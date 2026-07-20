@@ -1,0 +1,55 @@
+name: Deploy
+
+# main -> production (noahjefferson.pages.dev)
+# Deploys the static site in public/ to Cloudflare Pages via wrangler.
+# Skips gracefully until the two Cloudflare repo secrets exist, so the first
+# push never fails with a red X while you're still adding them:
+#   CLOUDFLARE_API_TOKEN   (an account-wide "Cloudflare Pages: Edit" token)
+#   CLOUDFLARE_ACCOUNT_ID  (same value your other apps use)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check Cloudflare secrets
+        id: cf
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$TOKEN" ] && [ -n "$ACCOUNT" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare secrets not configured yet - skipping deploy."
+          fi
+
+      # First deploy mints the Pages project; continue-on-error so an
+      # "already exists" response on later runs never fails the job.
+      - name: Ensure Pages project exists
+        if: steps.cf.outputs.ready == 'true'
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages project create noahjefferson --production-branch=main
+
+      - name: Deploy to Cloudflare Pages
+        if: steps.cf.outputs.ready == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public --project-name=noahjefferson --branch=${{ github.ref_name }} --commit-dirty=true
