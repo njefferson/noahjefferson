@@ -2,8 +2,7 @@ name: Deploy
 
 # main -> production (noahjefferson.pages.dev)
 # Deploys the static site in public/ to Cloudflare Pages via wrangler.
-# Skips gracefully until the two Cloudflare repo secrets exist, so the first
-# push never fails with a red X while you're still adding them:
+# Needs two repo secrets:
 #   CLOUDFLARE_API_TOKEN   (an account-wide "Cloudflare Pages: Edit" token)
 #   CLOUDFLARE_ACCOUNT_ID  (same value your other apps use)
 
@@ -35,8 +34,29 @@ jobs:
             echo "Cloudflare secrets not configured yet - skipping deploy."
           fi
 
-      # First deploy mints the Pages project; continue-on-error so an
-      # "already exists" response on later runs never fails the job.
+      # TEMPORARY diagnostic — reports WHY auth fails without printing secrets.
+      - name: Diagnose Cloudflare auth
+        if: steps.cf.outputs.ready == 'true'
+        continue-on-error: true
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "token length: ${#TOKEN} (a valid Cloudflare token is 40 chars)"
+          echo "account-id length: ${#ACCOUNT} (a valid account id is 32 hex chars)"
+          echo "== 1. is the token itself valid? =="
+          curl -s https://api.cloudflare.com/client/v4/user/tokens/verify \
+            -H "Authorization: Bearer $TOKEN" \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print('  valid:', d.get('success'), '| status:', (d.get('result') or {}).get('status'), '| errors:', d.get('errors'))"
+          echo "== 2. which accounts can this token see? (compare count to what you expect) =="
+          curl -s https://api.cloudflare.com/client/v4/accounts \
+            -H "Authorization: Bearer $TOKEN" \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); r=d.get('result') or []; print('  success:', d.get('success'), '| account count:', len(r), '| names:', [a.get('name') for a in r], '| errors:', d.get('errors'))"
+          echo "== 3. can it list Pages projects for the given account id? =="
+          curl -s "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/pages/projects" \
+            -H "Authorization: Bearer $TOKEN" \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print('  success:', d.get('success'), '| errors:', d.get('errors'))"
+
       - name: Ensure Pages project exists
         if: steps.cf.outputs.ready == 'true'
         continue-on-error: true
