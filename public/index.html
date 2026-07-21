@@ -7,7 +7,8 @@
 
 <!-- discovery + share tiles ---------------------------------------------- -->
 <meta name="description" content="Photography and free, no-account tools by Noah Jefferson — birds, infrared and macro, plus small web apps for enjoying the world. No sign-up, no install, works offline.">
-<meta name="theme-color" content="#0B1020">
+<meta name="theme-color" content="#0B1020" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F4F6FB" media="(prefers-color-scheme: light)">
 <link rel="canonical" href="https://noahjefferson.pages.dev/">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -169,19 +170,95 @@
     a.tile,a.appcard{transition:none}
     a.tile:hover,a.appcard:hover{transform:none}
   }
+
+  /* light theme — mirrors the dark palette; accents darkened so accent-as-text
+     (the "Open" go label, focus rings) still clears WCAG AA (>=4.5:1) on white */
+  @media (prefers-color-scheme:light){
+    :root{
+      --bg:#F4F6FB;
+      --bg2:#FBFCFE;
+      --surface:#FFFFFF;
+      --surface-hi:#F0F3FA;
+      --line:#D5DCEA;
+      --text:#171C2B;
+      --muted:#586079;
+      --amber:#B45309;
+      --green:#1E7A46;
+      --magenta:#B03270;
+      --cyan:#0E6E88;
+      --slate:#4A54C8;
+    }
+    body{
+      background:
+        radial-gradient(1200px 700px at 50% -10%, #E8EEFC 0%, rgba(232,238,252,0) 60%),
+        linear-gradient(180deg,var(--bg2),var(--bg));
+    }
+    a.tile:hover{border-color:#B9C4DC}
+    a.appcard:hover{border-color:#B9C4DC;box-shadow:0 12px 30px rgba(20,30,60,.14)}
+  }
+
+  /* stronger borders + text when the reader asks for more contrast */
+  @media (prefers-contrast:more){
+    :root{--line:#3D4A72;--muted:#AEB6CE}
+    @media (prefers-color-scheme:light){
+      :root{--line:#9AA6C2;--muted:#3D445C}
+    }
+    .tile,.appcard,.vchip{border-width:2px}
+  }
+
+  /* Windows High Contrast / forced-colors: keep boundaries + focus visible */
+  @media (forced-colors:active){
+    .tile,.appcard,.vchip{border:1px solid CanvasText}
+    a.tile:focus-visible,a.appcard:focus-visible{outline:2px solid Highlight}
+    .tile::before,.appcard::before{background:CanvasText}
+  }
+
+  /* no-JavaScript fallback list (hidden whenever JS runs) */
+  .ns-list{list-style:none;margin:0 0 6px;padding:0;display:flex;flex-direction:column;gap:9px}
+  .ns-list a{
+    display:block;padding:13px 15px;border-radius:13px;
+    background:var(--surface);border:1px solid var(--line);
+    color:var(--text);text-decoration:none;font-size:14.5px;line-height:1.35;
+  }
+  .ns-list a:focus-visible{outline:2px solid var(--slate);outline-offset:2px}
+  .ns-list b{font-weight:650}
+  .ns-list span{color:var(--muted)}
 </style>
 </head>
 <body>
   <main class="wrap">
     <header class="head">
       <div class="mark" aria-hidden="true"><span></span><span></span><span></span></div>
-      <h1 class="name" id="name"></h1>
+      <h1 class="name" id="name">Noah Jefferson</h1>
       <div class="rule" aria-hidden="true"></div>
-      <p class="tag" id="tag"></p>
+      <p class="tag" id="tag">Photography, and small free tools for enjoying the world.</p>
       <div class="values" id="values" role="group" aria-label="What every one of these is: free, no account, no install, works offline"></div>
     </header>
     <div id="groups"></div>
-    <p class="foot" id="foot"></p>
+
+    <noscript>
+      <section class="group">
+        <h2 class="group-title">Photography</h2>
+        <ul class="ns-list">
+          <li><a href="https://instagram.com/noah.jefferson.photo"><b>@noah.jefferson.photo</b> <span>— Birds &amp; wildlife (main)</span></a></li>
+          <li><a href="https://instagram.com/noah.jefferson.infrared"><b>@noah.jefferson.infrared</b> <span>— Infrared / false color</span></a></li>
+          <li><a href="https://instagram.com/noah.jefferson.macro"><b>@noah.jefferson.macro</b> <span>— Macro</span></a></li>
+        </ul>
+        <h2 class="group-title">Free web apps</h2>
+        <ul class="ns-list">
+          <li><a href="https://jefferson-photo-studio.pages.dev"><b>Photo Studio</b> <span>— Infrared editing &amp; focus stacking, in your browser</span></a></li>
+          <li><a href="https://bird-location-scouting.pages.dev"><b>Frame</b> <span>— Where &amp; when to photograph which birds</span></a></li>
+          <li><a href="https://photo-pointer.pages.dev"><b>Photo Pointer</b> <span>— A map of every place worth shooting</span></a></li>
+          <li><a href="https://clear-horizons.pages.dev"><b>Astro Planner</b> <span>— Clear-sky &amp; Seestar target windows</span></a></li>
+        </ul>
+        <h2 class="group-title">Code</h2>
+        <ul class="ns-list">
+          <li><a href="https://github.com/njefferson"><b>@njefferson</b> <span>— GitHub, the source behind these apps</span></a></li>
+        </ul>
+      </section>
+    </noscript>
+
+    <p class="foot" id="foot">No paywall, no sign-up — free, and yours to keep. Made by Noah Jefferson.</p>
   </main>
 
 <script>
