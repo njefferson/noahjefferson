@@ -8,10 +8,10 @@ await page.goto(pathToFileURL('/home/user/noahjefferson/public/index.html').href
 await page.screenshot({ path: '/home/user/noahjefferson/preview.png', fullPage: true });
 const stats = await page.evaluate(() => ({
   igLinks: [...document.querySelectorAll('.tile')].map(a => a.querySelector('.label')?.textContent),
-  appCards: [...document.querySelectorAll('.appcard')].map(a => ({
+  appCards: [...document.querySelectorAll('.approw')].map(a => ({
     name: a.querySelector('.app-name')?.textContent,
     href: a.href,
-    imgLoaded: (() => { const i=a.querySelector('img.shot'); return i && i.complete && i.naturalWidth>0; })()
+    imgLoaded: (() => { const i=a.querySelector('img.app-ico'); return i && i.complete && i.naturalWidth>0; })()
   })),
   values: [...document.querySelectorAll('.vchip')].map(v => v.textContent),
 }));

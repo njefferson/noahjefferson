@@ -137,31 +137,34 @@
   .tile.compact .label{font-size:14px}
   .tile.compact .sub{font-size:12px;margin-top:1px}
 
-  /* app card — shows the app's own social tile as the hero image */
-  .appcard{
-    position:relative;display:block;border-radius:16px;overflow:hidden;
+  /* app row — a scannable menu entry: real app icon + name + one-liner + Open.
+     Compact so every app is visible at once and the page reads as a directory,
+     not a single-app landing. */
+  .approw{
+    position:relative;display:flex;align-items:center;gap:14px;
+    padding:12px 15px 12px 14px;border-radius:15px;
     background:var(--surface);border:1px solid var(--line);
-    color:var(--text);text-decoration:none;
-    transition:transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+    color:var(--text);text-decoration:none;overflow:hidden;
+    transition:transform .16s ease, background .16s ease, border-color .16s ease;
   }
-  .appcard::before{
-    content:"";position:absolute;left:0;right:0;top:0;height:3px;z-index:2;
-    background:var(--band,var(--slate));
+  .approw::before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--band,var(--slate));
   }
-  a.appcard:hover{transform:translateY(-3px);border-color:#33406b;box-shadow:0 12px 30px rgba(0,0,0,.38)}
-  a.appcard:focus-visible{outline:2px solid var(--band,var(--slate));outline-offset:2px}
-  .appcard .shot{
-    display:block;width:100%;height:auto;aspect-ratio:1200/630;object-fit:cover;
-    background:#0a0f1e;border-bottom:1px solid var(--line);
+  a.approw:hover{transform:translateY(-2px);background:var(--surface-hi);border-color:#33406b}
+  a.approw:focus-visible{outline:2px solid var(--band,var(--slate));outline-offset:2px}
+  .approw .app-ico{
+    flex:0 0 52px;width:52px;height:52px;border-radius:14px;display:block;
+    box-shadow:0 3px 9px rgba(0,0,0,.20);
   }
-  .appcard .meta{display:flex;align-items:center;gap:12px;padding:13px 15px 14px}
-  .appcard .app-name{display:block;font-size:15.5px;font-weight:650;letter-spacing:-0.01em;line-height:1.2}
-  .appcard .app-sub{display:block;font-size:13px;color:var(--muted);margin-top:3px;line-height:1.3}
-  .appcard .go{
+  .approw .txt{min-width:0;flex:1}
+  .approw .app-name{display:block;font-size:16px;font-weight:650;letter-spacing:-0.01em;line-height:1.2}
+  .approw .app-sub{display:block;font-size:13px;color:var(--muted);margin-top:3px;line-height:1.25}
+  .approw .go{
     flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;
     font-size:12.5px;font-weight:650;letter-spacing:0.01em;color:var(--band,var(--slate));
   }
-  .appcard .go svg{width:15px;height:15px}
+  .approw .go svg{width:15px;height:15px}
+  @media (max-width:420px){ .approw .go span{display:none} }
 
   .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:40px;letter-spacing:0.01em;line-height:1.5}
   .foot-links{text-align:center;margin-top:10px}
@@ -170,8 +173,8 @@
 
   @media (prefers-reduced-motion:reduce){
     .rule{animation:none}
-    a.tile,a.appcard{transition:none}
-    a.tile:hover,a.appcard:hover{transform:none}
+    a.tile,a.approw{transition:none}
+    a.tile:hover,a.approw:hover{transform:none}
   }
 
   /* light theme — mirrors the dark palette; accents darkened so accent-as-text
@@ -197,7 +200,7 @@
         linear-gradient(180deg,var(--bg2),var(--bg));
     }
     a.tile:hover{border-color:#B9C4DC}
-    a.appcard:hover{border-color:#B9C4DC;box-shadow:0 12px 30px rgba(20,30,60,.14)}
+    a.approw:hover{border-color:#B9C4DC}
   }
 
   /* stronger borders + text when the reader asks for more contrast */
@@ -206,14 +209,14 @@
     @media (prefers-color-scheme:light){
       :root{--line:#9AA6C2;--muted:#3D445C}
     }
-    .tile,.appcard,.vchip{border-width:2px}
+    .tile,.approw,.vchip{border-width:2px}
   }
 
   /* Windows High Contrast / forced-colors: keep boundaries + focus visible */
   @media (forced-colors:active){
-    .tile,.appcard,.vchip{border:1px solid CanvasText}
-    a.tile:focus-visible,a.appcard:focus-visible{outline:2px solid Highlight}
-    .tile::before,.appcard::before{background:CanvasText}
+    .tile,.approw,.vchip{border:1px solid CanvasText}
+    a.tile:focus-visible,a.approw:focus-visible{outline:2px solid Highlight}
+    .tile::before,.approw::before{background:CanvasText}
   }
 
   /* no-JavaScript fallback list (hidden whenever JS runs) */
@@ -272,8 +275,9 @@
    Two kinds of section (set by "kind"):
      kind:"links" -> Instagram-style rows (icon + name + sub). Empty url = "Soon".
                      add compact:true on the group for tighter, shorter rows.
-     kind:"apps"  -> big cards that show each app's own social tile image.
-                     "shot" is the image path under public/tiles/.
+     kind:"apps"  -> scannable app rows (real app icon + name + sub + Open).
+                     "icon" is the image path under public/icons/apps/ (a square
+                     app icon, 128px is plenty — it renders at 52px).
    type (links): "ig" | "gh" | "app"
    band: "amber" | "green" | "magenta" | "cyan" | "slate"
    ========================================================================= */
@@ -310,32 +314,27 @@ const GROUPS = [
       {
         name: "Photo Studio", sub: "Infrared editing & focus stacking, in your browser",
         url: "https://jefferson-photo-studio.pages.dev",
-        shot: "tiles/photo-studio.jpg", band: "magenta",
-        alt: "Photo Studio — a free in-browser infrared photo editor and focus-stacker."
+        icon: "icons/apps/studio.png", band: "magenta"
       },
       {
         name: "Frame", sub: "Where & when to photograph which birds",
         url: "https://bird-location-scouting.pages.dev",
-        shot: "tiles/frame.png", band: "amber",
-        alt: "Frame — a free app for where to go, in which month, to photograph which birds."
+        icon: "icons/apps/frame.png", band: "amber"
       },
       {
         name: "Photo Pointer", sub: "A map of every place worth shooting",
         url: "https://photo-pointer.pages.dev",
-        shot: "tiles/photo-pointer.png", band: "cyan",
-        alt: "Photo Pointer — a map of every photo-worthy place in your region: viewpoints, markers, parks, trails, wildlife, dark skies."
+        icon: "icons/apps/pointer.png", band: "cyan"
       },
       {
         name: "Astro Planner", sub: "Clear-sky & Seestar target windows",
         url: "https://clear-horizons.pages.dev",
-        shot: "tiles/astro-planner.png", band: "slate",
-        alt: "Astro Planner (Clear Horizons) — a free, offline astronomy planner built on your real, measured horizon; clear-sky and Seestar target windows."
+        icon: "icons/apps/astro.png", band: "slate"
       },
       {
         name: "ND Toolbox", sub: "Calm tools for naming what’s going on inside",
         url: "https://nd-toolbox.pages.dev",
-        shot: "tiles/nd-toolbox.png", band: "green",
-        alt: "ND Toolbox — calm, private, local-first tools for naming what's going on inside, starting with a feelings wheel. Not a medical or diagnostic tool."
+        icon: "icons/apps/ndtoolbox.png", band: "green"
       },
     ]
   },
@@ -378,17 +377,19 @@ function tile(t, compact){
   return d;
 }
 
-/* App card with its social tile as the hero image */
-function appCard(a){
+/* App row — real app icon + name + one-liner + Open. Compact so every app is
+   visible together and the page reads as a menu, not a single-app landing.
+   The icon is decorative (alt="") — the name beside it is the link's label. */
+function appRow(a){
   const el=document.createElement("a");
-  el.className="appcard"; el.href=a.url; el.target="_blank"; el.rel="noopener";
+  el.className="approw"; el.href=a.url; el.target="_blank"; el.rel="noopener";
   el.style.setProperty("--band",`var(--${a.band})`);
   el.innerHTML=
-    `<img class="shot" src="${a.shot}" alt="${a.alt}" loading="lazy">`+
-    `<div class="meta"><span class="txt">`+
+    `<img class="app-ico" src="${a.icon}" alt="" aria-hidden="true" loading="lazy">`+
+    `<span class="txt">`+
       `<span class="app-name">${a.name}</span>`+
       `<span class="app-sub">${a.sub}</span>`+
-    `</span><span class="go">Open ${ARROW_GO}</span></div>`;
+    `</span><span class="go"><span>Open</span> ${ARROW_GO}</span>`;
   return el;
 }
 
@@ -410,7 +411,7 @@ GROUPS.forEach(g=>{
   const sec=document.createElement("section"); sec.className="group";
   const h=document.createElement("h2"); h.className="group-title"; h.textContent=g.title;
   const list=document.createElement("div"); list.className="tiles"+(g.compact?" compact":"");
-  g.tiles.forEach(t=>list.appendChild(g.kind==="apps" ? appCard(t) : tile(t, g.compact)));
+  g.tiles.forEach(t=>list.appendChild(g.kind==="apps" ? appRow(t) : tile(t, g.compact)));
   sec.appendChild(h); sec.appendChild(list); host.appendChild(sec);
 });
 </script>
