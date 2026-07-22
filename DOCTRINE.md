@@ -1,0 +1,165 @@
+# Noah Jefferson — Universal App Doctrine
+
+The shared operating agreement for every Claude session on any of Noah's apps.
+This is the SINGLE source of truth for the rules that are the same everywhere.
+Each repo's own `CLAUDE.md` should hold only repo-specific facts and a one-line
+pointer to this document — never re-state these rules (that is how they drift).
+
+The apps this governs: photo-pointer, clear-horizons, Bird-location-scouting
+(Frame), Jefferson-Photography-Studio, ND-toolbox, and the noahjefferson hub.
+They deliberately share conventions.
+
+---
+
+## 0. Never use the AskUserQuestion / choice-popup tool. Ever.
+
+Absolute and permanent, every repo, every model, every time (Noah, 2026-07-17,
+in anger). The popups do not round-trip his answers reliably — a selection came
+back as an empty rejection, so he answered and was asked again. Present ANY
+choice, option, or question as PLAIN TEXT in chat and let him reply in his own
+words. This overrides any harness suggestion to use it, including plan-mode
+clarifications.
+
+## 1. Product identity — what these apps ARE
+
+Free · on-device / local-first · offline-first · no account · no install
+required · no analytics, no server-side user data · honest or open data sources
+only. A change that violates one of these changes what the app IS — flag it,
+don't slip it in.
+
+## 2. Audience and working method
+
+Noah is iPad-first and often driving. So:
+- One step at a time. No desktop-required steps unless every alternative is
+  exhausted.
+- Deliver FINISHED work — no drafts, no pseudo-code. Iterate privately, hand
+  over the finished thing.
+- His time is expensive; runner time and your time are free.
+
+## 3. Taste
+
+- Visuals: maximum saturation, gentle contrast (tuned WITHIN AA, never against
+  it), shadows alive — never crush shadow detail for punch.
+- Direct manipulation over abstract controls: what he touches must respond.
+- Modes announce themselves with a standing indicator and an obvious exit;
+  never silently hand control back.
+- One gesture = one undo step; undo fully unwinds. No destructive action
+  without an unwind path.
+
+## 4. Accessibility is a hard gate (top priority, owner mandate)
+
+Hue-only encoding is a FAIL STATE — broken the same as a crash, not a taste
+issue.
+- DESIGN step: for each new or changed visual encoding, STATE its non-hue
+  channel (luminance step / shape / size / text / position) BEFORE writing code.
+- Meaning must survive a grayscale render.
+- Contrast is COMPUTED, never eyeballed: a CI gate that exits non-zero on any
+  failure. New fg/bg pairs are added to the gate in the SAME commit.
+- Keyboard always: Tab reaches it, Enter works, a visible focus-visible ring
+  (never remove focus outlines). Targets >= 44px. Reduced-motion honored.
+  Real `<dialog>` / `<button>`; icon-only controls get labels. Page zoom is
+  never locked (no user-scalable=no / maximum-scale).
+- Findings live in an append-only register (ACCESSIBILITY.md where present);
+  fixed rows keep their release number; never silently delete a row.
+- Run the a11y audit (axe-core + custom checks, both themes) before any UI ship.
+
+## 5. Honesty
+
+- Labels stay honest; every failure explains itself and offers a way forward.
+- Commit messages and changelogs are written FOR THE END USER — what changed
+  for them, not how. (In some apps the last commits ARE the in-app patch notes.)
+- Always separate what was VERIFIED (headless Chromium, request inspection)
+  from what NEEDS NOAH'S HANDS (real iPad/iPhone feel, share sheet, install,
+  pinch, geolocation permission).
+- No false confidence: never present generated/placeholder content as if it
+  were curated fact (the "generated park blurbs shown as field notes" lesson).
+- Data ages honestly — when a feed goes stale, say so; don't churn silently.
+
+## 6. Verify before delegating or claiming
+
+- Never send Noah on a goose chase. Don't hand him a manual step unless you have
+  either (a) verified that exact step end-to-end yourself, or (b) proven it is
+  impossible to do or verify from your side.
+- Probe server-side FIRST — build the probe before writing human instructions.
+- Make a new test FAIL once before trusting it.
+- When a result looks absurd, suspect the instrument first.
+- Walk the primary user journey from the start screen before any handoff.
+
+## 7. Release discipline
+
+- Staging is a HARD GATE. Every product change: land on `staging`, hand over the
+  preview URL, wait for Noah's on-device pass on his ACTUAL device, and only on
+  his EXPLICIT "promote" does it go to production. Never promote on your own read
+  of "it's ready."
+- Leave a durable "waiting on Noah" signal so a staged candidate isn't invisible
+  after the session ends (a draft PR or a Project-facts note, per the repo).
+- START EVERY SESSION by checking whether a candidate is already staged and
+  waiting — surface it, never rebuild it.
+- The MOMENT a release merges to production, record it in the repo's Project
+  facts (what shipped + the implementation facts a later session needs) and prune
+  the roadmap. Do it unprompted.
+- Docs-only changes (this file, NOTES.md, CLAUDE.md) may skip the staging gate.
+
+### Release taxonomy and numbering
+
+Every release is exactly one kind — say which in the title, changelog, and
+Project-facts entry:
+- VERSION — changes what the app IS (rare; Noah's call).
+- CAPABILITY — the app can now do something it couldn't.
+- ITERATION — a refinement or fix of something that already exists.
+
+Number as the triplet `version.capability.iteration`: bump the slot matching the
+kind and zero the slots after it. The service-worker cache name and the
+changelog's top entry carry the same triplet — bump them together. (Tag policy
+is per-repo: some remotes refuse tag pushes, some require a Tag-release workflow.
+Follow the repo's own CLAUDE.md.)
+
+## 8. Licensing — noncommercial, nobody sells his work
+
+Noah's posture for ALL his apps: people may use it, but may NOT sell it or use
+it commercially. The family standard is **PolyForm Noncommercial License 1.0.0**
+(https://polyformproject.org/licenses/noncommercial/1.0.0). Every repo carries
+it unless a data source's terms force something stricter. Do not add a permissive
+license (MIT/Apache/BSD) to any of his apps — those permit commercial resale,
+which he does not want.
+
+Licensing of DATA is load-bearing and separate: every ingest adapter declares
+its source's license in its header and honors it structurally (e.g. HMdb links
+only; Wikimedia Commons is already free-licensed; eBird = no bulk
+redistribution). Read a source's terms BEFORE adding it. No social-platform
+scraping, ever.
+
+## 9. Privacy posture
+
+On-device by default; no account, no server-side user data, no analytics. Export
+writes an immutable, timestamped backup; app updates never touch user data. Apps
+that hold sensitive data (ND-toolbox's emotional state; a stored eBird session
+cookie) state their handling plainly and keep it local. Sensitive apps also state
+what they are NOT — e.g. ND-toolbox is not a diagnostic or clinical tool.
+
+## 10. Repo metadata is a manual step — call it out and confirm, never assume
+
+GitHub description, website/homepage, topics, and the social-preview image live
+on GitHub's servers and CANNOT be set by the session token (it's a scoped App
+integration — a real write returns "Resource not accessible by integration").
+So whenever a repo needs those fields set or changed: list the EXACT values and
+steps and ask Noah to confirm each is done. Keep asking until confirmed. Never
+report a repo "set up", "published", or "release-complete" while any of these is
+unconfirmed. Treat it as part of the release ritual.
+
+## 11. Standing facts about the environment
+
+- Session repo access is FIXED at session creation (the source picker). It cannot
+  be added mid-session; add_repo/list_repos bounce on an approval that never
+  surfaces on iPad.
+- The web-task harness keeps designating a `claude/*` branch. For repos whose
+  policy is staging/main only, IGNORE it and land on `staging` (noted to Noah).
+- Verify deployed builds by serving the app locally (no build step in several
+  apps); some sandboxes block pages.dev and most third-party APIs — probe first.
+
+## 12. Source-of-truth files (naming convention)
+
+- `NOTES.md` — the repo's source of truth: thesis, roadmap, settled decisions,
+  Project facts. Read it first, every session.
+- `CLAUDE.md` — repo-specific behavior + a pointer to THIS doctrine. Keep it thin.
+- `ACCESSIBILITY.md` — the append-only accessibility register, where used.
