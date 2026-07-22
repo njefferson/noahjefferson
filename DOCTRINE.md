@@ -172,10 +172,15 @@ cheap to update.
 
 ## 13. Starting a new app (bootstrap checklist)
 
-When a new repo joins the family, run this once. (Session note: a session can
-only reach repos picked at its start and CANNOT add one mid-session — so to
-bootstrap or work on a new app, start the session with BOTH the new repo AND the
-noahjefferson hub selected, because this Doctrine lives in the hub.)
+When a new repo joins the family, run this once. **No trigger phrase is
+required.** At the start of any session, if a repo in scope is one of Noah's apps
+and is MISSING its `CLAUDE.md`, `LICENSE`, or `NOTES.md`, proactively say so and
+OFFER to run this checklist — do not wait for Noah to name it or remember a
+keyword. Any plain-language ask also counts ("set this up", "make it like the
+others", "it's new", "onboard it"). (Session note: a session can only reach repos
+picked at its start and CANNOT add one mid-session — so to work on or set up a
+new app, start the session with BOTH the new repo AND the noahjefferson hub
+selected, because this Doctrine lives in the hub.)
 
 The session does 1–6; Noah does 7 (metadata is a manual GitHub-UI step):
 1. `CLAUDE.md` — the standard pointer header (link to this Doctrine + "the
