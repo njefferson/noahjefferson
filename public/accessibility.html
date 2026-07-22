@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accessibility — Noah Jefferson</title>
+<meta name="description" content="Accessibility statement for Noah Jefferson's free apps — Frame, Photo Pointer, Clear Horizons and Photo Studio. WCAG 2.2 AA is the target; honest about what's done and what's still being improved.">
+<meta name="theme-color" content="#0B1020" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F4F6FB" media="(prefers-color-scheme: light)">
+<link rel="canonical" href="https://noahjefferson.pages.dev/accessibility">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>
+  :root{
+    --bg:#0B1020; --bg2:#0E1428; --surface:#151B30; --line:#26304F;
+    --text:#EAECF5; --muted:#B7BFD6; --link:#8A97FF;
+    --amber:#F2A65A; --magenta:#E0619E; --cyan:#58C6E0;
+  }
+  @media (prefers-color-scheme:light){
+    :root{
+      --bg:#F4F6FB; --bg2:#FBFCFE; --surface:#FFFFFF; --line:#D5DCEA;
+      --text:#171C2B; --muted:#4C5570; --link:#4A54C8;
+      --amber:#B45309; --magenta:#B03270; --cyan:#0E6E88;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1100px 640px at 50% -12%, color-mix(in srgb,var(--surface) 70%,var(--bg)) 0%, rgba(0,0,0,0) 60%),
+      linear-gradient(180deg,var(--bg2),var(--bg));
+    color:var(--text);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.55;
+    min-height:100dvh;padding:48px 20px 72px;
+  }
+  main{max-width:680px;margin:0 auto}
+  .mark{display:flex;gap:4px;margin-bottom:22px}
+  .mark span{width:9px;height:32px;border-radius:3px;display:block}
+  .mark span:nth-child(1){background:var(--amber)}
+  .mark span:nth-child(2){background:var(--magenta)}
+  .mark span:nth-child(3){background:var(--cyan)}
+  h1{font-size:34px;font-weight:660;letter-spacing:-0.02em;margin:0 0 6px}
+  .sub{color:var(--muted);font-size:15px;margin:0 0 30px}
+  h2{font-size:19px;font-weight:640;letter-spacing:-0.01em;margin:34px 0 10px}
+  p{margin:0 0 14px}
+  ul{margin:0 0 14px;padding-left:22px}
+  li{margin:0 0 8px}
+  a{color:var(--link);text-decoration:underline;text-underline-offset:2px}
+  a:focus-visible{outline:2px solid var(--link);outline-offset:3px;border-radius:2px}
+  .lead{font-size:17px}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:14px;
+    padding:18px 20px;margin:22px 0;
+  }
+  .card h2{margin-top:0}
+  .contact-email{font-weight:640}
+  .apps{color:var(--muted);font-size:14.5px}
+  .foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px}
+  .foot a{color:var(--muted)}
+</style>
+</head>
+<body>
+  <main>
+    <div class="mark" aria-hidden="true"><span></span><span></span><span></span></div>
+    <h1>Accessibility</h1>
+    <p class="sub">Noah Jefferson's free apps — Frame, Photo Pointer, Clear Horizons, and Photo Studio.</p>
+
+    <p class="lead">These apps are built so that a missing bit of care never gets
+    between someone and the joy of using them. Accessibility is a requirement here,
+    not a finishing touch — a design that shuts people out is treated as broken, the
+    same as a crash, and fixed the same way.</p>
+
+    <h2>What we aim for</h2>
+    <p>Every app targets <strong>WCAG&nbsp;2.2 level&nbsp;AA</strong>. That's the bar
+    the work is measured against, and much of it is checked automatically on every
+    change so it can't quietly slip.</p>
+
+    <h2>What that means in practice</h2>
+    <ul>
+      <li><strong>Color is never the only signal.</strong> Anything shown with color
+      is also shown with text, a shape, a symbol, or position — so it still reads in
+      grayscale and for color-blind users.</li>
+      <li><strong>Contrast is measured, not eyeballed.</strong> Text and control
+      contrast is computed against the WCAG formula and enforced as an automated
+      build check that fails the release if a value falls short.</li>
+      <li><strong>Everything works from the keyboard,</strong> with a clearly visible
+      focus outline on whatever you're on.</li>
+      <li><strong>Motion is optional.</strong> If your device asks for reduced motion,
+      animations step aside.</li>
+      <li><strong>Real controls, real dialogs.</strong> Buttons are buttons, dialogs
+      trap focus and close on Escape, icon-only controls carry text labels, and touch
+      targets are sized to be tapped.</li>
+      <li><strong>Light and dark are both first-class,</strong> each tuned to hold
+      contrast in its own right.</li>
+      <li><strong>State changes are announced,</strong> so a screen reader hears when
+      something loads, updates, or fails.</li>
+    </ul>
+
+    <h2>Where we're still working</h2>
+    <p>Honesty matters more than a clean claim, so here's the truth of it:</p>
+    <ul>
+      <li>Automated and headless testing catches a large share of issues but not all
+      of them — hands-on testing with assistive technology is ongoing.</li>
+      <li>A few rich interactions are genuinely hard to make fully accessible and are
+      still being improved: the pinch-and-pan maps, the photo-editing canvas, and the
+      augmented-reality sky view.</li>
+      <li>None of the apps has had a formal third-party accessibility audit yet.</li>
+    </ul>
+    <p>None of that is a reason to stop — it's the list of what's next.</p>
+
+    <div class="card">
+      <h2>Found a barrier?</h2>
+      <p>If anything here got in your way — a control you couldn't reach, text you
+      couldn't read, a gesture that didn't work with your device or your assistive
+      technology — please tell me, and I'll fix it.</p>
+      <p style="margin-bottom:0">Email
+      <a class="contact-email" href="mailto:noah.jefferson@icloud.com?subject=Accessibility">noah.jefferson@icloud.com</a>.
+      Say which app and what happened, and I'll follow up.</p>
+    </div>
+
+    <p class="apps">This statement covers Frame (bird-scouting), Photo Pointer
+    (photo-spot map), Clear Horizons (astronomy planner), and Photo Studio (infrared
+    &amp; macro editing).</p>
+
+    <div class="foot">
+      <a href="/">&larr; Back to Noah Jefferson's apps</a><br>
+      Last reviewed: July&nbsp;2026.
+    </div>
+  </main>
+</body>
+</html>
