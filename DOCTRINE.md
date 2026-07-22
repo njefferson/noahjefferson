@@ -147,6 +147,12 @@ steps and ask Noah to confirm each is done. Keep asking until confirmed. Never
 report a repo "set up", "published", or "release-complete" while any of these is
 unconfirmed. Treat it as part of the release ritual.
 
+Write the DESCRIPTION for what the app IS, not what it currently does — never
+name the current feature, module, or version in it. Those change; the
+description shouldn't (a suite that gains a module must not need its description
+rewritten). Which module/feature is current belongs in the README, where it is
+cheap to update.
+
 ## 11. Standing facts about the environment
 
 - Session repo access is FIXED at session creation (the source picker). It cannot
