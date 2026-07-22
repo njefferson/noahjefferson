@@ -169,3 +169,31 @@ cheap to update.
   Project facts. Read it first, every session.
 - `CLAUDE.md` — repo-specific behavior + a pointer to THIS doctrine. Keep it thin.
 - `ACCESSIBILITY.md` — the append-only accessibility register, where used.
+
+## 13. Starting a new app (bootstrap checklist)
+
+When a new repo joins the family, run this once. (Session note: a session can
+only reach repos picked at its start and CANNOT add one mid-session — so to
+bootstrap or work on a new app, start the session with BOTH the new repo AND the
+noahjefferson hub selected, because this Doctrine lives in the hub.)
+
+The session does 1–6; Noah does 7 (metadata is a manual GitHub-UI step):
+1. `CLAUDE.md` — the standard pointer header (link to this Doctrine + "the
+   Doctrine wins") followed by repo-specific facts only. Keep it thin.
+2. `LICENSE` — PolyForm Noncommercial 1.0.0, unless a data source's terms force
+   something stricter. Correct Required-Notice URL + a scope block for any
+   third-party material shipped or consumed.
+3. `NOTES.md` — the repo's source of truth (thesis, roadmap, settled decisions,
+   Project facts).
+4. `ACCESSIBILITY.md` — if the app has any UI (the append-only register).
+5. Branches: `staging` and `main` only.
+6. Wire it into the hub: the hub links OUT to the app, the app links BACK, and
+   its About links the shared accessibility statement.
+7. Repo metadata (Noah, manual — see §10): description (what the app IS, never a
+   module/feature/version), website, topics, social-preview image. List the exact
+   values and confirm each.
+
+A new app also inherits everything above by default: local-first / offline /
+no-account, the taste rules, the accessibility gate, the honesty and
+verification discipline, the staging gate, and the release taxonomy. A repo that
+holds sensitive data states plainly what it is NOT (see §9).
