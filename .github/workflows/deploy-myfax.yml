@@ -5,6 +5,11 @@ name: Deploy MyFax
 # Cloudflare Pages (staging -> staging.myfax.pages.dev preview,
 # main -> myfax.pages.dev production) plus the relay Worker.
 #
+# Tokens: CLOUDFLARE_API_TOKEN (Pages-scoped, the hub's long-standing one)
+# deploys the PWA; CLOUDFLARE_WORKER_API_TOKEN (Workers Scripts: Edit only)
+# deploys the relay Worker. Worker steps skip cleanly until that second
+# token exists as a hub secret.
+#
 # Worker RUNTIME secrets (FAXDROP key, SENDER_EMAIL, ACCESS_CODE) are pushed
 # only if the hub also has them as repo secrets; wrangler keeps previously-set
 # Worker secrets across deploys, so once set they stick. fax_key picks which
@@ -42,19 +47,31 @@ jobs:
         id: cf
         env:
           RAW_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RAW_WORKER_TOKEN: ${{ secrets.CLOUDFLARE_WORKER_API_TOKEN }}
           RAW_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           # Strip whitespace/newlines that sneak in when a secret is pasted —
           # a trailing newline corrupts the Authorization header (Cloudflare 6111).
+          # Two tokens by design (Noah, 2026-07-25): the long-standing hub token
+          # stays Pages-only; the Worker deploys with its own Workers-scoped token.
           TOKEN=$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')
+          WTOKEN=$(printf '%s' "$RAW_WORKER_TOKEN" | tr -d '[:space:]')
           ACCOUNT=$(printf '%s' "$RAW_ACCOUNT" | tr -d '[:space:]')
           echo "::add-mask::$TOKEN"
+          echo "::add-mask::$WTOKEN"
           echo "::add-mask::$ACCOUNT"
           if [ -z "$TOKEN" ] || [ -z "$ACCOUNT" ]; then
             echo "Hub Cloudflare secrets missing - cannot deploy." >&2
             exit 1
           fi
+          if [ -n "$WTOKEN" ]; then
+            echo "worker_ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "worker_ready=false" >> "$GITHUB_OUTPUT"
+            echo "CLOUDFLARE_WORKER_API_TOKEN not set - Pages will deploy, Worker steps will be skipped."
+          fi
           echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+          echo "worker_token=$WTOKEN" >> "$GITHUB_OUTPUT"
           echo "account=$ACCOUNT" >> "$GITHUB_OUTPUT"
 
       - name: Ensure Pages project exists
@@ -73,17 +90,19 @@ jobs:
           command: pages deploy public --project-name=myfax --branch=${{ inputs.branch }} --commit-dirty=true
 
       - name: Deploy relay Worker
+        if: steps.cf.outputs.worker_ready == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${{ steps.cf.outputs.token }}
+          apiToken: ${{ steps.cf.outputs.worker_token }}
           accountId: ${{ steps.cf.outputs.account }}
           workingDirectory: worker
           command: deploy
 
       - name: Push Worker runtime secrets (only those the hub has)
+        if: steps.cf.outputs.worker_ready == 'true'
         working-directory: worker
         env:
-          CLOUDFLARE_API_TOKEN: ${{ steps.cf.outputs.token }}
+          CLOUDFLARE_API_TOKEN: ${{ steps.cf.outputs.worker_token }}
           CLOUDFLARE_ACCOUNT_ID: ${{ steps.cf.outputs.account }}
           FAX_TEST: ${{ secrets.FAXDROP_TEST_API_KEY }}
           FAX_LIVE: ${{ secrets.FAXDROP_API_KEY }}
