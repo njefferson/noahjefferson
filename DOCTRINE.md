@@ -45,6 +45,10 @@ Noah is iPad-first and often driving. So:
   never silently hand control back.
 - One gesture = one undo step; undo fully unwinds. No destructive action
   without an unwind path.
+- **No words in AI-generated imagery.** Image generators butcher type. Any
+  prompt written for one (icons, social previews, artwork) must describe a
+  wordless image; all lettering is overlaid afterwards by us — real fonts,
+  exact palette, positioned deliberately. (Noah, 2026-07-25.)
 
 ## 4. Accessibility is a hard gate (top priority, owner mandate)
 
