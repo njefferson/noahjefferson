@@ -84,6 +84,14 @@ issue.
 - Make a new test FAIL once before trusting it.
 - When a result looks absurd, suspect the instrument first.
 - Walk the primary user journey from the start screen before any handoff.
+- Every "unchanged / unaffected / no regression" claim must NAME the test that
+  proved it. A claim without a test is a guess — label it UNTESTED instead.
+  (The "Z 50 unchanged" claim of 2026-07-24 was never tested against any Z 50
+  file; it was false, on the owner's primary camera.)
+- Verify at the scale the user sees: the FULL output (full frame, the whole
+  corpus/library), not the crop that demonstrates the fix. A defect sitting
+  exactly where no crop was looking (the orange sky, 2026-07-25) is the
+  expected outcome of crop-only verification, not bad luck.
 
 ## 7. Release discipline
 
@@ -202,3 +210,39 @@ A new app also inherits everything above by default: local-first / offline /
 no-account, the taste rules, the accessibility gate, the honesty and
 verification discipline, the staging gate, and the release taxonomy. A repo that
 holds sensitive data states plainly what it is NOT (see §9).
+
+## 14. When a fix fails — debugging discipline (the D5300 lessons, 2026-07-24/25)
+
+Earned across one brutal day: four failed repairs of the same defect, three of
+them caught by Noah on his own device. These rules exist so that never happens
+again. They bind every session, every repo.
+
+- **Two strikes on the frame.** If a second fix to the same problem fails in
+  the same CLASS of way, STOP tuning parameters. The approach is wrong, not
+  the numbers. Re-derive the design from first principles before writing
+  another line. (Four hue-guessing repairs failed with four different
+  artifacts; the frame — repairing at decode — was the bug all along.)
+- **The guessing test.** An operation that must GUESS information it cannot
+  know is in the wrong place — move it to where its ground truth exists.
+  ("What colour is a blown pixel" is unanswerable before white balance and
+  definitional after it. Every artifact came from guessing; at the right
+  pipeline stage the guess disappeared and the artifacts became impossible.)
+- **Noah is never the test bench.** One regression escaping to his device is
+  an accident; a second is a process failure. After the FIRST escaped
+  regression in a piece of work, the next handoff requires an exhaustive
+  adversarial audit first — the full corpus, full-frame renders, property
+  tests on edge cases, a headless walk of the built app, and independent
+  verification of every finding — BEFORE he sees it.
+- **Nothing automatic touches user content.** A photo (or any user file)
+  opens exactly as decoded. Every adjustment, correction, or repair is an
+  explicit, visible, user-operated control, default off/neutral, riding undo
+  and reset. "Helpful" automatic mutation is how trust died here (owner
+  ruling, 2026-07-25: "stop doing ANYTHING to the photo at open").
+- **Spatial operations must fade smoothly to zero.** Any hard accept/reject
+  boundary in a spatial algorithm prints its own geometry onto smooth content
+  (Chebyshev balls are squares — the lawn, twice). If influence exists at
+  radius r, it must decay continuously, in every factor: distance, density,
+  severity.
+- **Patch notes tell the truth.** No absolutes the tests don't back
+  ("any camera", "down to the last bit"). The end user reads them; so does
+  the next session.
