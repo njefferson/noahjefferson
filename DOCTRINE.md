@@ -233,11 +233,13 @@ again. They bind every session, every repo.
   adversarial audit first — the full corpus, full-frame renders, property
   tests on edge cases, a headless walk of the built app, and independent
   verification of every finding — BEFORE he sees it.
-- **Nothing automatic touches user content.** A photo (or any user file)
-  opens exactly as decoded. Every adjustment, correction, or repair is an
-  explicit, visible, user-operated control, default off/neutral, riding undo
-  and reset. "Helpful" automatic mutation is how trust died here (owner
-  ruling, 2026-07-25: "stop doing ANYTHING to the photo at open").
+- **No silent mutation of user content.** An automatic opening BASELINE is
+  fine when the owner approves it and it passes three tests: every value
+  lands on a VISIBLE control, the whole baseline is UNDOABLE/resettable, and
+  the untouched state stays one press away (rev. 2026-07-25: raw opens
+  auto-balanced per file type; camera-rendered files get a lighter touch).
+  What is banned forever: silently changing PIXEL DATA, and any automatic
+  whose effect does not appear on a control the user can see and move.
 - **Spatial operations must fade smoothly to zero.** Any hard accept/reject
   boundary in a spatial algorithm prints its own geometry onto smooth content
   (Chebyshev balls are squares — the lawn, twice). If influence exists at
