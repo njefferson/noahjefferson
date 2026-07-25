@@ -122,6 +122,11 @@ changelog's top entry carry the same triplet — bump them together. (Tag policy
 is per-repo: some remotes refuse tag pushes, some require a Tag-release workflow.
 Follow the repo's own CLAUDE.md.)
 
+**Versions are also NAMED.** Every VERSION release carries a name Noah chooses,
+written alongside the triplet in the changelog heading (e.g. `1.0.0 "…"`).
+Ask Noah for the name in plain text before the release lands — never invent
+one, never ship a placeholder. (Noah, 2026-07-25.)
+
 ## 8. Licensing — noncommercial, nobody sells his work
 
 Noah's posture for ALL his apps: people may use it, but may NOT sell it or use
