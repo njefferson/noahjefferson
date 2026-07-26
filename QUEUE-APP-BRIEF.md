@@ -9,7 +9,7 @@
 > To do that work, start a session with **both** the new repo **and** `noahjefferson`
 > selected — §13 requires the hub in scope because `DOCTRINE.md` lives here.
 
-Settled with Noah, 2026-07-26.
+Settled with Noah, 2026-07-26. **Repo name: `InstaQueue`** (Noah's call, 2026-07-26).
 
 ---
 
@@ -150,8 +150,13 @@ the network disabled. Report what was verified separately from what needs his ha
 
 ## Open — Noah's calls, still unanswered
 
-1. **Repo and app name.** The family reads Photo Studio / Frame / Photo Pointer /
-   Astro Planner / ND Toolbox.
+1. **App display name.** The repo is `InstaQueue`. Whether the *app* also reads
+   "InstaQueue" on the home screen and in the manifest is still open — the family
+   reads Photo Studio / Frame / Photo Pointer / Astro Planner / ND Toolbox. Default
+   assumption: same name, both places. Note for whoever ships it: Meta's brand
+   guidelines ask third parties not to use "Insta" or "Gram" in a product name, which
+   matters only if the app is ever published or listed publicly — a private repo and
+   an unlisted personal tool are unaffected. Noah's call, flagged once, not relitigated.
 2. **Does the app hand him the actual file to post** (a 1440px copy with
    Save-to-Photos), or is the photo only there to identify the frame he exports from
    Lightroom? The file it holds is whatever he imported, not his Lightroom export —
