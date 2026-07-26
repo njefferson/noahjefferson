@@ -63,6 +63,23 @@ issue.
   (never remove focus outlines). Targets >= 44px. Reduced-motion honored.
   Real `<dialog>` / `<button>`; icon-only controls get labels. Page zoom is
   never locked (no user-scalable=no / maximum-scale).
+- NO FIXED SIZE THAT IGNORES THE SPACE AVAILABLE. Any panel, card, dialog or
+  header must be measured against the space it actually has AT THE MOMENT IT
+  OPENS — never a constant, and never a value captured once at startup. A reader
+  who enlarges their text is, in layout terms, using a much smaller screen: a
+  place card carrying a fixed 320px width and a hard 240px minimum height simply
+  would not open at 200% text on a small phone (map 114px tall, card still
+  demanding 240), and at 150% it rendered wider than its container and pushed the
+  close button off-screen — readable, but impossible to dismiss. AND: A FLOOR
+  MUST NEVER EXCEED THE SPACE AVAILABLE, or the floor becomes the next fixed size
+  that fails (a 160px minimum inside a 160px container re-broke the same close
+  button). Content that cannot fit SCROLLS INSIDE ITSELF; it never overflows a
+  screen edge, and its dismiss control is always reachable. Gate it across a
+  range of viewport sizes including the small-phone-at-200%-text case.
+- Honour the reader's TEXT-SIZE PREFERENCE, not just page zoom. Page zoom scales
+  `px`, so a px-only stylesheet looks fine under zoom while ignoring the
+  preference a low-vision reader is most likely to have actually set. Size type
+  in `rem`.
 - Findings live in an append-only register (ACCESSIBILITY.md where present);
   fixed rows keep their release number; never silently delete a row.
 - Run the a11y audit (axe-core + custom checks, both themes) before any UI ship.
@@ -257,3 +274,51 @@ again. They bind every session, every repo.
 - **Patch notes tell the truth.** No absolutes the tests don't back
   ("any camera", "down to the last bit"). The end user reads them; so does
   the next session.
+
+## 15. How we treat the services we depend on
+
+These apps are built on other people's work: volunteer-run (OpenStreetMap,
+Overpass), donation-funded (Wikimedia, Wikidata, iNaturalist) or tax-funded
+(USGS, NPS, NOAA, Recreation.gov). None of them owes a free personal tool
+anything. Taking more than they have asked for is not a technical matter, it is a
+question of how Noah's work treats good-faith actors, and the answer is settled:
+we operate inside their published terms or we do not operate.
+
+THE POSTURE, and the failure that produced it (photo-pointer, 2026-07-26 — Noah:
+"we have not been following industry standard and have instead, as an amateur,
+bumbled through good faith actors' work with disregard"). The rules had been
+INFERRED from whatever error codes came back rather than READ from what the
+services publish. Measured against Wikimedia's published API:Etiquette, the app
+was outside their stated terms on every axis: four concurrent requests against a
+stated maximum of one, a 120 ms gap against a stated minimum of one second, no
+`maxlag`, and a User-Agent carrying no contact information. That is WHY they
+throttled it — and the reflex on being throttled was to retry harder.
+
+1. READ THE PUBLISHED POLICY BEFORE WRITING OR CHANGING ANY PACING. The policy
+   is the authority. Our inference from observed behaviour is not, and "it
+   worked" is not evidence of anything but their tolerance.
+2. IDENTIFY OURSELVES on every request: a User-Agent naming the tool, its
+   version, and a contactable full URL or email.
+3. A 429 IS AN INSTRUCTION, NOT AN OBSTACLE. Never retry harder, widen
+   concurrency, or move to another mirror to evade one. If a service states
+   `Retry-After`, wait exactly that long — our own backoff does not override
+   their terms.
+4. NEVER ASK TWICE FOR WHAT WE ALREADY HAVE. Committed data is the cache. Record
+   what was fetched and skip it on a re-run; re-running an ingest for convenience
+   spends someone else's bandwidth to be told what we already knew.
+5. NO BULK SWEEP WHERE A TARGETED QUERY EXISTS. Downloading a state to answer
+   two hundred small questions is the wrong shape even when it is permitted.
+6. INGEST ONCE, SHIP THE RESULT. The app must never call these services
+   per-user at runtime for bulk data, so usage does not scale with popularity.
+7. MAKE IT A GATE, NOT AN INTENTION. Prose in a file loses to whoever is in a
+   hurry — that is exactly how the drift above happened. Each networked adapter
+   DECLARES the policy it operates under and the pacing it uses, and a CI check
+   fails the build when the pacing is looser than the cited policy, when no
+   policy is cited, when requests go out unidentified, or when a 429 is handled
+   without honouring Retry-After. (Reference implementation:
+   photo-pointer `ingest/adapters/http-etiquette.mjs` + `scripts/check-etiquette.mjs`.)
+
+MEASURED, so this is not only manners: the gentler run returned a BETTER answer
+than the aggressive one — 51 places found versus 32, and the single most
+photographed site in the region went from missing entirely to first. Backing off
+cost nothing.
