@@ -41,7 +41,11 @@
   .mark span:nth-child(1){background:var(--amber)}
   .mark span:nth-child(2){background:var(--magenta)}
   .mark span:nth-child(3){background:var(--cyan)}
-  h1{font-size:34px;font-weight:660;letter-spacing:-0.02em;margin:0 0 6px}
+  /* A single long word — "Accessibility" — is wider than the column once the
+     reader enlarges their text enough, and a heading that forces the page to
+     scroll sideways is a poor advert for this page in particular. Let it wrap
+     rather than push the layout. */
+  h1{font-size:34px;font-weight:660;letter-spacing:-0.02em;margin:0 0 6px;overflow-wrap:break-word}
   .sub{color:var(--muted);font-size:15px;margin:0 0 30px}
   h2{font-size:19px;font-weight:640;letter-spacing:-0.01em;margin:34px 0 10px}
   p{margin:0 0 14px}
@@ -55,7 +59,7 @@
     padding:18px 20px;margin:22px 0;
   }
   .card h2{margin-top:0}
-  .contact-email{font-weight:640}
+  .contact-email{font-weight:640;overflow-wrap:anywhere}
   .apps{color:var(--muted);font-size:14.5px}
   .foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px}
   .foot a{color:var(--muted)}

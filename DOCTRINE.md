@@ -143,10 +143,20 @@ changelog's top entry carry the same triplet — bump them together. (Tag policy
 is per-repo: some remotes refuse tag pushes, some require a Tag-release workflow.
 Follow the repo's own CLAUDE.md.)
 
-**Versions are also NAMED.** Every VERSION release carries a name Noah chooses,
-written alongside the triplet in the changelog heading (e.g. `1.0.0 "…"`).
-Ask Noah for the name in plain text before the release lands — never invent
-one, never ship a placeholder. (Noah, 2026-07-25.)
+**A name is earned, and Noah says when.** Some releases carry a name alongside
+the triplet in the changelog heading (e.g. `1.0.0 "…"`). That is NOT a field to
+be filled in on every version bump — Noah decides when a release has reached the
+level that warrants one, and he says so unprompted. So: never invent a name,
+never ship a placeholder, and DON'T ASK FOR ONE AT EVERY VERSION RELEASE — that
+turns a mark of significance into paperwork, which is the opposite of the point.
+Ship the triplet; the name arrives when he gives it. (Noah, 2026-07-25;
+corrected by him 2026-07-26 — the earlier reading, "every VERSION release
+carries a name, ask before it lands", was wrong.)
+
+You MAY suggest — that something looks like it has reached that level, or that
+it hasn't. Say it plainly, once, as a suggestion. And per §5, if he is misleading
+himself — calling a fix a milestone, or waving off something that genuinely is
+one — say that too. A standing invitation from him, not an intrusion.
 
 ## 8. Licensing — noncommercial, nobody sells his work
 
