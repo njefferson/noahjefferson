@@ -15,7 +15,11 @@ deployed site; `.github/workflows/deploy.yml` deploys it to Cloudflare Pages on
 every push to `main`.
 
 ## This repo is the doctrine's home
-`DOCTRINE.md` is canonical here. When a doctrine rule changes, edit it HERE and
+`DOCTRINE.md` is canonical here, and so is [`LESSONS.md`](LESSONS.md) — the
+cross-app record of what has actually gone wrong, with the numbers. The doctrine
+says what to do; the lessons say what it cost to find out. Append to LESSONS.md
+from any app's session whenever something is learned that would have saved time
+elsewhere; never fork it into another repo. When a doctrine rule changes, edit it HERE and
 tell the sibling repos to re-point (their `CLAUDE.md` files link to this copy).
 Never fork the doctrine into another repo — link to it.
 

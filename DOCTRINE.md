@@ -213,6 +213,14 @@ cheap to update.
   Project facts. Read it first, every session.
 - `CLAUDE.md` — repo-specific behavior + a pointer to THIS doctrine. Keep it thin.
 - `ACCESSIBILITY.md` — the append-only accessibility register, where used.
+- `LESSONS.md` **in this hub** — [cross-app lessons](LESSONS.md): what has
+  actually gone wrong anywhere, with the numbers, so it does not go wrong again
+  somewhere else. Read it with this doctrine at the start of every session, and
+  APPEND to it whenever a session learns something that would have saved time in
+  a different app. Doctrine says what to do; Lessons says what went wrong and
+  what it cost. A repo may keep its own `LESSONS.md` for stack-contract detail
+  (build/deploy/vendor conventions specific to that codebase) — that is a
+  different, repo-local document.
 
 ## 13. Starting a new app (bootstrap checklist)
 
