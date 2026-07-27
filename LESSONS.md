@@ -62,6 +62,19 @@ camera was set down at* measures the claim being made. Show the other number,
 just do not let it decide.
 *(photo-pointer, 2026-07-27.)*
 
+**A moving camera defeats every "how many separate places" heuristic.** Counting
+distinct coordinates was meant to mean "distinct places a camera was set down",
+and it does defeat a batch upload geotagged once. It does not defeat a 360 rig
+capturing continuously from a vehicle: every frame lands on its own coordinate,
+so a stretch of road scored 376 "vantage points" off one person on one
+afternoon. The geometry could not tell; the filenames could — those uploads are
+named "<token> with Labpano Pilot One", and a second set "with Suzuki Dl1000",
+which is somebody photographing from a motorcycle. **When a metric can be
+saturated by one actor, find a second, independent field that identifies the
+actor** — do not tighten the first metric.
+*(photo-pointer, 2026-07-27. This overturned the layer's own headline result
+after it had already been reported as good.)*
+
 **"Cancelled" is not "zero".** A workflow that hits its timeout reports as
 cancelled, which reads at a glance like a completed run that found nothing. Only
 a *successful* run that logged "none found" is a real zero.
@@ -160,6 +173,15 @@ stand.
 leaking into the interface is ugly and gets found and fixed. A silently swallowed
 one never does.
 *(photo-pointer, 2026-07-26.)*
+
+**A behaviour-driven layer is also a coverage audit.** Where people demonstrably
+go and we know nothing for kilometres around is rarely an obscure place — it is
+a place our sources were never asked about. 26 of 43 discoveries landed in cells
+holding fewer than five known places, and the cause was structural: the map is a
+bounding BOX while the OpenStreetMap ingest is by COUNTY, so everything in the
+box outside the named counties had no data at all. Nobody would have found that
+by looking at the map; the discoveries found it by falling into the hole.
+*(photo-pointer, 2026-07-27.)*
 
 ## 5. Verifying
 
