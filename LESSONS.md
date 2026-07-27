@@ -115,6 +115,43 @@ build fails if the second is looser than the first.
 *(photo-pointer, 2026-07-26. The gate immediately found four more adapters
 ignoring `Retry-After`.)*
 
+**Retrying on a different server is not a retry — it is moving your load onto
+someone else.** A client cycled three Overpass mirrors three times before giving
+up: nine requests for one query. MEASURED over one afternoon: 11 map tiles
+answered in 3–14 seconds (median 5), and 8 took 86–739 seconds — and that extra
+time was not the service computing, it was the retry loop failing, sleeping, and
+asking the next volunteer the same question. One tile spent 333 seconds to be
+told there was nothing there. A 504 from an overloaded server means "this is too
+much right now"; the honest answer is to stop, not to go and ask the neighbours,
+especially when three of them are all the public capacity there is. **One host
+per run, never on failure. Two attempts, not nine.**
+*(photo-pointer, 2026-07-27 — roughly fifty pointless requests before the owner
+asked "make sure you are not hammering them and making it worse". He was right.)*
+
+**Know when to go away.** When several requests in a row fail, the considerate
+response is to abandon the run — not to grind through the remaining work proving
+the service is down. The right moment to walk away was the second tile; instead
+it spent 45 minutes to be cancelled anyway. A circuit breaker after N
+consecutive failures took the worst case from ~250 failed requests to 6. And a
+run that gives up must write NOTHING, so a partial sweep can never be mistaken
+for the whole picture.
+*(photo-pointer, 2026-07-27.)*
+
+**Keep what they already gave you.** A run that fails part-way must not make the
+next attempt re-fetch everything — that asks a service you have just decided is
+struggling to redo work it already did for you. Cache what answered, with a
+timestamp, and ask only for what is missing. This is the same rule twice now:
+the Commons sweep learned it after re-probing 205 places to be told what it
+already knew.
+*(photo-pointer, 2026-07-26 and again 2026-07-27.)*
+
+**Say who you are, accurately.** Two client identities had drifted — one claimed
+version 1.15 while the app was 1.20, the other claimed 0.1 — so an operator
+looking at a spike in their logs could not have told which build of ours caused
+it, even though both carried a contact URL. A User-Agent that is stale is barely
+better than an anonymous one. Derive it from the version the app actually ships.
+*(photo-pointer, 2026-07-27.)*
+
 **The gentler run got the better answer.** Dropping concurrency and adding a
 delay did not cost coverage — it went from 32 tagged places and 336 photos to 51
 and 882, with zero failures. When the instinct is to retry harder, try retrying
