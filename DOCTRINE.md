@@ -6,7 +6,7 @@ Each repo's own `CLAUDE.md` should hold only repo-specific facts and a one-line
 pointer to this document — never re-state these rules (that is how they drift).
 
 The apps this governs: photo-pointer, clear-horizons, Bird-location-scouting
-(Frame), Jefferson-Photography-Studio, ND-toolbox, Perennial (a planner, in
+(Frame), Jefferson-Photography-Studio, ND-toolbox, Wynts (a planner, in
 planning), and the noahjefferson hub.
 They deliberately share conventions.
 
