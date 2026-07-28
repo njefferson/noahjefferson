@@ -446,6 +446,28 @@ rejected variants so the choice is visible rather than argued.
 
 *(Quietkeep, 2026-07-28.)*
 
+**Checking is not the same as checking with the right instrument — and a cached
+index is the wrong one.** Two sessions running told Noah a repo topic still had a
+typo in it. He had fixed it before the first report. The reports were not guesses;
+they quoted a GitHub **search** API response, which is a *cached index*, not a read
+of current state — and the proof was sitting in the same payload, an `updated_at`
+frozen through four subsequent pushes. Nobody looked at it. Meanwhile the direct
+`api.github.com/repos/...` endpoint 403s through this sandbox's proxy, so there was
+no live read available at all.
+
+Two rules, both cheap:
+
+- **Ask any "current state" response when it last changed**, and check that against
+  what you know has happened since. A stale timestamp beside stale data is the
+  instrument confessing.
+- **When the owner is the only witness, ask clearly and believe the answer.** The
+  failure here was not the stale read — it was reporting "read back from the API,
+  not assumed" as though it outranked his word. It did not. Doctrine §10 already
+  says confirmation *is* the verification; a cache was being smuggled in as a
+  second opinion.
+
+*(Quietkeep, 2026-07-28.)*
+
 ## 8 · Pinning
 
 **A pin must match the environment it runs in, and a wrong pin is worse than
