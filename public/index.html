@@ -70,20 +70,20 @@
   .mark span:nth-child(1){background:var(--amber)}
   .mark span:nth-child(2){background:var(--magenta)}
   .mark span:nth-child(3){background:var(--cyan)}
-  .name{font-size:27px;font-weight:650;letter-spacing:-0.02em;margin:0}
+  .name{font-size:1.6875rem;font-weight:650;letter-spacing:-0.02em;margin:0}
   .rule{
     width:64px;height:3px;border-radius:3px;
     background:linear-gradient(90deg,var(--amber),var(--magenta),var(--cyan));
     background-size:200% 100%;
     animation:drift 6s linear infinite;
   }
-  .tag{margin:0;color:var(--muted);font-size:14.5px;letter-spacing:0.01em}
+  .tag{margin:0;color:var(--muted);font-size:0.90625rem;letter-spacing:0.01em}
   @keyframes drift{to{background-position:200% 0}}
 
   /* values strip */
   .values{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin-top:2px}
   .vchip{
-    font-size:11px;font-weight:600;letter-spacing:0.05em;
+    font-size:0.6875rem;font-weight:600;letter-spacing:0.05em;
     color:var(--text);background:var(--surface);
     border:1px solid var(--line);border-radius:999px;padding:5px 11px 5px 9px;
     display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
@@ -96,7 +96,7 @@
   /* groups */
   .group{margin-top:30px}
   .group-title{
-    font-size:11.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;
+    font-size:0.71875rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;
     color:var(--muted);margin:0 0 12px 4px;
   }
   .tiles{display:flex;flex-direction:column;gap:11px}
@@ -123,8 +123,8 @@
   }
   .ico svg{width:21px;height:21px}
   .txt{min-width:0;flex:1}
-  .label{display:block;font-size:15.5px;font-weight:600;letter-spacing:-0.01em;line-height:1.2}
-  .sub{display:block;font-size:13px;color:var(--muted);margin-top:3px;line-height:1.2}
+  .label{display:block;font-size:0.96875rem;font-weight:600;letter-spacing:-0.01em;line-height:1.2}
+  .sub{display:block;font-size:0.8125rem;color:var(--muted);margin-top:3px;line-height:1.2}
   .arrow{color:var(--muted);opacity:0;transform:translateX(-3px);transition:opacity .16s ease, transform .16s ease}
   a.tile:hover .arrow{opacity:1;transform:translateX(0)}
 
@@ -134,8 +134,8 @@
   .tile.compact::before{width:3px}
   .tile.compact .ico{flex:0 0 30px;height:30px;border-radius:9px}
   .tile.compact .ico svg{width:16px;height:16px}
-  .tile.compact .label{font-size:14px}
-  .tile.compact .sub{font-size:12px;margin-top:1px}
+  .tile.compact .label{font-size:0.875rem}
+  .tile.compact .sub{font-size:0.75rem;margin-top:1px}
 
   /* app row — a scannable menu entry: real app icon + name + one-liner + Open.
      Compact so every app is visible at once and the page reads as a directory,
@@ -157,20 +157,20 @@
     box-shadow:0 3px 9px rgba(0,0,0,.20);
   }
   .approw .txt{min-width:0;flex:1}
-  .approw .app-name{display:block;font-size:16px;font-weight:650;letter-spacing:-0.01em;line-height:1.2}
-  .approw .app-sub{display:block;font-size:13px;color:var(--muted);margin-top:3px;line-height:1.25}
+  .approw .app-name{display:block;font-size:1rem;font-weight:650;letter-spacing:-0.01em;line-height:1.2}
+  .approw .app-sub{display:block;font-size:0.8125rem;color:var(--muted);margin-top:3px;line-height:1.25}
   .approw .go{
     flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;
-    font-size:12.5px;font-weight:650;letter-spacing:0.01em;color:var(--band,var(--slate));
+    font-size:0.78125rem;font-weight:650;letter-spacing:0.01em;color:var(--band,var(--slate));
   }
   .approw .go svg{width:15px;height:15px}
   @media (max-width:420px){ .approw .go span{display:none} }
 
-  .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:40px;letter-spacing:0.01em;line-height:1.5}
+  .foot{text-align:center;color:var(--muted);font-size:0.75rem;margin-top:40px;letter-spacing:0.01em;line-height:1.5}
   .foot-links{text-align:center;margin-top:0}
   /* Doctrine §4: touch targets >= 44px. inline-flex grows the hit area without
      moving the text — the link reads the same, it is just reachable. */
-  .foot-links a{color:var(--slate);font-size:12px;text-decoration:underline;text-underline-offset:2px;
+  .foot-links a{color:var(--slate);font-size:0.75rem;text-decoration:underline;text-underline-offset:2px;
     display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding-inline:14px}
   .foot-links a:focus-visible{outline:2px solid var(--slate);outline-offset:2px}
 
@@ -227,7 +227,7 @@
   .ns-list a{
     display:block;padding:13px 15px;border-radius:13px;
     background:var(--surface);border:1px solid var(--line);
-    color:var(--text);text-decoration:none;font-size:14.5px;line-height:1.35;
+    color:var(--text);text-decoration:none;font-size:0.90625rem;line-height:1.35;
   }
   .ns-list a:focus-visible{outline:2px solid var(--slate);outline-offset:2px}
   .ns-list b{font-weight:650}
