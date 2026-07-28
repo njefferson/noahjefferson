@@ -385,6 +385,34 @@ instant, and were being run last or not at all.
 *(Horizons/planner, 2026-07-28 — caught by Noah after the name had already landed
 on `staging`; the staging gate contained it and it cost nothing.)*
 
+## 7b · Gates you never watched
+
+**Running the command locally is not the same as watching the gate.** Quietkeep's
+CI workflow failed on **all four of its runs, every run since it was created**,
+always on the first step — `npm ci` died with `EJSONPARSE` because `package.json`
+had unescaped double quotes inside a script string. Meanwhile every session
+verified the same code by invoking the tools *directly*
+(`node --experimental-strip-types --test …`, `npx tsc --noEmit`), which bypass
+`package.json` and pass. So the local check was green, the CI check was red, and a
+commit message reading *"Verified: 14/14 tests, tsc clean"* sat on a SHA with a
+failing run attached. Every statement was individually true and the picture they
+painted was false.
+
+Three things fall out of it, all cheap:
+
+- **If you cite a workflow as verification, open the run.** A gate nobody has
+  watched pass is a file, not a gate — the same finding as the accessibility gate
+  that had no `process.exit` in it, in a second place.
+- **Exercise the entry point CI uses, not a shortcut around it.** `npm run test`
+  and `node --test …` are not the same command; only one of them parses
+  `package.json`.
+- **`package.json` is executable configuration — validate it.**
+  `python3 -c "import json;json.load(open('package.json'))"` costs nothing and
+  catches the whole class.
+
+*(Quietkeep, 2026-07-28 — found only because a rename touched `package.json` and
+the failure finally surfaced locally. It had been red for a day.)*
+
 ## 8 · Pinning
 
 **A pin must match the environment it runs in, and a wrong pin is worse than
