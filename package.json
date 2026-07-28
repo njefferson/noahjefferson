@@ -1,0 +1,24 @@
+{
+  "name": "noahjefferson-hub",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tooling for the noahjefferson.pages.dev link hub. The deployed site is public/ and has no build step; these scripts render images and run the accessibility audit.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "a11y": "node a11y-scan.mjs",
+    "a11y:detail": "node a11y-detail.mjs",
+    "render:icons": "node render-icons.mjs",
+    "render:og": "node render-og.mjs",
+    "render:social": "node render-social.mjs",
+    "render:preview": "node render-preview.mjs"
+  },
+  "devDependencies": {
+    "axe-core": "4.10.2",
+    "playwright-core": "1.56.0"
+  },
+  "//browser": "playwright-core 1.56.0 ships chromium revision 1194, which matches /opt/pw-browsers/chromium-1194 in the session sandbox. These are a MATCHED PAIR: the scripts launch that hardcoded executablePath, and a playwright-core expecting a different revision connects and then hangs on a protocol mismatch with no error. Verified 2026-07-28 by launching Chromium and running the a11y scan end-to-end. If the sandbox browser changes, re-pin here and re-verify."
+}

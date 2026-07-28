@@ -85,6 +85,33 @@ issue.
   fixed rows keep their release number; never silently delete a row.
 - Run the a11y audit (axe-core + custom checks, both themes) before any UI ship.
 
+WHERE THIS IS TRUE TODAY, and where it is not (audited 2026-07-28). The rules
+above are the standard and they are not negotiable. But this doctrine claimed an
+enforcement that does not exist, which is exactly the false confidence §5 and §6
+forbid — so it is written down rather than left to be discovered:
+
+- **The hub has no gate.** `a11y-scan.mjs` and `a11y-detail.mjs` are REPORTERS,
+  not gates. `process.exit` appears nowhere in any of the hub's eight `.mjs`
+  files; `a11y-detail.mjs` prints the string `FAIL` and then exits 0. A run with
+  every pair failing is indistinguishable to automation from a clean run.
+- **Nothing invokes them.** Neither workflow references them, and neither has a
+  `pull_request` trigger, so a PR into `main` runs zero checks. They are run by
+  hand or not at all.
+- **"Both themes" is not implemented.** One theme is scanned, and the contrast
+  fallback background is hardcoded to the DARK value while headless Chromium
+  renders light — so the fallback path can measure against a background that is
+  not on screen.
+- **The fg/bg registry is nine hardcoded selectors** that silently skip anything
+  no longer matching. Renaming a class removes it from coverage with no signal —
+  the opposite of "added to the gate in the same commit".
+- **`public/accessibility.html` is scanned by nothing** — the shared statement
+  every sibling app's About screen links to.
+
+Until that is fixed, any claim that a change "passes the a11y gate" in the hub is
+UNTESTED and must be labelled so (§6). Making the gate real — non-zero exit, both
+themes, every deployed page, a registry that fails loudly when a selector goes
+missing — is owed work, not a completed state.
+
 ## 5. Honesty
 
 - Labels stay honest; every failure explains itself and offers a way forward.
@@ -341,3 +368,69 @@ MEASURED, so this is not only manners: the gentler run returned a BETTER answer
 than the aggressive one — 51 places found versus 32, and the single most
 photographed site in the region went from missing entirely to first. Backing off
 cost nothing.
+
+## 16. Security and the supply chain
+
+These apps are small, free and personal, which changes the threat model but does
+not empty it. Nobody is targeting Noah. The realistic path runs the other way: a
+compromised package, pulled in for a render script nobody thinks about, executing
+on a runner that is holding a live Cloudflare token — and soon, on machines
+running a PWA that holds an encrypted personal journal. Supply-chain compromise
+is indiscriminate; it does not need to have heard of you.
+
+THE POSTURE, and the exposure that produced it (hub audit, 2026-07-28). Nothing
+here is hypothetical — every rule below names something that was true of this
+repo when it was written:
+
+1. PIN WHAT EXECUTES. Anything that runs code gets a version that cannot change
+   under us: a committed lockfile, `npm ci` and never `npm install` in
+   automation, and GitHub Actions referenced BY COMMIT SHA, not by tag. A tag is
+   a mutable pointer someone else controls — `cloudflare/wrangler-action@v3`
+   floats, and it executes while holding a Pages:Edit token.
+2. NEVER PUT AN UNPINNED FETCH NEXT TO A SECRET. `npx wrangler secret put`
+   resolves whatever npm serves at that moment and is then handed a live API key
+   on stdin. That is the sharpest exposure this repo has had: an unreviewed
+   package, fetched at run time, given production credentials.
+3. DECLARE EVERY DEPENDENCY, even for a one-file script. Eight `.mjs` scripts
+   imported `playwright-core` and two read `node_modules/axe-core/axe.min.js`
+   from a hardcoded path, with no `package.json` and no lockfile anywhere. That
+   is not "no dependencies", it is undeclared ones: nothing is reproducible,
+   nothing is auditable, and Dependabot has nothing to read. An accessibility
+   result that depends on whichever axe-core happens to be on disk is not a
+   result.
+4. A SECRET REACHES EXACTLY THE STEP THAT NEEDS IT. Pass it as `env:` on that
+   step. Do not route it through `$GITHUB_OUTPUT`, where every later step in the
+   job can read it — including whatever action gets added next year. Masking
+   scrubs the log; it does not narrow the blast radius. Prefer the narrowest
+   scope the provider offers: the two-token split here (Pages-only for Pages,
+   Workers-only for Workers) is the pattern, not the exception.
+5. FRICTION IN PROPORTION TO DAMAGE. An irreversible or outward-facing action —
+   sending real faxes, deploying production, pushing runtime secrets — must cost
+   more than one click. `live` sitting one dropdown position from `test`, with no
+   confirmation and no required reviewer, is a UI inviting an expensive
+   mis-click. Use a protected `environment:`, or a typed confirmation, or both.
+6. EVERY DEPLOYED SITE SHIPS SECURITY HEADERS. At minimum
+   `X-Content-Type-Options: nosniff`, `Referrer-Policy`, framing protection and a
+   restrictive `Permissions-Policy`. These cost one file and break nothing. A
+   Content-Security-Policy is worth more and costs more: it is a REFACTOR, not a
+   header, anywhere the page carries inline script — so state honestly whether a
+   site has one rather than implying it.
+7. NEVER BUILD HTML BY CONCATENATION WHERE `textContent` WILL DO. Interpolating
+   into `innerHTML` is safe only while every input is a literal you wrote, and
+   that condition expires quietly — the first `&` or `<` in a label mis-renders,
+   and the first value that comes from anywhere else is an injection. Build nodes
+   and set text; reserve `innerHTML` for inert markup you authored.
+8. MAKE IT A GATE, NOT AN INTENTION (§15.7, and it generalises). A rule that
+   lives only in prose is a rule that loses to whoever is in a hurry. Lockfiles
+   are checked by `npm ci` failing. Pinning is checked by a CI step that rejects
+   an unpinned `uses:`. Headers are checked by fetching the deployed page. §4 is
+   the standing proof of what happens otherwise: a documented gate that never
+   existed, believed for months because nobody ran it.
+
+WHAT IS ALREADY RIGHT HERE, so it does not get "cleaned up" by a later session:
+the Cloudflare credential step strips whitespace and masks before use, with a
+comment naming the exact failure it prevents (a trailing newline corrupting the
+Authorization header, Cloudflare 6111); and the fax deploy runs two separate
+tokens on purpose, keeping the long-standing hub token Pages-only while the
+Worker deploys under its own Workers-scoped token (Noah, 2026-07-25). Both are
+above common professional practice. Neither is an accident.

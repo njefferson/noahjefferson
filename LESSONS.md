@@ -347,3 +347,28 @@ attempted, and attempt the second half. Doctrine §6 allows delegation only afte
 proving impossibility, and "I assumed it was impossible" is not that proof.
 *(Horizons/planner, 2026-07-28 — asserted twice in consecutive turns, the second
 time immediately after being corrected for the first.)*
+
+## 8 · Pinning
+
+**A pin must match the environment it runs in, and a wrong pin is worse than
+none — it looks deliberate.** Adding a first-ever `package.json` to the hub, the
+session pinned `playwright-core` to a plausible-looking recent version (1.49.1,
+which ships chromium revision **1148**) into a sandbox whose only browser is
+`/opt/pw-browsers/chromium-1194`. The eight render/audit scripts all launch that
+hardcoded `executablePath`, so the pair must match. Finding the right one took
+probing four versions' `browsers.json`: 1.54.0→1181, 1.55.0→1187, **1.56.0→1194**,
+1.57.0→1200. The version is now recorded in `package.json` **with the reason**,
+so the next person changing it knows what it is married to. Introducing a pin is
+not the safe half of the job; verifying it against the thing it must match is.
+*(hub, 2026-07-28.)*
+
+**A program that never exits, piped, produces no output at all.** `a11y-scan.mjs`
+never calls `browser.close()`, and Node block-buffers stdout when it is a pipe —
+so `node a11y-scan.mjs | head -30` printed nothing for three minutes and looked
+like a hang. Redirected to a file instead, the same run had already produced its
+full report. Worse, the empty pipe was used as *evidence* for a specific
+diagnosis (a browser protocol mismatch) that was never actually established.
+Suspect the instrument BEFORE naming a cause, not after — and when a long-running
+process shows no output, redirect to a file before concluding anything about it.
+*(hub, 2026-07-28. Same family as the USA-NPN empty body and the Overpass
+"cancelled is not zero".)*
