@@ -1,3 +1,9 @@
+// a11y-detail.mjs — human-readable DIAGNOSTIC, not the gate.
+//
+// Dumps axe's `incomplete` bucket and per-selector contrast while working.
+// Always exits 0. The enforcement is a11y-gate.mjs; a selector that stops
+// matching is silently skipped HERE but fails loudly THERE.
+
 import { chromium } from 'playwright-core';
 import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';

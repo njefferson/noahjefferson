@@ -85,32 +85,34 @@ issue.
   fixed rows keep their release number; never silently delete a row.
 - Run the a11y audit (axe-core + custom checks, both themes) before any UI ship.
 
-WHERE THIS IS TRUE TODAY, and where it is not (audited 2026-07-28). The rules
-above are the standard and they are not negotiable. But this doctrine claimed an
-enforcement that does not exist, which is exactly the false confidence §5 and §6
-forbid — so it is written down rather than left to be discovered:
+THE GATE, and the audit that produced it (2026-07-28). This doctrine claimed an
+enforcement that did not exist — `a11y-scan.mjs` and `a11y-detail.mjs` printed
+`FAIL` as a string and exited 0, no workflow ran them, one theme and one page
+were covered, and a registry selector that stopped matching was silently
+skipped. That is exactly the false confidence §5 and §6 forbid. It is recorded
+rather than quietly fixed, because a doctrine that has been wrong once should say
+so. The reference implementation is now hub `a11y-gate.mjs`:
 
-- **The hub has no gate.** `a11y-scan.mjs` and `a11y-detail.mjs` are REPORTERS,
-  not gates. `process.exit` appears nowhere in any of the hub's eight `.mjs`
-  files; `a11y-detail.mjs` prints the string `FAIL` and then exits 0. A run with
-  every pair failing is indistinguishable to automation from a clean run.
-- **Nothing invokes them.** Neither workflow references them, and neither has a
-  `pull_request` trigger, so a PR into `main` runs zero checks. They are run by
-  hand or not at all.
-- **"Both themes" is not implemented.** One theme is scanned, and the contrast
-  fallback background is hardcoded to the DARK value while headless Chromium
-  renders light — so the fallback path can measure against a background that is
-  not on screen.
-- **The fg/bg registry is nine hardcoded selectors** that silently skip anything
-  no longer matching. Renaming a class removes it from coverage with no signal —
-  the opposite of "added to the gate in the same commit".
-- **`public/accessibility.html` is scanned by nothing** — the shared statement
-  every sibling app's About screen links to.
-
-Until that is fixed, any claim that a change "passes the a11y gate" in the hub is
-UNTESTED and must be labelled so (§6). Making the gate real — non-zero exit, both
-themes, every deployed page, a registry that fails loudly when a selector goes
-missing — is owed work, not a completed state.
+- EXITS NON-ZERO on any axe violation, any registered pair below AA, any target
+  under 44px, any missing `lang`, any page error. That single property is the
+  difference between a gate and a reporter.
+- EVERY DEPLOYED PAGE, in BOTH THEMES, at more than one viewport including the
+  narrow-phone case. `public/accessibility.html` had never been scanned by
+  anything until this ran.
+- A REGISTRY THAT FAILS LOUDLY. A selector that matches nothing FAILS the build;
+  it is never skipped. Renaming a class must not silently remove coverage — that
+  is what "added to the gate in the SAME commit" is protecting.
+- CONTRAST AGAINST A GRADIENT is computed against every colour stop and the WORST
+  case is used. Never guess a background: if no opaque colour can be determined,
+  the run FAILS rather than assuming one. (The old code assumed the dark theme's
+  colour while the browser rendered light.)
+- EXEMPTIONS ARE PRINTED, NEVER SILENT. WCAG 2.2 SC 2.5.8 exempts a target inline
+  in a sentence, because forcing 44px mid-paragraph breaks the text flow and
+  makes the page worse. The gate applies that exception and NAMES every element
+  it applied it to. **Open for Noah:** the rule above says ">= 44px" flatly —
+  decide whether it should carry the inline exception in writing.
+- MAKE IT FAIL ONCE BEFORE TRUSTING IT (§6). Verified by breaking a real contrast
+  pair: `.foot` at 1.56:1 in dark theme, exit 1. Then reverted.
 
 ## 5. Honesty
 

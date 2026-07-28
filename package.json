@@ -9,8 +9,10 @@
     "node": ">=20"
   },
   "scripts": {
-    "a11y": "node a11y-scan.mjs",
-    "a11y:detail": "node a11y-detail.mjs",
+    "a11y": "node a11y-gate.mjs",
+    "a11y:verbose": "node a11y-gate.mjs --verbose",
+    "a11y:diagnose": "node a11y-scan.mjs",
+    "a11y:contrast": "node a11y-detail.mjs",
     "render:icons": "node render-icons.mjs",
     "render:og": "node render-og.mjs",
     "render:social": "node render-social.mjs",

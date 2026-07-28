@@ -167,8 +167,11 @@
   @media (max-width:420px){ .approw .go span{display:none} }
 
   .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:40px;letter-spacing:0.01em;line-height:1.5}
-  .foot-links{text-align:center;margin-top:10px}
-  .foot-links a{color:var(--slate);font-size:12px;text-decoration:underline;text-underline-offset:2px}
+  .foot-links{text-align:center;margin-top:0}
+  /* Doctrine §4: touch targets >= 44px. inline-flex grows the hit area without
+     moving the text — the link reads the same, it is just reachable. */
+  .foot-links a{color:var(--slate);font-size:12px;text-decoration:underline;text-underline-offset:2px;
+    display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding-inline:14px}
   .foot-links a:focus-visible{outline:2px solid var(--slate);outline-offset:2px}
 
   @media (prefers-reduced-motion:reduce){

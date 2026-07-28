@@ -1,3 +1,9 @@
+// a11y-scan.mjs — human-readable DIAGNOSTIC, not the gate.
+//
+// The gate is a11y-gate.mjs: it exits non-zero, covers both themes and both
+// deployed pages, and is what CI runs. This script prints a quick single-page
+// summary and always exits 0 — useful while working, never proof of anything.
+
 import { chromium } from 'playwright-core';
 import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
@@ -17,7 +23,7 @@ const custom = await page.evaluate(() => {
   return {
     interactive: inter.length,
     smallTargets: small,
-    imgsNoAlt:[...document.querySelectorAll('img')].filter(i=>!i.getAttribute('alt')).length,
+    imgsNoAlt:[...document.querySelectorAll('img')].filter(i=>!i.hasAttribute('alt')).length,
     linksNoName: inter.filter(el=>!el.textContent.trim()&&!el.getAttribute('aria-label')).length,
     lang: document.documentElement.lang, h1: document.querySelectorAll('h1').length
   };
@@ -33,3 +39,4 @@ console.log('passes:', results.passes.length);
 console.log('=== CUSTOM ===');
 console.log(JSON.stringify(custom,null,2));
 console.log('pageerrors:', errs.length, errs.join(' | '));
+await browser.close();

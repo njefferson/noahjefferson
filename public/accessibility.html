@@ -62,7 +62,11 @@
   .contact-email{font-weight:640;overflow-wrap:anywhere}
   .apps{color:var(--muted);font-size:14.5px}
   .foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px}
-  .foot a{color:var(--muted)}
+  /* Doctrine §4: touch targets >= 44px. The back link sits on its own line, so
+     nothing constrains its height — it gets a real hit area. The email link in
+     the paragraph above is deliberately NOT changed: it is inline in a sentence
+     (WCAG 2.2 SC 2.5.8), and forcing 44px there would break the text flow. */
+  .foot a{color:var(--muted);display:inline-flex;align-items:center;min-height:44px;padding-inline:2px}
 </style>
 </head>
 <body>
