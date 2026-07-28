@@ -152,6 +152,22 @@ it, even though both carried a contact URL. A User-Agent that is stale is barely
 better than an anonymous one. Derive it from the version the app actually ships.
 *(photo-pointer, 2026-07-27.)*
 
+**Bound what the other side pays, not what is convenient for you to count.** A
+client split a region into map tiles and capped the tile *count* at 40 — by
+doubling the tile *size* until it fit. The cap looked disciplined and was
+meaningless: a bigger area produced the same number of requests, each one
+heavier. MEASURED across seven regions, work per tile: the region we had tuned
+against, 0.11 sq°; the next one, 3.8× that; a statewide region, **58×** — each
+of its twelve "tiles" covering twice the entire area we had tested. The service
+bills by work, not by request count, so the metric that was capped was the one
+nobody was charged for. This is the same error as choosing the wrong unit of
+work in the first place: pick the unit the *other side* feels. Fix the size you
+know they will answer, let the count be whatever it is, and spend it over more
+occasions — and when the honest count comes back absurd (616 tiles), that is the
+answer telling you not to run there at all.
+*(photo-pointer, 2026-07-28 — caught while about to point a nightly sweep at the
+other six regions, one day after apologising for hammering the same service.)*
+
 **The gentler run got the better answer.** Dropping concurrency and adding a
 delay did not cost coverage — it went from 32 tagged places and 336 photos to 51
 and 882, with zero failures. When the instinct is to retry harder, try retrying
