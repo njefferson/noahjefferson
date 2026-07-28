@@ -468,6 +468,27 @@ Two rules, both cheap:
 
 *(Quietkeep, 2026-07-28.)*
 
+**A detail visible in a screenshot is not a fact you were told.** Debugging a
+site that would not load on Noah's iPad, a session noticed the status bar read
+LTE, inferred that earlier failed attempts must have been on Wi-Fi, and wrote
+"the likelier cause is a network-level block" into a permanent verification
+record as reasoning. **He had been on LTE the entire time, same device, one
+network.** The invented variable also crowded out the explanation that actually
+fit every observation — both failing URLs were preview deployments on a Pages
+project that had no production deployment yet, and the apex worked the moment one
+existed.
+
+Screenshots, API responses, and unset environment variables are all
+**instruments**. Reading one is not the same as being told something, and the gap
+between them is where confident wrong answers come from. If a variable matters to
+a diagnosis and the owner has not stated it, **ask — one line — rather than infer
+it and build on the inference.** Guessing about someone else's setup and
+presenting it as analysis is worse than saying "I don't know why."
+
+*(Quietkeep, 2026-07-28 — the third instance in one day, after a cached search
+index reported as current repo state and an unset secret name reported as a
+missing secret. Same error, three costumes.)*
+
 ## 8 · Pinning
 
 **A pin must match the environment it runs in, and a wrong pin is worse than
