@@ -173,20 +173,21 @@ changelog's top entry carry the same triplet — bump them together. (Tag policy
 is per-repo: some remotes refuse tag pushes, some require a Tag-release workflow.
 Follow the repo's own CLAUDE.md.)
 
-**A name is earned, and Noah says when.** Some releases carry a name alongside
-the triplet in the changelog heading (e.g. `1.0.0 "…"`). That is NOT a field to
-be filled in on every version bump — Noah decides when a release has reached the
-level that warrants one, and he says so unprompted. So: never invent a name,
-never ship a placeholder, and DON'T ASK FOR ONE AT EVERY VERSION RELEASE — that
-turns a mark of significance into paperwork, which is the opposite of the point.
-Ship the triplet; the name arrives when he gives it. (Noah, 2026-07-25;
-corrected by him 2026-07-26 — the earlier reading, "every VERSION release
-carries a name, ask before it lands", was wrong.)
+**RELEASES DO NOT HAVE NAMES. Never ask for one.** No monikers, no codenames, no
+`1.0.0 "Something"` in a changelog heading, no name field in a release record or
+an in-app About panel. A release is its triplet and what it did for the user.
+(Noah, 2026-07-28: *"I want the rule to quit asking me for NAMES of versions. I
+decide WHAT is a VERSION, but do NOT give MONIKERS."* This replaces the earlier
+"a name is earned, Noah says when" rule, which was the wrong answer twice — it
+kept a naming slot alive and therefore kept generating the question.)
 
-You MAY suggest — that something looks like it has reached that level, or that
-it hasn't. Say it plainly, once, as a suggestion. And per §5, if he is misleading
-himself — calling a fix a milestone, or waving off something that genuinely is
-one — say that too. A standing invitation from him, not an intrusion.
+**Noah decides what counts as a VERSION** — the first slot, what the app IS. That
+judgement is his and is not inferred from diff size, test count, or how much work
+a session did. Ship the triplet you were told to ship.
+
+You MAY say, once and plainly, that something looks like it has reached that
+level or that it hasn't — and per §5, if he is misleading himself about it, say
+that too. That is about the KIND of release, never about naming it.
 
 ## 8. Licensing — noncommercial, nobody sells his work
 
