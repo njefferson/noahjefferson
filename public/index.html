@@ -360,23 +360,40 @@ const ICONS = {
 const ARROW    = `<svg class="arrow" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>`;
 const ARROW_GO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>`;
 
+/* Doctrine §16.7: build nodes and set text — never concatenate content into
+   innerHTML. innerHTML is used ONLY for the inert SVG constants above, which we
+   authored. Text goes through textContent, so an & or < in a label renders as
+   itself instead of breaking (or worse). */
+function span(cls, text){
+  const s=document.createElement("span");
+  if(cls) s.className=cls;
+  if(text!=null) s.textContent=text;
+  return s;
+}
+function svgSpan(cls, markup, hidden){
+  const s=span(cls);
+  if(hidden) s.setAttribute("aria-hidden","true");
+  s.innerHTML=markup;              // authored SVG constant, never user content
+  return s;
+}
+
 /* Instagram-style row */
 function tile(t, compact){
   const cls = compact ? "tile compact" : "tile";
-  const inner =
-    `<span class="ico" aria-hidden="true">${ICONS[t.type]||ICONS.app}</span>`+
-    `<span class="txt"><span class="label">${t.label}</span><span class="sub">${t.sub}</span></span>`;
+  const txt=span("txt");
+  txt.append(span("label", t.label), span("sub", t.sub));
+  const ico=svgSpan("ico", ICONS[t.type]||ICONS.app, true);
   if(t.url){
     const a=document.createElement("a");
     a.className=cls; a.href=t.url; a.target="_blank"; a.rel="noopener";
     a.style.setProperty("--band",`var(--${t.band})`);
-    a.innerHTML=inner+ARROW;
+    a.append(ico, txt, svgSpan(null, ARROW, true).firstChild);
     return a;
   }
   const d=document.createElement("div");
   d.className=cls+" soon";
   d.style.setProperty("--band",`var(--${t.band})`);
-  d.innerHTML=inner+`<span class="chip">Soon</span>`;
+  d.append(ico, txt, span("chip","Soon"));
   return d;
 }
 
@@ -387,12 +404,14 @@ function appRow(a){
   const el=document.createElement("a");
   el.className="approw"; el.href=a.url; el.target="_blank"; el.rel="noopener";
   el.style.setProperty("--band",`var(--${a.band})`);
-  el.innerHTML=
-    `<img class="app-ico" src="${a.icon}" alt="" aria-hidden="true" loading="lazy">`+
-    `<span class="txt">`+
-      `<span class="app-name">${a.name}</span>`+
-      `<span class="app-sub">${a.sub}</span>`+
-    `</span><span class="go"><span>Open</span> ${ARROW_GO}</span>`;
+  const img=document.createElement("img");
+  img.className="app-ico"; img.src=a.icon; img.alt="";
+  img.setAttribute("aria-hidden","true"); img.loading="lazy";
+  const txt=span("txt");
+  txt.append(span("app-name", a.name), span("app-sub", a.sub));
+  const go=span("go");
+  go.append(span(null,"Open"), " ", svgSpan(null, ARROW_GO, false).firstChild);
+  el.append(img, txt, go);
   return el;
 }
 
