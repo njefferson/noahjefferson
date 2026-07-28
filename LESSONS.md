@@ -372,3 +372,24 @@ Suspect the instrument BEFORE naming a cause, not after — and when a long-runn
 process shows no output, redirect to a file before concluding anything about it.
 *(hub, 2026-07-28. Same family as the USA-NPN empty body and the Overpass
 "cancelled is not zero".)*
+
+**Say a candidate name OUT LOUD before you check a single registry.** A name was
+taken all the way to adoption on the strength of five clean checks — npm, GitHub,
+the App Store, trademark, and a grep of the app's own spec. Every one of them was
+a REGISTRY check, and registries only catch collisions with *products*. The name
+was *Wynts*; said aloud it is a near-homophone of **wince**, which for an app
+whose stated voice is calm and shame-free is disqualifying. Noah caught it in the
+time it took to read it back. The check costs nothing and it runs first now:
+say it, say it in a sentence, ask what it rhymes with and what it is one letter
+from. A registry cannot hear.
+*(planner, 2026-07-28. Fourth name attempt; the previous three died to searches
+that were also being run in the wrong order — narrowest and most expensive first,
+instead of cheapest and most-likely-to-kill first.)*
+
+**Order your checks by cost times kill-rate, not by how official they feel.** The
+same naming exercise ran expensive, authoritative, late-stage checks (trademark
+databases, store searches) before free instant ones (say it aloud; grep our own
+spec for the word). The free ones killed four candidates between them — *Lens*,
+*Gauge*, *Alignment* and *Wynts* — and each would have done so in seconds. An
+authoritative check is not a better check if a cheaper one would have answered.
+*(planner, 2026-07-28.)*
