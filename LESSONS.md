@@ -491,3 +491,39 @@ spec for the word). The free ones killed four candidates between them — *Lens*
 *Gauge*, *Alignment* and *Wynts* — and each would have done so in seconds. An
 authoritative check is not a better check if a cheaper one would have answered.
 *(planner, 2026-07-28.)*
+
+**Dim text with a token, never with `opacity` — an opacity is invisible to a
+contrast gate.** Frame's corner build stamp was `--dim` at `opacity: .65`. The
+token pair `--dim` on `--bg` measures 4.79:1, so `contrast-check.mjs` passed it
+every single run; what a reader actually saw, once the browser composited that
+opacity against the background, was **2.54:1** — a plain WCAG AA failure on the
+one element whose entire purpose is being readable in a screenshot. A token-based
+gate compares two declared colours. It cannot see `opacity`, and it cannot see a
+colour that gets composited at paint time. Photo Pointer hit exactly this in its
+1.14.2 (a `--dim` stamp that "photographed as a smudge") and fixed it the same
+way. Two apps, same author, same trap, found three days apart — so: if text needs
+to be quieter, define a quieter token and add the pair to the gate. Never reach
+for `opacity` on text.
+*(Frame 3.1.4 / Photo Pointer 1.14.2, 2026-07-28.)*
+
+**A "never re-fix this" entry blesses the PATTERN, not every number in it.**
+Studio's audit list records *"look-button state as TEXT (norm/R⇄B) not hue"* as
+audited-correct — right call, it is the non-hue channel someone who cannot
+separate the colours depends on. It shipped at **8px**. So the accessibility fix
+was real and the thing implementing it was too small to read, and the register
+entry made it look settled. When a NEVER-CHURN list protects a pattern, check
+that the pattern's own parameters still hold up; raising the size finishes that
+fix rather than churning it, and saying so explicitly in the register is what
+stops the next session reading it as a regression.
+*(Studio, 2026-07-28.)*
+
+**A pure unit conversion is provable; a conversion plus a redesign is not.**
+Converting ~435 px font sizes to rem across four apps was verifiable to the
+element — render every screen before and after, assert every computed size is
+identical, then assert they all scale 1.25× at a raised browser default. That
+proof only exists because the pass changed *units and nothing else*. The
+temptation each time was to fix the 8px and 9px text in the same commit; doing so
+would have destroyed the "pixel-identical" gate and left nothing but assertion.
+Ship the mechanical change with its proof, then the judgement calls as their own
+release with their own reasoning.
+*(cross-app px→rem sweep, 2026-07-28.)*
