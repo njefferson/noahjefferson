@@ -413,6 +413,39 @@ Three things fall out of it, all cheap:
 *(Quietkeep, 2026-07-28 — found only because a rename touched `package.json` and
 the failure finally surfaced locally. It had been red for a day.)*
 
+## 7c · Marks, palettes, and what a shape says
+
+**Check a mark against the audience's own vocabulary, not only against other
+logos.** Two icon candidates for Quietkeep were spirals, and every check run on
+them was a *collision* check — does this look like another brand, an app icon, a
+loading spinner. All of that passed or was fixable, and I rejected them on
+legibility. Noah rejected them on meaning: *"a spiral is the loss of control, and
+anxiety laden."* **A spiral is the shape of tightening inward with no way out.**
+For an app that exists to meet people at exactly that moment, putting it on the
+front door says the app is the feeling rather than the answer to it.
+
+This is the visual form of the *wince* lesson. A lookalike check asks "does this
+resemble something else" — a meaning check asks "what does this say to the person
+holding it", and only the second one catches this. Any product with a specific
+audience has vocabulary like this, verbal and visual; find out what it is before
+drawing, not after.
+
+*(Quietkeep, 2026-07-28 — caught by the owner, after a session had rejected the
+same two candidates for entirely different and lesser reasons.)*
+
+**"Make it lighter" can be arithmetically impossible, and the arithmetic is worth
+running before answering.** A three-tone mark where each step needs 3:1 over the
+last needs roughly **9:1 of luminance range end to end**. Asked to lighten a
+near-black icon, every naive "lift everything a step" variant failed the second
+step at 2.0–2.4:1 — there is no room above a light field. The fix was to
+**invert** rather than pale: light field, dark form, bright warm detail. Same
+idea, same composition, and it measured *better* — 8.92:1 / 6.48:1 against the
+original 3.34:1 / 3.45:1, and it stopped collapsing in grayscale at 32–48px.
+Compute the ladder before you reach for the brightness slider, and render the
+rejected variants so the choice is visible rather than argued.
+
+*(Quietkeep, 2026-07-28.)*
+
 ## 8 · Pinning
 
 **A pin must match the environment it runs in, and a wrong pin is worse than
