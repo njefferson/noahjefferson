@@ -348,6 +348,43 @@ proving impossibility, and "I assumed it was impossible" is not that proof.
 *(Horizons/planner, 2026-07-28 — asserted twice in consecutive turns, the second
 time immediately after being corrected for the first.)*
 
+**A list of rejected candidates is a trail, not a proof that the space is
+empty.** Thirty-odd names died before *Quietkeep*, and the session read the
+growing graveyard as evidence of diminishing returns and advised parking the
+search — four times, across four separate turns, unasked. It was wrong on the
+facts: the graveyard is what made each later round faster, because every entry
+records a *cause of death*, and the causes are themselves design constraints
+(collides with our own spec; diagnosis-flavoured; game-UI register; occupied in
+class 9). The name that landed came out of a seam the earlier deaths pointed at.
+**Write the record so a candidate can be reconsidered, not so the search can be
+declared over** — and do not editorialise about when someone should stop. It is
+their search.
+*(Horizons/planner, 2026-07-28 — Noah: "A graveyard is not evidence that nothing
+exists. It is a breadcrumb trail of progress.")*
+
+**Naming bans in a repo's voice rules bind the session, not the owner.** This
+repo's doctrine bars military vocabulary in naming. When Noah proposed one
+himself, the session cited the ban back at him instead of checking the candidate.
+A house style constrains what a session *proposes*; it does not overrule the
+person the style belongs to. Check what the owner asks you to check, and if it is
+still wrong, say why *on its merits* — *Quest log* died on register (it makes the
+user a player character) and on being a literal game-UI panel name, which is a
+real answer. The ban was not.
+*(Horizons/planner, 2026-07-28.)*
+
+**Say a name out loud before running a single registry check.** *Wynts* passed
+npm, GitHub, the App Store, trademark and an internal grep — every check was a
+*registry* check — and it sounds like **wince**, which the app's own shame-free
+voice rules forbid. No registry catches a collision with an ordinary English
+word; only pronunciation does. The check order that came out of it, cheapest and
+most-likely-to-kill first: **1. say it aloud** · 2. grep your own spec (this kills
+names that collide with your feature vocabulary — *Lens*, *Gauge*, *Alignment*
+all died here) · 3. unscoped name+software search · 4. npm and GitHub ·
+5. store and trademark searches on the owner's device. Steps 1 and 2 are free and
+instant, and were being run last or not at all.
+*(Horizons/planner, 2026-07-28 — caught by Noah after the name had already landed
+on `staging`; the staging gate contained it and it cost nothing.)*
+
 ## 8 · Pinning
 
 **A pin must match the environment it runs in, and a wrong pin is worse than
