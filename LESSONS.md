@@ -527,3 +527,18 @@ would have destroyed the "pixel-identical" gate and left nothing but assertion.
 Ship the mechanical change with its proof, then the judgement calls as their own
 release with their own reasoning.
 *(cross-app px→rem sweep, 2026-07-28.)*
+
+**The session git relay cannot delete a remote branch, and the GitHub MCP has no
+tool that can either.** `git push origin --delete <b>` and the equivalent
+`git push origin :refs/heads/<b>` both die the same way — *"send-pack: unexpected
+disconnect while reading sideband packet / the remote end hung up unexpectedly"* —
+then print a misleading `Everything up-to-date`, so a careless read looks like
+success. The relay drops the connection on any ref *deletion*; pushes that create
+or advance a ref work fine. The GitHub MCP offers `create_branch` and
+`list_branches` but nothing to remove one. So deleting a branch is a manual step
+for Noah (GitHub → Branches → the bin icon), and it should be handed over as one
+rather than retried. Delete the LOCAL branch from the session by all means — that
+part works — but verify with `git ls-remote --heads origin` before reporting a
+branch gone. This is why stale `claude/*` branches accumulate in every repo.
+*(2026-07-28; the same wall was recorded in Frame's CLAUDE.md on 2026-07-18 and
+re-hit here, which is the argument for it living in the hub instead.)*
