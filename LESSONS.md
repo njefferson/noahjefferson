@@ -1067,3 +1067,46 @@ costs one message and the owner answers in his own words; a guess produces
 confident output he can only evaluate by reading it, and he is the expensive
 resource. **Unrecognised subject → question first, tool calls never.**
 *(Cross-app, 2026-07-29 — Noah, in anger, and correctly.)*
+
+**A test that compares two failures is not a test that a failure says nothing.**
+The check asserted that a wrong-key refusal and a tampered-blob refusal produced
+the same message. It passed against an implementation that appended the
+ciphertext length and the IV to that message — because those two cases happen to
+share a length and an IV, so the leak cancelled out inside the very comparison
+written to catch it. **Two hand-picked cases agreeing is a much weaker claim than
+the value being constant, and the gap between the two is where the defect lives.**
+The rewrite proves it across six failures deliberately differing in key, in size
+and in which byte was disturbed, and refuses any digit in the message at all,
+since any number there is a measurement of the input. *When a property is "does
+not depend on X", the test has to vary X.*
+*(Quietkeep sync stage 2, 2026-07-29.)*
+
+**A test named for a claim is the one most likely to be theatre, because its name
+does the reassuring.** The test called THE CLAIM existed solely to assert *"the
+relay cannot read anything"* — and it passed with the plaintext on the wire. It
+searched the base64 envelope for the secret, and base64 of "roofer" does not
+contain "roofer". Four unrelated round-trip tests happened to red on the same
+break, so it would not have shipped; that is luck, not a gate, and luck does not
+survive a refactor. **Encoding is not encryption, and a test that reads the
+encoded form is testing the encoding.** Decode first, then look for the content
+in the bytes — and assert the bytes do not parse as a document at all, which
+plaintext always would and sixteen-plus random bytes never will.
+*(Quietkeep sync stage 2, 2026-07-29 — found by deliberately breaking the code
+after every gate was already green, which is the only reason it was found.)*
+
+**The deliberate-failure proof is worth more on the tests you are proudest of.**
+Three proofs behaved exactly as predicted and taught nothing. The fourth —
+against the one test with a capitalised name and a paragraph of justification
+above it — found that it had no power over the single break it existed to
+prevent. **Confidence in a check is uncorrelated with its detection power, and
+the checks carrying the most confidence are the ones nobody re-examines.** Run
+the proof against the assertion you would have skipped as obviously fine.
+*(Quietkeep sync stage 2, 2026-07-29.)*
+
+**Any number in a refusal message is a measurement of the input.** "Could not be
+opened" is a refusal; "could not be opened (28 bytes)" is a refusal plus an
+oracle. This generalises past crypto: sizes, counts, indexes, offsets and
+durations in error strings all tell whoever supplied the input something about
+what happened to it. **A refusal should be a constant.** If it needs detail to be
+debuggable, the detail belongs where the owner can see it and a stranger cannot.
+*(Quietkeep sync stage 2, 2026-07-29.)*
