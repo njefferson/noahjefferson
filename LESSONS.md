@@ -723,3 +723,53 @@ throwaway script backs up more than one file, key the copies by the full path
 (`src_ui_replan.ts`), or use `git stash`/a worktree — and when a break-and-restore
 loop starts failing in files it never touched, suspect the harness before the code.
 *(Quietkeep 0.9.0, 2026-07-29.)*
+
+**Feedback rendered above the control that triggers it reads as "nothing
+happened".** Quietkeep's calendar button had a live region directly above it,
+which is fine on a short surface. That panel had grown past ten thousand pixels,
+so the button was reached by scrolling *down* — and the confirmation then updated
+off the top of the reader's view. It had worked correctly for three releases;
+the owner reported it as doing nothing at all. **On any surface long enough to
+scroll, the confirmation goes BELOW the control**, and the same reasoning applies
+to error text, counts, and anything else that answers a press. A related finding
+in the same session: the only way to close that panel was beneath every release
+note, measured at 10,130px down. If a surface grows without bound, its way out
+has to be pinned — and once pinned, check it against WCAG 2.2 **2.4.11 Focus Not
+Obscured**, because a sticky header that covers the control you just focused is
+its own AA failure. At 200% text on a 320px screen the first version of that
+header took **99% of the dialog**.
+*(Quietkeep 0.10.1, 2026-07-29; found by the owner on device, not by eight green
+CI gates.)*
+
+**`rem` inside a media query resolves against the INITIAL root font size, never
+the current one.** A `@media (max-height: 32rem)` threshold written specifically
+for a 200%-zoom case silently never matched, because the query evaluated `rem`
+at 16px while the page was rendering at 32px. Nothing errors; the rule simply
+does not apply, and the layout it was meant to fix stays broken. **Use `px` in
+media-query thresholds**, and verify a responsive rule by measuring the element
+at the viewport it targets rather than by reading the CSS.
+*(Quietkeep 0.10.1, 2026-07-29.)*
+
+**A "replace" that clears before it writes will eventually clear and then fail.**
+Quietkeep's import validated a file, called it ready, then ran `reset()` followed
+by `append()`. A file with two records sharing an id passed validation — which
+never looked at ids — and the append hit the store's unique-id constraint *after*
+the clear. The user's real data was gone, replaced by whichever rows happened to
+land first, with a raw database error on screen, underneath a shipped patch note
+promising that damaged files were refused before anything was touched. **Two
+rules.** Validation at a destructive boundary must ask *every question the write
+will ask*, not a subset — the storage layer's constraints are part of the
+contract. And validation is never enough on its own: make the destructive
+operation **atomic** (one transaction, clear-and-refill together), because no
+amount of checking can rule out a quota or disk failure halfway through.
+*(Quietkeep 0.10.0→0.10.1, 2026-07-29; found by an adversarial audit, rated
+CRITICAL, in the feature whose entire purpose was data safety.)*
+
+**Spreading a large discriminated union in TypeScript can hang the compiler.**
+`{ ...event, seq: -5 }` in a test, where `AppEvent` is a ~60-member union, took
+`tsc --noEmit` from **2 seconds to over three minutes** — no error, no warning,
+just a check that never finished, which reads exactly like a hung machine.
+`Object.assign({}, base as Record<string, unknown>, over)` sidesteps the
+distribution and restores it. **If a typecheck suddenly takes minutes, look for a
+spread over a union before you look at your machine.**
+*(Quietkeep 0.10.1, 2026-07-29.)*
