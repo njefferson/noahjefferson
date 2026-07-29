@@ -224,6 +224,40 @@ You MAY say, once and plainly, that something looks like it has reached that
 level or that it hasn't — and per §5, if he is misleading himself about it, say
 that too. That is about the KIND of release, never about naming it.
 
+## 7b. Every app shows its version on screen
+
+**Non-negotiable, every app, from its first deploy.** The running
+`version.capability.iteration` is visible in the app itself — not only in an
+About panel, not only in a `<meta>` tag, not only in the changelog.
+
+**The reason is Noah's workflow.** He reports from his device, usually with a
+screenshot, often while doing something else. Without a version on that
+screenshot, a session cannot tell whether it is looking at a bug that still
+exists, a bug already fixed but not yet deployed, a stale service-worker cache,
+or a build from three releases ago — and it will guess. Every one of those wastes
+his time, and the guess is invisible: the session sounds equally confident either
+way.
+
+Requirements:
+- **Discreet, not decorative.** Small, quiet, in a corner or a status line. It is
+  a serial number, not a badge of pride, and it must not compete with the app.
+- **Always on screen**, in the app's normal working view. Not behind a tap, not
+  only on a first run, not only in a panel that has to be opened — the whole
+  point is that it lands in a screenshot nobody thought to compose.
+- **The real running value**, read from the same constant the release process
+  bumps. Never typed twice, never hand-maintained separately, or it will
+  eventually report a version the code is not.
+- **Legible when scaled down.** A screenshot arrives resized; if the number
+  cannot be read at that size it has not done its job.
+- **Selectable text where the platform allows**, so it can be pasted rather
+  than transcribed.
+- Where a service worker caches the shell, the version shown must be the one
+  actually running, so a stale cache is **visible rather than mysterious** —
+  that is one of the specific failures this rule exists to make diagnosable.
+
+Add it when bootstrapping a new app (§13), not after the first confusing
+screenshot.
+
 ## 8. Licensing — noncommercial, nobody sells his work
 
 Noah's posture for ALL his apps: people may use it, but may NOT sell it or use
@@ -289,6 +323,9 @@ cheap to update.
   different, repo-local document.
 
 ## 13. Starting a new app (bootstrap checklist)
+
+**Before anything else on this list: the app shows its version on screen (§7b).**
+It is the cheapest thing here and the one that makes every later report answerable.
 
 When a new repo joins the family, run this once. **No trigger phrase is
 required.** At the start of any session, if a repo in scope is one of Noah's apps
