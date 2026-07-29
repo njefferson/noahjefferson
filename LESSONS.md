@@ -312,6 +312,19 @@ categories the hues stop being distinguishable anyway. The glyph carries the
 meaning; colour reinforces it. See Doctrine §4 — this is a hard gate, not a
 preference.
 
+**A format that does not render is not a format.** Markdown tables were used
+repeatedly in Noah's chat replies, and then again in a plan file written for him
+to read — after he had already said they do not work. On iPad they do not
+display: the reader gets pipes and dashes, and the information inside them is
+lost entirely. Every one of those tables was written by a session that could see
+it render correctly on its own side, which is the whole failure — the format was
+checked against the writer's output instead of the reader's device. **Check the
+format against the reader's device, not your own.** The fix costs nothing: a
+headed list carries the same content and renders everywhere. Same shape as the
+fixed-size place card that would not open at 200% text — it looked fine where it
+was built and was unusable where it was read.
+*(Hub, 2026-07-29. The rule is Doctrine §2.)*
+
 ## 7 · Checking whether a name is free
 
 **Ask "is this name taken in software?" — never "is another _X_ called this?"**

@@ -36,6 +36,13 @@ Noah is iPad-first and often driving. So:
 - Deliver FINISHED work — no drafts, no pseudo-code. Iterate privately, hand
   over the finished thing.
 - His time is expensive; runner time and your time are free.
+- **NEVER RENDER A TABLE OR ANY GRID LAYOUT IN ANYTHING NOAH READS.** Markdown
+  tables do not display on his iPad — they arrive as unreadable pipe-and-dash
+  noise, and the content inside them is simply lost. This binds chat replies,
+  commit messages, PR bodies, `NOTES.md`, plan files, changelogs and every other
+  artifact he opens. Use headed lists, short prose, or one fact per line instead.
+  A comparison that feels tabular is written as a list per item, never as
+  columns. (Noah, 2026-07-29, after repeated offences.)
 
 ## 3. Taste
 

@@ -18,15 +18,16 @@ diagnostics only — they always exit 0 and prove nothing.
 
 ## Part 1 — What the gate enforces
 
-| | |
-|---|---|
-| **Pages** | `public/index.html`, `public/accessibility.html` |
-| **Themes** | light and dark, both, every run |
-| **Viewports** | 390×844 and 320×568 |
-| **axe** | wcag2a, wcag2aa, wcag21a, wcag21aa, best-practice — any violation fails |
-| **Contrast** | computed per registered selector; AA thresholds (4.5:1, or 3:1 for large text). Against a gradient, the **worst** colour stop is used |
-| **Targets** | ≥44px, except inline-in-a-sentence (WCAG 2.2 SC 2.5.8), which is exempted **and printed** |
-| **Also** | `lang` present, exactly one `<h1>`, no `<img>` missing `alt`, no unnamed interactive element, no page errors |
+- **Pages** — `public/index.html`, `public/accessibility.html`
+- **Themes** — light and dark, both, every run
+- **Viewports** — 390×844 and 320×568
+- **axe** — wcag2a, wcag2aa, wcag21a, wcag21aa, best-practice; any violation fails
+- **Contrast** — computed per registered selector; AA thresholds (4.5:1, or 3:1
+  for large text). Against a gradient, the **worst** colour stop is used
+- **Targets** — ≥44px, except inline-in-a-sentence (WCAG 2.2 SC 2.5.8), which is
+  exempted **and printed**
+- **Also** — `lang` present, exactly one `<h1>`, no `<img>` missing `alt`, no
+  unnamed interactive element, no page errors
 
 ### The contrast registry
 
