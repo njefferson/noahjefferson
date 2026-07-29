@@ -1110,3 +1110,45 @@ durations in error strings all tell whoever supplied the input something about
 what happened to it. **A refusal should be a constant.** If it needs detail to be
 debuggable, the detail belongs where the owner can see it and a stranger cannot.
 *(Quietkeep sync stage 2, 2026-07-29.)*
+
+**A fake that cannot express the failure cannot detect it.** The traversal test
+on the relay — percent-encoded `../<other id>/<chunk>` names, five variants,
+capitalised name, paragraph of justification — passed with the guard deleted
+outright. The fake store was a flat `Map`, and in a flat key-value namespace
+there is no traversal at all: the crafted key is a literal string that does not
+exist, so the lookup misses for a reason that has nothing to do with the guard.
+**The test was verifying the fake.** The rewrite runs it against a store that
+resolves keys as a filesystem would — decoding escapes, collapsing `..` — and
+asserts FIRST that this store really would hand over the other mailbox, so the
+guard is provably the only thing standing in the way. *When a test uses a double,
+ask whether the double is even capable of the failure; if it is not, the test's
+subject is the double.*
+*(Quietkeep sync stage 3, 2026-07-29.)*
+
+**The comment above a guard is a claim, and it can be false while the guard is
+fine.** The one above the relay's chunk-name check said that without it a crafted
+name "reads a mailbox the caller does not have the id for". That is not true of a
+flat store, and believing it meant the wrong thing got tested for an hour. The
+guard was worth keeping for a narrower reason — no adapter can ever be handed a
+key with structure in it — and the honest narrow reason is the one that told me
+which store to test against. **An overclaimed rationale does not just mislead the
+next reader; it misdirects the test you write next.**
+*(Quietkeep sync stage 3, 2026-07-29.)*
+
+**A denylist has to name the claim, not the letters.** Banning the word "lost"
+fired on the correct sentence *"nothing here is lost"* — the reassurance the rule
+existed to protect. The identical mistake had already happened with a check that
+banned `"by "` and rejected the right answer *"put by"*. **Twice is a pattern:
+substring bans on prose reject correct output at least as often as wrong output,
+because the forbidden word is usually forbidden as an ASSERTION and appears
+legitimately under negation.** Ban "was lost" and "data loss"; assert the good
+sentence positively.
+*(Cross-app, 2026-07-29 — second occurrence.)*
+
+**A 204 cannot carry a body, and `JSON.stringify(null)` is not nothing.** It
+returns the string `"null"`, and handing that to `new Response` with status 204
+throws — so every CORS preflight would have been a 500, on a code path no unit
+test would touch unless it deliberately sent OPTIONS. **The near-empty value that
+the platform counts as non-empty is a whole family of bug**: `""` vs `null`, `[]`
+vs absent, `0` vs unset. Send OPTIONS in the tests.
+*(Quietkeep sync stage 3, 2026-07-29.)*
