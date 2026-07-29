@@ -64,6 +64,33 @@ required · no analytics, no server-side user data · honest or open data source
 only. A change that violates one of these changes what the app IS — flag it,
 don't slip it in.
 
+**The default of every app keeps that list absolutely.** Not "mostly", not "by
+default with a setting" — the app you get by opening the URL has no account, no
+server holding your content, and nothing leaving the device.
+
+**Where a sibling build trades one of these away, it is a SEPARATE PRODUCT with
+its own honest claim, and the default is never weakened to accommodate it.**
+(Noah, 2026-07-29, on Quietkeep Sync: *"make it right".*) The rules:
+- **It is a different app, named differently**, with its own URL and its own
+  first-run explanation. Not a mode, not a preference buried in a panel. Someone
+  who never wants it must never be asked about it.
+- **The default build's copy does not soften.** No "no server *for most
+  people*", no asterisk. If the promise needs a footnote, the footnote belongs
+  on the other product, not on this one.
+- **The sibling states what it gives up, in its own words, before anyone opts
+  in** — naming exactly what leaves the device, what the server can and cannot
+  read, and what an id is for. "A relay that cannot read your content" is only
+  honest if the code proves it and the source is published with the app.
+- **An id is account-shaped and must be called what it is.** If a thing
+  identifies you across devices, do not describe the product as having "no
+  account" because the word is technically avoided. Say there is an id, say what
+  it is made of, and say what it cannot do.
+- **The data must be leavable.** Any sibling that syncs still exports the whole
+  log and still imports into the plain build, so nobody is held by having opted
+  in once.
+- **This section is the promise a user reads. Nothing in it may be true only of
+  a build they are not running.**
+
 ## 2. Audience and working method
 
 Noah is iPad-first and often driving. So:
