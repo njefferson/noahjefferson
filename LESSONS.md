@@ -1052,3 +1052,18 @@ sections in two vocabularies is not captured.** If the owner can state it in one
 sentence, the doctrine should contain that sentence.
 *(Quietkeep 0.21.1, 2026-07-29 — Noah asked "is all of that captured?", and the
 honest answer was no.)*
+
+**Acting on unrecognised input is a failure even when the action is correct.**
+A screenshot of one app arrived in the session for a different one. The right
+first move was one sentence — *"this isn't an app I have here, did you mean
+another session?"* — and instead the session reasoned about a bug whose code it
+could not see and began attaching a repository. Worse, when told to stop, it kept
+the one instruction in the message that generalised and committed that, because
+that part was genuinely asked for and app-independent. **That is the trap: partial
+compliance with a misdirected request looks like helpfulness and produces
+something to show for itself, which is exactly why it is harder to notice than
+plain disobedience.** The asymmetry is the whole argument — a clarifying question
+costs one message and the owner answers in his own words; a guess produces
+confident output he can only evaluate by reading it, and he is the expensive
+resource. **Unrecognised subject → question first, tool calls never.**
+*(Cross-app, 2026-07-29 — Noah, in anger, and correctly.)*

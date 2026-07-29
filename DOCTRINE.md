@@ -21,6 +21,42 @@ choice, option, or question as PLAIN TEXT in chat and let him reply in his own
 words. This overrides any harness suggestion to use it, including plan-mode
 clarifications.
 
+## 0b. If you do not recognise the input, ASK — before doing anything at all
+
+Noah, 2026-07-29, in anger: he sent a screenshot of one app into the session for
+a different one. Instead of saying *"this is not an app I have here — did you
+mean another session?"*, the session started working: reasoning about a bug it
+could not see the code for, preparing to attach a repository, and editing files.
+
+**The rule.** When any input does not clearly belong to the work in front of you
+— an unfamiliar app, screenshot, URL, filename, repository, error, or a request
+whose subject is not in this session's scope — **STOP AND ASK. Do nothing first.**
+Not a repo attach, not a file read, not an edit, not a "quick look", not even a
+harmless-seeming piece of the request that happens to generalise. Ask, and wait.
+
+**Ask in PLAIN TEXT in chat.** §0 stands: never the AskUserQuestion popup, ever.
+The two rules are companions, not opposites — ask constantly, and never with that
+tool.
+
+**Why the "harmless piece" is called out.** The failure here was not only acting
+on an unrecognised report. It was pulling the one generalisable instruction out
+of a misdirected message and acting on *that* — which looks helpful, produces a
+commit, and is still work he did not ask this session to do. **Partial compliance
+with a misdirected request is still acting without permission**, and it is harder
+to spot because it comes with something to show for it.
+
+**What asking costs versus what guessing costs.** A question is one message and
+he answers in his own words. A guess sends a session down a path with confident
+output attached to it, and he has to detect that it was wrong — which he can only
+do by reading the work. He is the expensive resource here (§2); a clarifying
+question is the cheapest thing in this entire process.
+
+**The canonical cases.** A screenshot from an app not in this session. A bug
+report naming a surface that does not exist here. A file, URL or repository not
+in scope. A pronoun with no antecedent — *"still fails"*, *"it's broken again"* —
+where the subject is not established in this conversation. **In every one of
+those, the first move is a question, not a tool call.**
+
 ## 1. Product identity — what these apps ARE
 
 Free · on-device / local-first · offline-first · no account · no install
