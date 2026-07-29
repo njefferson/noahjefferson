@@ -657,3 +657,18 @@ needs its own made-to-fail-first test.
 *(Quietkeep Phase 2, 2026-07-29; found by an adversarial audit run against a fully
 green tree — the third time "green is not correct" earned its place at the top of
 this file.)*
+
+**`git add -A` is unsafe whenever anything else can write into the working tree —
+and during an adversarial audit, something always can.** A Quietkeep release
+commit swept up `tools/.pz.mjs`, a probe script an auditing subagent had written
+into the repo to test a gate, and pushed it. Nothing referenced it and no gate
+noticed, because no gate asks "is every tracked file supposed to be here". The
+same session also had to revert an auditor's deliberate `if (false && …)` break
+that had been sitting in the tree for eleven minutes after the agent went quiet —
+a break which, had it been committed, would have shipped the release's headline
+feature silently disabled. Both are the same root cause: **a working tree with
+concurrent writers is not a safe thing to stage wholesale.** Stage the paths you
+actually changed, and before any release commit, read `git status` as a list of
+claims to check rather than a formality to clear. Subagents should write probes to
+a scratchpad outside the repo — but assume one will not, because one did.
+*(Quietkeep 0.7.1, 2026-07-29.)*
