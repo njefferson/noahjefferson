@@ -846,3 +846,43 @@ out any colour keyed to how long someone has had something. **If a product has a
 no-shame rule, the place it will first be broken is the screen about somebody who
 never agreed to be measured.**
 *(Quietkeep 0.16.0, 2026-07-29.)*
+
+**"One concept, two places, one of them checking" is the defect shape to hunt
+for first.** An adversarial audit of five Quietkeep releases found four real
+bugs, and three were literally the same mistake: a spent resume card was
+excluded from the held list but not from the stalled-project check; a let-go
+person was filtered out by the function that names who owes you something but
+not by the one that names who is running a project; a formula-injection guard
+was written for CSV export and not for the Markdown export beside it. In every
+case the concept was already understood and written down correctly *somewhere* —
+the bug was the second place that had never been told. **When you fix a class of
+thing, grep for every other site that asks the same question**, and prefer
+collapsing them into one shared predicate over adding a second guard. This is
+also the cheapest thing to search for in someone else's code: find any rule
+stated in two places and one of them is probably stale.
+*(Quietkeep 0.17.1, 2026-07-29.)*
+
+**Free text the user typed will break any document you paste it into.** A
+captured item title containing newlines and a `##` turned a Quietkeep status
+report into one that read **"Nothing to report."** while reporting real work —
+the title ended the bullet list, opened a heading, and contributed a bare line of
+its own. The app stores titles verbatim deliberately (a share-target capture
+composes title/text/url with newlines, so multi-line titles are *normal*, not
+hostile). The lesson is not about escaping one format: **every export path needs
+its own guard, and writing one is the moment to write the others.** CSV had a
+formula-injection guard already; Markdown, sitting in the same file, had nothing.
+The consequence is worse than a rendering blemish — it is a document handed to
+another person that says something untrue.
+*(Quietkeep 0.17.1, 2026-07-29.)*
+
+**"Since last time" is a question about what you KNEW, not about the clock.**
+Quietkeep's status report computed its delta by cutting the log at the timestamp
+of the previous report. Correct until data can arrive out of order — then a
+sync/import from another device, carrying work stamped *before* your last report,
+lands on the already-reported side of the line and is **silently absent from
+every report you ever send again**. You had never seen it and had certainly never
+told anyone about it. The fix is to record what the reporting device actually
+held at the time: a **per-device high-water mark**, which a log-based system
+usually has already for sync. Any "what's new since X" feature in a system that
+accepts foreign history has this bug until proven otherwise.
+*(Quietkeep 0.17.1, 2026-07-29.)*
