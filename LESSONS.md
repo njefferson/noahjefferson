@@ -945,3 +945,36 @@ per pointer event: 21.3ms median, 17.7ms on a CI runner. **Put the spec's
 stated scale in a gate, or you will only ever measure the toy case** — and when
 it fails, fix the shape of the algorithm rather than the threshold in the test.
 *(Intersecting Parallels 0.1.0, 2026-07-29.)*
+
+**A gate that checks a LABEL passes while the thing the label describes is
+broken.** Intersecting Parallels' browser walk asserted that every drawn stroke
+"binds to a guide, not to nothing" — and it was green on the build where Noah
+drew four lines at a vanishing point and reported *"the lines do not converge on
+the vanishing point."* Every stroke did carry a binding. The binding was
+`horizontal`, which is a **parallel** family: lines bound to it converge
+nowhere. The check was reading the app's own word for what it had done instead
+of measuring what it had drawn. The replacement computes the perpendicular
+distance from the vanishing point to each bound line — 0.000px now, and no
+label can satisfy it. **When a property is geometric, physical, or visual,
+assert the measurement, not the metadata**; the metadata is written by the same
+code you are testing, so it agrees with itself by construction. Same family as
+the self-referential assertion (`assert.equal(cards.length, CAP)`) and the
+consistency check between two projections of one source: all three compare the
+code to itself.
+*(Intersecting Parallels 0.1.1, 2026-07-29 — found by the owner on his iPad,
+against a walk of 33 green checks.)*
+
+**Two guides that are nearly the same LINE are not nearly the same
+CONSTRAINT.** The same defect had a second layer underneath. With both vanishing
+points on the horizon, a stroke drawn near the horizon measures within a couple
+of degrees of BOTH — a real ranking, taken with a 3° hand tremor, read
+`VP2 0.87° | horizontal 1.99° | VP1 3.00°`. Scoring by angle alone therefore let
+a tremor choose between two guides whose lines are visually identical but which
+converge in OPPOSITE directions, and between a vanishing point and an axis whose
+whole meaning is that it never converges. The fix was to notice that the gesture
+carried information the geometry had discarded: the direction the hand was
+travelling says which vanishing point is being reached for, even though the
+binding itself is direction-less. **When two candidates are within measurement
+noise of each other, do not break the tie with more precision — break it with a
+different signal the user already gave you.**
+*(Intersecting Parallels 0.1.1, 2026-07-29.)*
