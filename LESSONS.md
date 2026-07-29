@@ -1039,3 +1039,16 @@ is achieved, and it is the sentence the owner actually said. The same applies to
 "there is no progress bar" (assert the rendered markup has no `<progress>`, no
 `role="progressbar"`, no percentage width) rather than to any particular CSS.
 *(Quietkeep 0.21.1, 2026-07-29.)*
+
+**"Is there a way out" is a product requirement, not a code detail — write it
+down as one.** Two separate rules already existed about this: an accessibility
+bullet saying a dismiss control must stay reachable (buried inside a clause about
+sizing floors and overflow), and an engineering rule about wiring the close
+handler first. Neither said the thing a user would say: **every surface that
+takes the screen must be closeable, from the first frame, from anywhere in it,
+without earning it.** So the same defect shipped twice on the same panel while
+both rules were technically on the books. **A requirement scattered across two
+sections in two vocabularies is not captured.** If the owner can state it in one
+sentence, the doctrine should contain that sentence.
+*(Quietkeep 0.21.1, 2026-07-29 — Noah asked "is all of that captured?", and the
+honest answer was no.)*

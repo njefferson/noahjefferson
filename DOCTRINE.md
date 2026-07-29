@@ -84,6 +84,34 @@ issue.
   button). Content that cannot fit SCROLLS INSIDE ITSELF; it never overflows a
   screen edge, and its dismiss control is always reachable. Gate it across a
   range of viewport sizes including the small-phone-at-200%-text case.
+- **INTERRUPTING SURFACES ARE EXPECTED — AND EVERY ONE OF THEM MUST BE
+  CLOSEABLE.** Noah asks for first-run popups, onboarding panels, what's-new
+  panels, consent prompts and interstitials; they are a normal part of these
+  apps and nothing here discourages them. What is **not** negotiable is the way
+  out. Every surface that appears over the app and takes the screen carries a
+  dismiss that meets all six of these:
+  - **Visible in the first frame, without scrolling.** Not below the fold, not
+    reachable only by reading to the end. The reason to open a thing is never a
+    reason to be trapped in it.
+  - **Reachable from anywhere in it.** However far down the content someone has
+    scrolled, the way out is still on screen and nothing is on top of it. If
+    that is achieved with a technique the target browser may not honour, the
+    technique is wrong — see §14, *remove the dependency*.
+  - **Present at the bottom as well**, where a reader who has worked all the way
+    down expects it. Two ways out, not one.
+  - **Working before anything else does.** Wired first (§14), independent of
+    whatever the panel loads, fetches or renders. A panel whose close depends on
+    its content is a trap the moment the content fails.
+  - **Never conditional.** It does not require finishing, agreeing, choosing, or
+    granting anything. A dismiss you have to earn is not a dismiss.
+  - **Bounded in length.** A panel that grows by accumulation — release notes,
+    history, a log — folds or paginates. **Measure it.** A control is hard to
+    reach mostly because the container got long while nobody was looking.
+  **Gate all of it**, not by eye: assert the dismiss is on screen after scrolling
+  to the very end, that hit-testing its centre returns the dismiss itself, that
+  the surface is genuinely GONE afterwards (not merely flagged closed), that
+  focus lands somewhere real, and that the panel is under a stated height. Do
+  this at the small-phone-at-200%-text case as well as the ordinary one.
 - Honour the reader's TEXT-SIZE PREFERENCE, not just page zoom. Page zoom scales
   `px`, so a px-only stylesheet looks fine under zoom while ignoring the
   preference a low-vision reader is most likely to have actually set. Size type
@@ -346,7 +374,8 @@ again. They bind every session, every repo.
   the OUTPUT.** Otherwise the checks all pass on the day it is broken.
 - **The way out is wired first.** In any modal, sheet, or blocking flow, attach
   the dismiss/cancel/close handler as the FIRST statement, before anything that
-  can throw. A panel's close was attached ~490 lines into its setup, after the
+  can throw. (This is the engineering half of §4's rule on interrupting
+  surfaces, which states the whole requirement.) A panel's close was attached ~490 lines into its setup, after the
   content, storage, import and export wiring — so every one of those had to
   succeed for the thing to be closeable, and the caller swallowed failures
   silently. **A dialog you cannot leave is the worst failure a dialog has**, and
