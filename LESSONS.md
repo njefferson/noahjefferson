@@ -886,3 +886,62 @@ held at the time: a **per-device high-water mark**, which a log-based system
 usually has already for sync. Any "what's new since X" feature in a system that
 accepts foreign history has this bug until proven otherwise.
 *(Quietkeep 0.17.1, 2026-07-29.)*
+
+**A feature that works exactly once is a re-render eating the focus, not a
+broken handler.** Intersecting Parallels shipped arrow-key nudge on its
+vanishing-point list — press ArrowRight, the point moves 1px. Press it again
+and nothing happens, ever. The handler was fine: every edit called a helper
+that rebuilt the whole panel, so the focused `<button>` was destroyed and
+replaced by an identical-looking one, and the second keypress went to `<body>`.
+The keyboard surface the whole accessibility design rested on was, in practice,
+a single keystroke. **No unit test can see this, because no unit test has a
+focus** — all 38 passed. It was caught by a headless walk driving real key
+events, on its first run. Two things generalise: any list that re-renders on
+change must update nodes IN PLACE (rebuild only when the SET of items changes),
+and the fix is never "restore focus by id afterwards" — that patches the
+symptom while leaving a reader's caret position, text selection, and IME state
+still being destroyed on every keystroke. Doctrine §14: the frame was the bug.
+*(Intersecting Parallels 0.1.0, 2026-07-29.)*
+
+**An accessibility gate pointed at `file://` cannot test an app made of ES
+modules — it measures a blank page and passes.** The gate ported from this hub
+loaded pages with `pathToFileURL`, which is correct for a static page and
+silently wrong for anything with `<script type="module">`: a file:// origin is
+opaque, so every import is blocked by CORS and the app never boots. The gate
+would have reported an empty shell as clean, in both themes, at both viewports,
+forever. It now serves `public/` over HTTP from inside the gate itself — the
+same directory wrangler uploads — and waits for the app to actually finish
+booting before measuring anything, failing loudly if it does not. Same family
+as the throttled probe reported as "no photos nearby": **an instrument that
+cannot reach the thing it is measuring returns a confident pass.** While fixing
+it, the same gate gained the app's DIALOGS as scanned surfaces; a closed
+`<dialog>` is invisible to axe, so three of the app's four surfaces had been
+outside the gate without anyone choosing that.
+*(Intersecting Parallels 0.1.0, 2026-07-29.)*
+
+**`actions/upload-artifact` silently skips dot-directories, so the evidence you
+collect for failures is missing exactly when you need it.** The app walk writes
+screenshots to `.walk-shots/` and uploads them, so a failed CI run shows what
+the app looked like at each step. The first run uploaded nothing: v4 excludes
+hidden paths unless `include-hidden-files: true`, and it reports that as a
+warning in a green run — which nobody reads, because the run was green. The
+first time anyone would have noticed is a red run with no pictures attached.
+Set `include-hidden-files: true` AND `if-no-files-found: error`, so a missing
+artifact fails its own step rather than waiting to disappoint you later. The
+general rule: **a diagnostic that only matters on failure must be verified on a
+success**, or it is not there at all.
+*(Intersecting Parallels 0.1.0, 2026-07-29.)*
+
+**A topological solve written the obvious way is O(n²), and the cost only
+appears at the scale the spec actually names.** The perspective solver
+re-resolves every constructed point whenever a vanishing point moves. Written
+as "a set of pending dependencies per point, rescanned until nothing moves,
+with a linear lookup by id inside the loop", it measured 37.2ms per solve+frame
+at the 2,000 edges the spec's own acceptance test asks for — against a 16ms
+frame — while being instant at the twelve edges every test used. Rewritten as
+Kahn's algorithm over an index built once, plus batching canvas strokes by
+style instead of one draw call per edge, plus applying drags on rAF rather than
+per pointer event: 21.3ms median, 17.7ms on a CI runner. **Put the spec's
+stated scale in a gate, or you will only ever measure the toy case** — and when
+it fails, fix the shape of the algorithm rather than the threshold in the test.
+*(Intersecting Parallels 0.1.0, 2026-07-29.)*
