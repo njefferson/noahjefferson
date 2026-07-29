@@ -786,3 +786,63 @@ just a check that never finished, which reads exactly like a hung machine.
 distribution and restores it. **If a typecheck suddenly takes minutes, look for a
 spread over a union before you look at your machine.**
 *(Quietkeep 0.10.1, 2026-07-29.)*
+
+**A gate that exists only in the CI file is a gate you cannot run.** Quietkeep's
+banned-vocabulary check lived as an inline `grep` inside `spine.yml`. Running it
+"locally" therefore meant re-typing an approximation of it at a terminal — and
+the approximation was wrong, so two consecutive releases were reported green on
+all nine gates and both went **red in CI on the tenth**. The failing content was
+a source comment that explained a prohibition *by quoting the prohibited word*,
+which is a trap the repo's own notes already recorded from an earlier phase; it
+recurred because nothing structural stopped it. **Every gate belongs in one
+place the developer and CI both invoke** — a package script, a make target, a
+committed shell file — with the CI step being a one-line call to it. Two copies
+of one rule always drift, and the copy that drifts is the one you type from
+memory. The corollary is sharper than "be careful": *"green locally" is a claim
+about nothing unless the local thing and the CI thing are the same bytes.*
+*(Quietkeep 0.15.0/0.16.0, 2026-07-29 — the same session in which I had written
+a commit message criticising a hand-copied constant elsewhere in the codebase.)*
+
+**A projection nobody can reach is a unit test wearing a feature's clothes.**
+Quietkeep shipped this shape four separate times: a `parent` field written by the
+fold and settable by no control; an interval-setting event with no UI path; a
+resume-card tier that ranked **second** in the priority list over a set nothing
+could populate; and a project "role" whose documented consequence was never
+enforced because the role was never folded. Each looked done — schema present,
+fold correct, tests passing — and each did nothing for anyone. **Before calling a
+capability built, name the tap that reaches it.** If the answer is a test file, it
+is not built. Worse, these are invisible to the usual gates: unit tests pass
+because the projection is correct, and end-to-end walks pass because they never
+try the path that does not exist.
+*(Quietkeep 0.13.0–0.16.0, 2026-07-29.)*
+
+**An exceptions surface must be able to reach zero, and say nothing when it
+does.** Quietkeep's review lists only what is structurally broken — a container
+with no live work under it, a node whose parent is gone — and when there is
+nothing it is **not on the page at all**. No "all clear", no green tick, no
+count of zero. The reason is not minimalism: a surface that always renders
+something trains you to skim it, and once skimmed it cannot deliver the one
+message it exists for. The same rule made the empty state honest rather than
+congratulatory — a congratulation is a score, and scores were already banned.
+*(Quietkeep 0.13.0, 2026-07-29.)*
+
+**Save the user's context at the moment of interruption, not at the moment of
+exit.** Quietkeep's focus feature writes its "here is where you were" card the
+instant an interruption is *recorded*, not when the session is *ended*. The
+distinction is the whole feature: people do not get to press a button on the way
+out of the room, and a design that saves state only on a tidy exit saves it only
+in the cases where it was never at risk. The test that proves it writes no
+"ended" event at all — it simulates the app being killed — and it is the one test
+in that file that a plausible-looking alternative design fails.
+*(Quietkeep 0.14.0, 2026-07-29.)*
+
+**Never let a tool grade a third party.** Building a surface for work someone
+*else* is doing, every instinct offers a health word — "at risk", "slipping",
+amber/red. Each is a judgement about a person, made by software, on evidence it
+does not have, and rendered unarguable by being displayed. Quietkeep's portfolio
+states only facts joined by middots: who is running it, when an answer is owed,
+how many things are outstanding, when anything last moved. The same rule ruled
+out any colour keyed to how long someone has had something. **If a product has a
+no-shame rule, the place it will first be broken is the screen about somebody who
+never agreed to be measured.**
+*(Quietkeep 0.16.0, 2026-07-29.)*
