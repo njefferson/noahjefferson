@@ -672,3 +672,54 @@ actually changed, and before any release commit, read `git status` as a list of
 claims to check rather than a formality to clear. Subagents should write probes to
 a scratchpad outside the repo — but assume one will not, because one did.
 *(Quietkeep 0.7.1, 2026-07-29.)*
+
+**An allowlist of "what counts" turns adding a category into a silent deletion.**
+Quietkeep's calendar export picked entries from `new Set(['ready','soon','later'])`
+— the group keys of its todo list. A later release added a fourth group for dates
+that had gone by, and every one of those items dropped out of the exported `.ics`
+without a word: the single thing a reminder is most *for*, gone, with all eight CI
+gates green. The gate that should have caught it compared the file against the
+count the UI itself promised, so both sides moved together and neither noticed.
+**Two things generalise.** First, the failure directions are not symmetric: an
+allowlist that forgets a new category silently loses data, while an exclusion that
+forgets one merely includes something it shouldn't — so in any app whose promise is
+"nothing is lost", write the rule as *what is excluded*. Second, a consistency check
+between two projections of the same source proves they agree, not that either is
+right; at least one gate must name a concrete expected item ("the passed date is in
+the file") rather than compare two derived numbers.
+*(Quietkeep 0.9.0, 2026-07-29.)*
+
+**A test that asserts against the constant the code uses can never fail.**
+`assert.equal(view.cards.length, REPLAN_CAP)` looked like it pinned a product law
+that says "show at most three". It pinned nothing: change the cap to five and both
+sides move together. The same audit found `assert.deepEqual(f(s), f(s))` presented
+as an ordering guarantee — true of any pure function, including one that never
+sorts — and an assertion that a hardcoded `[]` equals `[]`. **A gate must state the
+expected value independently of the implementation**: a literal `3`, an explicit
+list in the expected order, a table of inputs to expected strings. If the assertion
+would still hold after you delete the mechanism it names, it is decoration. The
+cheapest way to find out is to delete the mechanism and watch.
+*(Quietkeep 0.9.0, 2026-07-29; four such checks in one feature, found by a subagent
+whose only brief was "are these checks theatre".)*
+
+**Words that reach a user need tests as much as logic does.** Three functions that
+produced every sentence on a new surface — how long ago a date was, how many there
+were, what a card's context said — had *no* coverage in any of eight gates. Each
+could be replaced with a constant string and everything stayed green, which means a
+card thirteen months behind could read "that date was yesterday", and the count line
+could say "One" however many there were. Two reasons they slipped: the tests that
+existed asserted `length > 0` plus a denylist of forbidden words, which a single
+space satisfies; and the browser walk only ever produced *one* item, so every plural
+branch was unreachable. **Table-test user-facing strings against expected values, and
+make the end-to-end walk carry at least two of anything that can be counted.**
+*(Quietkeep 0.9.0, 2026-07-29.)*
+
+**Restore backups by full path, not by basename.** A script that verified fixes by
+breaking them saved `src/replan.ts` and `src/ui/replan.ts` into one scratch
+directory. Same basename, so the second `cp` silently overwrote the first, and the
+next restore wrote the UI module over the projection module. Nothing warned; the
+damage showed up as a cascade of unrelated test failures several steps later. If a
+throwaway script backs up more than one file, key the copies by the full path
+(`src_ui_replan.ts`), or use `git stash`/a worktree — and when a break-and-restore
+loop starts failing in files it never touched, suspect the harness before the code.
+*(Quietkeep 0.9.0, 2026-07-29.)*
