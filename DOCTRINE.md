@@ -196,6 +196,20 @@ so. The reference implementation is now hub `a11y-gate.mjs`:
 - No false confidence: never present generated/placeholder content as if it
   were curated fact (the "generated park blurbs shown as field notes" lesson).
 - Data ages honestly — when a feed goes stale, say so; don't churn silently.
+- **EVERY APP WITH A UI SHOWS ITS VERSION ON SCREEN, ALWAYS.** A discreet
+  stamp of the `version.capability.iteration` triplet, visible without opening
+  a menu or an About panel, present on the first screen. Noah reports bugs by
+  screenshot from his iPad, and a screenshot that does not say which build it
+  came from costs a whole diagnostic round — the session cannot tell a defect
+  it has already fixed from one it has not, and may "fix" a build the reporter
+  was never running. Rules for the stamp, all learned the hard way: it is set
+  at BOOT, never when some panel opens, because it must be in any screenshot
+  taken at any moment; it is dimmed with a real colour TOKEN and never with
+  `opacity`, because an opacity is invisible to a contrast gate (two apps
+  shipped a stamp measuring 2.54:1 while their gate read 4.79:1); and its
+  contrast pair joins the accessibility registry in the same commit that
+  introduces it (§4). (Noah, 2026-07-29, after two screenshot rounds on
+  Intersecting Parallels where the running build had to be inferred.)
 
 ## 6. Verify before delegating or claiming
 
@@ -239,8 +253,9 @@ Project-facts entry:
 - ITERATION — a refinement or fix of something that already exists.
 
 Number as the triplet `version.capability.iteration`: bump the slot matching the
-kind and zero the slots after it. The service-worker cache name and the
-changelog's top entry carry the same triplet — bump them together. (Tag policy
+kind and zero the slots after it. The service-worker cache name, the changelog's
+top entry and the ON-SCREEN BUILD STAMP (§5) carry the same triplet — bump them
+together, in one commit. (Tag policy
 is per-repo: some remotes refuse tag pushes, some require a Tag-release workflow.
 Follow the repo's own CLAUDE.md.)
 
@@ -381,7 +396,9 @@ The session does 1–6; Noah does 7 (metadata is a manual GitHub-UI step):
    third-party material shipped or consumed.
 3. `NOTES.md` — the repo's source of truth (thesis, roadmap, settled decisions,
    Project facts).
-4. `ACCESSIBILITY.md` — if the app has any UI (the append-only register).
+4. `ACCESSIBILITY.md` — if the app has any UI (the append-only register). An
+   app with a UI also ships the on-screen build stamp from its first release
+   (§5), with its contrast pair registered.
 5. Branches: `staging` and `main` only.
 6. Wire it into the hub: the hub links OUT to the app, the app links BACK, and
    its About links the shared accessibility statement.
