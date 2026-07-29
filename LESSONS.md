@@ -627,3 +627,33 @@ part works — but verify with `git ls-remote --heads origin` before reporting a
 branch gone. This is why stale `claude/*` branches accumulate in every repo.
 *(2026-07-28; the same wall was recorded in Frame's CLAUDE.md on 2026-07-18 and
 re-hit here, which is the argument for it living in the hub instead.)*
+
+**A scalar field is safe with LWW alone; a mutable field needs three copies or it
+aliases history.** Quietkeep's event-sourced fold added `sourceTags: string[]` to
+its node state the way it adds scalars — stamp it, last-writer-wins — and shipped
+it green. An adversarial audit found it holed copy-on-write in two places at once:
+the fold's copy-on-write clone deep-copied the scalars' containers but let the
+top-level spread *alias* the array, and the reducer stored the log event's payload
+array *by reference*, so a later mutation of live state could rewrite an
+"immutable" log event and vice versa. A mutable (array/object) field needs all
+three: copy-on-clone, copy-on-store-from-payload, and default-on-deserialise. The
+scalars needed none of them, which is exactly why the new field was written as if
+it needed none either. When you add the first non-scalar to a reducer that has only
+ever held scalars, the whole aliasing discipline is new surface — audit it as such.
+*(Quietkeep Phase 2, 2026-07-29.)*
+
+**A single-item test cannot see a bug that needs two, and `Array.sort` is the
+classic hiding place.** The same field above also crashed the app on *update*: a
+snapshot cut before the field existed deserialised its nodes with the field
+`undefined`, and a projection that sorted the inbox by `n.sourceTags.includes(...)`
+threw. Every test passed — because every test had one inbox item, and V8's
+`Array.sort` skips the comparator entirely for length ≤ 1, so the throwing line
+never ran. The crash needed two items. Projections that sort, dedupe, or compare
+must be tested with **≥2 elements**, and any "state survives an upgrade" claim must
+be tested against a snapshot that is genuinely *missing* the new fields, not one
+freshly written by the current code (which can never be missing them). Deserialise
+is a migration; migrations are additive-only and must backfill, and the backfill
+needs its own made-to-fail-first test.
+*(Quietkeep Phase 2, 2026-07-29; found by an adversarial audit run against a fully
+green tree — the third time "green is not correct" earned its place at the top of
+this file.)*
