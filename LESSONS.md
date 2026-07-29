@@ -978,3 +978,64 @@ binding itself is direction-less. **When two candidates are within measurement
 noise of each other, do not break the tie with more precision — break it with a
 different signal the user already gave you.**
 *(Intersecting Parallels 0.1.1, 2026-07-29.)*
+
+**A `display` rule on a `<dialog>` silently defeats the browser's own hiding.**
+Adding `#about { display: flex }` to lay out a dialog beat the user-agent's
+`dialog:not([open]) { display: none }` on specificity — so `close()` succeeded,
+`dialog.open` went false, every handler ran, and **the panel stayed on screen**.
+A worse version of the bug being fixed, shipped by the fix. It was caught only
+because the check asked the browser `checkVisibility()` after the close instead
+of trusting that closing had closed it. **Any `display` you set on a `<dialog>`
+must be scoped to `[open]`**, and any test of "did it close" must assert the
+thing is *gone*, not that its state flag flipped.
+*(Quietkeep 0.21.1, 2026-07-29.)*
+
+**`<input type="file">` fires a `cancel` event, and it BUBBLES.** An Escape
+handler on an ancestor `<dialog>` therefore fires when the user dismisses the
+file chooser — closing the whole panel the instant anybody picks a file to
+import. The dialog's own `cancel` is what you want; a descendant's is not.
+**Guard every `cancel` listener with `e.target === dialog`.** More generally:
+before listening for a named event on a container, check whether any descendant
+fires the same name — `cancel`, `close`, `toggle`, `change`, `input`, `error` and
+`invalid` all exist on multiple elements and several of them bubble.
+*(Quietkeep 0.21.1, 2026-07-29 — introduced and caught within minutes, by the
+headless walk rather than by review.)*
+
+**A positioning complaint is often a length problem.** Noah reported twice that
+the close control on a panel was in a terrible position and moved when he
+scrolled. Both true. But the reason it was ever far from his thumb was that the
+panel rendered every release note ever written and measured **17,000 to 25,000
+pixels** — a number nobody had looked at, on a surface that had grown a little
+with each release. Fixing the header's position without fixing the length would
+have left the panel exactly as unusable to read. **When a control is hard to
+reach, measure the container before you move the control**, and put a bound on
+any surface that grows by accumulation.
+*(Quietkeep 0.21.1, 2026-07-29.)*
+
+**A feature that produces an artifact needs a gate on the artifact.** A "Print"
+button was reachable, operable, correctly labelled, correctly focus-ringed, at
+44px, and passed every contrast and axe check in both themes — while sending the
+printer the modal dialog it was launched from, the entire app behind that, and no
+print stylesheet whatsoever, because the repo had none. **Every check passed on
+the day it was broken.** The generalisation is not about printing: if the point of
+a control is to make a file, a page, a printout or a message, at least one check
+must inspect that output. For print specifically, stub `window.print()` and assert
+what *would* have gone to paper.
+*(Quietkeep 0.16.0→0.21.0, 2026-07-29.)*
+
+**Wire the escape hatch first.** In any modal or blocking flow, attach the
+close/cancel handler as the first statement of the setup, before anything that
+can throw. A panel's close was attached ~490 lines in, after the content,
+storage, import and export wiring — every one of which had to succeed for the
+thing to be closeable, with failures swallowed silently by the caller. **A dialog
+you cannot leave is the worst failure a dialog has**, and it should never be the
+last capability the code makes possible.
+*(Quietkeep 0.21.1, 2026-07-29.)*
+
+**Test the property, not the technique.** A check written against `position:
+sticky` proves nothing a user cares about and dies at the next refactor. "The way
+out is reachable from anywhere in this panel" survives every rewrite of how that
+is achieved, and it is the sentence the owner actually said. The same applies to
+"there is no progress bar" (assert the rendered markup has no `<progress>`, no
+`role="progressbar"`, no percentage width) rather than to any particular CSS.
+*(Quietkeep 0.21.1, 2026-07-29.)*

@@ -327,6 +327,34 @@ again. They bind every session, every repo.
   (Chebyshev balls are squares — the lawn, twice). If influence exists at
   radius r, it must decay continuously, in every factor: distance, density,
   severity.
+- **When you cannot reproduce it, remove the dependency — do not keep testing
+  the mechanism.** If a technique verifies clean in every environment you can
+  reach, and the owner keeps hitting the failure anyway, the correct move is to
+  **stop relying on the technique**, not to test it again more carefully. A
+  header pinned with `position: sticky` was measured holding perfectly at three
+  viewports and still scrolled away on Noah's iPad; the fix was a layout that
+  cannot scroll the header at all, because it is not inside the scrolling box.
+  Clean reproduction of the *intended* behaviour is not evidence — it is the
+  reason a first fix gets shipped without being a fix. This is §14's "two
+  strikes on the frame" for the case where the second strike is invisible to you.
+- **A gate measures the surface, not the thing the surface makes.** A control can
+  be reachable, operable, correctly labelled, correctly focus-ringed, pass every
+  accessibility and contrast check — and produce a useless artifact. A print
+  button passed all of it while sending the printer a modal dialog, the app
+  behind it, and no print stylesheet at all. **If a feature produces an output —
+  a file, a page, a printout, a message — the gate must assert something about
+  the OUTPUT.** Otherwise the checks all pass on the day it is broken.
+- **The way out is wired first.** In any modal, sheet, or blocking flow, attach
+  the dismiss/cancel/close handler as the FIRST statement, before anything that
+  can throw. A panel's close was attached ~490 lines into its setup, after the
+  content, storage, import and export wiring — so every one of those had to
+  succeed for the thing to be closeable, and the caller swallowed failures
+  silently. **A dialog you cannot leave is the worst failure a dialog has**, and
+  it should never be the last capability made possible.
+- **Test the property, not the technique.** A check written against `position:
+  sticky` dies the moment the CSS changes and tells you nothing about what the
+  user needs. Write "the way out is reachable from anywhere in this panel" and it
+  survives every future rewrite of how that is achieved.
 - **Patch notes tell the truth.** No absolutes the tests don't back
   ("any camera", "down to the last bit"). The end user reads them; so does
   the next session.
