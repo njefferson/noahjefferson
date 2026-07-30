@@ -1414,3 +1414,41 @@ are what made both diagnoses take a minute each.
 *(Intersecting Parallels 0.5.1, 2026-07-30. Also: an image containing text needs
 its words in the alt attribute — an alt that describes only the scene withholds
 the text from the people who cannot see it.)*
+
+**When a generative tool keeps failing a STRUCTURAL requirement, stop prompting
+and compute the structure.** Three rounds of increasingly precise prompts asked
+an image model for three-point perspective. Every render drew the two horizon
+points, drew the third point, and then drew the vertical edges PARALLEL — the
+third point was decoration. Noah: *"It CANNOT draw in 3 point perspective."* He
+was right, and the prompt was never the problem: consistency across every line
+in a picture is not a thing a describe-and-hope interface can be asked for. The
+artwork is now projected through a real camera (~200 lines), and the model's job
+shrank to what it is good at — nothing, in this case, since the geometry IS the
+art. **The tell is a requirement that is a relationship between many outputs
+rather than a property of one.** Wording will not fix those; a solver will.
+*(Intersecting Parallels, 2026-07-30.)*
+
+**A convergence check can pass on parallel lines, so measure the SPREAD too.**
+Verifying "these lines run to that point" by perpendicular distance is
+necessary and not sufficient: a bundle of parallel lines all miss a far-off
+point by very little, which is exactly how the bad artwork would have passed. The
+second number is the angular spread of the family — parallel means ~0°, genuinely
+converging means degrees. Reinstating the bug proved both halves at once: worst
+miss went to 208.16px and spread to 0.00°. **When a property is "these things
+agree about X", check the agreement AND check that they are not all the same
+thing.** Same shape as the earlier lesson about a test that passes with the
+mechanism deleted.
+*(Intersecting Parallels, 2026-07-30.)*
+
+**Some layouts an owner asks for are not merely ugly, they are impossible — say
+which, and name the way out.** Noah's wide social tile put the two horizon
+vanishing points 1076px apart and the third 502px below. No real camera has
+those three points: the principal point is the orthocentre of their triangle,
+f² = -(A-P)·(B-P), and there it comes out NEGATIVE. The constraint is
+d > s — the third point must be farther out than half the spread of the other
+two — and his own hand-drawn reference sits just inside it, at d=835 to s=795.
+The useful refusal is not "invalid input" but *"move the horizon points 44px
+closer together, or the third point 44px farther out"*, so the answer names both
+exits and lets him choose the one that costs him less. **A validator that only
+says no makes the owner guess; one that says which way is a collaborator.**
+*(Intersecting Parallels, 2026-07-30.)*
