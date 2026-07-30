@@ -37,15 +37,15 @@
   :root{
     --bg:#0B1020;
     --bg2:#0E1428;
-    --surface:#151B30;
-    --surface-hi:#1B2340;
-    --line:#646FA0;
+    --surface:#1B2135;
+    --surface-hi:#212945;
+    --line:#6F79A7;
     --text:#EAECF5;
     --muted:#8B93AD;
     /* false-color spectral accents */
     --amber:#F2A65A;
     --green:#5FD08A;
-    --magenta:#E0619E;
+    --magenta:#E168A2;
     --cyan:#58C6E0;
     --slate:#8A97FF;
   }
@@ -184,22 +184,22 @@
      (the "Open" go label, focus rings) still clears WCAG AA (>=4.5:1) on white */
   @media (prefers-color-scheme:light){
     :root{
-      --bg:#F4F6FB;
-      --bg2:#FBFCFE;
+      --bg:#EAECF1;
+      --bg2:#F1F2F4;
       --surface:#FFFFFF;
       --surface-hi:#F0F3FA;
       --line:#7482A0;
       --text:#171C2B;
       --muted:#586079;
-      --amber:#B45309;
-      --green:#1E7A46;
+      --amber:#AB4F09;
+      --green:#1E7945;
       --magenta:#B03270;
       --cyan:#0E6E88;
       --slate:#4A54C8;
     }
     body{
       background:
-        radial-gradient(1200px 700px at 50% -10%, #E8EEFC 0%, rgba(232,238,252,0) 60%),
+        radial-gradient(1200px 700px at 50% -10%, #DFE3EE 0%, rgba(223,227,238,0) 60%),
         linear-gradient(180deg,var(--bg2),var(--bg));
     }
     a.tile:hover{border-color:#63718F}
