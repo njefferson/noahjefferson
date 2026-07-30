@@ -1603,3 +1603,141 @@ whether the rule governs that case before touching the data.** The fix was to
 make the rule kind-aware; a state ladder owes only that its states are
 perceptible (ΔE ≥ 2.3), not that they ascend.
 *(the hub's palette gate, 2026-07-30.)*
+
+**A gate that never checked a token cannot fail on it — and its PASS line will
+say so with total confidence.** ND Toolbox's contrast gate reported `PASS — 66
+pairs across 6 themes` on every push for the life of the app. The hub's
+`palette-check.mjs`, run against the same tokens, found **16 hard-floor failures**
+— twelve of them the rail, `--line`, sitting at **1.16–1.56:1** against the 3:1
+that WCAG 1.4.11 requires of a control boundary. It was not a threshold that was
+too low or a value that had drifted. `--line` **was not in the pair list at all**,
+and no drift guard noticed, because the guard only checked that every token in the
+stylesheet was *known* to the gate — not that any pair actually exercised it. The
+app had been through two accessibility audits with that border on screen.
+
+Two things follow, and the second is the expensive one:
+
+- **Enumerate the tokens, then assert each one is reached by a check.** "Every
+  declared token is either gated or listed as ungated WITH A REASON, and an excuse
+  for a token that no longer exists fails too." That is three lines of code and it
+  is the difference between a gate and a list of things someone thought of.
+- **A second, independent instrument is worth more than a stricter first one.**
+  Nothing about the app's own gate looked wrong from inside it. What exposed the
+  gap was running a *different* tool, written for a different repo, against the
+  same values — and then confirming both agreed once the pair was added (1.33 /
+  1.50 / 1.25 light, identical from both). Cross-app tooling earns its keep
+  precisely when the local tooling is confident.
+*(ND Toolbox, 2026-07-30.)*
+
+**"VERIFIED (code review)" on a number is a guess wearing a gate's clothes.** The
+same app's accessibility register carried a row reading *"targets ≥44px
+(`--tap`)"*, status VERIFIED. Measuring every interactive element found the
+masthead Home button at **32×32**, breadcrumbs at **32px**, the view toggle at
+**36px**, chips at **39px**, and twenty segmented buttons at **40px**. The claim
+was false the day it was written; `--tap: 44px` existed as a token, and a reading
+of the CSS confirmed the token existed rather than that anything used it. Doctrine
+§6 already says every "unchanged / no regression" claim must name the test that
+proved it. **Extend that to every numeric claim in a register: if the row states a
+threshold, a machine must have measured it, or the status word is "UNTESTED".**
+*(ND Toolbox, 2026-07-30.)*
+
+**A pair that is hard to compute is a reason to change the design until it is
+computable — not a reason to exempt it.** The same register had deliberately
+excluded the radial wheel's labels from the contrast gate, reasoning that a
+text-stroke halo "makes the automated ratio misleading, so it is recorded here
+instead." Measured against the wedges they actually sit on, the labels ran
+**2.64:1 at worst**, five of six below AA, with a hardcoded ink that did not
+follow the theme and a *translucent* halo that resolved to no computable
+background at all. The exemption was not protecting a good design from a clumsy
+tool; it was hiding a bad one. The fix was to make the design measurable: an
+**opaque** halo taken from `--surface` with the ink from `--ink`, so
+`paint-order: stroke` turns it into a real background and the pair becomes
+`--ink` on `--surface` — already gated, in every palette. **Whenever a note says
+"can't be automated, recorded here instead", treat it as a design bug with a
+paper trail.**
+*(ND Toolbox, 2026-07-30.)*
+
+**Six ways to measure a rendered page, six ways to get a confident wrong answer.
+Budget for the instrument being the defect.** A broad non-axe sweep of ND Toolbox
+returned **130 findings**; roughly a third were the harness lying, and every one
+looked plausible:
+
+- **Identifying a token by its resolved colour cannot distinguish two tokens that
+  share a value.** A check for "elements using the decorative `--hairline`"
+  compared border colours to the resolved token — and in high contrast the rail
+  and the hairline are BOTH pure black, so every button in the app was reported as
+  a mis-used hairline. The fix was to stop asking which token drew the border and
+  assert the actual contract instead: *a border below the rail floor is only
+  allowed if the element's own fill already separates it from its backdrop.* **A
+  rule expressed in terms of intent needs no token identification and cannot be
+  fooled by two tokens agreeing.**
+- **A bounding box is not a shape.** Six pie wedges of an SVG wheel were reported
+  as "targets touching with no gap" — of course they were; each wedge's bounding
+  rectangle overlaps its neighbours' by construction. Spacing checks only mean
+  something for rectangles.
+- **A sticky bar overlapping content is not an occlusion bug.** Hit-testing every
+  control's centre flagged everything that happened to be under the tray at the
+  current scroll position. The question worth asking is the narrow one: after
+  scrolling to the very end, is anything *still* buried?
+- **A focus ring drawn on a CHILD reads as no focus ring.** The wheel strokes a
+  child `<path>` on `:focus-visible`; an `outline`-only check reported "no visible
+  focus indicator" on a ring plainly there. Measuring focus as a **screenshot
+  difference** does not care how the ring is drawn — and it is the same amount of
+  code.
+- **Two coordinate systems in one check.** `getBoundingClientRect()` is
+  viewport-relative; Playwright's screenshot `clip` is page-relative. Once Tab
+  scrolled the page, the harness photographed a region the control was not in,
+  found the two frames identical, and reported "no focus ring" — a *false PASS
+  shape* dressed as a failure. Comparing the whole viewport removes the mapping
+  entirely.
+- **`$?` after a pipe is the pipe's exit status.** Three carefully-built failure
+  tests all printed the right diagnosis and reported `EXIT=0`, because the command
+  was `node gate.mjs | tail -5`. The gate was fine; the *test of the gate* was the
+  reporter. If you are checking that a gate exits non-zero, do not pipe it.
+
+And the counterweight, because the instrument is not *always* at fault: the same
+sweep's one surviving finding was real and would never have been found by eye — at
+140% text, the first Tab landed on a checkbox whose focus ring was drawn
+**entirely behind the sticky tray**. Present, correct, invisible. `scroll-margin`
+on the element does nothing there, because it only changes where the browser
+scrolls *once it has decided to scroll*, and the browser had decided the control
+was already visible. **`scroll-padding` on the scrollport is the fix**: it shrinks
+the region the browser counts as visible.
+*(ND Toolbox, 2026-07-30.)*
+
+**Consolidate before you multiply, and prove the consolidation moved nothing.**
+PALETTES.md §6 says collapse N declaration sites to one *before* adding families.
+ND Toolbox had **six** — the stylesheet, the contrast gate's hand-typed "mirror",
+the role spec, the `theme-color` meta, the PWA manifest and the icon generator —
+and **three had already drifted**: the meta tag and the manifest both shipped
+`#2E3440`, a colour that appears in no theme in the app. Adding four families
+across two modes and two contrast settings would have made those six sites into
+96 blocks that must never disagree. Two things made the refactor safe to believe:
+
+- **Prove the no-op against the PREVIOUS spec, not the regenerated one.** After
+  the refactor, the app was re-measured in the browser against the colour spec
+  written *before* it — 80 values across 6 themes, identical. Checking the
+  regenerated spec against CSS generated from the same source would have agreed
+  even if both were wrong.
+- **The refactor is where you find the untested path.** Rebuilding the selectors
+  surfaced that `data-theme="auto"` — the DEFAULT setting, and the only one that
+  depends on a media query rather than an attribute — had never been verified in
+  either system colour scheme. It was correct. It had also never been checked.
+
+One design note worth stealing: generate the theme CSS with **negative** selectors
+("light unless explicitly dark") rather than matching the values you expect. A
+stale `data-theme` from an old build then still lands on a complete palette,
+instead of matching nothing and rendering the page with no tokens at all.
+*(ND Toolbox, 2026-07-30.)*
+
+**Splitting one control into two axes can give a setting back something it had
+silently been charging for.** ND Toolbox offered "Calm monochrome" on the same
+control as Light/Dark/Match-system — so choosing no-colour also meant choosing
+light, and a dark monochrome did not exist. Nobody had filed that as a bug; it
+reads as a missing feature rather than a defect, which is exactly why it survived.
+Separating mode from palette family made it fall out for free, with a one-line
+migration (`theme: 'mono'` → `theme: 'auto'` + `palette: 'mono'`) that runs on
+every load so it catches settings restored from an old backup too. **When one
+control carries two independent choices, at least one combination is missing and
+nobody will report it.**
+*(ND Toolbox, 2026-07-30.)*

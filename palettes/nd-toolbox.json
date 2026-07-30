@@ -1,0 +1,291 @@
+{
+  "_readme": "GENERATED from src/styles/tokens.mjs by scripts/build-theme.mjs (in the nd-toolbox repo) — do not edit here; edit tokens.mjs and run `npm run tokens`. The four families are taken verbatim from this hub's palettes/families.json. Roles per PALETTES.md §1: page=--bg, surfaces=[--surface,--surface-2,--surface-3] (rest / hover / checked), rail=--line, hairline=--hairline (decorative container edges only, never a control boundary), text=[--ink,--ink-soft], accents={primary:--accent}. --focus is excluded from accents because it is only ever an outline, never text, and is gated as a ring at 3:1 in the app's own scripts/check-contrast.mjs. The six --core-* hues are excluded because they never appear as text; meaning always rides on the adjacent label and glyph (Doctrine §4). Names are family-mode[-high]: 4 families x 2 modes x 2 contrast settings.",
+  "instrument-light": {
+    "kind": "app",
+    "page": "#c4bcab",
+    "surfaces": [
+      "#eee6d6",
+      "#f4ecdd",
+      "#faf3e5"
+    ],
+    "rail": "rgba(39,33,25,.68)",
+    "hairline": "rgba(39,33,25,.22)",
+    "text": [
+      "#272119",
+      "#363026"
+    ],
+    "accents": {
+      "primary": "#17458f"
+    }
+  },
+  "instrument-light-high": {
+    "kind": "app",
+    "page": "#FFFFFF",
+    "surfaces": [
+      "#FFFFFF",
+      "#E8E8E8",
+      "#DADADA"
+    ],
+    "rail": "#000000",
+    "hairline": "#000000",
+    "text": [
+      "#000000",
+      "#1a1a1a"
+    ],
+    "accents": {
+      "primary": "#17458f"
+    }
+  },
+  "instrument-dark": {
+    "kind": "app",
+    "page": "#1a1a1a",
+    "surfaces": [
+      "#3a3a3a",
+      "#414141",
+      "#484848"
+    ],
+    "rail": "rgba(255,255,255,.62)",
+    "hairline": "rgba(255,255,255,.17)",
+    "text": [
+      "#eaeaea",
+      "#d2d2d2"
+    ],
+    "accents": {
+      "primary": "#9fc2f5"
+    }
+  },
+  "instrument-dark-high": {
+    "kind": "app",
+    "page": "#000000",
+    "surfaces": [
+      "#000000",
+      "#262626",
+      "#383838"
+    ],
+    "rail": "#FFFFFF",
+    "hairline": "#FFFFFF",
+    "text": [
+      "#FFFFFF",
+      "#EDEDED"
+    ],
+    "accents": {
+      "primary": "#9fc2f5"
+    }
+  },
+  "paper-light": {
+    "kind": "app",
+    "page": "#c8c1b0",
+    "surfaces": [
+      "#f2eee3",
+      "#f6f3ea",
+      "#fbf9f3"
+    ],
+    "rail": "rgba(43,36,24,.66)",
+    "hairline": "rgba(43,36,24,.24)",
+    "text": [
+      "#322e25",
+      "#433d30"
+    ],
+    "accents": {
+      "primary": "#164493"
+    }
+  },
+  "paper-light-high": {
+    "kind": "app",
+    "page": "#FFFFFF",
+    "surfaces": [
+      "#FFFFFF",
+      "#E8E8E8",
+      "#DADADA"
+    ],
+    "rail": "#000000",
+    "hairline": "#000000",
+    "text": [
+      "#000000",
+      "#1a1a1a"
+    ],
+    "accents": {
+      "primary": "#164493"
+    }
+  },
+  "paper-dark": {
+    "kind": "app",
+    "page": "#141519",
+    "surfaces": [
+      "#35373c",
+      "#3e4045",
+      "#484a4f"
+    ],
+    "rail": "rgba(255,255,255,.64)",
+    "hairline": "rgba(255,255,255,.16)",
+    "text": [
+      "#e6e8ec",
+      "#c9ccd2"
+    ],
+    "accents": {
+      "primary": "#a3c4ff"
+    }
+  },
+  "paper-dark-high": {
+    "kind": "app",
+    "page": "#000000",
+    "surfaces": [
+      "#000000",
+      "#262626",
+      "#383838"
+    ],
+    "rail": "#FFFFFF",
+    "hairline": "#FFFFFF",
+    "text": [
+      "#FFFFFF",
+      "#EDEDED"
+    ],
+    "accents": {
+      "primary": "#a3c4ff"
+    }
+  },
+  "mono-light": {
+    "kind": "app",
+    "page": "#c5c5c5",
+    "surfaces": [
+      "#efefef",
+      "#f5f5f5",
+      "#fbfbfb"
+    ],
+    "rail": "rgba(20,20,20,.60)",
+    "hairline": "rgba(20,20,20,.24)",
+    "text": [
+      "#252525",
+      "#353535"
+    ],
+    "accents": {
+      "primary": "#274b86"
+    }
+  },
+  "mono-light-high": {
+    "kind": "app",
+    "page": "#FFFFFF",
+    "surfaces": [
+      "#FFFFFF",
+      "#E8E8E8",
+      "#DADADA"
+    ],
+    "rail": "#000000",
+    "hairline": "#000000",
+    "text": [
+      "#000000",
+      "#1a1a1a"
+    ],
+    "accents": {
+      "primary": "#274b86"
+    }
+  },
+  "mono-dark": {
+    "kind": "app",
+    "page": "#131313",
+    "surfaces": [
+      "#363636",
+      "#3e3e3e",
+      "#454545"
+    ],
+    "rail": "rgba(255,255,255,.62)",
+    "hairline": "rgba(255,255,255,.14)",
+    "text": [
+      "#e6e6e6",
+      "#cfcfcf"
+    ],
+    "accents": {
+      "primary": "#93b9ea"
+    }
+  },
+  "mono-dark-high": {
+    "kind": "app",
+    "page": "#000000",
+    "surfaces": [
+      "#000000",
+      "#262626",
+      "#383838"
+    ],
+    "rail": "#FFFFFF",
+    "hairline": "#FFFFFF",
+    "text": [
+      "#FFFFFF",
+      "#EDEDED"
+    ],
+    "accents": {
+      "primary": "#93b9ea"
+    }
+  },
+  "soft-light": {
+    "kind": "app",
+    "page": "#bfbab0",
+    "surfaces": [
+      "#e8e4da",
+      "#eeebe2",
+      "#f5f2ea"
+    ],
+    "rail": "#5f594c",
+    "hairline": "rgba(46,41,33,.28)",
+    "text": [
+      "#2e2921",
+      "#3e392f"
+    ],
+    "accents": {
+      "primary": "#204478"
+    }
+  },
+  "soft-light-high": {
+    "kind": "app",
+    "page": "#FFFFFF",
+    "surfaces": [
+      "#FFFFFF",
+      "#E8E8E8",
+      "#DADADA"
+    ],
+    "rail": "#000000",
+    "hairline": "#000000",
+    "text": [
+      "#000000",
+      "#1a1a1a"
+    ],
+    "accents": {
+      "primary": "#204478"
+    }
+  },
+  "soft-dark": {
+    "kind": "app",
+    "page": "#15161a",
+    "surfaces": [
+      "#36373c",
+      "#3c3d43",
+      "#43444a"
+    ],
+    "rail": "#9da1a9",
+    "hairline": "rgba(255,255,255,.17)",
+    "text": [
+      "#e0e2e7",
+      "#c9cbd1"
+    ],
+    "accents": {
+      "primary": "#97b8ec"
+    }
+  },
+  "soft-dark-high": {
+    "kind": "app",
+    "page": "#000000",
+    "surfaces": [
+      "#000000",
+      "#262626",
+      "#383838"
+    ],
+    "rail": "#FFFFFF",
+    "hairline": "#FFFFFF",
+    "text": [
+      "#FFFFFF",
+      "#EDEDED"
+    ],
+    "accents": {
+      "primary": "#97b8ec"
+    }
+  }
+}
