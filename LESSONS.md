@@ -1377,3 +1377,40 @@ the audited state, because otherwise the exemption lands on exactly the surfaces
 that are conditional — confirmations, error states, revealed detail — which are the
 ones people meet while already under strain.
 *(Quietkeep 0.23.0, 2026-07-30.)*
+
+**A share tile with no words on it is an unfinished tile — and the rule to
+finish it was already written.** Noah: *"The social preview tile has no words."*
+The doctrine already said (§3) that AI-generated imagery must be prompted
+wordless "and all lettering is overlaid afterwards by us"; the artwork was
+generated wordless, the overlay never happened, and the bare gradient shipped as
+`og.png` and as the repo's social preview. A card renders at roughly 360px next
+to nothing but a bare domain — pretty, and it names nothing. **When a rule has
+two halves, the second half is the one that goes missing**, because the first
+half produces a file that looks like a finished deliverable. The fix is a
+generator committed next to the art (`render-og.mjs`, `npm run render:og`), so
+the tile is reproducible instead of being a binary someone hand-made once.
+*(Intersecting Parallels 0.5.1, 2026-07-30.)*
+
+**Text over a picture has no background colour, so measure the lightest pixel
+under the actual glyphs.** A contrast gate for words baked into an image cannot
+read a CSS pair — the background of a letter is whatever pixel happens to be
+beneath it, and a sun in the corner is a different background from the navy in
+the middle. What worked: render the tile TWICE, once with the text hidden
+(`visibility`, not `display`, so the boxes do not move), sample the backdrop
+image inside each text run, take the lightest pixel found — worst case for light
+text — and compute the real WCAG ratio against the real text colour, printing
+the offending pixel's rgb AND coordinates. Two things fell out of it immediately.
+First, sample the LINE rects (`Range.getClientRects()`), not the element box: a
+block is as wide as its container, so the first run failed all three lines on
+backdrop out where the sun is and no letter is ever drawn — the instrument was
+wrong before the design was. Second, when a line did genuinely fail (a tagline
+run out across a wide column onto the horizon glow, 2.92:1), the fix was to
+narrow the column, NOT to deepen the wash: a scrim heavy enough to make any
+placement safe also erased the left vanishing point, on a picture whose subject
+is three of them. **Buying contrast by darkening the artwork is paying for the
+gate with the thing the gate exists to protect** (§14: fix the frame, not the
+constant). Shipped at 9.97:1, 8.44:1, 5.10:1, and the coordinates in the output
+are what made both diagnoses take a minute each.
+*(Intersecting Parallels 0.5.1, 2026-07-30. Also: an image containing text needs
+its words in the alt attribute — an alt that describes only the scene withholds
+the text from the people who cannot see it.)*

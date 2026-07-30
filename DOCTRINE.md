@@ -428,7 +428,33 @@ Write the DESCRIPTION for what the app IS, not what it currently does — never
 name the current feature, module, or version in it. Those change; the
 description shouldn't (a suite that gains a module must not need its description
 rewritten). Which module/feature is current belongs in the README, where it is
-cheap to update.
+cheap to update. The description is read in a search result and in a repo list,
+where the only question is *what is this thing* — so it is not the place for the
+tagline. The tagline already lives in `<title>`, `og:title`, the About surface
+and the README's first line; a description that only repeats it does no work.
+
+**The SOCIAL-PREVIEW TILE carries the app's NAME, in real type.** §3 already
+says AI-generated imagery must be wordless and that we overlay the lettering
+ourselves — this is the second half of that rule, and it is the half that gets
+skipped. A preview card renders at roughly a third of its size beside nothing
+but a bare domain, so a tile that is only artwork tells a stranger nothing about
+what they are being shown. Name, tagline, and one plain line of what it is.
+Two consequences, both non-optional:
+- **Measure the contrast; do not look at it.** Text over a picture has no single
+  background colour — the "background" of a letter is whatever pixel is under
+  it. Render the tile once with the text hidden, sample the real backdrop inside
+  each LINE's tight rect (not the element box, which is as wide as its container
+  and covers backdrop no glyph is ever drawn over), take the lightest pixel
+  found, and compute the real ratio against the real text colour. Gate it, like
+  any other contrast claim.
+- **Buy the contrast without destroying the picture.** If the words fail over
+  the art, move or narrow the words before you deepen the scrim: a scrim heavy
+  enough to guarantee any placement also erases the subject. (Doctrine §14 —
+  fix the frame, not the constant.)
+- **Alt text quotes the words.** `og:image:alt` / `twitter:image:alt` on an
+  image containing text must say the text before describing the scene, or the
+  words are withheld from exactly the people who cannot read them off the
+  picture. (Noah, 2026-07-30: *"The social preview tile has no words."*)
 
 ## 11. Standing facts about the environment
 
