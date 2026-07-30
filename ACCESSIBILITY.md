@@ -80,7 +80,7 @@ nothing constrains its height and no inline exemption applies.
 **Status:** FIXED 2026-07-28. Verified: gate re-run, 0 failures.
 
 ### F-03 · The email link is exempt, and that is a decision to confirm
-**Found:** 2026-07-28 · **Status: OPEN — needs Noah's word**
+**Found:** 2026-07-28 · **Status: CLOSED 2026-07-29 — Noah ruled, see below**
 **Detail:** `.contact-email` measures 244.1×19px, below §4's 44px. It sits inside
 a sentence ("Email *address*. Say which app and what happened…"), which WCAG 2.2
 SC 2.5.8 explicitly exempts — forcing 44px there would break the paragraph's
@@ -89,6 +89,10 @@ on every run.
 **Open question:** §4 states "Targets >= 44px" with no exception. Either §4 gains
 the inline exception in writing, or the link is restructured onto its own line.
 Recorded rather than decided by a session.
+**Status:** CLOSED 2026-07-29 — Noah ruled: §4 gains the exception. The doctrine
+now carries SC 2.5.8's inline exception in writing, matching what the gate has
+done and printed all along. The link stays in its sentence. The gate's end-of-run
+summary no longer says the question is open.
 
 ### F-04 · axe cannot check contrast on transformed elements
 **Found:** 2026-07-28 · **Status: KNOWN INSTRUMENT LIMITATION**
@@ -115,7 +119,7 @@ produced **16 failures across both themes and both viewports**, each naming the
 two targets and the measured gap, exit 1. Reverted; the real layout passes.
 
 ### F-06 · `.tiles.compact` sits exactly on the spacing floor
-**Found:** 2026-07-29 · **Status: OPEN — passes, but with no margin**
+**Found:** 2026-07-29 · **Status: FIXED 2026-07-29 — Noah ruled, see below**
 **Detail:** The compact handle rows (`.tiles.compact`) use `gap:8px`, which meets
 the new ≥8px rule exactly. It passes, so this is not a failure — but any future
 tightening of that value fails the build, and 8px is the least spacing a tremor
@@ -123,6 +127,10 @@ overshoot can tolerate rather than a comfortable one.
 **Open question:** whether to raise the compact gap. Recorded rather than changed,
 because the page currently passes and a session should not redesign a working
 layout on its own initiative.
+**Status:** FIXED 2026-07-29 — Noah ruled: raise it. `.tiles.compact` gap 8px →
+11px, matching the main list, so the compact rows carry real margin above the
+tremor spacing floor instead of sitting exactly on it. Verified: gate re-run
+green.
 
 ### F-07 · Card and chip boundaries are below 3:1 (WCAG 1.4.11)
 **Found:** 2026-07-29 · first run of the new non-text contrast check

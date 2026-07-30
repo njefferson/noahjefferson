@@ -131,7 +131,12 @@ issue.
 - Contrast is COMPUTED, never eyeballed: a CI gate that exits non-zero on any
   failure. New fg/bg pairs are added to the gate in the SAME commit.
 - Keyboard always: Tab reaches it, Enter works, a visible focus-visible ring
-  (never remove focus outlines). Targets >= 44px. Reduced-motion honored.
+  (never remove focus outlines). Targets >= 44px — EXCEPT a target inline in a
+  sentence, whose height the surrounding line constrains (WCAG 2.2 SC 2.5.8):
+  forcing 44px mid-paragraph breaks the text flow and makes the page worse. The
+  gate applies that exception and PRINTS every element it applied it to, never
+  silently. (Ruled by Noah, 2026-07-29 — closes the question §4 carried since
+  the 2026-07-28 audit.) Reduced-motion honored.
   Real `<dialog>` / `<button>`; icon-only controls get labels. Page zoom is
   never locked (no user-scalable=no / maximum-scale).
 - NO FIXED SIZE THAT IGNORES THE SPACE AVAILABLE. Any panel, card, dialog or

@@ -377,8 +377,7 @@ console.log(`pages: ${PAGES.length} x themes: ${THEMES.length} x viewports: ${VI
 if (exemptions.size) {
   console.log(`\nEXEMPTED (${exemptions.size}) — reported, never silent:`);
   for (const e of exemptions) console.log('  · ' + e);
-  console.log('  §4 states ">= 44px" flatly; WCAG 2.2 SC 2.5.8 exempts inline targets.');
-  console.log('  Noah rules on whether §4 should carry that exception explicitly.');
+  console.log('  §4 carries the inline exception explicitly (Noah, 2026-07-29; WCAG 2.2 SC 2.5.8).');
 }
 if (failures.length) {
   console.log(`\nFAILURES (${failures.length}):`);
