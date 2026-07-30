@@ -30,6 +30,10 @@ diagnostics only — they always exit 0 and prove nothing.
   overshoots and a 2px miss on a touching neighbour lands on the wrong control
   (Doctrine §4). Inline-in-a-sentence targets carry the same exemption they get
   from the size rule
+- **Non-text contrast** — registered control boundaries need 3:1 (WCAG 1.4.11),
+  measured as the best boundary signal (border or fill) against the **worst**
+  gradient stop, same as text. A registered selector that stops matching fails
+  loudly, never skipped
 - **Also** — `lang` present, exactly one `<h1>`, no `<img>` missing `alt`, no
   unnamed interactive element, no page errors
 
@@ -139,10 +143,24 @@ does not bite, because each card contains link text that already passes AA, so t
 component identifies itself and the card is grouping rather than the identifier.
 Doctrine §3 says gentle contrast is tuned *within* AA, never against it, which
 points at fixing it.
-**Status:** OPEN — needs Noah's word. It changes the look of the site, so a
-session must not decide it. Until then the three selectors are **deliberately
-absent** from `nonText` in `a11y-gate.mjs`, which means **that check is inert on
-this repo** — stated here so an always-green run is never mistaken for coverage.
+**Status:** FIXED 2026-07-29, on Noah's word ("what do you suggest?" → fix it,
+plan approved). `--line` raised to COMPUTED values on both deployed pages:
+dark `#26304F` → `#646FA0` (**3.29:1**), light `#D5DCEA` → `#7482A0` (**3.32:1**),
+each against the worst gradient stop. The `prefers-contrast: more` block was
+recomputed so the preference still strengthens rather than newly weakening:
+dark `#828CBC` (**4.90:1**), light `#5A6784` (**4.87:1**), verified applied in a
+real render (a first probe read the default mid-`border-color` transition —
+.16s ease — and looked like the block was dead; a settled re-read showed both
+values live. Suspect the instrument first). Hover border colours also failed the
+same rule and were raised — dark `#33406B` (1.59:1) → `#7C87B5` (**4.56:1**),
+light `#B9C4DC` (1.51:1) → `#63718F` (**4.21:1**) — so hovering strengthens a
+boundary, never erases it. `a.tile`, `a.approw`, `.vchip` are now registered in
+`nonText`; the fail→pass transition on the exact selectors that measured 1.18:1
+and 1.23:1 is the §6 proof. `.ns-list a` is NOT registered: it lives inside
+`<noscript>`, so the selector cannot match while JS runs — the loud-failure rule
+caught precisely that on first arming — and it borrows the same tokens, so it is
+covered by proxy. The og/social card templates keep the old token on purpose:
+static share images, not deployed pages.
 
 ### F-08 · Status messages (4.1.3) are not machine-checkable
 **Found:** 2026-07-29 · **Status: BY DESIGN — declaration, not a gate**

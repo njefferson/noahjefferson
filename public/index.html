@@ -39,7 +39,7 @@
     --bg2:#0E1428;
     --surface:#151B30;
     --surface-hi:#1B2340;
-    --line:#26304F;
+    --line:#646FA0;
     --text:#EAECF5;
     --muted:#8B93AD;
     /* false-color spectral accents */
@@ -112,7 +112,7 @@
   .tile::before{
     content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--band,var(--slate));
   }
-  a.tile:hover{transform:translateY(-2px);background:var(--surface-hi);border-color:#33406b}
+  a.tile:hover{transform:translateY(-2px);background:var(--surface-hi);border-color:#7C87B5}
   a.tile:focus-visible{outline:2px solid var(--band,var(--slate));outline-offset:2px}
 
   .ico{
@@ -150,7 +150,7 @@
   .approw::before{
     content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--band,var(--slate));
   }
-  a.approw:hover{transform:translateY(-2px);background:var(--surface-hi);border-color:#33406b}
+  a.approw:hover{transform:translateY(-2px);background:var(--surface-hi);border-color:#7C87B5}
   a.approw:focus-visible{outline:2px solid var(--band,var(--slate));outline-offset:2px}
   .approw .app-ico{
     flex:0 0 52px;width:52px;height:52px;border-radius:14px;display:block;
@@ -188,7 +188,7 @@
       --bg2:#FBFCFE;
       --surface:#FFFFFF;
       --surface-hi:#F0F3FA;
-      --line:#D5DCEA;
+      --line:#7482A0;
       --text:#171C2B;
       --muted:#586079;
       --amber:#B45309;
@@ -202,15 +202,15 @@
         radial-gradient(1200px 700px at 50% -10%, #E8EEFC 0%, rgba(232,238,252,0) 60%),
         linear-gradient(180deg,var(--bg2),var(--bg));
     }
-    a.tile:hover{border-color:#B9C4DC}
-    a.approw:hover{border-color:#B9C4DC}
+    a.tile:hover{border-color:#63718F}
+    a.approw:hover{border-color:#63718F}
   }
 
   /* stronger borders + text when the reader asks for more contrast */
   @media (prefers-contrast:more){
-    :root{--line:#3D4A72;--muted:#AEB6CE}
+    :root{--line:#828CBC;--muted:#AEB6CE}
     @media (prefers-color-scheme:light){
-      :root{--line:#9AA6C2;--muted:#3D445C}
+      :root{--line:#5A6784;--muted:#3D445C}
     }
     .tile,.approw,.vchip{border-width:2px}
   }

@@ -39,22 +39,25 @@ const axeSrc = readFileSync('node_modules/axe-core/axe.min.js', 'utf8');
 //               control's own edge is visible. Same loud-failure rule as
 //               `registry`: a selector that stops matching FAILS, never skipped.
 //
-//               EMPTY ON BOTH PAGES ON PURPOSE, AND THAT MEANS THIS CHECK IS
-//               CURRENTLY INERT HERE. `a.tile`, `a.approw` and `.vchip` were
-//               measured and FAIL: best boundary 1.18:1 light / 1.23:1 dark
-//               against 3:1 (their fills are worse, 1.03 and 1.07, because
-//               --surface nearly matches the radial overlay behind it). Passing
-//               would mean --line going roughly #26304F -> #646FA0 (dark) and
-//               #D5DCEA -> #7482A0 (light), which is a visible change to the
-//               site's look — Noah's call, not a session's. Recorded as F-07 in
-//               ACCESSIBILITY.md, OPEN. Do not quietly register them to make a
-//               number go up, and do not delete this note to make the file tidy.
+//               LIVE since 2026-07-29 (F-07, Noah's call): --line was raised to
+//               computed 3:1 values in both themes, so these selectors are
+//               registered and guarded. Adding a new bordered control? Register
+//               it here in the SAME commit that introduces it — the same rule
+//               the text registry above follows.
 const PAGES = [
   { file: 'public/index.html',
     registry: ['.tag','.foot','.sub','.vchip','.app-name','.app-sub','.go','.group-title','.label','.name','h1','h2'],
-    nonText:  [] },
+    // .ns-list a (the no-JS fallback) is NOT here: it lives inside <noscript>,
+    // so with JS running its content never enters the DOM and the selector
+    // cannot match — the loud-failure rule caught exactly that on first run.
+    // It borrows the same --line/--surface tokens as the three below, so it is
+    // covered by proxy; measuring it directly would need a JS-disabled pass.
+    nonText:  ['a.tile','a.approw','.vchip'] },
   { file: 'public/accessibility.html',
     registry: ['.foot','.sub','.lead','.apps','.contact-email','h1','h2'],
+    // .apps is a non-interactive grouping panel and the links inside identify
+    // themselves by text that already passes AA — no boundary is REQUIRED to
+    // identify a component here, so nothing is registered (WCAG 1.4.11 scope).
     nonText:  [] },
 ];
 
