@@ -1255,3 +1255,90 @@ becomes how the feature works. Going through the app's own boundary meant a bug 
 the generator surfaced as a plain refusal instead of as a corrupt store, and it
 revealed two wrong beliefs about the invariants in the process.
 *(Quietkeep, 2026-07-30.)*
+
+**A `git push` that prints nothing alarming can be a no-op, and "I pushed it" is
+not evidence.** A workflow fix was committed while the working tree was on
+`staging`, then pushed with `git push -u origin main`. That command pushes the
+LOCAL `main` — which had not moved — so it succeeded, printed a tracking line,
+and sent nothing. The remote kept the old file for another twenty minutes while
+being described as fixed, and it only came out because `origin/main`'s copy of
+the file was read directly: `git show origin/main:path`. Two rules, both seconds
+long. **Check the branch you are ON before committing** (`git branch
+--show-current`), because a commit lands where you are standing, not where you
+were thinking. And **verify a push by reading the remote, not the push output** —
+`git ls-remote --heads origin`, or better, read back the one line you changed.
+This is the same family as the deploy lesson directly above: the failure mode of
+release plumbing is not an error message, it is a success message about
+something other than what you meant.
+*(Intersecting Parallels 0.5.0, 2026-07-30 — found while writing the lesson
+above, which is its own kind of evidence.)*
+
+**When an owner objects to a behaviour, separate the property they object to
+from the mechanism that provides it — then remove only the property.** Noah, in
+capitals: *"WHY is there ANYTHING besides VPs, and perfect vertical and
+horizontal lines acting as ANCHORS FOR MY LINES?!"* The response was to delete
+endpoint joining entirely. Two releases later he was back with screenshots of a
+cube falling apart: *"Being unable to connect line ends means everything breaks
+when you do adjustments."* Both statements were right, because the one mechanism
+was doing two separable things: joining decided a line's DIRECTION (which he was
+objecting to, because it bent lines off their guides) and also WHERE ALONG that
+direction the line ended (which he needed, because shared corners are what hold
+a drawing together under an edit). Deleting the mechanism took the wanted half
+with the unwanted half, and cost him a round trip plus a broken drawing.
+**Before deleting a mechanism an owner has complained about, enumerate what else
+it provides and say so** — "this also does X; do you want X to stop too?" is one
+line, and it is much cheaper than shipping the removal and having the owner
+discover X was load-bearing.
+*(Intersecting Parallels 0.2.0 → 0.5.0, 2026-07-30.)*
+
+**A probe must print what it measured, never a verdict written in advance.** A
+diagnostic script ended with `console.log("edge binding = VP1, but VP1 is Npx
+off the line")` — the "binding = VP1" half was a hardcoded string, not a read of
+the data. After the fix, the same script printed the same accusation, because
+the only live number in the sentence (the distance) is legitimately large for an
+UNBOUND line, which is what the edge had correctly become. Half a minute was
+spent believing the fix had failed. **Print the field, not your expectation of
+the field** — `stored binding = ${...}` — and let the reader compare. Same
+family as the diagnostic selector that counted legend swatches and reported
+markers: an instrument that can only say one thing will keep saying it.
+*(Intersecting Parallels, 2026-07-29.)*
+
+**To trust a test, delete the mechanism it names — and check that your deletion
+actually changed the behaviour.** A hysteresis test was written, passed, and was
+then run against the hysteresis DELETED — where it passed again, because a
+different rule was already pinning the case it had chosen. It was decoration.
+Rewritten to sit exactly on the boundary where nothing else breaks the tie, it
+failed without the mechanism and passed with it. The subtler trap, hit the same
+day: a "nothing moves" test was checked by breaking the code that preserved the
+coordinates — and the break was a NO-OP, because the fields were never written
+in the first place, so the test could not distinguish. **If your deliberate break
+does not turn something red, suspect the break before you trust the test**; make
+the break large and obviously behaviour-changing, or reinstate the ORIGINAL
+buggy code, which is the only break guaranteed to be real.
+*(Intersecting Parallels 0.4.0, 2026-07-29. Sharpens "a test that asserts
+against the constant the code uses can never fail".)*
+
+**An indicator people will aim at must lie on the thing they are aiming for.**
+Off-screen vanishing points got an edge marker pinned along the ray from the
+VIEWPORT CENTRE to the point — correct as a compass, and used by the owner as a
+target to draw at. Measured from one stroke's origin: the marker sat at screen
+x=834 while the point's true direction left the viewport at x=1819, so aiming at
+the marker was several degrees off the actual guide from every origin, and no
+amount of scoring could recover an intent the gesture never contained. The fix
+was not a better guess — it was to stop requiring aim: the candidate guide lines
+are now drawn from the exact point the stroke starts, so a line is FOLLOWED
+rather than aimed at. **When a UI element gets repurposed as a target, either put
+it where the target is, or remove the need to aim.**
+*(Intersecting Parallels 0.2.0, 2026-07-29.)*
+
+**A synthetic input model can manufacture the failure you then go and "fix", so
+calibrate it or label it.** A headless repro of finger drawing used ±6px of
+high-frequency wobble over a 35px sample — far coarser than a real fingertip —
+and produced "5 of 14 strokes stray", which was reported as though it described
+the owner's experience. It described the noise model. The genuine defect
+underneath was found only by measuring a POSITION (an affordance 985px away from
+where it implied) rather than a rate. **State the model's parameters next to any
+number it produces**, and prefer a measurement that does not depend on simulated
+human noise at all — a distance, an incidence, a coordinate — because those hold
+whatever the hand does.
+*(Intersecting Parallels, 2026-07-29.)*

@@ -556,6 +556,15 @@ again. They bind every session, every repo.
   sticky` dies the moment the CSS changes and tells you nothing about what the
   user needs. Write "the way out is reachable from anywhere in this panel" and it
   survives every future rewrite of how that is achieved.
+- **Separate the property from the mechanism before deleting anything Noah
+  objects to.** When he says a behaviour is wrong, the mechanism causing it is
+  usually doing more than one thing. Enumerate what else it provides and SAY SO
+  in one line before removing it — "this also does X; should X stop too?" —
+  because shipping the whole removal and letting him discover that X was
+  load-bearing costs him a round trip and a broken piece of work. This happened
+  with endpoint joining in Intersecting Parallels: it both bent lines off their
+  guides (unwanted) and shared corners so a shape survived an edit (needed), and
+  deleting it took both.
 - **Patch notes tell the truth.** No absolutes the tests don't back
   ("any camera", "down to the last bit"). The end user reads them; so does
   the next session.
