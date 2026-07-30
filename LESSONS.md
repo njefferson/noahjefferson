@@ -1152,3 +1152,43 @@ test would touch unless it deliberately sent OPTIONS. **The near-empty value tha
 the platform counts as non-empty is a whole family of bug**: `""` vs `null`, `[]`
 vs absent, `0` vs unset. Send OPTIONS in the tests.
 *(Quietkeep sync stage 3, 2026-07-29.)*
+
+**A gate that measures the wrong thing and is right most of the time is worse
+than no gate, because its green is evidence.** Two smoke checks compared the app's
+correct LOCAL day against `new Date().toISOString().slice(0, 10)`, which is UTC,
+in a browser context deliberately pinned to America/Denver. They passed for
+eighteen hours a day and red for the six when the two zones are on different
+dates. One reported the app as accepting a date in the past; the other computed
+"six days ahead" by adding six times 86,400,000 to a UTC instant — which lands
+seven LOCAL days out in the evening — and so made the app's correct arithmetic
+look wrong. **Pinning a non-UTC timezone in the harness is only half the job; the
+expected values have to be computed in that same zone.** A mixed-zone comparison
+is not a flaky test, it is a wrong test with a schedule.
+*(Quietkeep, 2026-07-30 — found because a session ran past midnight UTC.)*
+
+**One artifact must not state two dates.** An export's filename was built from the
+UTC instant while the file's own contents stated the local day, so a calendar
+export taken at seven in the evening west of Greenwich was named 2026-07-30 and
+said "as of 2026-07-29". The name is the part a person sees in Files, so it is the
+one that has to be right, and the two must come from the same computation. **Any
+time a value appears in both a filename and a body, they are one fact with two
+writers** — the shape that has produced more defects in this project than any
+other. Check it explicitly, in both hemispheres: a fix that only handles negative
+offsets is not a fix.
+*(Quietkeep, 2026-07-30.)*
+
+**Let a session cross midnight on purpose before shipping anything temporal.** The
+date rolling over found a real product defect and two wrong gates in one minute,
+none of which nine green gates had ever noticed. A whole class of bug is only
+reachable at a boundary the clock crosses once a day, and the cheapest way to find
+it is to be there. If a session cannot wait, run the suite with the harness clock
+set to 23:55 in the pinned zone.
+*(Quietkeep, 2026-07-30.)*
+
+**"The build is stale" is a real explanation and it should be checked second, not
+last.** A fix to source did not show up in a browser gate because that gate loads
+the built bundle, and the build had not been re-run. Ten seconds of confusion, and
+the only reason it was short is that the failing assertion named a date that could
+not have come from the new code. **Any gate that consumes a build artifact should
+be preceded by the build in the same command**, not merely earlier in the script.
+*(Quietkeep, 2026-07-30.)*
