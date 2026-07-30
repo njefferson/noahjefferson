@@ -214,6 +214,27 @@ tired hands. Concretely:
   declaration that matches nothing FAILS rather than being skipped — the same
   loud-failure rule the contrast registry already follows.
 
+CONTRAST IS NOT ONLY FOR TEXT (SC 1.4.11). The visual information that identifies
+a control — its boundary, its fill, its focus ring — needs 3:1 against what is
+adjacent, and it is COMPUTED like text contrast, never eyeballed. A canvas app's
+marks are graphical objects under this rule: guide lines, handles, vertices, the
+drawing itself. They live in no stylesheet, so the app DECLARES their colours and
+the gate computes them. Note this is a different requirement from the hue rule
+above and both apply: "distinguishable without relying on hue" and "visible at
+3:1" can each pass while the other fails.
+
+A CANVAS IS NON-TEXT CONTENT (SC 1.1.1). Every `<canvas>` carries a text
+alternative — an accessible name, or real fallback content between the tags — and
+it describes WHAT IS ON IT, kept current as that changes. "Drawing canvas" is not
+an alternative, it is a label for the box.
+
+STATUS MESSAGES REACH ASSISTIVE TECH WITHOUT STEALING FOCUS (SC 4.1.3). Saved,
+exported, offline, this vertex is degenerate — anything the app tells you without
+being asked goes through a live region. **This one is NOT machine-checkable**, so
+it is a declaration and a hand check per app, and saying so is the point: a gate
+that always passes is worse than no gate, because it reads as coverage (§4's own
+history).
+
 Recorded because it was nearly missed. The Intersecting Parallels design reached
 several of these by accident, reasoning about styluses and keyboard access rather
 than about tremor, and still left a two-finger pinch-zoom with no single-pointer

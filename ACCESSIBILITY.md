@@ -119,3 +119,48 @@ overshoot can tolerate rather than a comfortable one.
 **Open question:** whether to raise the compact gap. Recorded rather than changed,
 because the page currently passes and a session should not redesign a working
 layout on its own initiative.
+
+### F-07 · Card and chip boundaries are below 3:1 (WCAG 1.4.11)
+**Found:** 2026-07-29 · first run of the new non-text contrast check
+**Rule:** Doctrine §4 (contrast is not only for text) / WCAG 1.4.11
+**Detail:** `a.tile`, `a.approw` and `.vchip` are bounded only by a `--line`
+border. Measured against the **worst** background stop — the radial overlay,
+`#E8EEFC` light and `#16203F` dark, which is darker/lighter than the linear
+gradient and is the case that actually decides it:
+
+- border **1.18:1** light, **1.23:1** dark (needs 3:1)
+- fill **1.03:1** light, **1.07:1** dark — `--surface` nearly matches the overlay,
+  so the fill carries no boundary information at all
+
+Reaching 3:1 means `--line` roughly `#26304F` → `#646FA0` (dark) and `#D5DCEA` →
+`#7482A0` (light). Those borders go from invisible to clearly drawn.
+**Both readings are honest:** strictly, the boundary is below 3:1. Arguably 1.4.11
+does not bite, because each card contains link text that already passes AA, so the
+component identifies itself and the card is grouping rather than the identifier.
+Doctrine §3 says gentle contrast is tuned *within* AA, never against it, which
+points at fixing it.
+**Status:** OPEN — needs Noah's word. It changes the look of the site, so a
+session must not decide it. Until then the three selectors are **deliberately
+absent** from `nonText` in `a11y-gate.mjs`, which means **that check is inert on
+this repo** — stated here so an always-green run is never mistaken for coverage.
+
+### F-08 · Status messages (4.1.3) are not machine-checkable
+**Found:** 2026-07-29 · **Status: BY DESIGN — declaration, not a gate**
+**Detail:** Whether a live region exists, and whether it actually announces the
+right thing at the right moment, cannot be determined statically. Doctrine §4
+carries the rule; each app declares its status messages and the region serving
+them, and it is verified by hand with a screen reader.
+**Why it is recorded rather than gated:** a check that always passes reads as
+coverage. That is precisely the failure §4 documents about itself — a documented
+gate nobody ran, believed for months.
+
+### F-09 · `<canvas>` text alternative — check added, inert here
+**Found:** 2026-07-29 · **Status: LIVE, but never exercised on this repo**
+**Rule:** Doctrine §4 (a canvas is non-text content) / WCAG 1.1.1
+**Detail:** The gate now fails any `<canvas>` lacking an accessible name or
+fallback content. The hub has no canvas, so this check cannot fire here; it exists
+for the sibling apps that share this gate, Intersecting Parallels above all, where
+the drawing surface *is* the app.
+**Proved by breaking it (§6):** an empty `<canvas>` injected into `index.html`
+produced 4 failures across both themes and both viewports, exit 1. Reverted. The
+check works; it simply has nothing to catch here.

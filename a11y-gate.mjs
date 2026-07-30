@@ -32,9 +32,30 @@ const axeSrc = readFileSync('node_modules/axe-core/axe.min.js', 'utf8');
 
 // Every deployed page. accessibility.html is the shared statement every sibling
 // app's About screen links to — it went unscanned by anything until 2026-07-28.
+// `registry`  — text colour vs background, AA (4.5:1, or 3:1 for large text).
+// `nonText`   — WCAG 1.4.11: the visual information that identifies a control
+//               (its boundary or its fill) needs 3:1 against what is adjacent.
+//               Text contrast passing tells you nothing about whether the
+//               control's own edge is visible. Same loud-failure rule as
+//               `registry`: a selector that stops matching FAILS, never skipped.
+//
+//               EMPTY ON BOTH PAGES ON PURPOSE, AND THAT MEANS THIS CHECK IS
+//               CURRENTLY INERT HERE. `a.tile`, `a.approw` and `.vchip` were
+//               measured and FAIL: best boundary 1.18:1 light / 1.23:1 dark
+//               against 3:1 (their fills are worse, 1.03 and 1.07, because
+//               --surface nearly matches the radial overlay behind it). Passing
+//               would mean --line going roughly #26304F -> #646FA0 (dark) and
+//               #D5DCEA -> #7482A0 (light), which is a visible change to the
+//               site's look — Noah's call, not a session's. Recorded as F-07 in
+//               ACCESSIBILITY.md, OPEN. Do not quietly register them to make a
+//               number go up, and do not delete this note to make the file tidy.
 const PAGES = [
-  { file: 'public/index.html',         registry: ['.tag','.foot','.sub','.vchip','.app-name','.app-sub','.go','.group-title','.label','.name','h1','h2'] },
-  { file: 'public/accessibility.html', registry: ['.foot','.sub','.lead','.apps','.contact-email','h1','h2'] },
+  { file: 'public/index.html',
+    registry: ['.tag','.foot','.sub','.vchip','.app-name','.app-sub','.go','.group-title','.label','.name','h1','h2'],
+    nonText:  [] },
+  { file: 'public/accessibility.html',
+    registry: ['.foot','.sub','.lead','.apps','.contact-email','h1','h2'],
+    nonText:  [] },
 ];
 
 const THEMES = ['light', 'dark'];
@@ -62,7 +83,7 @@ const fail = (where, msg) => failures.push(`${where}: ${msg}`);
 const browser = await chromium.launch(launchOpts);
 
 try {
-  for (const { file, registry } of PAGES) {
+  for (const { file, registry, nonText } of PAGES) {
     for (const theme of THEMES) {
       const page = await browser.newPage({
         viewport: VIEWPORTS[0],
@@ -92,7 +113,7 @@ try {
       if (VERBOSE) console.log(`  ${where} axe: ${axeResult.violations.length} violations, ${axeResult.passes.length} passes, incomplete: ${axeResult.incomplete.map(i=>i.id).join(', ')||'none'}`);
 
       // ---- computed contrast over the registry ----------------------------
-      const contrast = await page.evaluate((sels) => {
+      const contrast = await page.evaluate(({ sels, nonTextSels }) => {
         const lum = c => {
           const [r,g,b] = c.map(v => { v /= 255; return v <= 0.03928 ? v/12.92 : ((v+0.055)/1.055) ** 2.4; });
           return 0.2126*r + 0.7152*g + 0.0722*b;
@@ -154,10 +175,57 @@ try {
             size: cs.fontSize, weight, isLarge,
           };
         }
-        return out;
-      }, registry);
+        // WCAG 1.4.11 Non-text Contrast: 3:1 for the visual information needed
+        // to identify a UI component. Measured against the same worst-case
+        // gradient candidates as text, and never guessed.
+        const outNT = {};
+        for (const s of nonTextSels) {
+          const el = document.querySelector(s);
+          if (!el) { outNT[s] = { missing: true }; continue; }
+          const cs = getComputedStyle(el);
+          // 1.4.11 asks whether the component is IDENTIFIABLE, not whether one
+          // particular property passes. A filled card is bounded by its surface
+          // colour as much as by its border, so take the BEST available
+          // boundary signal — border-vs-outside, or fill-vs-outside — and
+          // require 3:1 of that. Measuring the border alone fails cards that
+          // are perfectly visible by their fill.
+          const outside = bgCandidates(el.parentElement || el);
+          if (!outside.length) { outNT[s] = { undetermined: true }; continue; }
+          const worst = rgb => Math.min(...outside.map(bg => ratio(rgb, bg)));
+          const signals = {};
+          const bw = parseFloat(cs.borderTopWidth) || 0;
+          const edge = parse(cs.borderTopColor);
+          if (bw > 0 && cs.borderTopStyle !== 'none' && edge && edge.a === 1) {
+            signals.border = worst(edge.rgb);
+          }
+          const fill = parse(cs.backgroundColor);
+          if (fill && fill.a === 1) signals.fill = worst(fill.rgb);
+          if (!Object.keys(signals).length) { outNT[s] = { undetermined: true }; continue; }
+          const best = Object.entries(signals).sort((a, b) => b[1] - a[1])[0];
+          outNT[s] = {
+            ratio: +best[1].toFixed(2),
+            via: best[0],
+            all: Object.fromEntries(Object.entries(signals).map(([k, v]) => [k, +v.toFixed(2)])),
+            required: 3,
+          };
+        }
+        return { text: out, nonText: outNT };
+      }, { sels: registry, nonTextSels: nonText });
 
-      for (const [sel, r] of Object.entries(contrast)) {
+      for (const [sel, r] of Object.entries(contrast.nonText)) {
+        if (r.missing) {
+          fail(where, `non-text registry selector "${sel}" matched nothing — restore it or remove it from nonText in a11y-gate.mjs`);
+        } else if (r.undetermined) {
+          fail(where, `could not determine an opaque boundary or background for "${sel}" — refusing to guess`);
+        } else if (r.ratio < r.required) {
+          const detail = Object.entries(r.all).map(([k, v]) => `${k} ${v}:1`).join(', ');
+          fail(where, `non-text contrast ${sel} best boundary ${r.ratio}:1 via ${r.via} (needs ${r.required}:1 — WCAG 1.4.11; measured ${detail})`);
+        } else if (VERBOSE) {
+          console.log(`  ${where} non-text ${sel} ${r.ratio}:1 via ${r.via} ok`);
+        }
+      }
+
+      for (const [sel, r] of Object.entries(contrast.text)) {
         if (r.missing) {
           // §4: a registered pair that stops matching must FAIL, not be skipped.
           fail(where, `registry selector "${sel}" matched nothing — either restore it or remove it from REGISTRY in a11y-gate.mjs`);
@@ -249,12 +317,24 @@ try {
           const imgsNoAlt = [...document.querySelectorAll('img')]
             .filter(i => !i.hasAttribute('alt'))
             .map(i => i.getAttribute('src') || '(no src)');
+          // WCAG 1.1.1: a <canvas> is non-text content and needs a text
+          // alternative — an accessible name, or real fallback content between
+          // the tags. "Drawing canvas" is not an alternative; it must describe
+          // what is actually on it. INERT IN THIS REPO (the hub has no canvas)
+          // and live in the app repos that share this gate — see ACCESSIBILITY.md.
+          const canvasNoAlt = [...document.querySelectorAll('canvas')]
+            .filter(c => !c.getAttribute('aria-label')
+                      && !c.getAttribute('aria-labelledby')
+                      && !c.getAttribute('title')
+                      && !c.textContent.trim())
+            .map(c => c.outerHTML.slice(0, 60));
           const linksNoName = inter
             .filter(el => !el.textContent.trim() && !el.getAttribute('aria-label') && !el.getAttribute('title'))
             .map(el => el.outerHTML.slice(0, 60));
           return {
             smallTargets: small,
             tightTargets: tight,
+            canvasNoAlt,
             inlineExempt: exempt,
             imgsNoAlt,
             linksNoName,
@@ -274,6 +354,7 @@ try {
           exemptions.add(`${t.t} (${t.w}x${t.h}px, inline in a sentence — WCAG 2.2 SC 2.5.8)`);
         }
         for (const s of custom.imgsNoAlt) fail(at, `<img> has no alt attribute: ${s}`);
+        for (const c of custom.canvasNoAlt) fail(at, `<canvas> has no text alternative (WCAG 1.1.1) — needs aria-label, aria-labelledby, or fallback content describing what it holds: ${c}`);
         for (const l of custom.linksNoName) fail(at, `interactive element has no accessible name: ${l}`);
         if (!custom.lang) fail(at, 'document has no lang attribute');
         if (custom.h1 !== 1) fail(at, `expected exactly one <h1>, found ${custom.h1}`);
