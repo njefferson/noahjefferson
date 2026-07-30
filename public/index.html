@@ -35,25 +35,25 @@
 
 <style>
   :root{
-    --bg:#0B1020;
-    --bg2:#0E1428;
-    --surface:#1B2135;
-    --surface-hi:#212945;
-    --line:#6F79A7;
-    --text:#EAECF5;
-    --muted:#8B93AD;
+    --bg:#14161D;
+    --bg2:#1C1F28;
+    --surface:#373C49;
+    --surface-hi:#414755;
+    --line:#9AA3B8;
+    --text:#E7E9EE;
+    --muted:#C2C8D5;
     /* false-color spectral accents */
-    --amber:#F2A65A;
-    --green:#5FD08A;
-    --magenta:#E168A2;
-    --cyan:#58C6E0;
-    --slate:#8A97FF;
+    --amber:#FADFA2;
+    --green:#6ED194;
+    --magenta:#EFA7C5;
+    --cyan:#A5E9F8;
+    --slate:#BEB4FB;
   }
   *{box-sizing:border-box}
   html,body{margin:0}
   body{
     background:
-      radial-gradient(1200px 700px at 50% -10%, #16203f 0%, rgba(22,32,63,0) 60%),
+      radial-gradient(1200px 700px at 50% -10%, #232733 0%, rgba(35,39,51,0) 60%),
       linear-gradient(180deg,var(--bg2),var(--bg));
     color:var(--text);
     font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -112,7 +112,7 @@
   .tile::before{
     content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--band,var(--slate));
   }
-  a.tile:hover{transform:translateY(-2px);background:var(--surface-hi);border-color:#7C87B5}
+  a.tile:hover{transform:translateY(-2px);background:var(--surface-hi);border-color:var(--line)}
   a.tile:focus-visible{outline:2px solid var(--band,var(--slate));outline-offset:2px}
 
   .ico{
@@ -150,7 +150,7 @@
   .approw::before{
     content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--band,var(--slate));
   }
-  a.approw:hover{transform:translateY(-2px);background:var(--surface-hi);border-color:#7C87B5}
+  a.approw:hover{transform:translateY(-2px);background:var(--surface-hi);border-color:var(--line)}
   a.approw:focus-visible{outline:2px solid var(--band,var(--slate));outline-offset:2px}
   .approw .app-ico{
     flex:0 0 52px;width:52px;height:52px;border-radius:14px;display:block;
@@ -184,33 +184,31 @@
      (the "Open" go label, focus rings) still clears WCAG AA (>=4.5:1) on white */
   @media (prefers-color-scheme:light){
     :root{
-      --bg:#EAECF1;
-      --bg2:#F1F2F4;
-      --surface:#FFFFFF;
-      --surface-hi:#F0F3FA;
-      --line:#7482A0;
-      --text:#171C2B;
-      --muted:#586079;
-      --amber:#AB4F09;
-      --green:#1E7945;
-      --magenta:#B03270;
-      --cyan:#0E6E88;
-      --slate:#4A54C8;
+      --bg:#C3C7D1;
+      --bg2:#D1D4DC;
+      --surface:#F4F6F9;
+      --surface-hi:#EAEDF3;
+      --line:#59606E;
+      --text:#23262C;
+      --muted:#2F333C;
+      --amber:#714408;
+      --green:#082F18;
+      --magenta:#6D1A44;
+      --cyan:#0B5266;
+      --slate:#3F2585;
     }
     body{
       background:
-        radial-gradient(1200px 700px at 50% -10%, #DFE3EE 0%, rgba(223,227,238,0) 60%),
+        radial-gradient(1200px 700px at 50% -10%, #D6DAE4 0%, rgba(214,218,228,0) 60%),
         linear-gradient(180deg,var(--bg2),var(--bg));
     }
-    a.tile:hover{border-color:#63718F}
-    a.approw:hover{border-color:#63718F}
   }
 
   /* stronger borders + text when the reader asks for more contrast */
   @media (prefers-contrast:more){
-    :root{--line:#828CBC;--muted:#AEB6CE}
+    :root{--line:#B4BCCC;--muted:#DDE0E7}
     @media (prefers-color-scheme:light){
-      :root{--line:#5A6784;--muted:#3D445C}
+      :root{--line:#3E4450;--muted:#1E2128}
     }
     .tile,.approw,.vchip{border-width:2px}
   }
