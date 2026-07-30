@@ -183,6 +183,43 @@ issue.
   fixed rows keep their release number; never silently delete a row.
 - Run the a11y audit (axe-core + custom checks, both themes) before any UI ship.
 
+TREMOR IS A SUPPORTED CONDITION. NOT SUPPORTING IT IS A FAILURE — the same fail
+state as hue-only encoding, and judged the same way. Assume a user whose pointer
+wobbles: essential or Parkinsonian tremor, an intention tremor, or simply cold,
+tired hands. Concretely:
+
+- EVERY DRAG HAS A NON-DRAG PATH (WCAG 2.2 SC 2.5.7). If a thing can be dragged,
+  it can also be moved without dragging — arrow-key nudge, a numeric field, or
+  tap-then-tap-destination. A drag-only interaction is a broken interaction. In a
+  direct-manipulation app the core gesture usually IS the drag, which is exactly
+  why this is the rule most likely to be skipped.
+- EVERY MULTI-POINT OR PATH GESTURE HAS A SINGLE-POINTER ALTERNATIVE (SC 2.5.1).
+  Pinch-zoom needs zoom controls. Two-finger pan needs another way to pan. A
+  gesture is an accelerator, never the only door.
+- NOTHING COMMITS ON POINTER-DOWN (SC 2.5.2). Act on pointer-up, and let a
+  pointer that leaves the target before release cancel the action. Tremor
+  produces spurious downs; a down-triggered action fires every one of them.
+- NO TIMED GESTURES (SC 2.2.1). No required double-tap, no press-and-hold on a
+  short window, no action that expires while someone is still aiming.
+- TARGETS ARE SPACED, NOT ONLY SIZED. 44px is a floor on the target itself. What
+  tremor actually does is OVERSHOOT, so adjacent targets need clear space between
+  them, and a destructive control never sits next to a routine one. The gate
+  checks spacing, not only size.
+- SNAPPING AND SMOOTHING ARE ACCESSIBILITY FEATURES, NOT POLISH. Wherever a tool
+  interprets pointer motion, a generous snap radius and input smoothing absorb
+  the wobble — and the radius is ADJUSTABLE, never tuned to a steady hand.
+- DECLARE IT, so it is a gate and not an intention (§16.8). Each app declares its
+  drag and gesture interactions alongside the non-drag control satisfying each
+  one. A declared interaction with no declared alternative FAILS the build, and a
+  declaration that matches nothing FAILS rather than being skipped — the same
+  loud-failure rule the contrast registry already follows.
+
+Recorded because it was nearly missed. The Intersecting Parallels design reached
+several of these by accident, reasoning about styluses and keyboard access rather
+than about tremor, and still left a two-finger pinch-zoom with no single-pointer
+alternative. Good instincts produced most of it and silently dropped one; that is
+the argument for a rule. (Noah, 2026-07-29.)
+
 THE GATE, and the audit that produced it (2026-07-28). This doctrine claimed an
 enforcement that did not exist — `a11y-scan.mjs` and `a11y-detail.mjs` printed
 `FAIL` as a string and exited 0, no workflow ran them, one theme and one page

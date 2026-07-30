@@ -26,6 +26,10 @@ diagnostics only — they always exit 0 and prove nothing.
   for large text). Against a gradient, the **worst** colour stop is used
 - **Targets** — ≥44px, except inline-in-a-sentence (WCAG 2.2 SC 2.5.8), which is
   exempted **and printed**
+- **Target spacing** — ≥8px between any two non-inline targets, because tremor
+  overshoots and a 2px miss on a touching neighbour lands on the wrong control
+  (Doctrine §4). Inline-in-a-sentence targets carry the same exemption they get
+  from the size rule
 - **Also** — `lang` present, exactly one `<h1>`, no `<img>` missing `alt`, no
   unnamed interactive element, no page errors
 
@@ -89,3 +93,29 @@ violation for elements under a CSS transform — a green axe run over such conte
 proves nothing (inherited from photo-pointer, LESSONS §5). This is why the
 registry above is computed by hand rather than delegated to axe.
 **Status:** Mitigated by the hand-computed registry. Not fixable in axe.
+
+### F-05 · Target spacing was never checked, only target size
+**Found:** 2026-07-29 · Noah's instruction that tremor MUST be supported
+**Rule:** Doctrine §4 (tremor is a fail state — targets are spaced, not only sized)
+**Detail:** The gate measured every target's own box and nothing about the gap
+between neighbours. Size alone is the wrong measurement for tremor: the failure
+mode is **overshoot**, so two 44px targets touching each other still send a 2px
+miss to the wrong control. Nothing in the repo would have caught a zero-gap list.
+**Fix:** `a11y-gate.mjs` gained a pairwise spacing check over the rects it was
+already collecting — `MIN_SPACING = 8`, applied to non-inline targets, with the
+same inline-in-a-sentence exemption the size rule carries and the same loud
+reporting. 8px is our own floor, not a WCAG citation: SC 2.5.8 treats spacing as
+compensation for insufficient size rather than as an absolute gap.
+**Status:** FIXED 2026-07-29. Verified by breaking it: `.tiles` gap 11px→2px
+produced **16 failures across both themes and both viewports**, each naming the
+two targets and the measured gap, exit 1. Reverted; the real layout passes.
+
+### F-06 · `.tiles.compact` sits exactly on the spacing floor
+**Found:** 2026-07-29 · **Status: OPEN — passes, but with no margin**
+**Detail:** The compact handle rows (`.tiles.compact`) use `gap:8px`, which meets
+the new ≥8px rule exactly. It passes, so this is not a failure — but any future
+tightening of that value fails the build, and 8px is the least spacing a tremor
+overshoot can tolerate rather than a comfortable one.
+**Open question:** whether to raise the compact gap. Recorded rather than changed,
+because the page currently passes and a session should not redesign a working
+layout on its own initiative.

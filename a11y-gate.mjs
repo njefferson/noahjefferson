@@ -47,6 +47,12 @@ const VIEWPORTS = [
 ];
 
 const MIN_TARGET = 44; // §4: targets >= 44px
+// §4 tremor: overshoot is the failure mode, so size alone is not enough — two
+// targets with no gap mean a 2px miss lands on the wrong control. 8px is OUR
+// floor (the common platform-guidance minimum). WCAG 2.5.8 treats spacing as
+// compensation for insufficient SIZE rather than as an absolute gap, so this is
+// a stricter rule of ours in a different axis, not a WCAG citation.
+const MIN_SPACING = 8;
 
 const failures = [];
 const notes = [];
@@ -167,7 +173,7 @@ try {
       // ---- structural checks ---------------------------------------------
       for (const vp of VIEWPORTS) {
         await page.setViewportSize({ width: vp.width, height: vp.height });
-        const custom = await page.evaluate((minTarget) => {
+        const custom = await page.evaluate(({ minTarget, minSpacing }) => {
           const inter = [...document.querySelectorAll('a[href],button,[role="button"]')];
           const visible = el => {
             const r = el.getBoundingClientRect();
@@ -207,10 +213,33 @@ try {
               el,
               t: el.textContent.trim().slice(0,32),
               w: +r.width.toFixed(1), h: +r.height.toFixed(1),
+              r: { left: r.left, top: r.top, right: r.right, bottom: r.bottom },
               tooSmall: r.width < minTarget || r.height < minTarget,
               inline: isInlineInText(el),
             };
           });
+          // §4 tremor: TARGETS ARE SPACED, NOT ONLY SIZED. Gap between two
+          // axis-aligned rects — 0 when they touch or overlap. If they overlap
+          // on one axis, dx or dy is 0 and this reduces to the distance on the
+          // other, which is the gap a finger actually has to clear.
+          const gapBetween = (a, b) => {
+            const dx = Math.max(0, a.left - b.right, b.left - a.right);
+            const dy = Math.max(0, a.top - b.bottom, b.top - a.bottom);
+            return Math.hypot(dx, dy);
+          };
+          // Inline-in-a-sentence targets are exempt from spacing for the same
+          // reason they are exempt from size: the line box constrains them, and
+          // forcing gaps mid-paragraph shreds the text. Exemption is reported.
+          const spaceable = measured.filter(m => !m.inline);
+          const tight = [];
+          for (let i = 0; i < spaceable.length; i++) {
+            for (let j = i + 1; j < spaceable.length; j++) {
+              const gap = gapBetween(spaceable[i].r, spaceable[j].r);
+              if (gap < minSpacing) {
+                tight.push({ a: spaceable[i].t, b: spaceable[j].t, gap: +gap.toFixed(1) });
+              }
+            }
+          }
           const small   = measured.filter(m => m.tooSmall && !m.inline).map(({el,...m}) => m);
           const exempt  = measured.filter(m => m.tooSmall &&  m.inline).map(({el,...m}) => m);
           // An <img> is a fault only when it has NO alt attribute at all.
@@ -225,17 +254,21 @@ try {
             .map(el => el.outerHTML.slice(0, 60));
           return {
             smallTargets: small,
+            tightTargets: tight,
             inlineExempt: exempt,
             imgsNoAlt,
             linksNoName,
             lang: document.documentElement.lang,
             h1: document.querySelectorAll('h1').length,
           };
-        }, MIN_TARGET);
+        }, { minTarget: MIN_TARGET, minSpacing: MIN_SPACING });
 
         const at = `${where} @${vp.name}`;
         for (const t of custom.smallTargets) {
           fail(at, `touch target "${t.t}" is ${t.w}x${t.h}px — §4 requires >= ${MIN_TARGET}px`);
+        }
+        for (const t of custom.tightTargets) {
+          fail(at, `targets "${t.a}" and "${t.b}" are ${t.gap}px apart — §4 tremor requires >= ${MIN_SPACING}px between targets`);
         }
         for (const t of custom.inlineExempt) {
           exemptions.add(`${t.t} (${t.w}x${t.h}px, inline in a sentence — WCAG 2.2 SC 2.5.8)`);
@@ -270,4 +303,4 @@ if (failures.length) {
   console.log('\nDoctrine §4: accessibility is a hard gate. This exits non-zero.');
   process.exit(1);
 }
-console.log('PASS — no violations, all registered contrast pairs meet AA, all non-inline targets >= 44px.');
+console.log(`PASS — no violations, all registered contrast pairs meet AA, all non-inline targets >= ${MIN_TARGET}px and >= ${MIN_SPACING}px apart.`);
