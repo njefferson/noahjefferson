@@ -1551,3 +1551,40 @@ recorded with its numbers and left for its own pass. **When something measures
 out of spec, first find out whether you brought it — the control group is
 usually already on screen.**
 *(Photography Studio, 2026-07-30.)*
+
+**Surface colours and text colours are one system — you cannot tune either
+alone.** "Cards don't stand out from the page" looks like a one-line fix: move
+the surfaces apart. It isn't. Pushing surfaces away from the page pushes the
+*pressed* surface toward the text sitting on it, so every naive spread broke
+text-on-pressed contrast; and in a dark theme, lifting surfaces also weakens a
+light hairline riding on them, so the rail token has to move in the same breath.
+Four knobs — surface lift, page move, rail strength, quiet-text strength — and
+changing one silently spends the budget of the others. **Solve them together
+against the whole matrix, or a fix in one place is a regression somewhere you
+weren't looking.** The frontier is worth computing rather than guessing: for the
+Studio it turned out to be page→card 1.30:1 dark / 1.27:1 light, and past that
+something correct breaks.
+*(Photography Studio + the hub, 2026-07-30.)*
+
+**Near-black has no room left underneath it — check which direction is even
+available before designing the fix.** The obvious way to separate cards from the
+page in a dark theme is to darken the page, leaving every text and rail ratio on
+the surfaces untouched. It does nothing: at `#0b0c0f` the page is already at the
+luminance floor, so 55% darker moved separation 1.09 → 1.13. The `+0.05` term in
+the WCAG contrast formula dominates down there — ratios between two very dark
+colours barely move no matter what you do. Light themes are the mirror image
+near white. **The cheap direction is often the unavailable one; spend a minute
+computing which way has headroom before committing to an approach.**
+*(Photography Studio, 2026-07-30.)*
+
+**An optimiser will happily destroy the brand to win the metric.** Asked to
+maximise card/page separation on the hub, the search returned a palette that
+washed the magenta accent from `#E0619E` to `#F8DAE8` — a pale pink — because
+that bought 2.89:1. The spectral accents ARE the hub's identity; the "best"
+answer was unusable. Re-run with the brand pinned (accent shift capped at 5%)
+and the honest answer appeared: a modest 1.08 → 1.18, plus the genuinely
+valuable part, two accents lifted off the 4.5:1 line where they'd been sitting
+at 4.52 and 4.68. **Constrain the search by what must not change, or the
+objective will quietly eat it — and check the winning output by eye before
+believing it.**
+*(the hub, 2026-07-30.)*
