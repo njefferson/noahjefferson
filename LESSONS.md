@@ -1452,3 +1452,47 @@ closer together, or the third point 44px farther out"*, so the answer names both
 exits and lets him choose the one that costs him less. **A validator that only
 says no makes the owner guess; one that says which way is a collaborator.**
 *(Intersecting Parallels, 2026-07-30.)*
+
+**A link that exists is not a link that works — count the taps a stranger would
+need, and how many of them are invisible.** The apps had been made to "point
+both ways", and technically they did: every tool carried "‹ Studio" in its bar
+and the Infrared ⓘ dialog carried a line to the hub. But the Studio page itself
+had NOTHING pointing up, so the chain dead-ended one rung short, and the single
+hub link in the whole app was the fourth of five identical grey text lines
+inside a dialog, worded "More free tools by Noah Jefferson" — which describes a
+category, not a way back. Noah couldn't find it on device. **Cross-app links
+are the easiest thing to mark done and the hardest thing to notice are broken,
+because the person who added them always knows where they are.** The check that
+would have caught it costs nothing: walk it from the far end, on a phone, and
+count how many steps are visible without scrolling or opening something. Here
+it went from "one buried line inside a dialog" to one visible control per level.
+*(Photography Studio ← the hub, 2026-07-30.)*
+
+**Measuring contrast against a gradient: computed style will confidently tell
+you the page is black.** `background: radial-gradient(...)` sets no
+background-COLOR, so walking up the tree looking for an opaque one falls through
+every ancestor to its fallback. A light-theme page measured against that
+fallback returned 1.11:1, which is absurd on its face — and absurdity is the
+signal, per "suspect the instrument first". Three more traps sat behind it, each
+producing a confident wrong answer: sampling a rail at the tangent of a
+999px-radius pill reads pure antialiasing and under-reports by ~0.5; a gradient
+backdrop CHANGES with position, so a rail must be compared against the pixel
+touching it, not a convenient patch elsewhere; and `:focus-visible` never
+matches a scripted `.focus()` in Chromium, so a perfectly good focus ring
+reports as `outline: 0px none` until the harness presses a real Tab. **If a
+visual property is worth asserting, assert it on real painted pixels off a
+screenshot, and drive it the way a person would.**
+*(Photography Studio, 2026-07-30.)*
+
+**A calibrated token that fails in one place is a finding, not a fix to make in
+passing.** The rail token measured 2.87:1 on the launcher's light-theme
+gradient, under the 3:1 rule. The tempting move — nudge it, or drop in a
+one-off color — would have churned a value defined in five files and calibrated
+against a documented surface set, inside a change about navigation. The cheap
+test that settled it: measure an ALREADY-SHIPPED, already-audited control
+sitting on the same backdrop. It came out worse (2.68:1), which proved the
+shortfall belonged to the token on that gradient and not to the new work. It got
+recorded with its numbers and left for its own pass. **When something measures
+out of spec, first find out whether you brought it — the control group is
+usually already on screen.**
+*(Photography Studio, 2026-07-30.)*
