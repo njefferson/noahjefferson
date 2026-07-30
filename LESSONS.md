@@ -1212,3 +1212,46 @@ record-keeping commits, which is exactly when the deploy it is recording is
 still in flight: **do not push again until the deploy you are claiming has
 finished.**
 *(Intersecting Parallels 0.5.0, 2026-07-30.)*
+
+**Pushing again cancels the run you were waiting on.** A verification run was
+watched through eleven of fourteen steps and then killed at the browser gate,
+because a docs commit went up on the same branch and the concurrency group
+superseded it. Nothing was wrong with the code and nothing was wrong with the
+gate; the evidence was simply destroyed by the next push. **Between "pushed" and
+"green", the branch is a held resource.** If a docs change cannot wait, it can go
+on the other repo, or after.
+*(Quietkeep, 2026-07-30. Two sessions hit this independently within the same hour
+— the entry above is the same failure on a production deploy in another app. When
+one mistake is found twice in one hour by two people who could not see each
+other's work, it is not carelessness, it is a missing guard rail: `staging` and
+`main` want `cancel-in-progress` set differently, and every session wants to
+commit its record-keeping the moment the thing it is recording is still in
+flight.)*
+
+**Assert on the store, not on the sentence.** A button that reported "13 sample
+things" while committing nothing left the message assertion passing and reded only
+the three checks that read the database. **The copy on screen is written by the
+same code that failed, so it agrees with itself.** Every check on an action that
+writes should read the thing written — the row count, the log, the file on disk —
+and the check on the wording is a separate, weaker claim that must never stand in
+for it.
+*(Quietkeep, 2026-07-30 — the proof was written expecting all seven checks to red;
+four did not, and that was the finding.)*
+
+**Check the invariant against the code that enforces it, not against your memory
+of it.** Two consecutive mistakes came from one misremembering: that a container
+is kept alive by its clocked children. It is not — containment satisfies the
+CHILD, so a parent whose children are all clocked is still silent. Believing the
+wrong version produced a sample set that leaned on the gate's cures, and then a
+test asserting a state the app cannot reach at all. **A law you can quote is not a
+law you have read**; the enforcement function is the specification, and it takes
+thirty seconds to open.
+*(Quietkeep, 2026-07-30.)*
+
+**When a generated demonstration exists, run it through the real write path.** The
+temptation is a fixture that skips validation "because we control the input" — and
+that is exactly how a privileged path gets added for a fixture and then quietly
+becomes how the feature works. Going through the app's own boundary meant a bug in
+the generator surfaced as a plain refusal instead of as a corrupt store, and it
+revealed two wrong beliefs about the invariants in the process.
+*(Quietkeep, 2026-07-30.)*
