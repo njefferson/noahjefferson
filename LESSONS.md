@@ -1655,14 +1655,18 @@ perceptible (ΔE ≥ 2.3), not that they ascend.
 **Do not state a UI or platform path as fact unless you have verified it — "I
 don't know" beats a confident wrong answer, every time.** Asked where to edit
 GitHub repo metadata from an iPhone, the session invented tap-paths ("gear next
-to About", "Request Desktop Website") and, when each was refuted, adjusted the
-guess rather than establishing the truth. It cost Noah five minutes of proving
-each answer wrong before the real one surfaced: **repo description / topics /
-social-preview cannot be edited from the GitHub mobile site or app at all — it
-needs a desktop browser.** The failure is the same shape as the security
-overclaims (7f): asserting past what is actually known, which turns the
-non-expert owner into the fact-checker for the expert. When you don't know a
-platform detail, say so and go find it, or say plainly that it can't be done —
-never dress a guess as a direction. A wrong "go here" is worse than "I'm not
-sure," because it spends the other person's time to discover it was empty.
-*(Quietkeep, 2026-07-30.)*
+to About", "Request Desktop Website"), and when each was refuted it adjusted the
+guess rather than establishing the truth — costing Noah minutes of proving each
+answer wrong. Then, writing THIS very lesson, it did the same thing again: it
+asserted repo metadata "cannot be edited from the mobile site or app at all,"
+another unverified absolute — and Noah corrected it, because the GitHub mobile
+app *can* edit the description. So the honest state of what is actually known is
+small: the description is editable in the app; what else the mobile surfaces
+allow was never verified and must not be claimed either way. The failure is the
+same shape as the security overclaims (7f): asserting past what is known, which
+turns the non-expert owner into the fact-checker for the expert. It is so
+ingrained that it survived into the sentence meant to cure it. When you don't
+know a platform detail, say so and find it, or scope the claim to exactly what
+you have seen — never a sweeping "you can" or "you can't." A wrong direction, in
+either direction, spends the other person's time to discover it was empty.
+*(Quietkeep, 2026-07-30 — and the entry itself had to be corrected once.)*
