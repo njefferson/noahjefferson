@@ -1342,3 +1342,38 @@ number it produces**, and prefer a measurement that does not depend on simulated
 human noise at all — a distance, an incidence, a coordinate — because those hold
 whatever the hand does.
 *(Intersecting Parallels, 2026-07-29.)*
+
+**A guard on a destructive action must test intent, not dexterity.** Hold-to-confirm
+is the fashionable pattern and it is a hand-steadiness exam: tremor is a supported
+condition in these apps, so a guard a shaking hand cannot pass is a guard that locks
+somebody out of their own data at the exact moment they want it gone. Typing a short
+word tests the thing actually in question — did this person mean it — and it costs
+nothing to forgive case and stray whitespace, because neatness under pressure was
+never the property being checked.
+*(Quietkeep 0.23.0, 2026-07-30.)*
+
+**Two guarded actions must never share a confirmation token.** If the reversible
+"clear the list" and the irreversible "erase everything" both accept the same typed
+word, then satisfying the guard for the safe one and switching mode leaves a
+satisfied-looking control sitting in front of the dangerous one. **Authorisation
+crosses whenever the token is the same and the target can change.** Different words
+per action, and switching target clears whatever was entered — the second half
+matters as much as the first, and it belongs in the UI test rather than in a habit.
+*(Quietkeep 0.23.0, 2026-07-30.)*
+
+**Never reveal a surface before it can say anything.** The confirmation panel was
+unhidden and THEN filled in, because the count came from an async store read — so
+for as long as that read took, an empty paragraph sat above the go-ahead button, in
+the one place where the sentence is the entire safeguard. Compute, write, then
+reveal. **A surface that appears before its content is a surface that can be acted
+on before it has warned anybody**, and the window is exactly as long as the slowest
+device makes it.
+*(Quietkeep 0.23.0, 2026-07-30.)*
+
+**A control that only appears after a click is still a control somebody reads.** The
+accessibility gate correctly refused a registry entry pointing inside a hidden
+block. The tempting fix is to drop the entry; the right fix is to open the block in
+the audited state, because otherwise the exemption lands on exactly the surfaces
+that are conditional — confirmations, error states, revealed detail — which are the
+ones people meet while already under strain.
+*(Quietkeep 0.23.0, 2026-07-30.)*
