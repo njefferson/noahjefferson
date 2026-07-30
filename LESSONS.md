@@ -1588,3 +1588,18 @@ at 4.52 and 4.68. **Constrain the search by what must not change, or the
 objective will quietly eat it — and check the winning output by eye before
 believing it.**
 *(the hub, 2026-07-30.)*
+
+**A rule can be correct and still be wrong where you applied it — and the
+tempting fix is to edit the data until the rule is happy.** A palette gate
+enforced "the surface ladder steps monotonically away from the page." True for an
+ELEVATION ladder (rest → raised → pressed). False for a STATE ladder: a
+light-theme hover legitimately darkens *toward* the page, and the rule failed a
+hub hover that was right. What makes this worth writing down is the near-miss:
+the first instinct was to reorder the data — list the hover as if it were the
+resting surface — so the numbers would line up. That would have left a permanent
+lie in a reference file other apps copy from, to protect a rule that was the
+thing at fault. **When a gate flags something you believe is correct, establish
+whether the rule governs that case before touching the data.** The fix was to
+make the rule kind-aware; a state ladder owes only that its states are
+perceptible (ΔE ≥ 2.3), not that they ascend.
+*(the hub's palette gate, 2026-07-30.)*

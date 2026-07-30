@@ -16,8 +16,11 @@ every push to `main`.
 
 ## This repo is the doctrine's home
 `DOCTRINE.md` is canonical here, and so is [`LESSONS.md`](LESSONS.md) — the
-cross-app record of what has actually gone wrong, with the numbers. The doctrine
-says what to do; the lessons say what it cost to find out. Append to LESSONS.md
+cross-app record of what has actually gone wrong, with the numbers — and
+[`PALETTES.md`](PALETTES.md), how any app gets reskinned (roles, floors, four
+verified families, traps), enforced by [`palette-check.mjs`](palette-check.mjs).
+The doctrine says what to do; the lessons say what it cost to find out; palettes
+says what colour has to clear before taste gets a vote. Append to LESSONS.md
 from any app's session whenever something is learned that would have saved time
 elsewhere; never fork it into another repo. When a doctrine rule changes, edit it HERE and
 tell the sibling repos to re-point (their `CLAUDE.md` files link to this copy).

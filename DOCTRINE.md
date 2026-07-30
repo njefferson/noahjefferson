@@ -130,6 +130,18 @@ issue.
 - Meaning must survive a grayscale render.
 - Contrast is COMPUTED, never eyeballed: a CI gate that exits non-zero on any
   failure. New fg/bg pairs are added to the gate in the SAME commit.
+- COLOUR IS A SYSTEM, NOT A LIST OF KNOBS — and the branding is placeholder
+  (owner, 2026-07-30: *"I am not tied to any brand. It's all placeholder while I
+  get accessibility right. Everything is subject to audit."*). No app's colours
+  are protected; accessibility designs the palette and taste chooses among the
+  options that already pass. Surfaces, text tokens and rails trade against each
+  other — spreading surfaces pushes the pressed one toward its text, lifting
+  dark surfaces weakens a light rail — so they are solved TOGETHER against the
+  whole matrix, never one at a time. Before touching any palette, read
+  [`PALETTES.md`](PALETTES.md) (roles, floors, four verified families, the
+  measurement traps) and run [`palette-check.mjs`](palette-check.mjs). If several
+  palettes pass, SHIP THEM AS OPTIONS on an axis independent of day/night rather
+  than arguing about taste (owner, 2026-07-30).
 - Keyboard always: Tab reaches it, Enter works, a visible focus-visible ring
   (never remove focus outlines). Targets >= 44px — EXCEPT a target inline in a
   sentence, whose height the surrounding line constrains (WCAG 2.2 SC 2.5.8):
@@ -477,6 +489,12 @@ Two consequences, both non-optional:
   Project facts. Read it first, every session.
 - `CLAUDE.md` — repo-specific behavior + a pointer to THIS doctrine. Keep it thin.
 - `ACCESSIBILITY.md` — the append-only accessibility register, where used.
+- `PALETTES.md` **in this hub** — [how any app gets reskinned](PALETTES.md):
+  the colour ROLES (so one instrument serves apps that name their tokens
+  differently), the hard floors, the coupling that makes surfaces/text/rails a
+  single system, four verified palette families, and the measurement traps.
+  Enforced by [`palette-check.mjs`](palette-check.mjs), which exits non-zero.
+  Canonical HERE — link to it, never fork it.
 - `LESSONS.md` **in this hub** — [cross-app lessons](LESSONS.md): what has
   actually gone wrong anywhere, with the numbers, so it does not go wrong again
   somewhere else. Read it with this doctrine at the start of every session, and
