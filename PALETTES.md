@@ -255,3 +255,72 @@ a result looks absurd, **suspect the instrument first** (Doctrine §14).
 
 Adding a palette, a role or a threshold? Change it **here**, and tell the sibling
 repos to re-point. Never fork.
+
+---
+
+## 9. Starting this work in another app — the session prompt
+
+Paste this into a new session, replacing `<APP>` and `<app-repo>`. It front-loads
+the things that otherwise get discovered late and expensively.
+
+```
+Work on <APP>: bring its colour and accessibility up to the family standard.
+
+SESSION SETUP — do this in the source picker, it cannot be fixed later:
+select BOTH njefferson/<app-repo> AND njefferson/noahjefferson. The hub carries
+the canonical rules, the four verified palette families and the gate. Without it
+in the session you will re-derive all of it, worse.
+
+READ FIRST, IN THIS ORDER. Do not skip to code:
+  1. <app-repo>/NOTES.md      — the repo's source of truth, every session
+  2. <app-repo>/CLAUDE.md     — its release flow; the gate differs per repo
+  3. hub DOCTRINE.md §4       — accessibility is a hard gate
+  4. hub PALETTES.md          — all of it: §1 roles, §2 floors, §3 coupling,
+                                §7 measurement traps, §8 recipe
+  5. hub LESSONS.md           — what has already gone wrong elsewhere
+
+THE WORK, IN THIS ORDER. The order is load-bearing:
+  1. Map this app's colour tokens onto the §1 ROLES (page, surfaces, rail,
+     hairline, text scale, accents). Write palettes/<app>.json in the shape
+     palette-check.mjs documents.
+  2. Run `node palette-check.mjs palettes/<app>.json` against what ships TODAY,
+     before designing anything, and report what it finds. It found real
+     failures on the hub — a page that had already been audited twice.
+  3. Fix the floors it reports. Nothing else until those pass.
+  4. Count how many places colour tokens are declared. If more than one,
+     CONSOLIDATE TO ONE FIRST. N sites x families x modes is the drift factory
+     this family has been bitten by repeatedly; consolidating afterwards is
+     much harder.
+  5. Only then adopt a family from palettes/families.json (Instrument is the
+     default) — or offer several behind a picker if the app has a settings
+     surface. Do not invent values. If you must, §3 is mandatory reading and
+     the roles get solved as ONE system, not one knob at a time.
+  6. Broad a11y sweep: axe-core PLUS the checks axe cannot make — touch targets
+     with the inline-in-a-sentence exemption applied AND NAMED, sub-11px text,
+     landmarks, keyboard focus, effective hit area. Every page, both themes,
+     resting AND with every dialog open. Most controls live inside dialogs; a
+     resting-state-only sweep reports a clean bill of health it has not earned.
+
+NON-NEGOTIABLE:
+  - Make every new check FAIL once before you trust it.
+  - When a result looks absurd, suspect the instrument first. §7 lists eight
+    ways these measurements lie, each of which produced a confident wrong
+    answer before it was caught.
+  - When a gate flags something you believe is correct, establish whether the
+    rule governs that case before editing the data to please the rule.
+  - Never fork DOCTRINE.md, PALETTES.md or LESSONS.md — link to them. APPEND to
+    the hub's LESSONS.md anything a sibling app would want to know.
+  - Never use the AskUserQuestion popup. Ask in chat.
+  - Check CLAUDE.md for whether commit messages are end-user patch notes.
+  - Say plainly what was VERIFIED headless versus what needs Noah's hands on
+    the real device.
+
+HAND BACK: what the gate found before and after, what you changed, what you
+deliberately did NOT change and why, and anything that needs his eye.
+```
+
+**Adjust per app.** An app with no settings surface should take the default
+family and skip the picker entirely. An app whose palette is already one file
+skips step 4. An app with no dialogs simplifies step 6. The two steps that are
+never optional are **2** (measure what ships before designing) and **4** (one
+source before many families).
