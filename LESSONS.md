@@ -1192,6 +1192,7 @@ the only reason it was short is that the failing assertion named a date that cou
 not have come from the new code. **Any gate that consumes a build artifact should
 be preceded by the build in the same command**, not merely earlier in the script.
 *(Quietkeep, 2026-07-30.)*
+
 **`cancel-in-progress` on a production deploy turns "promoted" into a lie.** A
 promote to `main` was pushed, its deploy started, and a Project-facts commit
 pushed twenty seconds later cancelled it — GitHub's concurrency group did
