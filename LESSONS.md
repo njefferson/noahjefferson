@@ -1192,3 +1192,22 @@ the only reason it was short is that the failing assertion named a date that cou
 not have come from the new code. **Any gate that consumes a build artifact should
 be preceded by the build in the same command**, not merely earlier in the script.
 *(Quietkeep, 2026-07-30.)*
+**`cancel-in-progress` on a production deploy turns "promoted" into a lie.** A
+promote to `main` was pushed, its deploy started, and a Project-facts commit
+pushed twenty seconds later cancelled it — GitHub's concurrency group did
+exactly what it was told. The run's conclusion was **`cancelled`**, not
+`failure`, so nothing was red anywhere: the branch was correct, the previous
+checks were green, and production was quietly still serving the previous
+release. It only surfaced because the deploy status was read one release at a
+time instead of assumed. It also happened to be harmless — the second push
+carried the same `public/` tree, so production landed anyway. That is luck, and
+luck is not a deploy strategy. **Latest-wins is right for previews and wrong for
+production**: `cancel-in-progress: ${{ github.ref_name != 'main' }}`. Two things
+generalise beyond the flag. A `cancelled` run reads as neutral to every glance
+and every notification, so it is the perfect place for a silent staleness bug to
+live — the same shape as "cancelled is not zero" from the Overpass sweep. And
+the moment after a release is exactly when a session wants to push
+record-keeping commits, which is exactly when the deploy it is recording is
+still in flight: **do not push again until the deploy you are claiming has
+finished.**
+*(Intersecting Parallels 0.5.0, 2026-07-30.)*
