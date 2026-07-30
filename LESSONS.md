@@ -1670,3 +1670,19 @@ know a platform detail, say so and find it, or scope the claim to exactly what
 you have seen — never a sweeping "you can" or "you can't." A wrong direction, in
 either direction, spends the other person's time to discover it was empty.
 *(Quietkeep, 2026-07-30 — and the entry itself had to be corrected once.)*
+
+**A session CANNOT edit repo metadata. Stop trying, stop hunting for a way,
+stop sending Noah on UI expeditions — it is his manual step, full stop.**
+Description, website, topics and social-preview are not editable by any tool a
+session has: there is no GitHub MCP call for them, and there is no back door.
+Noah has said this every time an app is set up, and every time a session tries
+anyway — searches for a tool, proposes tap-paths, offers to "just do it" — which
+is worse than useless because it burns his time proving the wall is still a wall.
+Doctrine §10 already says the values are his to set; this says the behaviour that
+rule keeps failing to produce. When metadata comes up: state the exact values
+once, in plain text, say they are Noah's to paste in whenever he is at it, and
+move on. Do NOT attempt it, do NOT re-offer it, do NOT explain where the buttons
+are. He knows where they are — the app edits the description, and the rest he
+handles. The only job a session has here is to hand over correct values and drop
+it.
+*(Quietkeep, 2026-07-30 — logged because it keeps happening despite being told.)*
