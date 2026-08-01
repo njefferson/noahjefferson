@@ -82,6 +82,32 @@ jobs:
           echo "CLOUDFLARE_ANALYTICS_TOKEN=$TOKEN" >> "$GITHUB_ENV"
           echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT" >> "$GITHUB_ENV"
 
+      - name: Describe the credentials without printing them
+        run: |
+          # Two rejected tokens in a row means guessing at the cause is costing
+          # more than measuring it. Length and character class identify which
+          # credential was pasted without ever revealing it — the same trade
+          # deploy.yml already makes when it echoes the cleaned token length.
+          echo "token length:      ${#CLOUDFLARE_ANALYTICS_TOKEN}"
+          echo "account id length: ${#CLOUDFLARE_ACCOUNT_ID}  (expect 32)"
+          if [[ "$CLOUDFLARE_ANALYTICS_TOKEN" =~ ^[A-Za-z0-9_-]{40}$ ]]; then
+            echo "shape: consistent with a Cloudflare API Token."
+            echo "So the string is well-formed but Cloudflare does not know it:"
+            echo "it was likely revoked, or belongs to a different account."
+          elif [[ "$CLOUDFLARE_ANALYTICS_TOKEN" =~ ^[0-9a-f]{37}$ ]]; then
+            echo "shape: this is a GLOBAL API KEY, not an API Token."
+            echo "The Global key cannot authenticate as a Bearer token, which"
+            echo "produces exactly this error. Create an API Token instead:"
+            echo "My Profile > API Tokens > Create Token > Account Analytics: Read."
+          elif [[ "$CLOUDFLARE_ANALYTICS_TOKEN" =~ ^[0-9a-f]{32}$ ]]; then
+            echo "shape: 32 hex characters — that is an ACCOUNT ID, not a token."
+            echo "The two secrets may have been pasted into each other."
+          else
+            echo "shape: matches neither an API Token, a Global API Key, nor an"
+            echo "account ID. Likely a truncated paste or a token ID rather than"
+            echo "the token value (Cloudflare shows the value only once)."
+          fi
+
       - name: Verify the token before using it
         run: |
           # This step must FAIL on a bad token, not just report one. The first
