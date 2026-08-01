@@ -321,6 +321,106 @@ async function report(dataset, opts) {
       console.log(`${app},${cc},${n}`);
 }
 
+// ---------------------------------------------------------------- top-ips
+
+// This repo is PUBLIC, so whatever this prints ends up in a publicly readable
+// Actions log. A visitor's IP is personal data and publishing it there would
+// contradict Doctrine §9 for the sake of a debugging convenience. So: an IP is
+// shown in full only above a volume no person browsing a static site produces,
+// which is exactly the set worth adding to --exclude-ip. Everything else is
+// masked to its network, which still shows a scanner range without naming
+// anyone. --full-ips overrides, for a local run where nothing is published.
+const FULL_IP_THRESHOLD = 500;
+
+function maskIp(ip) {
+  if (ip.includes(':')) return ip.split(':').slice(0, 3).join(':') + ':…'; // IPv6 /48
+  const p = ip.split('.');
+  return p.length === 4 ? `${p[0]}.${p[1]}.${p[2]}.x` : 'unknown';
+}
+
+async function topIps(dataset, opts) {
+  const { ip, country, ua, status, hostField, host, days, limit, fullIps } = opts;
+  const end = new Date();
+  const start = new Date(end.getTime() - days * 86400_000);
+
+  const decls = ['$account: String!', '$start: Time!', '$end: Time!'];
+  const filters = ['datetime_geq: $start', 'datetime_leq: $end'];
+  const vars = { account: ACCOUNT, start: start.toISOString(), end: end.toISOString() };
+  if (host) {
+    decls.push('$host: String!');
+    filters.push(`${hostField}: $host`);
+    vars.host = host;
+  }
+
+  const data = await gql(
+    `query(${decls.join(', ')}) {
+      viewer {
+        accounts(filter: { accountTag: $account }) {
+          rows: ${dataset}(
+            limit: 5000
+            filter: { ${filters.join(', ')} }
+            orderBy: [count_DESC]
+          ) {
+            count
+            dimensions { ${ip} ${country} ${ua} ${status} }
+          }
+        }
+      }
+    }`,
+    vars
+  );
+
+  const rows = data?.viewer?.accounts?.[0]?.rows ?? [];
+  if (!rows.length) {
+    console.log('No rows returned for that window.');
+    return;
+  }
+
+  // Fold the status dimension away, keeping the 4xx share — a client walking a
+  // wordlist is nearly all 4xx, a person loading the app is nearly all 2xx.
+  // That ratio separates them without anyone having to eyeball user agents.
+  const agg = new Map();
+  for (const r of rows) {
+    const addr = r.dimensions[ip];
+    const e = agg.get(addr) ?? {
+      total: 0,
+      errors: 0,
+      country: r.dimensions[country],
+      uas: new Map(),
+    };
+    e.total += r.count;
+    const code = Number(r.dimensions[status]);
+    if (code >= 400 && code < 500) e.errors += r.count;
+    const agent = r.dimensions[ua] || '(none)';
+    e.uas.set(agent, (e.uas.get(agent) ?? 0) + r.count);
+    agg.set(addr, e);
+  }
+
+  const ranked = [...agg.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, limit);
+  const scope = host ? `host=${host}` : 'all hosts';
+  console.log(`\nTop IPs — last ${days} day(s), ${scope}\n`);
+  console.log(
+    `${'ip'.padEnd(24)}${'cc'.padEnd(5)}${'requests'.padStart(9)}${'4xx'.padStart(7)}   user agent`
+  );
+  console.log('-'.repeat(100));
+  for (const [addr, e] of ranked) {
+    const shown = fullIps || e.total >= FULL_IP_THRESHOLD ? addr : maskIp(addr);
+    const pct = e.total ? `${((e.errors / e.total) * 100).toFixed(0)}%` : '';
+    const topUa = [...e.uas.entries()].sort((a, b) => b[1] - a[1])[0][0].slice(0, 44);
+    console.log(
+      `${shown.padEnd(24)}${(e.country || '??').padEnd(5)}${e.total.toLocaleString().padStart(9)}${pct.padStart(7)}   ${topUa}`
+    );
+  }
+
+  if (!fullIps) {
+    console.log(
+      `\nIPs under ${FULL_IP_THRESHOLD} requests are masked to their network — this log is public.`
+    );
+  }
+  console.log('A high 4xx share with a non-browser agent is a scanner, not a visitor.');
+  console.log('Feed the ones you want gone to `report --exclude-ip`.');
+}
+
 // -------------------------------------------------------------------- main
 
 const [cmd, arg, ...rest] = process.argv.slice(2);
@@ -329,7 +429,7 @@ const flag = (name, fallback) => {
   return i === -1 ? fallback : rest[i + 1];
 };
 
-if (cmd === 'datasets' || cmd === 'fields' || cmd === 'report') await preflight();
+if (['datasets', 'fields', 'report', 'top-ips'].includes(cmd)) await preflight();
 
 switch (cmd) {
   case 'datasets':
@@ -349,6 +449,26 @@ switch (cmd) {
         .filter(Boolean),
     });
     break;
+  case 'top-ips':
+    // These four dimension names are not assumed — they came back from
+    // `fields httpRequestsAdaptiveGroups` against this account. Overridable
+    // anyway, in case a different dataset names them differently.
+    await topIps(arg || 'httpRequestsAdaptiveGroups', {
+      ip: flag('ip', 'clientIP'),
+      country: flag('country', 'clientCountryName'),
+      ua: flag('ua', 'userAgent'),
+      status: flag('status', 'edgeResponseStatus'),
+      hostField: flag('host-field', 'clientRequestHTTPHost'),
+      host: flag('host', ''),
+      days: Number(flag('days', 7)),
+      limit: Number(flag('limit', 25)),
+      fullIps: rest.includes('--full-ips'),
+    });
+    break;
   default:
-    console.log('Commands: datasets | fields <dataset> | report <dataset> --host <f> --country <f> [--days 7]');
+    console.log('Commands:');
+    console.log('  datasets');
+    console.log('  fields <dataset>');
+    console.log('  report <dataset> --host <f> --country <f> [--days 7] [--exclude-ip a,b]');
+    console.log('  top-ips [dataset] [--host <hostname>] [--days 7] [--limit 25] [--full-ips]');
 }

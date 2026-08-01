@@ -26,7 +26,11 @@ on:
         description: Which step
         type: choice
         default: datasets
-        options: [datasets, fields, report]
+        options: [datasets, fields, report, top-ips]
+      host:
+        description: Limit to one hostname (top-ips only), e.g. quietkeep.pages.dev
+        type: string
+        required: false
       dataset:
         description: Dataset name (needed for fields and report)
         type: string
@@ -197,6 +201,13 @@ jobs:
                 --country "${{ inputs.country_field }}" \
                 --days "${{ inputs.days }}" \
                 --exclude-ip "${{ inputs.exclude_ip }}"
+              ;;
+            top-ips)
+              # Never pass --full-ips here: this repository is public and the
+              # run log is world-readable (Doctrine §9).
+              node cf-analytics.mjs top-ips "${{ inputs.dataset || 'httpRequestsAdaptiveGroups' }}" \
+                --host "${{ inputs.host }}" \
+                --days "${{ inputs.days }}"
               ;;
           esac
 
