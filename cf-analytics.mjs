@@ -99,22 +99,67 @@ async function preflight() {
   console.error('the token is bad — continuing to the query, which is the real test.');
 }
 
+// ------------------------------------------------------------ schema walk
+
+// A GraphQL type reference nests through NON_NULL and LIST wrappers, which
+// carry no name. Unwrap until the named type appears.
+function namedType(t) {
+  while (t && !t.name) t = t.ofType;
+  return t?.name ?? null;
+}
+
+const TYPE_QUERY = (name) => `{
+  __type(name: "${name}") {
+    name
+    fields {
+      name
+      description
+      type { name kind ofType { name kind ofType { name kind ofType { name } } } }
+    }
+  }
+}`;
+
+async function typeInfo(name) {
+  const d = await gql(TYPE_QUERY(name));
+  return d?.__type ?? null;
+}
+
+// Follow Query -> viewer -> accounts by reading the schema, never by assuming
+// a type is called "Account". That assumption burned a run; the walk cannot.
+async function findAccountsType() {
+  const root =
+    (await gql(`{ __schema { queryType { name } } }`))?.__schema?.queryType?.name;
+  if (!root) throw new Error('schema exposes no query root');
+
+  const chain = [root];
+  let current = await typeInfo(root);
+
+  for (const step of ['viewer', 'accounts']) {
+    const field = current?.fields?.find((f) => f.name === step);
+    if (!field) {
+      console.error(`No "${step}" field on type ${current?.name}. It has:`);
+      console.error(`  ${(current?.fields ?? []).map((f) => f.name).join(', ')}`);
+      process.exit(1);
+    }
+    const next = namedType(field.type);
+    chain.push(`${step}: ${next}`);
+    current = await typeInfo(next);
+  }
+
+  console.log(`schema path: ${chain.join(' -> ')}\n`);
+  return current;
+}
+
 // ---------------------------------------------------------------- datasets
 
 async function datasets() {
-  const data = await gql(`{
-    __type(name: "Account") {
-      fields { name description }
-    }
-  }`);
-  const fields = data?.__type?.fields;
-  if (!fields) {
-    // The token verified, so this really is a schema difference and not auth.
-    console.error('Authenticated, but the schema exposes no "Account" type.');
-    console.error('The API shape has changed — the query needs updating.');
+  const accounts = await findAccountsType();
+  const fields = accounts?.fields ?? [];
+  if (!fields.length) {
+    console.error(`Type ${accounts?.name} exposes no fields.`);
     process.exit(1);
   }
-  console.log(`${fields.length} account-scoped datasets:\n`);
+  console.log(`${fields.length} account-scoped datasets on ${accounts.name}:\n`);
   for (const f of fields) {
     console.log(`  ${f.name}`);
     if (f.description) console.log(`      ${f.description.split('\n')[0]}`);
@@ -130,22 +175,30 @@ async function fields(dataset) {
     console.error('Usage: node cf-analytics.mjs fields <datasetName>');
     process.exit(1);
   }
-  // A *Groups dataset exposes its dimensions under a "dimensions" sub-object.
-  const data = await gql(`{
-    __type(name: "${dataset}") { fields { name } }
-  }`);
-  if (!data?.__type) {
-    console.error(`No type named "${dataset}". Run \`datasets\` and copy a name exactly.`);
+  // `dataset` may be either a field name on the accounts type or a type name.
+  // Resolve it through the accounts type first so the caller can paste either.
+  const accounts = await findAccountsType();
+  const asField = accounts?.fields?.find((f) => f.name === dataset);
+  const typeName = asField ? namedType(asField.type) : dataset;
+  if (asField) console.log(`${dataset} resolves to type ${typeName}\n`);
+
+  const info = await typeInfo(typeName);
+  if (!info) {
+    console.error(`No type named "${typeName}". Run \`datasets\` and copy a name exactly.`);
     process.exit(1);
   }
-  const top = data.__type.fields.map((f) => f.name);
-  console.log(`${dataset} top-level fields:\n  ${top.join(', ')}\n`);
+  const top = info.fields.map((f) => f.name);
+  console.log(`${typeName} top-level fields:\n  ${top.join(', ')}\n`);
 
-  if (top.includes('dimensions')) {
-    const dimType = `${dataset}Dimensions`;
-    const d = await gql(`{ __type(name: "${dimType}") { fields { name } } }`);
-    const dims = d?.__type?.fields?.map((f) => f.name) ?? [];
+  const dimField = info.fields.find((f) => f.name === 'dimensions');
+  if (dimField) {
+    // Read the dimensions type off the field rather than guessing at a
+    // "<dataset>Dimensions" naming convention.
+    const dimType = namedType(dimField.type);
+    const d = await typeInfo(dimType);
+    const dims = d?.fields?.map((f) => f.name) ?? [];
     if (dims.length) {
+      console.log(`dimensions type: ${dimType}`);
       console.log(`dimensions (${dims.length}):\n  ${dims.join(', ')}\n`);
       const host = dims.filter((n) => /host|domain|site/i.test(n));
       const country = dims.filter((n) => /countr|geo/i.test(n));
