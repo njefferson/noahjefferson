@@ -1902,3 +1902,32 @@ Three things generalise, and none of them are about MCP:
 
 *(the hub / MyFax, 2026-08-01. Codified as Doctrine §5b the same hour — the
 fallback, a session-only cron, was fine; the explanation was the defect.)*
+
+**A carry list written by hand is a bug with a delay fuse — and a test that
+names its coverage shares the blind spot of the code it guards.** Quietkeep's
+"fold a duplicate" verb writes across what the survivor lacks: dates, the note,
+people, children. That list was written once, correctly, by the release that
+built it. Then three later releases each added a field to the same data
+structure — a standing decline, a decision log, dependency edges — and not one
+of them visited the merge, because nothing made them. Every omission silently
+took a real record off every surface the moment a duplicate was folded. The
+part worth carrying between apps is not "we forgot"; it is that **the test could
+never have caught it.** It was called *"a fold carries the date, the note, the
+people, and the children — nothing swallowed"*, and it asserted exactly those
+four, so it enumerated the same list the code did and was blind in precisely the
+same place, permanently. A test whose name is a promise and whose body is an
+enumeration is not guarding the promise. The fix is a **totality gate**: a map
+from every field of the structure to a decision — carried, handled elsewhere, or
+deliberately left behind *with the reason in words* — checked by the type system
+so a new field cannot compile until someone has written the sentence. A reasoned
+"not carried" is a fine answer; forcing the sentence is the whole mechanism.
+Anywhere one structure is copied, transformed, or exported field-by-field —
+serialisers, API mappers, form submissions, migrations — the hand-written list
+will drift the same way, and the same gate stops it. Two smaller riders from the
+same audit: writing the invariant *generically* (for every object-valued key,
+assert identities differ) found two aliasing bugs a field-list test had been
+walking past; and a randomised property test needs its own **coverage** pin,
+because Quietkeep's strongest test had silently stopped exercising nine of the
+kinds it was supposed to cover, including the one branch changed since it was
+written.
+*(Quietkeep, 2026-08-01 — the 1.9.2 audit of nine releases.)*
