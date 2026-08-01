@@ -526,26 +526,40 @@ async function calibrate(opts) {
   console.log('== httpRequestsOverviewAdaptiveGroups ("requests made by end users") ==');
   let overviewRaw = null;
   let overviewWeighted = null;
+  let overviewSumRequests = null;
   const shapeOv = await datasetShape('httpRequestsOverviewAdaptiveGroups');
   if (!shapeOv) {
     console.log('not present on this account.\n');
   } else {
-    const parts = ['count'];
+    console.log(`fields: ${shapeOv.top.join(', ')}`);
+    // Built from what the schema says exists. The first pass hardcoded
+    // `count` and the API answered "unknown field" — the same assumption bug
+    // this entire exercise is about, one layer further down.
+    const parts = [];
+    if (shapeOv.top.includes('count')) parts.push('count');
     if (has(shapeOv.avgs, 'sampleInterval')) parts.push('avg { sampleInterval }');
     if (has(shapeOv.sums, 'requests')) parts.push('sum { requests }');
-    const rows = await run(
-      'overview',
-      `httpRequestsOverviewAdaptiveGroups(limit: 10, filter: { datetime_geq: "${t0}", datetime_leq: "${t1}" }) {
-        ${parts.join('\n        ')}
-      }`
-    );
-    if (rows) {
-      overviewRaw = rows.reduce((a, r) => a + r.count, 0);
-      overviewWeighted = rows.reduce((a, r) => a + r.count * (r.avg?.sampleInterval ?? 1), 0);
-      const sumReq = rows.reduce((a, r) => a + (r.sum?.requests ?? 0), 0);
-      console.log(`  raw count: ${fmt(overviewRaw)} | weighted: ${fmt(overviewWeighted)}${has(shapeOv.sums, 'requests') ? ` | sum.requests: ${fmt(sumReq)}` : ''}`);
+    if (!parts.length) {
+      console.log('no usable fields — skipping.\n');
+    } else {
+      const rows = await run(
+        'overview',
+        `httpRequestsOverviewAdaptiveGroups(limit: 10, filter: { datetime_geq: "${t0}", datetime_leq: "${t1}" }) {
+          ${parts.join('\n          ')}
+        }`
+      );
+      if (rows) {
+        if (shapeOv.top.includes('count')) {
+          overviewRaw = rows.reduce((a, r) => a + r.count, 0);
+          overviewWeighted = rows.reduce((a, r) => a + r.count * (r.avg?.sampleInterval ?? 1), 0);
+        }
+        if (has(shapeOv.sums, 'requests')) {
+          overviewSumRequests = rows.reduce((a, r) => a + (r.sum?.requests ?? 0), 0);
+        }
+        console.log(`  raw: ${fmt(overviewRaw)} | weighted: ${fmt(overviewWeighted)} | sum.requests: ${fmt(overviewSumRequests)}`);
+      }
+      console.log('');
     }
-    console.log('');
   }
 
   // ---- 3. Decompose the main dataset by requestSource --------------------
@@ -569,6 +583,35 @@ async function calibrate(opts) {
     }
     for (const [src, e] of [...bySource.entries()].sort((a, b) => b[1].raw - a[1].raw)) {
       console.log(`  ${src.padEnd(24)} raw ${fmt(e.raw).padStart(10)}   weighted ${fmt(e.weighted).padStart(12)}`);
+    }
+    console.log('');
+  }
+
+  // ---- 3b. Eyeball-only per-country: lines up against the dashboard's own
+  // CSV export, which is per-country — if these agree, the identification of
+  // "dashboard = eyeball" holds at the row level, not just in the total.
+  console.log('== eyeball-only, per country ==');
+  {
+    const rows = await run(
+      'eyeball-countries',
+      `httpRequestsAdaptiveGroups(limit: 300, filter: { datetime_geq: "${t0}", datetime_leq: "${t1}", requestSource: "eyeball" }) {
+        count
+        avg { sampleInterval }
+        dimensions { clientCountryName }
+      }`
+    );
+    if (rows) {
+      const agg = new Map();
+      for (const r of rows) {
+        const c = r.dimensions?.clientCountryName || '??';
+        const e = agg.get(c) ?? { raw: 0, weighted: 0 };
+        e.raw += r.count;
+        e.weighted += r.count * (r.avg?.sampleInterval ?? 1);
+        agg.set(c, e);
+      }
+      for (const [c, e] of [...agg.entries()].sort((a, b) => b[1].raw - a[1].raw).slice(0, 12)) {
+        console.log(`  ${c.padEnd(4)} raw ${fmt(e.raw).padStart(9)}   weighted ${fmt(e.weighted).padStart(11)}`);
+      }
     }
     console.log('');
   }
@@ -633,6 +676,7 @@ async function calibrate(opts) {
     const candidates = [
       ['overview raw', overviewRaw],
       ['overview weighted', overviewWeighted],
+      ['overview sum.requests', overviewSumRequests],
       eyeball ? [`adaptive ${eyeballKey} raw`, eyeball.raw] : null,
       eyeball ? [`adaptive ${eyeballKey} weighted`, eyeball.weighted] : null,
       ['adaptive all raw', adaptiveAllRaw],
