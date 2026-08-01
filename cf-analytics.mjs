@@ -686,6 +686,137 @@ async function calibrate(opts) {
   }
 }
 
+// ------------------------------------------------------------------ people
+
+// "How many people is this?" cannot be answered exactly — the apps have no
+// accounts and no cookies, by design (Doctrine §1/§9) — but distinct client
+// IPs split by network OWNER get close. A household is one IP; a person is
+// one to three IPs across a week (home wifi, phone LTE, work); an uptime
+// monitor is one datacenter IP forever. So: count distinct eyeball IPs,
+// classify each ASN as hosting or ISP, and put honest bounds around the ISP
+// side. Prints aggregates only — never an address (public log, Doctrine §9).
+const HOSTING_RE =
+  /amazon|aws|hetzner|ovh|digital ?ocean|google|microsoft|azure|oracle|linode|akamai|fastly|m247|datacamp|choopa|vultr|contabo|leaseweb|scaleway|fly\.io|alibaba|tencent|hosting|server|datacent|data center|colocat|cdn|cloud/i;
+
+async function people(opts) {
+  const days = opts.days || 7;
+  const dayMs = 86400_000;
+  const nowD = new Date();
+  const endD = new Date(Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth(), nowD.getUTCDate()));
+  const startD = new Date(endD.getTime() - days * dayMs);
+  const t0 = startD.toISOString();
+  const t1 = endD.toISOString();
+  const excl = opts.excludeIps?.length
+    ? `, clientIP_notin: [${opts.excludeIps.map((i) => `"${i}"`).join(', ')}]`
+    : '';
+  const fmt = (n) => (n == null ? 'n/a' : Math.round(n).toLocaleString());
+
+  console.log(`Window: ${t0.slice(0, 10)} .. ${new Date(endD - dayMs).toISOString().slice(0, 10)} (complete UTC days), requestSource=eyeball.`);
+  if (opts.excludeIps?.length) console.log(`Excluding ${opts.excludeIps.length} known-scanner IP(s).`);
+  console.log('');
+
+  const run = async (label, body) => {
+    const { data, errors } = await gqlSoft(
+      `{ viewer { accounts(filter: { accountTag: "${ACCOUNT}" }) { rows: ${body} } } }`
+    );
+    if (errors.length) {
+      console.log(`[${label}] FAILED:`);
+      for (const e of errors) console.log(`    ${e.message}`);
+      return null;
+    }
+    return data?.viewer?.accounts?.[0]?.rows ?? [];
+  };
+
+  // ---- Cloudflare's own "visits" metric, if this schema carries it -------
+  const shape = await datasetShape('httpRequestsAdaptiveGroups');
+  const sums = shape?.sums?.map((f) => f.name) ?? [];
+  console.log(`sum fields on this dataset: ${sums.join(', ') || '(none)'}`);
+  if (sums.includes('visits')) {
+    const rows = await run(
+      'visits',
+      `httpRequestsAdaptiveGroups(limit: 5000, filter: { datetime_geq: "${t0}", datetime_leq: "${t1}", requestSource: "eyeball"${excl} }) {
+        sum { visits }
+        dimensions { clientRequestHTTPHost }
+      }`
+    );
+    if (rows) {
+      const perHost = new Map();
+      for (const r of rows) {
+        const h = r.dimensions?.clientRequestHTTPHost || '(none)';
+        perHost.set(h, (perHost.get(h) ?? 0) + (r.sum?.visits ?? 0));
+      }
+      const total = [...perHost.values()].reduce((a, b) => a + b, 0);
+      console.log(`\nvisits (Cloudflare's session-ish metric): ${fmt(total)} total`);
+      for (const [h, v] of [...perHost.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12)) {
+        console.log(`  ${h.padEnd(46)} ${fmt(v).padStart(8)}`);
+      }
+    }
+  } else {
+    console.log('(no visits field — skipping that estimate)');
+  }
+
+  // ---- distinct IPs, classified by network owner -------------------------
+  const rows = await run(
+    'ips-by-asn',
+    `httpRequestsAdaptiveGroups(limit: 10000, filter: { datetime_geq: "${t0}", datetime_leq: "${t1}", requestSource: "eyeball"${excl} }) {
+      count
+      dimensions { clientIP clientASNDescription }
+    }`
+  );
+  if (!rows) return;
+  if (rows.length === 10000) {
+    console.log('\nWARNING: hit the 10,000-row limit — distinct-IP counts are a floor, not a total.');
+  }
+
+  const asns = new Map();
+  const ips = new Set();
+  for (const r of rows) {
+    const ip = r.dimensions?.clientIP;
+    const asn = r.dimensions?.clientASNDescription || '(unknown)';
+    ips.add(ip);
+    const e = asns.get(asn) ?? { ips: new Set(), requests: 0 };
+    e.ips.add(ip);
+    e.requests += r.count;
+    asns.set(asn, e);
+  }
+
+  let ispIps = 0;
+  let ispReq = 0;
+  let hostIps = 0;
+  let hostReq = 0;
+  for (const [asn, e] of asns) {
+    if (HOSTING_RE.test(asn)) {
+      hostIps += e.ips.size;
+      hostReq += e.requests;
+    } else {
+      ispIps += e.ips.size;
+      ispReq += e.requests;
+    }
+  }
+
+  console.log(`\ndistinct client IPs: ${fmt(ips.size)} across ${fmt(asns.size)} networks`);
+  console.log(`  ISP/mobile-owned:   ${fmt(ispIps)} IPs, ${fmt(ispReq)} requests`);
+  console.log(`  hosting/datacenter: ${fmt(hostIps)} IPs, ${fmt(hostReq)} requests  <- monitors, crawlers, headless`);
+  console.log(`\ntop networks (aggregates only — no addresses):`);
+  const top = [...asns.entries()].sort((a, b) => b[1].requests - a[1].requests).slice(0, 15);
+  for (const [asn, e] of top) {
+    const cls = HOSTING_RE.test(asn) ? 'hosting' : 'isp';
+    console.log(`  ${asn.slice(0, 44).padEnd(46)} ${String(e.ips.size).padStart(5)} IPs ${fmt(e.requests).padStart(9)} req  [${cls}]`);
+  }
+
+  // ---- the honest translation to people ----------------------------------
+  console.log(`\n== estimate ==`);
+  console.log(`People cannot be counted exactly without tracking, which these apps refuse`);
+  console.log(`to do. Bounds instead, from ${fmt(ispIps)} distinct ISP/mobile IPs over ${days} days:`);
+  console.log(`  upper bound: ~${fmt(ispIps)} people (every IP a different person — ignores`);
+  console.log(`               one person appearing on wifi AND phone, so this overcounts)`);
+  console.log(`  lower bound: ~${fmt(Math.round(ispIps / 3))} people (three IPs per person across the week —`);
+  console.log(`               aggressive; also, a whole household shares one IP, which pulls`);
+  console.log(`               the true number back UP)`);
+  console.log(`Crawlers with browser user agents that run from ISP ranges are the residual`);
+  console.log(`nobody can remove. Treat the range as an order of magnitude, not a census.`);
+}
+
 // ---------------------------------------------------------------- top-ips
 
 // This repo is PUBLIC, so whatever this prints ends up in a publicly readable
@@ -802,7 +933,7 @@ const flag = (name, fallback) => {
   return i === -1 ? fallback : rest[i + 1];
 };
 
-if (['datasets', 'fields', 'report', 'top-ips', 'calibrate'].includes(cmd)) await preflight();
+if (['datasets', 'fields', 'report', 'top-ips', 'calibrate', 'people'].includes(cmd)) await preflight();
 
 switch (cmd) {
   case 'datasets':
@@ -832,6 +963,15 @@ switch (cmd) {
   case 'calibrate':
     await calibrate({ days: Number(flag('days', 7)) });
     break;
+  case 'people':
+    await people({
+      days: Number(flag('days', 7)),
+      excludeIps: (flag('exclude-ip', '') || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    });
+    break;
   case 'top-ips':
     // These four dimension names are not assumed — they came back from
     // `fields httpRequestsAdaptiveGroups` against this account. Overridable
@@ -855,4 +995,5 @@ switch (cmd) {
     console.log('  report <dataset> --host <f> --country <f> [--days 7] [--exclude-ip a,b] [--source eyeball]');
     console.log('  top-ips [dataset] [--host <hostname>] [--days 7] [--limit 25] [--full-ips]');
     console.log('  calibrate [--days 7]   — reconcile the estimators against the unsampled rollup');
+    console.log('  people [--days 7] [--exclude-ip a,b] — distinct IPs by network class, bounded people estimate');
 }
