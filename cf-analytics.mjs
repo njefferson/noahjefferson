@@ -99,6 +99,39 @@ async function preflight() {
   console.error('the token is bad — continuing to the query, which is the real test.');
 }
 
+// ------------------------------------------------------------- sampling
+
+// THE BUG THIS FIXES: adaptive datasets return SAMPLED rows. `count` is the
+// number of records that landed in the sample, not the number of requests, and
+// each carries a `sampleInterval` saying how many it stands for. Summing raw
+// counts under-reports by whatever the sampling rate happens to be, and that
+// rate differs per query — which is why an unrelated staging host drifted
+// 5,106 -> 4,488 -> 3,483 across three runs, and why excluding one French
+// address appeared to reduce Korean traffic. Neither was real.
+//
+// Estimated requests = count x avg(sampleInterval).
+const SAMPLE_SELECTION = 'count\n            avg { sampleInterval }';
+
+function weigh(row) {
+  const interval = row.avg?.sampleInterval ?? 1;
+  return Math.round(row.count * interval);
+}
+
+// Report the observed interval rather than assuming sampling is happening. If
+// every row comes back at 1.0 then nothing is being sampled, this fix is inert,
+// and the drift has a different cause that still needs finding.
+function sampleNote(rows) {
+  const intervals = rows.map((r) => r.avg?.sampleInterval ?? 1);
+  const lo = Math.min(...intervals);
+  const hi = Math.max(...intervals);
+  const raw = rows.reduce((a, r) => a + r.count, 0);
+  const est = rows.reduce((a, r) => a + weigh(r), 0);
+  if (hi === 1 && lo === 1) {
+    return `sampleInterval is 1.0 on every row — this data is NOT sampled, so weighting changed nothing (${raw.toLocaleString()} requests). The run-to-run drift has another cause.`;
+  }
+  return `sampleInterval ${lo.toFixed(2)}–${hi.toFixed(2)}: ${raw.toLocaleString()} sampled records represent ~${est.toLocaleString()} requests.`;
+}
+
 // ------------------------------------------------------------ schema walk
 
 // A GraphQL type reference nests through NON_NULL and LIST wrappers, which
@@ -244,7 +277,7 @@ async function report(dataset, opts) {
               filter: { ${filters.join(', ')} }
               orderBy: [count_DESC]
             ) {
-              count
+              ${SAMPLE_SELECTION}
               dimensions { ${host} ${country} }
             }
           }
@@ -256,11 +289,12 @@ async function report(dataset, opts) {
   };
 
   const rows = await fetchRows(excludeIps);
+  if (rows.length) console.log(sampleNote(rows) + '\n');
 
   if (excludeIps.length) {
     const unfiltered = await fetchRows([]);
-    const before = unfiltered.reduce((a, r) => a + r.count, 0);
-    const after = rows.reduce((a, r) => a + r.count, 0);
+    const before = unfiltered.reduce((a, r) => a + weigh(r), 0);
+    const after = rows.reduce((a, r) => a + weigh(r), 0);
     const dropped = before - after;
     const pct = before ? ((dropped / before) * 100).toFixed(1) : '0.0';
     console.log(`Excluding ${excludeIps.length} IP(s): ${excludeIps.join(', ')}`);
@@ -279,10 +313,11 @@ async function report(dataset, opts) {
   for (const r of rows) {
     const app = r.dimensions[host] || '(none)';
     const cc = r.dimensions[country] || '??';
+    const n = weigh(r);
     if (!table.has(app)) table.set(app, new Map());
     const row = table.get(app);
-    row.set(cc, (row.get(cc) ?? 0) + r.count);
-    countries.set(cc, (countries.get(cc) ?? 0) + r.count);
+    row.set(cc, (row.get(cc) ?? 0) + n);
+    countries.set(cc, (countries.get(cc) ?? 0) + n);
   }
 
   const topCountries = [...countries.entries()]
@@ -361,7 +396,7 @@ async function topIps(dataset, opts) {
             filter: { ${filters.join(', ')} }
             orderBy: [count_DESC]
           ) {
-            count
+            ${SAMPLE_SELECTION}
             dimensions { ${ip} ${country} ${ua} ${status} }
           }
         }
@@ -379,20 +414,23 @@ async function topIps(dataset, opts) {
   // Fold the status dimension away, keeping the 4xx share — a client walking a
   // wordlist is nearly all 4xx, a person loading the app is nearly all 2xx.
   // That ratio separates them without anyone having to eyeball user agents.
+  console.log('\n' + sampleNote(rows));
+
   const agg = new Map();
   for (const r of rows) {
     const addr = r.dimensions[ip];
+    const n = weigh(r);
     const e = agg.get(addr) ?? {
       total: 0,
       errors: 0,
       country: r.dimensions[country],
       uas: new Map(),
     };
-    e.total += r.count;
+    e.total += n;
     const code = Number(r.dimensions[status]);
-    if (code >= 400 && code < 500) e.errors += r.count;
+    if (code >= 400 && code < 500) e.errors += n;
     const agent = r.dimensions[ua] || '(none)';
-    e.uas.set(agent, (e.uas.get(agent) ?? 0) + r.count);
+    e.uas.set(agent, (e.uas.get(agent) ?? 0) + n);
     agg.set(addr, e);
   }
 
