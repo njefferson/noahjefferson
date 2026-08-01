@@ -58,6 +58,27 @@ async function gql(query, variables = {}) {
   return body.data;
 }
 
+// Non-fatal variant for the calibration battery: one bad query must not kill
+// the run, and the error text itself is diagnostic (GraphQL errors name the
+// fields that DO exist).
+async function gqlSoft(query, variables = {}) {
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, variables }),
+    });
+    const body = await res.json().catch(() => null);
+    if (!body) return { data: null, errors: [{ message: `HTTP ${res.status}, body not JSON` }] };
+    return { data: body.data ?? null, errors: body.errors ?? [] };
+  } catch (err) {
+    return { data: null, errors: [{ message: `fetch failed: ${err.message}` }] };
+  }
+}
+
 // --------------------------------------------------------------- preflight
 
 // ADVISORY ONLY — never fatal. /user/tokens/verify checks USER-owned tokens
@@ -180,7 +201,10 @@ async function typeInfo(name) {
 
 // Follow Query -> viewer -> accounts by reading the schema, never by assuming
 // a type is called "Account". That assumption burned a run; the walk cannot.
+// Memoized: calibrate introspects several datasets and only needs the walk once.
+let _accountsType = null;
 async function findAccountsType() {
+  if (_accountsType) return _accountsType;
   const root =
     (await gql(`{ __schema { queryType { name } } }`))?.__schema?.queryType?.name;
   if (!root) throw new Error('schema exposes no query root');
@@ -201,7 +225,30 @@ async function findAccountsType() {
   }
 
   console.log(`schema path: ${chain.join(' -> ')}\n`);
+  _accountsType = current;
   return current;
+}
+
+// Full shape of one dataset: its top-level fields plus the subfields of
+// dimensions/sum/avg, all read from the schema rather than assumed.
+async function datasetShape(fieldName) {
+  const accounts = await findAccountsType();
+  const f = accounts?.fields?.find((x) => x.name === fieldName);
+  if (!f) return null;
+  const typeName = namedType(f.type);
+  const info = await typeInfo(typeName);
+  const sub = async (n) => {
+    const fld = info?.fields?.find((x) => x.name === n);
+    if (!fld) return null;
+    return (await typeInfo(namedType(fld.type)))?.fields ?? null;
+  };
+  return {
+    typeName,
+    top: info?.fields?.map((x) => x.name) ?? [],
+    dims: await sub('dimensions'),
+    sums: await sub('sum'),
+    avgs: await sub('avg'),
+  };
 }
 
 // ---------------------------------------------------------------- datasets
@@ -266,7 +313,7 @@ async function fields(dataset) {
 // ------------------------------------------------------------------ report
 
 async function report(dataset, opts) {
-  const { host, country, days, excludeIps } = opts;
+  const { host, country, days, excludeIps, source } = opts;
   if (!dataset || !host || !country) {
     console.error('Usage: node cf-analytics.mjs report <dataset> --host <field> --country <field> [--days 7] [--exclude-ip a,b]');
     console.error('Run `fields <dataset>` first to get the real field names.');
@@ -289,6 +336,14 @@ async function report(dataset, opts) {
       filters.push('clientIP_notin: $excludeIps');
       vars.excludeIps = excluded;
     }
+    // requestSource separates end-user traffic from Worker subrequests and
+    // other internal request classes — run `calibrate` to see which values
+    // exist on this account and how much each contributes.
+    if (source) {
+      decls.push('$source: String!');
+      filters.push('requestSource: $source');
+      vars.source = source;
+    }
     const data = await gql(
       `query(${decls.join(', ')}) {
         viewer {
@@ -310,6 +365,7 @@ async function report(dataset, opts) {
   };
 
   const rows = await fetchRows(excludeIps);
+  if (source) console.log(`Filtered to requestSource = ${source}.\n`);
   if (rows.length) console.log(sampleNote(rows) + '\n');
 
   if (excludeIps.length) {
@@ -375,6 +431,224 @@ async function report(dataset, opts) {
   for (const [app, , row] of apps)
     for (const [cc, n] of [...row.entries()].sort((a, b) => b[1] - a[1]))
       console.log(`${app},${cc},${n}`);
+}
+
+// --------------------------------------------------------------- calibrate
+
+// One run, four sources, no favourites. Three totals were produced for the
+// same window (raw 64,012 / weighted 684,433 / dashboard 27,424) and calling
+// that "unverified" was giving up one step early: the account exposes
+// httpRequests1dGroups, an UNSAMPLED daily rollup, plus an "end users"
+// overview dataset and a requestSource dimension. This queries all of them
+// over the same complete UTC days and prints the reconciliation, so the
+// estimator is chosen by evidence instead of by whichever number was computed
+// most recently.
+async function calibrate(opts) {
+  const days = opts.days || 7;
+  const dayMs = 86400_000;
+  const now = new Date();
+  const endDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const startDay = new Date(endDay.getTime() - days * dayMs);
+  const d0 = startDay.toISOString().slice(0, 10);
+  const d1 = new Date(endDay.getTime() - dayMs).toISOString().slice(0, 10);
+  const t0 = startDay.toISOString();
+  const t1 = endDay.toISOString();
+
+  console.log(`Calibration window: ${d0} .. ${d1} inclusive (complete UTC days, so`);
+  console.log(`every dataset below covers the identical wall-clock span).\n`);
+
+  // Values are generated locally and inlined as literals, so the filter types
+  // (Date vs Time) never have to be guessed at via variable declarations.
+  const acct = `viewer { accounts(filter: { accountTag: "${ACCOUNT}" })`;
+  const run = async (label, body) => {
+    const { data, errors } = await gqlSoft(`{ ${acct} { rows: ${body} } } }`);
+    if (errors.length) {
+      console.log(`[${label}] FAILED:`);
+      for (const e of errors) console.log(`    ${e.message}`);
+      return null;
+    }
+    return data?.viewer?.accounts?.[0]?.rows ?? [];
+  };
+  const has = (fields, name) => !!fields?.some((x) => x.name === name);
+  const fmt = (n) => (n == null ? 'n/a' : Math.round(n).toLocaleString());
+
+  // ---- 1. The unsampled rollup: ground truth if it exists here -----------
+  console.log('== httpRequests1dGroups (daily rollup — not adaptive, not sampled) ==');
+  let rollupTotal = null;
+  const rollupCountries = new Map();
+  const shape1d = await datasetShape('httpRequests1dGroups');
+  if (!shape1d) {
+    console.log('not present on this account.\n');
+  } else {
+    console.log(`sum fields: ${shape1d.sums?.map((x) => x.name).join(', ') || '(none)'}`);
+    const sel = [];
+    if (has(shape1d.sums, 'requests')) sel.push('requests');
+    const cm = shape1d.sums?.find((x) => x.name === 'countryMap');
+    let cmFields = null;
+    if (cm) cmFields = (await typeInfo(namedType(cm.type)))?.fields?.map((x) => x.name) ?? null;
+    if (cmFields?.includes('clientCountryName') && cmFields?.includes('requests')) {
+      sel.push('countryMap { clientCountryName requests }');
+    }
+    if (!sel.length) {
+      console.log('no usable sum fields — cannot use as ground truth.\n');
+    } else {
+      const rows = await run(
+        '1dGroups',
+        `httpRequests1dGroups(limit: 1000, filter: { date_geq: "${d0}", date_leq: "${d1}" }) {
+          dimensions { date }
+          sum { ${sel.join(' ')} }
+        }`
+      );
+      if (rows) {
+        rollupTotal = 0;
+        for (const r of rows) {
+          const req = r.sum?.requests ?? 0;
+          rollupTotal += req;
+          console.log(`  ${r.dimensions?.date}  ${fmt(req)} requests`);
+          for (const c of r.sum?.countryMap ?? []) {
+            rollupCountries.set(
+              c.clientCountryName,
+              (rollupCountries.get(c.clientCountryName) ?? 0) + (c.requests ?? 0)
+            );
+          }
+        }
+        console.log(`  TOTAL ${fmt(rollupTotal)} requests (unsampled)`);
+        if (rollupCountries.size) {
+          const top = [...rollupCountries.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+          console.log(`  top countries: ${top.map(([c, n]) => `${c} ${fmt(n)}`).join(', ')}`);
+        }
+      }
+      console.log('');
+    }
+  }
+
+  // ---- 2. The "end users" overview dataset -------------------------------
+  console.log('== httpRequestsOverviewAdaptiveGroups ("requests made by end users") ==');
+  let overviewRaw = null;
+  let overviewWeighted = null;
+  const shapeOv = await datasetShape('httpRequestsOverviewAdaptiveGroups');
+  if (!shapeOv) {
+    console.log('not present on this account.\n');
+  } else {
+    const parts = ['count'];
+    if (has(shapeOv.avgs, 'sampleInterval')) parts.push('avg { sampleInterval }');
+    if (has(shapeOv.sums, 'requests')) parts.push('sum { requests }');
+    const rows = await run(
+      'overview',
+      `httpRequestsOverviewAdaptiveGroups(limit: 10, filter: { datetime_geq: "${t0}", datetime_leq: "${t1}" }) {
+        ${parts.join('\n        ')}
+      }`
+    );
+    if (rows) {
+      overviewRaw = rows.reduce((a, r) => a + r.count, 0);
+      overviewWeighted = rows.reduce((a, r) => a + r.count * (r.avg?.sampleInterval ?? 1), 0);
+      const sumReq = rows.reduce((a, r) => a + (r.sum?.requests ?? 0), 0);
+      console.log(`  raw count: ${fmt(overviewRaw)} | weighted: ${fmt(overviewWeighted)}${has(shapeOv.sums, 'requests') ? ` | sum.requests: ${fmt(sumReq)}` : ''}`);
+    }
+    console.log('');
+  }
+
+  // ---- 3. Decompose the main dataset by requestSource --------------------
+  console.log('== httpRequestsAdaptiveGroups split by requestSource ==');
+  const bySource = new Map();
+  {
+    const rows = await run(
+      'requestSource',
+      `httpRequestsAdaptiveGroups(limit: 50, filter: { datetime_geq: "${t0}", datetime_leq: "${t1}" }) {
+        count
+        avg { sampleInterval }
+        dimensions { requestSource }
+      }`
+    );
+    for (const r of rows ?? []) {
+      const src = r.dimensions?.requestSource || '(empty)';
+      const e = bySource.get(src) ?? { raw: 0, weighted: 0 };
+      e.raw += r.count;
+      e.weighted += r.count * (r.avg?.sampleInterval ?? 1);
+      bySource.set(src, e);
+    }
+    for (const [src, e] of [...bySource.entries()].sort((a, b) => b[1].raw - a[1].raw)) {
+      console.log(`  ${src.padEnd(24)} raw ${fmt(e.raw).padStart(10)}   weighted ${fmt(e.weighted).padStart(12)}`);
+    }
+    console.log('');
+  }
+
+  // ---- 4. Same adaptive query twice: which estimator is stable? ----------
+  console.log('== stability: identical adaptive query, run twice back-to-back ==');
+  console.log('(a matching pair may just be a server-side cache hit — a MISMATCH');
+  console.log('is the informative outcome, and says which estimator to distrust)');
+  const twice = [];
+  for (let i = 0; i < 2; i++) {
+    const rows = await run(
+      `stability-${i + 1}`,
+      `httpRequestsAdaptiveGroups(limit: 10000, filter: { datetime_geq: "${t0}", datetime_leq: "${t1}" }) {
+        count
+        avg { sampleInterval }
+        dimensions { clientRequestHTTPHost }
+      }`
+    );
+    if (!rows) break;
+    const hosts = new Map();
+    let raw = 0;
+    let weighted = 0;
+    for (const r of rows) {
+      const h = r.dimensions?.clientRequestHTTPHost || '(none)';
+      const w = r.count * (r.avg?.sampleInterval ?? 1);
+      raw += r.count;
+      weighted += w;
+      const e = hosts.get(h) ?? { raw: 0, weighted: 0 };
+      e.raw += r.count;
+      e.weighted += w;
+      hosts.set(h, e);
+    }
+    twice.push({ raw, weighted, hosts });
+  }
+  if (twice.length === 2) {
+    const [a, b] = twice;
+    const pct = (x, y) => (x ? (((y - x) / x) * 100).toFixed(1) + '%' : 'n/a');
+    console.log(`  total raw:      ${fmt(a.raw)} vs ${fmt(b.raw)}  (delta ${pct(a.raw, b.raw)})`);
+    console.log(`  total weighted: ${fmt(a.weighted)} vs ${fmt(b.weighted)}  (delta ${pct(a.weighted, b.weighted)})`);
+    const top = [...a.hosts.entries()].sort((x, y) => y[1].raw - x[1].raw).slice(0, 5);
+    for (const [h, e] of top) {
+      const e2 = b.hosts.get(h) ?? { raw: 0, weighted: 0 };
+      console.log(
+        `  ${h.padEnd(44)} raw ${fmt(e.raw)}/${fmt(e2.raw)}  weighted ${fmt(e.weighted)}/${fmt(e2.weighted)}`
+      );
+    }
+  }
+  console.log('');
+
+  // ---- 5. Verdict --------------------------------------------------------
+  console.log('== reconciliation ==');
+  const adaptiveAllRaw = twice[0]?.raw ?? null;
+  const adaptiveAllWeighted = twice[0]?.weighted ?? null;
+  const eyeballKey = [...bySource.keys()].find((k) => /eyeball/i.test(k));
+  const eyeball = eyeballKey ? bySource.get(eyeballKey) : null;
+  console.log(`  1dGroups (unsampled):              ${fmt(rollupTotal)}`);
+  console.log(`  overview raw / weighted:           ${fmt(overviewRaw)} / ${fmt(overviewWeighted)}`);
+  if (eyeball)
+    console.log(`  adaptive ${eyeballKey} raw / wtd:   ${fmt(eyeball.raw)} / ${fmt(eyeball.weighted)}`);
+  console.log(`  adaptive ALL raw / weighted:       ${fmt(adaptiveAllRaw)} / ${fmt(adaptiveAllWeighted)}`);
+  if (rollupTotal != null) {
+    const candidates = [
+      ['overview raw', overviewRaw],
+      ['overview weighted', overviewWeighted],
+      eyeball ? [`adaptive ${eyeballKey} raw`, eyeball.raw] : null,
+      eyeball ? [`adaptive ${eyeballKey} weighted`, eyeball.weighted] : null,
+      ['adaptive all raw', adaptiveAllRaw],
+      ['adaptive all weighted', adaptiveAllWeighted],
+    ].filter((c) => c && c[1] != null);
+    candidates.sort(
+      (a, b) => Math.abs(a[1] - rollupTotal) - Math.abs(b[1] - rollupTotal)
+    );
+    if (candidates.length) {
+      const [name, val] = candidates[0];
+      console.log(`\n  closest to the unsampled rollup: ${name} (${fmt(val)} vs ${fmt(rollupTotal)},`);
+      console.log(`  off by ${(Math.abs(val - rollupTotal) / rollupTotal * 100).toFixed(1)}%). That is the estimator to use.`);
+    }
+  } else {
+    console.log('\n  no unsampled rollup available — compare against the dashboard by hand.');
+  }
 }
 
 // ---------------------------------------------------------------- top-ips
@@ -488,7 +762,7 @@ const flag = (name, fallback) => {
   return i === -1 ? fallback : rest[i + 1];
 };
 
-if (['datasets', 'fields', 'report', 'top-ips'].includes(cmd)) await preflight();
+if (['datasets', 'fields', 'report', 'top-ips', 'calibrate'].includes(cmd)) await preflight();
 
 switch (cmd) {
   case 'datasets':
@@ -506,7 +780,11 @@ switch (cmd) {
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean),
+      source: flag('source', ''),
     });
+    break;
+  case 'calibrate':
+    await calibrate({ days: Number(flag('days', 7)) });
     break;
   case 'top-ips':
     // These four dimension names are not assumed — they came back from
@@ -528,6 +806,7 @@ switch (cmd) {
     console.log('Commands:');
     console.log('  datasets');
     console.log('  fields <dataset>');
-    console.log('  report <dataset> --host <f> --country <f> [--days 7] [--exclude-ip a,b]');
+    console.log('  report <dataset> --host <f> --country <f> [--days 7] [--exclude-ip a,b] [--source eyeball]');
     console.log('  top-ips [dataset] [--host <hostname>] [--days 7] [--limit 25] [--full-ips]');
+    console.log('  calibrate [--days 7]   — reconcile the estimators against the unsampled rollup');
 }

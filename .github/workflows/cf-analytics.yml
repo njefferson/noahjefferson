@@ -26,7 +26,11 @@ on:
         description: Which step
         type: choice
         default: datasets
-        options: [datasets, fields, report, top-ips]
+        options: [datasets, fields, report, top-ips, calibrate]
+      source:
+        description: requestSource filter (report only), e.g. eyeball — run calibrate to see the values
+        type: string
+        required: false
       host:
         description: Limit to one hostname (top-ips only), e.g. quietkeep.pages.dev
         type: string
@@ -200,7 +204,14 @@ jobs:
                 --host "${{ inputs.host_field }}" \
                 --country "${{ inputs.country_field }}" \
                 --days "${{ inputs.days }}" \
-                --exclude-ip "${{ inputs.exclude_ip }}"
+                --exclude-ip "${{ inputs.exclude_ip }}" \
+                --source "${{ inputs.source }}"
+              ;;
+            calibrate)
+              # Reconciles every estimator against the unsampled daily rollup
+              # in one run, because dispatches are serialized by the
+              # concurrency group and each round-trip costs a minute.
+              node cf-analytics.mjs calibrate --days "${{ inputs.days }}"
               ;;
             top-ips)
               # Never pass --full-ips here: this repository is public and the
