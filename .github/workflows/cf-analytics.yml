@@ -121,6 +121,35 @@ jobs:
             echo "An API Token from My Profile > API Tokens is the one to use."
           fi
 
+      - name: Control — does the known-good deploy token verify here?
+        env:
+          DEPLOY_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          # deploy.yml ships the live site with CLOUDFLARE_API_TOKEN, so that
+          # credential is known to work. Verifying it through this exact code
+          # path answers the question measuring the string cannot: if the
+          # deploy token verifies and the analytics one does not, the pipeline
+          # is fine and the difference is the token itself.
+          #
+          # This only calls /user/tokens/verify. It reads nothing and changes
+          # nothing, and the deploy token is not used for the query below.
+          T=$(printf '%s' "$DEPLOY_TOKEN" | tr -d '[:space:]')
+          if [ -z "$T" ]; then
+            echo "CLOUDFLARE_API_TOKEN not readable here — control skipped."
+            exit 0
+          fi
+          echo "::add-mask::$T"
+          echo "deploy token length: ${#T}"
+          curl -s https://api.cloudflare.com/client/v4/user/tokens/verify \
+            -H "Authorization: Bearer $T" > control.json
+          python3 -c "
+          import json
+          d = json.load(open('control.json'))
+          print('deploy token valid:', d.get('success'), '|',
+                (d.get('result') or {}).get('status'),
+                '|', [e.get('code') for e in (d.get('errors') or [])])
+          "
+
       - name: Verify the token before using it
         run: |
           # This step must FAIL on a bad token, not just report one. The first
