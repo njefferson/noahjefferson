@@ -84,11 +84,29 @@ jobs:
 
       - name: Verify the token before using it
         run: |
-          # A scope failure here is the likeliest cause of an empty report, so
-          # establish it up front rather than letting it surface as "no rows".
+          # This step must FAIL on a bad token, not just report one. The first
+          # run printed "Invalid API Token" and then carried on to produce a
+          # misleading "the API shape has changed" — a real error wearing a
+          # different error's clothes (LESSONS.md §1).
           curl -s https://api.cloudflare.com/client/v4/user/tokens/verify \
-            -H "Authorization: Bearer $CLOUDFLARE_ANALYTICS_TOKEN" \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print('valid:', d.get('success'), '| status:', (d.get('result') or {}).get('status'), '| errors:', d.get('errors'))"
+            -H "Authorization: Bearer $CLOUDFLARE_ANALYTICS_TOKEN" > verify.json
+          python3 - <<'PY'
+          import json, sys
+          d = json.load(open('verify.json'))
+          res = d.get('result') or {}
+          print('valid:', d.get('success'), '| status:', res.get('status'))
+          if d.get('success'):
+              sys.exit(0)
+          for e in d.get('errors') or []:
+              print(f"  {e.get('code')}: {e.get('message')}")
+          print()
+          print('Code 1000 = the token string is not recognised. Re-copy or re-create')
+          print('it; this is not a scope problem. A token with the wrong permissions')
+          print('verifies fine here and fails later on the query itself.')
+          print('Needs its own token scoped Account Analytics: Read — the Pages')
+          print('deploy token will not work.')
+          sys.exit(1)
+          PY
 
       - name: Run
         run: |

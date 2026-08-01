@@ -58,6 +58,50 @@ async function gql(query, variables = {}) {
   return body.data;
 }
 
+// --------------------------------------------------------------- preflight
+
+// Check the token BEFORE introspecting. An unauthenticated introspection comes
+// back with no types, which is indistinguishable from "the API changed" unless
+// auth was established first — the same shape as the empty-body trap in §1.
+async function preflight() {
+  let res;
+  try {
+    res = await fetch('https://api.cloudflare.com/client/v4/user/tokens/verify', {
+      headers: { Authorization: `Bearer ${TOKEN}` },
+    });
+  } catch (err) {
+    // Could not reach Cloudflare at all. Say that, rather than blaming the
+    // token — sending someone to re-create a perfectly good credential is a
+    // worse outcome than admitting the network is the problem.
+    console.error(`Could not reach api.cloudflare.com: ${err.message}`);
+    console.error('This is a connectivity problem, not a token problem.');
+    process.exit(1);
+  }
+
+  const raw = await res.text();
+  let body = null;
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    console.error(`api.cloudflare.com returned HTTP ${res.status} and not JSON.`);
+    console.error('Something between here and Cloudflare is intercepting the call;');
+    console.error('the token has not been tested yet. First 200 characters:');
+    console.error(`  ${raw.slice(0, 200)}`);
+    process.exit(1);
+  }
+
+  if (body?.success) return;
+
+  console.error('Cloudflare rejected the token:');
+  for (const e of body?.errors ?? []) console.error(`  ${e.code}: ${e.message}`);
+  console.error('');
+  console.error('Code 1000 means the token string is not recognised at all — re-copy');
+  console.error('or re-create it. That is NOT a scope problem: a token with the wrong');
+  console.error('permissions verifies fine here and fails later on the query.');
+  console.error('This needs its own token scoped Account Analytics: Read.');
+  process.exit(1);
+}
+
 // ---------------------------------------------------------------- datasets
 
 async function datasets() {
@@ -68,7 +112,9 @@ async function datasets() {
   }`);
   const fields = data?.__type?.fields;
   if (!fields) {
-    console.error('No "Account" type in the schema — the API shape has changed.');
+    // The token verified, so this really is a schema difference and not auth.
+    console.error('Authenticated, but the schema exposes no "Account" type.');
+    console.error('The API shape has changed — the query needs updating.');
     process.exit(1);
   }
   console.log(`${fields.length} account-scoped datasets:\n`);
@@ -200,6 +246,8 @@ const flag = (name, fallback) => {
   const i = rest.indexOf(`--${name}`);
   return i === -1 ? fallback : rest[i + 1];
 };
+
+if (cmd === 'datasets' || cmd === 'fields' || cmd === 'report') await preflight();
 
 switch (cmd) {
   case 'datasets':
