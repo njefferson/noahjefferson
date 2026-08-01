@@ -755,66 +755,130 @@ async function people(opts) {
     console.log('(no visits field — skipping that estimate)');
   }
 
-  // ---- distinct IPs, classified by network owner -------------------------
-  const rows = await run(
+  // ---- distinct IPs, classified by network owner (plan-permitting) -------
+  let personishIps = null;
+  let personishLabel = '';
+
+  const asnRows = await run(
     'ips-by-asn',
     `httpRequestsAdaptiveGroups(limit: 10000, filter: { datetime_geq: "${t0}", datetime_leq: "${t1}", requestSource: "eyeball"${excl} }) {
       count
       dimensions { clientIP clientASNDescription }
     }`
   );
-  if (!rows) return;
-  if (rows.length === 10000) {
-    console.log('\nWARNING: hit the 10,000-row limit — distinct-IP counts are a floor, not a total.');
-  }
 
-  const asns = new Map();
-  const ips = new Set();
-  for (const r of rows) {
-    const ip = r.dimensions?.clientIP;
-    const asn = r.dimensions?.clientASNDescription || '(unknown)';
-    ips.add(ip);
-    const e = asns.get(asn) ?? { ips: new Set(), requests: 0 };
-    e.ips.add(ip);
-    e.requests += r.count;
-    asns.set(asn, e);
-  }
-
-  let ispIps = 0;
-  let ispReq = 0;
-  let hostIps = 0;
-  let hostReq = 0;
-  for (const [asn, e] of asns) {
-    if (HOSTING_RE.test(asn)) {
-      hostIps += e.ips.size;
-      hostReq += e.requests;
-    } else {
-      ispIps += e.ips.size;
-      ispReq += e.requests;
+  if (asnRows) {
+    if (asnRows.length === 10000) {
+      console.log('\nWARNING: hit the 10,000-row limit — distinct-IP counts are a floor, not a total.');
     }
-  }
-
-  console.log(`\ndistinct client IPs: ${fmt(ips.size)} across ${fmt(asns.size)} networks`);
-  console.log(`  ISP/mobile-owned:   ${fmt(ispIps)} IPs, ${fmt(ispReq)} requests`);
-  console.log(`  hosting/datacenter: ${fmt(hostIps)} IPs, ${fmt(hostReq)} requests  <- monitors, crawlers, headless`);
-  console.log(`\ntop networks (aggregates only — no addresses):`);
-  const top = [...asns.entries()].sort((a, b) => b[1].requests - a[1].requests).slice(0, 15);
-  for (const [asn, e] of top) {
-    const cls = HOSTING_RE.test(asn) ? 'hosting' : 'isp';
-    console.log(`  ${asn.slice(0, 44).padEnd(46)} ${String(e.ips.size).padStart(5)} IPs ${fmt(e.requests).padStart(9)} req  [${cls}]`);
+    const asns = new Map();
+    const ips = new Set();
+    for (const r of asnRows) {
+      const ip = r.dimensions?.clientIP;
+      const asn = r.dimensions?.clientASNDescription || '(unknown)';
+      ips.add(ip);
+      const e = asns.get(asn) ?? { ips: new Set(), requests: 0 };
+      e.ips.add(ip);
+      e.requests += r.count;
+      asns.set(asn, e);
+    }
+    let ispIps = 0;
+    let ispReq = 0;
+    let hostIps = 0;
+    let hostReq = 0;
+    for (const [asn, e] of asns) {
+      if (HOSTING_RE.test(asn)) {
+        hostIps += e.ips.size;
+        hostReq += e.requests;
+      } else {
+        ispIps += e.ips.size;
+        ispReq += e.requests;
+      }
+    }
+    console.log(`\ndistinct client IPs: ${fmt(ips.size)} across ${fmt(asns.size)} networks`);
+    console.log(`  ISP/mobile-owned:   ${fmt(ispIps)} IPs, ${fmt(ispReq)} requests`);
+    console.log(`  hosting/datacenter: ${fmt(hostIps)} IPs, ${fmt(hostReq)} requests  <- monitors, crawlers, headless`);
+    console.log(`\ntop networks (aggregates only — no addresses):`);
+    const top = [...asns.entries()].sort((a, b) => b[1].requests - a[1].requests).slice(0, 15);
+    for (const [asn, e] of top) {
+      const cls = HOSTING_RE.test(asn) ? 'hosting' : 'isp';
+      console.log(`  ${asn.slice(0, 44).padEnd(46)} ${String(e.ips.size).padStart(5)} IPs ${fmt(e.requests).padStart(9)} req  [${cls}]`);
+    }
+    personishIps = ispIps;
+    personishLabel = 'ISP/mobile-network IPs';
+  } else {
+    // clientASNDescription is plan-gated on some accounts (it was on this
+    // one). Fall back to the classifier the plan does allow: which BROWSER
+    // each IP presented as. An IP that ever presented as a real browser is
+    // person-ish; an IP that only ever presented as curl/Go/bot/unknown is
+    // machinery. Weaker than ASN — headless Chrome from a datacenter passes —
+    // but it separates the obvious, and it is what this account can see.
+    console.log('\nfalling back: classifying IPs by presented browser instead of network owner.');
+    const BOTISH =
+      /curl|wget|go-http|python|okhttp|java|libwww|axios|node|bot|spider|crawl|scan|monitor|probe|check|fetch|headless|unknown|others|^\(none\)$|^$/i;
+    const uaRows = await run(
+      'ips-by-browser',
+      `httpRequestsAdaptiveGroups(limit: 10000, filter: { datetime_geq: "${t0}", datetime_leq: "${t1}", requestSource: "eyeball"${excl} }) {
+        count
+        dimensions { clientIP userAgentBrowser }
+      }`
+    );
+    if (!uaRows) return;
+    if (uaRows.length === 10000) {
+      console.log('WARNING: hit the 10,000-row limit — distinct-IP counts are a floor, not a total.');
+    }
+    const perIp = new Map();
+    const browsers = new Map();
+    for (const r of uaRows) {
+      const ip = r.dimensions?.clientIP;
+      const b = r.dimensions?.userAgentBrowser || '(none)';
+      const e = perIp.get(ip) ?? { browserish: false, requests: 0 };
+      if (!BOTISH.test(b)) e.browserish = true;
+      e.requests += r.count;
+      perIp.set(ip, e);
+      const be = browsers.get(b) ?? { ips: new Set(), requests: 0 };
+      be.ips.add(ip);
+      be.requests += r.count;
+      browsers.set(b, be);
+    }
+    let browserIps = 0;
+    let browserReq = 0;
+    let botIps = 0;
+    let botReq = 0;
+    for (const e of perIp.values()) {
+      if (e.browserish) {
+        browserIps++;
+        browserReq += e.requests;
+      } else {
+        botIps++;
+        botReq += e.requests;
+      }
+    }
+    console.log(`\ndistinct client IPs: ${fmt(perIp.size)}`);
+    console.log(`  presented as a real browser at least once: ${fmt(browserIps)} IPs, ${fmt(browserReq)} requests`);
+    console.log(`  only ever bot/tool/unknown agents:         ${fmt(botIps)} IPs, ${fmt(botReq)} requests`);
+    console.log(`\nbrowsers by distinct IPs (aggregates only):`);
+    const top = [...browsers.entries()].sort((a, b) => b[1].ips.size - a[1].ips.size).slice(0, 12);
+    for (const [b, e] of top) {
+      console.log(`  ${b.slice(0, 36).padEnd(38)} ${String(e.ips.size).padStart(5)} IPs ${fmt(e.requests).padStart(9)} req`);
+    }
+    personishIps = browserIps;
+    personishLabel = 'browser-presenting IPs';
   }
 
   // ---- the honest translation to people ----------------------------------
-  console.log(`\n== estimate ==`);
-  console.log(`People cannot be counted exactly without tracking, which these apps refuse`);
-  console.log(`to do. Bounds instead, from ${fmt(ispIps)} distinct ISP/mobile IPs over ${days} days:`);
-  console.log(`  upper bound: ~${fmt(ispIps)} people (every IP a different person — ignores`);
-  console.log(`               one person appearing on wifi AND phone, so this overcounts)`);
-  console.log(`  lower bound: ~${fmt(Math.round(ispIps / 3))} people (three IPs per person across the week —`);
-  console.log(`               aggressive; also, a whole household shares one IP, which pulls`);
-  console.log(`               the true number back UP)`);
-  console.log(`Crawlers with browser user agents that run from ISP ranges are the residual`);
-  console.log(`nobody can remove. Treat the range as an order of magnitude, not a census.`);
+  if (personishIps != null) {
+    console.log(`\n== estimate ==`);
+    console.log(`People cannot be counted exactly without tracking, which these apps refuse`);
+    console.log(`to do. Bounds instead, from ${fmt(personishIps)} distinct ${personishLabel} over ${days} days:`);
+    console.log(`  upper bound: ~${fmt(personishIps)} people (every IP a different person — overcounts,`);
+    console.log(`               since one person appears on wifi AND phone; headless browsers`);
+    console.log(`               from datacenters also slip in)`);
+    console.log(`  lower bound: ~${fmt(Math.round(personishIps / 3))} people (three IPs per person across the week —`);
+    console.log(`               aggressive; a whole household sharing one IP pulls the true`);
+    console.log(`               number back UP)`);
+    console.log(`Treat the range as an order of magnitude, not a census.`);
+  }
 }
 
 // ---------------------------------------------------------------- top-ips
