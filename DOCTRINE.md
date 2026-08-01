@@ -151,6 +151,38 @@ issue.
   the 2026-07-28 audit.) Reduced-motion honored.
   Real `<dialog>` / `<button>`; icon-only controls get labels. Page zoom is
   never locked (no user-scalable=no / maximum-scale).
+- A CONTROL MUST NOT MOVE WHEN IT IS USED. Pressing a toggle may not change its
+  own size or anything else's. A tick, badge or count that appears only in the
+  selected state makes the control wider the moment it is pressed, and in a
+  wrapping row that reflows every control after it — under a finger already on
+  its way to where they used to be. Reserve the space in BOTH states and change
+  only visibility. The same applies to anything sized by content that content can
+  change: a `<select>` is as wide as its longest option, so a picker listing
+  scene objects resizes as the drawing grows and rearranges the toolbar around
+  it. Gate it by comparing the geometry of every control across the interaction,
+  not just the one that was pressed. (Intersecting Parallels 1.12.1 / 1.12.4 —
+  owner, 2026-08-01: *"Buttons move when used."*)
+- NO TWO CONTROLS ANSWER TO THE SAME NAME on one surface. Duplicate accessible
+  names are ambiguous to anyone driving by voice or stepping through a list —
+  "activate Place" with two answers is a coin toss. The rule is on the ACCESSIBLE
+  NAME, not the visible text, so repeated words like two Hide buttons or a Delete
+  per row are fine when their names differ. And WCAG 2.2 SC 2.5.3: when a control
+  shows words AND carries an `aria-label`, the visible words must appear in that
+  label, or saying what is written on it does nothing. Both are gate rules, added
+  in the same commit as the `aria-label` that makes them relevant. Exclude what
+  the criterion itself excludes — `aria-hidden` decoration is not part of a label,
+  and a control labelled only by a symbol has no text for it to be about.
+  (Intersecting Parallels 1.12.2 — owner: *"Label is confusing."*)
+- THE WAY IN COSTS WHAT THE WAY OUT COSTS. A mode that carries its own exit — a
+  standing banner with a Turn off, which §3 requires — is one tap to leave and
+  must not be three taps to enter. Check the ROUND TRIP from a clean load with
+  nothing open; a control that is only cheap once a panel is already open is not
+  cheap. Conversely, "has an accessible alternative" and "the alternative is one
+  tap" are DIFFERENT requirements: SC 2.5.1 asks only that a single-pointer route
+  exist, and a disclosure is one — so an alternative may live in a panel, provided
+  the gate follows the disclosure and proves that opener is itself reachable.
+  (Intersecting Parallels 1.12.3 / 1.12.4 — owner: *"'Touch draw' shouldn't be
+  buried in menus."*)
 - NO FIXED SIZE THAT IGNORES THE SPACE AVAILABLE. Any panel, card, dialog or
   header must be measured against the space it actually has AT THE MOMENT IT
   OPENS — never a constant, and never a value captured once at startup. A reader
