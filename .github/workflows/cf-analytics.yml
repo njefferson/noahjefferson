@@ -43,6 +43,11 @@ on:
         description: Days to cover (report only)
         type: string
         default: '7'
+      exclude_ip:
+        description: Comma-separated IPs to exclude (report only). The run prints how much this drops.
+        type: string
+        required: false
+        default: '185.177.72.22'
 
 permissions:
   contents: read
@@ -190,7 +195,8 @@ jobs:
               node cf-analytics.mjs report "${{ inputs.dataset }}" \
                 --host "${{ inputs.host_field }}" \
                 --country "${{ inputs.country_field }}" \
-                --days "${{ inputs.days }}"
+                --days "${{ inputs.days }}" \
+                --exclude-ip "${{ inputs.exclude_ip }}"
               ;;
           esac
 

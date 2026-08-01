@@ -212,34 +212,62 @@ async function fields(dataset) {
 // ------------------------------------------------------------------ report
 
 async function report(dataset, opts) {
-  const { host, country, days } = opts;
+  const { host, country, days, excludeIps } = opts;
   if (!dataset || !host || !country) {
-    console.error('Usage: node cf-analytics.mjs report <dataset> --host <field> --country <field> [--days 7]');
+    console.error('Usage: node cf-analytics.mjs report <dataset> --host <field> --country <field> [--days 7] [--exclude-ip a,b]');
     console.error('Run `fields <dataset>` first to get the real field names.');
     process.exit(1);
   }
   const end = new Date();
   const start = new Date(end.getTime() - days * 86400_000);
 
-  const data = await gql(
-    `query($account: String!, $start: Time!, $end: Time!) {
-      viewer {
-        accounts(filter: { accountTag: $account }) {
-          rows: ${dataset}(
-            limit: 10000
-            filter: { datetime_geq: $start, datetime_leq: $end }
-            orderBy: [count_DESC]
-          ) {
-            count
-            dimensions { ${host} ${country} }
+  // Scanners and crawlers are most of the traffic to a public static site, so a
+  // report that silently includes them reads as usage when it is not. Excluding
+  // them is only honest if the report also says what it dropped — hence the
+  // second, unfiltered query and the delta printed below (LESSONS.md §9).
+  const fetchRows = async (excluded) => {
+    const useFilter = excluded.length > 0;
+    const decls = ['$account: String!', '$start: Time!', '$end: Time!'];
+    const filters = ['datetime_geq: $start', 'datetime_leq: $end'];
+    const vars = { account: ACCOUNT, start: start.toISOString(), end: end.toISOString() };
+    if (useFilter) {
+      decls.push('$excludeIps: [String!]');
+      filters.push('clientIP_notin: $excludeIps');
+      vars.excludeIps = excluded;
+    }
+    const data = await gql(
+      `query(${decls.join(', ')}) {
+        viewer {
+          accounts(filter: { accountTag: $account }) {
+            rows: ${dataset}(
+              limit: 10000
+              filter: { ${filters.join(', ')} }
+              orderBy: [count_DESC]
+            ) {
+              count
+              dimensions { ${host} ${country} }
+            }
           }
         }
-      }
-    }`,
-    { account: ACCOUNT, start: start.toISOString(), end: end.toISOString() }
-  );
+      }`,
+      vars
+    );
+    return data?.viewer?.accounts?.[0]?.rows ?? [];
+  };
 
-  const rows = data?.viewer?.accounts?.[0]?.rows ?? [];
+  const rows = await fetchRows(excludeIps);
+
+  if (excludeIps.length) {
+    const unfiltered = await fetchRows([]);
+    const before = unfiltered.reduce((a, r) => a + r.count, 0);
+    const after = rows.reduce((a, r) => a + r.count, 0);
+    const dropped = before - after;
+    const pct = before ? ((dropped / before) * 100).toFixed(1) : '0.0';
+    console.log(`Excluding ${excludeIps.length} IP(s): ${excludeIps.join(', ')}`);
+    console.log(`Dropped ${dropped.toLocaleString()} of ${before.toLocaleString()} requests (${pct}%).`);
+    console.log(`Reporting the remaining ${after.toLocaleString()}.\n`);
+  }
+
   if (!rows.length) {
     console.log('No rows returned for that window.');
     return;
@@ -281,7 +309,11 @@ async function report(dataset, opts) {
     );
   }
 
-  console.log('\nThese are requests, not visits, and they include bots.');
+  console.log(
+    excludeIps.length
+      ? '\nThese are requests, not visits. Excluded IPs are named above; other bots remain.'
+      : '\nThese are requests, not visits, and they include bots.'
+  );
   console.log('CSV of the same data:\n');
   console.log('app,country,requests');
   for (const [app, , row] of apps)
@@ -311,6 +343,10 @@ switch (cmd) {
       host: flag('host'),
       country: flag('country'),
       days: Number(flag('days', 7)),
+      excludeIps: (flag('exclude-ip', '') || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
     });
     break;
   default:
