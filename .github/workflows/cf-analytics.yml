@@ -1,0 +1,126 @@
+name: Cloudflare analytics
+
+# Manual only — this reports, it does not deploy or change anything.
+#
+# Answers "which app, from which country" from the account-scoped GraphQL API.
+# That data is counted at Cloudflare's edge from requests it already serves, so
+# nothing is injected into any app and Doctrine §1's "no analytics" holds. The
+# alternative (Cloudflare Web Analytics) is a JS beacon and would break it.
+#
+# Needs two repo secrets: CLOUDFLARE_ANALYTICS_TOKEN (scoped Account Analytics:
+# Read — the Pages deploy token will NOT work) and the existing
+# CLOUDFLARE_ACCOUNT_ID.
+#
+# Run `datasets` first, then `fields` on the dataset it names, then `report`
+# with the two field names that come back. The script introspects rather than
+# assuming a schema, so those two steps take about a minute and remove the
+# guesswork (LESSONS.md §9).
+#
+# Actions are pinned by SHA, not tag (Doctrine §16.1) — same pins as the other
+# workflows here.
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Which step
+        type: choice
+        default: datasets
+        options: [datasets, fields, report]
+      dataset:
+        description: Dataset name (needed for fields and report)
+        type: string
+        required: false
+      host_field:
+        description: Host dimension, from `fields` (report only)
+        type: string
+        required: false
+      country_field:
+        description: Country dimension, from `fields` (report only)
+        type: string
+        required: false
+      days:
+        description: Days to cover (report only)
+        type: string
+        default: '7'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cf-analytics
+  cancel-in-progress: true
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+
+      - name: Prepare Cloudflare credentials
+        id: cf
+        env:
+          RAW_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_TOKEN }}
+          RAW_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Strip whitespace/newlines that sneak in when a secret is pasted — a
+          # trailing newline corrupts the Authorization header (Cloudflare 6111).
+          TOKEN=$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')
+          ACCOUNT=$(printf '%s' "$RAW_ACCOUNT" | tr -d '[:space:]')
+          echo "::add-mask::$TOKEN"
+          echo "::add-mask::$ACCOUNT"
+          if [ -z "$TOKEN" ] || [ -z "$ACCOUNT" ]; then
+            echo "Missing CLOUDFLARE_ANALYTICS_TOKEN or CLOUDFLARE_ACCOUNT_ID." >&2
+            exit 1
+          fi
+          # Doctrine §16.4: cleaned values go to the job environment, never to
+          # step outputs — outputs persist in the run and are readable via API.
+          echo "CLOUDFLARE_ANALYTICS_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT" >> "$GITHUB_ENV"
+
+      - name: Verify the token before using it
+        run: |
+          # A scope failure here is the likeliest cause of an empty report, so
+          # establish it up front rather than letting it surface as "no rows".
+          curl -s https://api.cloudflare.com/client/v4/user/tokens/verify \
+            -H "Authorization: Bearer $CLOUDFLARE_ANALYTICS_TOKEN" \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print('valid:', d.get('success'), '| status:', (d.get('result') or {}).get('status'), '| errors:', d.get('errors'))"
+
+      - name: Run
+        run: |
+          case "${{ inputs.command }}" in
+            datasets)
+              node cf-analytics.mjs datasets
+              ;;
+            fields)
+              if [ -z "${{ inputs.dataset }}" ]; then
+                echo "fields needs a dataset name — run 'datasets' first." >&2
+                exit 1
+              fi
+              node cf-analytics.mjs fields "${{ inputs.dataset }}"
+              ;;
+            report)
+              if [ -z "${{ inputs.dataset }}" ] || [ -z "${{ inputs.host_field }}" ] || [ -z "${{ inputs.country_field }}" ]; then
+                echo "report needs dataset, host_field and country_field — run 'fields' first." >&2
+                exit 1
+              fi
+              node cf-analytics.mjs report "${{ inputs.dataset }}" \
+                --host "${{ inputs.host_field }}" \
+                --country "${{ inputs.country_field }}" \
+                --days "${{ inputs.days }}"
+              ;;
+          esac
+
+      - name: What these numbers are not
+        if: always()
+        run: |
+          # LESSONS.md §9 — the count includes machines. Say so every time rather
+          # than letting a flattering number travel unqualified.
+          echo "Requests are not visits, and this includes bots, scanners and crawlers."
+          echo "Sanity-check composition before quoting any of it as usage:"
+          echo "  - asset ratio: html far exceeding js/png means most hits never rendered"
+          echo "  - protocol mix: HTTP/1.1 share is machine traffic; browsers use h2/h3"

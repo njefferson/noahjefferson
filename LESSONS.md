@@ -1686,3 +1686,55 @@ are. He knows where they are — the app edits the description, and the rest he
 handles. The only job a session has here is to hand over correct values and drop
 it.
 *(Quietkeep, 2026-07-30 — logged because it keeps happening despite being told.)*
+
+## 9 · Measuring, and reading the measurement
+
+**Cloudflare already counts every request server-side, per host and per country
+— reaching for an analytics beacon is the wrong tool AND a breach of §1.** Asked
+how to see app usage by country, the session proposed enabling Cloudflare Web
+Analytics across all eight Pages projects: a JS beacon, on apps whose stated
+identity is *no analytics*. It then wrote a careful trade-off paragraph about
+breaking that promise — reasoning about how to justify the violation instead of
+questioning the premise. **Analytics → Account analytics** was already on,
+already retaining the data, and already broke it down by **Top Hosts** and
+**Requests by Country**, with nothing injected anywhere: 27.42k requests over 7
+days across 36 countries, hosts itemised (`quietkeep.pages.dev` 2.81k,
+`noahjefferson.pages.dev` 72). The edge counts what it already serves; a beacon
+can only ever count *less*, because blockers drop it. Before proposing a
+measurement, find out what the platform already measures for free — and when the
+app's own doctrine forbids the thing you are about to suggest, that is the signal
+to look harder, not to start writing the caveat.
+*(the hub, 2026-08-01.)*
+
+**Requests are not usage, and on a public host most of them are not people.**
+That same 27.42k read as 62.3% United States, 10.5% France, 10.0% Germany, which
+looks like an audience until composition is checked. France was one IP —
+`185.177.72.22`, 2.7k requests, user agent `curl/8.7.1` — walking a secrets
+wordlist against quietkeep: `/deploy/.env.smtp`, `/.aws/secret_access_key.txt`,
+`/nuxt/secrets.env`, ~120 hits each, all 4xx. France, Germany, Netherlands,
+Ireland and Singapore together — the five largest commercial hosting regions —
+were **27.9%** of all traffic. Two composition checks separate machines from
+people with no extra tooling: **the asset ratio** (html 12.29k against js 2.94k;
+a real page load pulls html *and* its js, css and icons, so 4:1 means most html
+responses never became a rendered page) and **the protocol mix** (HTTP/1.1 was
+7.93k of 27.42k, **29%**, while current browsers negotiate h2/h3). The same page
+offered "9.98k visits" in large type. Quote the filtered number, or state plainly
+that the figure includes bots — an unqualified visit count is a flattering lie,
+and it is the one a proud owner will repeat.
+*(the hub, 2026-08-01.)*
+
+**Third recurrence of the UI-guessing failure above — in a session that had this
+file open.** Asked for per-app country data, the session twice described a
+Cloudflare control it could not see: "Add filter → Host = …", then a per-site
+export scope. Both were invented, and both times Noah had to send a screenshot to
+refute them. The disproving evidence was available the whole time and was only
+gathered *after* the second correction: `dash.cloudflare.com` and
+`api.cloudflare.com` both fail CONNECT from the sandbox (HTTP `000`), so no claim
+about that dashboard was ever verifiable from here. **Check whether the surface
+you are about to describe is even reachable, and if it is not, say "I cannot see
+it — send me a screenshot."** One screenshot costs a single message. The guess
+cost four, plus the goodwill of the person who had to keep proving it wrong. Two
+prior entries said this; writing them down did not stop it. What might: treat
+*any* sentence naming a menu, tab or button in a third-party UI as requiring a
+citation, exactly like a security claim (§7f).
+*(the hub, 2026-08-01 — see the two entries above on UI paths and repo metadata.)*
