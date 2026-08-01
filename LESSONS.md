@@ -1738,3 +1738,32 @@ prior entries said this; writing them down did not stop it. What might: treat
 *any* sentence naming a menu, tab or button in a third-party UI as requiring a
 citation, exactly like a security claim (§7f).
 *(the hub, 2026-08-01 — see the two entries above on UI paths and repo metadata.)*
+
+**A sampled dataset does not return counts, and the drift is the tell you will
+explain away twice before you believe it.** Cloudflare's
+`httpRequestsAdaptiveGroups` returns SAMPLED rows: `count` is how many records
+landed in the sample, and each carries a `sampleInterval` saying how many it
+stands for. Summing raw counts under-reports by whatever rate that query drew.
+The evidence appeared early and was dismissed as noise twice: a host no filter
+touched went 5,106 → 4,488 → 3,483 across three runs, and excluding one *French*
+IPv6 address appeared to cut *Korean* traffic 819 → 160 — which one address
+cannot do, and which should have ended the matter on sight. **When a number
+moves that a change cannot possibly have moved, stop and find the mechanism;
+"sampling noise" is a label, not a diagnosis.**
+*(the hub, 2026-08-01.)*
+
+**Then the fix was wrong too, and the only reason that is known is a number
+outside the tool.** Weighting by `count × avg(sampleInterval)` — the textbook
+estimator — produced **684,433** requests for a 7-day window in which
+Cloudflare's own Account analytics reported **27,424**. A 25× overshoot. Raw
+counts gave 64,012, still 2.3×. Three figures, at most one right, none verified.
+The tool now ships raw counts, names the weighted estimate beside them, and
+prints the reconciliation gap, because a number that is confidently 25× wrong is
+worse than one labelled unverified. **Reconcile any derived metric against a
+figure the vendor publishes before believing it — the second implementation is
+not more trustworthy than the first just because it is newer, and a fix that was
+never checked against an outside number is a guess with more code around it.**
+What survived all of this was never a magnitude: that `2a06:98c0::/29` is
+Cloudflare's own range and `185.177.72.22` is a secrets scanner came from user
+agents and 4xx shares, and those held while every total moved.
+*(the hub, 2026-08-01.)*

@@ -112,7 +112,19 @@ async function preflight() {
 // Estimated requests = count x avg(sampleInterval).
 const SAMPLE_SELECTION = 'count\n            avg { sampleInterval }';
 
+// DEFAULT OFF, and that is deliberate. Weighting by avg(sampleInterval) is the
+// textbook estimator, but on this account over 7 days it produced 684,433
+// requests against the 27,424 Cloudflare's own Account analytics reports for
+// the same window — 25x. Raw counts came to 64,012, still 2.3x. Three figures,
+// at most one correct, and none of them verified.
+//
+// So the tool does not pick a winner. It reports the raw count the API returns,
+// names the weighted estimate beside it, and states the gap. Shipping a number
+// that is confidently 25x wrong is worse than shipping one labelled unverified.
+const WEIGHTED = process.argv.includes('--weighted');
+
 function weigh(row) {
+  if (!WEIGHTED) return row.count;
   const interval = row.avg?.sampleInterval ?? 1;
   return Math.round(row.count * interval);
 }
@@ -127,9 +139,18 @@ function sampleNote(rows) {
   const raw = rows.reduce((a, r) => a + r.count, 0);
   const est = rows.reduce((a, r) => a + weigh(r), 0);
   if (hi === 1 && lo === 1) {
-    return `sampleInterval is 1.0 on every row — this data is NOT sampled, so weighting changed nothing (${raw.toLocaleString()} requests). The run-to-run drift has another cause.`;
+    return `sampleInterval is 1.0 on every row — this data is NOT sampled (${raw.toLocaleString()} requests).`;
   }
-  return `sampleInterval ${lo.toFixed(2)}–${hi.toFixed(2)}: ${raw.toLocaleString()} sampled records represent ~${est.toLocaleString()} requests.`;
+  return [
+    `MAGNITUDES HERE ARE UNVERIFIED. Read the shape, not the totals.`,
+    `  raw sampled records:        ${raw.toLocaleString()}`,
+    `  weighted estimate:          ${est.toLocaleString()}  (count x avg sampleInterval)`,
+    `  sampleInterval range:       ${lo.toFixed(2)}–${hi.toFixed(2)}`,
+    `Neither reconciles with Cloudflare's own Account analytics, which reported`,
+    `27,424 requests for a 7-day window where these came to 64,012 and 684,433.`,
+    `Showing ${WEIGHTED ? 'WEIGHTED' : 'RAW'} counts. What this tool is actually good for is the`,
+    `cross-tab the dashboard will not give you — which app, which country, which IP.`,
+  ].join('\n');
 }
 
 // ------------------------------------------------------------ schema walk
