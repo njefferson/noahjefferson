@@ -88,24 +88,37 @@ jobs:
           # more than measuring it. Length and character class identify which
           # credential was pasted without ever revealing it — the same trade
           # deploy.yml already makes when it echoes the cleaned token length.
-          echo "token length:      ${#CLOUDFLARE_ANALYTICS_TOKEN}"
+          # Report composition only. The previous version keyed every branch on
+          # length against an ASSUMED 40-character token, so a 53-character
+          # value fell through to a verdict that was not evidence. Character
+          # census answers "what kind of string is this" without assuming what
+          # Cloudflare's format is.
+          t="$CLOUDFLARE_ANALYTICS_TOKEN"
+          echo "token length:      ${#t}"
           echo "account id length: ${#CLOUDFLARE_ACCOUNT_ID}  (expect 32)"
-          if [[ "$CLOUDFLARE_ANALYTICS_TOKEN" =~ ^[A-Za-z0-9_-]{40}$ ]]; then
-            echo "shape: consistent with a Cloudflare API Token."
-            echo "So the string is well-formed but Cloudflare does not know it:"
-            echo "it was likely revoked, or belongs to a different account."
-          elif [[ "$CLOUDFLARE_ANALYTICS_TOKEN" =~ ^[0-9a-f]{37}$ ]]; then
-            echo "shape: this is a GLOBAL API KEY, not an API Token."
-            echo "The Global key cannot authenticate as a Bearer token, which"
-            echo "produces exactly this error. Create an API Token instead:"
-            echo "My Profile > API Tokens > Create Token > Account Analytics: Read."
-          elif [[ "$CLOUDFLARE_ANALYTICS_TOKEN" =~ ^[0-9a-f]{32}$ ]]; then
-            echo "shape: 32 hex characters — that is an ACCOUNT ID, not a token."
-            echo "The two secrets may have been pasted into each other."
+
+          count() { printf '%s' "$t" | tr -cd "$1" | wc -c; }
+          echo "lowercase a-z:     $(count 'a-z')"
+          echo "uppercase A-Z:     $(count 'A-Z')"
+          echo "digits 0-9:        $(count '0-9')"
+          echo "dash and under:    $(count '_-')"
+
+          # Which unexpected characters appear, not where or in what order. A
+          # '.' points at a JWT, ':' or '=' at a key=value or header paste.
+          other=$(printf '%s' "$t" | tr -d 'A-Za-z0-9_-' | fold -w1 | sort -u | tr -d '\n')
+          if [ -n "$other" ]; then
+            echo "other characters:  [$other]  <- not in the usual token alphabet"
           else
-            echo "shape: matches neither an API Token, a Global API Key, nor an"
-            echo "account ID. Likely a truncated paste or a token ID rather than"
-            echo "the token value (Cloudflare shows the value only once)."
+            echo "other characters:  none (alphanumeric plus - and _ only)"
+          fi
+
+          # Positive identification of the one credential type that cannot work
+          # as a Bearer token, independent of any length assumption.
+          if [[ "$t" =~ ^[0-9a-f]+$ ]]; then
+            echo
+            echo "All hex. Cloudflare's Global API Key is hex and does NOT"
+            echo "authenticate as a Bearer token — that would explain code 1000."
+            echo "An API Token from My Profile > API Tokens is the one to use."
           fi
 
       - name: Verify the token before using it
