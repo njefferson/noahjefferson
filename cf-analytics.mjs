@@ -135,6 +135,17 @@ async function preflight() {
 // Therefore: DO NOT multiply by avg(sampleInterval). An earlier "fix" here
 // did, double-applying the adjustment, and produced totals 3-12x too high.
 // Run `calibrate` to re-derive all of this from the live account if in doubt.
+//
+// Cloudflare's own docs confirm both halves (cloudflare/cloudflare-docs):
+// - analytics/graphql-api/features/confidence-intervals.mdx shows count: 42939
+//   equal to the confidence *estimate* while sampleSize: 40054 is separate,
+//   with avg sampleInterval 1.072 — i.e. count = sampleSize x interval,
+//   already multiplied.
+// - logs/reference/clientrequestsource.mdx: eyeball = "a request from an end
+//   user", and an FAQ states "The Cloudflare dashboard applies a
+//   requestSource = 'eyeball' filter to every analytics view."
+// Note eyeball means "from outside Cloudflare's machinery", not "human" —
+// external crawlers (e.g. CCBot) are eyeball-class and remain in the counts.
 const SAMPLE_SELECTION = 'count';
 
 function totalNote(rows) {
