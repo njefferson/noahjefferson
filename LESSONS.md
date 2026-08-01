@@ -1854,3 +1854,51 @@ it is not allowed until the cross-checks within reach are actually exhausted,
 and the person who declares it early is just giving up with a technical
 vocabulary.**
 *(the hub, 2026-08-01, later the same session.)*
+
+## 10 · Explaining your own failure with Noah's inaction
+
+**When a call fails, the cause is a claim about the world — go and find it.
+"You must not have approved it" is the one guess that costs the person who
+cannot check it, so it is the last one you are allowed to reach for, never the
+first.**
+
+MyFax PR #1, 2026-08-01. Subscribing to PR activity through the
+`claude-code-remote` MCP server returned `MCP error -32003: MCP tool call
+requires approval`. What followed was the whole anti-pattern in about four
+minutes: the identical call was **retried verbatim** (twice — the same call is
+not new evidence), then the same server's `send_later` failed the same way, and
+Noah was told the tools were "blocked pending approval in this session" and that
+"this session can't run that prompt". He had approved everything. He said so,
+with some feeling, and he was right.
+
+The diagnosis took two minutes once it was actually attempted, and every piece
+of it was sitting on disk the entire time:
+
+- `~/.claude/mcp-needs-auth-cache.json` contained exactly one server —
+  `711ebc42-…` — and the failing server, `bf7c680d-…`, was **not in it**. The
+  harness did not think that server needed authorisation at all.
+- `~/.claude/launcher-settings.json` pre-allows `"Skill"` and nothing else, so
+  the approval gate is a harness permission policy, not a pending user action.
+- **The decisive tell was in the transcript before the wrong explanation was
+  ever offered**: `mcp__github__subscribe_pr_activity` — the *same action, same
+  PR, different server* — succeeded on the first attempt. Two servers, one
+  action, opposite outcomes is a server-side difference. It cannot be something
+  the user did or failed to do, because the user did the same nothing for both.
+
+Three things generalise, and none of them are about MCP:
+
+- **A failed call is a puzzle you own.** Read the error code, check the tool's
+  state, find the config that governs it, and compare against a call that
+  works. Attributing it to the user before doing that is not a hypothesis, it is
+  a way of stopping.
+- **Guess in the direction where being wrong costs YOU.** "The server is
+  misconfigured" is wrong at the price of a minute of your own time. "You didn't
+  approve it" is wrong at the price of sending Noah to inspect a setting that
+  was never the problem, while telling him the fault was his — and he is the
+  only one who can disprove it.
+- **"I don't know why yet" is a complete, honest answer.** Say what you ruled
+  out, say what the fallback costs, and move. The failure here was never not
+  knowing; it was filling the gap with the user's name.
+
+*(the hub / MyFax, 2026-08-01. Codified as Doctrine §5b the same hour — the
+fallback, a session-only cron, was fine; the explanation was the defect.)*
