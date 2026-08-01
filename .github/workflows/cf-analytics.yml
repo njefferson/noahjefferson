@@ -150,30 +150,23 @@ jobs:
                 '|', [e.get('code') for e in (d.get('errors') or [])])
           "
 
-      - name: Verify the token before using it
+      - name: Token check (advisory — does not gate the run)
         run: |
-          # This step must FAIL on a bad token, not just report one. The first
-          # run printed "Invalid API Token" and then carried on to produce a
-          # misleading "the API shape has changed" — a real error wearing a
-          # different error's clothes (LESSONS.md §1).
+          # This step used to exit 1 on success:false and it was WRONG to.
+          # /user/tokens/verify checks USER-owned tokens and answers 1000 for
+          # anything it cannot find there — including this repo's deploy token,
+          # which ships the live site on every push and fails this call. Five
+          # runs died here on credentials that were never the problem.
+          # The GraphQL query is the authoritative test; this is a note.
           curl -s https://api.cloudflare.com/client/v4/user/tokens/verify \
             -H "Authorization: Bearer $CLOUDFLARE_ANALYTICS_TOKEN" > verify.json
           python3 - <<'PY'
-          import json, sys
+          import json
           d = json.load(open('verify.json'))
-          res = d.get('result') or {}
-          print('valid:', d.get('success'), '| status:', res.get('status'))
-          if d.get('success'):
-              sys.exit(0)
-          for e in d.get('errors') or []:
-              print(f"  {e.get('code')}: {e.get('message')}")
-          print()
-          print('Code 1000 = the token string is not recognised. Re-copy or re-create')
-          print('it; this is not a scope problem. A token with the wrong permissions')
-          print('verifies fine here and fails later on the query itself.')
-          print('Needs its own token scoped Account Analytics: Read — the Pages')
-          print('deploy token will not work.')
-          sys.exit(1)
+          print('user-token verify:', d.get('success'),
+                '|', (d.get('result') or {}).get('status'),
+                '|', [e.get('code') for e in (d.get('errors') or [])])
+          print('(advisory only — an account-owned token fails this and still works)')
           PY
 
       - name: Run

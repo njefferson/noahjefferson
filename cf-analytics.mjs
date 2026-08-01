@@ -60,9 +60,12 @@ async function gql(query, variables = {}) {
 
 // --------------------------------------------------------------- preflight
 
-// Check the token BEFORE introspecting. An unauthenticated introspection comes
-// back with no types, which is indistinguishable from "the API changed" unless
-// auth was established first — the same shape as the empty-body trap in §1.
+// ADVISORY ONLY — never fatal. /user/tokens/verify checks USER-owned tokens
+// and answers 1000 "Invalid API Token" for one it cannot find there, even when
+// that token works: the hub's deploy token, which ships the live site on every
+// push, fails this exact call. Gating on it blocked good credentials for five
+// runs and sent Noah re-creating a token that was fine. The authoritative test
+// is the GraphQL query itself, so this only prints what it saw.
 async function preflight() {
   let res;
   try {
@@ -70,12 +73,10 @@ async function preflight() {
       headers: { Authorization: `Bearer ${TOKEN}` },
     });
   } catch (err) {
-    // Could not reach Cloudflare at all. Say that, rather than blaming the
-    // token — sending someone to re-create a perfectly good credential is a
-    // worse outcome than admitting the network is the problem.
-    console.error(`Could not reach api.cloudflare.com: ${err.message}`);
-    console.error('This is a connectivity problem, not a token problem.');
-    process.exit(1);
+    // Connectivity, not credentials. Still advisory — the query below will
+    // fail on its own and report the real reason.
+    console.error(`note: could not reach api.cloudflare.com (${err.message})`);
+    return;
   }
 
   const raw = await res.text();
@@ -83,23 +84,19 @@ async function preflight() {
   try {
     body = JSON.parse(raw);
   } catch {
-    console.error(`api.cloudflare.com returned HTTP ${res.status} and not JSON.`);
-    console.error('Something between here and Cloudflare is intercepting the call;');
-    console.error('the token has not been tested yet. First 200 characters:');
-    console.error(`  ${raw.slice(0, 200)}`);
-    process.exit(1);
+    console.error(`note: /user/tokens/verify returned HTTP ${res.status}, not JSON.`);
+    return;
   }
 
-  if (body?.success) return;
+  if (body?.success) {
+    console.error('note: token verifies as a user-owned token.');
+    return;
+  }
 
-  console.error('Cloudflare rejected the token:');
-  for (const e of body?.errors ?? []) console.error(`  ${e.code}: ${e.message}`);
-  console.error('');
-  console.error('Code 1000 means the token string is not recognised at all — re-copy');
-  console.error('or re-create it. That is NOT a scope problem: a token with the wrong');
-  console.error('permissions verifies fine here and fails later on the query.');
-  console.error('This needs its own token scoped Account Analytics: Read.');
-  process.exit(1);
+  const codes = (body?.errors ?? []).map((e) => e.code).join(', ');
+  console.error(`note: /user/tokens/verify says no (${codes}).`);
+  console.error('That is expected for an account-owned token and does not mean');
+  console.error('the token is bad — continuing to the query, which is the real test.');
 }
 
 // ---------------------------------------------------------------- datasets
