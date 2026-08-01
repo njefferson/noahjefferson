@@ -28,9 +28,10 @@ on:
         default: datasets
         options: [datasets, fields, report, top-ips, calibrate]
       source:
-        description: requestSource filter (report only), e.g. eyeball — run calibrate to see the values
+        description: requestSource filter (report only). eyeball = end users, matches the dashboard; all = include Worker/cache traffic
         type: string
         required: false
+        default: eyeball
       host:
         description: Limit to one hostname (top-ips only), e.g. quietkeep.pages.dev
         type: string

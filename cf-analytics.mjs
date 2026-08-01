@@ -122,56 +122,24 @@ async function preflight() {
 
 // ------------------------------------------------------------- sampling
 
-// THE BUG THIS FIXES: adaptive datasets return SAMPLED rows. `count` is the
-// number of records that landed in the sample, not the number of requests, and
-// each carries a `sampleInterval` saying how many it stands for. Summing raw
-// counts under-reports by whatever the sampling rate happens to be, and that
-// rate differs per query — which is why an unrelated staging host drifted
-// 5,106 -> 4,488 -> 3,483 across three runs, and why excluding one French
-// address appeared to reduce Korean traffic. Neither was real.
+// VERIFIED 2026-08-01, by calibrate, against two independent sources: in
+// these adaptive datasets `count` already IS the estimated request count —
+// the sampling adjustment is baked in. With requestSource=eyeball over
+// complete UTC days, raw counts matched the dashboard's per-country CSV
+// export request-for-request on seven countries (DE 2,732, KR 559, GB 336,
+// AU 233, CH 164, JP 133, SG 393) and within 0.1% on FR, and
+// httpRequestsOverviewAdaptiveGroups sum.requests returned the identical
+// total (27,807). Exact equality is impossible if `count` were sample
+// records.
 //
-// Estimated requests = count x avg(sampleInterval).
-const SAMPLE_SELECTION = 'count\n            avg { sampleInterval }';
+// Therefore: DO NOT multiply by avg(sampleInterval). An earlier "fix" here
+// did, double-applying the adjustment, and produced totals 3-12x too high.
+// Run `calibrate` to re-derive all of this from the live account if in doubt.
+const SAMPLE_SELECTION = 'count';
 
-// DEFAULT OFF, and that is deliberate. Weighting by avg(sampleInterval) is the
-// textbook estimator, but on this account over 7 days it produced 684,433
-// requests against the 27,424 Cloudflare's own Account analytics reports for
-// the same window — 25x. Raw counts came to 64,012, still 2.3x. Three figures,
-// at most one correct, and none of them verified.
-//
-// So the tool does not pick a winner. It reports the raw count the API returns,
-// names the weighted estimate beside it, and states the gap. Shipping a number
-// that is confidently 25x wrong is worse than shipping one labelled unverified.
-const WEIGHTED = process.argv.includes('--weighted');
-
-function weigh(row) {
-  if (!WEIGHTED) return row.count;
-  const interval = row.avg?.sampleInterval ?? 1;
-  return Math.round(row.count * interval);
-}
-
-// Report the observed interval rather than assuming sampling is happening. If
-// every row comes back at 1.0 then nothing is being sampled, this fix is inert,
-// and the drift has a different cause that still needs finding.
-function sampleNote(rows) {
-  const intervals = rows.map((r) => r.avg?.sampleInterval ?? 1);
-  const lo = Math.min(...intervals);
-  const hi = Math.max(...intervals);
-  const raw = rows.reduce((a, r) => a + r.count, 0);
-  const est = rows.reduce((a, r) => a + weigh(r), 0);
-  if (hi === 1 && lo === 1) {
-    return `sampleInterval is 1.0 on every row — this data is NOT sampled (${raw.toLocaleString()} requests).`;
-  }
-  return [
-    `MAGNITUDES HERE ARE UNVERIFIED. Read the shape, not the totals.`,
-    `  raw sampled records:        ${raw.toLocaleString()}`,
-    `  weighted estimate:          ${est.toLocaleString()}  (count x avg sampleInterval)`,
-    `  sampleInterval range:       ${lo.toFixed(2)}–${hi.toFixed(2)}`,
-    `Neither reconciles with Cloudflare's own Account analytics, which reported`,
-    `27,424 requests for a 7-day window where these came to 64,012 and 684,433.`,
-    `Showing ${WEIGHTED ? 'WEIGHTED' : 'RAW'} counts. What this tool is actually good for is the`,
-    `cross-tab the dashboard will not give you — which app, which country, which IP.`,
-  ].join('\n');
+function totalNote(rows) {
+  const total = rows.reduce((a, r) => a + r.count, 0);
+  return `${total.toLocaleString()} requests. Counts are sampling-adjusted by Cloudflare (verified via calibrate).`;
 }
 
 // ------------------------------------------------------------ schema walk
@@ -319,8 +287,13 @@ async function report(dataset, opts) {
     console.error('Run `fields <dataset>` first to get the real field names.');
     process.exit(1);
   }
-  const end = new Date();
-  const start = new Date(end.getTime() - days * 86400_000);
+  // Complete UTC days, not a rolling window. Rolling windows made identical
+  // queries drift between runs (a burst falling off the trailing edge looks
+  // like resampling noise); fixed day boundaries make runs reproducible.
+  const dayMs = 86400_000;
+  const nowD = new Date();
+  const end = new Date(Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth(), nowD.getUTCDate()));
+  const start = new Date(end.getTime() - days * dayMs);
 
   // Scanners and crawlers are most of the traffic to a public static site, so a
   // report that silently includes them reads as usage when it is not. Excluding
@@ -365,13 +338,20 @@ async function report(dataset, opts) {
   };
 
   const rows = await fetchRows(excludeIps);
-  if (source) console.log(`Filtered to requestSource = ${source}.\n`);
-  if (rows.length) console.log(sampleNote(rows) + '\n');
+  console.log(`Window: ${start.toISOString().slice(0, 10)} .. ${end.toISOString().slice(0, 10)} (complete UTC days).`);
+  if (source) {
+    console.log(`requestSource = ${source}: end-user traffic, the same population the`);
+    console.log(`dashboard counts. Pass --source all to include Worker/cache machinery.\n`);
+  } else {
+    console.log(`ALL request sources — includes Worker subrequests and cache-API traffic,`);
+    console.log(`which on this account is roughly half the total and is not visitors.\n`);
+  }
+  if (rows.length) console.log(totalNote(rows) + '\n');
 
   if (excludeIps.length) {
     const unfiltered = await fetchRows([]);
-    const before = unfiltered.reduce((a, r) => a + weigh(r), 0);
-    const after = rows.reduce((a, r) => a + weigh(r), 0);
+    const before = unfiltered.reduce((a, r) => a + r.count, 0);
+    const after = rows.reduce((a, r) => a + r.count, 0);
     const dropped = before - after;
     const pct = before ? ((dropped / before) * 100).toFixed(1) : '0.0';
     console.log(`Excluding ${excludeIps.length} IP(s): ${excludeIps.join(', ')}`);
@@ -390,7 +370,7 @@ async function report(dataset, opts) {
   for (const r of rows) {
     const app = r.dimensions[host] || '(none)';
     const cc = r.dimensions[country] || '??';
-    const n = weigh(r);
+    const n = r.count;
     if (!table.has(app)) table.set(app, new Map());
     const row = table.get(app);
     row.set(cc, (row.get(cc) ?? 0) + n);
@@ -714,8 +694,13 @@ function maskIp(ip) {
 
 async function topIps(dataset, opts) {
   const { ip, country, ua, status, hostField, host, days, limit, fullIps } = opts;
-  const end = new Date();
-  const start = new Date(end.getTime() - days * 86400_000);
+  // Complete UTC days, not a rolling window. Rolling windows made identical
+  // queries drift between runs (a burst falling off the trailing edge looks
+  // like resampling noise); fixed day boundaries make runs reproducible.
+  const dayMs = 86400_000;
+  const nowD = new Date();
+  const end = new Date(Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth(), nowD.getUTCDate()));
+  const start = new Date(end.getTime() - days * dayMs);
 
   const decls = ['$account: String!', '$start: Time!', '$end: Time!'];
   const filters = ['datetime_geq: $start', 'datetime_leq: $end'];
@@ -753,12 +738,12 @@ async function topIps(dataset, opts) {
   // Fold the status dimension away, keeping the 4xx share — a client walking a
   // wordlist is nearly all 4xx, a person loading the app is nearly all 2xx.
   // That ratio separates them without anyone having to eyeball user agents.
-  console.log('\n' + sampleNote(rows));
+  console.log('\n' + totalNote(rows));
 
   const agg = new Map();
   for (const r of rows) {
     const addr = r.dimensions[ip];
-    const n = weigh(r);
+    const n = r.count;
     const e = agg.get(addr) ?? {
       total: 0,
       errors: 0,
@@ -824,7 +809,13 @@ switch (cmd) {
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean),
-      source: flag('source', ''),
+      // Default to end-user traffic: "who is using my apps" means people, and
+      // eyeball is the population the dashboard counts (verified by calibrate).
+      // --source all drops the filter; any other value passes through.
+      source: (() => {
+        const s = flag('source', 'eyeball');
+        return s === 'all' ? '' : s;
+      })(),
     });
     break;
   case 'calibrate':

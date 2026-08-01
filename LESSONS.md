@@ -1824,3 +1824,33 @@ What survived all of this was never a magnitude: that `2a06:98c0::/29` is
 Cloudflare's own range and `185.177.72.22` is a secrets scanner came from user
 agents and 4xx shares, and those held while every total moved.
 *(the hub, 2026-08-01.)*
+
+**RESOLVED, same night — and the resolution corrects both entries above:
+"unverified" had been declared one query before the data that verifies it.**
+When the three irreconcilable totals (raw 64k / weighted 684k / dashboard 27k)
+were treated as a question instead of a dead end, the discriminating evidence
+turned out to be sitting in the same dataset list: a `requestSource` dimension,
+and an overview dataset described as counting "requests made by end users." One
+calibration run over fixed complete-UTC days settled everything. (1) The
+dashboard counts `requestSource = eyeball` — end users. Eyeball-only raw counts
+matched the dashboard's own CSV export **request-for-request on seven
+countries** (DE 2,732, KR 559, GB 336, AU 233, CH 164, JP 133, SG 393) and
+within 2 requests on FR; `httpRequestsOverviewAdaptiveGroups sum.requests`
+independently returned the identical total, 27,807. (2) So `count` in the
+adaptive datasets already IS the sampling-adjusted request count — the first
+entry's "raw counts under-report" was wrong, and the ×sampleInterval "fix" was
+double-applying an adjustment Cloudflare had already made. Exact equality on
+seven rows is not possible any other way. (3) The run-to-run drift that started
+the panic was the ROLLING WINDOW sliding between runs — identical queries over
+fixed day boundaries agree to 0.0%. (4) The missing half of the traffic was
+never missing: 35,784 requests were `edgeWorkerCacheAPI` — quietkeep's own
+Worker machinery, the Cloudflare-IPv6 "France" traffic — plus 2,499
+`earlyHintsCache`. Real requests, not visitors. Three rules earned here: **when
+totals from the same system disagree, decompose by scope before doubting the
+measurement — the datasets were counting different populations, and both were
+right**; **windows must be fixed to day boundaries before any run-to-run
+comparison means anything**; and **"unverifiable" is a claim like any other —
+it is not allowed until the cross-checks within reach are actually exhausted,
+and the person who declares it early is just giving up with a technical
+vocabulary.**
+*(the hub, 2026-08-01, later the same session.)*
