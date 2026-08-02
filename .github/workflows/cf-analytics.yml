@@ -70,6 +70,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          # This workflow reads analytics and pushes nothing (verified: no git
+          # push, no commit anywhere in the file), so the checkout token has no
+          # job to do after clone. Leaving it in .git/config hands it to every
+          # later step in a job that also holds two Cloudflare tokens.
+          # zizmor: artipacked. One line, no behaviour change — unlike the
+          # template-injection fixes in the same file, which are deferred.
+          persist-credentials: false
 
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:

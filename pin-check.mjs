@@ -1,13 +1,20 @@
-// pin-check.mjs — supply-chain pinning, enforced (Doctrine §16.1, LESSONS §8).
+// pin-check.mjs — npm supply-chain hygiene (Doctrine §16.1/§16.3, LESSONS §8).
 //
 // CANONICAL IN THE HUB. Never fork it.
 //
 //   node pin-check.mjs                  check this repo
 //   node pin-check.mjs --repo ../myapp  check a sibling
 //
-// §16.1 has said "PIN WHAT EXECUTES" since it was written, and §8 records what
-// it cost to learn. Neither had anything behind it: a tag could drift back into
-// a workflow at any time and nothing would notice. This is that check.
+// SCOPE, deliberately narrow. This used to audit GitHub Actions pinning too.
+// It no longer does, because **zizmor** already does that far better — on its
+// first run it found template injection and credential persistence in
+// workflows written the same afternoon this file was, which this file had no
+// concept of. Workflow security is `zizmor --offline` in CI; a hand-rolled
+// regex over `uses:` was reinventing a maintained tool badly.
+//
+// What is left here is the part zizmor does not cover: npm hygiene. A lockfile
+// exists, automation uses `npm ci`, and no script runs on undeclared
+// dependencies.
 //
 // EXITS NON-ZERO on any failure.
 
@@ -24,7 +31,7 @@ const failures = [];
 const notes = [];
 const ok = [];
 
-/* ---------- 1. every `uses:` is pinned to a 40-char SHA ---------- */
+/* ---------- 1. npm ci, never npm install, in automation ---------- */
 
 const wfDir = join(REPO, '.github', 'workflows');
 if (!existsSync(wfDir)) {
@@ -32,26 +39,6 @@ if (!existsSync(wfDir)) {
 } else {
   for (const file of readdirSync(wfDir).filter((f) => /\.ya?ml$/.test(f))) {
     const text = readFileSync(join(wfDir, file), 'utf8');
-    text.split('\n').forEach((line, n) => {
-      const m = /^\s*(?:-\s*)?uses:\s*(\S+)/.exec(line);
-      if (!m) return;
-      const ref = m[1].replace(/['"]/g, '');
-      // A local action or a reusable workflow in this repo is not a
-      // third-party pin — it moves only when this repo moves.
-      if (ref.startsWith('./') || ref.startsWith('.\\')) { ok.push(`${file}:${n + 1} local ${ref}`); return; }
-      const at = ref.lastIndexOf('@');
-      if (at < 0) {
-        failures.push(`${file}:${n + 1}: \`uses: ${ref}\` has no version at all.`);
-        return;
-      }
-      const version = ref.slice(at + 1);
-      if (/^[0-9a-f]{40}$/.test(version)) { ok.push(`${file}:${n + 1} ${ref.slice(0, at)}`); return; }
-      failures.push(
-        `${file}:${n + 1}: \`uses: ${ref}\` is pinned to "${version}", which is a MUTABLE POINTER `
-        + 'someone else controls. Pin the 40-character commit SHA and put the tag in a trailing comment.',
-      );
-    });
-
     // §16.1: npm ci, never npm install, in automation.
     text.split('\n').forEach((line, n) => {
       if (/^\s*(?:-\s*run:|\s+)?.*\bnpm\s+install\b/.test(line) && !line.trim().startsWith('#')) {
@@ -99,14 +86,15 @@ if (existsSync(join(REPO, 'package.json'))) {
 
 /* ---------- report ---------- */
 
-console.log(`=== pin gate · ${NAME} ===`);
-if (ok.length) console.log(`${ok.length} pinned reference(s) / lockfile checks passed`);
+console.log(`=== npm hygiene · ${NAME} ===`);
+console.log('(GitHub Actions security is zizmor\'s job — run `zizmor --offline .github/workflows/`)');
+if (ok.length) console.log(`${ok.length} check(s) passed`);
 for (const n of notes) console.log(`  · ${n}`);
 if (failures.length) {
   console.log(`\nFAILURES (${failures.length}):`);
   for (const f of failures) console.log(`  ✗ ${f}`);
-  console.log('\nDoctrine §16.1: a tag is a mutable pointer someone else controls, and these');
-  console.log('steps execute holding live credentials. Exiting non-zero.');
+  console.log('\nDoctrine §16.3: undeclared dependencies are not absent dependencies.');
+  console.log('Exiting non-zero.');
   process.exit(1);
 }
-console.log('PASS — everything that executes is pinned to something that cannot move.');
+console.log('PASS — lockfile present, no `npm install` in automation, no undeclared deps.');

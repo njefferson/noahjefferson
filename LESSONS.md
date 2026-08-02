@@ -776,7 +776,20 @@ Back up before you plant, and never reach for `git checkout` on a dirty file.)*
 
 ## 8 · Pinning
 
-**Enforced by:** GATE hub:pin-check.mjs — rejects unpinned GitHub Actions, a missing lockfile, and `npm install` in automation.
+**Enforced by:** GATE hub:.github/workflows/doctrine.yml — `zizmor --offline` audits workflow security (pinning, template injection, credential persistence, cache poisoning); `pin-check.mjs` covers the npm hygiene zizmor does not.
+
+**Postscript, 2026-08-02 — and this is the sharper lesson.** The first attempt
+at enforcing this section was a hand-written regex over `uses:` lines. It
+passed both repos. Installing **zizmor**, a maintained off-the-shelf auditor,
+took thirty seconds and immediately found 18 template injections and 5
+credential-persistence issues — including two in workflows written *that same
+afternoon, alongside the bespoke checker that missed them*. Owner, on being
+shown the growing pile of hand-rolled infrastructure: *"WHY THE FUCK AM I
+HAVING TO CREATE ALL THIS INDUSTRY STANDARD STUFF?"*
+**Reach for the standard tool FIRST. Write a bespoke gate only for what is
+genuinely specific to this work** — acceptance criteria, a palette's own roles,
+an app's offline behaviour, the handoff. Everything else already exists, is
+better, and is somebody else's job to keep correct.
 
 **A pin must match the environment it runs in, and a wrong pin is worse than
 none — it looks deliberate.** Adding a first-ever `package.json` to the hub, the

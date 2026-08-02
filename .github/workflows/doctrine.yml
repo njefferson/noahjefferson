@@ -31,6 +31,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          # Nothing in this job pushes. Leaving the token in .git/config makes
+          # it available to every later step, including whatever action gets
+          # added next year (Doctrine §16.4). zizmor: artipacked.
+          persist-credentials: false
 
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
@@ -39,7 +44,17 @@ jobs:
       - name: Lessons declare their enforcement
         run: node lessons-check.mjs
 
-      - name: Nothing that executes floats on a tag
+      # zizmor is MAINTAINED and off-the-shelf. On its first run here it found
+      # 18 template injections and 5 credential-persistence issues that a
+      # hand-rolled checker written the same afternoon had no concept of.
+      # Standard tooling first; bespoke only where nothing standard exists.
+      - name: Install zizmor
+        run: pipx install zizmor || pip install zizmor
+
+      - name: Workflow security audit
+        run: zizmor --offline .github/workflows/
+
+      - name: npm hygiene (what zizmor does not cover)
         run: node pin-check.mjs
 
       # Printed on every run so the un-automatable rules are READ rather than

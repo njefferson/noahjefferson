@@ -807,7 +807,12 @@ repo when it was written:
 
 1. PIN WHAT EXECUTES. Anything that runs code gets a version that cannot change
    under us: a committed lockfile, `npm ci` and never `npm install` in
-   automation, and GitHub Actions referenced BY COMMIT SHA, not by tag. A tag is
+   automation, and GitHub Actions referenced BY COMMIT SHA, not by tag.
+   **Enforced by `zizmor --offline .github/workflows/` in CI** — a maintained
+   auditor that also catches template injection, credential persistence and
+   cache poisoning. USE IT RATHER THAN WRITING ONE: the first hand-rolled
+   version of this check passed both repos while zizmor found 23 real findings
+   in the same files, two of them in workflows written that afternoon. A tag is
    a mutable pointer someone else controls — `cloudflare/wrangler-action@v3`
    floats, and it executes while holding a Pages:Edit token.
 2. NEVER PUT AN UNPINNED FETCH NEXT TO A SECRET. `npx wrangler secret put`
