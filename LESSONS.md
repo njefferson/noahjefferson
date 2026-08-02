@@ -1931,3 +1931,52 @@ because Quietkeep's strongest test had silently stopped exercising nine of the
 kinds it was supposed to cover, including the one branch changed since it was
 written.
 *(Quietkeep, 2026-08-01 — the 1.9.2 audit of nine releases.)*
+
+---
+
+**A `<dialog>` sizes to its CONTENT even when it is `position: fixed; inset: 0`,
+and that is how a first-run panel ships with no way out.** The UA stylesheet
+gives `dialog` `height: fit-content`, and `fit-content` beats the inset. So a
+surface written the obvious way — fixed, inset 0, an inner box with
+`overflow-y: auto` — is not bounded by the viewport at all: it grows to whatever
+its content needs and the inner box never scrolls, because there is nothing to
+scroll it against. fauxplane's PANEL POWER screen measured **1765px tall inside
+a 640px viewport** at 200% text on a 360-wide phone, with the second dismiss
+simply off the bottom of the screen and unreachable by any means. It looked
+perfect at 1024x768 and at 740x360; only the small-phone-at-200%-text case
+exposed it, which is exactly why Doctrine §4 names that case. The fix is one
+line — set `height` and `max-height` explicitly rather than trusting the inset —
+but the part worth carrying is the shape of the bug: **an interrupting surface
+that verifies fine at ordinary viewports can be a trap at the one viewport
+nobody opens**, and the check that catches it is not "is the dismiss visible"
+(it was, at the top) but "is the SURFACE within the space it actually has".
+Measure the container against the viewport, not just the control against the
+container. Two riders from the same run: the page behind that dialog was not
+`inert`, so Tab walked straight into the controls underneath it — a dialog that
+is merely painted over the app is not modal; and a control-geometry check that
+compares *every* control's position across an interaction (not just the one
+pressed) caught a tab bar that overflowed at 200% text, so pressing a tab
+scrolled it into view and moved every other control under the finger already
+reaching for it.
+*(fauxplane 0.1.0, 2026-08-02 — caught by the accessibility gate before the first commit.)*
+
+---
+
+**"No events arrived" and "events arrived carrying nothing" are different
+failures, and a silence timer only catches the first.** fauxplane detects a dead
+orientation sensor with a timer: if no `deviceorientation` event has arrived in
+three seconds, fail the attitude fields with a reason. It looked right and it
+was useless — a browser with no orientation sensor still fires **one**
+`deviceorientation` event with `beta` and `gamma` both null. That single event
+cancelled the timer, so the silence handler never ran, and the ADI sat forever
+on its initial `"not yet read"` — a reason that explains nothing, on the one
+surface whose entire job is explaining. The fix is to define silence as *no
+usable reading* rather than *no callback*: only a sample that actually carries a
+value counts as the sensor working. This generalises past sensors to anything
+with a liveness timer — a websocket that sends empty frames, a poll that returns
+`200 []`, a subscription that fires with `undefined`. **Arm the watchdog on the
+DATA, not on the callback**, or a source that is technically responding will
+look alive forever. Worth noting how it was found: not by a unit test, which
+mocked a sensor that behaved, but by walking the app headless with no sensors at
+all and reading what the failure actually said.
+*(fauxplane 0.1.0, 2026-08-02.)*
