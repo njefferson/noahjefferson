@@ -2122,3 +2122,33 @@ the answer genuinely turns on something only he knows: taste, priority, risk
 appetite, or what the thing is for.
 *(fauxplane, 2026-08-02 — owner: "you make it sound routine like I shouldn't
 have to be asked and you should have done it the right way in the first place.")*
+
+**A fault-injection harness that is not crash-safe is a saboteur with good
+intentions.** fauxplane's planting script backed each file up IN MEMORY and
+restored it in a `finally` — correct for every failure mode it was designed for,
+and useless for the one that happened. An outer shell timeout killed the run
+partway through a plant. The `finally` never executed. The working tree kept the
+injected fault, which happened to be the one that disables the built-in-test
+page's live merge.
+
+It surfaced twenty minutes later, after a clean commit had already been pushed,
+as a gate failure that looked exactly like a real regression in code that had
+just been verified. The wasted effort went into re-reading correct code hunting
+for a bug that a test harness had written. The tell, missed at first, was that
+the *same commit* had passed the same gate minutes earlier: **when a gate flips
+without the code changing, suspect the tooling before the code.**
+
+The fix is three cheap parts, and it is worth having before the first
+interruption rather than after: write the backup TO DISK before touching the
+file, handle SIGINT/SIGTERM/SIGHUP with a synchronous restore, and **restore any
+leftover backup at the start of the next run** so a SIGKILL — which no handler
+can catch — repairs itself rather than needing a diagnosis. Verified by actually
+SIGKILLing a run and watching the next one report "restored from an interrupted
+earlier run" and go green.
+
+This generalises to anything that deliberately puts a repo into a broken state
+for a moment: migration dry-runs, permission-downgrade tests, chaos scripts,
+codemod previews. If the process can be killed — and it can — the repair has to
+survive the process.
+*(fauxplane, 2026-08-02. Same family as the earlier rule against `git checkout`
+to undo a plant: both are about the fact that the undo is the dangerous half.)*
