@@ -1931,3 +1931,121 @@ because Quietkeep's strongest test had silently stopped exercising nine of the
 kinds it was supposed to cover, including the one branch changed since it was
 written.
 *(Quietkeep, 2026-08-01 — the 1.9.2 audit of nine releases.)*
+
+## 11 · Instruments, signs, and the checks that measure the wrong thing
+
+**Two independent derivations of the same geometry catch sign errors that
+neither catches alone — and both looked completely plausible on screen.**
+fauxplane computes aircraft pitch and roll two ways: from the orientation
+event's Euler angles through a rotation matrix, and from the accelerometer's
+gravity vector. The gravity route had its roll sign inverted, so it returned
+**+30 degrees for a 30-degree LEFT bank**. Nothing about that is visible in
+isolation: the horizon tilts smoothly, tracks the device, and returns to level.
+The test that found it derives the gravity vector *from* the matrix and asserts
+the two routes agree across a grid of attitudes — a thing neither implementation
+could fake. Two riders, both earned the hard way in the same hour: the first
+version of that test took the third **column** of the rotation matrix where the
+maths needs the third **row**, and confidently accused correct code of
+disagreeing with itself (suspect the instrument first); and self-consistency
+between two derivations is *not* the same as being right, so a second test now
+pins the aviation convention itself — right wing down is a positive roll — or a
+future refactor that mirrors both routes together would still pass.
+*(fauxplane, 2026-08-02.)*
+
+**The same session, the same shape, in a different subsystem.** The World
+Magnetic Model's north component was 180 degrees out, because X is the
+*northward* component while the spherical-coordinate unit vector points *south*.
+Y and Z were both right, which put the horizontal field exactly reversed. A pure
+axial dipole reported a declination of 180 at every point on earth — a number
+that is finite, stable, and varies sensibly with position. **Anywhere a sign
+convention crosses a coordinate-frame boundary, find an invariant that does not
+depend on the implementation** (a pure axial dipole has zero declination
+everywhere; a dipole tilted into the 90E plane has zero declination on that
+meridian) rather than checking the output against a remembered real-world value,
+which is how a half-remembered constant becomes the thing under test.
+
+**DIMMING A UI WITH A BRIGHTNESS FILTER DESTROYS EVERY CONTRAST PAIR YOU
+MEASURED.** This is arithmetic, not opinion: the WCAG formula's `+0.05` term
+means scaling foreground and background *together* reduces the ratio. Measured
+on fauxplane's palette, a `filter: brightness(0.45)` — the obvious way to dim a
+cockpit display at night — takes primary text from **14.5:1 to about 3.7:1**. A
+fail state, produced by the one control whose entire purpose is legibility, and
+completely invisible to a contrast gate that reads authored token values. The
+fix is to make each dim level a **measured palette block** (PALETTES §6 already
+has the mechanism: value blocks, no new token names) and run the whole
+accessibility sweep in each. Any app that dims, tints, fades or "de-emphasises"
+a whole surface is on this hook, not only cockpit panels.
+*(fauxplane, 2026-08-02.)*
+
+**A real Content-Security-Policy will block your own test harness, and that is
+the policy working.** The accessibility gate injected axe-core with
+Playwright's `addScriptTag({path})`, which inlines the file — and `script-src
+'self'` correctly refused it. The available wrong answer is to relax the policy
+for the gate, which means testing a policy the deploy does not have. The right
+one costs four lines: serve the tool from the harness's own static server so it
+is same-origin. Worth knowing before writing the CSP, because the first symptom
+looks like the harness being broken. The related win: a CSP is only possible at
+all because the app was written with **no inline script and no inline style from
+the first commit** — Doctrine §16.6 is right that it is a refactor, not a
+header, and the refactor is nearly free if it happens on day one and expensive
+ever after.
+*(fauxplane, 2026-08-02.)*
+
+**"No console errors" and "this optional file is deliberately absent" are in
+direct conflict, and the fix is a committed manifest.** Three data bundles were
+knowingly not shipped, each for a good reason. Fetching them produced a 404 on
+every boot — which is a console error whatever the intent, and an HTTP status
+cannot tell a user the difference between "not generated yet" and "deliberately
+not approximated". Putting the reasons in a committed `data/manifest.json` that
+the loaders consult *first* cleaned the console and, more usefully, gave the
+capability page a sentence somebody wrote on purpose. Anywhere an app probes for
+optional content, the probe result is worse documentation than a written answer.
+A second turn of the same screw: those written reasons then appeared verbatim on
+an instrument face and turned one altitude readout into eight lines of prose, so
+each entry now carries a **short reason** for a gauge and a **long detail** for
+the page with room for it.
+*(fauxplane, 2026-08-02.)*
+
+**A "mark this stale now" flag that the ageing machine re-derives away.**
+A store recomputed each field's LIVE/STALE/FAIL from its timestamp on every
+publish — a good design, and the reason "kill the network and watch the feeds
+decay" needed no per-instrument code. But `markStale()`, called on
+`visibilitychange` because iOS stops delivering sensor events when backgrounded,
+set the flag and was overwritten **40 ms later** by the next publish, which saw
+a reading still inside its freshness window and called it LIVE again. The
+instruction survived exactly one frame. **Wherever a derived property is
+recomputed on a loop, an imperative override needs somewhere sticky to live** —
+here a flag on the field that only a genuinely new reading clears. Found by a
+test asserting the state 200 ms after the call rather than immediately, which is
+the only version of that test that could have failed.
+*(fauxplane, 2026-08-02.)*
+
+**§7g again, immediately, on a brand-new check — this is not a rare failure.**
+A gate asserted that the built-in-test page "reads the live store" by checking
+that *something* on it reported FAIL. Planting the fault — disabling the live
+merge entirely — left the gate **green**, because unrelated feed rows were
+already FAIL in that build and satisfied the count on their own. Exactly the
+roof-plane shape: a total that a pre-existing thing was already satisfying.
+Rewritten to name the four specific entries whose status only the merge can
+know, it caught the plant immediately. The point worth carrying is that this was
+written *by someone who had just read §7g and was actively trying to avoid it*,
+in the same session, and it still happened — so **planting is not a discipline
+you can replace with care.** Its companion: when the plant script reported "red,
+but for a different reason", the check was right and the script's expected
+pattern was stale. A planting harness that only asserts non-zero exit will
+happily bless a check that fires for the wrong cause; assert the *message*.
+*(fauxplane, 2026-08-02 — 10 planted faults, 10 caught, after two rounds.)*
+
+**A headless browser has no sensors, so every automated look at a
+sensor-driven app sees the same failed screen.** That screen is worth asserting
+— it is the all-permissions-denied acceptance criterion — but it is also the one
+state in which a mirrored horizon, an upside-down tape or a needle at the wrong
+end of its scale is completely invisible. A small script that drives the app's
+own state store from outside, through the same public write the sensors use, and
+screenshots two or three deliberately opposite scenes (climbing right turn,
+descending left turn) costs half an hour and is the only reason the roll-sign
+bug above was visually confirmed rather than merely argued. It is a test bench
+holding wires to the connector, not a signal generator soldered inside the box —
+worth saying plainly in the file header for any app whose whole premise is that
+it contains no synthetic data path.
+*(fauxplane, 2026-08-02.)*
