@@ -2362,3 +2362,103 @@ Three fixes, in order of how much they buy:
 - **If you must check out another branch, check back afterwards**, and treat any
   `git checkout` during a release as a step that must be undone.
 *(fauxplane, 2026-08-02.)*
+
+---
+
+## 13. Asking whether a value EXISTS when you meant whether it is GOOD
+
+An attitude filter published nothing at all until a smoothed residual settled
+under two degrees. On a real phone that residual sat at 14.8 and stayed there,
+so the artificial horizon showed a red cross for as long as anyone cared to
+watch — while the app knew its own attitude to a fraction of a degree the whole
+time. Gravity alone gives pitch and roll exactly on a device sitting still;
+what the gyro adds is steadiness THROUGH MOTION.
+
+**Convergence was a QUALITY signal being used as an EXISTENCE gate.** Those are
+different questions, and conflating them means a good reading is thrown away
+because a refinement to it has not settled. The fix was to publish the reading
+and carry the caveat as its `reason` — which is what a provenance system is
+for, and it was already there.
+
+The general form, worth checking wherever a "ready" flag guards a display:
+**if the flag never becomes true, does the user see nothing, or something
+honest?** A gate that can fail closed for ever is a gate that will.
+
+*(fauxplane, 2026-08-02.)*
+
+## 14. Every gyroscope reads a number while sitting perfectly still
+
+It is one to two degrees per second, it differs per device, per axis and with
+temperature, and integrated it becomes unbounded drift. A complementary filter
+that only corrects the ANGLE has to drag that back for ever, and the two halves
+settle into a standoff at `residual = offset / (rate x (1 - alpha))` — which
+looks exactly like "still converging" and never converges.
+
+**The accelerometer residual is evidence about the RATE, not only the angle.**
+A filter persistently below gravity has been integrating a rate that is too
+low. Accumulating that recovers the offset in seconds. It is the I of a PI
+complementary filter (Mahony) and it is four lines.
+
+Two traps found in the process:
+- **Do not gate the offset estimate on the gyro's own reading being small.**
+  That is circular: a large enough offset stops the device ever looking still
+  and locks the filter out of learning the thing making it look that way.
+- **If the proportional gain changes, scale Ki with it.** A hard static
+  correction collapses the residual, which is the only evidence the integrator
+  has — measured, a fixed Ki reached 57% of a 3 deg/s offset after forty
+  seconds, where a scaled one reached it in four.
+
+*(fauxplane, 2026-08-02.)*
+
+## 15. `[hidden]` stops hiding the moment you give the element a `display`
+
+`.thing { display: flex }` in an author stylesheet outranks the user agent's
+`[hidden] { display: none }`. The element then stays on screen whatever the
+code sets `.hidden` to. Here it was a "FOLLOWING <aircraft>" banner that
+appeared, with an empty label, on every page that was not following anything.
+
+**Any rule that sets `display` on an element the code toggles with `hidden`
+needs a `[hidden]` companion.** It is one line and it is invisible until
+somebody looks at the page in the state where the element should be gone —
+which is exactly the state nobody screenshots.
+
+*(fauxplane, 2026-08-02.)*
+
+## 16. A test harness that edits the working tree must refuse to run twice
+
+`plant.mjs` injects a fault, runs the gate, and restores the file from a copy it
+took first. Two runs overlapped. The second read a file the first had already
+planted, kept THAT as its "original", and faithfully restored the planted fault
+into the tree — leaving a genuinely broken page that every subsequent gate
+passed, because the plant it came from had been retired. It surfaced days'
+worth of confusion later as a single STALE plant.
+
+**A pid lock, and refuse.** A harness whose entire contract is "the tree is
+exactly as I found it" cannot honour that contract concurrently with itself.
+
+The same run taught a second thing: **plant against the gate that can actually
+see the fault.** Sensor-logic plants were being checked against a browser gate,
+and a headless browser has no accelerometer — so every attitude in it is FAIL
+whatever the code does, and the gate would have stayed green through any of
+them. A plant that "passes" against a blind gate is worse than no plant: it is
+a green tick recording that something was verified when nothing was.
+
+*(fauxplane, 2026-08-02.)*
+
+## 17. Read the terms from the publisher, then make the gate enforce them
+
+adsb.fi's open data terms require a citation with a link to their home page.
+That is a CONDITION OF USE, not a courtesy — and a condition that lives only in
+a code comment is one that quietly lapses in the next refactor, at which point
+the app is out of compliance and nobody knows.
+
+**The licence condition is now an assertion in the accessibility gate and a
+planted fault that proves the assertion works.** If the link goes, the build
+goes red and says why.
+
+Also worth stating plainly, because it changed a "no" to a "yes": the terms had
+been recorded as unreadable because the host was blocked from the build sandbox.
+They were in the publisher's own GitHub repository the whole time. A blocked
+hostname is not an unreadable policy — see §12.
+
+*(fauxplane, 2026-08-02.)*
