@@ -2049,3 +2049,76 @@ holding wires to the connector, not a signal generator soldered inside the box �
 worth saying plainly in the file header for any app whose whole premise is that
 it contains no synthetic data path.
 *(fauxplane, 2026-08-02.)*
+
+**A test built from a degenerate case validates the degenerate case — and can be
+structurally blind to the bug.** fauxplane's magnetic model was tested with two
+synthetic fields: a pure axial dipole (declination must be zero everywhere) and
+a dipole tilted into one meridian plane (declination must be zero on it). Both
+are good invariants, both passed, and both are **degree 1** — where every
+Schmidt normalisation factor happens to be exactly 1. The implementation had the
+m=0 normalisation wrong at every degree from 2 to 12, and the tests could not
+see it in principle, not by bad luck. The symptom was worse than a crash:
+declination came out **three to five degrees wrong** while total intensity and
+inclination stayed close, because the dipole term dominates those two. A pilot
+reconciling a compass against a GPS track would have been handed a plausible,
+stable, wrong number.
+
+Two more bugs in the same file had the same character. The northward component
+was negated (theta-hat points *south*, so X = -B_theta), and the
+geocentric-to-geodetic rotation had its angle backwards — zero error at the
+equator, degrees of it at high latitude. Each was individually invisible: the
+output was always finite, stable, and varied sensibly with position.
+
+**The rule: when a published model has published test values, those are the
+test.** NOAA ships a 213-row validation table with the World Magnetic Model.
+Running against it found all three bugs in one pass and now holds the
+implementation to 0.05 degrees at a hundred points including the poles and
+100 km altitude. The generalisation past geomagnetism: reference implementations
+and conformance suites exist for most standards worth implementing — codecs,
+colour spaces, geodesy, date arithmetic, unicode — and reaching for one is
+cheaper than deriving your own invariants AND strictly stronger, because the
+invariants you can think of are drawn from the same understanding that wrote the
+bug.
+*(fauxplane, 2026-08-02.)*
+
+**"The proxy blocks it" can be true of the host you tried and false of the
+data.** A previous session recorded three data bundles as unobtainable because
+the egress proxy denied their hosts, and a later session repeated that to the
+owner as work he would have to do. He pushed back on being handed a vague task,
+which prompted an actual re-probe — and two of the three were reachable all
+along by a different route: the npm registry is on the proxy's allowlist, and
+`raw.githubusercontent.com` served the same publisher's same repository that
+`*.github.io` would not. Both files were fetched, verified and committed inside
+an hour, and the owner's task list went from three items to zero.
+
+Three things fall out, in increasing order of cost:
+- **Re-probe blocks rather than inheriting them.** A recorded block is a
+  measurement of one host at one moment, not a property of the data.
+- **A blocked host is not a blocked ecosystem.** Package registries, git hosts
+  and mirrors are separate allowlist entries, and the data you want is very
+  often in a package somebody already made for exactly that reason.
+- **Before delegating anything, separate what is blocked from what was merely
+  not attempted** — Doctrine §6 already says this, and it was still the owner
+  who had to ask.
+
+The honesty rider: one of the three, OurAirports, stayed unbuilt afterwards —
+not because it was unreachable (it was), but because its published TERMS page
+was not, and nothing in the current release consumes it. **When the reason for
+a block changes, rewrite the reason.** The stale "egress denied" note had become
+false, and a false reason is worse than no reason: it stops the next person
+looking.
+*(fauxplane, 2026-08-02.)*
+
+**Do not hand the owner a decision he has no basis to make, dressed as routine.**
+The same handoff asked him to rule on whether the module tree should live at
+`public/src/` or at repo-root `/src` with a bundler. That is a technical call
+with a correct answer — the deploy root is `public/`, native ES modules need no
+bundler, and the repo had already settled against a build step — and the session
+had already made it correctly. Presenting a settled, defensible decision as an
+open question reads as either fishing for cover or as an admission it was done
+wrong, and it costs the owner the effort of reconstructing an argument that was
+already complete. **Flag a deviation, state the reason, own it.** Ask only when
+the answer genuinely turns on something only he knows: taste, priority, risk
+appetite, or what the thing is for.
+*(fauxplane, 2026-08-02 — owner: "you make it sound routine like I shouldn't
+have to be asked and you should have done it the right way in the first place.")*
