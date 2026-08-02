@@ -133,9 +133,17 @@ for (let k = 0; k < heads.length - 1; k++) {
   }
 }
 
+// The lesson's own shout-across-a-room rule — NOT the declaration line, which
+// now sits first in every section and made every checklist entry read
+// "Enforced by:". A checklist that does not say what to do is decoration.
 function firstRule(body) {
-  const m = /\*\*(.+?)\*\*/s.exec(body);
-  return m ? ' '.repeat(0) + m[1].replace(/\s+/g, ' ').slice(0, 116) : '';
+  for (const m of body.matchAll(/\*\*(.+?)\*\*/gs)) {
+    const t = m[1].replace(/\s+/g, ' ').trim();
+    if (/^(Enforced by|Smell)\s*:/.test(t)) continue;
+    if (t.length < 12) continue;                 // skip inline emphasis
+    return t.slice(0, 116);
+  }
+  return '';
 }
 
 /* ------------------------------------------------------------------ *
