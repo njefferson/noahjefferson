@@ -2036,6 +2036,31 @@ pattern was stale. A planting harness that only asserts non-zero exit will
 happily bless a check that fires for the wrong cause; assert the *message*.
 *(fauxplane, 2026-08-02 — 10 planted faults, 10 caught, after two rounds.)*
 
+**A plant is anchored to a line of source, so ordinary refactoring disarms it —
+and the better-guarded the code, the faster its own guards rot.** A plant
+proving "the gyro zero-offset keeps being learned" replaced
+`const ki = cfg.biasKi * (gain / (1 - cfg.alpha));` with `const ki = 0;`. Later
+work in the same session added an anti-windup gate and rewrote that line to
+`const ki = explainable ? … : 0;`. The plant's find-string no longer matched
+anything. Nothing about the app was worse; the *evidence* was gone, and the
+suite would have gone on reporting a number that no longer included it.
+
+Two things follow, and the second is the transferable one:
+- **An injection that cannot find its anchor must be a LOUD FAILURE, never a
+  skip.** fauxplane's harness reports `UNPROVEN … this script has gone stale`
+  and drops the run to 16/17. A harness that quietly skips an unmatchable plant
+  reports 16/16 and reads as a clean sweep — the worst possible output, because
+  it is indistinguishable from success.
+- **Plant decay is concentrated exactly where the code is most active.** The
+  plants that go stale are the ones guarding code someone is currently working
+  on, which is the code most likely to break. So the sweep has to be re-run
+  after the edits, not before them: a green plant run taken at the start of a
+  session is stale by the end of it.
+
+*(fauxplane, 2026-08-02 — 17 plants; one silently disarmed by a two-hour-old
+edit to the very line it guarded, caught only because the harness refuses to
+skip.)*
+
 **A headless browser has no sensors, so every automated look at a
 sensor-driven app sees the same failed screen.** That screen is worth asserting
 — it is the all-permissions-denied acceptance criterion — but it is also the one
