@@ -704,6 +704,28 @@ breaking your own green.
 uncommitted, destroying it; the copy taken before planting is what got it back.
 Back up before you plant, and never reach for `git checkout` on a dirty file.)*
 
+**The quietest version of this: a correct check, in a walk that never contains
+the case.** Quietkeep's headless walk asserts that the coverage list's rows
+equal the number the gauge claims — a real check, correctly written, aimed at
+the right defect, and it had been green for a year. Then two releases excluded a
+kind from the list without excluding it from the number (journal entries in
+1.13.0, weights in 1.15.0), and it stayed green through both. Nothing was wrong
+with the assertion. **Neither kind existed at the point in the walk where it
+ran**, so the two sets it compares were trivially equal, and the surface was
+meanwhile rendering every private journal entry as an untitled row in a work
+list.
+
+Nothing here is planted-fault-shaped. Planting *would* have caught it — the
+check goes red the moment you revert the fix — but only if you thought to plant
+it, on a check nobody had touched in a year. What catches it earlier is
+cheaper: **when a check compares two sets, ask what is IN the fixture at that
+moment, not just what the check asserts.** An equality between two sets that are
+empty of everything interesting is the same green as an equality that holds.
+The fix was one line of walk — raise the excluded kind before the assertion and
+leave it on across it — and it turned a decorative check back into a real one.
+
+*(Quietkeep 1.15.1, 2026-08-02.)*
+
 ## 8 · Pinning
 
 **A pin must match the environment it runs in, and a wrong pin is worse than
