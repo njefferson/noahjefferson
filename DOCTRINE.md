@@ -722,6 +722,34 @@ than the aggressive one — 51 places found versus 32, and the single most
 photographed site in the region went from missing entirely to first. Backing off
 cost nothing.
 
+### 7c. A PUSH IS NOT DONE UNTIL THE REMOTE REF MOVED. READ THE RECEIPT.
+
+`git push` prints a RANGE when it transfers anything:
+
+    c4e952c..d1b6d65  staging -> staging
+
+**That range line is the receipt.** If the output has no range — only
+`Everything up-to-date`, or just `branch 'x' set up to track` — then NOTHING
+MOVED, whatever else it said and whatever exit code it returned.
+
+The way this goes wrong is quiet. `git push -u origin staging` pushes the ref
+NAMED `staging`, not whatever HEAD happens to be. Stay on `main` after a
+promote, commit twice, push "staging", and both pushes succeed while the remote
+sits exactly where it was — and the work is announced as shipped when it is
+still only local.
+
+Two rules, both cheap:
+- **After any release step that changes branch, return to the working branch**,
+  or never leave it: `git push origin staging:main` promotes without a checkout
+  and cannot strand commits on the wrong branch.
+- **Verify with `git ls-remote --heads origin` before telling Noah anything
+  landed.** The push output is a claim; the remote is the fact. This is §5's
+  "verify before reporting" applied to the one step that ends every session.
+
+*(fauxplane, 2026-08-02. Two releases were reported to Noah as live on staging,
+twice, with instructions to reload. Neither had left the machine. A stop-hook
+noticed commits on the wrong branch; nothing in the session did.)*
+
 ### 15b. "I CAN'T REACH THE NETWORK" IS ALMOST ALWAYS FALSE. PROVE IT BEFORE SAYING IT.
 
 Noah, 2026-08-02, in anger, about a pattern he has watched **every day**: a

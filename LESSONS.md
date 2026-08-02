@@ -2297,3 +2297,41 @@ decision index had been stale for twenty-four entries, and eleven of the
 filenames written from memory to repair it were wrong until checked against
 disk. A pointer file nobody verifies is a pointer file that lies.
 *(Quietkeep, 2026-08-02 — Noah asked "if I clear Safari cookies, do I lose everything?")*
+
+**`git push -u origin <branch>` pushes the ref with that NAME, not the branch you
+are standing on — and it reports success either way.** After promoting fauxplane
+to production with `git checkout main && git merge --ff-only staging`, the
+session never went back. Two further releases were committed — onto `main`,
+locally — and each was "pushed to staging" with `git push -u origin staging`.
+Both pushes succeeded. Both moved nothing, because local `staging` had not
+advanced. Production was never at risk, which was luck rather than care: had the
+pushes named the current branch, unreviewed work would have gone straight to
+production past a hard release gate.
+
+The owner was told twice that fixes were live, with instructions to reload a URL
+that was still serving the old build. He would have found it in seconds and it
+would have been the second false "it's deployed" of the day.
+
+**The tell was in the output, and it was read as success twice.** A push that
+transfers anything prints a range:
+
+    c4e952c..d1b6d65  staging -> staging
+
+No range means no transfer. The output in question was only
+`branch 'staging' set up to track 'origin/staging'` — the tracking message,
+which git prints for `-u` whether or not anything moved. **Read the range line;
+its absence is the failure.**
+
+What caught it was a stop hook complaining about commit signatures, which
+happened to name the branch. Nothing in the session's own reasoning did,
+because every step reported success.
+
+Three fixes, in order of how much they buy:
+- **`git ls-remote --heads origin` before claiming anything shipped.** The push
+  output is a claim; the remote is the fact. One command, and it is the same
+  discipline as opening the CI run rather than citing it (§7b).
+- **Promote without leaving the branch:** `git push origin staging:main` does
+  the whole job and cannot strand commits on the wrong branch.
+- **If you must check out another branch, check back afterwards**, and treat any
+  `git checkout` during a release as a step that must be undone.
+*(fauxplane, 2026-08-02.)*
