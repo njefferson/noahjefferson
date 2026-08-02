@@ -2487,3 +2487,65 @@ They were in the publisher's own GitHub repository the whole time. A blocked
 hostname is not an unreadable policy — see §12.
 
 *(fauxplane, 2026-08-02.)*
+
+
+---
+
+## 19. Stop diagnosing by screenshot — build the export instead
+
+Every defect in an app over several sessions was found the same way: the owner
+photographed his phone, and I read pixels. That channel loses the reason strings
+(clipped at the edge of a gauge), cannot show a field that is off screen, cannot
+show a filter's internals at all, and makes a person do OCR on behalf of a
+machine. It also makes the owner do the work — repeatedly, and he said so.
+
+**One tap on the version stamp now emits the entire panel state as text.** What
+made it worth more than a raw dump:
+
+- **The first lines are the DIAGNOSIS, not the data.** Everything failing, with
+  its reason, above a field table nobody reads.
+- **Root causes separated from what they knocked over.** A derived field names
+  the inputs it is missing, so its reason contains "unavailable (" — that makes
+  it a consequence. Thirty-eight failures collapse to three real ones plus
+  "these fell over because of those."
+- **Console errors captured from BOOT**, by wrapping `console.error` at module
+  load rather than inside the startup function — "the app failed to start" is
+  exactly the case worth capturing, and the startup function may never run.
+- **Position rounded to ~1 km by default**, with a tick box, because a report
+  designed to be pasted somewhere should not carry a precise location by
+  accident.
+
+The version stamp becoming a BUTTON is also a better reading of the
+"stamp must be pasteable" rule than the rule's literal text: pressing it yields
+the version *and everything else* as selectable text.
+
+*(fauxplane, 2026-08-02.)*
+
+## 20. Ask what the standard says BEFORE inventing the convention
+
+Asked point-blank whether I was using industry standards or guessing, the honest
+answer was: standards for the physics, invention for the presentation. The
+filter was a named Mahony PI complementary filter with gains chosen by computing
+the damping ratio. The *display* conventions were my own reasoning dressed in
+confident comments.
+
+Checking took ten minutes and immediately contradicted something already built:
+**a real EFIS clears the ENTIRE artificial horizon when attitude is lost — no
+certified aircraft draws bank without pitch.** And the colour standard is
+specific: RED for a condition needing immediate action, AMBER for one the crew
+should merely be aware of. A degraded-but-usable parameter is the amber case,
+and I had drawn it in the cyan I was using for "derived".
+
+Two outcomes, and the second matters more:
+- The amber was simply a bug, fixed.
+- The bank-without-pitch display was kept, but **relabelled in the code as a
+  knowing departure** with the reason the standard does not decide the case —
+  a certified AHRS gives both angles or neither, so "measured bank, no pitch
+  source in existence" is not a failure mode the convention was written
+  against. Guarded against the hazard the convention protects (the horizon and
+  ladder are both removed, so nothing can be misread as a horizon).
+
+**A departure you can name and justify is engineering. The identical code
+without the check is a guess that happened to look confident.**
+
+*(fauxplane, 2026-08-02.)*
