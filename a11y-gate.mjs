@@ -54,7 +54,10 @@ const PAGES = [
     // covered by proxy; measuring it directly would need a JS-disabled pass.
     nonText:  ['a.tile','a.approw','.vchip'] },
   { file: 'public/accessibility.html',
-    registry: ['.foot','.sub','.lead','.apps','.contact-email','h1','h2'],
+    // .applist / .applist strong added 2026-08-02 with the single-source app
+    // list that replaced three drifting copies. §4: a new fg/bg pair joins the
+    // gate in the SAME commit as the markup that introduces it.
+    registry: ['.foot','.sub','.lead','.apps','.applist li','.applist strong','.contact-email','h1','h2'],
     // .apps is a non-interactive grouping panel and the links inside identify
     // themselves by text that already passes AA — no boundary is REQUIRED to
     // identify a component here, so nothing is registered (WCAG 1.4.11 scope).
