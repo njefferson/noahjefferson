@@ -2214,3 +2214,55 @@ is not evidence.
 *(Every app, every day, until 2026-08-02. Owner: "You always can. You just see
 one failure and assume the Internet is unreachable, but you never try the right
 ways, and you always try the wrong way first.")*
+
+**A test suite whose inputs all share a timestamp cannot find a bug about
+differing ages — and a filter test that never moves cannot find a bug about
+movement.** fauxplane shipped to production with 84 passing unit tests, a green
+accessibility gate over eighteen combinations, and ten planted faults all
+caught. The owner opened it on his phone and found four real defects in about a
+minute. Every one had the same shape: **the tests used inputs a real device
+never produces.**
+
+- **The altimeter could never display a number at all.** A derived value was
+  stamped with its OLDEST input's timestamp and then aged against its OWN, much
+  shorter window. A weather observation is always several minutes old; the
+  altitude window was sixty seconds. So it expired the instant it was computed,
+  every time, for ever. Every unit test passed because each one built its inputs
+  at the same instant — the bug lived in the *interaction* between the
+  derivation and the ageing, and only inputs of genuinely different ages
+  expose it. The screen read "no update for 806s", 806 seconds being precisely
+  the age of the observation it came from.
+- **Fifteen attitude-filter tests passed while the gyroscope's roll axis was
+  integrated with the wrong sign.** All fifteen fed a ZERO rotation rate. The
+  gyro therefore contributed nothing, the accelerometer alone was correct, and a
+  sign error in the integration was invisible in principle rather than by bad
+  luck. On a real device the two halves of the filter fought continuously and
+  the horizon never converged.
+- **A convergence check that measured hand-shake.** It compared the filter
+  against the INSTANTANEOUS accelerometer solution, which in a hand jitters
+  several degrees continuously, so it never settled. Worth recording that the
+  first fix was also wrong in a new way — smoothing the *reference* made it lag
+  a turning device, scoring a perfectly-tracking filter as 3.8 degrees out. The
+  answer was the smoothed *signed* residual: jitter is zero-mean and cancels, a
+  real misalignment is a bias and does not. Three versions, two of them
+  measuring something adjacent to the claim; this is §7g's shape in a filter
+  rather than in a gate.
+- **A read of state taken before that state was published.** The first-GPS-fix
+  handler ran inside the geolocation callback, before the publish loop had
+  written the fix down, so the code that needed a position correctly concluded
+  there wasn't one — and then waited fifteen minutes for its next scheduled try.
+
+**What to do about it, cheaply.** When a value's correctness depends on a
+dimension — time, motion, order, scale — put a test on the AXIS, not just at a
+point. Give inputs different ages. Feed a rotation, not a stillness. Publish
+between the write and the read. The question to ask of any green suite is not
+"did I test this function" but "does any test differ from the others along the
+dimension the code actually varies in".
+
+**And the corollary that made this cheap rather than expensive:** every one of
+the four was found by the owner opening the thing on his own device, once, for
+a minute. No amount of the sandbox testing that preceded it would have found
+them, because the sandbox has no hands, no compass and no clock skew. Ship to a
+real device early; it is a better fuzzer than anything available in here.
+*(fauxplane, 2026-08-02 — 0.2.0 to 0.2.1. Each of the four is now pinned by a
+test that was watched to fail first.)*
