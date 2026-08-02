@@ -20,11 +20,33 @@ cross-app record of what has actually gone wrong, with the numbers — and
 [`PALETTES.md`](PALETTES.md), how any app gets reskinned (roles, floors, four
 verified families, traps), enforced by [`palette-check.mjs`](palette-check.mjs).
 The doctrine says what to do; the lessons say what it cost to find out; palettes
-says what colour has to clear before taste gets a vote. Append to LESSONS.md
-from any app's session whenever something is learned that would have saved time
-elsewhere; never fork it into another repo. When a doctrine rule changes, edit it HERE and
-tell the sibling repos to re-point (their `CLAUDE.md` files link to this copy).
-Never fork the doctrine into another repo — link to it.
+says what colour has to clear before taste gets a vote.
+
+Append to LESSONS.md from any app's session whenever something is learned that
+would have saved time elsewhere; never fork it into another repo. When a
+doctrine rule changes, edit it HERE and tell the sibling repos to re-point
+(their `CLAUDE.md` files link to this copy). Never fork the doctrine into
+another repo — link to it.
+
+## Four gates live here and serve every repo
+Never fork these either — they take `--repo ../app` so a sibling runs them
+without copying them, which is what stops four divergent versions existing.
+
+- [`palette-check.mjs`](palette-check.mjs) — the colour floors (PALETTES.md).
+- [`lessons-check.mjs`](lessons-check.mjs) — every lesson in LESSONS.md
+  declares `GATE`, `CHECKLIST` or `JUDGEMENT`, and a cited gate that does not
+  exist FAILS. `--checklist` prints the steps no script can perform; run it
+  before any handoff.
+- [`pin-check.mjs`](pin-check.mjs) — nothing that executes floats on a tag
+  (Doctrine §16.1), no `npm install` in automation, no package.json without a
+  lockfile.
+- [`handoff-check.mjs`](handoff-check.mjs) — a staged candidate is recorded in
+  NOTES.md with its URL and version, no instruction tells an iPad-first owner to
+  fetch a file from a repo, and the four un-automatable handoff obligations are
+  acknowledged. LESSONS §14 is why it exists.
+
+`npm run check` runs the hub's own. `.github/workflows/doctrine.yml` runs
+lessons and pins on every push and PR.
 
 ## Cross-app connective tissue
 This hub links OUT to every sibling app, and each app links back. It also hosts

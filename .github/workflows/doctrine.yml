@@ -1,0 +1,49 @@
+name: Doctrine gates
+
+# The rules that used to be prose only, now with something behind them.
+#
+# LESSONS §14: in one build every GATED rule held and every PROSE rule lost —
+# same repo, same hours, same process. The difference was not care, it was
+# whether anything exited non-zero. So these run on every push and every PR.
+#
+#   lessons-check  every lesson declares how it is enforced, and every gate it
+#                  cites actually exists (a cited-but-absent gate reads as
+#                  coverage — §7g, Doctrine §4)
+#   pin-check      nothing that executes floats on a tag (Doctrine §16.1, §8)
+#
+# Actions pinned by SHA, which pin-check itself enforces on this very file.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: doctrine-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+
+      - name: Lessons declare their enforcement
+        run: node lessons-check.mjs
+
+      - name: Nothing that executes floats on a tag
+        run: node pin-check.mjs
+
+      # Printed on every run so the un-automatable rules are READ rather than
+      # remembered. These are the ones that got broken.
+      - name: The steps no script can perform
+        if: always()
+        run: node lessons-check.mjs --checklist

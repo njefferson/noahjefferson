@@ -19,6 +19,44 @@ one-line rule you could shout across a room, then the concrete evidence: real
 numbers, the real symptom, the app and date. A lesson without evidence is an
 opinion, and opinions are what this file exists to replace.
 
+## This file is ENFORCED, not just read
+
+Noah, 2026-08-02: *"I thought lessons was a good document, but you don't do
+fuck-all with it."* He was right — 2400 lines that every session read and then
+ignored, because reading was all the file ever asked for. §14 is the autopsy:
+in one build every **gated** rule held and every **prose** rule lost.
+
+So each lesson now has to say how it is enforced. Run it:
+
+```
+node lessons-check.mjs               # every lesson declares its enforcement
+node lessons-check.mjs --checklist   # the steps no script can do — read at handoff
+node pin-check.mjs      --repo ../x  # §8, Doctrine §16.1 — nothing floats on a tag
+node handoff-check.mjs  --repo ../x  # §10, §14 — the handoff is a deliverable
+```
+
+**Every `## ` section carries an `**Enforced by:**` line**, naming one of:
+
+- **`GATE <repo>:<path>`** — an executable check. `lessons-check.mjs` verifies
+  the file EXISTS. A cited gate that is not there is the precise failure §7g and
+  Doctrine §4 both describe, so it FAILS rather than reading as coverage.
+- **`CHECKLIST <id>`** — a session-time step no script can perform. Printed by
+  `--checklist` so it is read at the moment it matters.
+- **`JUDGEMENT`** — genuinely not automatable. Must also carry a **`Smell:`**
+  line, so the lesson is recognisable when you are standing in it.
+
+**A section with no declaration FAILS.** That is deliberate: it makes the
+un-gated lessons countable instead of letting them blend in with the gated ones.
+Right now that is 3 judgement calls and 14 checklist items against 6 gate
+citations — the honest picture, and the list of what to automate next.
+
+**Adding a lesson?** It does not land without a declaration. If you cannot
+gate it, say `CHECKLIST` and give it an id; if you cannot even do that, say
+`JUDGEMENT` and write the smell. "Somebody will remember this" is not an option
+the file accepts any more.
+
+---
+
 > A repo may also keep its own `LESSONS.md` for **stack contract** detail —
 > build, deploy and vendor conventions specific to that codebase (photo-pointer
 > has one). That is a different document. This is the shared one.
@@ -26,6 +64,8 @@ opinion, and opinions are what this file exists to replace.
 ---
 
 ## 1. Reading data honestly
+
+**Enforced by:** CHECKLIST empty-success — every fetch path treats an empty-but-200 response as a failure, not as data.
 
 **A success response carrying nothing is not an answer — it is a question.**
 USA-NPN returned HTTP 200 with `[]` twice and it was read as "no records in this
@@ -83,6 +123,10 @@ hour later worked fine.)*
 
 ## 2. Statistics that are right and useless
 
+**Enforced by:** JUDGEMENT
+
+**Smell:** the arithmetic checks out and nobody asked the question it answers. Say what the number is FOR before computing it.
+
 **The correct arithmetic can answer the wrong question.** The median day-of-year
 across every "in flower" record put California poppy at 25 June in the Sierra
 foothills, where it peaks in early April. The median of a March-to-August season
@@ -103,6 +147,8 @@ fortnight" lets the reader see a diffuse season as diffuse. A card that says
 only "early November" reads as a promise.
 
 ## 3. Asking a service for something
+
+**Enforced by:** GATE photo-pointer:scripts/check-etiquette.mjs · CHECKLIST read-the-policy — cite the published policy before writing or changing any pacing.
 
 **Read the service's published policy before writing the client, and make it a
 gate.** Wikimedia's API:Etiquette asks for a total concurrency of at most 1 and
@@ -201,6 +247,8 @@ lesson.
 
 ## 4. Building a layer
 
+**Enforced by:** CHECKLIST run-it-twice — any discovery, ingest or migration pass is run twice and the second run's output diffed against the first.
+
 **A discovery pass must survive being run twice.** The photo-density layer
 counted *its own pins from the previous run* as prior knowledge. Run two found
 its 43 discoveries, decided each was already explained by the pin it had itself
@@ -238,6 +286,8 @@ by looking at the map; the discoveries found it by falling into the hole.
 
 ## 5. Verifying
 
+**Enforced by:** CHECKLIST literal-words — when a headless repro will not come, measure the data and read the reporter's words literally before theorising.
+
 **When a headless repro will not come, measure the data and read the user's
 words literally.** A card that "opens, pushes down, then closes" was never
 reproduced in the harness across synthetic clicks, real touch taps, forced pans,
@@ -274,6 +324,8 @@ deadline from 6 s to 15 s made a failure *more* frequent, which ruled out
 *(photo-pointer, 2026-07-26.)*
 
 ## 6. Interface
+
+**Enforced by:** GATE hub:a11y-gate.mjs — every page is measured at more than one viewport including the small-phone-at-200%-text case.
 
 **No fixed size may ignore the space available.** A place card had three
 hard-coded sizes computed once at creation time from the window, never from the
@@ -326,6 +378,8 @@ was built and was unusable where it was read.
 *(Hub, 2026-07-29. The rule is Doctrine §2.)*
 
 ## 7 · Checking whether a name is free
+
+**Enforced by:** CHECKLIST name-search — search the name as software, not as a member of its own category, before proposing it.
 
 **Ask "is this name taken in software?" — never "is another _X_ called this?"**
 A name search scoped to your own product category filters out exactly the
@@ -400,6 +454,8 @@ on `staging`; the staging gate contained it and it cost nothing.)*
 
 ## 7b · Gates you never watched
 
+**Enforced by:** CHECKLIST watch-the-gate — after pushing, READ the CI run. A workflow that exits 0 is not evidence a step ran; a skipped step exits 0 too.
+
 **Running the command locally is not the same as watching the gate.** Quietkeep's
 CI workflow failed on **all four of its runs, every run since it was created**,
 always on the first step — `npm ci` died with `EJSONPARSE` because `package.json`
@@ -427,6 +483,10 @@ Three things fall out of it, all cheap:
 the failure finally surfaced locally. It had been red for a day.)*
 
 ## 7c · Marks, palettes, and what a shape says
+
+**Enforced by:** GATE hub:palette-check.mjs · JUDGEMENT
+
+**Smell:** a mark that reads correctly to you and has never been shown to anyone who uses the audience's own vocabulary.
 
 **Check a mark against the audience's own vocabulary, not only against other
 logos.** Two icon candidates for Quietkeep were spirals, and every check run on
@@ -504,6 +564,8 @@ missing secret. Same error, three costumes.)*
 
 ## 7d · Green is not a synonym for correct
 
+**Enforced by:** CHECKLIST adversarial-pass — before a boundary widens, run reviewers told to REFUTE one invariant each and write the repro, not the risk.
+
 **A fully green tree is where the worst defects hide, not where they are
 absent.** Quietkeep had 18 passing tests, a green CI pipeline with a
 type-check, a headless walk of the built app, an accessibility gate, a
@@ -545,6 +607,10 @@ before it was believed, and pinned with a regression test before it was
 called fixed.)*
 
 ## 7e · The comment that made the bug sound principled
+
+**Enforced by:** JUDGEMENT
+
+**Smell:** a comment that ARGUES for the design rather than describing it. A rationale is a claim; check the claim, not the prose.
 
 **A comment stating a rationale is a claim, and an unverified one costs more
 than no comment at all — because it stops the next reader checking.** Quietkeep's
@@ -601,6 +667,8 @@ shape through the real path.)*
 
 ## 7f · A security claim is a liability until a test pins it
 
+**Enforced by:** CHECKLIST security-claim — every security sentence in docs or comments names the test that pins it, or it is deleted.
+
 **Three times in two days, a confident security sentence in this codebase was
 wrong, and the OWNER caught each one — not a test, not a review.** The pattern is
 specific enough to name: a comment or a piece of user-facing copy states a
@@ -648,6 +716,8 @@ copy correction, not an exploit. The hold-to-promote was for the words, not the
 walls.)*
 
 ## 7g · A check that cannot fail
+
+**Enforced by:** CHECKLIST plant-the-fault — every gate is made to go RED on purpose before it is trusted, and the mutation is recorded.
 
 **Plant the fault. A check you have never seen go red is not evidence, and it
 is indistinguishable from a check that works.** Intersecting Parallels shipped a
@@ -705,6 +775,8 @@ uncommitted, destroying it; the copy taken before planting is what got it back.
 Back up before you plant, and never reach for `git checkout` on a dirty file.)*
 
 ## 8 · Pinning
+
+**Enforced by:** GATE hub:pin-check.mjs — rejects unpinned GitHub Actions, a missing lockfile, and `npm install` in automation.
 
 **A pin must match the environment it runs in, and a wrong pin is worse than
 none — it looks deliberate.** Adding a first-ever `package.json` to the hub, the
@@ -1746,6 +1818,8 @@ it.
 
 ## 9 · Measuring, and reading the measurement
 
+**Enforced by:** CHECKLIST no-beacon — read what the platform already counts server-side before adding any client-side measurement.
+
 **Cloudflare already counts every request server-side, per host and per country
 — reaching for an analytics beacon is the wrong tool AND a breach of §1.** Asked
 how to see app usage by country, the session proposed enabling Cloudflare Web
@@ -1857,6 +1931,8 @@ vocabulary.**
 
 ## 10 · Explaining your own failure with Noah's inaction
 
+**Enforced by:** GATE hub:handoff-check.mjs · CHECKLIST evidence — every claim about external state cites the log line or response it came from.
+
 **When a call fails, the cause is a claim about the world — go and find it.
 "You must not have approved it" is the one guess that costs the person who
 cannot check it, so it is the last one you are allowed to reach for, never the
@@ -1933,6 +2009,8 @@ written.
 *(Quietkeep, 2026-08-01 — the 1.9.2 audit of nine releases.)*
 
 ## 11 · Instruments, signs, and the checks that measure the wrong thing
+
+**Enforced by:** CHECKLIST two-derivations — derive any geometry or sign-sensitive result a second, independent way and compare before believing either.
 
 **Two independent derivations of the same geometry catch sign errors that
 neither catches alone — and both looked completely plausible on screen.**
@@ -2155,6 +2233,8 @@ to undo a plant: both are about the fact that the undo is the dangerous half.)*
 
 ## 12 · The network is not down. You tried one host.
 
+**Enforced by:** CHECKLIST probe-order — run the proxy status and the alternate hosts BEFORE reporting any block, and quote the status codes per host.
+
 **The single most repeated failure across these apps, and the owner has watched
 it happen every day.** A session makes one request, it fails, and the session
 reports that it cannot reach the network — then hands the owner the work. It is
@@ -2218,6 +2298,8 @@ ways, and you always try the wrong way first.")*
 ---
 
 ## 13 · A guard nobody calls, and other ways a green tree lies
+
+**Enforced by:** CHECKLIST plant-the-fault — the same mutation rule as §7g. A guard is not wired until breaking it turns something red.
 
 *(photo-field-tools, 2026-08-02, building a new app from a written spec. Every
 item here was found by making a check FAIL on purpose, or by looking at a
@@ -2350,6 +2432,8 @@ where the owner can rule on it.
 ---
 
 ## 14 · Gated in the code, freelance in the handoff
+
+**Enforced by:** GATE hub:handoff-check.mjs — the handoff is a deliverable and has its own checker.
 
 *(photo-field-tools, 2026-08-02. The owner, at the end of a build whose four
 CI gates were all green: "Why the fuck do you get so many things wrong when

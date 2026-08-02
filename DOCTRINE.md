@@ -380,6 +380,13 @@ without evidence is the one that makes it Noah's fault.
   of "it's ready."
 - Leave a durable "waiting on Noah" signal so a staged candidate isn't invisible
   after the session ends (a draft PR or a Project-facts note, per the repo).
+  **This is gated**: [`handoff-check.mjs`](handoff-check.mjs) fails a repo that
+  deploys to staging without recording the preview URL and the staged version in
+  `NOTES.md`. It also refuses to pass until the session has acknowledged the
+  handoff obligations no script can judge — quoting a deploy URL read from the
+  LOG rather than inferred, citing evidence for any claim about external state,
+  attaching files rather than naming paths, and verifying every manual step
+  handed over. LESSONS §14 is why.
 - START EVERY SESSION by checking whether a candidate is already staged and
   waiting — surface it, never rebuild it.
 - The MOMENT a release merges to production, record it in the repo's Project
@@ -555,7 +562,12 @@ Two consequences, both non-optional:
   actually gone wrong anywhere, with the numbers, so it does not go wrong again
   somewhere else. Read it with this doctrine at the start of every session, and
   APPEND to it whenever a session learns something that would have saved time in
-  a different app. Doctrine says what to do; Lessons says what went wrong and
+  a different app. **It is ENFORCED, not merely read** (owner, 2026-08-02: *"I
+  thought lessons was a good document, but you don't do fuck-all with it"*).
+  Every lesson declares `GATE`, `CHECKLIST` or `JUDGEMENT`, and
+  [`lessons-check.mjs`](lessons-check.mjs) FAILS on a lesson that declares
+  nothing or cites a gate that does not exist. Run
+  `node lessons-check.mjs --checklist` before any handoff. Doctrine says what to do; Lessons says what went wrong and
   what it cost. A repo may keep its own `LESSONS.md` for stack-contract detail
   (build/deploy/vendor conventions specific to that codebase) — that is a
   different, repo-local document.
@@ -833,8 +845,10 @@ repo when it was written:
    and set text; reserve `innerHTML` for inert markup you authored.
 8. MAKE IT A GATE, NOT AN INTENTION (§15.7, and it generalises). A rule that
    lives only in prose is a rule that loses to whoever is in a hurry. Lockfiles
-   are checked by `npm ci` failing. Pinning is checked by a CI step that rejects
-   an unpinned `uses:`. Headers are checked by fetching the deployed page. §4 is
+   are checked by `npm ci` failing. Pinning is checked by
+   [`pin-check.mjs`](pin-check.mjs), which rejects an unpinned `uses:`, an
+   `npm install` in automation, and a package.json with no lockfile — run it
+   against any repo with `--repo`. Headers are checked by fetching the deployed page. §4 is
    the standing proof of what happens otherwise: a documented gate that never
    existed, believed for months because nobody ran it.
 
