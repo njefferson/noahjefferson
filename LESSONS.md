@@ -1931,3 +1931,74 @@ because Quietkeep's strongest test had silently stopped exercising nine of the
 kinds it was supposed to cover, including the one branch changed since it was
 written.
 *(Quietkeep, 2026-08-01 — the 1.9.2 audit of nine releases.)*
+
+**A gate that narrows its own scope reports the exclusion as a pass.** Fauxplane
+ships five networked adapters, and the etiquette gate's job is to fail the build
+when one of them stops citing a policy or stops honouring `Retry-After`. It
+decided which files were in scope by matching `fetch("https://…")` — and three of
+the five fetch through a shared `cachedFetch` helper, so the URL and the call
+sat on different lines. For those three the gate printed *"no third-party egress,
+no declaration required"* and exited 0. Two of them were the NOAA weather feed
+and Open-Meteo. The output did not look like a failure; it looked like coverage,
+in the same green run as the two files it did check. **A scoping predicate is
+part of the gate and needs the same suspicion as the rule it feeds** — the rule
+was correct throughout, and the gate was still blind on 60% of its subject.
+Worth pairing with §7g's other rule: a check that matches nothing must FAIL. That
+one fired here on a sibling gate the same afternoon — a provenance check whose
+literal-stripping had accidentally blanked the very string keys it searched for,
+so it found 0 of 27 state writes — and the explicit zero-match failure is the
+only reason it was caught in the first minute instead of the next release.
+*(Fauxplane, 2026-08-02 — first run of four new gates.)*
+
+**Catching a 404 does not remove it; only not asking does.** Two optional data
+bundles are built from other people's servers, so the app and its service worker
+both handled a missing bundle gracefully — the fetch was wrapped, the failure
+became a reported capability on the built-in-test page, nothing threw. The
+accessibility gate still failed the build twice per page load, because a handled
+404 is *still a console error*, and the acceptance criterion said no console
+errors. `cache.add` on an absent file performs the request whatever you do with
+the rejection. The fix was a tiny always-present `manifest.json` listing which
+bundles this deployment actually carries, asked before either is requested.
+**Where an asset is optional, ship a manifest of what exists rather than
+probing and catching** — it is the difference between a clean console and a
+console that has taught its reader to ignore red lines.
+*(Fauxplane, 2026-08-02.)*
+
+**Two failures with different names can be one missing property.** At 200% text
+on a 360px phone, the accessibility gate reported the page scrolling sideways by
+106px *and* all four controls in the header jumping 16px whenever a tab was
+pressed — filed as an overflow bug and a §4 "controls must not move" bug. Both
+were one missing `flex-wrap` on the tab row: three tabs at that text size are
+wider than the screen, the row could not wrap, the document gained a horizontal
+scroll, and the layout origin moved with it. **Fixing them in the order reported
+would have meant two patches, and the second would have looked like it worked
+for the wrong reason.** Read the whole failure list for a common cause before
+fixing the first entry; symptom count is not cause count.
+*(Fauxplane, 2026-08-02.)*
+
+**Every structural gate can pass on a layout that is visibly wrong.** The panel's
+attitude indicator — the one instrument the whole app exists to draw — rendered
+as a letterbox about a third of its proper height, with the heading strip below
+it claiming most of the column. Contrast passed, targets passed, axe passed, the
+canvas text alternative was correct and current, 345 checks green. The cause was
+`flex: 0 0 auto` on a box whose child canvas was styled `height: 100%`: an
+indeterminate basis inside a flex column, valid CSS, no warning anywhere. It was
+found by opening the screenshot. This is §14's *"a gate measures the surface, not
+the thing the surface makes"* arriving from a new direction — there the print
+button passed every check while sending the printer garbage; here every check
+passed while the instrument was unreadable. **If a feature produces a picture,
+look at the picture.** Budget a screenshot in the verification pass, not just
+assertions about the DOM.
+*(Fauxplane, 2026-08-02.)*
+
+**A source label that names the wrong sensor is worse than one that names
+nothing.** In an app whose entire promise is that every value says where it came
+from, the attitude readout credited `deviceorientationabsolute` — the *heading*
+source — while the number was actually produced by a complementary filter over
+the accelerometer and rate gyro. It read as precise, it was on screen next to a
+green LIVE flag, and it was false. A vague "sensor" would have cost a reader
+nothing; a specific wrong answer spends the credibility that the honest labels
+elsewhere had earned. **Wherever provenance is displayed, the label is a claim
+and needs checking like any other claim** — including when it was right at the
+time and a later refactor moved the value's real origin.
+*(Fauxplane, 2026-08-02.)*
