@@ -46,7 +46,12 @@ without copying them, which is what stops four divergent versions existing.
   acknowledged. LESSONS §14 is why it exists.
 
 `npm run check` runs the hub's own. `.github/workflows/doctrine.yml` runs
-lessons and pins on every push and PR.
+lessons, pins and `zizmor` on every push and PR.
+
+[`SECURITY.md`](SECURITY.md) is canonical here too — the baseline every repo
+is held to, splitting what CI enforces from the GitHub and Cloudflare settings
+only Noah can switch on. Confirm those the same way as repo metadata (§10):
+list them, never assume them.
 
 ## Cross-app connective tissue
 This hub links OUT to every sibling app, and each app links back. It also hosts

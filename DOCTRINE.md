@@ -794,6 +794,11 @@ real bugs that would otherwise have shipped.*
 
 ## 16. Security and the supply chain
 
+> **The switch-on list lives in [`SECURITY.md`](SECURITY.md)** — what runs
+> automatically, and the GitHub and Cloudflare settings only Noah can set
+> (same manual-and-confirm rule as §10). This section is the posture and the
+> reasoning; that file is what you work down.
+
 These apps are small, free and personal, which changes the threat model but does
 not empty it. Nobody is targeting Noah. The realistic path runs the other way: a
 compromised package, pulled in for a render script nobody thinks about, executing
