@@ -2298,6 +2298,33 @@ filenames written from memory to repair it were wrong until checked against
 disk. A pointer file nobody verifies is a pointer file that lies.
 *(Quietkeep, 2026-08-02 — Noah asked "if I clear Safari cookies, do I lose everything?")*
 
+**And the fix generalises into a gate, which is the half worth copying.** Having
+found two of these in one day, the obvious next question was *how many more?* —
+and the answer was **twenty-three more names the app could record and never did,
+of which exactly two carried a note saying so.** From outside, all twenty-three
+looked identical to the two that were real defects. So the rule became: **every
+name in the closed vocabulary is either written by the running code, or the
+document says in words that it is not, and why.** There is no third state, and a
+build fails on one. The check greps for the name's string literal outside the
+handful of files that necessarily mention every name (the declaration, the
+renderer, the reader) — deliberately crude, because a precise emit-detector
+would need to understand every code path and would become another thing that
+could quietly stop working, which is the exact failure being fixed. Crude also
+errs toward calling a name *used*, and that is the safe direction: the sentence
+it would otherwise demand is cheap, while a false "accounted for" is the outcome
+that hurts. **It checks both directions** — a name the code now does write must
+not still be described as unused, because a stale note is the next quiet lie and
+would be left behind by whoever finally wires the thing up. Two implementation
+notes that cost real time: the first version split the document on blank lines,
+and since a bullet list has none, one note vouched for every entry beside it —
+scope the check to the entry, not the region; and forcing a *sentence* rather
+than a boolean is the whole mechanism, because "reserved", "deferred, waiting on
+X", "superseded by Y" and "redundant" are four different answers and only prose
+distinguishes them. Applies to any closed set a system declares and only
+sometimes uses: feature flags, error codes, permission scopes, event types,
+metric names, translation keys.
+*(Quietkeep, 2026-08-02 — 1.14.2, the release after the two that prompted it.)*
+
 **`git push -u origin <branch>` pushes the ref with that NAME, not the branch you
 are standing on — and it reports success either way.** After promoting fauxplane
 to production with `git checkout main && git merge --ff-only staging`, the
