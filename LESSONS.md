@@ -2436,6 +2436,12 @@ worth of confusion later as a single STALE plant.
 **A pid lock, and refuse.** A harness whose entire contract is "the tree is
 exactly as I found it" cannot honour that contract concurrently with itself.
 
+**And the lock cannot stop a PERSON.** Mid-run the working tree genuinely
+contains a planted fault, so a `git diff` looks alarming and a `git commit`
+would ship the fault. This nearly happened twice in one session — the second
+time while writing this very lesson. If a harness edits the tree, treat it like
+a lock on the whole repository: do not read the diff, do not commit, wait.
+
 The same run taught a second thing: **plant against the gate that can actually
 see the fault.** Sensor-logic plants were being checked against a browser gate,
 and a headless browser has no accelerometer — so every attitude in it is FAIL
