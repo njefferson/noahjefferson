@@ -722,6 +722,64 @@ than the aggressive one — 51 places found versus 32, and the single most
 photographed site in the region went from missing entirely to first. Backing off
 cost nothing.
 
+### 15b. "I CAN'T REACH THE NETWORK" IS ALMOST ALWAYS FALSE. PROVE IT BEFORE SAYING IT.
+
+Noah, 2026-08-02, in anger, about a pattern he has watched **every day**: a
+session hits ONE failed request, concludes the internet is unreachable, and
+hands him the work. It is nearly always wrong, and the reason it is wrong is
+always the same — **the wrong thing was tried first, and nothing else was
+tried at all.**
+
+**A failed request is a fact about ONE HOST at ONE MOMENT. It is never a fact
+about the network, and it is never a fact about the DATA you wanted.** Saying
+"the proxy blocks it" without a probe is the §5b failure — a diagnosis with no
+evidence — pointed at the environment instead of at Noah.
+
+**READ THE FAILURE MODE. They mean completely different things:**
+- `000` / connection refused / CONNECT rejected → the proxy denied THIS HOST.
+  Every other host is still an open question.
+- `403` / `404` / `200` → **THE HOST IS REACHABLE.** A 404 is a routing success.
+  If you got a status code back, the network is not the problem — your URL is.
+- DNS failure → that name, not the network.
+- TLS error → see `/root/.ccr/README.md`. Never disable verification.
+
+**THE PROBE ORDER, cheapest and most-likely-to-work first. Run it BEFORE
+reporting any block:**
+1. **Ask the proxy what it allows.** `curl -sS "$HTTPS_PROXY/__agentproxy/status"`
+   prints the allowlist and the recent denials, with reasons. This is the single
+   highest-value command and it is routinely skipped.
+2. **Package registries are usually open** even when the general web is not —
+   npm, PyPI, crates, the Go proxy are commonly on the allowlist by name. An
+   enormous amount of public data is already packaged: reference datasets,
+   coefficient tables, geodata, dictionaries, test fixtures.
+3. **Try the other host serving the same bytes.** `raw.githubusercontent.com`
+   versus `*.github.io`; a CDN (jsdelivr, unpkg) versus the origin; a mirror
+   versus the canonical site. These are SEPARATE allowlist entries and one being
+   denied says nothing about the others.
+4. **Separate the DATA from the TERMS.** They live on different hosts and are
+   different questions. A reachable dataset whose licence page is blocked is a
+   §15.1 problem, not a connectivity one — and vice versa. Say which.
+5. **Re-probe an INHERITED block.** A block recorded in NOTES.md is a
+   measurement somebody else took, of one host, at one moment. Repeating it as
+   current fact without re-testing is how a false blocker survives for weeks.
+
+**WHAT YOU MAY SAY, and it must carry the evidence:** *"aviationweather.gov
+answers 403 to CONNECT; raw.githubusercontent.com returns 200; npm is on the
+allowlist"* — a mechanism, with status codes, per host. **What you may never
+say: "I don't have network access", "the sandbox has no internet", or anything
+that makes reaching the data Noah's job before you have run the list above.**
+
+**Delegating a fetch is a last resort and it needs proof of impossibility**
+(§6). "I assumed it was blocked" is not that proof. Neither is "a previous
+session said so."
+
+*Measured the day this was written: three datasets had been recorded as
+unobtainable and handed to Noah as his problem. Two were reachable in under a
+minute — one from npm, one from a different GitHub host — and were fetched,
+verified against the publisher's own test values, and committed the same hour.
+His task list went from three items to zero, and the verification found three
+real bugs that would otherwise have shipped.*
+
 ## 16. Security and the supply chain
 
 These apps are small, free and personal, which changes the threat model but does

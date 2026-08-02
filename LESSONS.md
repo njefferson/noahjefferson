@@ -2152,3 +2152,65 @@ codemod previews. If the process can be killed — and it can — the repair has
 survive the process.
 *(fauxplane, 2026-08-02. Same family as the earlier rule against `git checkout`
 to undo a plant: both are about the fact that the undo is the dangerous half.)*
+
+## 12 · The network is not down. You tried one host.
+
+**The single most repeated failure across these apps, and the owner has watched
+it happen every day.** A session makes one request, it fails, and the session
+reports that it cannot reach the network — then hands the owner the work. It is
+nearly always false. Doctrine §15b is the rule that came out of it; this is what
+it cost.
+
+**The measurement, taken the day the rule was written.** Three datasets were
+recorded in a repo's NOTES.md as unobtainable because "the egress proxy denies
+the hosts". A later session repeated that to the owner as three things he would
+have to go and do. He pushed back — not on the technical claim, but on being
+handed a vague task — which is the only reason anybody re-probed. Results, in
+under a minute:
+
+- `davidmegginson.github.io` — denied, as recorded. **The same repository on
+  `raw.githubusercontent.com` returned 200.** Different allowlist entry.
+- `ncei.noaa.gov`, `earth-info.nga.mil` — denied. **Both datasets were sitting
+  in npm packages, and the npm registry is on the proxy's own allowlist.**
+- One `raw.githubusercontent.com` URL returned **404**, which had been read as
+  another failure. A 404 means the host answered. The path was wrong.
+
+Two of the three were fetched, verified against the publisher's own test values,
+and committed the same hour. The owner's task list went from three items to
+zero. And the verification found **three real bugs in the code that consumed
+them** — a magnetic model that was three to five degrees wrong — which would
+have shipped precisely because the data was believed unobtainable and the code
+was therefore never checked against reality. **Declaring a block does not just
+cost you the data. It costs you every test that data would have made possible.**
+
+**The diagnostic that gets skipped every time.** The proxy will tell you what it
+allows: `curl -sS "$HTTPS_PROXY/__agentproxy/status"` prints the allowlist and
+the recent denials with reasons. It costs one command and it is almost never the
+first thing tried, or the tenth.
+
+**Read the failure mode; they are not interchangeable.** `000` or a rejected
+CONNECT is a policy denial of THAT HOST. Any HTTP status at all — 403, 404, 200
+— means the host answered and the network is fine. Treating a 404 as
+"unreachable" is the specific mistake that turned a wrong URL into a false
+blocker.
+
+**Where the data actually lives, in the order worth trying:** package registries
+(npm, PyPI, crates, the Go proxy are commonly allowlisted by name, and a
+startling amount of public reference data is packaged — coefficient tables,
+geodata, dictionaries, conformance suites); then a different host for the same
+bytes (git host versus pages host, CDN versus origin, mirror versus canonical);
+then the origin.
+
+**And keep the data separate from its terms.** They are different hosts and
+different questions. In this same episode one dataset stayed unbuilt afterwards —
+correctly — because its DATA was reachable but its published TERMS page was not,
+which is a §15.1 licensing question and not a connectivity one. Saying "blocked"
+for both would have been wrong in two different directions at once.
+
+**The rule, plainly: a failed request is a fact about one host at one moment.
+Never about the network, never about the data, and never a reason to make it the
+owner's problem.** Inherited blocks get re-probed; "a previous session said so"
+is not evidence.
+*(Every app, every day, until 2026-08-02. Owner: "You always can. You just see
+one failure and assume the Internet is unreachable, but you never try the right
+ways, and you always try the wrong way first.")*
