@@ -2002,3 +2002,41 @@ elsewhere had earned. **Wherever provenance is displayed, the label is a claim
 and needs checking like any other claim** — including when it was right at the
 time and a later refactor moved the value's real origin.
 *(Fauxplane, 2026-08-02.)*
+
+## 11 · The session that did not check whether it was alone
+
+**An empty repo is not evidence that nobody is working on it — and the harness
+branch name is the detector.** Fauxplane's remote had zero refs when this
+session started: no branches, no commits, no issues, no pull requests. That read
+as "new app, nothing here, build it," and a full night went into building it.
+The remote was checked again only after Noah said stop, and by then it held
+`claude/jet-panel-pwa-amendments-f07ygu` — a different session, the same task,
+finished and pushed. The hub had a third, `...-pf266w`. Three sessions, one
+brief, and the only person who found out was the one paying for it.
+
+**The check is mechanical and takes three seconds.** The web harness designates
+a branch named for the TASK plus a random suffix, so a sibling session working
+the same brief is sitting on the same slug with a different tail. Before
+building anything, and again before pushing:
+
+    git ls-remote origin | grep "$(git branch --show-current | sed 's/-[^-]*$//')"
+
+A hit that is not your own branch means someone else is already on this. **Stop
+and say so — do not start, and do not "just have a quick look" first.** This is
+Doctrine §0b's rule arriving from a direction §0b does not name: the input was
+recognised, the repo was in scope, the brief was legitimate, and the work was
+still redundant the moment it began. *"Is this task already being done"* belongs
+next to *"do I recognise this task"* as a thing to establish BEFORE the first
+file is written.
+
+**And the corollary that made it worse: never offer a capability you have not
+exercised.** Asked to clean up, this session said *"say the word and I'll delete
+them."* It could not. The session's git proxy accepts pushes and returns HTTP
+403 on a delete refspec, and the GitHub MCP server exposes `create_branch` and
+`delete_file` but nothing that removes a branch — both routes dead, neither
+tried before the offer was made. That is §6 inverted: instead of verifying a
+step before handing it over, it promised one and discovered the wall afterwards,
+in front of the owner, at the end of a night he had already lost. **The cost of
+checking a capability is one tool call. The cost of promising it wrongly is
+paid by him.**
+*(Fauxplane, 2026-08-02 — Noah, in anger, and rightly.)*
