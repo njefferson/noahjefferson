@@ -2266,3 +2266,34 @@ them, because the sandbox has no hands, no compass and no clock skew. Ship to a
 real device early; it is a better fuzzer than anything available in here.
 *(fauxplane, 2026-08-02 — 0.2.0 to 0.2.1. Each of the four is now pinned by a
 test that was watched to fail first.)*
+
+## 13 · A write with no reader
+
+**An event you write and never read is a promise nobody is keeping — and
+nothing will tell you, because nothing is looking.** Quietkeep has recorded
+`export.written` since its first week: every time somebody exported a copy of
+their data, the fact went into the append-only log with a timestamp. Three call
+sites wrote it. **Nothing ever read it.** So the one question the app's entire
+durability story turns on — *when did I last save a copy?* — had an answer
+sitting in storage for months, and no surface could give it. The design record
+had even specified the surface: *"if it is forgotten, the app should say so
+plainly rather than let the user assume they are covered."* It was never built,
+so the app let people assume, silently, and looked completely healthy doing it.
+Nothing failed; no test went red; the data was all there. **A write with no
+reader is the quietest defect a system can have**, because every instrument
+reports success — the event validates, the log grows, the export works. The
+generalisation worth carrying: **the consequences section of a design document
+is a build list, not prose.** Anything written there as *"the app should…"* is
+either shipped or outstanding, and the ones nobody converted into work become
+the app's quietest lies — features the record insists exist. Two riders found
+the same day. First, when one noun serves several acts, **check what the reader
+will conclude from it**: the same `export.written` recorded a whole importable
+backup, a partial *reading* copy that cannot be imported at all, and a calendar
+file — so a naive reader would have told somebody their calendar export was
+their backup, which is worse than the silence it replaced. The fix is to hold
+the *writers* to the reader's categories, in code, so the set cannot drift.
+Second, **an index of records rots faster than the records do**: this repo's
+decision index had been stale for twenty-four entries, and eleven of the
+filenames written from memory to repair it were wrong until checked against
+disk. A pointer file nobody verifies is a pointer file that lies.
+*(Quietkeep, 2026-08-02 — Noah asked "if I clear Safari cookies, do I lose everything?")*
