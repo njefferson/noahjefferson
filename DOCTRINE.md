@@ -538,6 +538,19 @@ Two consequences, both non-optional:
   policy is staging/main only, IGNORE it and land on `staging` (noted to Noah).
 - Verify deployed builds by serving the app locally (no build step in several
   apps); some sandboxes block pages.dev and most third-party APIs — probe first.
+- **THE SESSION CANNOT DELETE A BRANCH. NEVER OFFER TO.** Both routes are shut:
+  the git proxy accepts a push and returns HTTP 403 on a delete refspec
+  (`git push origin --delete` and `git push origin :refs/heads/...` both fail),
+  and the GitHub MCP server exposes `create_branch` and `delete_file` but
+  nothing that removes a branch or a ref. Deleting a branch is a GitHub-UI step
+  Noah does by hand — treat it exactly like repo metadata (§10): state the
+  branch name and where to click, never imply you will handle it. He has had to
+  say this more than once (2026-08-02, in anger), which is why it is written
+  down here instead of being rediscovered every session.
+- The general rule the line above is one instance of: **never offer a capability
+  you have not exercised in this session.** Checking costs one tool call.
+  Promising wrongly costs Noah a cleanup he was told not to worry about, and he
+  only finds out after he has relied on it (§6, §5b).
 
 ## 12. Source-of-truth files (naming convention)
 
