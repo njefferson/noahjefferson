@@ -853,6 +853,99 @@ of something they are trying to use.
 *(Added 2026-08-03 at Noah's instruction, after five releases in one evening
 that he could only tell apart by asking.)*
 
+## 7e. Every app has ONE information surface, and this is what is behind it
+
+**Noah should not have to ask for this app after app.** He has asked for the
+same set of things in enough repos that the asking is itself the evidence: a
+rule that has to be requested per-app is a rule that was missing from here. The
+list below is the BASELINE. A session builds it because the app exists, not
+because anyone said so, and "he did not ask for it" is not a reason it is absent.
+
+**The surface is an (i) control in the app's own chrome** — a letter `i`, in the
+header or equivalent, with an accessible name that says what it opens. Not a
+tab, because tabs are for the app's actual content and every tab added is width
+taken from the thing the reader came for. Not the footer, where it is a link
+nobody has ever clicked. One control, obviously information, always in the same
+place.
+
+**What must be behind it.** Each of these has been asked for by name at least
+once, in at least one app:
+
+1. **What this app IS** — one short paragraph in plain words. What the reader
+   gets, not what it was built with.
+2. **What it is NOT** — the limits, stated as plainly as the capabilities. The
+   disclaimer that keeps the app honest belongs where someone reads it, not only
+   in a footer strip.
+3. **How to install it** — the home-screen steps, with EVERY PLATFORM NAMED
+   rather than detected. iOS fires no `beforeinstallprompt`, so a sniffed
+   "Install" button is a button that does not exist for half the readers, and
+   naming both menus cannot go stale the way a capability check can.
+4. **What changed** — the patch notes required by §7d live here. This is the
+   "somewhere they already go" that rule asks for.
+5. **Where the numbers come from** — every feed and dataset, with its terms or
+   attribution. §15's obligations are discharged on a surface, not in a comment.
+6. **How to report a problem** — the diagnostics text (§7f), reachable here as
+   well as wherever else it lives.
+7. **The accessibility statement**, and the licence.
+
+**What it must NOT do.**
+
+- **Never interrupt.** It opens on request. It is not a launch modal, and it
+  does not appear over something a reader is using.
+- **Never cost the app height.** Adding one control to a header can wrap a
+  toolbar onto a second row and take that space out of the content — measured,
+  not theorised: one 44px button cost 51px of header and pushed a panel over its
+  own footer. Measure the chrome before and after.
+- **MOVE content into it, never COPY.** The first-run text, the release notes
+  and the credits each exist once. Two copies of the same prose drift, and the
+  one nobody is looking at is the one that goes stale.
+- **Never become the app.** Bounded, like §7d's history.
+
+**First-run orientation is part of this and is not optional.** A reader opening
+an app for the first time is shown what it is, what it will not do, and how to
+install it — and that text SURVIVES whatever they press to get started. It then
+lives permanently behind the (i), because the one thing more annoying than an
+explanation you did not want is an explanation you cannot find again. The gate a
+new reader dismisses must never be the thing that destroys the instructions.
+
+**Make it a gate.** Each app's existing accessibility or build gate asserts that
+the control is present, that its accessible name says what it opens, and that
+the first-run content survives dismissal. Prose in this file did not stop any of
+the omissions that produced this section.
+
+**The rule behind the rule: if Noah says the same thing in two apps, it belongs
+in this document, and the session that hears it the second time writes it in.**
+Not the session that finishes the feature — the one that hears the repeat. He
+has better things to do than be the memory these repos lack.
+
+*(Added 2026-08-03 at Noah's instruction: "I also consistently expect a
+first-time run and patch notes and many other things that I'm very, very tired
+of having to say over and over again.")*
+
+## 7f. Ask for the DIAGNOSTIC, never for a screenshot
+
+**A photograph of a screen loses every reason string and cannot show internal
+state at all.** Noah reports from a phone or an iPad. A screenshot shows what a
+gauge reads and nothing about why — not the filter's internals, not the failure
+reasons behind a crossed-out value, not what the app tried and could not do.
+
+**So every app that has any internal state worth asking about produces a text
+report**: the whole state, as selectable text, with copy / share / save, behind
+a control the reader can find (the version stamp is a good home; the (i) menu
+lists it too). It leads with the diagnosis — root causes separated from what
+they knocked over — and it says what is missing and why, not merely that it is
+missing.
+
+**Then ASK FOR THAT, not for a picture.** A session that asks Noah to photograph
+his screen is asking him to do worse work on its behalf.
+
+**Privacy is part of it:** anything precise enough to locate him is coarsened by
+default, with an explicit opt-in to include it.
+
+*(Stated here 2026-08-03. It was already built in fauxplane and already written
+in that repo's CLAUDE.md; being in one app's file is why it had to be asked for
+again elsewhere.)*
+
 ## 16. Security and the supply chain
 
 These apps are small, free and personal, which changes the threat model but does

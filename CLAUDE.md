@@ -35,6 +35,23 @@ Every item below has actually happened.
 The shape of three of these is the same: **do not offer a capability the
 lessons already record as impossible.** Check before promising, not after.
 
+## The baseline every app ships without being asked (Doctrine §7e, §7f)
+Noah should not have to request these per repo; he has, repeatedly, and the
+asking was the evidence the doctrine was missing a rule. Build them because the
+app exists.
+
+- **An (i) control in the app's own chrome** — not a tab, not a footer link —
+  carrying what the app IS, what it is NOT, how to install it on a home screen
+  with every platform NAMED, what changed, where the data comes from with its
+  terms, how to report a problem, and the accessibility statement and licence.
+- **First-run orientation that SURVIVES whatever the reader presses to begin**,
+  and then lives permanently behind the (i). Move it there; never copy it.
+- **Patch notes from one source** (§7d), including what is still broken.
+- **A text diagnostic report** (§7f). Ask Noah for that, never for a screenshot.
+
+**And the rule behind them: if he says the same thing in two apps, it belongs
+in `DOCTRINE.md`, and the session that hears the repeat writes it in.**
+
 ## What this repo is
 The personal link hub at **noahjefferson.pages.dev** — photography accounts and
 the free web apps. Static, self-contained, no build step. `public/` is the

@@ -2806,3 +2806,43 @@ Two riders:
 *(2026-08-03. Written the same hour both rules were broken, at Noah's
 insistence — he had to point at his own screenshot of an unreadable table to get
 it noticed.)*
+
+---
+
+**When the owner has to ask for the same thing in a second app, the asking IS
+the defect report — and it is a report about this document, not about the
+feature.** Noah asked for an information menu in fauxplane. What he actually
+said was: *"I also consistently expect a first-time run and patch notes and many
+other things that I'm very, very tired of having to say over and over again."*
+Every one of those had been built before, in some app, at his request, and then
+not written down anywhere a session for the NEXT app would read.
+
+The mechanism is the same one that makes rules get broken (the injected-versus-
+opened entry above), turned around. A feature requested per-app gets built
+per-app, beautifully, and dies with the session. The repo's own `CLAUDE.md`
+records it — fauxplane's had "ask Noah for the report, not for a photograph"
+written down for days — but a sibling repo's session never opens fauxplane's
+`CLAUDE.md`, so the rule is invisible from three feet away. **Being written in
+one app's file is precisely why it had to be asked for again in another.**
+
+Three things follow:
+
+- **The session that HEARS the repeat writes the doctrine entry**, not the
+  session that finishes the feature. Those are usually the same conversation and
+  the entry still gets skipped, because the feature feels like the deliverable
+  and the rule feels like paperwork. It is the other way round: the feature
+  serves one app, the rule serves all of them.
+- **Generalise from the second instance, not the fifth.** Waiting for a pattern
+  to be undeniable means four more repos shipped without it and four more
+  conversations spent asking.
+- **Write it as a BASELINE, not a suggestion.** "Consider an about screen" gets
+  read as optional. The entry that works names the surface, lists what must be
+  behind it, says what it must not do, and requires the app's existing gate to
+  assert it exists — because prose in the doctrine did not stop any of the
+  omissions that produced the section.
+
+The tell to watch for, in his words rather than in code: *"over and over
+again"*, *"every other repo"*, *"I expect"*, *"consistently"*. Those are not
+feature requests. They are bug reports against the shared rules.
+
+*(2026-08-03, fauxplane — Doctrine §7e and §7f were written from this.)*
