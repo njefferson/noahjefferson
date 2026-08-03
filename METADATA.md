@@ -104,5 +104,36 @@ URL this entry used to give were both 404 until then. Regenerate with
 
 ---
 
-New app? Add its section here in the same commit that creates the repo, and
-point its CLAUDE.md §10 note at this file.
+# njefferson/MyFax
+
+The app presents as **Fax Relay**; the Pages project is `myfax`. Nothing is
+live yet (1.0.0 staged) — apply these when Noah promotes, or before.
+
+**Description** — proposed 2026-08-03
+
+> Free fax from your phone — an installable web app that sends a document to
+> any US or Canadian fax number. No account, no subscription.
+
+("US or Canadian", not "any": the provider's contract is E.164 US+Canada
+only — MyFax NOTES.md ledger F9. The earlier chat-proposed wording overstated.)
+
+**Website** — proposed 2026-08-03
+
+> https://myfax.pages.dev
+
+**Topics** — proposed 2026-08-03
+
+> `fax` `pwa` `offline-first` `cloudflare-pages` `cloudflare-workers`
+
+**Social preview** — proposed 2026-08-03
+
+`social-preview.png` at the MyFax repo root (branch
+`claude/myfax-notes-handoff-0pmsmy` until merged), 1280×640. Rendered in code
+by `tools/render-icons.py` from Noah's wordless reference art; the lettering
+("FAX RELAY" / "FREE FAX FROM YOUR PHONE") is overlaid in real type, mono
+caps, ink #191C18 on housing #C3C0B2, contrast computed at render time —
+9.42:1, and the renderer fails below 4.5.
+
+**Default branch** — set
+
+`main` — verified 2026-08-03 via `git remote show origin` (HEAD branch: main).
