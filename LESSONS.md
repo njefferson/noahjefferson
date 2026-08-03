@@ -2729,3 +2729,37 @@ than no gate — and the pressure to do exactly that is highest when the
 expectation feels obvious.
 
 *(fauxplane, 2026-08-02.)*
+
+## 23. A check on one invariant passes every corruption orthogonal to it
+
+fauxplane's attitude filter rejected accelerometer samples whose MAGNITUDE
+strayed from one g. Leaning a hand-held phone corrupts the DIRECTION — the
+vector rotates without stretching — so the check certified the corrupted
+samples as clean, and the horizon pitched like a rocket while reading 1.01 g.
+The fix needed a second instrument entirely (the gyro) because no threshold on
+the checked quantity could ever see the unchecked one.
+
+The same audit found the same shape twice more in one function:
+
+- **Stillness was one sample** — rate under a floor beside magnitude near one
+  g, no duration. Rhythmic leaning crosses zero rate at every reversal, exactly
+  where the corruption peaks, so the corrupted instant PASSED the stillness
+  check and bypassed the new gate at triple gain. A predicate about a state
+  ("still") that tests an instant is a different predicate than one that tests
+  a duration, and the comment claimed the duration while the code tested the
+  instant.
+- **Two rejection paths, two clocks.** The new gate bounded its coast on a
+  private timer while staleness ran on the shared one, so the two paths could
+  spend the same trust budget twice and cross the instrument out. If two
+  mechanisms spend one resource, they must read one meter.
+
+**The rule: when a validity check guards a vector quantity, ask what the check
+does NOT constrain, and whether the failure you fear lives there.** |v| ≈ 1
+says nothing about direction; "rate is low right now" says nothing about the
+last half second; "my window is open" says nothing about the other gate's.
+The corruptions that ship are the ones orthogonal to the invariant somebody
+checked, precisely because the checked ones get caught.
+
+*(fauxplane, 2026-08-03 — found by five adversarial reviewers set against a
+one-hour-old fix; three of the five findings were this same shape in different
+clothes.)*
