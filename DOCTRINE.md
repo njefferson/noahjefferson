@@ -6,8 +6,11 @@ Each repo's own `CLAUDE.md` should hold only repo-specific facts and a one-line
 pointer to this document — never re-state these rules (that is how they drift).
 
 The apps this governs: photo-pointer, clear-horizons, Bird-location-scouting
-(Frame), Jefferson-Photography-Studio, ND-toolbox, Quietkeep (in planning), and
-the noahjefferson hub.
+(Frame), Jefferson-Photography-Studio, ND-toolbox, Quietkeep,
+Intersecting-Parallels, fauxplane, MyFax (presents as Fax Relay), and the
+noahjefferson hub. The opening line is the rule — every app of Noah's is
+governed, listed here or not; this enumeration went stale once (three
+shipped apps missing, 2026-08-03) and the list is not the boundary.
 They deliberately share conventions.
 
 ---
