@@ -74,7 +74,22 @@ const html = collect(/\.html$/);
 // modules while the new cache is swapped in underneath, and activate deletes the
 // old cache, so the old page is then served NEW files. Old markup, new modules,
 // no reload, nothing said.
-const installBlock = /addEventListener\(\s*["']install["'][\s\S]*?\n\}\);/.exec(sw)?.[0] ?? '';
+/**
+ * COMMENTS ARE NOT CALLS, and stripping them is not a nicety.
+ *
+ * fauxplane removed `skipWaiting()` from its install block and left a comment
+ * in its place saying "NO skipWaiting() HERE, and that is Doctrine §7h.1" —
+ * which is exactly the comment that should be there, because the next person to
+ * read that function will wonder why the line everyone else has is missing.
+ * This gate then failed the repo for the comment explaining the fix.
+ *
+ * A false positive here is expensive in a specific way: the only ways to go
+ * green are to delete a useful comment or to reword around a substring, and
+ * both teach the author to write for the grep instead of for the reader.
+ */
+const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
+const installBlock = stripComments(/addEventListener\(\s*["']install["'][\s\S]*?\n\}\);/.exec(sw)?.[0] ?? '');
 if (/skipWaiting/.test(installBlock)) {
   failures.push(
     `${swPath} calls skipWaiting() during install. The new worker then takes over under the OPEN page, `
