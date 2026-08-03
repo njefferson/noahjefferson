@@ -107,12 +107,23 @@ the trend.
 
 ## Optional: a dashboard
 
-If Noah wants something to look at rather than read, render an **Artifact** from
-the same data — a small dashboard with the totals, the by-app bars, a country
-list, and the trend line. Load the `dataviz` and `artifact-design` skills first.
-Do not build a standing app or put the analytics token in a browser: the token
-is a GitHub Actions secret and must stay server-side. An on-demand Artifact is
-the app-feel without the infrastructure or the credential surface.
+If Noah wants something to look at rather than read, render a small dashboard —
+real users by country and by app, the requests-vs-real comparison, the trend.
+Load the `dataviz` and `artifact-design` skills first.
+
+**Build it with ZERO JavaScript — every bar a static `style="width:N%"`, every
+heatmap cell an inline colour, no `<script>` at all.** Noah reads on an iPad, and
+the file viewer that shows a sent HTML file **strips scripts**: a chart drawn in
+JS renders as a blank card with floating numbers (happened 2026-08-03, LESSONS
+§9). Static HTML/CSS renders identically in the Artifact, the file viewer, and
+offline. **Avoid a `<table>` for the cross-tab** — tables collapse for him;
+use bars. Verify by rendering with JS DISABLED at ~400px width before sending.
+
+**Deliver it two ways**: publish the Artifact (a link) AND send the standalone
+file via the file tool with inline render — the link needs him signed in and can
+fail to open on the iPad, the file always renders. Do not build a standing app or
+put the analytics token in a browser: the token is a GitHub Actions secret and
+must stay server-side.
 
 ## What NOT to do
 

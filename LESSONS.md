@@ -2029,6 +2029,27 @@ included," and the dashboard leads with the device numbers and demotes requests
 to a clearly-marked machine layer.
 *(the hub, 2026-08-03.)*
 
+**A chart drawn in JavaScript renders as a blank card in Noah's file viewer —
+the script is stripped, so build the visualization in static HTML/CSS or he sees
+nothing.** The usage dashboard built every bar, fill and the app×country table
+in `<script>` (innerHTML from data arrays). It rendered correctly in the
+published Artifact — which executes JS — and in my headless screenshots, so it
+looked done. But the Artifact link would not open for Noah (private artifact +
+iPad), and the fallback — the same HTML sent as a file and rendered inline —
+runs in a viewer that **strips `<script>`**. Result: the static text (headings,
+paragraphs, the one CSS-only grey bar) showed, while every JS-generated bar,
+every fill, and the whole heatmap came out blank. His words: *"Tables are lost.
+Number bars appear meaningless."* Two rules. **(1) If Noah will see it as a sent
+file, author it with zero JavaScript — every bar a static `style="width:N%"`,
+every cell an inline colour — and verify by rendering with JS DISABLED at ~400px
+before sending; the Artifact executing JS proves nothing about the file he
+opens. (2) A `<table>` for a cross-tab collapses on his iPad regardless of JS
+(this is the no-grid rule in a rendered page, not just markdown) — use bars.**
+The fix replaced the heatmap with a static requests-vs-real bar comparison and
+dropped every script; it now renders the same in the Artifact, the file viewer,
+and offline.
+*(the hub, 2026-08-03.)*
+
 ## 10 · Explaining your own failure with Noah's inaction
 
 **Enforced by:** GATE hub:handoff-check.mjs · CHECKLIST evidence — every claim about external state cites the log line or response it came from.
