@@ -951,6 +951,33 @@ missing.
 **Then ASK FOR THAT, not for a picture.** A session that asks Noah to photograph
 his screen is asking him to do worse work on its behalf.
 
+**AND IT IS WHERE A SESSION PUTS ITS TESTS.** This is the part that keeps being
+missed. A sandbox cannot reach most of the internet, cannot hold a phone still,
+has no accelerometer, no GPS, no cellular connection and no camera. Noah's
+device has all of them. So when something cannot be verified from here, the
+answer is NOT to record it as unverified and move on, and it is certainly not to
+ask him to go and look at something and describe it.
+
+**Build the check into the diagnostic surface and let his device run it.**
+(Noah, 2026-08-03: *"If you want to test something, put it in the damn debug
+screen behind the version number."*) He presses one control and pastes back text
+that a session can read exactly — which is better evidence than a session would
+have got from the network anyway, because it comes from the real device, the
+real network path, and the real provider.
+
+- **Prefer reporting what already happened** over firing a new request. The last
+  response's status, timing, which provider answered and what fields it actually
+  contained are all in hand and cost nothing. A deliberate probe button is for
+  when a fresh answer is genuinely needed, and it makes ONE request (§15.6).
+- **Report the SHAPE, not just the values.** "Did the field arrive at all, on how
+  many of N records" is the question a session usually cannot answer from a
+  sandbox, and it is the one that catches a parser written from documentation
+  rather than from an observed payload.
+- **An unverified assumption that a probe could settle is a defect, not a
+  caveat.** Writing "NOT verified" in a notes file is honest; leaving it there
+  when three lines of diagnostics would have settled it is laziness wearing
+  honesty's clothes.
+
 **Privacy is part of it:** anything precise enough to locate him is coarsened by
 default, with an explicit opt-in to include it.
 
