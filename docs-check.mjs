@@ -27,7 +27,11 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 /** Directories never worth walking. */
-const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.wrangler']);
+// `.hub` is a sibling repo's CI checkout of THIS repo, vendored so it can run
+// these gates without forking them. Auditing it from the sibling means auditing
+// the hub's docs twice, from a repo that cannot fix them — and the sibling's
+// build goes red for a file it does not own. The hub audits itself.
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.wrangler', '.hub']);
 
 /**
  * A GFM table is only a table if it has a DELIMITER row — `|---|---|`. A line
@@ -61,7 +65,16 @@ export function findGrids(source) {
       });
       return;
     }
-    if (HTML_GRID.test(line)) {
+    // INLINE CODE IS STRIPPED FIRST. A sentence that NAMES the element —
+    // "avoid a `<table>` for the cross-tab" — is prose about the rule, not a
+    // breach of it, and backticked markup renders as literal text rather than a
+    // grid. The lesson explaining this rule tripped it, which is the clearest
+    // possible sign the check was wrong: a gate that fires on its own
+    // documentation is one people learn to work around.
+    //
+    // Fenced blocks stay in scope (see above) — that is deliberate and
+    // different: a real table in a fence still renders as a scrolling block.
+    if (HTML_GRID.test(line.replace(/`[^`]*`/g, ''))) {
       hits.push({ line: i + 1, kind: '<table> element', text: line.trim() });
     }
   });
