@@ -18,7 +18,7 @@ Every item below has actually happened.
 - **NEVER A TABLE OR GRID, anywhere Noah reads** — chat, commits, PR bodies,
   `NOTES.md`, all of it. They do not render on his iPad; the columns are lost
   silently while the prose around them looks fine. Headed lists instead.
-  (Doctrine §3. Files are gated by `docs-check.mjs`; chat replies are not, and
+  (Doctrine §2. Files are gated by `docs-check.mjs`; chat replies are not, and
   chat is where it happened again on 2026-08-03.)
 - **A session CANNOT delete a remote branch.** The git relay drops the
   connection on any ref deletion and then prints `Everything up-to-date`, so it
