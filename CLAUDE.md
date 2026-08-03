@@ -20,6 +20,12 @@ Every item below has actually happened.
   silently while the prose around them looks fine. Headed lists instead.
   (Doctrine §2. Files are gated by `docs-check.mjs`; chat replies are not, and
   chat is where it happened again on 2026-08-03.)
+- **ANYTHING HE IS MEANT TO PASTE IS ONE FENCED CODE BLOCK** — handoff prompts,
+  commands, configs, a message to send on. Not prose, not a blockquote, not
+  styled markdown. The test is not "is it readable" but "what does he do with
+  it next"; if the answer is *copy*, it is a block. (Doctrine §2. Noah,
+  2026-08-03: *"I need a copy paste block, and I'm fucking tired of saying that
+  over and over again."*)
 - **A session CANNOT delete a remote branch.** The git relay drops the
   connection on any ref deletion and then prints `Everything up-to-date`, so it
   looks like it worked. The GitHub MCP has no tool for it either. Hand it to

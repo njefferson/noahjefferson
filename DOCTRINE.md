@@ -111,6 +111,20 @@ Noah is iPad-first and often driving. So:
   gate cannot see a chat reply, so that part is still on the session.
   A comparison that feels tabular is written as a list per item, never as
   columns. (Noah, 2026-07-29, after repeated offences.)
+- **ANYTHING HE IS MEANT TO PASTE, RUN OR CARRY ELSEWHERE IS ONE FENCED CODE
+  BLOCK.** A handoff prompt, a command, a config, a message to send on — if the
+  next thing that happens to it is *copy*, it ships as a single plain-text
+  block with a copy control, not as prose, not as a blockquote, not as
+  formatted markdown with bold and links threaded through it. Rendered
+  formatting cannot be copied back out cleanly, and on an iPad selecting prose
+  by hand is a fight; a blockquote is the same failure as a table — it looks
+  considered on the way out and arrives as something he has to repair.
+  **The test is not "is it readable" but "what does he do with it next".**
+  If the answer is paste, it is a block. Sessions get this wrong by trying to
+  make the thing look nice, which optimises for the wrong moment: the reading,
+  not the using. (Noah, 2026-08-03: *"I need a copy paste block, and I'm
+  fucking tired of saying that over and over again."* Said after a session
+  handed him a handoff prompt as a styled blockquote — twice in one exchange.)
 
 ## 3. Taste
 
