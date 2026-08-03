@@ -47,5 +47,7 @@ is a site change — verify the rendered page before pushing.
 
 ## Repo metadata (manual, confirm — see Doctrine §10)
 Description / website / topics / social-preview are GitHub-UI steps the session
-token cannot perform. List the exact values and ask Noah to confirm each; never
-report the hub "set up" while any is unconfirmed.
+token cannot perform. **The values for every app live in
+[`METADATA.md`](METADATA.md)** — propose there, Noah applies from there, and
+the per-item status flips to `set` only on his say-so. Never report any repo
+"set up" while a row says proposed.
