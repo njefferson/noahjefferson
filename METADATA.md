@@ -32,7 +32,7 @@ converting fetcher drops the `<head>`, so this needs the raw HTML.
 | Website | https://fauxplane.pages.dev | **set** 2026-08-03 |
 | Topics | `aviation` `glass-cockpit` `flight-instruments` `adsb` `efis` `pwa` `offline-first` `web-sensors` | **set** 2026-08-03 |
 | Social preview | **The icon-art card — Noah's pick, 2026-08-03.** Source: `scripts/social-card-icon.html`; og:image serves it too. | **set** 2026-08-03 |
-| Default branch | `main`. Currently `claude/jet-panel-pwa-amendments-f07ygu` — a harness branch this repo's policy says to ignore (Doctrine §11), so the landing page, the default clone and every new PR base all point at stale code. Settings → General → Default branch → switch to `main`. | proposed |
+| Default branch | `main`. Was `claude/jet-panel-pwa-amendments-f07ygu` — a harness branch this repo's policy says to ignore (Doctrine §11), so the landing page, the default clone and every new PR base all pointed at stale code until Noah moved it. | **set** 2026-08-03 |
 
 ## njefferson/noahjefferson
 
