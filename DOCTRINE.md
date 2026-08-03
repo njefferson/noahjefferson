@@ -713,6 +713,21 @@ throttled it — and the reflex on being throttled was to retry harder.
 1. READ THE PUBLISHED POLICY BEFORE WRITING OR CHANGING ANY PACING. The policy
    is the authority. Our inference from observed behaviour is not, and "it
    worked" is not evidence of anything but their tolerance.
+1b. **INVENTORY THE ALTERNATIVES, AND SAY WHAT EACH ONE WOULD ADD.** Noah,
+   2026-08-03: *"If there are other sources, I always want to know about them to
+   know if they add any other value."* When a source is chosen, refused, or
+   rate limited, the useful answer is never only "here is another door to the
+   same data". Organise by CAPABILITY: what would this one let the app do that
+   it cannot do now? Keep it as a standing list in `NOTES.md` rather than
+   rediscovering it every time a provider says no, and record the REJECTED ones
+   with their reason so nobody re-litigates them.
+
+   **And watch for the shape that keeps hiding.** A live-changing quantity needs
+   an API; almost everything else — routes, operators, aircraft types, airports,
+   coefficients — is published as a DATASET, and a dataset committed to the repo
+   is immune to every rate limit, block page and shared-address problem an API
+   has. Ask which half of a feature is actually live before assuming the whole
+   thing needs a provider.
 2. IDENTIFY OURSELVES on every request: a User-Agent naming the tool, its
    version, and a contactable full URL or email.
 3. A 429 IS AN INSTRUCTION, NOT AN OBSTACLE. Never retry harder, widen
