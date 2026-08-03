@@ -974,16 +974,79 @@ async function snapshot(opts) {
     }
   }
 
+  // ---- real users BY COUNTRY and BY APP -----------------------------------
+  // The by-app / by-country totals above are REQUESTS and include machines:
+  // requestSource=eyeball strips Cloudflare's own worker/cache traffic but NOT
+  // crawlers, monitors and scrapers, which are eyeball-class too. So a country
+  // showing thousands of requests can be almost entirely one AI crawler. This
+  // block distributes the trusted floor instead: distinct phones+tablets per
+  // country and per app — the same least-fakeable signal, broken out. Much
+  // smaller, and the honest answer to "who is using my apps, and from where".
+  // (Distinct IPs don't sum: an IP counts once per country it appears in, and
+  //  a person using several apps counts in each — so per-app won't total the
+  //  floor. That is correct, not a bug.)
+  const realByCountry = new Map();
+  const realByApp = new Map();
+  let realCapped = false;
+  let geo = await run('real-geo',
+    `httpRequestsAdaptiveGroups(limit: 10000, filter: { ${filter}, clientDeviceType_in: ["mobile", "tablet"] }) {
+      count
+      dimensions { clientIP clientCountryName clientRequestHTTPHost }
+    }`);
+  if (!geo) {
+    // Some plans do not allow filtering on clientDeviceType. Fall back to
+    // pulling it as a dimension and keeping mobile/tablet in code.
+    const raw = await run('real-geo-fallback',
+      `httpRequestsAdaptiveGroups(limit: 10000, filter: { ${filter} }) {
+        count
+        dimensions { clientIP clientDeviceType clientCountryName clientRequestHTTPHost }
+      }`);
+    geo = raw ? raw.filter((r) => /mobile|tablet/i.test(r.dimensions?.clientDeviceType || '')) : null;
+  }
+  if (geo) {
+    if (geo.length === 10000) realCapped = true;
+    const ccIps = new Map();
+    const appIps = new Map();
+    for (const r of geo) {
+      const ip = r.dimensions?.clientIP; if (!ip) continue;
+      const cc = r.dimensions?.clientCountryName || '??';
+      const app = canonHost(r.dimensions?.clientRequestHTTPHost);
+      if (!ccIps.has(cc)) ccIps.set(cc, new Set());
+      ccIps.get(cc).add(ip);
+      if (!appIps.has(app)) appIps.set(app, new Set());
+      appIps.get(app).add(ip);
+    }
+    for (const [cc, s] of ccIps) realByCountry.set(cc, s.size);
+    for (const [app, s] of appIps) realByApp.set(app, s.size);
+  }
+  const realCcSorted = [...realByCountry.entries()].sort((a, b) => b[1] - a[1]);
+  const realAppSorted = [...realByApp.entries()].sort((a, b) => b[1] - a[1]);
+
   // ---- present ------------------------------------------------------------
   console.log(`== TOTALS ==\n${fmt(total)} eyeball requests across ${appsSorted.length} apps and ${ccSorted.length} countries.`);
-  console.log(`real users (distinct devices): ~${fmt(floor)} phones+tablets (trust) .. ~${fmt(ceiling)} incl. human-shaped desktop.\n`);
+  console.log(`real users (distinct devices): ~${fmt(floor)} phones+tablets (trust) .. ~${fmt(ceiling)} incl. human-shaped desktop.`);
+  console.log(`REQUESTS include crawlers/monitors; REAL USERS below are distinct phones+tablets only.\n`);
 
-  console.log('== BY APP ==');
+  console.log('== REAL USERS BY COUNTRY (distinct phones+tablets) ==');
+  if (realCapped) console.log('  (WARNING: 10k-row cap hit — treat as a floor, not a total)');
+  if (realCcSorted.length) for (const [c, n] of realCcSorted) console.log(`  ${c.padEnd(6)} ${String(n).padStart(5)}`);
+  else console.log('  (device-level data unavailable this run)');
+
+  console.log('\n== REAL USERS BY APP (distinct phones+tablets) ==');
+  if (realAppSorted.length) for (const [a, n] of realAppSorted) console.log(`  ${a.padEnd(44)} ${String(n).padStart(5)}`);
+  else console.log('  (device-level data unavailable this run)');
+
+  console.log('\n== REAL USERS (CSV) ==');
+  console.log('kind,name,users');
+  for (const [c, n] of realCcSorted) console.log(`country,${c},${n}`);
+  for (const [a, n] of realAppSorted) console.log(`app,${a},${n}`);
+
+  console.log('\n== BY APP (eyeball requests — machines included) ==');
   for (const [a, n] of appsSorted) console.log(`  ${a.padEnd(44)} ${fmt(n).padStart(8)}`);
-  console.log('\n== BY COUNTRY (top 20) ==');
+  console.log('\n== BY COUNTRY (eyeball requests — machines included; top 20) ==');
   for (const [c, n] of ccSorted.slice(0, 20)) console.log(`  ${c.padEnd(6)} ${fmt(n).padStart(8)}`);
 
-  console.log('\n== APP x COUNTRY (CSV) ==');
+  console.log('\n== APP x COUNTRY (CSV — eyeball requests, machines included) ==');
   console.log('app,country,requests');
   for (const [a] of appsSorted)
     for (const [c] of ccSorted) {
