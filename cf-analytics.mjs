@@ -1223,68 +1223,85 @@ async function region(opts) {
   const fmt = (n) => (n == null ? 'n/a' : Math.round(n).toLocaleString());
 
   console.log(`Window: ${t0.slice(0, 10)} .. ${new Date(endD - dayMs).toISOString().slice(0, 10)} (complete UTC days), requestSource=eyeball.`);
-  console.log('NO US-state dimension exists in this dataset — only country. Proxies below:');
-  console.log('  coloCode = the Cloudflare data centre that served the request (metro-ish region, NOT state).');
-  console.log('  network owner = clientASNDescription (may be blank if gated on this plan).');
+  console.log('NO US-state dimension exists — only country. coloCode (data-centre) and');
+  console.log('clientASNDescription (network owner) are richer proxies but are often');
+  console.log('plan-gated; this tries them and degrades to IP-block clustering, which');
+  console.log('only needs clientIP and always works.');
   console.log('');
 
-  const run = async (label, body) => {
+  const run = async (label, body, quiet) => {
     const { data, errors } = await gqlSoft(
       `{ viewer { accounts(filter: { accountTag: "${ACCOUNT}" }) { rows: ${body} } } }`
     );
-    if (errors.length) { console.log(`[${label}] unavailable: ${errors.map((e) => e.message).join('; ')}`); return null; }
+    if (errors.length) { if (!quiet) console.log(`[${label}] unavailable: ${errors.map((e) => e.message).join('; ')}`); return null; }
     return data?.viewer?.accounts?.[0]?.rows ?? [];
   };
-
-  // Trusted US devices only: mobile/tablet, in the US. Try the device-type
-  // filter first; fall back to filtering in code if the plan rejects it.
-  let rows = await run('region',
-    `httpRequestsAdaptiveGroups(limit: 10000, filter: { ${filter}, clientDeviceType_in: ["mobile", "tablet"], clientCountryName: "US" }) {
-      count
-      dimensions { clientIP coloCode clientASNDescription }
-    }`);
-  if (!rows) {
-    const raw = await run('region-fallback',
-      `httpRequestsAdaptiveGroups(limit: 10000, filter: { ${filter} }) {
-        count
-        dimensions { clientIP clientCountryName clientDeviceType coloCode clientASNDescription }
-      }`);
-    rows = raw ? raw.filter((r) => r.dimensions?.clientCountryName === 'US' && /mobile|tablet/i.test(r.dimensions?.clientDeviceType || '')) : null;
-  }
-  if (!rows) { console.log('No data.'); return; }
-  if (rows.length === 10000) console.log('WARNING: 10k-row cap — counts are a floor.\n');
 
   const HOSTING_RE = /amazon|aws|hetzner|ovh|digital ?ocean|google|microsoft|azure|oracle|linode|akamai|fastly|m247|datacamp|choopa|vultr|contabo|leaseweb|scaleway|alibaba|tencent|hosting|server|datacent|colocat|cdn|cloud/i;
   const MOBILE_RE = /mobil|wireless|cellular|t-?mobile|verizon|cellco|sprint|cricket|metropcs|boost|vodafone|telefonica|telus|rogers|bell mobility/i;
 
-  const colo = new Map(); // coloCode -> Set(ip)
-  const nets = new Map(); // asn -> Set(ip)
+  // ---- CORE (always available): distinct US real-device IPs + /24 blocks ----
+  // Only needs clientIP, so it survives every field being plan-gated.
+  let core = await run('region-core',
+    `httpRequestsAdaptiveGroups(limit: 10000, filter: { ${filter}, clientDeviceType_in: ["mobile", "tablet"] }) {
+      count
+      dimensions { clientIP clientCountryName }
+    }`, true);
+  if (!core) {
+    const raw = await run('region-core-fallback',
+      `httpRequestsAdaptiveGroups(limit: 10000, filter: { ${filter} }) {
+        count
+        dimensions { clientIP clientCountryName clientDeviceType }
+      }`);
+    core = raw ? raw.filter((r) => /mobile|tablet/i.test(r.dimensions?.clientDeviceType || '')) : null;
+  }
+  if (!core) { console.log('No device-level data available on this plan.'); return; }
+  const us = core.filter((r) => r.dimensions?.clientCountryName === 'US');
+  if (us.length === 10000) console.log('WARNING: 10k-row cap — counts are a floor.\n');
+
   const ips = new Set();
-  const s24 = new Set();  // distinct /24 (or /48) blocks
-  for (const r of rows) {
+  const s24 = new Set();
+  for (const r of us) {
     const ip = r.dimensions?.clientIP; if (!ip) continue;
     ips.add(ip);
+    if (ip.includes('.')) { const p = ip.split('.'); s24.add(`${p[0]}.${p[1]}.${p[2]}`); }
+    else s24.add(ip.split(':').slice(0, 3).join(':'));
+  }
+  console.log(`distinct US real devices (mobile+tablet IPs): ${fmt(ips.size)}   <- overcounts: phones churn IPs`);
+  console.log(`distinct /24 network blocks among them:       ${fmt(s24.size)}   <- ~how many separate networks/places`);
+  console.log('(count only — the blocks themselves are not printed; this log is public, Doctrine §9)');
+  console.log('');
+
+  // ---- BONUS (usually gated): colo + network owner ------------------------
+  const geo = await run('region-geo',
+    `httpRequestsAdaptiveGroups(limit: 10000, filter: { ${filter}, clientDeviceType_in: ["mobile", "tablet"] }) {
+      count
+      dimensions { clientIP clientCountryName coloCode clientASNDescription }
+    }`);
+  if (!geo) {
+    console.log('== EDGE LOCATION / NETWORK OWNER ==');
+    console.log('Unavailable: coloCode and clientASNDescription are gated on this Cloudflare plan.');
+    console.log('So there is no sub-country geography here at all — the /24 count above is the');
+    console.log('only "how many networks" signal this account can produce.');
+    return;
+  }
+  const geoUs = geo.filter((r) => r.dimensions?.clientCountryName === 'US');
+  const colo = new Map();
+  const nets = new Map();
+  for (const r of geoUs) {
+    const ip = r.dimensions?.clientIP; if (!ip) continue;
     const cc = r.dimensions?.coloCode || '(none)';
-    const asn = (r.dimensions?.clientASNDescription || '').trim() || '(unknown/gated)';
+    const asn = (r.dimensions?.clientASNDescription || '').trim() || '(unknown)';
     if (!colo.has(cc)) colo.set(cc, new Set());
     colo.get(cc).add(ip);
     if (!nets.has(asn)) nets.set(asn, new Set());
     nets.get(asn).add(ip);
-    if (ip.includes('.')) { const p = ip.split('.'); s24.add(`${p[0]}.${p[1]}.${p[2]}`); }
-    else s24.add(ip.split(':').slice(0, 3).join(':'));
   }
-
-  console.log(`distinct US real devices (mobile+tablet IPs): ${fmt(ips.size)}   <- overcounts: phones churn IPs`);
-  console.log(`distinct /24 network blocks among them:       ${fmt(s24.size)}   <- closer to "how many places/networks"`);
-  console.log('');
-
   console.log('== BY EDGE LOCATION (coloCode — rough region, NOT state) ==');
   for (const [c, s] of [...colo.entries()].sort((a, b) => b[1].size - a[1].size)) {
     console.log(`  ${c.padEnd(6)} ${String(s.size).padStart(4)} device(s)`);
   }
-  console.log('');
-
-  console.log('== BY NETWORK OWNER (distinct IPs; classification is best-effort) ==');
+  console.log('\n== BY NETWORK OWNER (distinct IPs; classification is best-effort) ==');
   let homeNets = 0, mobileIps = 0, hostIps = 0;
   for (const [asn, s] of [...nets.entries()].sort((a, b) => b[1].size - a[1].size)) {
     const cls = HOSTING_RE.test(asn) ? 'hosting' : MOBILE_RE.test(asn) ? 'mobile' : 'home/isp';
@@ -1292,7 +1309,7 @@ async function region(opts) {
     console.log(`  ${asn.slice(0, 40).padEnd(42)} ${String(s.size).padStart(4)} IPs  [${cls}]`);
   }
   console.log('');
-  console.log(`distinct home/ISP networks:  ${homeNets}   (an ISP ASN can still cover several households, so this is fuzzy)`);
+  console.log(`distinct home/ISP networks:  ${homeNets}   (an ISP ASN can still cover several households — fuzzy)`);
   console.log(`mobile-carrier IPs:          ${mobileIps}   (churn — collapses to far fewer people)`);
   console.log(`hosting/datacenter IPs:      ${hostIps}   (not people)`);
 }
