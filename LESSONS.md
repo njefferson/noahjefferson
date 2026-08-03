@@ -3699,3 +3699,81 @@ rather than for what he does with it next.** The moment the next action is
 
 *(Quietkeep, 2026-08-03.)*
 
+---
+
+## 33 · A registry that cannot see a thing reports it MISSING
+
+**Enforced by:** GATE fauxplane:scripts/a11y-gate.mjs — the contrast registry now
+reads a form field's value, and a selector that matched elements but found no
+measurable text says so in those words instead of "matched nothing".
+
+fauxplane's contrast registry, 1.16.0. Every foreground/background pair the app
+renders is listed, and a selector matching nothing is a hard failure — that is
+what makes "a new pair joins the gate in the same commit" mean anything. It
+filtered candidates with `n.textContent.trim().length > 0`.
+
+**An `<input>` has no `textContent`.** So the registry was structurally blind to
+every text field in the app, and had been since it was written. Registering the
+new airport picker's box produced:
+
+    contrast registry selector matched nothing: .radar-centre-input
+
+which reads as *the element is not there* — the message sends you to look for a
+missing element or a renamed class. The element was there, painted, with a value
+in it. The gate simply could not see it, and its vocabulary had no way to say so.
+
+**The failure is not the blind spot; it is the blind spot reporting as the wrong
+diagnosis.** A gate that said "I cannot measure this" would have cost five
+minutes. One that said "it is not there" costs however long you spend proving it
+is. Any check with a fixed failure message should be asked what ELSE produces it.
+
+**And the second half, which is the part with teeth.** The sampler hides the
+registered text, screenshots, and reads the backdrop pixel. `visibility: hidden`
+on a `<p>` reveals what is behind it — correct. On an input it takes the field's
+own background away too, so the sample reads the card behind the box and the gate
+happily measures the field's text against a colour it is not on. **The number
+would have been wrong and green.** Blanking the value leaves the box painted and
+removes only the ink.
+
+**The general shape: when you teach an instrument to look at a new KIND of
+thing, re-derive its method rather than extending its list.** Every step that
+assumed "text in a transparent element" has to be asked again.
+
+*(fauxplane, 2026-08-03.)*
+
+---
+
+## 34 · A gate that reads the wrong file demands a lie to go green
+
+**Enforced by:** GATE hub:handoff-check.mjs — the version lookup now tries
+`public/src/core/version.js` and `src/core/version.js` before falling through to
+`package.json`.
+
+`handoff-check.mjs` requires a staged candidate's NOTES.md block to name the
+version it is staging, so "there is a build on staging" cannot be acted on
+without knowing WHICH. It found the version at `src/version.js`, or failing that
+in `package.json`.
+
+fauxplane has **no build step**: `public/` is deployed verbatim, so its module
+tree is `public/src/` and its one version constant lives at
+`public/src/core/version.js`. Neither path matched. The gate fell through to
+`package.json` — which in that repo is a scaffold holding `0.1.0`, a number
+nobody has ever bumped because nothing reads it — and failed with:
+
+    NOTES.md records the deploy URL but not the current version (0.1.0) beside it
+
+The app on screen said 1.16.0. **The only way to satisfy the gate was to write
+0.1.0 into the handoff**, telling Noah a version that does not exist, about a
+build he is being asked to test. The gate's green state was a false statement.
+
+**Doctrine §7b says a version is typed once.** A gate that reads a DIFFERENT
+place than the app does is a second source of truth wearing a gate's authority —
+worse than an ordinary duplicate, because it can compel the duplicate.
+
+**The general shape: when a gate fails, check whether it is measuring what you
+think before you change anything to satisfy it.** A fallback that silently
+succeeds on the wrong file is the dangerous kind, because it produces a
+plausible number rather than an error. Order fallbacks so the general case is
+last, and prefer failing to guessing.
+
+*(fauxplane and the hub, 2026-08-03.)*

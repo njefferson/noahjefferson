@@ -107,17 +107,37 @@ if (!deployWf) {
         // The recorded version must be the one that would deploy. A stale URL
         // block claiming an old build is worse than none.
         //
-        // Read the version the way the REPO versions, in that order of
-        // authority. `package.json` was the only source until 2026-08-03, and
-        // it is the weakest: Quietkeep leaves it at the `0.0.0` npm-init
-        // placeholder and carries its real release triplet in the service
-        // worker's cache name, which its own `changelog:check` pins to the
-        // changelog head. Demanding "0.0.0 beside the URL" would have been a
-        // gate inventing a requirement the repo is right to ignore.
+        // WHERE THE VERSION ACTUALLY LIVES, WHICH IS NOT ONE PATH, and the
+        // order is order of AUTHORITY rather than convenience.
+        //
+        // `package.json` was the only source until 2026-08-03 and it is the
+        // weakest. Quietkeep leaves it at the `0.0.0` npm-init placeholder and
+        // carries its real release triplet in the service worker's cache name,
+        // which its own `changelog:check` pins to the changelog head — so
+        // demanding "0.0.0 beside the URL" would have been a gate inventing a
+        // requirement the repo is right to ignore.
+        //
+        // fauxplane found the other half of the same defect. It has NO BUILD
+        // STEP: `public/` deploys verbatim, so its module tree is `public/src/`
+        // and its one version constant is at `public/src/core/version.js`. Its
+        // cache name is a template literal reading a query parameter, so the
+        // regex below cannot match it, and neither `src/version.js` nor
+        // `package.json` held anything true — the fall-through produced `0.1.0`,
+        // a scaffold number nobody bumps, while the app on screen said 1.16.0.
+        // The only way to go green was to write a version that did not exist,
+        // into a handoff, about a build Noah was being asked to test.
+        //
+        // **A gate whose green state is a lie is worse than no gate**, and both
+        // repos reached it by the same route: a fallback that succeeds on the
+        // wrong file produces a plausible number instead of an error.
         const swText = read('public/sw.js') || read('sw.js');
         const vm = (swText && /CACHE\s*=\s*['"][\w-]*?-(\d+\.\d+\.\d+)['"]/.exec(swText))
           || (() => {
-            const vSrc = read('src/version.js') || read('package.json');
+            const vSrc =
+              read('src/version.js')
+              || read('public/src/core/version.js')
+              || read('src/core/version.js')
+              || read('package.json');
             const m = vSrc && (/VERSION\s*=\s*'([^']+)'/.exec(vSrc) || /"version":\s*"([^"]+)"/.exec(vSrc));
             // `0.0.0` is the npm placeholder, not a claim about a release.
             return m && m[1] !== '0.0.0' ? m : null;
