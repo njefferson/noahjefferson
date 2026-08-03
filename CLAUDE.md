@@ -72,6 +72,12 @@ checks before offering to build one of these again):**
   and the first-run move in 1.21.0; §7h's stale-app offer in 1.22.0, which also
   removed a `skipWaiting()` that had been serving a MIXED app — old markup, new
   modules — for twenty-two releases. Each is asserted by the walk, not assumed.
+- **fauxplane** — all of them, 2026-08-03. The (i) menu, first-run move, patch
+  notes (`releases.js`, one source, version-pinned by a test) and the §7f
+  diagnostic were already there; §7h's stale-app offer landed in 1.17.0 and
+  removed a `skipWaiting()` on install, plus a `boot.js` that had been silently
+  reloading the reader whenever it found a stale shell. Its `checkUpdateStrip`
+  drives a REAL second worker and is worth copying.
 - **Every other sibling** — still owed. Ask that repo's NOTES before assuming.
 
 The two omissions worth knowing before building one: a new surface must join the
