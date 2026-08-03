@@ -32,7 +32,7 @@ under Settings → General → Social preview → Edit.
 | Description | Photography, and small free tools for enjoying the world. | proposed |
 | Website | https://noahjefferson.pages.dev | proposed |
 | Topics | `photography` `portfolio` `free-tools` `pwa` `offline-first` `static-site` | proposed |
-| Social preview | Save from https://noahjefferson.pages.dev/og.png (the deployed card) or regenerate with `node render-social.mjs`. | proposed |
+| Social preview | Delivered to Noah in chat, 2026-08-03. Also now genuinely at https://noahjefferson.pages.dev/og.png — the file had never been copied into `public/`, so index.html's og:image and the URL this row used to give were both 404. Regenerate with `node render-social.mjs`, then copy to `public/og.png`. | proposed |
 
 ---
 
