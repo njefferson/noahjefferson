@@ -125,12 +125,28 @@ Verified 2026-08-02, by running the checks rather than assuming:
   live analytics and fax deploys that cannot be tested end to end from a
   session is its own risk.
 
+- **Intersecting-parallels** — brought to this line 2026-08-03, and it was NOT
+  clean when the audit was first run on it. zizmor found four `artipacked`
+  findings: all four workflows checked out without `persist-credentials: false`,
+  so each left a git credential in `.git/config` on the runner — including the
+  deploy job, which runs holding a live Cloudflare token. That is threat #1 and
+  #2 in the same step. Fixed, re-audited clean. Also verified: npm audit clean,
+  every Action SHA-pinned, every workflow `contents: read`, lockfile committed,
+  no credential-shaped string in any tracked file, `dependabot.yml` present.
+  It now runs its own `security.yml` weekly and on every push, installing the
+  hash-pinned zizmor from this repo rather than forking the pin.
+
+  **The finding is the argument for the schedule.** This repo had shipped
+  twenty releases through four green workflows; nothing was wrong with the
+  code, and the credential sat there the whole time because no audit had ever
+  been pointed at it.
+
 **Not in reach this session:** photo-pointer, clear-horizons,
-Bird-location-scouting, Jefferson-Photography-Studio, ND-toolbox, Quietkeep,
-intersecting-parallels. A session can only see the repos picked when it
-started (Doctrine §11). **Nothing above should be read as a statement about
-them.** Start a session with a repo selected and it takes about ten minutes to
-bring it to this line.
+Bird-location-scouting, Jefferson-Photography-Studio, ND-toolbox, Quietkeep.
+A session can only see the repos picked when it started (Doctrine §11).
+**Nothing above should be read as a statement about them.** Start a session
+with a repo selected and it takes about ten minutes to bring it to this line —
+and on the evidence of intersecting-parallels, assume it will find something.
 
 ---
 

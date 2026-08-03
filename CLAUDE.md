@@ -86,7 +86,7 @@ doctrine rule changes, edit it HERE and tell the sibling repos to re-point
 (their `CLAUDE.md` files link to this copy). Never fork the doctrine into
 another repo — link to it.
 
-## Five gates live here and serve every repo
+## Six gates live here and serve every repo
 Never fork these either — they take `--repo ../app` (or a path) so a sibling
 runs them without copying them, which is what stops five divergent versions
 existing.
@@ -106,6 +106,18 @@ existing.
   NOTES.md with its URL and version, no instruction tells an iPad-first owner to
   fetch a file from a repo, and the four un-automatable handoff obligations are
   acknowledged. LESSONS §26 is why it exists.
+- [`doctrine-sync.mjs`](doctrine-sync.mjs) — **run this FIRST in any sibling
+  session**: `node ../noahjefferson/doctrine-sync.mjs --repo .`. It says what has
+  landed in the hub since that repo last reconciled — which files, which commits,
+  and **which sections of DOCTRINE.md**, because "DOCTRINE.md changed" sends you
+  to re-read 900 lines and "§7e changed" sends you to the paragraph. Each sibling
+  records the hub commit it has read in a `.doctrine-sync` file; `--adopt` moves
+  it, and that is an ASSERTION the drift was read, like handoff-check's `--ack`.
+  Exits non-zero on unreconciled drift.
+
+  **Not a CI gate, deliberately.** A sibling's CI going red because the hub moved
+  trains everyone to ignore red, and CI cannot tell a *session* what it has not
+  read. This blocks the session, which is where the failure actually happens.
 
 `npm run check` runs the hub's own, **including `zizmor`** — run
 `npm run security:install` once first; the gate fails with an install hint
