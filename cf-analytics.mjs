@@ -881,6 +881,142 @@ async function people(opts) {
   }
 }
 
+// ------------------------------------------------------------------ humans
+
+// "What are real users?" answered the way Noah framed it: phones and tablets
+// are the hardest traffic to fake, so distinct mobile/tablet IPs are the
+// high-confidence humans; the desktop bucket is then INVESTIGATED rather than
+// trusted or discarded. Uses Cloudflare's own clientDeviceType (better than
+// guessing from the UA string) and its bot signals (verifiedBotCategory,
+// botScore) where the plan populates them. Aggregates only — never an address.
+async function humans(opts) {
+  const days = opts.days || 7;
+  const dayMs = 86400_000;
+  const nowD = new Date();
+  const endD = new Date(Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth(), nowD.getUTCDate()));
+  const startD = new Date(endD.getTime() - days * dayMs);
+  const t0 = startD.toISOString();
+  const t1 = endD.toISOString();
+  const excl = opts.excludeIps?.length
+    ? `, clientIP_notin: [${opts.excludeIps.map((i) => `"${i}"`).join(', ')}]`
+    : '';
+  const fmt = (n) => (n == null ? 'n/a' : Math.round(n).toLocaleString());
+  const filter = `datetime_geq: "${t0}", datetime_leq: "${t1}", requestSource: "eyeball"${excl}`;
+
+  console.log(`Window: ${t0.slice(0, 10)} .. ${new Date(endD - dayMs).toISOString().slice(0, 10)} (complete UTC days), requestSource=eyeball.`);
+  if (opts.excludeIps?.length) console.log(`Excluding ${opts.excludeIps.length} known-scanner IP(s).`);
+  console.log('');
+
+  const run = async (label, body) => {
+    const { data, errors } = await gqlSoft(
+      `{ viewer { accounts(filter: { accountTag: "${ACCOUNT}" }) { rows: ${body} } } }`
+    );
+    if (errors.length) {
+      console.log(`[${label}] unavailable: ${errors.map((e) => e.message).join('; ')}`);
+      return null;
+    }
+    return data?.viewer?.accounts?.[0]?.rows ?? [];
+  };
+
+  // ---- device type + browser, per IP, in one consistent sample -----------
+  const rows = await run(
+    'device',
+    `httpRequestsAdaptiveGroups(limit: 10000, filter: { ${filter} }) {
+      count
+      dimensions { clientIP clientDeviceType userAgentBrowser }
+    }`
+  );
+  if (!rows) {
+    console.log('Device data unavailable on this plan/dataset — cannot classify.');
+    return;
+  }
+  if (rows.length === 10000) console.log('WARNING: hit the 10,000-row cap — counts are a floor.\n');
+
+  // A browser string that is never a person sitting at a screen.
+  const BOTISH = /curl|wget|go-http|python|okhttp|java|libwww|axios|node|bot|spider|crawl|scan|monitor|probe|headless|unknown|others|^\(none\)$|^$/i;
+
+  const perIp = new Map(); // ip -> { devices:Set, browsers:Map }
+  for (const r of rows) {
+    const ip = r.dimensions?.clientIP;
+    if (!ip) continue;
+    const dev = (r.dimensions?.clientDeviceType || '').toLowerCase() || 'unknown';
+    const br = r.dimensions?.userAgentBrowser || '(none)';
+    const e = perIp.get(ip) ?? { devices: new Set(), browsers: new Map() };
+    e.devices.add(dev);
+    e.browsers.set(br, (e.browsers.get(br) ?? 0) + r.count);
+    perIp.set(ip, e);
+  }
+
+  let mobile = 0;
+  let tablet = 0;
+  const desktopHuman = new Map(); // browser -> IP count
+  const desktopBot = new Map();
+  for (const e of perIp.values()) {
+    if (e.devices.has('tablet')) { tablet++; continue; }
+    if (e.devices.has('mobile')) { mobile++; continue; }
+    // desktop or device-unknown: judge by the browser it presented most
+    const top = [...e.browsers.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '(none)';
+    const bucket = BOTISH.test(top) ? desktopBot : desktopHuman;
+    bucket.set(top, (bucket.get(top) ?? 0) + 1);
+  }
+  const desktopHumanIps = [...desktopHuman.values()].reduce((a, b) => a + b, 0);
+  const desktopBotIps = [...desktopBot.values()].reduce((a, b) => a + b, 0);
+
+  console.log(`distinct client IPs: ${fmt(perIp.size)}\n`);
+  console.log("by device (Cloudflare's own classification):");
+  console.log(`  mobile (phones):    ${String(mobile).padStart(4)} IPs   <- high-confidence humans`);
+  console.log(`  tablet (iPads etc): ${String(tablet).padStart(4)} IPs   <- high-confidence humans`);
+  console.log(`  desktop / other:    ${String(desktopHumanIps + desktopBotIps).padStart(4)} IPs`);
+  console.log(`     human-shaped:    ${String(desktopHumanIps).padStart(4)} IPs  (real browser, not headless/tool)`);
+  console.log(`     bot-shaped:      ${String(desktopBotIps).padStart(4)} IPs  (headless / unknown / tool)\n`);
+
+  console.log('desktop, investigated — the "other areas" worth a look:');
+  for (const [br, n] of [...desktopHuman.entries()].sort((a, b) => b[1] - a[1])) {
+    const note = /safari/i.test(br) ? '  <- Macs AND iPads in desktop mode; almost all human'
+      : /firefox|edge/i.test(br) ? '  <- desktop browser, rarely a bot'
+      : /^chrome$/i.test(br) ? '  <- mostly human, but the muddiest bucket' : '';
+    console.log(`  ${br.padEnd(20)} ${String(n).padStart(4)} IPs${note}`);
+  }
+  if (desktopBot.size) {
+    console.log('  (excluded as bot-shaped:', [...desktopBot.entries()].sort((a, b) => b[1] - a[1]).map(([b, n]) => `${b} ${n}`).join(', ') + ')');
+  }
+  console.log('');
+
+  // ---- Cloudflare's own bot signals, if the plan populates them ----------
+  const bots = await run('verifiedBot', `httpRequestsAdaptiveGroups(limit: 50, filter: { ${filter} }) { count dimensions { verifiedBotCategory } }`);
+  if (bots) {
+    const named = bots.filter((r) => (r.dimensions?.verifiedBotCategory || '').trim());
+    console.log('verified bots Cloudflare recognises (excluded from any human count):');
+    if (named.length) for (const r of named.sort((a, b) => b.count - a.count)) {
+      console.log(`  ${(r.dimensions.verifiedBotCategory).padEnd(28)} ${fmt(r.count)} req`);
+    } else console.log('  none flagged in this window.');
+    console.log('');
+  }
+  const scores = await run('botScore', `httpRequestsAdaptiveGroups(limit: 20, filter: { ${filter} }) { count dimensions { botScoreBucketBy10 } }`);
+  if (scores) {
+    const real = scores.filter((r) => r.dimensions?.botScoreBucketBy10 != null);
+    if (real.length && real.some((r) => Number(r.dimensions.botScoreBucketBy10) > 0)) {
+      console.log('botScore distribution (higher = more human; Cloudflare calls ~>30 likely-human):');
+      for (const r of real.sort((a, b) => Number(a.dimensions.botScoreBucketBy10) - Number(b.dimensions.botScoreBucketBy10))) {
+        console.log(`  score ${String(r.dimensions.botScoreBucketBy10).padStart(3)}+ : ${fmt(r.count)} req`);
+      }
+    } else {
+      console.log('botScore is not populated on this plan (Bot Management is a paid add-on) —');
+      console.log('so the device-type split above is the best human signal available here.');
+    }
+    console.log('');
+  }
+
+  const floor = mobile + tablet;
+  const withDesktop = floor + desktopHumanIps;
+  console.log('== real users ==');
+  console.log(`High-confidence humans (phones + tablets alone):     ~${fmt(floor)}`);
+  console.log(`Including the human-shaped desktop IPs:              ~${fmt(withDesktop)}`);
+  console.log('These are distinct IPs, so a person on both a phone and a laptop counts');
+  console.log('twice (pushes the number up) while a household on one wifi counts once');
+  console.log('(pushes it down). Read it as a band, and watch the trend, not one week.');
+}
+
 // ---------------------------------------------------------------- top-ips
 
 // This repo is PUBLIC, so whatever this prints ends up in a publicly readable
@@ -997,7 +1133,7 @@ const flag = (name, fallback) => {
   return i === -1 ? fallback : rest[i + 1];
 };
 
-if (['datasets', 'fields', 'report', 'top-ips', 'calibrate', 'people'].includes(cmd)) await preflight();
+if (['datasets', 'fields', 'report', 'top-ips', 'calibrate', 'people', 'humans'].includes(cmd)) await preflight();
 
 switch (cmd) {
   case 'datasets':
@@ -1026,6 +1162,15 @@ switch (cmd) {
     break;
   case 'calibrate':
     await calibrate({ days: Number(flag('days', 7)) });
+    break;
+  case 'humans':
+    await humans({
+      days: Number(flag('days', 7)),
+      excludeIps: (flag('exclude-ip', '') || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    });
     break;
   case 'people':
     await people({
@@ -1060,4 +1205,5 @@ switch (cmd) {
     console.log('  top-ips [dataset] [--host <hostname>] [--days 7] [--limit 25] [--full-ips]');
     console.log('  calibrate [--days 7]   — reconcile the estimators against the unsampled rollup');
     console.log('  people [--days 7] [--exclude-ip a,b] — distinct IPs by network class, bounded people estimate');
+  console.log('  humans [--days 7] [--exclude-ip a,b] — real users by device type (mobile/tablet), desktop investigated');
 }

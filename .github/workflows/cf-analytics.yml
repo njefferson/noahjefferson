@@ -26,7 +26,7 @@ on:
         description: Which step
         type: choice
         default: datasets
-        options: [datasets, fields, report, top-ips, calibrate, people]
+        options: [datasets, fields, report, top-ips, calibrate, people, humans]
       source:
         description: requestSource filter (report only). eyeball = end users, matches the dashboard; all = include Worker/cache traffic
         type: string
@@ -218,6 +218,12 @@ jobs:
               # Aggregates only — the command never prints an address, because
               # this log is public (Doctrine §9).
               node cf-analytics.mjs people \
+                --days "${{ inputs.days }}" \
+                --exclude-ip "${{ inputs.exclude_ip }}"
+              ;;
+            humans)
+              # Aggregates only (device-type + browser counts, never an address).
+              node cf-analytics.mjs humans \
                 --days "${{ inputs.days }}" \
                 --exclude-ip "${{ inputs.exclude_ip }}"
               ;;
