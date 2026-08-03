@@ -2846,3 +2846,44 @@ again"*, *"every other repo"*, *"I expect"*, *"consistently"*. Those are not
 feature requests. They are bug reports against the shared rules.
 
 *(2026-08-03, fauxplane — Doctrine §7e and §7f were written from this.)*
+
+---
+
+**A modal `<dialog>` lives in the TOP LAYER, so a full-page screenshot cannot
+see the part of it below the fold — and a sampler that reads pixels by
+coordinate will happily measure the wrong ones instead of failing.** fauxplane's
+contrast gate reads backdrops off a real screenshot rather than from computed
+style, which is correct and catches things `getComputedStyle` cannot. It sampled
+the first-run text inside the power gate at 1.37:1 and reported a contrast
+failure. The colours were fine. The text was simply not painted at the
+coordinate being sampled.
+
+The top layer is not part of document flow and is composited relative to the
+VIEWPORT. `fullPage: true` stitches the document; anything a modal draws past
+the bottom of the screen is not in that image, so those coordinates show the
+page behind — or nothing, which reads back as near-white and produces an
+arbitrary ratio. Note that `position: static` does NOT fix it: top-layer
+membership is not a positioning property. The dialog must be demoted with
+`close()` + `setAttribute('open','')` for sampling, then promoted again.
+
+**The dangerous part is not the false failure, it is the silent degradation.**
+The check had been green for weeks and was genuinely measuring — because the
+gate's content was short enough to fit on screen. Adding four lines of copy
+pushed the registered text below the fold and the check started reading unpainted
+pixels. It did not know, and nothing said so. A wrong pixel that happens to be
+dark would have produced a false PASS just as easily, and nobody would ever have
+looked.
+
+Two rules generalise:
+
+- **A pixel-sampling check must prove the pixel belongs to the element**, not
+  merely that the coordinates are inside the image. Sampling by geometry is
+  sound only while everything is on screen, and content length decides that.
+- **When you change how a check MEASURES, plant a fault and watch it go red
+  before trusting the green.** The fix here turned a red into a green, which is
+  exactly the shape of a fix that has disabled a check rather than repaired one.
+  A deliberately bad colour was planted, the gate reported 1.08:1, and only then
+  was the pass believed.
+
+*(fauxplane, 2026-08-03. Applies to every app whose accessibility gate samples
+a screenshot — which is all of them, since they share this approach.)*

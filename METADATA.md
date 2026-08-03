@@ -37,10 +37,22 @@ A markdown-converting fetcher drops the `<head>`, so this needs the raw HTML.
 
 # njefferson/fauxplane
 
-**Description** — set 2026-08-03
+**Description** — set 2026-08-03. **A revision is proposed below.**
+
+Live on GitHub now:
 
 > A glass cockpit for your desk — airliner instruments driven by your device's
 > own sensors and live aviation data. Not a simulator; never for navigation.
+
+**Proposed revision** — 2026-08-03, from how Noah actually describes the app to
+his friends: *"You can follow a flight, or use it on a flight to see like the
+pilot, or use it in a car while you drive!"* The live description says **"for
+your desk"**, which is the one reader's case and silently excludes the two uses
+that make the panel come alive. The app is undersold by its own copy.
+
+> Airliner instruments on your phone or tablet, driven by its own sensors and
+> live aviation data. Follow a real flight, take it on one, or clamp it in the
+> car. Not a simulator; never for navigation.
 
 **Website** — set 2026-08-03
 
