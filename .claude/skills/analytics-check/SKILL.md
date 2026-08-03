@@ -43,17 +43,40 @@ the trend.
 - **AI crawlers are now the largest bot category** hitting the apps — real, not
   a threat, and excluded from any human count by Cloudflare's `verifiedBotCategory`.
 
-## Geography is country-only on this plan
+## The ceiling of what's knowable — do not chase these again (verified 2026-08-03)
 
-Do **not** promise a by-state, by-metro, or by-city view. `httpRequestsAdaptiveGroups`
-has 102 dimensions but only two are geographic — `clientCountryName` and `coloCode`
-(the serving data-centre) — and on Noah's Cloudflare plan **`coloCode` AND
-`clientASNDescription` (network owner) are both query-gated** ("account does not
-have access to the field", verified 2026-08-03). So the finest geography available
-is **country**. The one sub-country signal left is IP-block clustering — distinct
-mobile/tablet IPs and distinct **/24 blocks** (the `region` command) — which speaks
-to "how many separate networks," never to where or who. Getting region/network back
-would require a higher Cloudflare analytics tier.
+Noah asked, in order, for by-state, then how phones change IP, then MAC tracking.
+The answers are settled; re-deriving them wastes a session.
+
+- **Geography is country-only.** `httpRequestsAdaptiveGroups` has 102 dimensions but
+  only two are geographic — `clientCountryName` and `coloCode` (serving data-centre)
+  — and on this plan **`coloCode` AND `clientASNDescription` (network owner) are
+  query-gated** ("account does not have access to the field"). So there is no
+  by-state / by-metro / by-city / by-colo view, and no ISP labels. `clientIP` *is*
+  available, so the one sub-country signal is IP-block clustering — distinct
+  mobile/tablet IPs and distinct **/24 blocks** (the `region` command) — which
+  speaks to "how many separate networks," never to where or who.
+- **Unlocking colo/ASN = Cloudflare Enterprise**, custom-priced (thousands/mo, talk
+  to sales). Pro (~$20/mo) and Business (~$200/mo) do **not** open the adaptive
+  geo/ASN fields. And the apps are `*.pages.dev` — plan tiers attach to zones/custom
+  domains, not free Pages projects — so it isn't even a clean upgrade. **Not worth
+  it for free hobby apps; country + /24 count is the sensible ceiling.** (Confirm the
+  exact field↔plan boundary with Cloudflare if it ever matters — it shifts.)
+- **Distinct IPs overcount people and cannot be de-duplicated by time.** Phone public
+  IPs change on network events, not a clock: CGNAT reassignment, session teardown
+  (signal loss, airplane mode, reboot, idle), crossing to a different carrier
+  gateway region, and above all **wifi↔cellular switching**. Local tower-to-tower
+  handovers usually *keep* the IP. So one phone throws off many IPs across many /24s
+  in a week — there is no interval to collapse them on. This is why the real-user
+  count is a **band**, not a headcount.
+- **MAC address is untrackable from the web, full stop.** It is Layer-2, stripped at
+  the first router hop, never in HTTP or anything Cloudflare sees; modern phones also
+  randomize it per network. Do not propose it.
+
+The through-line: the web hands out no stable per-person identifier by design. An
+exact headcount would need logins/accounts, which these apps deliberately refuse
+(Doctrine §1). "Distinct phones+tablets as a band + a rough network-spread number"
+is the floor of what's knowable, and it is the honest, no-tracking answer anyway.
 
 ## Known scanner IPs to exclude
 
