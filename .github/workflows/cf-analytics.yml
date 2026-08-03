@@ -26,7 +26,7 @@ on:
         description: Which step
         type: choice
         default: datasets
-        options: [datasets, fields, report, top-ips, calibrate, people, humans]
+        options: [datasets, fields, report, top-ips, calibrate, people, humans, snapshot]
       source:
         description: requestSource filter (report only). eyeball = end users, matches the dashboard; all = include Worker/cache traffic
         type: string
@@ -224,6 +224,12 @@ jobs:
             humans)
               # Aggregates only (device-type + browser counts, never an address).
               node cf-analytics.mjs humans \
+                --days "${{ inputs.days }}" \
+                --exclude-ip "${{ inputs.exclude_ip }}"
+              ;;
+            snapshot)
+              # Aggregates only. Emits every view plus a TREND_ROW line.
+              node cf-analytics.mjs snapshot \
                 --days "${{ inputs.days }}" \
                 --exclude-ip "${{ inputs.exclude_ip }}"
               ;;

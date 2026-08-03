@@ -881,6 +881,124 @@ async function people(opts) {
   }
 }
 
+// ---------------------------------------------------------------- snapshot
+
+// One run, every view the recurring question needs: totals, by-app, by-country,
+// app x country, and the real-user floor — plus a single machine-readable
+// TREND_ROW line the analytics-check skill appends to docs/usage-trend.csv so
+// "any changes over time" becomes a slope instead of two weeks from memory.
+// eyeball only, scanner excluded, complete UTC days — the verified defaults.
+
+/** Fold host variants into one app: drop a :port suffix and a leading www.,
+ *  but keep staging.* separate (it is Noah's own testing, not an audience). */
+function canonHost(host) {
+  let h = String(host || '(none)').replace(/:\d+$/, '');
+  if (h.startsWith('www.')) h = h.slice(4);
+  return h;
+}
+
+async function snapshot(opts) {
+  const days = opts.days || 7;
+  const dayMs = 86400_000;
+  const nowD = new Date();
+  const endD = new Date(Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth(), nowD.getUTCDate()));
+  const startD = new Date(endD.getTime() - days * dayMs);
+  const t0 = startD.toISOString();
+  const t1 = endD.toISOString();
+  const endDate = new Date(endD - dayMs).toISOString().slice(0, 10);
+  const excl = opts.excludeIps?.length
+    ? `, clientIP_notin: [${opts.excludeIps.map((i) => `"${i}"`).join(', ')}]`
+    : '';
+  const filter = `datetime_geq: "${t0}", datetime_leq: "${t1}", requestSource: "eyeball"${excl}`;
+  const fmt = (n) => (n == null ? 'n/a' : Math.round(n).toLocaleString());
+
+  console.log(`Window: ${t0.slice(0, 10)} .. ${endDate} (complete UTC days), requestSource=eyeball.`);
+  if (opts.excludeIps?.length) console.log(`Excluding ${opts.excludeIps.length} known-scanner IP(s).`);
+  console.log('');
+
+  const run = async (label, body) => {
+    const { data, errors } = await gqlSoft(
+      `{ viewer { accounts(filter: { accountTag: "${ACCOUNT}" }) { rows: ${body} } } }`
+    );
+    if (errors.length) { console.log(`[${label}] unavailable: ${errors.map((e) => e.message).join('; ')}`); return null; }
+    return data?.viewer?.accounts?.[0]?.rows ?? [];
+  };
+
+  // ---- app x country (the source of totals / by-app / by-country) ---------
+  const rows = await run('app-country',
+    `httpRequestsAdaptiveGroups(limit: 10000, filter: { ${filter} }) {
+      count
+      dimensions { clientRequestHTTPHost clientCountryName }
+    }`);
+  if (!rows) { console.log('No data.'); return; }
+
+  const byApp = new Map();
+  const byCountry = new Map();
+  const cell = new Map(); // "app\tcc" -> n
+  let total = 0;
+  for (const r of rows) {
+    const app = canonHost(r.dimensions?.clientRequestHTTPHost);
+    const cc = r.dimensions?.clientCountryName || '??';
+    const n = r.count;
+    total += n;
+    byApp.set(app, (byApp.get(app) ?? 0) + n);
+    byCountry.set(cc, (byCountry.get(cc) ?? 0) + n);
+    const k = `${app}\t${cc}`;
+    cell.set(k, (cell.get(k) ?? 0) + n);
+  }
+  const appsSorted = [...byApp.entries()].sort((a, b) => b[1] - a[1]);
+  const ccSorted = [...byCountry.entries()].sort((a, b) => b[1] - a[1]);
+
+  // ---- real-user floor: distinct mobile/tablet IPs ------------------------
+  const dev = await run('device',
+    `httpRequestsAdaptiveGroups(limit: 10000, filter: { ${filter} }) {
+      count
+      dimensions { clientIP clientDeviceType userAgentBrowser }
+    }`);
+  let floor = 0;
+  let ceiling = 0;
+  if (dev) {
+    const BOTISH = /curl|wget|go-http|python|okhttp|java|libwww|axios|node|bot|spider|crawl|scan|monitor|probe|headless|unknown|others|^\(none\)$|^$/i;
+    const perIp = new Map();
+    for (const r of dev) {
+      const ip = r.dimensions?.clientIP; if (!ip) continue;
+      const d = (r.dimensions?.clientDeviceType || '').toLowerCase();
+      const b = r.dimensions?.userAgentBrowser || '(none)';
+      const e = perIp.get(ip) ?? { dev: new Set(), br: new Map() };
+      e.dev.add(d); e.br.set(b, (e.br.get(b) ?? 0) + r.count); perIp.set(ip, e);
+    }
+    for (const e of perIp.values()) {
+      if (e.dev.has('mobile') || e.dev.has('tablet')) { floor++; ceiling++; continue; }
+      const top = [...e.br.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '(none)';
+      if (!BOTISH.test(top)) ceiling++;
+    }
+  }
+
+  // ---- present ------------------------------------------------------------
+  console.log(`== TOTALS ==\n${fmt(total)} eyeball requests across ${appsSorted.length} apps and ${ccSorted.length} countries.`);
+  console.log(`real users (distinct devices): ~${fmt(floor)} phones+tablets (trust) .. ~${fmt(ceiling)} incl. human-shaped desktop.\n`);
+
+  console.log('== BY APP ==');
+  for (const [a, n] of appsSorted) console.log(`  ${a.padEnd(44)} ${fmt(n).padStart(8)}`);
+  console.log('\n== BY COUNTRY (top 20) ==');
+  for (const [c, n] of ccSorted.slice(0, 20)) console.log(`  ${c.padEnd(6)} ${fmt(n).padStart(8)}`);
+
+  console.log('\n== APP x COUNTRY (CSV) ==');
+  console.log('app,country,requests');
+  for (const [a] of appsSorted)
+    for (const [c] of ccSorted) {
+      const n = cell.get(`${a}\t${c}`);
+      if (n) console.log(`${a},${c},${n}`);
+    }
+
+  // ---- the one line the skill appends to the trend file -------------------
+  const topApp = appsSorted[0] ?? ['-', 0];
+  const topCc = ccSorted[0] ?? ['-', 0];
+  console.log('');
+  console.log('== TREND_ROW (skill appends the part after the comma to docs/usage-trend.csv) ==');
+  console.log(`TREND_ROW,${endDate},${days},${total},${floor},${ceiling},${topApp[0]},${topCc[0]}`);
+}
+
 // ------------------------------------------------------------------ humans
 
 // "What are real users?" answered the way Noah framed it: phones and tablets
@@ -1133,7 +1251,7 @@ const flag = (name, fallback) => {
   return i === -1 ? fallback : rest[i + 1];
 };
 
-if (['datasets', 'fields', 'report', 'top-ips', 'calibrate', 'people', 'humans'].includes(cmd)) await preflight();
+if (['datasets', 'fields', 'report', 'top-ips', 'calibrate', 'people', 'humans', 'snapshot'].includes(cmd)) await preflight();
 
 switch (cmd) {
   case 'datasets':
@@ -1162,6 +1280,15 @@ switch (cmd) {
     break;
   case 'calibrate':
     await calibrate({ days: Number(flag('days', 7)) });
+    break;
+  case 'snapshot':
+    await snapshot({
+      days: Number(flag('days', 7)),
+      excludeIps: (flag('exclude-ip', '') || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    });
     break;
   case 'humans':
     await humans({
@@ -1206,4 +1333,5 @@ switch (cmd) {
     console.log('  calibrate [--days 7]   — reconcile the estimators against the unsampled rollup');
     console.log('  people [--days 7] [--exclude-ip a,b] — distinct IPs by network class, bounded people estimate');
   console.log('  humans [--days 7] [--exclude-ip a,b] — real users by device type (mobile/tablet), desktop investigated');
+  console.log('  snapshot [--days 7] [--exclude-ip a,b] — totals + by-app + by-country + app x country + real-user floor + trend row');
 }
