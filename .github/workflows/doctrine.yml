@@ -9,13 +9,26 @@ name: Doctrine gates
 #   lessons-check  every lesson declares how it is enforced, and every gate it
 #                  cites actually exists (a cited-but-absent gate reads as
 #                  coverage — §7g, Doctrine §4)
-#   pin-check      nothing that executes floats on a tag (Doctrine §16.1, §8)
+#   zizmor         workflow security — pinning, template injection, credential
+#                  persistence, cache poisoning. Maintained and off-the-shelf;
+#                  itself pinned by version AND hash in
+#                  .github/requirements-ci.txt, and always run with
+#                  --strict-collection so an unparseable workflow FAILS
+#                  instead of being skipped past a green tick (LESSONS §13)
+#   pin-check      the npm hygiene zizmor does not cover — lockfile present,
+#                  `npm ci` never `npm install`, no undeclared deps (§16.3)
 #
-# Actions pinned by SHA, which pin-check itself enforces on this very file.
+# Actions are pinned by SHA. That is zizmor's job now, NOT pin-check's — the
+# hand-rolled version of that check passed while zizmor found 23 real findings
+# in the same files (LESSONS §8).
 
+# Runs on the working branches too, not just main. Written with
+# `branches: [main]` alone, this workflow had never executed ONCE: the hub is a
+# main-only repo, the harness develops on claude/*, and so the gate meant to
+# catch unwatched gates was itself never watched (LESSONS §7b).
 on:
   push:
-    branches: [main]
+    branches: [main, "claude/**"]
   pull_request:
   workflow_dispatch:
 
@@ -48,11 +61,27 @@ jobs:
       # 18 template injections and 5 credential-persistence issues that a
       # hand-rolled checker written the same afternoon had no concept of.
       # Standard tooling first; bespoke only where nothing standard exists.
-      - name: Install zizmor
-        run: pipx install zizmor || pip install zizmor
+      # Pinned by version AND hash (.github/requirements-ci.txt). `pip install
+      # zizmor` resolves to whatever PyPI serves that morning — the same
+      # mutable-pointer problem as an unpinned Action tag, and it sat in THIS
+      # workflow, in the change that argued for pinning everything (§16.1).
+      # --require-hashes rejects a swapped artefact; --only-binary stops a
+      # silent fall back to building the sdist from source.
+      - name: Install zizmor (version- and hash-pinned)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/zizmor"
+          "$RUNNER_TEMP/zizmor/bin/pip" install --quiet --only-binary=:all: \
+            --require-hashes -r .github/requirements-ci.txt
 
+      # --strict-collection turns an unparseable workflow into a FAILURE. By
+      # default zizmor logs "failed to parse input", skips that file and still
+      # exits 0 — so a workflow with a YAML error is silently never audited,
+      # and the run reports "No findings. Good job!". Caught here by breaking
+      # this very file's YAML and watching the gate stay green (§16.8).
       - name: Workflow security audit
-        run: zizmor --offline .github/workflows/
+        run: |
+          "$RUNNER_TEMP/zizmor/bin/zizmor" --offline --strict-collection \
+            .github/workflows/
 
       - name: npm hygiene (what zizmor does not cover)
         run: node pin-check.mjs

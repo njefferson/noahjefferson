@@ -31,11 +31,31 @@ So the things that actually matter, in order:
 
 These are wired into CI and exit non-zero. If they pass, that layer is done.
 
-- **`zizmor --offline .github/workflows/`** — the maintained GitHub Actions
+- **`zizmor --offline --strict-collection`** — the maintained GitHub Actions
   auditor. Catches unpinned actions, template injection, credential
   persistence, cache poisoning. **Use this rather than writing one.** A
   hand-rolled pinning checker in this repo passed both apps clean while zizmor
   found 23 real findings in the same files (LESSONS §8 postscript).
+
+  Two things about it are not the defaults and both are deliberate:
+
+  **`--strict-collection` is required.** Without it, a workflow with a YAML
+  error is logged at WARN, **skipped, and the run still exits 0 printing "No
+  findings to report. Good job!"** — so the file most likely to be wrong is
+  the one that never gets audited. This happened here (LESSONS §13).
+
+  **zizmor is itself pinned**, by version *and* hash, in
+  [`.github/requirements-ci.txt`](.github/requirements-ci.txt), installed with
+  `--require-hashes --only-binary=:all:`. `pip install zizmor` floats on
+  whatever PyPI serves that morning — an unpinned binary executing beside a
+  deploy token is threat #2 above, and it was live in this repo's own audit
+  workflow. That file is canonical in the hub: a sibling repo checks the hub
+  out in CI and installs from it, so every app is audited by the same build,
+  and Dependabot's `pip` ecosystem bumps the version and the hashes together.
+
+  Locally: `npm run security:install` once, then `npm run security` — and
+  `npm run check` runs it, failing with an install hint rather than skipping
+  when the tool is absent.
 - **[`pin-check.mjs`](pin-check.mjs)** — the npm half zizmor does not do:
   lockfile present, `npm ci` never `npm install`, no undeclared dependencies.
 - **`npm audit`** — run it, and do not ship a known-vulnerable tree. If a fix

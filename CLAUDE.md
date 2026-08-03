@@ -37,16 +37,25 @@ without copying them, which is what stops four divergent versions existing.
   declares `GATE`, `CHECKLIST` or `JUDGEMENT`, and a cited gate that does not
   exist FAILS. `--checklist` prints the steps no script can perform; run it
   before any handoff.
-- [`pin-check.mjs`](pin-check.mjs) — nothing that executes floats on a tag
-  (Doctrine §16.1), no `npm install` in automation, no package.json without a
-  lockfile.
+- [`pin-check.mjs`](pin-check.mjs) — npm hygiene only: `npm ci` never
+  `npm install`, a lockfile beside every package.json, no undeclared deps.
+  **Workflow security is `zizmor`'s job, not this file's** — see SECURITY.md.
 - [`handoff-check.mjs`](handoff-check.mjs) — a staged candidate is recorded in
   NOTES.md with its URL and version, no instruction tells an iPad-first owner to
   fetch a file from a repo, and the four un-automatable handoff obligations are
   acknowledged. LESSONS §14 is why it exists.
 
-`npm run check` runs the hub's own. `.github/workflows/doctrine.yml` runs
-lessons, pins and `zizmor` on every push and PR.
+`npm run check` runs the hub's own, **including `zizmor`** — run
+`npm run security:install` once first; the gate fails with an install hint
+rather than skipping when the tool is absent.
+`.github/workflows/doctrine.yml` runs lessons, pins and `zizmor` on every push
+and PR.
+
+zizmor is always invoked with **`--strict-collection`**, and is itself pinned by
+version and hash in [`.github/requirements-ci.txt`](.github/requirements-ci.txt)
+— which is canonical here, so every sibling repo installs the same build. Both
+of those are load-bearing and neither is a default; SECURITY.md says why, and
+LESSONS §8 and §13 say what it cost to find out.
 
 [`SECURITY.md`](SECURITY.md) is canonical here too — the baseline every repo
 is held to, splitting what CI enforces from the GitHub and Cloudflare settings

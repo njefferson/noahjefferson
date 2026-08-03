@@ -15,6 +15,23 @@ updates:
     labels:
       - dependencies
 
+  # The CI tooling that is not npm — currently just zizmor, pinned by version
+  # and hash in .github/requirements-ci.txt. A hash pin is a SHA pin by another
+  # name: safe but frozen, and dead the moment nobody bumps it. Dependabot
+  # rewrites the version and regenerates every hash in the same PR.
+  #
+  # This file is canonical for zizmor's version across ALL the repos: a sibling
+  # checks the hub out in CI and installs from this requirements file rather
+  # than carrying its own, so a bump here moves every app at once.
+  - package-ecosystem: pip
+    directory: /.github
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "Keep a build tool up to date"
+    labels:
+      - dependencies
+
   - package-ecosystem: npm
     directory: /
     schedule:

@@ -2,3 +2,4 @@ node_modules/
 *.log
 dist-standalone/
 preview.png
+.zizmor/

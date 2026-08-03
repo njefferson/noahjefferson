@@ -153,7 +153,10 @@ if (missing.length) {
     console.log(`\n  [${id}]`);
     for (const line of wrap(text, 74)) console.log(`      ${line}`);
   }
-  console.log(`\n  Re-run: node handoff-check.mjs --repo ${process.argv[ri + 1] || '.'} --ack=${MUST_ACK.map(([i]) => i).join(',')}`);
+  // `ri` indexes `argv` (already sliced by 2). Reading process.argv[ri + 1]
+  // here printed this script's own path as the --repo value, i.e. the one
+  // line whose whole job is to be copy-pasteable was not.
+  console.log(`\n  Re-run: node handoff-check.mjs --repo ${argv[ri + 1] || '.'} --ack=${MUST_ACK.map(([i]) => i).join(',')}`);
   console.log('\n  These are ASSERTIONS, not measurements — the script cannot read your draft.');
   console.log('  Saying them is cheap; skipping them without noticing is what actually happened.');
   failures.push(`${missing.length} handoff obligation(s) not acknowledged.`);

@@ -9,7 +9,7 @@
 // It no longer does, because **zizmor** already does that far better — on its
 // first run it found template injection and credential persistence in
 // workflows written the same afternoon this file was, which this file had no
-// concept of. Workflow security is `zizmor --offline` in CI; a hand-rolled
+// concept of. Workflow security is `zizmor --offline --strict-collection` in
 // regex over `uses:` was reinventing a maintained tool badly.
 //
 // What is left here is the part zizmor does not cover: npm hygiene. A lockfile
@@ -87,7 +87,7 @@ if (existsSync(join(REPO, 'package.json'))) {
 /* ---------- report ---------- */
 
 console.log(`=== npm hygiene · ${NAME} ===`);
-console.log('(GitHub Actions security is zizmor\'s job — run `zizmor --offline .github/workflows/`)');
+console.log('(GitHub Actions security is zizmor\'s job — run `npm run security`)');
 if (ok.length) console.log(`${ok.length} check(s) passed`);
 for (const n of notes) console.log(`  · ${n}`);
 if (failures.length) {

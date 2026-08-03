@@ -810,16 +810,31 @@ THE POSTURE, and the exposure that produced it (hub audit, 2026-07-28). Nothing
 here is hypothetical — every rule below names something that was true of this
 repo when it was written:
 
-1. PIN WHAT EXECUTES. Anything that runs code gets a version that cannot change
-   under us: a committed lockfile, `npm ci` and never `npm install` in
-   automation, and GitHub Actions referenced BY COMMIT SHA, not by tag.
-   **Enforced by `zizmor --offline .github/workflows/` in CI** — a maintained
+1. PIN WHAT EXECUTES — **all of it, including the tools that do the checking.**
+   Anything that runs code gets a version that cannot change under us: a
+   committed lockfile, `npm ci` and never `npm install` in automation, GitHub
+   Actions referenced BY COMMIT SHA and not by tag, and **every other installer
+   a workflow reaches for** — `pip install`, `pipx install`, `brew install`,
+   `curl | sh`. A tag is a mutable pointer someone else controls —
+   `cloudflare/wrangler-action@v3` floats, and it executes while holding a
+   Pages:Edit token. So does `pip install zizmor`.
+
+   That last one is not hypothetical and it is the reason this rule now names
+   the installers rather than just npm and Actions: the session that adopted
+   zizmor installed it with `pipx install zizmor || pip install zizmor`, an
+   unpinned binary fetch **inside the workflow that enforces this rule**, in
+   the change that argued for it (LESSONS §8). The pin is now version and hash
+   in [`.github/requirements-ci.txt`](.github/requirements-ci.txt), canonical
+   in the hub, installed `--require-hashes --only-binary=:all:`, maintained by
+   Dependabot's `pip` ecosystem. **Adopting a good tool is the moment the guard
+   is down; pin it the same day.**
+
+   **Enforced by `zizmor --offline --strict-collection` in CI** — a maintained
    auditor that also catches template injection, credential persistence and
    cache poisoning. USE IT RATHER THAN WRITING ONE: the first hand-rolled
    version of this check passed both repos while zizmor found 23 real findings
-   in the same files, two of them in workflows written that afternoon. A tag is
-   a mutable pointer someone else controls — `cloudflare/wrangler-action@v3`
-   floats, and it executes while holding a Pages:Edit token.
+   in the same files, two of them in workflows written that afternoon.
+   `--strict-collection` is not optional — see §16.8.
 2. NEVER PUT AN UNPINNED FETCH NEXT TO A SECRET. `npx wrangler secret put`
    resolves whatever npm serves at that moment and is then handed a live API key
    on stdin. That is the sharpest exposure this repo has had: an unreviewed
@@ -855,12 +870,23 @@ repo when it was written:
    and set text; reserve `innerHTML` for inert markup you authored.
 8. MAKE IT A GATE, NOT AN INTENTION (§15.7, and it generalises). A rule that
    lives only in prose is a rule that loses to whoever is in a hurry. Lockfiles
-   are checked by `npm ci` failing. Pinning is checked by
-   [`pin-check.mjs`](pin-check.mjs), which rejects an unpinned `uses:`, an
-   `npm install` in automation, and a package.json with no lockfile — run it
-   against any repo with `--repo`. Headers are checked by fetching the deployed page. §4 is
+   are checked by `npm ci` failing. Workflow security — pinning, template
+   injection, credential persistence — is checked by **`zizmor`**, a maintained
+   auditor; npm hygiene by [`pin-check.mjs`](pin-check.mjs). Run either against
+   any repo with `--repo`. **Prefer a maintained tool to a bespoke gate every
+   time.** Headers are checked by fetching the deployed page. §4 is
    the standing proof of what happens otherwise: a documented gate that never
    existed, believed for months because nobody ran it.
+
+   **And then ask the maintained tool what it does with input it cannot
+   handle** — preferring it does not mean trusting its defaults. zizmor's
+   default is to log a YAML error at WARN, **skip that workflow, and exit 0
+   with "No findings to report. Good job!"**: the file most likely to be wrong
+   is the one excused, and the tick certifies less than it appears to. Always
+   `--strict-collection`. Found here by breaking a workflow's YAML and watching
+   the audit stay green (LESSONS §13). Skip-and-pass is a common default across
+   linters and scanners; assume it until you have checked, and prove the flag
+   by planting the fault (§15.7).
 
 WHAT IS ALREADY RIGHT HERE, so it does not get "cleaned up" by a later session:
 the Cloudflare credential step strips whitespace and masks before use, with a

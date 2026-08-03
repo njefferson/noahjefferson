@@ -31,7 +31,8 @@ So each lesson now has to say how it is enforced. Run it:
 ```
 node lessons-check.mjs               # every lesson declares its enforcement
 node lessons-check.mjs --checklist   # the steps no script can do — read at handoff
-node pin-check.mjs      --repo ../x  # §8, Doctrine §16.1 — nothing floats on a tag
+npm run security                    # §8, §13, Doctrine §16.1 — zizmor, pinned + strict
+node pin-check.mjs      --repo ../x  # §8 — the npm hygiene zizmor does not do
 node handoff-check.mjs  --repo ../x  # §10, §14 — the handoff is a deliverable
 ```
 
@@ -482,6 +483,31 @@ Three things fall out of it, all cheap:
 *(Quietkeep, 2026-07-28 — found only because a rename touched `package.json` and
 the failure finally surfaced locally. It had been red for a day.)*
 
+**It happened again the same week this rule was written down, twice, in the two
+repos that hold the rule.** Both are the same shape and neither needed anything
+clever to catch — one API call would have done it.
+
+- **photo-field-tools CI: red on its last three runs, unnoticed.** The
+  `doctrine` job died on
+  `Cannot find module '.../hub/pin-check.mjs'`. The job checks the hub out at
+  its **default branch**, and the hub instruments it calls only existed on a
+  working branch. Every gate had been run locally and passed; nobody opened the
+  run. **A cross-repo gate depends on the OTHER repo's default branch, not on
+  your working copy — landing the caller before the callee is red CI by
+  construction.**
+- **The hub's own `doctrine.yml` had never executed, not once.** It was written
+  `on: push: branches: [main]` in a repo whose work happens on `claude/*`
+  branches. So the workflow created *specifically to stop rules from being
+  prose* was, itself, prose — a file that had never exited any code at all. It
+  now also runs on `claude/**`.
+
+**Ask of a new workflow: on which branch does this actually fire, and have I
+seen it fire?** An unrun workflow and a missing workflow are the same artefact.
+And after any push, list the runs — `actions_list` on the workflow, read
+`conclusion` — before writing a sentence that implies the tree is green.
+*(the hub and photo-field-tools, 2026-08-03 — found in a review of the
+session's own diff, not by the gates.)*
+
 ## 7c · Marks, palettes, and what a shape says
 
 **Enforced by:** GATE hub:palette-check.mjs · JUDGEMENT
@@ -776,7 +802,7 @@ Back up before you plant, and never reach for `git checkout` on a dirty file.)*
 
 ## 8 · Pinning
 
-**Enforced by:** GATE hub:.github/workflows/doctrine.yml — `zizmor --offline` audits workflow security (pinning, template injection, credential persistence, cache poisoning); `pin-check.mjs` covers the npm hygiene zizmor does not.
+**Enforced by:** GATE hub:.github/workflows/doctrine.yml — `zizmor --offline --strict-collection` audits workflow security (pinning, template injection, credential persistence, cache poisoning) and FAILS rather than skipping a file it cannot parse; zizmor itself is version- and hash-pinned in `hub:.github/requirements-ci.txt`; `pin-check.mjs` covers the npm hygiene zizmor does not.
 
 **Postscript, 2026-08-02 — and this is the sharper lesson.** The first attempt
 at enforcing this section was a hand-written regex over `uses:` lines. It
@@ -790,6 +816,22 @@ HAVING TO CREATE ALL THIS INDUSTRY STANDARD STUFF?"*
 genuinely specific to this work** — acceptance criteria, a palette's own roles,
 an app's offline behaviour, the handoff. Everything else already exists, is
 better, and is somebody else's job to keep correct.
+
+**Postscript to the postscript, 2026-08-03 — the tool you reached for is a
+thing that executes, and §16.1 applies to it too.** Having correctly replaced
+the bespoke checker with zizmor, the session installed it with
+`run: pipx install zizmor || pip install zizmor` — an unpinned fetch of a
+binary that then runs next to a deploy token, added *inside the very workflow
+whose job is to enforce pinning*, in the change that argued for it. It survived
+because the rule was being applied to the *subject* of the audit and not to the
+audit. Nothing caught it; a review of the session's own diff a day later did.
+Now version- and hash-pinned in `.github/requirements-ci.txt`, installed with
+`--require-hashes --only-binary=:all:`, kept current by a `pip` ecosystem in
+Dependabot, and canonical in the hub so every sibling repo installs the same
+build rather than carrying its own copy. **When you adopt a standard tool, pin
+it the same day you adopt it — an off-the-shelf tool is not automatically a
+pinned one, and "I just installed the good tool" is the moment the guard is
+down.** See §13 for what that same tool did next.
 
 **A pin must match the environment it runs in, and a wrong pin is worse than
 none — it looks deliberate.** Adding a first-ever `package.json` to the hub, the
@@ -2441,6 +2483,32 @@ ratio and wrong on the conversion, because aperture stops go as √2 and it is
 faithfully is not fidelity, and neither is quietly correcting it. Compute from
 the primary formula, pin it with a test, and put the discrepancy in NOTES.md
 where the owner can rule on it.
+
+### The auditor skipped the file it could not read, and said "Good job!"
+
+`zizmor --offline .github/workflows/` printed
+`No findings to report. Good job!` and exited **0** while one of the five
+workflows had never been audited at all. A YAML error — a `run:` line written
+as `run: "$RUNNER_TEMP/bin/zizmor" --offline …`, which YAML reads as a quoted
+scalar followed by garbage — made the file unparseable, and zizmor's default
+behaviour is to log `failed to parse input` at WARN, skip it, and carry on. The
+warning scrolled past in a wall of cheerful `🌈 completed` lines. The only
+reason it was caught is that the file count in the output dropped from five to
+four.
+
+This is §7g and the top of this section in a tool somebody else wrote: **a check
+that silently reduces its own scope is worse than one that fails, because the
+green tick now certifies less than you think it does — and it is the malformed
+workflow, the one most likely to be wrong, that gets excused.** zizmor ships
+`--strict-collection` for exactly this and it is not the default. It is now on
+in both repos and in `npm run security`.
+
+**Ask of every third-party checker: what does it do with input it cannot
+handle?** Skipping-and-passing is a common default and it is never the one you
+want. Verified the way §7g demands — the broken file was re-broken on purpose
+and the two commands run side by side: without the flag, exit 0 and "Good
+job!"; with it, exit 1.
+*(the hub and photo-field-tools, 2026-08-03.)*
 
 ---
 
