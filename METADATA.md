@@ -23,8 +23,7 @@ under Settings → General → Social preview → Edit.
 | Description | A glass cockpit for your desk — airliner instruments driven by your device's own sensors and live aviation data. Not a simulator; never for navigation. | proposed |
 | Website | https://fauxplane.pages.dev | proposed |
 | Topics | `aviation` `glass-cockpit` `flight-instruments` `adsb` `efis` `pwa` `offline-first` `web-sensors` | proposed |
-| Social preview | Save from https://fauxplane.pages.dev/social-preview.jpg (concept-render card) or https://fauxplane.pages.dev/social-preview-icon.jpg (icon-art card) — long-press the image, Save, then upload 
-in Settings. Sources live in `scripts/social-card*.html`. | proposed |
+| Social preview | **The icon-art card — Noah's pick, 2026-08-03.** Save from https://fauxplane.pages.dev/social-preview-icon.jpg (long-press, Save), upload in Settings → Social preview. Source: `scripts/social-card-icon.html`; og:image already serves it. | proposed |
 
 ## njefferson/noahjefferson
 
