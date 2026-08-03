@@ -149,16 +149,27 @@ if (!/caches\s*\??\.\s*keys\(\)/.test(appSrc)) {
 }
 
 // ---- 5. the cache name carries the release (LESSONS §21) -------------------
-const cacheName = /(?:const|let|var)\s+\w*CACHE\w*\s*=\s*[`"']([^`"']+)[`"']/i.exec(sw)?.[1];
-if (!cacheName) {
+// The WHOLE right-hand side, not the first string literal in it. §21's actual
+// requirement is that the name CHANGES when the release does — and it is met by
+// a semver, by a plain counter (`horizon-v57`), by an interpolation, by
+// concatenation, and by a build-time placeholder. An earlier version of this
+// check demanded a semver triplet and reported two of Noah's six apps as broken
+// when both were fine. Two false positives out of six is how a gate gets
+// ignored, which costs more than the check is worth.
+//
+// So this fails only on the case that is unambiguously wrong: one string
+// literal, fixed, with nothing in it that could ever differ between releases.
+const cacheExpr = /(?:const|let|var)\s+\w*CACHE\w*\s*=\s*([^;\n]+)/i.exec(sw)?.[1]?.trim();
+const literalOnly = cacheExpr && /^[`"'][^`"']*[`"']$/.test(cacheExpr);
+if (!cacheExpr) {
   notes.push('could not find a cache-name constant — check by hand that it carries the release');
-} else if (!/\d+\.\d+\.\d+/.test(cacheName) && !/\$\{/.test(cacheName)) {
+} else if (literalOnly && !/\d/.test(cacheExpr) && !/\$\{/.test(cacheExpr)) {
   failures.push(
-    `the cache name "${cacheName}" carries no version, so a release reuses it and can never replace what is cached `
-    + '(hub LESSONS §21).',
+    `the cache name is the fixed string ${cacheExpr} — nothing in it changes between releases, so a new release `
+    + 'reuses the same cache and can never replace what is already in it (hub LESSONS §21).',
   );
 } else {
-  passed.push(`the cache name carries the release — ${cacheName}`);
+  passed.push(`the cache name can change between releases — ${cacheExpr}`);
 }
 
 for (const n of notes) console.log(`  · ${n}`);
