@@ -2796,6 +2796,25 @@ Two riders:
   CLAUDE.md says to read it first every session. Nobody had noticed, because
   a table looks fine to whoever wrote it. The gate cannot see a chat reply,
   which is exactly where it broke, so the index still earns its place.
+
+  **Amended 2026-08-03, later the same day — and the amendment is the sharper
+  lesson.** Shown the 62 rows, Noah narrowed the rule instead of accepting the
+  sweep: *"If they display correctly, leave them alone. I'm just tired of tables
+  in chat that I have to scroll way to the right to read."* The gate had been
+  built to enforce the rule AS WRITTEN, and the rule as written was broader than
+  the complaint that produced it — it banned tables in `.md` files, which GitHub
+  renders perfectly well on his device. So the gate was busy generating work
+  against documents that were never the problem, in the name of a reader who was
+  never inconvenienced by them.
+  **A gate inherits its rule's precision, and amplifies it.** Prose that is a
+  little too broad is a preference stated loosely; the same breadth wired to an
+  exit code is a machine that will keep demanding the wrong work, and it argues
+  with more authority than the person who wanted the rule. Before enforcing a
+  rule mechanically, check the enforced scope against the ORIGINAL COMPLAINT —
+  not against the sentence the complaint was written down as.
+  The gate now reads COMMIT MESSAGES, which is the surface still covered and one
+  a gate can actually see. Chat, the surface that keeps breaking, remains beyond
+  it — so the `CLAUDE.md` index carries more of the weight here, not less.
 - **Never offer a capability the lessons record as impossible.** The branch
   offer is a distinct failure from forgetting a rule: it promises work that will
   fail *and report success* (`git push --delete` dies on a sideband disconnect,

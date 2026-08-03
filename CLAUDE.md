@@ -15,11 +15,13 @@ is loaded into every session automatically — so a rule that lives only there
 gets read once at the start of a long session and broken four hours later.
 Every item below has actually happened.
 
-- **NEVER A TABLE OR GRID, anywhere Noah reads** — chat, commits, PR bodies,
-  `NOTES.md`, all of it. They do not render on his iPad; the columns are lost
-  silently while the prose around them looks fine. Headed lists instead.
-  (Doctrine §2. Files are gated by `docs-check.mjs`; chat replies are not, and
-  chat is where it happened again on 2026-08-03.)
+- **NEVER A TABLE IN CHAT.** The test is how it ARRIVES: chat delivers markdown
+  RAW, so he scrolls far right and the columns are effectively lost while the
+  prose around them looks fine. Headed lists instead. Same for commit messages
+  (`git log` shows them raw). **Tables inside `.md` files are FINE** — GitHub
+  renders them; leave them alone. (Doctrine §2, narrowed by Noah 2026-08-03.
+  `docs-check.mjs` gates commit messages; chat is not gated, and chat is where
+  it happened again on 2026-08-03.)
 - **A session CANNOT delete a remote branch.** The git relay drops the
   connection on any ref deletion and then prints `Everything up-to-date`, so it
   looks like it worked. The GitHub MCP has no tool for it either. Hand it to

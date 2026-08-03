@@ -10,8 +10,10 @@ and never typed fresh in chat where it evaporates.
 applied it and said so; `proposed` means the value below is awaiting his
 confirm. Never report a repo "set up" while any item says proposed (§10).
 
-**No tables in this file, ever** (Doctrine §3). One item per heading, its value
-on its own line. `node docs-check.mjs` fails the build if a grid creeps back in.
+**One item per heading, its value on its own line.** Not because tables are
+banned in files — Doctrine §2 was narrowed on 2026-08-03 and a rendered `.md`
+table is fine — but because these values get copied one at a time into a GitHub
+form, and a list is what you read while doing that.
 
 Where to apply: repo → Settings → General. Description and website live in
 "About" (the ⚙ on the repo home page also works); topics likewise; social

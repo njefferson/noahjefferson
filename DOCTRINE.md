@@ -99,18 +99,30 @@ Noah is iPad-first and often driving. So:
 - Deliver FINISHED work — no drafts, no pseudo-code. Iterate privately, hand
   over the finished thing.
 - His time is expensive; runner time and your time are free.
-- **NEVER RENDER A TABLE OR ANY GRID LAYOUT IN ANYTHING NOAH READS.** Markdown
-  tables do not display on his iPad — they arrive as unreadable pipe-and-dash
-  noise, and the content inside them is simply lost. This binds chat replies,
-  commit messages, PR bodies, `NOTES.md`, plan files, changelogs and every other
-  artifact he opens. Use headed lists, short prose, or one fact per line instead.
-  **Enforced by [`docs-check.mjs`](docs-check.mjs)** over every tracked `.md`,
-  run from the hub and never forked — because this rule was in this document
-  the entire time and three files still accumulated 62 rows between them,
-  `NOTES.md` among them. A rule nothing enforces is a preference (§16.8). The
-  gate cannot see a chat reply, so that part is still on the session.
-  A comparison that feels tabular is written as a list per item, never as
-  columns. (Noah, 2026-07-29, after repeated offences.)
+- **NEVER A TABLE IN CHAT, OR IN A COMMIT MESSAGE.** **The test is how it
+  ARRIVES, not where it lives.** In chat and in `git log`, markdown is delivered
+  RAW — so a table reaches him as pipe-and-dash noise he has to scroll far to
+  the right to read, and the right-hand columns are effectively lost while the
+  prose around them looks fine. Use headed lists, short prose, or one fact per
+  line. A comparison that feels tabular is written as a list per item, never as
+  columns. Commit messages count for the same reason: he reads them in `git log`
+  and in narrow commit views, and in some apps the last commits ARE the in-app
+  patch notes (§5).
+  **A table inside an `.md` file is FINE** — GitHub renders it as a real table
+  on his device, which is the whole point of the test above. Do not go hunting
+  for tables in documents to rewrite.
+  **Enforced by [`docs-check.mjs`](docs-check.mjs)** over COMMIT MESSAGES, run
+  from the hub and never forked. A rule nothing enforces is a preference
+  (§16.8) — but the gate cannot see a chat reply, and chat is the surface that
+  actually keeps breaking, so that half stays on the session. It is in the hub's
+  `CLAUDE.md` index for exactly that reason.
+  *(Noah, 2026-07-29, after repeated offences — then NARROWED by him on
+  2026-08-03: "If they display correctly, leave them alone. I'm just tired of
+  tables in chat that I have to scroll way to the right to read." The original
+  rule banned tables in every artifact including `NOTES.md`, and a sweep on that
+  reading found 62 rows across three documents. The documents were never the
+  thing that annoyed him. Nine tables in Frame's docs were left standing on this
+  ruling; a later session must not "fix" them.)*
 
 ## 3. Taste
 
