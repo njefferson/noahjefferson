@@ -808,6 +808,46 @@ verified against the publisher's own test values, and committed the same hour.
 His task list went from three items to zero, and the verification found three
 real bugs that would otherwise have shipped.*
 
+## 7d. Every app shows the reader WHAT CHANGED
+
+**A version string tells a reader that something changed. It never tells them
+what.** §7b puts the version on screen because Noah reports from his device; the
+same argument finishes here. He installs a build, uses it, and has no way to
+know whether the thing he complained about last time is the thing he is looking
+at now — so he asks, and the answer costs a round trip that the app could have
+saved by simply saying.
+
+**The rule.** An app that has shipped more than one release SHOWS ITS PATCH
+NOTES, in the app, reachable from a place a reader already goes.
+
+- **Reachable without hunting.** Beside the version, on the About or first-run
+  surface, or behind the version stamp itself. Never a sixth tab. If a reader
+  has to be told where the notes are, they are in the wrong place.
+- **The current release at minimum, and a short history if there is room.**
+  BOUNDED, per §-the-panel-rule: a list that grows by accumulation eventually
+  becomes the app. Half a dozen entries is a history; forty is an archive, and
+  an archive belongs in the repo.
+- **Written for the reader, in their words, not the commit's.** §7's rule about
+  changelogs applies with more force here, because this copy is on screen. "The
+  radar no longer empties when you change range" — not "guard the nearby
+  assignment on result.ok".
+- **Say what is still broken.** An app that lists only its fixes is an
+  advertisement. The open items a reader would otherwise rediscover — the thing
+  that still does not work on their platform, the reading that is still coarse —
+  belong beside the fixes. This is §-honesty applied to the release itself.
+- **GENERATED FROM ONE SOURCE, never typed twice.** The same trap as §7b: notes
+  maintained separately from the release drift from it, and the drift is
+  invisible. Derive them from whatever the release process already writes —
+  `NOTES.md`, the tag body, the commit subjects — or keep one data file that
+  both the app and the repo read.
+
+**What this is not.** It is not a modal that interrupts a reader who wanted an
+instrument. Show it on request, or once per release at most, and never in front
+of something they are trying to use.
+
+*(Added 2026-08-03 at Noah's instruction, after five releases in one evening
+that he could only tell apart by asking.)*
+
 ## 16. Security and the supply chain
 
 These apps are small, free and personal, which changes the threat model but does

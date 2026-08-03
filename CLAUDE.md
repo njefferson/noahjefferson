@@ -26,6 +26,14 @@ elsewhere; never fork it into another repo. When a doctrine rule changes, edit i
 tell the sibling repos to re-point (their `CLAUDE.md` files link to this copy).
 Never fork the doctrine into another repo — link to it.
 
+## Patch notes are a doctrine rule now (§7d)
+Every app that has shipped more than one release SHOWS THE READER WHAT CHANGED,
+in the app, reachable from somewhere they already go — the current release at
+minimum, written in their words, **including what is still broken**, and
+generated from one source rather than typed twice. Added at Noah's instruction
+on 2026-08-03. The sibling repos inherit it and each needs the surface built;
+none has one yet.
+
 ## Cross-app connective tissue
 This hub links OUT to every sibling app, and each app links back. It also hosts
 the shared **accessibility statement** (`/accessibility`) that every app's About
