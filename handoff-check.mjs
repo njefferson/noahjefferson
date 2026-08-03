@@ -56,7 +56,34 @@ if (!deployWf) {
   notes.push('no deploy workflow — the deploy checks below do not apply');
 } else {
   // What project does this repo deploy to, and does it have a staging branch?
-  const project = (/--project-name=([\w-]+)/.exec(deployWf.text) || [])[1];
+  //
+  // The capture is DELIBERATELY LOOSE and then resolved, because the first
+  // version matched `[\w-]+` only and therefore missed every workflow that
+  // parameterises the name — which is the better practice, not the worse one.
+  // Quietkeep sets `PROJECT: quietkeep` once at workflow level and writes
+  // `--project-name=${{ env.PROJECT }}` at four call sites; the gate declared
+  // it "names no --project-name" and failed a repo that names it correctly.
+  //
+  // **The false positive was the lesser half.** `project` also feeds the
+  // staging-URL assertion below, so the early `if (!project)` return meant
+  // that check — Doctrine §7, the one about a staged candidate leaving a
+  // visible URL — had NEVER RUN against that repo. A gate whose first failure
+  // hides its later checks reports less than it appears to, and the missing
+  // assertion is invisible precisely because something else went red.
+  // NOT `\S+` — a GitHub expression contains spaces (`${{ env.PROJECT }}`), so
+  // a non-whitespace capture stops at `${{` and resolves to nothing. The
+  // alternation matches an expression OR a bare name, and nothing else.
+  const projectRaw = (/--project-name=(\$\{\{[^}]*\}\}|[\w-]+)/.exec(deployWf.text) || [])[1];
+  const project = (() => {
+    if (!projectRaw) return undefined;
+    // `${{ env.X }}` → the workflow's own `env:` value for X. Anything else
+    // that still carries an expression is left unresolved rather than guessed:
+    // a name this script cannot work out is reported, never invented.
+    const expr = /^\$\{\{\s*env\.(\w+)\s*\}\}$/.exec(projectRaw);
+    if (!expr) return /^[\w-]+$/.test(projectRaw) ? projectRaw : undefined;
+    const val = new RegExp(`^\\s*${expr[1]}:\\s*([\\w-]+)\\s*$`, 'm').exec(deployWf.text);
+    return val ? val[1] : undefined;
+  })();
   const hasStaging = /branches:\s*\[[^\]]*staging/.test(deployWf.text);
 
   if (!project) {
@@ -79,8 +106,22 @@ if (!deployWf) {
 
         // The recorded version must be the one that would deploy. A stale URL
         // block claiming an old build is worse than none.
-        const vSrc = read('src/version.js') || read('package.json');
-        const vm = vSrc && (/VERSION\s*=\s*'([^']+)'/.exec(vSrc) || /"version":\s*"([^"]+)"/.exec(vSrc));
+        //
+        // Read the version the way the REPO versions, in that order of
+        // authority. `package.json` was the only source until 2026-08-03, and
+        // it is the weakest: Quietkeep leaves it at the `0.0.0` npm-init
+        // placeholder and carries its real release triplet in the service
+        // worker's cache name, which its own `changelog:check` pins to the
+        // changelog head. Demanding "0.0.0 beside the URL" would have been a
+        // gate inventing a requirement the repo is right to ignore.
+        const swText = read('public/sw.js') || read('sw.js');
+        const vm = (swText && /CACHE\s*=\s*['"][\w-]*?-(\d+\.\d+\.\d+)['"]/.exec(swText))
+          || (() => {
+            const vSrc = read('src/version.js') || read('package.json');
+            const m = vSrc && (/VERSION\s*=\s*'([^']+)'/.exec(vSrc) || /"version":\s*"([^"]+)"/.exec(vSrc));
+            // `0.0.0` is the npm placeholder, not a claim about a release.
+            return m && m[1] !== '0.0.0' ? m : null;
+          })();
         if (vm) {
           const version = vm[1];
           const block = notes_md.slice(Math.max(0, found.index - 400), found.index + 400);
