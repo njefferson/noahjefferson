@@ -14,25 +14,34 @@ Where to apply: repo → Settings → General. Description and website in "About
 (the ⚙ on the repo home page also works); topics likewise; social preview
 under Settings → General → Social preview → Edit.
 
+**How to verify a row rather than assume it.** Description, website and topics
+come back from the search API (`repo:owner/name`, full output). The social
+preview does NOT — no API field exposes it. Read the repo's own HTML instead
+and look at the `og:image` host: `repository-images.githubusercontent.com`
+means a card was really uploaded, `opengraph.githubassets.com` means GitHub is
+auto-generating one and the upload did not land. Note that a markdown-
+converting fetcher drops the `<head>`, so this needs the raw HTML.
+
 ---
 
 ## njefferson/fauxplane
 
 | item | value | status |
 |---|---|---|
-| Description | A glass cockpit for your desk — airliner instruments driven by your device's own sensors and live aviation data. Not a simulator; never for navigation. | proposed |
-| Website | https://fauxplane.pages.dev | proposed |
-| Topics | `aviation` `glass-cockpit` `flight-instruments` `adsb` `efis` `pwa` `offline-first` `web-sensors` | proposed |
-| Social preview | **The icon-art card — Noah's pick, 2026-08-03.** Save from https://fauxplane.pages.dev/social-preview-icon.jpg (long-press, Save), upload in Settings → Social preview. Source: `scripts/social-card-icon.html`; og:image already serves it. | proposed |
+| Description | A glass cockpit for your desk — airliner instruments driven by your device's own sensors and live aviation data. Not a simulator; never for navigation. | **set** 2026-08-03 |
+| Website | https://fauxplane.pages.dev | **set** 2026-08-03 |
+| Topics | `aviation` `glass-cockpit` `flight-instruments` `adsb` `efis` `pwa` `offline-first` `web-sensors` | **set** 2026-08-03 |
+| Social preview | **The icon-art card — Noah's pick, 2026-08-03.** Source: `scripts/social-card-icon.html`; og:image serves it too. | **set** 2026-08-03 |
+| Default branch | `main`. Currently `claude/jet-panel-pwa-amendments-f07ygu` — a harness branch this repo's policy says to ignore (Doctrine §11), so the landing page, the default clone and every new PR base all point at stale code. Settings → General → Default branch → switch to `main`. | proposed |
 
 ## njefferson/noahjefferson
 
 | item | value | status |
 |---|---|---|
-| Description | Photography, and small free tools for enjoying the world. | proposed |
-| Website | https://noahjefferson.pages.dev | proposed |
-| Topics | `photography` `portfolio` `free-tools` `pwa` `offline-first` `static-site` | proposed |
-| Social preview | Delivered to Noah in chat, 2026-08-03. Also now genuinely at https://noahjefferson.pages.dev/og.png — the file had never been copied into `public/`, so index.html's og:image and the URL this row used to give were both 404. Regenerate with `node render-social.mjs`, then copy to `public/og.png`. | proposed |
+| Description | Photography, and small free tools for enjoying the world. | **set** 2026-08-03 |
+| Website | https://noahjefferson.pages.dev | **set** 2026-08-03 |
+| Topics | `photography` `portfolio` `free-tools` `pwa` `offline-first` `static-site` | **set** 2026-08-03 |
+| Social preview | Delivered to Noah in chat, 2026-08-03. Also at https://noahjefferson.pages.dev/og.png — the file had never been copied into `public/`, so index.html's og:image and the URL this row used to give were both 404 until then. Regenerate with `node render-social.mjs`, then copy to `public/og.png`. | **set** 2026-08-03 |
 
 ---
 
