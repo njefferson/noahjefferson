@@ -2763,3 +2763,46 @@ checked, precisely because the checked ones get caught.
 *(fauxplane, 2026-08-03 — found by five adversarial reviewers set against a
 one-hour-old fix; three of the five findings were this same shape in different
 clothes.)*
+
+---
+
+**The documentation a session obeys is the documentation the harness INJECTS,
+not the documentation it is told to open.** In one hour, two written rules were
+broken: a markdown table was rendered into chat, and a session offered to delete
+a remote branch. Both are recorded — the table ban has been Doctrine §3 since
+the beginning, and the branch relay's inability to delete a ref has been in this
+file since 2026-07-28. Neither rule was disputed, forgotten, or judged
+inapplicable. They were simply not in front of anyone at the moment of typing.
+
+The mechanism is worth stating plainly, because it is a property of the tooling
+and not of anyone's care. `CLAUDE.md` is loaded into context automatically at
+every session start. `DOCTRINE.md` (900 lines) and this file (2700) are *linked*
+from it — they must be deliberately opened, which happens once, early, before
+any of the work that will violate them exists. Four hours later the rule is a
+memory competing with a task, and memories lose. The table went into a reply
+about metadata verification; the branch offer went into a tidy-up paragraph.
+Neither moment felt like a moment for consulting a doctrine.
+
+So: **a rule that binds EVERY message must live in the injected file.** Not
+forked there — indexed, one line each, pointing at the canonical text. The hub's
+`CLAUDE.md` now carries that index. Length is the whole reason it works, so it
+earns entries only by having actually been broken.
+
+Two riders:
+
+- **A gate beats an index, wherever one is possible.** The table ban is now
+  `docs-check.mjs`, run from the hub over every tracked `.md`, and it found 62
+  rows across three documents — including `NOTES.md`, the file whose own
+  CLAUDE.md says to read it first every session. Nobody had noticed, because
+  a table looks fine to whoever wrote it. The gate cannot see a chat reply,
+  which is exactly where it broke, so the index still earns its place.
+- **Never offer a capability the lessons record as impossible.** The branch
+  offer is a distinct failure from forgetting a rule: it promises work that will
+  fail *and report success* (`git push --delete` dies on a sideband disconnect,
+  then prints `Everything up-to-date`). Before writing "happy to do X", check
+  whether X is on the list of things that do not work. Three of the five entries
+  in the new index are of this shape.
+
+*(2026-08-03. Written the same hour both rules were broken, at Noah's
+insistence — he had to point at his own screenshot of an unreadable table to get
+it noticed.)*

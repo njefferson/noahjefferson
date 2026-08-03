@@ -104,6 +104,11 @@ Noah is iPad-first and often driving. So:
   noise, and the content inside them is simply lost. This binds chat replies,
   commit messages, PR bodies, `NOTES.md`, plan files, changelogs and every other
   artifact he opens. Use headed lists, short prose, or one fact per line instead.
+  **Enforced by [`docs-check.mjs`](docs-check.mjs)** over every tracked `.md`,
+  run from the hub and never forked — because this rule was in this document
+  the entire time and three files still accumulated 62 rows between them,
+  `NOTES.md` among them. A rule nothing enforces is a preference (§16.8). The
+  gate cannot see a chat reply, so that part is still on the session.
   A comparison that feels tabular is written as a list per item, never as
   columns. (Noah, 2026-07-29, after repeated offences.)
 

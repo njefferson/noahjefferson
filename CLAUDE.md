@@ -8,6 +8,33 @@
 > **repo-metadata confirm rule** (§10). **Where anything below overlaps the
 > Doctrine, the Doctrine wins.** This file keeps only what is specific to this repo.
 
+## The rules that get broken anyway — read these before typing
+This is an INDEX, not a fork; the canonical text is in `DOCTRINE.md` and
+`LESSONS.md`. It exists because those two files must be OPENED, while this one
+is loaded into every session automatically — so a rule that lives only there
+gets read once at the start of a long session and broken four hours later.
+Every item below has actually happened.
+
+- **NEVER A TABLE OR GRID, anywhere Noah reads** — chat, commits, PR bodies,
+  `NOTES.md`, all of it. They do not render on his iPad; the columns are lost
+  silently while the prose around them looks fine. Headed lists instead.
+  (Doctrine §3. Files are gated by `docs-check.mjs`; chat replies are not, and
+  chat is where it happened again on 2026-08-03.)
+- **A session CANNOT delete a remote branch.** The git relay drops the
+  connection on any ref deletion and then prints `Everything up-to-date`, so it
+  looks like it worked. The GitHub MCP has no tool for it either. Hand it to
+  Noah as a manual step (GitHub → Branches → bin icon) — never offer to do it.
+  (LESSONS, 2026-07-28.)
+- **A session CANNOT set repo metadata** — description, website, topics, social
+  preview, default branch are all GitHub-UI steps. Propose in `METADATA.md`;
+  never report a repo set up while a row says proposed. (Doctrine §10.)
+- **AskUserQuestion is permanently banned.** (Doctrine §0.)
+- **Verify a push by reading the remote**, not by reading the push output. No
+  range line in the output means nothing moved. (LESSONS, 2026-08-02.)
+
+The shape of three of these is the same: **do not offer a capability the
+lessons already record as impossible.** Check before promising, not after.
+
 ## What this repo is
 The personal link hub at **noahjefferson.pages.dev** — photography accounts and
 the free web apps. Static, self-contained, no build step. `public/` is the

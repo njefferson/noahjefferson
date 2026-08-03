@@ -27,15 +27,26 @@ node palette-check.mjs palettes/<yourapp>.json         # your reskin
 Every app names its colours differently. The gate and this document speak in
 **roles**, so one instrument serves all of them. Map your tokens onto these:
 
-| Role | What it is | Studio's name | Hub's name |
-|---|---|---|---|
-| `page` | the backdrop everything sits on | `--bg` | `--bg` |
-| `pageAlt` | the gradient's other stop, if any | `--bg-2` | `--bg2` |
-| `surfaces[]` | the fill ladder — **rest, raised, pressed** | `--surface`, `--surface-2`, `--surface-3` | `--surface`, `--surface-hi` |
-| `rail` | **load-bearing** control edge — carries boundaries | `--line-2` | `--line` |
-| `hairline` | decorative separator, never the sole affordance | `--line` | — |
-| `text[]` | the voice scale — **primary, secondary, tertiary** | `--txt`, `--txt-2`, `--txt-3` | `--text`, `--muted` |
-| `accents{}` | anything used as coloured **text**, ring or band | `--accent` | five categoricals |
+**`page`** — the backdrop everything sits on.
+Studio calls it `--bg`; the hub calls it `--bg`.
+
+**`pageAlt`** — the gradient's other stop, if any.
+Studio `--bg-2`; hub `--bg2`.
+
+**`surfaces[]`** — the fill ladder: **rest, raised, pressed**.
+Studio `--surface`, `--surface-2`, `--surface-3`; hub `--surface`, `--surface-hi`.
+
+**`rail`** — the **load-bearing** control edge, the one that carries boundaries.
+Studio `--line-2`; hub `--line`.
+
+**`hairline`** — a decorative separator, never the sole affordance.
+Studio `--line`; the hub has none.
+
+**`text[]`** — the voice scale: **primary, secondary, tertiary**.
+Studio `--txt`, `--txt-2`, `--txt-3`; hub `--text`, `--muted`.
+
+**`accents{}`** — anything used as coloured **text**, ring or band.
+Studio `--accent`; the hub has five categoricals.
 
 Two roles get confused constantly and must not be:
 
@@ -54,16 +65,34 @@ Two roles get confused constantly and must not be:
 
 **HARD FLOORS — any violation is a failure, the same as a crash.**
 
-| | Threshold | Why not the WCAG number |
-|---|---|---|
-| Text on every fill it can land on | **≥ 4.6:1** | AA is 4.5. A value specced *at* the line drifts under it the first time any neighbouring token moves. |
-| Rail on every fill it edges | **≥ 3.4:1** | 1.4.11 is 3.0, but a 1px edge **renders ~0.15 below its arithmetic** — antialiasing. Measured, not assumed. |
-| Accent as focus ring | **≥ 3:1** | on every surface a ring can circle. |
-| Text hierarchy | **strictly ordered on every fill** | primary louder than secondary louder than tertiary, everywhere — not just on the one surface someone checked. |
-| Adjacent text tokens | **ΔE ≥ 2.3** | below one JND they are one token wearing two names. Shipped once at ΔE 1.65. |
-| Fill ladder (*elevation*) | **monotonic away from the page** | rest, then raised, then pressed — each further than the last, or "higher" stops meaning anything. |
-| Surface *states* (hover etc.) | **ΔE ≥ 2.3 between states** | a state ladder carries no elevation order — a light-theme hover legitimately darkens toward the page. It owes only being seen. See §7. |
-| Text on an accent-tinted fill | **≥ 4.6:1** | if the app tints a fill with its accent (active chips), that composite is a real background. Regressed once. |
+**Text on every fill it can land on — ≥ 4.6:1.**
+AA is 4.5. A value specced *at* the line drifts under it the first time any
+neighbouring token moves.
+
+**Rail on every fill it edges — ≥ 3.4:1.**
+1.4.11 is 3.0, but a 1px edge **renders ~0.15 below its arithmetic** because of
+antialiasing. Measured, not assumed.
+
+**Accent as focus ring — ≥ 3:1**, on every surface a ring can circle.
+
+**Text hierarchy — strictly ordered on every fill.**
+Primary louder than secondary louder than tertiary, everywhere — not just on
+the one surface someone checked.
+
+**Adjacent text tokens — ΔE ≥ 2.3.**
+Below one JND they are one token wearing two names. Shipped once at ΔE 1.65.
+
+**Fill ladder (*elevation*) — monotonic away from the page.**
+Rest, then raised, then pressed, each further than the last, or "higher" stops
+meaning anything.
+
+**Surface *states* (hover etc.) — ΔE ≥ 2.3 between states.**
+A state ladder carries no elevation order: a light-theme hover legitimately
+darkens toward the page. It owes only being seen. See §7.
+
+**Text on an accent-tinted fill — ≥ 4.6:1.**
+If the app tints a fill with its accent (active chips), that composite is a
+real background. Regressed once.
 
 **ASPIRATIONS — score these, never trade a floor for one.**
 
@@ -145,12 +174,22 @@ verification, three judging lenses), then re-verified on one shared instrument.
 tile variants for hub-shaped link pages, are in
 [`palettes/families.json`](palettes/families.json).
 
-| | Night `page` → `surface` | Day `page` → `surface` | Character | Chrome chroma |
-|---|---|---|---|---|
-| **Instrument** *(default)* | `#1a1a1a` → `#3a3a3a` | `#c4bcab` → `#eee6d6` | exact-neutral night, warm day | 0.0000 / 0.025 |
-| **Paper** | `#141519` → `#35373c` | `#c8c1b0` → `#f2eee3` | cool night, warm paper day | 0.009 / 0.025 |
-| **Mono** | `#131313` → `#363636` | `#c5c5c5` → `#efefef` | neutral in *both* modes | 0.0000 / 0.0000 |
-| **Soft** | `#15161a` → `#36373c` | `#bfbab0` → `#e8e4da` | lowest glare, capped contrast | 0.010 / 0.015 |
+**Instrument** *(the default)* — exact-neutral night, warm day.
+Night `page` → `surface`: `#1a1a1a` → `#3a3a3a`.
+Day `page` → `surface`: `#c4bcab` → `#eee6d6`.
+Chrome chroma 0.0000 night / 0.025 day.
+
+**Paper** — cool night, warm paper day.
+Night `#141519` → `#35373c`. Day `#c8c1b0` → `#f2eee3`.
+Chrome chroma 0.009 / 0.025.
+
+**Mono** — neutral in *both* modes.
+Night `#131313` → `#363636`. Day `#c5c5c5` → `#efefef`.
+Chrome chroma 0.0000 / 0.0000.
+
+**Soft** — lowest glare, capped contrast.
+Night `#15161a` → `#36373c`. Day `#bfbab0` → `#e8e4da`.
+Chrome chroma 0.010 / 0.015.
 
 **Instrument is the recommended default** — it is the only family whose *worst*
 text pairing is ≥ 4.87 across all four palettes, with primary text AAA on every
