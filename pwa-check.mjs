@@ -135,7 +135,11 @@ if (!tellsReader) {
 }
 
 // ---- 4. the diagnostic reports cache state --------------------------------
-if (!/caches\.keys\(\)/.test(appSrc)) {
+// `caches?.keys()` counts. Optional chaining is the CORRECT way to touch the
+// Cache API — it is absent in some privacy modes and in older WebViews — so a
+// regex insisting on a bare dot fails the repos that guard it properly.
+// Quietkeep writes `globalThis.caches?.keys()` and this said it read nothing.
+if (!/caches\s*\??\.\s*keys\(\)/.test(appSrc)) {
   failures.push(
     'nothing reads `caches.keys()`, so the §7f diagnostic cannot say which copy of the app this device is holding. '
     + 'The version stamp alone cannot tell "current" from "what the cache still holds" (§7h.4).',
