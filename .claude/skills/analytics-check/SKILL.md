@@ -43,6 +43,18 @@ the trend.
 - **AI crawlers are now the largest bot category** hitting the apps — real, not
   a threat, and excluded from any human count by Cloudflare's `verifiedBotCategory`.
 
+## Geography is country-only on this plan
+
+Do **not** promise a by-state, by-metro, or by-city view. `httpRequestsAdaptiveGroups`
+has 102 dimensions but only two are geographic — `clientCountryName` and `coloCode`
+(the serving data-centre) — and on Noah's Cloudflare plan **`coloCode` AND
+`clientASNDescription` (network owner) are both query-gated** ("account does not
+have access to the field", verified 2026-08-03). So the finest geography available
+is **country**. The one sub-country signal left is IP-block clustering — distinct
+mobile/tablet IPs and distinct **/24 blocks** (the `region` command) — which speaks
+to "how many separate networks," never to where or who. Getting region/network back
+would require a higher Cloudflare analytics tier.
+
 ## Known scanner IPs to exclude
 
 ```
