@@ -1198,6 +1198,105 @@ async function humans(opts) {
   console.log('(pushes it down). Read it as a band, and watch the trend, not one week.');
 }
 
+// ---------------------------------------------------------------- region
+
+// "Which state?" cannot be answered: httpRequestsAdaptiveGroups has 102
+// dimensions and exactly ONE below country is geographic — coloCode, the
+// Cloudflare data centre that served the request. That is a metro-ish PROXY
+// for where the user is (nearest PoP), wide and imperfect, NOT their state.
+// This groups the trusted US devices (distinct mobile/tablet IPs) by that
+// colo, by network owner, and counts distinct /24 blocks — the closest honest
+// read on "a handful of people in a few places" vs "many". Aggregates only:
+// never an address, only counts by region/network (Doctrine §9).
+async function region(opts) {
+  const days = opts.days || 7;
+  const dayMs = 86400_000;
+  const nowD = new Date();
+  const endD = new Date(Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth(), nowD.getUTCDate()));
+  const startD = new Date(endD.getTime() - days * dayMs);
+  const t0 = startD.toISOString();
+  const t1 = endD.toISOString();
+  const excl = opts.excludeIps?.length
+    ? `, clientIP_notin: [${opts.excludeIps.map((i) => `"${i}"`).join(', ')}]`
+    : '';
+  const filter = `datetime_geq: "${t0}", datetime_leq: "${t1}", requestSource: "eyeball"${excl}`;
+  const fmt = (n) => (n == null ? 'n/a' : Math.round(n).toLocaleString());
+
+  console.log(`Window: ${t0.slice(0, 10)} .. ${new Date(endD - dayMs).toISOString().slice(0, 10)} (complete UTC days), requestSource=eyeball.`);
+  console.log('NO US-state dimension exists in this dataset — only country. Proxies below:');
+  console.log('  coloCode = the Cloudflare data centre that served the request (metro-ish region, NOT state).');
+  console.log('  network owner = clientASNDescription (may be blank if gated on this plan).');
+  console.log('');
+
+  const run = async (label, body) => {
+    const { data, errors } = await gqlSoft(
+      `{ viewer { accounts(filter: { accountTag: "${ACCOUNT}" }) { rows: ${body} } } }`
+    );
+    if (errors.length) { console.log(`[${label}] unavailable: ${errors.map((e) => e.message).join('; ')}`); return null; }
+    return data?.viewer?.accounts?.[0]?.rows ?? [];
+  };
+
+  // Trusted US devices only: mobile/tablet, in the US. Try the device-type
+  // filter first; fall back to filtering in code if the plan rejects it.
+  let rows = await run('region',
+    `httpRequestsAdaptiveGroups(limit: 10000, filter: { ${filter}, clientDeviceType_in: ["mobile", "tablet"], clientCountryName: "US" }) {
+      count
+      dimensions { clientIP coloCode clientASNDescription }
+    }`);
+  if (!rows) {
+    const raw = await run('region-fallback',
+      `httpRequestsAdaptiveGroups(limit: 10000, filter: { ${filter} }) {
+        count
+        dimensions { clientIP clientCountryName clientDeviceType coloCode clientASNDescription }
+      }`);
+    rows = raw ? raw.filter((r) => r.dimensions?.clientCountryName === 'US' && /mobile|tablet/i.test(r.dimensions?.clientDeviceType || '')) : null;
+  }
+  if (!rows) { console.log('No data.'); return; }
+  if (rows.length === 10000) console.log('WARNING: 10k-row cap — counts are a floor.\n');
+
+  const HOSTING_RE = /amazon|aws|hetzner|ovh|digital ?ocean|google|microsoft|azure|oracle|linode|akamai|fastly|m247|datacamp|choopa|vultr|contabo|leaseweb|scaleway|alibaba|tencent|hosting|server|datacent|colocat|cdn|cloud/i;
+  const MOBILE_RE = /mobil|wireless|cellular|t-?mobile|verizon|cellco|sprint|cricket|metropcs|boost|vodafone|telefonica|telus|rogers|bell mobility/i;
+
+  const colo = new Map(); // coloCode -> Set(ip)
+  const nets = new Map(); // asn -> Set(ip)
+  const ips = new Set();
+  const s24 = new Set();  // distinct /24 (or /48) blocks
+  for (const r of rows) {
+    const ip = r.dimensions?.clientIP; if (!ip) continue;
+    ips.add(ip);
+    const cc = r.dimensions?.coloCode || '(none)';
+    const asn = (r.dimensions?.clientASNDescription || '').trim() || '(unknown/gated)';
+    if (!colo.has(cc)) colo.set(cc, new Set());
+    colo.get(cc).add(ip);
+    if (!nets.has(asn)) nets.set(asn, new Set());
+    nets.get(asn).add(ip);
+    if (ip.includes('.')) { const p = ip.split('.'); s24.add(`${p[0]}.${p[1]}.${p[2]}`); }
+    else s24.add(ip.split(':').slice(0, 3).join(':'));
+  }
+
+  console.log(`distinct US real devices (mobile+tablet IPs): ${fmt(ips.size)}   <- overcounts: phones churn IPs`);
+  console.log(`distinct /24 network blocks among them:       ${fmt(s24.size)}   <- closer to "how many places/networks"`);
+  console.log('');
+
+  console.log('== BY EDGE LOCATION (coloCode — rough region, NOT state) ==');
+  for (const [c, s] of [...colo.entries()].sort((a, b) => b[1].size - a[1].size)) {
+    console.log(`  ${c.padEnd(6)} ${String(s.size).padStart(4)} device(s)`);
+  }
+  console.log('');
+
+  console.log('== BY NETWORK OWNER (distinct IPs; classification is best-effort) ==');
+  let homeNets = 0, mobileIps = 0, hostIps = 0;
+  for (const [asn, s] of [...nets.entries()].sort((a, b) => b[1].size - a[1].size)) {
+    const cls = HOSTING_RE.test(asn) ? 'hosting' : MOBILE_RE.test(asn) ? 'mobile' : 'home/isp';
+    if (cls === 'hosting') hostIps += s.size; else if (cls === 'mobile') mobileIps += s.size; else homeNets += 1;
+    console.log(`  ${asn.slice(0, 40).padEnd(42)} ${String(s.size).padStart(4)} IPs  [${cls}]`);
+  }
+  console.log('');
+  console.log(`distinct home/ISP networks:  ${homeNets}   (an ISP ASN can still cover several households, so this is fuzzy)`);
+  console.log(`mobile-carrier IPs:          ${mobileIps}   (churn — collapses to far fewer people)`);
+  console.log(`hosting/datacenter IPs:      ${hostIps}   (not people)`);
+}
+
 // ---------------------------------------------------------------- top-ips
 
 // This repo is PUBLIC, so whatever this prints ends up in a publicly readable
@@ -1314,7 +1413,7 @@ const flag = (name, fallback) => {
   return i === -1 ? fallback : rest[i + 1];
 };
 
-if (['datasets', 'fields', 'report', 'top-ips', 'calibrate', 'people', 'humans', 'snapshot'].includes(cmd)) await preflight();
+if (['datasets', 'fields', 'report', 'top-ips', 'calibrate', 'people', 'humans', 'snapshot', 'region'].includes(cmd)) await preflight();
 
 switch (cmd) {
   case 'datasets':
@@ -1362,6 +1461,15 @@ switch (cmd) {
         .filter(Boolean),
     });
     break;
+  case 'region':
+    await region({
+      days: Number(flag('days', 7)),
+      excludeIps: (flag('exclude-ip', '') || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    });
+    break;
   case 'people':
     await people({
       days: Number(flag('days', 7)),
@@ -1397,4 +1505,5 @@ switch (cmd) {
     console.log('  people [--days 7] [--exclude-ip a,b] — distinct IPs by network class, bounded people estimate');
   console.log('  humans [--days 7] [--exclude-ip a,b] — real users by device type (mobile/tablet), desktop investigated');
   console.log('  snapshot [--days 7] [--exclude-ip a,b] — totals + by-app + by-country + app x country + real-user floor + trend row');
+  console.log('  region [--days 7] [--exclude-ip a,b] — US real devices by edge location (colo, a region proxy) + network + /24 blocks');
 }
