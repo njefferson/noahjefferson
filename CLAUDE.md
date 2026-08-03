@@ -47,7 +47,13 @@ app exists.
 - **First-run orientation that SURVIVES whatever the reader presses to begin**,
   and then lives permanently behind the (i). Move it there; never copy it.
 - **Patch notes from one source** (§7d), including what is still broken.
-- **A text diagnostic report** (§7f). Ask Noah for that, never for a screenshot.
+- **A text diagnostic report** (§7f). Ask Noah for that, never for a screenshot,
+  and make it carry what the browser string HIDES — iPadOS Safari reports itself
+  as macOS, so `maxTouchPoints` is what tells an iPad from a Mac.
+- **A way to say the app has gone stale** (§7h). Every app here is offline-first,
+  so every app here has this defect until it is fixed on purpose: the new version
+  waits, the reader is TOLD in a standing indicator, and a newcomer never is.
+  Gated by `pwa-check.mjs`.
 
 **And the rule behind them: if he says the same thing in two apps, it belongs
 in `DOCTRINE.md`, and the session that hears the repeat writes it in.**
@@ -55,9 +61,11 @@ in `DOCTRINE.md`, and the session that hears the repeat writes it in.**
 **Where each app stands (keep this current — it is the thing a new session
 checks before offering to build one of these again):**
 
-- **Intersecting Parallels** — all four built, 2026-08-03. Patch notes in 1.19.0
+- **Intersecting Parallels** — all of them built, 2026-08-03. Patch notes in 1.19.0
   (generated from CHANGELOG.md, drift-gated), the diagnostic in 1.20.0, the (i)
-  and the first-run move in 1.21.0. Each is asserted by the walk, not assumed.
+  and the first-run move in 1.21.0; §7h's stale-app offer in 1.22.0, which also
+  removed a `skipWaiting()` that had been serving a MIXED app — old markup, new
+  modules — for twenty-two releases. Each is asserted by the walk, not assumed.
 - **Every other sibling** — still owed. Ask that repo's NOTES before assuming.
 
 The two omissions worth knowing before building one: a new surface must join the
@@ -86,7 +94,7 @@ doctrine rule changes, edit it HERE and tell the sibling repos to re-point
 (their `CLAUDE.md` files link to this copy). Never fork the doctrine into
 another repo — link to it.
 
-## Six gates live here and serve every repo
+## Seven gates live here and serve every repo
 Never fork these either — they take `--repo ../app` (or a path) so a sibling
 runs them without copying them, which is what stops five divergent versions
 existing.
@@ -106,6 +114,12 @@ existing.
   NOTES.md with its URL and version, no instruction tells an iPad-first owner to
   fetch a file from a repo, and the four un-automatable handoff obligations are
   acknowledged. LESSONS §26 is why it exists.
+- [`pwa-check.mjs`](pwa-check.mjs) — Doctrine §7h, for any repo with a service
+  worker: the new version WAITS rather than taking over under the open page, the
+  reader is told in words a reader can see, the diagnostic can read
+  `caches.keys()`, and the cache name carries the release. An app that caches
+  itself cannot notice it has gone stale — that is what caching means — so this
+  is invisible until someone checks. LESSONS §31.
 - [`doctrine-sync.mjs`](doctrine-sync.mjs) — **run this FIRST in any sibling
   session**: `node ../noahjefferson/doctrine-sync.mjs --repo .`. It says what has
   landed in the hub since that repo last reconciled — which files, which commits,

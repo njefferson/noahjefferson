@@ -996,6 +996,67 @@ real network path, and the real provider.
 **Privacy is part of it:** anything precise enough to locate him is coarsened by
 default, with an explicit opt-in to include it.
 
+**Two things the report must carry that are easy to leave out, both found by
+reading the first real report Noah ever sent (2026-08-03):**
+
+- **What the browser string HIDES about the device.** iPadOS Safari sends the
+  macOS user-agent — `Macintosh; Intel Mac OS X 10_15_7` — so on an iPad-first
+  project the report confidently said "Mac" about an iPad, and a 1180x580-ish
+  viewport is equally plausible either way. That is worse than an absence: it is
+  a wrong answer that looks like a fact. Report `maxTouchPoints` (iPadOS says 5,
+  a Mac says 0, and a compatibility UA cannot fake it), pointer coarseness,
+  screen size, pixel ratio, and whether the app is running from the home screen
+  or a browser tab. Any plain-language summary is LABELLED A GUESS.
+- **Whether the copy running is the current one.** See §7h — the version stamp
+  at the top of the report is whatever the cache served, so on its own it cannot
+  tell "this is current" from "this is what the cache still holds".
+
+## 7h. An app that caches itself CANNOT NOTICE it has gone stale
+
+**So it must be told, and then it must tell the reader.** Noah, 2026-08-03:
+*"Knowing that the app could not show if it was old and stuck seems like
+something all my apps need to fix."* Every app here is offline-first, so every
+app here has this defect until it is fixed deliberately.
+
+**The failure is invisible by construction.** Caching is precisely the business
+of not asking the network, so a stale app looks perfectly fine — it is just old.
+Nothing is broken, nothing errors, and the version on screen is the old one
+reporting itself accurately. There is no symptom to notice.
+
+**`skipWaiting()` on install makes it actively worse, and is the default advice.**
+A new worker that takes over immediately leaves the OPEN PAGE running the previous
+release's HTML and modules; `activate` then deletes the old cache, so anything
+that page requests afterwards is served the NEW file. Old markup, new modules, no
+reload, nothing said. Measured in Intersecting Parallels, which shipped that way
+for twenty-two releases.
+
+**What every app owes:**
+
+1. **The new version WAITS.** No `skipWaiting()` on install. A `message` handler
+   takes a `SKIP_WAITING` sent by the page and nothing else triggers it. Until
+   the reader accepts, they keep a *consistent old app* rather than an
+   inconsistent new one — an old app that works is a smaller problem than a mixed
+   one that does not.
+2. **The app SAYS a new version is ready**, in a standing indicator with its own
+   two ways out (§3) — never a modal, never a timed toast, and never over
+   something the reader is using. Say what happens to their work; "your drawing
+   is saved" is the thing they will actually worry about.
+3. **A brand-new visitor is never told**, which would be nonsense thirty seconds
+   after arriving. Gate on there already being a controller.
+4. **The diagnostic (§7f) reports the cache state**: which caches are held,
+   whether the worker controls the page, and whether one is waiting. Reporting it
+   there is NOT sufficient on its own — nobody opens a diagnostic to discover
+   they are running last week's build — but it is what makes a report readable
+   from the other end.
+5. **The cache name carries the release**, so a release cannot silently reuse it
+   (LESSONS §21).
+
+**Test it with a REAL second worker**, not a mocked registration. Serve a
+genuinely different `sw.js` and let the browser's own update machinery run; a
+mock proves the mock works.
+
+*(Added 2026-08-03 at Noah's instruction, from the first §7f report.)*
+
 *(Stated here 2026-08-03. It was already built in fauxplane and already written
 in that repo's CLAUDE.md; being in one app's file is why it had to be asked for
 again elsewhere.)*
