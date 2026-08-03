@@ -124,7 +124,27 @@ if (!noticesUpdate) {
 // anything. That is exactly LESSONS §29, and it happened in this very gate on
 // the repo it was written against. A check whose cheapest passing input is
 // changelog prose is measuring the wrong thing.
-const tellsReader = /new version/i.test(html);
+//
+// TWO WAYS TO GET THIS WRONG, and the first two attempts managed one each.
+//
+// Searching ALL source made it satisfiable by coincidence: an app that generates
+// its patch notes into a .mjs carries "new version" in a changelog entry and
+// passes while telling nobody anything (LESSONS §29).
+//
+// Searching ONLY markup made it blind: Quietkeep and photo-pointer both have a
+// real update prompt whose words live in TypeScript and are written into the DOM
+// at runtime, and this reported them as telling nobody. Three of Noah's six apps
+// were called broken when they were not — the same false-alarm failure the cache
+// check had, in the check written to avoid it.
+//
+// So: the words may live anywhere, and the WEIGHT is carried by check 2 above.
+// An app that both detects an update and says these words is telling someone;
+// an app that only carries the words in a changelog fails check 2 instead.
+// Residual risk, stated rather than hidden: an app that detects an update, logs
+// it to the console, and happens to ship changelog prose would pass both. That
+// is what the repo's own end-to-end gate is for.
+const SAYS_IT = /new(er)? version|update (is )?(ready|available)|version is ready/i;
+const tellsReader = SAYS_IT.test(appSrc);
 if (!tellsReader) {
   failures.push(
     'the app never says the words "new version" anywhere a reader could see. Detecting an update and only '
