@@ -2356,6 +2356,11 @@ ways, and you always try the wrong way first.")*
 
 **Enforced by:** CHECKLIST plant-the-fault — the same mutation rule as §7g. A guard is not wired until breaking it turns something red.
 
+**A green tree is evidence only about the checks that actually ran — so break
+the invariant and watch something go red, rather than reading the gate and
+believing it.** Every item below was a guard, a signal or a tool that looked
+correct, was documented as correct, and was not wired to anything.
+
 *(photo-field-tools, 2026-08-02, building a new app from a written spec. Every
 item here was found by making a check FAIL on purpose, or by looking at a
 screenshot after the checks had already gone green.)*
