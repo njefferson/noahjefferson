@@ -2006,6 +2006,29 @@ and the person who declares it early is just giving up with a technical
 vocabulary.**
 *(the hub, 2026-08-01, later the same session.)*
 
+**A filter applied to the headline but not to the breakdowns silently puts the
+machines back.** The snapshot computed "real users" (~104 distinct phones +
+tablets) one way, then built by-app, by-country and the heatmap from raw eyeball
+**request** counts — a different population. So the dashboard's hero said 104
+real users while its by-country bars said US 12,946, and the two were never
+reconciled. Noah caught it in one line: *"you are not filtering every data point
+or by-country would look much smaller."* He was exactly right. Filtered to
+distinct devices, by-country collapsed to US 72, Sweden 9, then single digits —
+and it exposed inversions the request view had buried: Netherlands 1,150
+requests / 3 real devices, Korea 529 / **0**, Ireland 492 / **0**, Singapore
+260 / **0** (datacenter and single-app crawler traffic), while Sweden showed 47
+requests but **9** real people — the #2 real audience, nearly invisible in the
+raw view. **When you filter a headline metric to a trustworthy population, apply
+the SAME filter to every breakdown that sits under it, or relabel the breakdowns
+as the other population in the same breath. A per-country or per-app view left at
+request granularity under a device-level headline is not a smaller version of the
+headline — it is a different, more flattering number wearing the headline's
+name.** The fix: `snapshot` now emits real-users-by-country and real-users-by-app
+(distinct mobile+tablet IPs), the request views stay but are labelled "machines
+included," and the dashboard leads with the device numbers and demotes requests
+to a clearly-marked machine layer.
+*(the hub, 2026-08-03.)*
+
 ## 10 · Explaining your own failure with Noah's inaction
 
 **Enforced by:** GATE hub:handoff-check.mjs · CHECKLIST evidence — every claim about external state cites the log line or response it came from.

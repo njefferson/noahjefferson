@@ -27,9 +27,16 @@ the trend.
   it the totals are ~2x higher and meaningless as "usage".
 - **`count` is already sampling-adjusted.** NEVER multiply by `sampleInterval`
   — an earlier version did and was 3–12x too high.
-- **Requests ≠ visits ≠ people.** One page load pulls many requests. "Real
+- **Requests ≠ visits ≠ people, and this is the trap Noah caught.** The by-app,
+  by-country and heatmap numbers are eyeball **requests** — `requestSource=eyeball`
+  strips Cloudflare's own worker/cache traffic but NOT crawlers, monitors and
+  scrapers, which are eyeball-class too. So a country can read thousands of
+  requests and have **zero** real users (Korea, Ireland, Singapore did). "Real
   users" is distinct **mobile + tablet** IPs (the least-fakeable), with a softer
-  ceiling that adds human-shaped desktop.
+  ceiling that adds human-shaped desktop. `snapshot` now emits **real users by
+  country and by app** (the `REAL USERS ...` sections and the `REAL USERS (CSV)`
+  block) alongside the request views. **Lead with the real-user numbers; the
+  request numbers are the machine layer, shown second and always labelled.**
 - **Exclude known scanners.** `185.177.72.22` is a secrets scanner that inflated
   one app. Keep the exclude list below current; if a new flooder appears, find
   it with the `top-ips` command and add its IP.
@@ -55,10 +62,14 @@ the trend.
    result can be large — if it overflows, extract the newest run id with a
    short python slice, then fetch that job's log.
 
-3. **Extract three things from the log:**
+3. **Extract from the log:**
    - the `TREND_ROW,...` line (one line);
-   - the `== APP x COUNTRY (CSV) ==` block;
-   - the `== TOTALS ==`, `== BY APP ==`, `== BY COUNTRY ==` sections.
+   - the `== REAL USERS BY COUNTRY ==`, `== REAL USERS BY APP ==` sections and
+     the `== REAL USERS (CSV) ==` block — **these lead the presentation**;
+   - the `== TOTALS ==` line (requests + the real-user band);
+   - the request views — `== BY APP (... machines included) ==`,
+     `== BY COUNTRY (... machines included) ==`, `== APP x COUNTRY (CSV ...) ==`
+     — these are the **machine layer**, shown second.
 
 4. **Append to the trend.** Take everything **after** `TREND_ROW,` and append it
    as one line to `docs/usage-trend.csv` in this repo. If the file does not
@@ -70,20 +81,25 @@ the trend.
    the same window overwrites, not stacks). Commit and push to `main` with a
    one-line message. This is the only write the skill makes.
 
-5. **Present to Noah, in this order:**
-   - **Totals** — eyeball requests, and the real-user band (`~floor` phones+tablets
-     you can trust, `~ceiling` including human-shaped desktop).
-   - **By app** — every app, descending.
-   - **By country** — top ~15, descending.
-   - **App × country** — the cross-tab (a compact table of the top apps ×
-     top countries, or offer the full CSV).
-   - **Trend** — the last ~8 rows of `docs/usage-trend.csv`, with the
-     week-over-week change on `total_requests` and `real_floor`. This is the
-     point of the whole thing: one week is noise, the slope is signal.
+5. **Present to Noah, real users FIRST, machine layer SECOND:**
+   - **Real users** — the band (`~floor` phones+tablets to trust, `~ceiling`
+     incl. human-shaped desktop).
+   - **Real users by country** — descending; these sum to ~floor. Call out any
+     inversion (a low-request country with real people, e.g. Sweden) — it's the
+     clearest proof the filter matters.
+   - **Real users by app** — descending; this is the true "which apps get used."
+     Name the apps that had big request counts but few real devices.
+   - **The machine layer** (labelled, second): total requests, and where they
+     concentrate — the single-country request blocks that turned out to be ~0
+     real users (crawlers). App × country heatmap lives here.
+   - **Trend** — the last ~8 rows of `docs/usage-trend.csv`; week-over-week change
+     on `real_floor` first, `total_requests` second. One week is noise, the slope
+     is signal — and the floor is the slope that matters.
 
-6. **Always attach the caveats** (short): eyeball-only and scanner-excluded;
-   requests ≠ people; mobile/tablet is the trusted floor and desktop-Chrome is
-   the uncertain band; sampled data, so read the trend not a single delta.
+6. **Always attach the caveats** (short): two layers never conflated (real users
+   vs requests); eyeball ≠ human (AI crawlers are eyeball-class); mobile/tablet
+   is the trusted floor; single-digit country counts are sampling-noisy — trust
+   the shape; read the trend not a single delta.
 
 7. **If a run fails,** report the failure and the error line from the log. Never
    invent numbers to fill the gap — a missing week is an honest blank in the
@@ -103,6 +119,9 @@ the app-feel without the infrastructure or the credential surface.
 - Do not enable Cloudflare Web Analytics or any beacon — that is the §1
   violation this whole approach exists to avoid.
 - Do not present the account-wide (all-source) totals as usage; always eyeball.
+- Do not present **request** counts as **users**. Requests are the machine layer;
+  lead with distinct mobile+tablet devices. Noah caught this once — a by-country
+  view in the thousands that was mostly crawlers. Do not make him catch it twice.
 - Do not multiply by `sampleInterval`.
 - Do not call requests "visits" or "people".
 - Do not print raw client IPs into any public place — the workflow log is
