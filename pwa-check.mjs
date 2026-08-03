@@ -158,8 +158,43 @@ if (!noticesUpdate) {
 // Residual risk, stated rather than hidden: an app that detects an update, logs
 // it to the console, and happens to ship changelog prose would pass both. That
 // is what the repo's own end-to-end gate is for.
+//
+// A THIRD WAY, worse than that residual risk and measured rather than feared:
+// COMMENTS SATISFIED IT. Quietkeep's reader-visible copy was rewritten to say
+// nothing about a version and the check stayed GREEN, held up entirely by four
+// pieces of commentary — a `<!-- A newer version is ready … -->` design note in
+// index.html, and three `//` lines in the update module, one of which QUOTES the
+// copy it is describing. A comment is the one string in a file guaranteed to be
+// invisible to a reader, so it is the worst possible thing to accept as proof
+// that a reader was told. Prose about the copy is not the copy.
+//
+// The fix is already in this file: `stripComments` above exists because a
+// comment saying "we do not call skipWaiting here" is not a call. The same
+// sentence is true one check down, and HTML comments join it.
+//
+// WHAT THIS STILL DOES NOT FIX, measured on Quietkeep and left here as data
+// rather than as a guess, because the scope of this check has now been changed
+// twice in opposite directions and the next person deserves the numbers:
+// deleting Quietkeep's ONLY reader-visible update copy still leaves this green,
+// held up by four unrelated string literals —
+//   src/seal.ts        "sealed by a newer version of Quietkeep (format …)"
+//   src/ui/pairing.ts  "written by a newer version of Quietkeep (format …)"
+//   src/ui/changelog.ts patch-notes prose describing this very feature
+//   src/ui/security.ts "checked every time a new version is built"
+// Three of those are about FILE FORMATS and builds, not about an update being
+// ready. So the documented residual risk above is not residual: it is active,
+// four times, in the first repo this was pointed at.
+//
+// The candidate fix, NOT taken here on purpose: require the words in a string
+// literal in a file that also carries the update DETECTION. That is precise and
+// it is how Quietkeep and photo-pointer are both built — but it fails any repo
+// that keeps its copy constants in a separate module, which is a normal thing
+// to do, and this check has already been narrowed and widened once each. Landing
+// a third scope change in the same hour is how a gate starts thrashing. Decide
+// it once, deliberately, with the four strings above in view.
+const readerVisible = s => stripComments(s.replace(/<!--[\s\S]*?-->/g, ''));
 const SAYS_IT = /new(er)? version|update (is )?(ready|available)|version is ready/i;
-const tellsReader = SAYS_IT.test(appSrc);
+const tellsReader = SAYS_IT.test(readerVisible(appSrc));
 if (!tellsReader) {
   failures.push(
     'the app never says the words "new version" anywhere a reader could see. Detecting an update and only '
