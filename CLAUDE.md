@@ -52,6 +52,20 @@ app exists.
 **And the rule behind them: if he says the same thing in two apps, it belongs
 in `DOCTRINE.md`, and the session that hears the repeat writes it in.**
 
+**Where each app stands (keep this current — it is the thing a new session
+checks before offering to build one of these again):**
+
+- **Intersecting Parallels** — all four built, 2026-08-03. Patch notes in 1.19.0
+  (generated from CHANGELOG.md, drift-gated), the diagnostic in 1.20.0, the (i)
+  and the first-run move in 1.21.0. Each is asserted by the walk, not assumed.
+- **Every other sibling** — still owed. Ask that repo's NOTES before assuming.
+
+The two omissions worth knowing before building one: a new surface must join the
+a11y gate's surface list **in the same commit**, or it ships unmeasured (hub
+LESSONS §28 — now mechanical in that repo, worth copying), and an (i) button
+labelled with `aria-label` passes a substring SC 2.5.3 check by pure accident
+(§29). Both cost a release each here.
+
 ## What this repo is
 The personal link hub at **noahjefferson.pages.dev** — photography accounts and
 the free web apps. Static, self-contained, no build step. `public/` is the
@@ -115,8 +129,9 @@ Every app that has shipped more than one release SHOWS THE READER WHAT CHANGED,
 in the app, reachable from somewhere they already go — the current release at
 minimum, written in their words, **including what is still broken**, and
 generated from one source rather than typed twice. Added at Noah's instruction
-on 2026-08-03. The sibling repos inherit it and each needs the surface built;
-none has one yet.
+on 2026-08-03. The sibling repos inherit it and each needs the surface built.
+**Intersecting Parallels has one** (1.19.0, generated from CHANGELOG.md with a
+`notes:check` that fails on drift); the others still do not.
 
 ## Cross-app connective tissue
 This hub links OUT to every sibling app, and each app links back. It also hosts
