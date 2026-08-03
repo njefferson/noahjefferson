@@ -4,7 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Accessibility — Noah Jefferson</title>
-<meta name="description" content="Accessibility statement for Noah Jefferson's free apps — Frame, Photo Pointer, Clear Horizons and Photo Studio. WCAG 2.2 AA is the target; honest about what's done and what's still being improved.">
+<!-- THE APP LIST LIVES IN EXACTLY ONE PLACE ON THIS PAGE: the <ul class="applist">
+     near the bottom. It used to be written out three times — here, in the
+     subtitle, and in the closing paragraph — and all three had drifted apart
+     and out of date, each missing a different set of apps. Three copies of a
+     list that must never disagree is the same drift factory PALETTES.md §6
+     warns about for colour tokens. Do not re-scatter it: if you add an app,
+     add it to that one list and nowhere else on this page. -->
+<meta name="description" content="Accessibility statement for Noah Jefferson's free apps. WCAG 2.2 AA is the target, contrast is measured rather than eyeballed, and the page is honest about what is done and what is still being improved.">
 <meta name="theme-color" content="#0B1020" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#F4F6FB" media="(prefers-color-scheme: light)">
 <link rel="canonical" href="https://noahjefferson.pages.dev/accessibility">
@@ -60,7 +67,12 @@
   }
   .card h2{margin-top:0}
   .contact-email{font-weight:640;overflow-wrap:anywhere}
-  .apps{color:var(--muted);font-size:0.90625rem}
+  .apps{color:var(--muted);font-size:0.90625rem;margin-bottom:10px}
+  /* The app list is primary content, not an aside, so it takes --text rather
+     than --muted. Its pair is registered in a11y-gate.mjs in this same commit
+     (Doctrine §4). */
+  .applist{color:var(--text)}
+  .applist strong{font-weight:640}
   .foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:0.84375rem}
   /* Doctrine §4: touch targets >= 44px. The back link sits on its own line, so
      nothing constrains its height — it gets a real hit area. The email link in
@@ -73,7 +85,7 @@
   <main>
     <div class="mark" aria-hidden="true"><span></span><span></span><span></span></div>
     <h1>Accessibility</h1>
-    <p class="sub">Noah Jefferson's free apps — Frame, Photo Pointer, Clear Horizons, and Photo Studio.</p>
+    <p class="sub">The shared statement for every free app on this site.</p>
 
     <p class="lead">These apps are built so that a missing bit of care never gets
     between someone and the joy of using them. Accessibility is a requirement here,
@@ -132,13 +144,27 @@
       Say which app and what happened, and I'll follow up.</p>
     </div>
 
-    <p class="apps">This statement covers Frame (bird-scouting), Photo Pointer
-    (photo-spot map), Clear Horizons (astronomy planner), and Photo Studio (infrared
-    &amp; macro editing).</p>
+    <h2>Which apps this covers</h2>
+    <p class="apps">Everything below is covered by every commitment above.</p>
+    <!-- ↓↓ THE ONE LIST. Adding an app? Add it here and nowhere else on this
+         page — see the note at the top of this file for why. ↓↓ -->
+    <ul class="applist">
+      <li><strong>Frame</strong> — where and when to photograph which birds</li>
+      <li><strong>Photo Pointer</strong> — a map of places worth shooting</li>
+      <li><strong>Clear Horizons</strong> — astronomy planner</li>
+      <li><strong>Photo Studio</strong> — infrared editing and focus stacking</li>
+      <li><strong>Photo Field Tools</strong> — capture-time calculators for the field</li>
+      <li><strong>Quietkeep</strong> — a planner that brings back everything you put in</li>
+      <li><strong>ND Toolbox</strong> — tools for naming what's going on inside</li>
+      <li><strong>Intersecting Parallels</strong> — perspective drawing</li>
+    </ul>
+    <p>If an app of mine is missing from that list, that is an oversight rather than
+    an exclusion — the commitments above apply to all of them. Tell me and I'll fix
+    both the app and the list.</p>
 
     <div class="foot">
       <a href="/">&larr; Back to Noah Jefferson's apps</a><br>
-      Last reviewed: July&nbsp;2026.
+      Last reviewed: August&nbsp;2026.
     </div>
   </main>
 </body>

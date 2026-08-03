@@ -16,7 +16,15 @@
     "render:icons": "node render-icons.mjs",
     "render:og": "node render-og.mjs",
     "render:social": "node render-social.mjs",
-    "render:preview": "node render-preview.mjs"
+    "render:preview": "node render-preview.mjs",
+    "lessons": "node lessons-check.mjs",
+    "lessons:checklist": "node lessons-check.mjs --checklist",
+    "pins": "node pin-check.mjs",
+    "handoff": "node handoff-check.mjs",
+    "check": "node lessons-check.mjs && node docs-check.mjs . && node pin-check.mjs && npm run --silent security && node a11y-gate.mjs && node palette-check.mjs palettes/families.json",
+    "security:install": "python3 -m venv .zizmor && ./.zizmor/bin/pip install --quiet --only-binary=:all: --require-hashes -r .github/requirements-ci.txt",
+    "security": "test -x .zizmor/bin/zizmor || { echo \"zizmor is not installed. Run: npm run security:install\"; exit 1; }; ./.zizmor/bin/zizmor --offline --strict-collection .github/workflows/",
+    "docs": "node docs-check.mjs ."
   },
   "devDependencies": {
     "axe-core": "4.10.2",

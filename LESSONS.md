@@ -19,6 +19,45 @@ one-line rule you could shout across a room, then the concrete evidence: real
 numbers, the real symptom, the app and date. A lesson without evidence is an
 opinion, and opinions are what this file exists to replace.
 
+## This file is ENFORCED, not just read
+
+Noah, 2026-08-02: *"I thought lessons was a good document, but you don't do
+fuck-all with it."* He was right — 2400 lines that every session read and then
+ignored, because reading was all the file ever asked for. §26 is the autopsy:
+in one build every **gated** rule held and every **prose** rule lost.
+
+So each lesson now has to say how it is enforced. Run it:
+
+```
+node lessons-check.mjs               # every lesson declares its enforcement
+node lessons-check.mjs --checklist   # the steps no script can do — read at handoff
+npm run security                    # §8, §25, Doctrine §16.1 — zizmor, pinned + strict
+node pin-check.mjs      --repo ../x  # §8 — the npm hygiene zizmor does not do
+node handoff-check.mjs  --repo ../x  # §10, §26 — the handoff is a deliverable
+```
+
+**Every `## ` section carries an `**Enforced by:**` line**, naming one of:
+
+- **`GATE <repo>:<path>`** — an executable check. `lessons-check.mjs` verifies
+  the file EXISTS. A cited gate that is not there is the precise failure §7g and
+  Doctrine §4 both describe, so it FAILS rather than reading as coverage.
+- **`CHECKLIST <id>`** — a session-time step no script can perform. Printed by
+  `--checklist` so it is read at the moment it matters.
+- **`JUDGEMENT`** — genuinely not automatable. Must also carry a **`Smell:`**
+  line, so the lesson is recognisable when you are standing in it.
+
+**A section with no declaration FAILS.** That is deliberate: it makes the
+un-gated lessons countable instead of letting them blend in with the gated ones.
+Right now that is 3 judgement calls and 14 checklist items against 6 gate
+citations — the honest picture, and the list of what to automate next.
+
+**Adding a lesson?** It does not land without a declaration. If you cannot
+gate it, say `CHECKLIST` and give it an id; if you cannot even do that, say
+`JUDGEMENT` and write the smell. "Somebody will remember this" is not an option
+the file accepts any more.
+
+---
+
 > A repo may also keep its own `LESSONS.md` for **stack contract** detail —
 > build, deploy and vendor conventions specific to that codebase (photo-pointer
 > has one). That is a different document. This is the shared one.
@@ -26,6 +65,8 @@ opinion, and opinions are what this file exists to replace.
 ---
 
 ## 1. Reading data honestly
+
+**Enforced by:** CHECKLIST empty-success — every fetch path treats an empty-but-200 response as a failure, not as data.
 
 **A success response carrying nothing is not an answer — it is a question.**
 USA-NPN returned HTTP 200 with `[]` twice and it was read as "no records in this
@@ -83,6 +124,10 @@ hour later worked fine.)*
 
 ## 2. Statistics that are right and useless
 
+**Enforced by:** JUDGEMENT
+
+**Smell:** the arithmetic checks out and nobody asked the question it answers. Say what the number is FOR before computing it.
+
 **The correct arithmetic can answer the wrong question.** The median day-of-year
 across every "in flower" record put California poppy at 25 June in the Sierra
 foothills, where it peaks in early April. The median of a March-to-August season
@@ -103,6 +148,8 @@ fortnight" lets the reader see a diffuse season as diffuse. A card that says
 only "early November" reads as a promise.
 
 ## 3. Asking a service for something
+
+**Enforced by:** GATE photo-pointer:scripts/check-etiquette.mjs · CHECKLIST read-the-policy — cite the published policy before writing or changing any pacing.
 
 **Read the service's published policy before writing the client, and make it a
 gate.** Wikimedia's API:Etiquette asks for a total concurrency of at most 1 and
@@ -201,6 +248,8 @@ lesson.
 
 ## 4. Building a layer
 
+**Enforced by:** CHECKLIST run-it-twice — any discovery, ingest or migration pass is run twice and the second run's output diffed against the first.
+
 **A discovery pass must survive being run twice.** The photo-density layer
 counted *its own pins from the previous run* as prior knowledge. Run two found
 its 43 discoveries, decided each was already explained by the pin it had itself
@@ -238,6 +287,8 @@ by looking at the map; the discoveries found it by falling into the hole.
 
 ## 5. Verifying
 
+**Enforced by:** CHECKLIST literal-words — when a headless repro will not come, measure the data and read the reporter's words literally before theorising.
+
 **When a headless repro will not come, measure the data and read the user's
 words literally.** A card that "opens, pushes down, then closes" was never
 reproduced in the harness across synthetic clicks, real touch taps, forced pans,
@@ -274,6 +325,8 @@ deadline from 6 s to 15 s made a failure *more* frequent, which ruled out
 *(photo-pointer, 2026-07-26.)*
 
 ## 6. Interface
+
+**Enforced by:** GATE hub:a11y-gate.mjs — every page is measured at more than one viewport including the small-phone-at-200%-text case.
 
 **No fixed size may ignore the space available.** A place card had three
 hard-coded sizes computed once at creation time from the window, never from the
@@ -326,6 +379,8 @@ was built and was unusable where it was read.
 *(Hub, 2026-07-29. The rule is Doctrine §2.)*
 
 ## 7 · Checking whether a name is free
+
+**Enforced by:** CHECKLIST name-search — search the name as software, not as a member of its own category, before proposing it.
 
 **Ask "is this name taken in software?" — never "is another _X_ called this?"**
 A name search scoped to your own product category filters out exactly the
@@ -400,6 +455,8 @@ on `staging`; the staging gate contained it and it cost nothing.)*
 
 ## 7b · Gates you never watched
 
+**Enforced by:** CHECKLIST watch-the-gate — after pushing, READ the CI run. A workflow that exits 0 is not evidence a step ran; a skipped step exits 0 too.
+
 **Running the command locally is not the same as watching the gate.** Quietkeep's
 CI workflow failed on **all four of its runs, every run since it was created**,
 always on the first step — `npm ci` died with `EJSONPARSE` because `package.json`
@@ -426,7 +483,36 @@ Three things fall out of it, all cheap:
 *(Quietkeep, 2026-07-28 — found only because a rename touched `package.json` and
 the failure finally surfaced locally. It had been red for a day.)*
 
+**It happened again the same week this rule was written down, twice, in the two
+repos that hold the rule.** Both are the same shape and neither needed anything
+clever to catch — one API call would have done it.
+
+- **photo-field-tools CI: red on its last three runs, unnoticed.** The
+  `doctrine` job died on
+  `Cannot find module '.../hub/pin-check.mjs'`. The job checks the hub out at
+  its **default branch**, and the hub instruments it calls only existed on a
+  working branch. Every gate had been run locally and passed; nobody opened the
+  run. **A cross-repo gate depends on the OTHER repo's default branch, not on
+  your working copy — landing the caller before the callee is red CI by
+  construction.**
+- **The hub's own `doctrine.yml` had never executed, not once.** It was written
+  `on: push: branches: [main]` in a repo whose work happens on `claude/*`
+  branches. So the workflow created *specifically to stop rules from being
+  prose* was, itself, prose — a file that had never exited any code at all. It
+  now also runs on `claude/**`.
+
+**Ask of a new workflow: on which branch does this actually fire, and have I
+seen it fire?** An unrun workflow and a missing workflow are the same artefact.
+And after any push, list the runs — `actions_list` on the workflow, read
+`conclusion` — before writing a sentence that implies the tree is green.
+*(the hub and photo-field-tools, 2026-08-03 — found in a review of the
+session's own diff, not by the gates.)*
+
 ## 7c · Marks, palettes, and what a shape says
+
+**Enforced by:** GATE hub:palette-check.mjs · JUDGEMENT
+
+**Smell:** a mark that reads correctly to you and has never been shown to anyone who uses the audience's own vocabulary.
 
 **Check a mark against the audience's own vocabulary, not only against other
 logos.** Two icon candidates for Quietkeep were spirals, and every check run on
@@ -504,6 +590,8 @@ missing secret. Same error, three costumes.)*
 
 ## 7d · Green is not a synonym for correct
 
+**Enforced by:** CHECKLIST adversarial-pass — before a boundary widens, run reviewers told to REFUTE one invariant each and write the repro, not the risk.
+
 **A fully green tree is where the worst defects hide, not where they are
 absent.** Quietkeep had 18 passing tests, a green CI pipeline with a
 type-check, a headless walk of the built app, an accessibility gate, a
@@ -545,6 +633,10 @@ before it was believed, and pinned with a regression test before it was
 called fixed.)*
 
 ## 7e · The comment that made the bug sound principled
+
+**Enforced by:** JUDGEMENT
+
+**Smell:** a comment that ARGUES for the design rather than describing it. A rationale is a claim; check the claim, not the prose.
 
 **A comment stating a rationale is a claim, and an unverified one costs more
 than no comment at all — because it stops the next reader checking.** Quietkeep's
@@ -601,6 +693,8 @@ shape through the real path.)*
 
 ## 7f · A security claim is a liability until a test pins it
 
+**Enforced by:** CHECKLIST security-claim — every security sentence in docs or comments names the test that pins it, or it is deleted.
+
 **Three times in two days, a confident security sentence in this codebase was
 wrong, and the OWNER caught each one — not a test, not a review.** The pattern is
 specific enough to name: a comment or a piece of user-facing copy states a
@@ -648,6 +742,8 @@ copy correction, not an exploit. The hold-to-promote was for the words, not the
 walls.)*
 
 ## 7g · A check that cannot fail
+
+**Enforced by:** CHECKLIST plant-the-fault — every gate is made to go RED on purpose before it is trusted, and the mutation is recorded.
 
 **Plant the fault. A check you have never seen go red is not evidence, and it
 is indistinguishable from a check that works.** Intersecting Parallels shipped a
@@ -727,6 +823,37 @@ leave it on across it — and it turned a decorative check back into a real one.
 *(Quietkeep 1.15.1, 2026-08-02.)*
 
 ## 8 · Pinning
+
+**Enforced by:** GATE hub:.github/workflows/doctrine.yml — `zizmor --offline --strict-collection` audits workflow security (pinning, template injection, credential persistence, cache poisoning) and FAILS rather than skipping a file it cannot parse; zizmor itself is version- and hash-pinned in `hub:.github/requirements-ci.txt`; `pin-check.mjs` covers the npm hygiene zizmor does not.
+
+**Postscript, 2026-08-02 — and this is the sharper lesson.** The first attempt
+at enforcing this section was a hand-written regex over `uses:` lines. It
+passed both repos. Installing **zizmor**, a maintained off-the-shelf auditor,
+took thirty seconds and immediately found 18 template injections and 5
+credential-persistence issues — including two in workflows written *that same
+afternoon, alongside the bespoke checker that missed them*. Owner, on being
+shown the growing pile of hand-rolled infrastructure: *"WHY THE FUCK AM I
+HAVING TO CREATE ALL THIS INDUSTRY STANDARD STUFF?"*
+**Reach for the standard tool FIRST. Write a bespoke gate only for what is
+genuinely specific to this work** — acceptance criteria, a palette's own roles,
+an app's offline behaviour, the handoff. Everything else already exists, is
+better, and is somebody else's job to keep correct.
+
+**Postscript to the postscript, 2026-08-03 — the tool you reached for is a
+thing that executes, and §16.1 applies to it too.** Having correctly replaced
+the bespoke checker with zizmor, the session installed it with
+`run: pipx install zizmor || pip install zizmor` — an unpinned fetch of a
+binary that then runs next to a deploy token, added *inside the very workflow
+whose job is to enforce pinning*, in the change that argued for it. It survived
+because the rule was being applied to the *subject* of the audit and not to the
+audit. Nothing caught it; a review of the session's own diff a day later did.
+Now version- and hash-pinned in `.github/requirements-ci.txt`, installed with
+`--require-hashes --only-binary=:all:`, kept current by a `pip` ecosystem in
+Dependabot, and canonical in the hub so every sibling repo installs the same
+build rather than carrying its own copy. **When you adopt a standard tool, pin
+it the same day you adopt it — an off-the-shelf tool is not automatically a
+pinned one, and "I just installed the good tool" is the moment the guard is
+down.** See §25 for what that same tool did next.
 
 **A pin must match the environment it runs in, and a wrong pin is worse than
 none — it looks deliberate.** Adding a first-ever `package.json` to the hub, the
@@ -1768,6 +1895,8 @@ it.
 
 ## 9 · Measuring, and reading the measurement
 
+**Enforced by:** CHECKLIST no-beacon — read what the platform already counts server-side before adding any client-side measurement.
+
 **Cloudflare already counts every request server-side, per host and per country
 — reaching for an analytics beacon is the wrong tool AND a breach of §1.** Asked
 how to see app usage by country, the session proposed enabling Cloudflare Web
@@ -1879,6 +2008,8 @@ vocabulary.**
 
 ## 10 · Explaining your own failure with Noah's inaction
 
+**Enforced by:** GATE hub:handoff-check.mjs · CHECKLIST evidence — every claim about external state cites the log line or response it came from.
+
 **When a call fails, the cause is a claim about the world — go and find it.
 "You must not have approved it" is the one guess that costs the person who
 cannot check it, so it is the last one you are allowed to reach for, never the
@@ -1955,6 +2086,8 @@ written.
 *(Quietkeep, 2026-08-01 — the 1.9.2 audit of nine releases.)*
 
 ## 11 · Instruments, signs, and the checks that measure the wrong thing
+
+**Enforced by:** CHECKLIST two-derivations — derive any geometry or sign-sensitive result a second, independent way and compare before believing either.
 
 **Two independent derivations of the same geometry catch sign errors that
 neither catches alone — and both looked completely plausible on screen.**
@@ -2202,6 +2335,8 @@ to undo a plant: both are about the fact that the undo is the dangerous half.)*
 
 ## 12 · The network is not down. You tried one host.
 
+**Enforced by:** CHECKLIST probe-order — run the proxy status and the alternate hosts BEFORE reporting any block, and quote the status codes per host.
+
 **The single most repeated failure across these apps, and the owner has watched
 it happen every day.** A session makes one request, it fails, and the session
 reports that it cannot reach the network — then hands the owner the work. It is
@@ -2316,6 +2451,8 @@ test that was watched to fail first.)*
 
 ## 13 · A write with no reader
 
+**Enforced by:** CHECKLIST read-your-own-write — every field or event a build writes must name the code that reads it, and a push is confirmed by reading the remote ref, never by reading the push output.
+
 **An event you write and never read is a promise nobody is keeping — and
 nothing will tell you, because nothing is looking.** Quietkeep has recorded
 `export.written` since its first week: every time somebody exported a copy of
@@ -2412,7 +2549,9 @@ Three fixes, in order of how much they buy:
 
 ---
 
-## 13. Asking whether a value EXISTS when you meant whether it is GOOD
+## 13b · Asking whether a value EXISTS when you meant whether it is GOOD
+
+**Enforced by:** CHECKLIST quality-vs-existence — for any gate on a computed value, say whether it tests that the value EXISTS or that it is GOOD, and what the user sees if it never becomes true.
 
 An attitude filter published nothing at all until a smoothed residual settled
 under two degrees. On a real phone that residual sat at 14.8 and stayed there,
@@ -2434,6 +2573,10 @@ honest?** A gate that can fail closed for ever is a gate that will.
 *(fauxplane, 2026-08-02.)*
 
 ## 14. Every gyroscope reads a number while sitting perfectly still
+
+**Enforced by:** JUDGEMENT
+
+**Smell:** a raw sensor reading used as signal with no stated noise floor, bias estimate or still-state calibration — "it reads 0.3°/s at rest" treated as motion.
 
 It is one to two degrees per second, it differs per device, per axis and with
 temperature, and integrated it becomes unbounded drift. A complementary filter
@@ -2459,6 +2602,8 @@ Two traps found in the process:
 
 ## 15. `[hidden]` stops hiding the moment you give the element a `display`
 
+**Enforced by:** CHECKLIST hidden-vs-display — any CSS rule that sets `display` on an element the code toggles with `hidden` must restore the hiding, and the toggle is exercised once in the browser before it is believed.
+
 `.thing { display: flex }` in an author stylesheet outranks the user agent's
 `[hidden] { display: none }`. The element then stays on screen whatever the
 code sets `.hidden` to. Here it was a "FOLLOWING <aircraft>" banner that
@@ -2472,6 +2617,8 @@ which is exactly the state nobody screenshots.
 *(fauxplane, 2026-08-02.)*
 
 ## 16. A test harness that edits the working tree must refuse to run twice
+
+**Enforced by:** CHECKLIST harness-lock — a harness that mutates the tree takes a pid lock and refuses a second run, and states plainly that the lock cannot stop a person editing mid-run.
 
 `plant.mjs` injects a fault, runs the gate, and restores the file from a copy it
 took first. Two runs overlapped. The second read a file the first had already
@@ -2500,6 +2647,8 @@ a green tick recording that something was verified when nothing was.
 
 ## 17. Exactly one source may own a field, and adding a second is silent
 
+**Enforced by:** CHECKLIST one-owner-per-field — when a second writer is added to any field, answer "which source owns this right now" in the code, not in your head.
+
 An app gained a mode where a live data feed drove the same values the device's
 own sensors did. Both kept writing. Nothing errored, nothing warned, and no
 test failed — the store simply held whichever write landed last, and the two
@@ -2518,6 +2667,8 @@ stay converged and are ready the moment ownership comes back.
 *(fauxplane, 2026-08-02.)*
 
 ## 18. Read the terms from the publisher, then make the gate enforce them
+
+**Enforced by:** CHECKLIST licence-terms — read the publisher’s own licence page before shipping their data, and turn each condition into an assertion rather than a promise.
 
 adsb.fi's open data terms require a citation with a link to their home page.
 That is a CONDITION OF USE, not a courtesy — and a condition that lives only in
@@ -2539,6 +2690,8 @@ hostname is not an unreadable policy — see §12.
 ---
 
 ## 19. Stop diagnosing by screenshot — build the export instead
+
+**Enforced by:** CHECKLIST text-diagnostic — every app emits its whole panel state as text (Doctrine §7f). Ask Noah for that, never for a screenshot.
 
 Every defect in an app over several sessions was found the same way: the owner
 photographed his phone, and I read pixels. That channel loses the reason strings
@@ -2570,6 +2723,8 @@ the version *and everything else* as selectable text.
 
 ## 20. Ask what the standard says BEFORE inventing the convention
 
+**Enforced by:** CHECKLIST check-the-standard — before inventing a convention in a domain that has one, find what the real instrument does; a departure you can name is engineering, the same code unnamed is a bug.
+
 Asked point-blank whether I was using industry standards or guessing, the honest
 answer was: standards for the physics, invention for the presentation. The
 filter was a named Mahony PI complementary filter with gains chosen by computing
@@ -2598,6 +2753,8 @@ without the check is a guess that happened to look confident.**
 *(fauxplane, 2026-08-02.)*
 
 ## 21. A cache that only ever serves its own release can never be replaced
+
+**Enforced by:** CHECKLIST cache-escape-hatch — every cache ships the path by which a later release replaces it, and that path is exercised from a genuinely stale client, not reasoned about.
 
 Noah's iPad sat on v0.4.1 through two successful deploys of 0.4.2 and 0.4.3. The
 deploys were green, the Pages step really ran, and the device was simply
@@ -2647,6 +2804,8 @@ said, which took one paste and no screenshots.)*
 
 ## 22. A hand-written list of files to check goes stale, silently and twice
 
+**Enforced by:** CHECKLIST derive-the-list — a check DERIVES what it covers by walking the tree; where it must enumerate, a missing entry FAILS rather than shrinking the sweep.
+
 In one session, two of them:
 
 - A fault-injection plant was anchored to a specific line of source. Ordinary
@@ -2670,6 +2829,8 @@ true.
 *(fauxplane, 2026-08-02.)*
 
 ## 23. "The source gave me null" is not the same fact as "this is unknowable"
+
+**Enforced by:** CHECKLIST null-is-not-unknowable — distinguish “the source returned nothing” from “this cannot be known” in the data model and in the words shown to the reader.
 
 An honesty rule can be over-applied until it starts refusing to report a
 measurement you are already holding.
@@ -2711,6 +2872,8 @@ agreed the FAIL was intentional.)*
 
 ## 24. A failing test can mean the EXPECTATION was wrong
 
+**Enforced by:** CHECKLIST test-may-be-wrong — before editing code to make a test pass, establish that the test was entitled to its expectation.
+
 Writing tests for the above, a case called "a walking pace is obviously motion"
 failed. The instinct is to go fix the code.
 
@@ -2730,7 +2893,9 @@ expectation feels obvious.
 
 *(fauxplane, 2026-08-02.)*
 
-## 23. A check on one invariant passes every corruption orthogonal to it
+## 23b · A check on one invariant passes every corruption orthogonal to it
+
+**Enforced by:** CHECKLIST orthogonal-corruption — when a validity check guards a vector quantity, name what the check does NOT constrain, and add the case that moves only that.
 
 fauxplane's attitude filter rejected accelerometer samples whose MAGNITUDE
 strayed from one g. Leaning a hand-held phone corrupts the DIRECTION — the
@@ -2917,3 +3082,253 @@ Two riders:
   same discipline as the planted-fault rule above.
 
 *(Quietkeep 1.17.4, 2026-08-03.)*
+
+---
+
+## 25 · A guard nobody calls, and other ways a green tree lies
+
+**Enforced by:** CHECKLIST plant-the-fault — the same mutation rule as §7g. A guard is not wired until breaking it turns something red.
+
+**A green tree is evidence only about the checks that actually ran — so break
+the invariant and watch something go red, rather than reading the gate and
+believing it.** Every item below was a guard, a signal or a tool that looked
+correct, was documented as correct, and was not wired to anything.
+
+*(photo-field-tools, 2026-08-02, building a new app from a written spec. Every
+item here was found by making a check FAIL on purpose, or by looking at a
+screenshot after the checks had already gone green.)*
+
+### The guard that was never called
+
+The light meter has one hard rule: with no calibration profile it shows relative
+stops only and must never print an absolute EV or a lux value. The module had a
+function for it, `canShowAbsolute()`, a header comment saying the rule was
+"enforced in ONE place", and an acceptance check asserting no absolute value
+reaches the panel. All three looked right.
+
+Setting the function to `return true` — the most direct possible violation of
+the rule — **changed nothing and the gate stayed green.** The render branch read
+`calibrationState().calibrated` directly and never called the guard at all. The
+function was dead, the comment was false, and the gate was passing for reasons
+unconnected to the thing it claimed to protect.
+
+Wiring the branch through the guard and re-running the same mutation produced
+four failures including two crashes.
+
+**The lesson is not "write a guard".** It is that **a mutation test is the only
+thing that proves a gate is connected to the code it names.** A gate can be
+correct, a guard can be correct, and the wire between them can be missing — and
+every observable signal is identical to the healthy case. This is 7e's "comment
+that made the bug sound principled" with a second layer: the comment described
+an architecture that the code did not have, and the comment is exactly why
+nobody checked.
+
+**Do this on every load-bearing invariant before shipping it:** break it in the
+crudest way available, watch the gate fail, put it back. If the gate does not
+fail, you have learned something far more valuable than a passing run.
+
+### A signal that distinguishes nothing
+
+The hotspot grid must never let an UNTESTED lens combination read as a clean
+one — spec called it load-bearing in the field. Four channels were declared and
+documented: a dash instead of a number, an empty severity bar, a dashed hatched
+border, and the word UNTESTED in the accessible name. The acceptance gate
+checked fill, hatch, border style, text and accessible name. Green.
+
+Then a screenshot: **a clean cell is severity step 0, so it also drew three
+empty segments.** On that channel the two states were pixel-identical. One of
+the four declared signals carried no information at all, and the register said
+it did.
+
+Fixed by drawing no bar on untested cells — *absence* versus presence is a real
+difference; three empty boxes beside three empty boxes is not. The gate now
+asserts absence rather than counting segments.
+
+**When you declare N redundant channels, check each one against the state it is
+supposed to distinguish FROM, not merely that it exists.** "Untested has an
+empty bar" is true and useless. The question is always "and what does clean
+have?"
+
+### Two gate bugs that flagged correct code
+
+Both would have been "fixed" in the app by anyone in a hurry, making it worse.
+
+**Measuring inert content.** A modal opened with `showModal()` makes everything
+behind it inert — unreachable by pointer, keyboard or AT. A structural sweep
+over `document` still finds it, so every chip on the page behind "collided" at
+0px with every control in the dialog, and f-numbers appeared as duplicate names
+across two surfaces that can never both be live. Dozens of failures, all
+imaginary. Scope structural checks to `dialog[open]` when one is open.
+
+**Rects that extend past their clipping box.** A control inside a scroll
+container has a `getBoundingClientRect` that runs on past the container when the
+content overflows — so an off-screen chip appeared to sit 0px from a footer
+button a finger could never reach it from. Intersect with every clipping
+ancestor before measuring spacing. Size still uses the real rect; a 30px button
+is 30px whether or not it is scrolled.
+
+**And one more, on SC 2.5.3** (visible words must appear in the accessible
+name): comparing `textContent` as a single substring is wrong the moment a
+control is built from two elements. "Body" + "Z50 II" serialises as `BodyZ50 II`
+with no separator, which can never be a substring of any sensible label. Use
+`innerText`, tokenise into words, and strip trailing punctuation — otherwise
+`VR.` in a label fails to match `VR` on the button and the gate teaches people
+to ignore it.
+
+**All four are the same failure**: the instrument modelled the DOM instead of
+modelling what a person can reach and say. PALETTES.md §7 already says suspect
+the instrument first; this is the same rule for structural checks, not just
+colour ones.
+
+### The grid column that widened the whole page
+
+At 320px the entire page — header included — measured 345px and scrolled
+sideways. The cause was two layers away from the symptom: `body` is a CSS grid,
+a grid column defaults to `auto`, and an `auto` column sizes to its widest
+descendant's **min-content**. The horizontally-scrolling hotspot matrix, sitting
+correctly inside its own `overflow-x: auto` container, was still dictating the
+width of everything above it.
+
+`grid-template-columns: minmax(0, 1fr)` fixed it. **A scroll container can only
+do its job if its ancestors are allowed to be narrower than it** — and in grid
+and flex layouts they are not, by default. Worth checking on any app with a wide
+table, code block or chart inside a grid or flex shell.
+
+### Two test expectations that were wrong, not the code
+
+Both caught immediately because the anchors came from outside the
+implementation, which is the entire argument for writing them that way.
+
+Vertical frame-fill needs *more* distance than horizontal, not less: the short
+sensor dimension covers less real-world height at any distance, so a subject
+already fills more of the vertical frame and you must back further away. And ISO
+450 snaps *up* to 500 — it is an exact linear tie between 400 and 500, and the
+geometric midpoint is 447.2, so log-space snapping breaks the tie upward. That
+case is precisely the difference between log and linear snapping, and a suite
+without it would pass with either rule implemented.
+
+### When the spec contradicts itself, say which half you followed
+
+Three places needed a written decision rather than a silent pick: the spec asked
+for a press-and-hold gesture that Doctrine §4 forbids outright (built as a
+toggle); §5.1 wanted a label "on the IR body" while acceptance §11.2 wanted it
+on every result (took the stricter); and the spec's own derived figure was
+wrong — "0.76× the f-number, i.e. about two-thirds of a stop" is right on the
+ratio and wrong on the conversion, because aperture stops go as √2 and it is
+0.78 stops. The app computes it rather than quoting either number.
+
+**A spec is a document with bugs in it.** Implementing a wrong derived figure
+faithfully is not fidelity, and neither is quietly correcting it. Compute from
+the primary formula, pin it with a test, and put the discrepancy in NOTES.md
+where the owner can rule on it.
+
+### The auditor skipped the file it could not read, and said "Good job!"
+
+`zizmor --offline .github/workflows/` printed
+`No findings to report. Good job!` and exited **0** while one of the five
+workflows had never been audited at all. A YAML error — a `run:` line written
+as `run: "$RUNNER_TEMP/bin/zizmor" --offline …`, which YAML reads as a quoted
+scalar followed by garbage — made the file unparseable, and zizmor's default
+behaviour is to log `failed to parse input` at WARN, skip it, and carry on. The
+warning scrolled past in a wall of cheerful `🌈 completed` lines. The only
+reason it was caught is that the file count in the output dropped from five to
+four.
+
+This is §7g and the top of this section in a tool somebody else wrote: **a check
+that silently reduces its own scope is worse than one that fails, because the
+green tick now certifies less than you think it does — and it is the malformed
+workflow, the one most likely to be wrong, that gets excused.** zizmor ships
+`--strict-collection` for exactly this and it is not the default. It is now on
+in both repos and in `npm run security`.
+
+**Ask of every third-party checker: what does it do with input it cannot
+handle?** Skipping-and-passing is a common default and it is never the one you
+want. Verified the way §7g demands — the broken file was re-broken on purpose
+and the two commands run side by side: without the flag, exit 0 and "Good
+job!"; with it, exit 1.
+*(the hub and photo-field-tools, 2026-08-03.)*
+
+---
+
+## 26 · Gated in the code, freelance in the handoff
+
+**Enforced by:** GATE hub:handoff-check.mjs — the handoff is a deliverable and has its own checker.
+
+*(photo-field-tools, 2026-08-02. The owner, at the end of a build whose four
+CI gates were all green: "Why the fuck do you get so many things wrong when
+you start a new project? I have a very detailed doctrine and in this session
+alone you've ignored all of it.")*
+
+He was right, and the interesting part is WHICH rules got ignored.
+
+**The rules that held, perfectly, all session:** contrast floors, touch-target
+sizes, tremor spacing, offline behaviour, the acceptance criteria, the untested-
+vs-clean distinction, no-lens-preloaded, no-filter-control. Every one of those
+was checked by something that exits non-zero, and every one of them was also
+deliberately broken once to prove the checker bites.
+
+**The rules that were ignored, every single time they came up:** hand over the
+preview URL (§7). Don't give Noah a manual step you haven't verified end to end
+(§6). Don't diagnose his setup without evidence (§5b). iPad-first — no step
+that assumes a desktop (§2).
+
+Not one of those has a gate. All of them are prose.
+
+**So the failure is not "the doctrine wasn't read".** It was read closely enough
+to be quoted in the commit messages. The failure is that it was applied to the
+ARTEFACT and not to the HANDOFF — rigorous about the software, freelance about
+the sentence at the end that tells the owner what to do next.
+
+### The single mechanism underneath all four
+
+**Asserting something about the world outside the sandbox instead of checking
+it, where the assertion creates work for the owner.**
+
+- Told him to add Cloudflare secrets and create a Pages project. Both already
+  existed. The deploy log said so and the log was one tool call away — the
+  session had GitHub Actions access the whole time and never looked.
+- Told him to upload an image "from the repo", to a man on an iPad, when the
+  session could have attached the file directly.
+- Deployed to staging four times and never gave him the URL, then told him the
+  build was "waiting on your on-device pass".
+- Modelled his converted camera from a spec document instead of from the
+  hardware, and built a per-shoot wavelength dial after reading his own IR notes
+  saying the cutoff is *"a fixed property of the camera, established once —
+  never a per-shoot question."*
+
+Each one individually looks like carelessness. Together they are one habit: the
+code got evidence and the human got inference.
+
+### What does NOT fix it
+
+**Writing more doctrine.** There are 847 lines of it and every rule broken here
+was already in there, stated plainly. A rule that was ignored once at 847 lines
+will be ignored again at 900. Asking the owner to write it better is asking him
+to pay for the session's mistake.
+
+### What does
+
+Doctrine's own answer, §15.7 and §16.8: **MAKE IT A GATE, NOT AN INTENTION. A
+rule that lives only in prose is a rule that loses to whoever is in a hurry.**
+That rule was written about pinning and pacing. It generalises to the handoff,
+and this session is the proof: the gated half was clean and the prose half was
+a mess, in the same repo, in the same hours, by the same process.
+
+**The handoff is a deliverable and it needs a checker.** Before any "here's
+where things stand" message:
+
+- If a deploy ran, READ THE LOG and quote the URL from it. A workflow that
+  exits 0 is not evidence of a deploy — a gracefully-skipped deploy also exits
+  0. Check whether the steps ran or were skipped.
+- Any claim about external state — secrets, projects, permissions, whether
+  something exists — cites the log line or API response it came from, or it is
+  not made.
+- Any manual step handed over is either verified end to end, or accompanied by
+  the reason it could not be. "Upload the file in the repo" fails this: the
+  session never confirmed he could reach it, and could have just sent it.
+- Any file the owner is asked to act on is ATTACHED, not described by path.
+
+The first two are mechanically checkable and should be a script in any repo
+that deploys. The last two are not, which is exactly why they need to be on a
+list that gets read rather than left to judgement at the end of a long session,
+when judgement is worst.

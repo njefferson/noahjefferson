@@ -1,0 +1,97 @@
+name: Doctrine gates
+
+# The rules that used to be prose only, now with something behind them.
+#
+# LESSONS §26: in one build every GATED rule held and every PROSE rule lost —
+# same repo, same hours, same process. The difference was not care, it was
+# whether anything exited non-zero. So these run on every push and every PR.
+#
+#   lessons-check  every lesson declares how it is enforced, and every gate it
+#                  cites actually exists (a cited-but-absent gate reads as
+#                  coverage — §7g, Doctrine §4)
+#   zizmor         workflow security — pinning, template injection, credential
+#                  persistence, cache poisoning. Maintained and off-the-shelf;
+#                  itself pinned by version AND hash in
+#                  .github/requirements-ci.txt, and always run with
+#                  --strict-collection so an unparseable workflow FAILS
+#                  instead of being skipped past a green tick (LESSONS §25)
+#   pin-check      the npm hygiene zizmor does not cover — lockfile present,
+#                  `npm ci` never `npm install`, no undeclared deps (§16.3)
+#
+# Actions are pinned by SHA. That is zizmor's job now, NOT pin-check's — the
+# hand-rolled version of that check passed while zizmor found 23 real findings
+# in the same files (LESSONS §8).
+
+# Runs on the working branches too, not just main. Written with
+# `branches: [main]` alone, this workflow had never executed ONCE: the hub is a
+# main-only repo, the harness develops on claude/*, and so the gate meant to
+# catch unwatched gates was itself never watched (LESSONS §7b).
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: doctrine-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          # Nothing in this job pushes. Leaving the token in .git/config makes
+          # it available to every later step, including whatever action gets
+          # added next year (Doctrine §16.4). zizmor: artipacked.
+          persist-credentials: false
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+
+      - name: Lessons declare their enforcement
+        run: node lessons-check.mjs
+
+      # Doctrine §2 — markdown tables are LOST on an iPad, not merely ugly.
+      - name: No grids in anything Noah reads
+        run: node docs-check.mjs .
+
+      # zizmor is MAINTAINED and off-the-shelf. On its first run here it found
+      # 18 template injections and 5 credential-persistence issues that a
+      # hand-rolled checker written the same afternoon had no concept of.
+      # Standard tooling first; bespoke only where nothing standard exists.
+      # Pinned by version AND hash (.github/requirements-ci.txt). `pip install
+      # zizmor` resolves to whatever PyPI serves that morning — the same
+      # mutable-pointer problem as an unpinned Action tag, and it sat in THIS
+      # workflow, in the change that argued for pinning everything (§16.1).
+      # --require-hashes rejects a swapped artefact; --only-binary stops a
+      # silent fall back to building the sdist from source.
+      - name: Install zizmor (version- and hash-pinned)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/zizmor"
+          "$RUNNER_TEMP/zizmor/bin/pip" install --quiet --only-binary=:all: \
+            --require-hashes -r .github/requirements-ci.txt
+
+      # --strict-collection turns an unparseable workflow into a FAILURE. By
+      # default zizmor logs "failed to parse input", skips that file and still
+      # exits 0 — so a workflow with a YAML error is silently never audited,
+      # and the run reports "No findings. Good job!". Caught here by breaking
+      # this very file's YAML and watching the gate stay green (§16.8).
+      - name: Workflow security audit
+        run: |
+          "$RUNNER_TEMP/zizmor/bin/zizmor" --offline --strict-collection \
+            .github/workflows/
+
+      - name: npm hygiene (what zizmor does not cover)
+        run: node pin-check.mjs
+
+      # Printed on every run so the un-automatable rules are READ rather than
+      # remembered. These are the ones that got broken.
+      - name: The steps no script can perform
+        if: always()
+        run: node lessons-check.mjs --checklist

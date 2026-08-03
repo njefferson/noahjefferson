@@ -1,0 +1,27 @@
+# zizmor configuration — GitHub Actions security audit.
+#
+# Suppressions are EXPLAINED, never blanket. Doctrine §4's rule about printed
+# exemptions applies to a security audit too: an ignore with no stated reason
+# is indistinguishable from one nobody understood.
+
+rules:
+  template-injection:
+    ignore:
+      # PRE-EXISTING, ASSESSED, NOT YET FIXED — awaiting Noah's go-ahead.
+      #
+      # These two workflows expand `${{ inputs.* }}` directly into `run:`
+      # blocks (18 sites in cf-analytics, 1 in deploy-myfax). That is genuine
+      # shell injection and the fix is mechanical — pass each through `env:`
+      # and quote the variable.
+      #
+      # Why it is not an emergency: both are `workflow_dispatch` only, so the
+      # inputs are typed by whoever manually starts the run, and this is a
+      # personal repo with no external contributors. Exploiting it requires
+      # the ability to dispatch, which already implies repo access.
+      #
+      # Why it is not fixed here anyway: these are Noah's live analytics and
+      # fax deploys, and rewriting 19 interpolation sites in workflows this
+      # session did not write — and cannot test end to end — is how a working
+      # deploy quietly stops working. Offered, not assumed.
+      - cf-analytics.yml
+      - deploy-myfax.yml

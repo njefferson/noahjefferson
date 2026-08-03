@@ -64,11 +64,51 @@ cross-app record of what has actually gone wrong, with the numbers — and
 [`PALETTES.md`](PALETTES.md), how any app gets reskinned (roles, floors, four
 verified families, traps), enforced by [`palette-check.mjs`](palette-check.mjs).
 The doctrine says what to do; the lessons say what it cost to find out; palettes
-says what colour has to clear before taste gets a vote. Append to LESSONS.md
-from any app's session whenever something is learned that would have saved time
-elsewhere; never fork it into another repo. When a doctrine rule changes, edit it HERE and
-tell the sibling repos to re-point (their `CLAUDE.md` files link to this copy).
-Never fork the doctrine into another repo — link to it.
+says what colour has to clear before taste gets a vote.
+
+Append to LESSONS.md from any app's session whenever something is learned that
+would have saved time elsewhere; never fork it into another repo. When a
+doctrine rule changes, edit it HERE and tell the sibling repos to re-point
+(their `CLAUDE.md` files link to this copy). Never fork the doctrine into
+another repo — link to it.
+
+## Five gates live here and serve every repo
+Never fork these either — they take `--repo ../app` (or a path) so a sibling
+runs them without copying them, which is what stops five divergent versions
+existing.
+
+- [`palette-check.mjs`](palette-check.mjs) — the colour floors (PALETTES.md).
+- [`docs-check.mjs`](docs-check.mjs) — the no-grid rule (Doctrine §2) over every
+  tracked `.md`. `node docs-check.mjs .` from the hub, or
+  `node ../noahjefferson/docs-check.mjs .` from a sibling.
+- [`lessons-check.mjs`](lessons-check.mjs) — every lesson in LESSONS.md
+  declares `GATE`, `CHECKLIST` or `JUDGEMENT`, and a cited gate that does not
+  exist FAILS. `--checklist` prints the steps no script can perform; run it
+  before any handoff.
+- [`pin-check.mjs`](pin-check.mjs) — npm hygiene only: `npm ci` never
+  `npm install`, a lockfile beside every package.json, no undeclared deps.
+  **Workflow security is `zizmor`'s job, not this file's** — see SECURITY.md.
+- [`handoff-check.mjs`](handoff-check.mjs) — a staged candidate is recorded in
+  NOTES.md with its URL and version, no instruction tells an iPad-first owner to
+  fetch a file from a repo, and the four un-automatable handoff obligations are
+  acknowledged. LESSONS §26 is why it exists.
+
+`npm run check` runs the hub's own, **including `zizmor`** — run
+`npm run security:install` once first; the gate fails with an install hint
+rather than skipping when the tool is absent.
+`.github/workflows/doctrine.yml` runs lessons, pins and `zizmor` on every push
+and PR.
+
+zizmor is always invoked with **`--strict-collection`**, and is itself pinned by
+version and hash in [`.github/requirements-ci.txt`](.github/requirements-ci.txt)
+— which is canonical here, so every sibling repo installs the same build. Both
+of those are load-bearing and neither is a default; SECURITY.md says why, and
+LESSONS §8 and §25 say what it cost to find out.
+
+[`SECURITY.md`](SECURITY.md) is canonical here too — the baseline every repo
+is held to, splitting what CI enforces from the GitHub and Cloudflare settings
+only Noah can switch on. Confirm those the same way as repo metadata (§10):
+list them, never assume them.
 
 ## Patch notes are a doctrine rule now (§7d)
 Every app that has shipped more than one release SHOWS THE READER WHAT CHANGED,

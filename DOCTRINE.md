@@ -385,6 +385,13 @@ without evidence is the one that makes it Noah's fault.
   of "it's ready."
 - Leave a durable "waiting on Noah" signal so a staged candidate isn't invisible
   after the session ends (a draft PR or a Project-facts note, per the repo).
+  **This is gated**: [`handoff-check.mjs`](handoff-check.mjs) fails a repo that
+  deploys to staging without recording the preview URL and the staged version in
+  `NOTES.md`. It also refuses to pass until the session has acknowledged the
+  handoff obligations no script can judge — quoting a deploy URL read from the
+  LOG rather than inferred, citing evidence for any claim about external state,
+  attaching files rather than naming paths, and verifying every manual step
+  handed over. LESSONS §26 is why.
 - START EVERY SESSION by checking whether a candidate is already staged and
   waiting — surface it, never rebuild it.
 - The MOMENT a release merges to production, record it in the repo's Project
@@ -560,7 +567,12 @@ Two consequences, both non-optional:
   actually gone wrong anywhere, with the numbers, so it does not go wrong again
   somewhere else. Read it with this doctrine at the start of every session, and
   APPEND to it whenever a session learns something that would have saved time in
-  a different app. Doctrine says what to do; Lessons says what went wrong and
+  a different app. **It is ENFORCED, not merely read** (owner, 2026-08-02: *"I
+  thought lessons was a good document, but you don't do fuck-all with it"*).
+  Every lesson declares `GATE`, `CHECKLIST` or `JUDGEMENT`, and
+  [`lessons-check.mjs`](lessons-check.mjs) FAILS on a lesson that declares
+  nothing or cites a gate that does not exist. Run
+  `node lessons-check.mjs --checklist` before any handoff. Doctrine says what to do; Lessons says what went wrong and
   what it cost. A repo may keep its own `LESSONS.md` for stack-contract detail
   (build/deploy/vendor conventions specific to that codebase) — that is a
   different, repo-local document.
@@ -948,6 +960,11 @@ again elsewhere.)*
 
 ## 16. Security and the supply chain
 
+> **The switch-on list lives in [`SECURITY.md`](SECURITY.md)** — what runs
+> automatically, and the GitHub and Cloudflare settings only Noah can set
+> (same manual-and-confirm rule as §10). This section is the posture and the
+> reasoning; that file is what you work down.
+
 These apps are small, free and personal, which changes the threat model but does
 not empty it. Nobody is targeting Noah. The realistic path runs the other way: a
 compromised package, pulled in for a render script nobody thinks about, executing
@@ -959,11 +976,31 @@ THE POSTURE, and the exposure that produced it (hub audit, 2026-07-28). Nothing
 here is hypothetical — every rule below names something that was true of this
 repo when it was written:
 
-1. PIN WHAT EXECUTES. Anything that runs code gets a version that cannot change
-   under us: a committed lockfile, `npm ci` and never `npm install` in
-   automation, and GitHub Actions referenced BY COMMIT SHA, not by tag. A tag is
-   a mutable pointer someone else controls — `cloudflare/wrangler-action@v3`
-   floats, and it executes while holding a Pages:Edit token.
+1. PIN WHAT EXECUTES — **all of it, including the tools that do the checking.**
+   Anything that runs code gets a version that cannot change under us: a
+   committed lockfile, `npm ci` and never `npm install` in automation, GitHub
+   Actions referenced BY COMMIT SHA and not by tag, and **every other installer
+   a workflow reaches for** — `pip install`, `pipx install`, `brew install`,
+   `curl | sh`. A tag is a mutable pointer someone else controls —
+   `cloudflare/wrangler-action@v3` floats, and it executes while holding a
+   Pages:Edit token. So does `pip install zizmor`.
+
+   That last one is not hypothetical and it is the reason this rule now names
+   the installers rather than just npm and Actions: the session that adopted
+   zizmor installed it with `pipx install zizmor || pip install zizmor`, an
+   unpinned binary fetch **inside the workflow that enforces this rule**, in
+   the change that argued for it (LESSONS §8). The pin is now version and hash
+   in [`.github/requirements-ci.txt`](.github/requirements-ci.txt), canonical
+   in the hub, installed `--require-hashes --only-binary=:all:`, maintained by
+   Dependabot's `pip` ecosystem. **Adopting a good tool is the moment the guard
+   is down; pin it the same day.**
+
+   **Enforced by `zizmor --offline --strict-collection` in CI** — a maintained
+   auditor that also catches template injection, credential persistence and
+   cache poisoning. USE IT RATHER THAN WRITING ONE: the first hand-rolled
+   version of this check passed both repos while zizmor found 23 real findings
+   in the same files, two of them in workflows written that afternoon.
+   `--strict-collection` is not optional — see §16.8.
 2. NEVER PUT AN UNPINNED FETCH NEXT TO A SECRET. `npx wrangler secret put`
    resolves whatever npm serves at that moment and is then handed a live API key
    on stdin. That is the sharpest exposure this repo has had: an unreviewed
@@ -999,10 +1036,23 @@ repo when it was written:
    and set text; reserve `innerHTML` for inert markup you authored.
 8. MAKE IT A GATE, NOT AN INTENTION (§15.7, and it generalises). A rule that
    lives only in prose is a rule that loses to whoever is in a hurry. Lockfiles
-   are checked by `npm ci` failing. Pinning is checked by a CI step that rejects
-   an unpinned `uses:`. Headers are checked by fetching the deployed page. §4 is
+   are checked by `npm ci` failing. Workflow security — pinning, template
+   injection, credential persistence — is checked by **`zizmor`**, a maintained
+   auditor; npm hygiene by [`pin-check.mjs`](pin-check.mjs). Run either against
+   any repo with `--repo`. **Prefer a maintained tool to a bespoke gate every
+   time.** Headers are checked by fetching the deployed page. §4 is
    the standing proof of what happens otherwise: a documented gate that never
    existed, believed for months because nobody ran it.
+
+   **And then ask the maintained tool what it does with input it cannot
+   handle** — preferring it does not mean trusting its defaults. zizmor's
+   default is to log a YAML error at WARN, **skip that workflow, and exit 0
+   with "No findings to report. Good job!"**: the file most likely to be wrong
+   is the one excused, and the tick certifies less than it appears to. Always
+   `--strict-collection`. Found here by breaking a workflow's YAML and watching
+   the audit stay green (LESSONS §25). Skip-and-pass is a common default across
+   linters and scanners; assume it until you have checked, and prove the flag
+   by planting the fault (§15.7).
 
 WHAT IS ALREADY RIGHT HERE, so it does not get "cleaned up" by a later session:
 the Cloudflare credential step strips whitespace and masks before use, with a
