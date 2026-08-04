@@ -50,7 +50,20 @@ const NAME = REPO.split('/').pop();
 
 // privacy-gate:patterns-begin
 const DISCLOSURE = [
-  /\b(?:noah|the owner|he|she|they)\s+(?:is|was|are|were|being|remains)\s+(?:\w+\s+){0,2}?(?:audhd|adhd|autistic|neurodivergent|diagnosed)\b/i,
+  /\b(?:noah|the owner|he|she|they)\s+(?:is|was|are|were|being|remains)\s+(?:\w+\s+){0,2}?(?:audhd|adhd|autistic|neurodivergent)\b/i,
+  // `diagnosed` only counts as a disclosure when something is diagnosed WITH
+  // something. Bare "diagnosed" is ordinary engineering English about a FAULT,
+  // and this pattern used to swallow it: fauxplane's release note "they are
+  // still not diagnosed, only absent" — about console warnings — failed the
+  // gate and blocked FOUR consecutive deploys before anyone noticed, because
+  // "they are ... diagnosed" matched. Four releases sat on a branch, reported
+  // as shipped, while the owner's device stayed on the last one that deployed.
+  //
+  // Requiring "with" keeps every real disclosure ("he was diagnosed with X")
+  // and releases the technical sense outright. A gate that fires on ordinary
+  // prose is a gate people learn to route around, which is the one failure a
+  // privacy check cannot afford.
+  /\b(?:noah|the owner|he|she|they)\s+(?:is|was|are|were|being|remains)\s+(?:\w+\s+){0,2}?diagnosed\s+with\b/i,
   /\b(?:audhd|adhd|autistic|neurodivergent)\s+(?:owner|maker|author)\b/i,
   /\bconfirmed\b[^\n]{0,50}\b(?:he|she|they)\s+(?:is|are)\s+neurodivergent\b/i,
   /\b(?:noah|the owner)\b[^\n]{0,30}\b(?:medication|therapy|diagnosis|diagnosed)\b/i,
