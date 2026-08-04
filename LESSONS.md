@@ -3099,7 +3099,13 @@ a screenshot — which is all of them, since they share this approach.)*
 
 ---
 
-## 26 · A helper written for a known race protects nothing at the call site that skips it
+## 39 · A helper written for a known race protects nothing at the call site that skips it
+
+> **Renumbered from 26 on 2026-08-04.** It shared that number with *"Gated in the
+> code, freelance in the handoff"*, which DOCTRINE.md, CLAUDE.md,
+> `handoff-check.mjs` and `doctrine-sync.mjs` all cite as §26 — so that one kept
+> it and this one moved. Nothing cited this lesson by number; its checklist id
+> `helper-call-sites` is unchanged and was always the stabler reference.
 
 **Enforced by:** CHECKLIST helper-call-sites — when a helper's docstring describes a failure MODE rather than a convenience, grep for bare calls of the primitive it wraps; every one is a live instance of that failure waiting on timing.
 
@@ -3623,7 +3629,12 @@ coincidence; this is its mirror image — a check falsifiable by nothing.)*
 
 ---
 
-## 30 · An absent record of success is not an absent attempt
+## 40 · An absent record of success is not an absent attempt
+
+> **Renumbered from 30 on 2026-08-04**, where it collided with *"A link is only
+> followed if somebody remembers to follow it"*. Neither was cited by number, so
+> the first-written kept 30. Quietkeep's NOTES cites the range "LESSONS 30–35",
+> which was `doctrine-sync` output listing both and remains accurate.
 
 **Enforced by:** CHECKLIST attempt-vs-success — when a counter, streak or milestone reads zero, establish whether it never ran or whether it ran and failed, and say which in the words you write down. Never infer "not started" from "nothing recorded".
 
@@ -3665,7 +3676,12 @@ checked.)*
 
 ---
 
-## 31 · A handed-over artifact is FROZEN the moment it leaves
+## 41 · A handed-over artifact is FROZEN the moment it leaves
+
+> **Renumbered from 31 on 2026-08-04.** It shared that number with *"An app that
+> caches itself cannot notice it has gone stale"*, which `CLAUDE.md` and
+> `pwa-check.mjs` both cite as §31 — so that one kept it. Its checklist id
+> `handoff-is-frozen` is unchanged.
 
 **Enforced by:** CHECKLIST handoff-is-frozen — a prompt, command block or message written for the owner to carry elsewhere is final on delivery. If it is later found wrong, send a short CORRECTION that names what to change; never a revised copy of the whole thing.
 

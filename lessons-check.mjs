@@ -63,6 +63,38 @@ if (!heads.length) {
 }
 heads.push(['', lines.length]);
 
+// EVERY LESSON NUMBER IS UNIQUE, because the number IS the citation.
+//
+// This file is cited by number from everywhere: DOCTRINE.md, both CLAUDE.mds,
+// the gates' own source, sibling NOTES and ADRs, and commit messages that can
+// never be edited. "LESSONS §31" has to resolve to one lesson or the citation
+// is decoration.
+//
+// It went wrong the ordinary way and nothing noticed: sessions append
+// concurrently, each takes "the next number" off the copy it read, and both are
+// right at the moment they look. Found with six lessons sharing three numbers —
+// §26, §30 and §31 — while §26 was cited four times from DOCTRINE.md,
+// CLAUDE.md and handoff-check.mjs, all meaning only one of them.
+//
+// The rule when it happens: the lesson the existing citations resolve to KEEPS
+// the number, and the other takes a fresh one off the end. Renumbering the
+// cited one silently rewrites history that has already been read.
+const byNumber = new Map();
+for (const [head] of heads) {
+  const n = /^##\s*(\d+[a-z]?)\b/.exec(head)?.[1];
+  if (!n) continue;
+  if (!byNumber.has(n)) byNumber.set(n, []);
+  byNumber.get(n).push(head.replace(/^##\s*/, '').trim());
+}
+for (const [n, titles] of byNumber) {
+  if (titles.length < 2) continue;
+  failures.push(
+    `LESSONS.md has ${titles.length} lessons numbered ${n}, so a citation to §${n} is ambiguous:\n`
+    + titles.map(t => `        · ${t.slice(0, 66)}`).join('\n')
+    + '\n      The one existing citations resolve to keeps the number; the other takes a fresh one.',
+  );
+}
+
 for (let k = 0; k < heads.length - 1; k++) {
   const [head, at] = heads[k];
   const body = lines.slice(at + 1, heads[k + 1][1]).join('\n');
