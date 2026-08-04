@@ -3822,3 +3822,45 @@ often a step nobody can perform yet, and saying which turns a request into a
 sequencing fact.
 
 *(Quietkeep, 2026-08-03.)*
+
+---
+
+## 36 · The diagnostic already told him. Reading it back is nagging.
+
+**Enforced by:** JUDGEMENT — when a §7f report arrives, answer from what the
+owner CANNOT see in it. Its own "what is wrong" section is addressed to him and
+is already on his screen; a session has nothing to add by restating it, and no
+repo carries a to-do about his personal habits.
+
+Noah, 2026-08-04, in anger: *"DO NOT NAG ME ABOUT FUCKING BACKUPS HERE"* — after
+a session opened three consecutive replies with the top line of a report he had
+sent it himself.
+
+Doctrine §7f gets an app to produce a text report and gets Noah to send it. What
+it does not say, because it seemed obvious until it wasn't, is **what a session
+is for once the report arrives**. The report has two audiences and they need
+opposite things:
+
+- **Him.** He has already read it. The app wrote its warnings in his words, on
+  his screen, ranked, at the moment he opened it. That is the whole design.
+- **The session.** Its value is entirely in what he cannot get from the text
+  alone: which line of code produced a number, whether a count means what its
+  label says, what the figure implies about a defect, what it rules out.
+
+Restating his half is not "being thorough" — it is spending his attention to tell
+him something he had before you did. And it degrades: said once it is redundant,
+said three times it reads as being managed.
+
+**Smell:** a sentence in your reply could have been written by reading only the
+report, with the repository closed — or it restates a line from the report's own
+"what is wrong" section, or it appears in two consecutive replies. In the
+exchange that produced this, every useful finding failed that test in the right
+direction: a cache name proving what production served, an import that could not
+have minted the device id it was credited with, a "devices" count that counts
+stores. None of those are in the report. All of them needed the code.
+
+**And do not convert his warnings into repo to-dos.** A `NOTES.md` line tracking
+whether the owner has taken a backup is the same nag with a longer half-life,
+sitting where every future session will read it and repeat it.
+
+*(Quietkeep, 2026-08-04.)*
