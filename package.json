@@ -29,8 +29,8 @@
     "docs": "node docs-check.mjs ."
   },
   "devDependencies": {
-    "axe-core": "4.10.2",
-    "playwright-core": "1.56.0"
+    "axe-core": "4.12.1",
+    "playwright-core": "1.62.1"
   },
   "//browser": "playwright-core 1.56.0 ships chromium revision 1194, which matches /opt/pw-browsers/chromium-1194 in the session sandbox. These are a MATCHED PAIR: the scripts launch that hardcoded executablePath, and a playwright-core expecting a different revision connects and then hangs on a protocol mismatch with no error. Verified 2026-07-28 by launching Chromium and running the a11y scan end-to-end. If the sandbox browser changes, re-pin here and re-verify."
 }
