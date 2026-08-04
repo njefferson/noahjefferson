@@ -3994,3 +3994,93 @@ the clause describes has never been observed. Ask what else can reach that
 outcome, and whether anything has ever watched it happen.
 
 *(Quietkeep 1.18.1 → 1.18.2, 2026-08-04.)*
+
+---
+
+## 43 · A `title` attribute is not a caveat on a touch screen, and `textContent` cannot tell you that
+
+**Enforced by:** GATE fauxplane:scripts/a11y-gate.mjs — the follow-route check measures a bounding box, not `textContent`; and GATE fauxplane:scripts/plant.mjs — the plant that deletes the caveat while keeping the value.
+
+fauxplane shows a followed flight's route. adsb.lol *infer* that route from the
+callsign and call it **plausible**, so the panel is obliged to carry the word:
+`KSFO → KJFK` presented bare reads, to the person this app is built for and who
+is not a pilot, as the flight plan the crew filed.
+
+The first build put the qualifier in `el.title`.
+
+**On the phone and the iPad this app exists for, that is not a hiding place —
+it is a deletion.** There is no hover on a touch screen. The one sentence
+stopping a guess being read as a clearance was, on every device that would ever
+run it, absent.
+
+**The check that should have caught it would have passed.** A DOM assertion
+built the obvious way — read the element, look for the word — finds `title`
+just as happily as it finds a text node, because `getAttribute('title')` and
+`textContent` are both just strings on the same object. The check would have
+gone green about an empty banner. So the assertion is now a
+`getBoundingClientRect()` with real width and height, plus text that is really
+there: the only definition of "on screen" that a `title`, a `visibility:
+hidden`, or a zero-height container cannot satisfy.
+
+**And it needed the reader's own path to measure anything at all.** The first
+run of that check reported `0x0` for a perfectly visible element: the banner
+lives inside the PFD page, which is `[hidden]` while the radar is up, and the
+check tapped an aircraft on the radar and measured without going back. The fix
+is to make the check walk the path — tap, then return to the panel — and never
+to weaken the assertion until the number it reads stops being inconvenient.
+
+**The general shape: "is the text present" and "can a reader read it" are
+different questions, and the DOM only answers the first.** Anywhere a value is
+qualified — a caveat, a unit, a provenance flag, an "estimated" — the qualifier
+has to be measured the way a reader meets it. This is the same failure as hub
+§29, where an `aria-label` satisfied a substring check by accident: both are a
+check reading the machine's copy of the text instead of the reader's.
+
+*(fauxplane 1.21.0, 2026-08-04.)*
+
+---
+
+## 44 · When a contract cannot be read, ship the probe — a wrong guess that reports itself beats a fourth screenshot
+
+**Enforced by:** JUDGEMENT. The surface it needs is gated: Doctrine §7f requires a text diagnostic in every app, and fauxplane's carries the probe block.
+
+**Smell:** a session about to ask the owner for another screenshot, capture or paste of a document he has already sent — or about to park a feature as blocked — when the missing fact is one his DEVICE could report and yours cannot reach.
+
+fauxplane needed `POST /api/0/routeset` from adsb.lol. Their OpenAPI page names
+the request schemas `PlaneList` and `PlaneInstance` and does not expand them in
+either capture Noah sent, and the sandbox cannot reach `api.adsb.lol` at all.
+Three options:
+
+- Ask for a **fourth screenshot** of a page already screenshotted twice, hoping
+  the schema expanded this time.
+- **Wait**, and ship nothing.
+- **Send the best-reasoned shape and report exactly what came back.**
+
+The third shipped, and it is the one to reach for. The Function sends the shape
+the endpoint's lineage uses, and the diagnostics report gained a block carrying
+the HTTP status, the top-level keys, the per-entry keys and the **validation
+detail**. The endpoint is FastAPI: a body it rejects comes back as a 422 whose
+`detail` array names the offending field with `loc`, `msg` and `type`. So the
+report says `REJECTED at: body.planes.0.lat says: field required`, and the next
+release is a CORRECTION rather than another guess.
+
+**What makes this honest rather than reckless is the failure mode.** A wrong
+guess renders as "route unavailable" and never as an invented route — the
+no-synthetic-data rule is what allows the guess to be shipped at all. A probe
+whose failure mode is a plausible wrong answer is not a probe, it is a bug with
+telemetry.
+
+**Two preconditions, and without them this is just guessing:** the app must
+already have a §7f text diagnostic the owner can send back, and the release
+notes must SAY the feature may not work and why — fauxplane 1.21.0's `broken`
+list leads with it, and NOTES tells the next session the shape is unconfirmed.
+Shipping a hypothesis silently is how a repo acquires a mystery.
+
+**The general shape: when the blocker is a fact only the owner's device can
+observe, build the thing that observes it instead of asking him to be the
+instrument.** The same method settled fauxplane's Mode S crew readouts, built
+from published field names without a single real response ever seen. Asking for
+one more screenshot is asking a person to do a machine's job, and it was already
+established (§36) that he had sent the answer once.
+
+*(fauxplane 1.21.0, 2026-08-04.)*
