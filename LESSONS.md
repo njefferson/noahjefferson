@@ -3864,3 +3864,74 @@ whether the owner has taken a backup is the same nag with a longer half-life,
 sitting where every future session will read it and repeat it.
 
 *(Quietkeep, 2026-08-04.)*
+
+---
+
+## 37 · A pixel gate must be asked whether the pixels are the ones it thinks
+
+**Enforced by:** GATE fauxplane:scripts/a11y-gate.mjs — the contrast sampler grows the viewport to the document height BEFORE measuring, so the coordinates it reads and the screenshot it samples come from one layout.
+
+fauxplane's contrast registry measures text against the real backdrop by hiding
+the text, taking a full-page screenshot, and sampling the pixel where the text
+was. It reported:
+
+    power annunciator (OFF, lit) measured 1.00:1 against the real backdrop
+
+A ratio of exactly 1.00 means the foreground was compared against **its own
+colour** — the pixel sampled for the BACKDROP was the element's own text.
+
+**`page.screenshot({ fullPage: true })` grows the viewport to the document
+height to take the shot.** Anything sized by viewport height — a percentage
+height, flex distribution down a column, a panel sized to fill the screen —
+reflows while it does. The coordinates had been read at a 768px viewport and
+were being sampled out of an image laid out at 1030px, so they pointed at
+whatever had slid into that spot: in this case the element itself, still
+painted, a hundred pixels from where the measurement said it was.
+
+**Three investigations went straight past it, and all three were correct.** The
+DOM said the element was hidden. `elementsFromPoint` said nothing was behind it.
+A hand-rolled replication of the sampler measured a clean 10:1. Every one of
+them was looking at the DOM; the gate was looking at a screenshot.
+
+**The general shape: when a check disagrees with your reasoning, suspect the
+CHECK'S INSTRUMENT before the reasoning.** A gate that measures pixels has a
+second question nobody asks it — not "is this colour right" but "are these the
+pixels of the thing I named". Growing the viewport first makes the capture a
+no-op and the two agree by construction, which is better than a correction
+factor because there is nothing left to get wrong.
+
+*(fauxplane, 2026-08-03.)*
+
+---
+
+## 38 · Fixing one check can blunt another, and the plants you re-run are the ones you suspect
+
+**Enforced by:** GATE fauxplane:scripts/plant.mjs — run WHOLE. Also the ordering rule it produced: in fauxplane's page sweep the pixel checks run before `checkContrast`, because that pass perturbs the page.
+
+Straight after the sampler fix in §37, four contrast and target plants were
+re-run individually — on the explicit reasoning that a fix to an instrument can
+quietly blunt it. All four still went red about their own thing.
+
+**They were the wrong four.** The full sweep came back **44/45**, with the
+magenta canvas sentinel UNPROVEN: the gate stayed GREEN with its fault planted.
+
+The mechanism is worth stating because nothing about it is guessable. Growing
+the viewport fires a `resize`; the app re-reads its canvas colour tokens on one;
+and re-reading them HEALS the exact fault that sentinel exists to catch — a
+token read taken while the page was hidden and cached as magenta. `checkContrast`
+ran before the sentinel in the page loop, so the sentinel was inspecting a page
+another check had already repaired. Nothing was wrong in the app.
+
+**The fix is ORDERING, not un-doing the perturbation.** That pass expands scroll
+containers, demotes modals, hides text and now resizes the viewport. Any of
+those could heal something, and an exemption list would go stale on the next
+step added. So: measure what the app produced, then mutate it. Pixel checks
+first, contrast last.
+
+**The general shape: a targeted re-run tests the plants you SUSPECT, and that is
+reasoning — which is precisely what a fault-injection harness exists to
+replace.** The instinct to re-run "the related ones" is the same instinct that
+writes a check nobody has watched fail. Run the sweep whole; it is slow, and it
+is slow in the way a smoke alarm is annoying.
+
+*(fauxplane, 2026-08-03.)*
