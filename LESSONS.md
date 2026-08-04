@@ -4234,3 +4234,74 @@ was blocking nothing changed nothing observable. **A plant has to break
 something the check can SEE**; "the code is different now" is not the test.
 
 *(fauxplane 1.22.0, 2026-08-04.)*
+
+---
+
+## 49 · A reason string is a value, and inventing one is the same defect as inventing a number
+
+**Enforced by:** GATE fauxplane:scripts/plant.mjs — the plant that reports a quiet compass as a device without one, and the plant that makes the follow banner claim a broadcast that never arrived. Both are `tests` plants over pure wording functions.
+
+fauxplane forbids synthetic data: every number traces to a sensor or a feed, and
+a missing reading is FAIL with a reason. **The reasons were not held to the same
+rule**, and one diagnostics report contained two fabricated ones.
+
+**"This device reports no magnetic heading."** Twenty lines below, the same
+report: `webkitCompassHeading 278.3`. The phone has a compass and was reporting
+278.3°; it had stopped SENDING while the page was backgrounded. The filter's
+`hasHeading` goes false for two unrelated reasons — no heading at all, and a
+heading too old to use — and one sentence was printed for both.
+
+**"This panel is showing that aircraft's broadcast, not this device"** — printed
+from the instant FOLLOW was pressed, while every followed field read *"waiting
+for the first report"* and the feed was rate limited. It was showing nothing.
+
+**Why this is worse than a bad number, not better.** A wrong number looks wrong;
+a reader distrusts it and checks. A confident wrong sentence is believed, and
+these two were specific enough to act on — one sends the reader off to replace
+working hardware, the other tells them data is present on a screen that has
+none. And the second sat at the top of a wall of red crosses, which is exactly
+what made the owner report the panel as "broken without any data": **the app was
+arguing with itself, and the prose was the part that was lying.**
+
+**The fix is structural, not editorial.** Both wordings became PURE FUNCTIONS —
+`headingReason` on the filter, `followBannerText` beside the feed — with every
+branch unit-tested and a plant proving the test fails. Prose that states a fact
+about the reader's hardware or about what is on screen is program output, and it
+gets the same gate as a number.
+
+**Smell:** a `fail()`/error path whose message asserts a CAPABILITY ("this device has no…", "not supported", "unavailable on this platform") on a code path that is also reachable by a timeout, a stale reading, or a permission that has not been asked for yet.
+
+*(fauxplane 1.22.1, 2026-08-04.)*
+
+---
+
+## 50 · An old report is not a verdict on a new release
+
+**Enforced by:** CHECKLIST report-version-first — read the version stamp at the top of any diagnostic before drawing a conclusion from it, and say in the reply which release it describes.
+
+Two fixes went out. The owner sent a diagnostics report showing the same symptom
+they had described before — a panel of crossed-out instruments.
+
+**The report was from the release BEFORE the fix.** Its own header said so, and
+so did a line further down: `a newer version is not waiting`, timestamped three
+minutes before capture. The new build had not reached the device.
+
+The pull is to read it as "the fix did not work" and start undoing good work, or
+as "he must not have reloaded" and say nothing useful. Both are wrong. **The
+report was worth having — it contained two defects nobody had noticed** — but it
+could not speak to the release it predated.
+
+**And the symptom genuinely had two causes.** One was the freshness-window bug
+that release fixed: fields crossed out whose data HAD arrived. The other, in
+this report, was an aircraft that never reported at all because the feed was
+refusing us. **Identical on screen, unrelated underneath.** Matching a screenshot
+to a known bug is not diagnosis; the report says which one, and only if it is
+read.
+
+**The general shape: a diagnostic carries the version it was taken on, and that
+is the first field to read, not the last.** An app with §7f diagnostics and
+§7h stale-app detection will routinely receive reports from releases behind
+HEAD — the two features together guarantee it. Say plainly in the reply which
+release the report describes and what it therefore cannot tell you.
+
+*(fauxplane 1.22.0 → 1.22.1, 2026-08-04.)*
