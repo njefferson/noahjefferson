@@ -57,6 +57,46 @@ in scope. A pronoun with no antecedent — *"still fails"*, *"it's broken again"
 where the subject is not established in this conversation. **In every one of
 those, the first move is a question, not a tool call.**
 
+## 0c. Only NOAH decides what goes on the hub. Never a session.
+
+Noah, 2026-08-04, in anger: *"ONLY *I* DECIDE WHAT GOES ON THE HUB."* And when
+told the rule was nowhere in this file: *"IT SHOULDN'T BE NECESSARY."* He is
+right that it shouldn't be. It is written here because it turned out to be.
+
+**The rule.** The hub at noahjefferson.pages.dev is Noah's shop window, and
+putting an app in it is ADVERTISING it under his name. A session adds an app to
+the hub only when Noah NAMES that app. Not when the app is finished, not when a
+gate is green, not when a doctrine section says a repo should be wired in, not
+when the app is already live at its own URL, and not when its absence looks like
+an oversight — those establish that an app COULD be listed, never that it should
+be. **Readiness is not a session's call to make.** He may have reasons he has
+not said, and he does not owe any.
+
+**This binds four moves, not one.** Adding an app; proposing one; restoring one
+that used to be listed and is not now; and mentioning an unlisted app as
+something that could be added. The fourth is the one that feels safe and is not
+— naming an app he has not named puts it on the table, which is the deciding he
+just said is his. If a session NOTICES an unlisted app, it says nothing about
+it. Where a genuine inconsistency needs recording, it goes in a file, not into a
+message that reads as a pitch.
+
+**It covers every surface the hub deploys**, not just the app rows on the front
+page: the noscript list, the shared accessibility statement's app list, tiles,
+icons, and any future shared page. An app named on a deployed hub page is
+advertised on it, whether or not that page links to it.
+
+**And it survives being right.** A session that has found a real defect — an app
+in one hub list and missing from another — still does not fix it by adding the
+app. Report the inconsistency, name nothing, and wait. §0b's "partial compliance
+with a misdirected request is still acting without permission" is the same
+failure in a different coat: work he did not ask for is not redeemed by being
+correct, and an unasked addition to the hub is worse than most, because it is
+published under his name the moment `main` deploys.
+
+**Removal is his call too, and in the same direction: a session does not remove
+an app from the hub either.** The rule is not "be conservative about the hub",
+it is "the hub's contents are Noah's decision" — both directions.
+
 ## 1. Product identity — what these apps ARE
 
 Free · on-device / local-first · offline-first · no account · no install
@@ -660,7 +700,8 @@ picked at its start and CANNOT add one mid-session — so to work on or set up a
 new app, start the session with BOTH the new repo AND the noahjefferson hub
 selected, because this Doctrine lives in the hub.)
 
-The session does 1–6; Noah does 7 (metadata is a manual GitHub-UI step):
+The session does 1–5 and 6b; Noah does 6 and 7 (the hub is his to decide — §0c;
+metadata is a manual GitHub-UI step — §10):
 1. `CLAUDE.md` — the standard pointer header (link to this Doctrine + "the
    Doctrine wins") followed by repo-specific facts only. Keep it thin.
 2. `LICENSE` — PolyForm Noncommercial 1.0.0, unless a data source's terms force
@@ -673,7 +714,11 @@ The session does 1–6; Noah does 7 (metadata is a manual GitHub-UI step):
    (§7b), with its contrast pair registered.
 5. Branches: `staging` and `main` only.
 6. Wire it into the hub: the hub links OUT to the app, the app links BACK, and
-   its About links the shared accessibility statement.
+   its About links the shared accessibility statement. **The two halves are not
+   the same job.** The app's own links back are the session's to build. The
+   hub's outbound link is NOT — that is advertising the app under Noah's name,
+   and only he decides it goes there (§0c). Build the app's half, leave the
+   hub's, and do not name the app as a candidate for it.
 6b. Wire the §9b privacy gate into CI from the FIRST workflow: check the hub
    out (SHA-pinned, `persist-credentials: false`, an untracked path) and run
    `node <hub>/privacy-check.mjs --repo .`. Prove it with a local plant,

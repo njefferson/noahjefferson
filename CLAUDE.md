@@ -34,6 +34,16 @@ Every item below has actually happened.
 - **A session CANNOT set repo metadata** — description, website, topics, social
   preview, default branch are all GitHub-UI steps. Propose in `METADATA.md`;
   never report a repo set up while a row says proposed. (Doctrine §10.)
+- **ONLY NOAH DECIDES WHAT GOES ON THE HUB.** Adding an app here is advertising
+  it under his name. A session adds one only when he NAMES it — not because it
+  is finished, not because it is already live, not because §13.6 says a repo
+  gets wired in, not because its absence looks like an oversight. It binds
+  proposing and restoring and *mentioning an unlisted app as a candidate*, which
+  is the one that feels safe and is not. Every deployed surface counts, not just
+  the front page: the noscript list, the accessibility statement's app list,
+  tiles, icons. Removal is his call too. (Doctrine §0c. Noah, 2026-08-04:
+  *"ONLY *I* DECIDE WHAT GOES ON THE HUB"* — and, on being told it was written
+  down nowhere, *"IT SHOULDN'T BE NECESSARY."*)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
   range line in the output means nothing moved. (LESSONS, 2026-08-02.)
