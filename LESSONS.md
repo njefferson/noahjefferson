@@ -4084,3 +4084,73 @@ one more screenshot is asking a person to do a machine's job, and it was already
 established (§36) that he had sent the answer once.
 
 *(fauxplane 1.21.0, 2026-08-04.)*
+---
+
+## 45 · A shared allowance split per feature is not scoping, it is a second consumer
+
+**Enforced by:** GATE fauxplane:scripts/plant.mjs — the plant that keys the route feed's stand-off per endpoint; and GATE fauxplane:scripts/route.test.mjs — a test that drives the real handler and reads the key it wrote.
+
+fauxplane asks adsb.lol for aircraft every ten seconds. A release added a second
+endpoint on the SAME service for flight routes, and recorded its rate-limit
+stand-off under `adsb.lol:route` rather than `adsb.lol`.
+
+That reads like careful scoping. It is the opposite. **The limit is per IP
+across their whole API**, so a per-endpoint cooldown is not a cooldown — and it
+broke in both directions at once:
+
+- a 429 earned by a ROUTE request never told the AIRCRAFT feed to back off, so
+  the aircraft feed kept asking and kept being refused;
+- an aircraft feed already standing off still got asked for routes, spending the
+  allowance the stand-off existed to protect.
+
+The helper's own docstring said *"the standing refusal for a PROVIDER"*. The
+call site ignored it, and the docstring is not a gate.
+
+**The symptom was reported as something else entirely, and that is the part
+worth carrying.** The owner wrote: *"You broke touch to add on the radar."* The
+touch handling was fine — tap-to-follow was driven under real touch emulation,
+on three separate controls, and all three worked. What broke was the thing that
+puts aircraft on the scope, and **an empty scope has nothing to tap.** The
+report was accurate and the words pointed at the wrong layer. Reproduce the
+SYMPTOM before believing the NOUN in the bug report.
+
+**The rule: a rate limit belongs to whoever grants it, and the client's model of
+it must have the same shape.** One provider, one allowance, one stand-off,
+however many endpoints or features consume it. Where two consumers share a
+limit, say which one loses — fauxplane's route request is now skipped entirely
+while the aircraft feed is failing, because a route is a nicety and the aircraft
+ARE the instrument.
+
+**Smell:** a cooldown, quota, token bucket or backoff keyed on anything narrower than the thing that issues the refusal — per endpoint, per feature, per call site — when the issuer counts them together.
+
+*(fauxplane 1.21.0 → 1.21.1, 2026-08-04.)*
+
+---
+
+## 46 · A check that drives one input mode is silent about the one your reader has
+
+**Enforced by:** GATE fauxplane:scripts/a11y-gate.mjs — `checkRadarTap` runs under both mouse and touch, and the label says which.
+
+fauxplane's accessibility gate had a check built precisely because an
+interaction defect had shipped: `hitTestAircraft` was used and never imported,
+so every tap on the radar threw, for seven releases, while the gate asserted
+"no console errors" and had never CLICKED anything.
+
+The check that fixed it used `page.mouse.click`. **The device this app exists
+for is an iPad. It has no mouse.**
+
+Nothing was broken by that, this time — but for as long as the check existed it
+could only ever have proven the path the reader does not use. A mouse click and
+a touch tap are different event sequences, and the gap was invisible because the
+check was green and specific and *about the right feature*.
+
+It runs both modes now, labelled `radar-tap/mouse` and `radar-tap/touch`, so a
+failure names which one.
+
+**The general shape: an emulated interaction is a claim about ONE input path,
+and green says nothing about the others.** The same applies to keyboard versus
+pointer, to portrait versus landscape, and to hover-dependent affordances (see
+§43 — a `title` attribute, which no touch device can reach). When a check drives
+an input, ask which input the READER has, and whether anything drives that one.
+
+*(fauxplane 1.21.1, 2026-08-04.)*
