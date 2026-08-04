@@ -106,7 +106,7 @@ doctrine rule changes, edit it HERE and tell the sibling repos to re-point
 (their `CLAUDE.md` files link to this copy). Never fork the doctrine into
 another repo — link to it.
 
-## Seven gates live here and serve every repo
+## Eight gates live here and serve every repo
 Never fork these either — they take `--repo ../app` (or a path) so a sibling
 runs them without copying them, which is what stops five divergent versions
 existing.
@@ -132,6 +132,14 @@ existing.
   `caches.keys()`, and the cache name carries the release. An app that caches
   itself cannot notice it has gone stale — that is what caching means — so this
   is invisible until someone checks. LESSONS §31.
+- [`privacy-check.mjs`](privacy-check.mjs) — **nothing personal about the
+  owner lands in any repo — a FAIL state** (Noah, 2026-08-04). Product framing
+  and population-level research are public on purpose; a sentence attaching a
+  diagnosis, health fact, or identity disclosure to the OWNER is the
+  violation. Narrow on purpose — a false positive teaches sessions to route
+  around it. It reads the working TREE only; git history is out of its reach
+  and rewriting public history is the owner's call, never a session's.
+  LESSONS §52 is why it exists, the same day the rule was stated.
 - [`doctrine-sync.mjs`](doctrine-sync.mjs) — **run this FIRST in any sibling
   session**: `node ../noahjefferson/doctrine-sync.mjs --repo .`. It says what has
   landed in the hub since that repo last reconciled — which files, which commits,
