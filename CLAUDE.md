@@ -139,6 +139,10 @@ existing.
   violation. Narrow on purpose — a false positive teaches sessions to route
   around it. It reads the working TREE only; git history is out of its reach
   and rewriting public history is the owner's call, never a session's.
+  **No file is exempt** — it scans itself and its own Quietkeep test, skipping
+  only a sentinel-marked region of pattern source that a second rule holds to
+  no proper name and no date. The whole-file exemption it shipped with is where
+  the material collected, and green there meant *not looked at*.
   LESSONS §52 is why it exists, the same day the rule was stated.
   **A HARD CI gate in every repo per Doctrine §9b** (Noah, same day:
   *"Personal/embarrassing info in the repo should be a HARD gate for ALL
