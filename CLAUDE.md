@@ -116,7 +116,7 @@ doctrine rule changes, edit it HERE and tell the sibling repos to re-point
 (their `CLAUDE.md` files link to this copy). Never fork the doctrine into
 another repo — link to it.
 
-## Eight gates live here and serve every repo
+## Nine gates live here and serve every repo
 Never fork these either — they take `--repo ../app` (or a path) so a sibling
 runs them without copying them, which is what stops five divergent versions
 existing.
@@ -160,6 +160,18 @@ existing.
   the hub out and runs the canonical copy). **Every other sibling still owes
   the CI step** — wired means the exact CI command was seen red on a LOCAL
   plant, never a pushed one (a pushed plant IS the violation).
+- [`privacy-history-check.mjs`](privacy-history-check.mjs) — the same patterns
+  over every commit reachable from every ref, plus every commit MESSAGE, which
+  no later commit can clean because a message is not a file. **Reports
+  locations only — path, short SHA — and never prints the matched text**, because
+  on a public repo the Actions log is public and a gate that quotes its find
+  republishes it on every failure. **Deliberately NOT in CI**: history does not
+  change on a push, so a per-push run measures nothing, and the remedy is
+  rewriting published history, which is Noah's call and never a session's or a
+  workflow's. Run it when adopting the privacy gate in a new repo, and again
+  after any rewrite, to verify. This is the gate that answers "what about the
+  history" — the question `privacy-check.mjs` has always had to decline.
+
 - [`doctrine-sync.mjs`](doctrine-sync.mjs) — **run this FIRST in any sibling
   session**: `node ../noahjefferson/doctrine-sync.mjs --repo .`. It says what has
   landed in the hub since that repo last reconciled — which files, which commits,

@@ -101,7 +101,11 @@ for (const f of files) {
   const { body, region } = split(text);
   for (const p of DISCLOSURE) {
     const m = p.exec(body);
-    if (m) hits.push(`  ${f}: "${m[0]}"`);
+    // LOCATION ONLY, never the matched text. On a public repo the Actions log
+    // is public, so a gate that quotes what it found republishes it on every
+    // failure — which is the same mistake as a fixture quoting the sentence it
+    // exists to exclude. The line number is enough to fix it.
+    if (m) hits.push(`  ${f}:${body.slice(0, m.index).split('\n').length}`);
   }
   for (const [p, what] of REGION_FORBIDDEN) {
     if (p.test(region)) hits.push(`  ${f}: the sentinel-skipped region contains ${what}`);
@@ -110,7 +114,8 @@ for (const f of files) {
 
 console.log(`=== privacy gate · ${NAME} ===`);
 if (hits.length) {
-  console.error(`\nFAIL STATE — ${hits.length} personal disclosure(s) about the owner:`);
+  console.error(`\nFAIL STATE — ${hits.length} personal disclosure(s) about the owner.`);
+  console.error('Locations only; the matched text is deliberately not printed.\n');
   for (const h of hits) console.error(h);
   console.error('\nRemove the sentence, not the gate. Design statements stay; who he is does not.');
   process.exit(1);

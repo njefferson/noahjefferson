@@ -4430,6 +4430,27 @@ list is the first place to audit, because it is the only place the scanner
 guarantees it is not looking.** Ask what an exclusion is load-bearing FOR,
 then make it the narrowest thing that carries that load.
 
+**A gate that quotes what it found republishes it.** Both this gate and its
+Quietkeep test printed the matched sentence into the failure message. On a
+public repo the Actions log is public, so every red run would have broadcast
+the exact text the gate exists to suppress — to a wider audience than the file
+did, and in a place nobody thinks to scrub. They now print `path:line` and
+nothing else. The rule generalises past privacy: **a check that reports a
+secret, a token, or a personal sentence must report its LOCATION, never its
+VALUE.** The person fixing it has the file open anyway.
+
+**And the history question now has an answer.** GATE
+hub:privacy-history-check.mjs walks every commit reachable from every ref plus
+every commit MESSAGE — a message being the one thing no later commit can clean.
+It is deliberately NOT in CI: history does not change on a push, so a per-push
+run measures nothing, and the only remedy is rewriting published history, which
+is the owner's call. Two things it must be built knowing, both of which it got
+wrong first: it has to skip regex-literal lines, or it reports every version of
+the gate as a violation of itself; and it has to honour the sentinel region, or
+it reports the gate's own synthetic probes. A history scanner that cries wolf on
+the gate files is worse than none, because the one repo it is guaranteed to run
+against is the one that contains it.
+
 **What the gate cannot reach, said plainly: git history.** A pushed sentence
 lives in old commits whether or not the tree is clean. Rewriting public
 history, making a repo private, or accepting the residue are the OWNER's
