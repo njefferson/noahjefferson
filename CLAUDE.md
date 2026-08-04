@@ -140,6 +140,12 @@ existing.
   around it. It reads the working TREE only; git history is out of its reach
   and rewriting public history is the owner's call, never a session's.
   LESSONS §52 is why it exists, the same day the rule was stated.
+  **A HARD CI gate in every repo per Doctrine §9b** (Noah, same day:
+  *"Personal/embarrassing info in the repo should be a HARD gate for ALL
+  apps."*). Wired: the hub (`doctrine.yml`) and Quietkeep (its Spine checks
+  the hub out and runs the canonical copy). **Every other sibling still owes
+  the CI step** — wired means the exact CI command was seen red on a LOCAL
+  plant, never a pushed one (a pushed plant IS the violation).
 - [`doctrine-sync.mjs`](doctrine-sync.mjs) — **run this FIRST in any sibling
   session**: `node ../noahjefferson/doctrine-sync.mjs --repo .`. It says what has
   landed in the hub since that repo last reconciled — which files, which commits,

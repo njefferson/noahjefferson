@@ -513,6 +513,60 @@ that hold sensitive data (ND-toolbox's emotional state; a stored eBird session
 cookie) state their handling plainly and keep it local. Sensitive apps also state
 what they are NOT — e.g. ND-toolbox is not a diagnostic or clinical tool.
 
+## 9b. The owner's person is not repo material — a HARD gate, in EVERY repo
+
+Noah, 2026-08-04, verbatim: *"Make sure you never record anything in the repo
+that is personal or embarrassing for me. That is a FAIL state."* And the same
+day, widening it from one app to all of them: *"Personal/embarrassing info in
+the repo should be a HARD gate for ALL apps."* Said twice in one day, and the
+hub CLAUDE.md's standing rule about repeats is that the session hearing the
+repeat writes it into the doctrine — this is that. HARD means CI: a red X on
+the push, not a courtesy a session may remember to extend.
+
+- **The line that decides every case: his design statements are repo
+  material; who he is, is not.** Product framing ("a planner for
+  neurodivergent users") is public on purpose; research about users as a
+  population is public on purpose. The violation is a sentence that attaches
+  a diagnosis, a health fact, or an identity disclosure to the owner — in any
+  file, commit message, or PR body.
+- **Why a gate and not a resolution:** the violation that created this rule
+  was committed by DILIGENCE — the record-his-words-verbatim habit pointed at
+  the wrong object (LESSONS §52). A failure mode driven by a repo's best
+  habit will recur, and §16.8 says what to do with a rule nothing enforces.
+- **The gate is [`privacy-check.mjs`](privacy-check.mjs), canonical in the
+  hub.** Never fork it; widen its patterns HERE first. The patterns stay
+  NARROW on purpose: a false positive on the products' own honest vocabulary
+  teaches sessions to route around the one gate that must never be routed
+  around.
+- **HARD means every repo's CI runs the canonical script and goes red on a
+  hit.** The hub's `doctrine.yml` runs it directly. A sibling's CI checks the
+  hub out (SHA-pinned, `persist-credentials: false`, an untracked path) and
+  runs `node <hub>/privacy-check.mjs --repo .` — so a pattern widened in the
+  hub binds every sibling on its next push, with no copy to drift. A repo
+  MAY also carry a local mirror of the patterns (Quietkeep's
+  `test/privacy.test.ts`) so plain `npm test` fails offline too; the mirror
+  may lag the hub, and that is acceptable ONLY because the CI step runs the
+  canonical set.
+- **Prove the wiring with a LOCAL plant, never a pushed one.** Seen-red means
+  a violating sentence planted in the working tree fails the exact command CI
+  runs — then the plant is discarded. A plant that lands in a commit IS the
+  violation: git history is out of the gate's reach, permanently.
+- **What the gate cannot reach, stated so nobody mistakes the coverage: git
+  history.** A pushed sentence lives in old commits whether or not the tree
+  is clean. Rewriting public history, making a repo private, or accepting the
+  residue are the OWNER's calls, never a session's — a session that finds
+  residue reports it to him plainly, with the options, and stops.
+- **Writing ABOUT this rule: name the term first, the person second** ("a
+  diagnosis attached to the owner", never the reverse order). Meta-prose that
+  leads with the person reads, to the gate, exactly like a disclosure — the
+  gate's own first CI wiring failed on its own documentation this way
+  (LESSONS §52, third trap).
+- **Wiring status lives in the hub CLAUDE.md's gate index.** A repo is not
+  "gated" until the CI step exists and its command has been seen red on a
+  local plant. As of 2026-08-04: the hub and Quietkeep are wired; every
+  other sibling OWES the step, and a sibling session that reads this owes it
+  in its next commit.
+
 ## 10. Repo metadata is a manual step — call it out and confirm, never assume
 
 GitHub description, website/homepage, topics, and the social-preview image live
@@ -620,6 +674,11 @@ The session does 1–6; Noah does 7 (metadata is a manual GitHub-UI step):
 5. Branches: `staging` and `main` only.
 6. Wire it into the hub: the hub links OUT to the app, the app links BACK, and
    its About links the shared accessibility statement.
+6b. Wire the §9b privacy gate into CI from the FIRST workflow: check the hub
+   out (SHA-pinned, `persist-credentials: false`, an untracked path) and run
+   `node <hub>/privacy-check.mjs --repo .`. Prove it with a local plant,
+   never a pushed one. A repo that waits to be caught by a session running
+   the script by hand is not gated (§16.8).
 7. Repo metadata (Noah, manual — see §10): description (what the app IS, never a
    module/feature/version), website, topics, social-preview image. List the exact
    values and confirm each.

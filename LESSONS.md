@@ -4365,9 +4365,12 @@ cost is obviously worth it.
 ## 52 · The owner's person is not repo material
 
 **Enforced by:** GATE hub:privacy-check.mjs — tracked files in any repo are
-scanned for sentences linking the owner to a diagnosis, health fact, or
-identity disclosure; any hit exits non-zero. Quietkeep also carries the same
-patterns as `test/privacy.test.ts`, so its CI fails without the hub present.
+scanned for sentences that attach a diagnosis, health fact, or identity
+disclosure to the owner; any hit exits non-zero. HARD in CI per Doctrine §9b:
+GATE hub:.github/workflows/doctrine.yml runs it on every hub push, and GATE
+Quietkeep:.github/workflows/spine.yml checks the hub out and runs the
+canonical copy on every Quietkeep push. Quietkeep also carries the patterns
+as `test/privacy.test.ts`, so its `npm test` fails without the hub present.
 
 The owner, 2026-08-04, verbatim: *"Make sure you never record anything in the
 repo that is personal or embarrassing for me. That is a FAIL state."*
@@ -4383,19 +4386,29 @@ needs a gate rather than a resolution.
 
 The line that decides every case: **his design statements are repo material;
 who he is, is not.** The products' framing ("a planner for neurodivergent
-users") is public on purpose. Research about users as a population is fine. A
-sentence whose subject is the OWNER and whose predicate is a diagnosis, a
-health fact, or an identity disclosure is the violation — and the gate's
+users") is public on purpose. Research about users as a population is fine.
+The violation is a sentence whose predicate is a diagnosis, a health fact, or
+an identity disclosure and whose subject is the OWNER — and the gate's
 patterns anchor on exactly that structure, because the same nouns appear
 legitimately a hundred times in product and research prose.
 
-Two traps found building the gate, kept so the next widening avoids them:
+Three traps found building the gate, kept so the next widening avoids them:
 the medical pattern must say `diagnosis|diagnosed`, not `diagnos\w+` — the
 apps ship a *diagnostic report* feature whose name sits beside the owner's
 constantly, and the first run false-fired on it. And a false positive here is
 worse than elsewhere: a gate that fails the product's honest vocabulary
 teaches sessions to route around the one gate that must never be routed
-around.
+around. And the gate's first CI wiring failed on its own documentation:
+this lesson's original Enforced-by line named the person first and the
+medical term four words later, which is the exact shape the medical pattern
+anchors on — prose ABOUT the rule reads exactly like the thing the rule
+forbids, and it cannot even be QUOTED here without failing the gate again. The convention that resolves it without loosening
+anything: meta-prose names the TERM first and the person second ("a diagnosis
+attached to the owner"), while a real disclosure leads with the person —
+which is the very structure the patterns anchor on. The wrong fix was
+excluding LESSONS.md from the scan: the recording reflex that caused the
+original violation writes HERE, so this file is the last one the gate may
+skip.
 
 **What the gate cannot reach, said plainly: git history.** A pushed sentence
 lives in old commits whether or not the tree is clean. Rewriting public
