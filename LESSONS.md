@@ -4359,3 +4359,48 @@ cost is obviously worth it.
 **Smell:** a verification step whose runtime is dominated by one component, re-run in full after a change that provably cannot reach that component — and a session defending it with a rule written about a different situation.
 
 *(fauxplane, 2026-08-04. The numbers are fauxplane's; the shape is not.)*
+
+---
+
+## 52 · The owner's person is not repo material
+
+**Enforced by:** GATE hub:privacy-check.mjs — tracked files in any repo are
+scanned for sentences linking the owner to a diagnosis, health fact, or
+identity disclosure; any hit exits non-zero. Quietkeep also carries the same
+patterns as `test/privacy.test.ts`, so its CI fails without the hub present.
+
+The owner, 2026-08-04, verbatim: *"Make sure you never record anything in the
+repo that is personal or embarrassing for me. That is a FAIL state."*
+
+Said the same day a session violated it — not through carelessness with
+secrets, but through the repos' own best habit pointed at the wrong object.
+These repos run on *record his words verbatim, because sessions keep paying
+for not writing them down*. A design conversation turned personal for two
+sentences, and the recording reflex carried a personal identity disclosure
+into a PUBLIC repo inside an otherwise correct log entry. The failure mode is
+DILIGENCE, not sloppiness — which is what makes it likely to recur and why it
+needs a gate rather than a resolution.
+
+The line that decides every case: **his design statements are repo material;
+who he is, is not.** The products' framing ("a planner for neurodivergent
+users") is public on purpose. Research about users as a population is fine. A
+sentence whose subject is the OWNER and whose predicate is a diagnosis, a
+health fact, or an identity disclosure is the violation — and the gate's
+patterns anchor on exactly that structure, because the same nouns appear
+legitimately a hundred times in product and research prose.
+
+Two traps found building the gate, kept so the next widening avoids them:
+the medical pattern must say `diagnosis|diagnosed`, not `diagnos\w+` — the
+apps ship a *diagnostic report* feature whose name sits beside the owner's
+constantly, and the first run false-fired on it. And a false positive here is
+worse than elsewhere: a gate that fails the product's honest vocabulary
+teaches sessions to route around the one gate that must never be routed
+around.
+
+**What the gate cannot reach, said plainly: git history.** A pushed sentence
+lives in old commits whether or not the tree is clean. Rewriting public
+history, making a repo private, or accepting the residue are the OWNER's
+calls, never a session's — the gate keeps the present clean and makes the
+next violation loud at commit time, which is where the recording reflex fires.
+
+*(Quietkeep and the hub, 2026-08-04.)*
