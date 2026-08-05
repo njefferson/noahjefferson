@@ -3,7 +3,7 @@
 // CANONICAL IN THE HUB. Never fork it.
 //
 //   node handoff-check.mjs --repo ../myapp
-//   node handoff-check.mjs --repo ../myapp --ack=deploy-url,evidence,attachments,manual-steps
+//   node handoff-check.mjs --repo ../myapp --ack=deploy-green,deploy-url,evidence,attachments,manual-steps
 //
 // WHY (LESSONS §26, Noah 2026-08-02). A build shipped with four green gates and
 // a handoff that broke four doctrine rules — every one of them prose-only:
@@ -187,6 +187,27 @@ for (const [file, text] of prose) {
  * ================================================================== */
 
 const MUST_ACK = [
+  /**
+   * A PUSH IS NOT A RELEASE, and this obligation exists because that sentence
+   * was learned the expensive way on 2026-08-04.
+   *
+   * fauxplane pushed four releases — 1.24.1, 1.25.0, 1.25.1, 1.26.0 — and
+   * verified each one the way the lessons demand: read the REMOTE, confirm the
+   * range line, confirm the SHA. Every push was real. Every DEPLOY had failed,
+   * on a CI gate added the same afternoon. Noah's device sat on 1.24.0 for four
+   * releases while each was reported as shipped, and it surfaced only when he
+   * asked "What. Button." about a feature that had never left the branch.
+   *
+   * `deploy-url` above covers reading a log you already opened. This covers the
+   * step before it: opening one AT ALL, for the exact commit, on the branch
+   * that deploys. Those are different failures — the first is misreading
+   * evidence, the second is never gathering it — and the second is the one that
+   * hid for four releases, because `git push` succeeding feels like completion.
+   */
+  ['deploy-green', 'For every branch I pushed, I checked the DEPLOY for that exact SHA '
+    + 'and saw it CONCLUDE SUCCESSFULLY — not that the push landed, which is a different '
+    + 'fact. A green push over a red deploy is a release that does not exist, and the '
+    + 'owner finds out by using the old build.'],
   ['deploy-url', 'If anything deployed, I READ THE LOG and quoted the URL from it. '
     + 'A workflow exiting 0 is not evidence — a gracefully-skipped deploy also exits 0, '
     + 'so I checked whether the steps RAN or were SKIPPED.'],

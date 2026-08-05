@@ -47,6 +47,15 @@ Every item below has actually happened.
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
   range line in the output means nothing moved. (LESSONS, 2026-08-02.)
+- **A PUSH IS NOT A RELEASE — check the DEPLOY for that exact SHA.** fauxplane
+  pushed four releases that never deployed; every push was verified against the
+  remote, correctly, and every deploy had failed on a CI gate added that
+  afternoon. Noah stayed on the old build for four releases while each was
+  reported as shipped, and found out by asking *"What. Button."* about a feature
+  that had never left the branch. **A session adding a hard gate to a pipeline
+  has just added a new way for its own work to silently not arrive**, and is at
+  its least likely to look because it watched that gate pass locally.
+  (LESSONS §53; `handoff-check.mjs --ack=deploy-green`.)
 
 The shape of three of these is the same: **do not offer a capability the
 lessons already record as impossible.** Check before promising, not after.
