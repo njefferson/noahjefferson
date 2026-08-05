@@ -103,6 +103,18 @@ checks before offering to build one of these again):**
  removed a `skipWaiting` on install, plus a `boot.js` that had been silently
  reloading the reader whenever it found a stale shell. Its `checkUpdateStrip`
  drives a REAL second worker and is worth copying.
+- **Quietkeep** — all of them, and each one is asserted rather than assumed.
+ The first-run walkthrough is State 0 of `tools/a11y.mjs` and the (i) panel is
+ gated behind it, so the orientation SURVIVES the thing a reader presses to
+ begin (§7e); patch notes come from one source, `src/ui/changelog.ts`, which
+ the app renders and `tools/changelog.mjs --check` holds identical to
+ CHANGELOG.md and to the service-worker triplet; the §7f diagnostic is there
+ and is asserted to contain nothing the reader wrote; §7h's waiting worker is
+ driven by `tools/update-walk.mjs` against a REAL second worker. Two later
+ additions worth copying: the update strip's stuck state is audited as its own
+ a11y state (1.20.2 — it shipped unmeasured for a day), and the offline
+ privacy-pattern mirror is held to the hub by `privacy-mirror-check.mjs` in
+ its Spine.
 - **Every other sibling** — still owed. Ask that repo's NOTES before assuming.
 
 The two omissions worth knowing before building one: a new surface must join the
