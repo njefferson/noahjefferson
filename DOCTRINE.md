@@ -995,8 +995,52 @@ NOTES, in the app, reachable from a place a reader already goes.
 instrument. Show it on request, or once per release at most, and never in front
 of something they are trying to use.
 
+### 7d.1 "You" is the reader. There is no "I". Nobody is asked to send anything.
+
+**A patch note is product copy, not correspondence, and the difference is
+invisible from inside the session that writes it.** It has to be a separate rule
+because "written for the reader" above did not stop it: fauxplane shipped ten
+consecutive releases whose notes were a support thread published inside the
+product, under a file whose own header said READERS ARE NOT DEVELOPERS.
+
+Three forms, and each reads as perfectly reasonable while being typed:
+
+- **"YOU" DRIFTS FROM THE READER TO WHOEVER REPORTED THE FAULT.** *"You asked
+  why every runway looks the same."* *"You sent a photo of DAL2229."* *"Five
+  things you said were wrong."* Someone else opens the app and is addressed as a
+  person they are not, about events they were not present for. **Ordinary second
+  person is right and should stay** — "the aircraft over your desk", "you decide
+  when to install it". What is banned is "you" meaning somebody else.
+- **"I" APPEARS AT ALL.** *"I measured both."* *"I only wrote the test AFTER you
+  found it."* A session narrating its own process, in Noah's app, to a stranger.
+  There is no author character in a patch note. The app changed; say what it does
+  now.
+- **THE READER IS GIVEN HOMEWORK.** *"Send me that."* *"Follow a flight and send
+  the report."* Telling a reader HOW to report a problem is §7e and belongs on
+  the information surface. Making the next release conditional on them doing it
+  is a working arrangement between two other people, leaking onto their screen.
+
+Raw protocol goes the same way — status codes, header names, trace identifiers,
+pixel measurements. §7f's diagnostic is where that lives and it is one press
+away.
+
+**The tell they share: a note written from the SESSION's memory of the day rather
+than from the diff.** What changed is reader material. Who found it, how it felt
+to find, and what is owed next are not. The risk is highest exactly when the work
+is going well — a fast back-and-forth with Noah is the condition under which
+his words are freshest in the session and least distinguishable from the app's.
+
+**GATE IT, do not write it down.** This rule was a paragraph at the top of the
+very file being edited every release, and every release walked past it: a comment
+at the head of a file is read once and the file is then edited from the bottom.
+A test over the notes costs twenty lines. Write its patterns from **sentences
+that actually shipped**, and assert both directions — that each pattern still
+catches its real sentence, and that the ban has not widened into something that
+makes the notes worse.
+
 *(Added 2026-08-03 at Noah's instruction, after five releases in one evening
-that he could only tell apart by asking.)*
+that he could only tell apart by asking. §7d.1 added 2026-08-05, on his opening
+What's New and asking what the fuck these release notes were.)*
 
 ## 7e. Every app has ONE information surface, and this is what is behind it
 
