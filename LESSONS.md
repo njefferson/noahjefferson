@@ -4969,3 +4969,85 @@ sentence — the one saying what is still broken — is always the cheapest thin
 the room to cut.
 
 *(Quietkeep 1.22.0, 2026-08-05.)*
+
+---
+
+---
+
+## 63 · A page that RENDERS correctly can be a page that DOES nothing, and no rendering check will tell you
+
+**Enforced by:** CHECKLIST press-the-thing — for every control a reader can operate, the gate must press it and assert the STATE CHANGED. "It is legible, it is named, it is 44px and axe is happy" is four statements about a control that may be wired to nothing.
+
+fauxplane's MAP page shipped with a full-screen canvas of aircraft symbols and
+**no click handler at all**. It looked exactly like the RADAR page's tappable
+scope, which had been tappable for twenty-eight releases. The owner reported it
+from an iPad with 275 aircraft on screen: tapping does nothing.
+
+**Every check passed, and every one of them was right.** The contrast registry
+measured real pixels. The accessible names were distinct and contained their
+visible text. Touch targets cleared 44px. axe was clean across three viewports
+and two palettes. Not one of them asks whether pressing a thing does anything,
+because rendering and behaviour are different properties and a gate built out of
+rendering assertions is structurally blind to the second.
+
+**The near-miss is worse than the miss.** A first attempt at the check tested the
+follow banner's text for `/following/i` — and the banner carries the word
+FOLLOWING as a **static badge label**, present in the markup whether or not
+anything is being followed. So the check passed against a page with no handler,
+which is the exact defect it was written to catch. Two plants sat GREEN and the
+sweep said `<-- the check does not work`. That is §29 again: a substring
+satisfiable by coincidence reports coverage it does not have. The assertion now
+names the CALLSIGN of the aircraft the renderer said it tapped, which nothing
+else can produce.
+
+**And the geometry has to be shared, not re-derived.** The hit test computed its
+own centre — the middle of the box, which is what anyone writes. That is correct
+for a centred scope and wrong for a track-up one, where own ship sits near the
+bottom, so a re-derived hit test passes on the easy mode and misses on the other.
+One `planGeometry` for the renderer and the hit test; the check presses in BOTH
+modes so the easy one cannot carry it.
+
+**Smell:** any interactive element whose gate coverage is entirely adjectives —
+legible, named, large enough, valid. Ask what STATE it changes and whether
+anything asserts the change. Anything a reader can press, press.
+
+*(fauxplane 1.33.0 → 1.35.0, 2026-08-05.)*
+
+---
+
+## 64 · A fixture built to match your heuristic will agree with it forever
+
+**Enforced by:** CHECKLIST fixture-from-reality — a parser's fixture must be a captured real payload or a faithful reconstruction of one. If the fixture was written by the same reasoning as the parser, the test is a mirror and passes on both being wrong together.
+
+fauxplane split a raw weather feed into reports on blank lines, and its test
+proved it: a body of two short advisories separated by one blank line, split into
+two. Green, and shipped.
+
+**A real convective SIGMET bulletin is ONE document with several paragraphs** —
+the advisory, an OUTLOOK, then AREA 1, AREA 2, AREA 3 — separated by blank lines.
+The rule tore each bulletin into five. The panel reported *66 reports* that were
+fragments, and displayed a lone `AREA 3...FROM END-ARG-LIT-MCB-CEW-210S` with no
+header saying which SIGMET or which hazard it belonged to — **a truncated
+warning, which is the precise failure the rule had been written to prevent.**
+
+**The test could not have failed.** Its fixture came from the same idea as the
+code: *reports are separated by blank lines, so here are reports separated by
+blank lines.* Two expressions of one assumption, checking each other. Every real
+property — how many paragraphs a bulletin has, whether a fragment is
+self-describing — was outside what the fixture could express.
+
+**The tell is that the fixture is TIDY.** Real payloads have headers, feed-added
+prefixes, inconsistent separators and documents that do not fit the rule. A
+fixture with none of that was not captured; it was composed, and composed by the
+author of the thing it is checking.
+
+**What it cost, and what it bought.** One release, and a correction that was
+free: the feed marks its own documents with a `Type:` prefix, which is what a
+delimiter is for. The right rule was in the payload the whole time and nobody had
+looked at a payload.
+
+**Smell:** a parser fixture you wrote from your head. A test whose input you could
+have derived from the implementation. Any "reports are separated by X" where X
+was chosen before any real input was seen.
+
+*(fauxplane 1.34.0 → 1.35.0, 2026-08-05.)*
