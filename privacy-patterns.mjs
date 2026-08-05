@@ -40,6 +40,33 @@
  * fact. Everything else is somebody's message.
  */
 
+/**
+ * HIS_LIFE — the owner's actual circumstances, as opposed to his person or his
+ * words. A THIRD fail class, and the one the doctrine claimed to cover and did
+ * not.
+ *
+ * WHAT HAPPENED. He described a real morning to shape the product — medication
+ * running low, a medical device needing supplies, appointments to make, a
+ * workplace matter, his family's plans. A session's next move was to write all
+ * of it into a public NOTES.md as "evidence", hours after that same session had
+ * finished removing every quotation of him for the identical reason. He stopped
+ * it. Neither of the two existing classes would have: DISCLOSURE looks for a
+ * diagnosis beside his name, ATTRIBUTION looks for his words, and a paraphrased
+ * account of his day is neither.
+ *
+ * THE LINE. The SHAPE of what he reports is product design and belongs here —
+ * "a standing arrangement whose failure mode is silence" is a noun worth having.
+ * The INSTANCE is his life and belongs nowhere in a repository.
+ *
+ * WHY THIS IS NOT A WORD LIST. This app is a PLANNER: its own sample data says
+ * dentist, appointment, doctor, family, car — ten files use "dentist" alone.
+ * Banning everyday nouns would fail the product's own fixtures on the first run,
+ * which this file already records as the one thing a privacy gate cannot afford.
+ * So the broad rule ANCHORS ON HIM — a life noun tied to him by a possessive or
+ * a verb — and only a short list of specifics with no possible product meaning
+ * is banned outright.
+ */
+
 // privacy-gate:patterns-begin
 export const DISCLOSURE = [
   /\b(?:noah|the owner|he|she|they)\s+(?:is|was|are|were|being|remains)\s+(?:\w+\s+){0,2}?(?:audhd|adhd|autistic|neurodivergent)\b/i,
@@ -81,6 +108,20 @@ export const ATTRIBUTION = [
   // The name token excludes handles and domains, which are his own product copy
   // and were caught by the first draft of this rule.
   /\b(?:noah(?![.\w])|the owner)(?:'s|\u2019s)\s+(?:words|quote|message|complaint|wording|phrasing|screenshot|exact)\b/i,
+];
+export const HIS_LIFE = [
+  // Anchored on him: a life noun tied to the owner by a possessive. "his
+  // prescriptions", "the owner's supervisor", "his wife". The app's own
+  // fixtures say "dentist" and "appointment" freely and are untouched, because
+  // nothing there belongs to anybody.
+  /\b(?:noah(?![.\w])|the owner|his)(?:'s|\u2019s)?\s+(?:\w+\s+){0,2}?(?:prescription|prescriptions|pharmacy|refill|refills|medication|medications|dose|dosage|inhaler|appointment|appointments|doctor|dentist|optician|optometrist|surgery|clinic|therapist|supervisor|employer|workplace|payroll|wife|husband|partner|spouse|kids|children|daughter|son|truck|car|vehicle|mortgage|landlord)\b/i,
+  // Health and care specifics a planner has no reason to contain at all. Short
+  // and explicit on purpose: each earns its place by having no product meaning.
+  /\b(?:cpap|bipap|sleep apnoea|sleep apnea|blood pressure|insulin|antidepressant|adhd meds|stimulant medication)\b/i,
+  // A first-person account of a real day. The repo's own prose is written in
+  // the repo's voice about the software; "I noticed in the shower", "I realise
+  // I need to", "I remember I have to" is somebody's morning, not a design note.
+  /\bI\s+(?:noticed|realis|realiz|remember|forgot|need to|have to|keep forgetting)\w*\b[^\n]{0,40}\b(?:shower|sink|driving|drive|car|work|appointment|doctor|order|refill)\b/i,
 ];
 // privacy-gate:patterns-end
 

@@ -41,7 +41,7 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
-import { ATTRIBUTION, DISCLOSURE, REGION_FORBIDDEN, split } from './privacy-patterns.mjs';
+import { ATTRIBUTION, DISCLOSURE, HIS_LIFE, REGION_FORBIDDEN, split } from './privacy-patterns.mjs';
 
 const argv = process.argv.slice(2);
 const ri = argv.indexOf('--repo');
@@ -84,6 +84,11 @@ for (const f of files) {
   for (const p of ATTRIBUTION) {
     const m = p.exec(body);
     if (m) hits.push(`  ${f}:${body.slice(0, m.index).split('\n').length}  (attribution — his words are not repo material)`);
+  }
+
+  for (const p of HIS_LIFE) {
+    const m = p.exec(body);
+    if (m) hits.push(`  ${f}:${body.slice(0, m.index).split('\n').length}  (his life — the instance is not repo material)`);
   }
   for (const [p, what] of REGION_FORBIDDEN) {
     if (p.test(region)) hits.push(`  ${f}: the sentinel-skipped region contains ${what}`);
