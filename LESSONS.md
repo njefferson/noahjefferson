@@ -4586,9 +4586,31 @@ context. Ask what that context fixes — viewport, fixture, permissions, palette
 and whether the defect can appear there at all. If you cannot say what the check
 measured, you have not written a check, you have written a sentence.
 
-*(fauxplane 1.28.0, 2026-08-05. The check was shipped and reported as working
-before the sweep contradicted it — the sweep ran after the push, which is why it
-was caught in an hour rather than in four releases.)*
+**A full end-to-end walk in a browser is still a "somewhere", and it is not his
+device.** Quietkeep's update walk is as honest as a walk gets: a real second
+service worker, a real press of the real control, an assertion that the swap
+completed and nothing is left waiting. It passed every release. Then, on an
+iPad: *"I hit 'install it now' 10 times, gave up, force closed, and reopened,
+and it worked."* An installed app on iPadOS will not reliably let a waiting
+worker take over while the app is open — a platform behaviour headless Chromium
+does not have and cannot be made to have. The walk was not weak; it was
+measuring a machine where the defect cannot occur.
+
+The generalisable move, when the real platform is out of reach: stop trying to
+prove the happy path harder, and **assert the FAILURE path instead** — that is
+the one thing a wrong platform can still tell you. The fix here was that a
+stuck update must not silently reload; the check is a source assertion that the
+timed blind reload is absent, which runs offline, on any machine, and went red
+the moment the old behaviour was restored. **When you cannot reproduce the
+environment, gate the BEHAVIOUR the environment would have exposed.**
+
+Corollary worth saying plainly: a fix to an update mechanism can only reach a
+reader through the update mechanism it fixes. Say that in the release note
+rather than letting them find out.
+
+*(fauxplane 1.28.0 and Quietkeep 1.20.2, 2026-08-05. The check was shipped and
+reported as working before the sweep contradicted it — the sweep ran after the
+push, which is why it was caught in an hour rather than in four releases.)*
 
 ---
 
