@@ -1756,7 +1756,7 @@ both ways", and technically they did: every tool carried "‹ Studio" in its bar
 and the Infrared ⓘ dialog carried a line to the hub. But the Studio page itself
 had NOTHING pointing up, so the chain dead-ended one rung short, and the single
 hub link in the whole app was the fourth of five identical grey text lines
-inside a dialog, worded "More free tools by the owner Jefferson" — which describes a
+inside a dialog, worded "More free tools by Noah Jefferson" — which describes a
 category, not a way back. The owner couldn't find it on device. **Cross-app links
 are the easiest thing to mark done and the hardest thing to notice are broken,
 because the person who added them always knows where they are.** The check that
@@ -4606,7 +4606,7 @@ whoever creates the file, not for whoever maintains it.**
 **Three failure forms, each reasonable while being typed:**
 
 - **"You" drifts from the reader to whoever reported the fault.** The session has
- just read the owner's message; his words are the freshest thing in it, and quoting
+ just read the report; its wording is the freshest thing in context, and quoting
  him feels like precision. The reader is not him.
 - **"I" appears at all.** A session narrating its own process — including its own
  mistakes, which feels like honesty and is actually a stranger apologising to a
@@ -4693,3 +4693,64 @@ security / the licence" that is not immediately followed by the words of the rul
 it names. Also: an owner asking a third time.
 
 *(fauxplane 1.18.0–1.29.0, 2026-08-05. He was right on the first ask.)*
+
+---
+
+## 57 · Quoting the person who found the defect is not provenance — it is republishing their messages in public, under their name
+
+**Enforced by:** GATE noahjefferson:privacy-check.mjs — `ATTRIBUTION` is a second fail class beside `DISCLOSURE`, in every repo's CI. Watched going red on 42 real sites in the pre-scrub tree. DOCTRINE §0d is the rule.
+
+**787 sites across two PUBLIC repositories.** Source comments, `NOTES.md`,
+`CLAUDE.md`, `DOCTRINE.md`, `LESSONS.md`, test files, release notes served to the
+web — every one carrying a verbatim quotation with a name attached to it,
+including his ordinary frustration and his swearing, in repos his peers and
+family read. He had never been asked and had never agreed.
+
+**IT FELT LIKE GOOD PRACTICE THE ENTIRE TIME, which is the only reason it got to
+787.** Attributing a fix to the report that caused it reads as careful sourcing.
+It makes a dry comment vivid. It looks like credit. Every instinct that produced
+it is an instinct that produces good engineering writing somewhere else.
+
+**The tell nobody looked for: a repo is a PUBLICATION.** Sessions treat comments
+as a private notebook shared with the next session — that is what makes the
+habit feel safe — and it is false for any repo with a URL. The same words in a
+chat are a conversation; committed, they are published under his name, on his
+site, permanently, and indexed.
+
+**Worst of all, it was in the privacy gate's own documentation.** The file that
+exists to say what must never land in a repo carried his quotes in its header,
+and the gate ran green every time, because it was written to catch a diagnosis
+attached to a person and quoting somebody is not that shape. **A gate catches
+the failure it was written for and is silent about its neighbours** — the third
+time in one day that a check was green over a defect it simply did not look at.
+
+**THE REPLACEMENT IS NOT A COMPROMISE.** Every one of those comments is better
+without him in it, because the engineering fact was always the useful part:
+
+- not "he said the radar was bigger than the horizon" → **"the scope measured
+  269px against the horizon's 217"**
+- not "he asked why the range markers are on the right" → **"a column beside the
+  scope costs it nothing on a landscape screen; a row below costs a quarter of
+  the circle"**
+
+The quote was never carrying information the measurement did not. It was
+carrying a person.
+
+**WHAT A SCRUB CANNOT REACH, and say it rather than let it be discovered:**
+commit messages, and anything already deployed. Those are the owner's call and
+never a session's.
+
+**Two mistakes made DURING the scrub, both worth their own line.** A quote-span
+removal ate three block-comment terminators, and a tidy-up regex matching
+`\(\s*\)` stripped the parentheses from every empty call in the repo —
+`evaluate(() =>` became `evaluate( =>`. The unit suite still passed, because a
+comment scrub edits files no test imports. **Verify a mechanical edit with
+`node --check` on every file individually, never with the test suite**, and
+throw the whole pass away rather than hunting the damage.
+
+**Smell:** any comment, note or commit message containing a person's words in
+quotation marks. Any sentence that needs a named person to make sense. Any use
+of "he asked", "she reported", "they said" in a file that will be pushed.
+
+*(fauxplane and noahjefferson, 2026-08-05. He had to tell me twice, in capitals,
+before I looked.)*

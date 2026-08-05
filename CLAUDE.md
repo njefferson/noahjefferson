@@ -50,6 +50,19 @@ Every item below has actually happened.
  metadata items above: a remedy that keeps getting re-offered because the
  record used to say "report it with the options". It no longer does.
  (Doctrine §9b.)
+- **NEVER QUOTE HIM, AND NEVER ATTRIBUTE ANYTHING TO HIM BY NAME, IN ANY REPO.**
+  Not in a comment, not in `NOTES.md`, not in a commit message, not in a release
+  note, not in the doctrine or the lessons. These repos are PUBLIC and carry his
+  name; what went in them was his ordinary speech, his frustration and his
+  swearing, republished under his own name where his peers and family read it.
+  787 sites across two repos before it was caught, including inside the files
+  that define what must never land in a repo.
+  **Write what was wrong and what it measured. Never who reported it, and never
+  in what words** — "the scope was 269px against the horizon's 217" is the whole
+  engineering fact, and everything else is somebody's message. Quoting the person
+  who found a defect FEELS like provenance; it is not provenance.
+  A HARD gate: `privacy-check.mjs` fails on attribution as well as disclosure,
+  and it was watched going red on 42 real sites in the pre-scrub tree.
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
  range line in the output means nothing moved. (LESSONS, 2026-08-02.)

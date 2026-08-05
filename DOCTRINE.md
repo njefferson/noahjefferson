@@ -1,4 +1,4 @@
-# the owner Jefferson — Universal App Doctrine
+# Noah Jefferson — Universal App Doctrine
 
 The shared operating agreement for every Claude session on any of the owner's apps.
 This is the SINGLE source of truth for the rules that are the same everywhere.
@@ -469,7 +469,7 @@ Follow the repo's own CLAUDE.md.)
 an in-app About panel. A release is its triplet and what it did for the user.
 (
 This replaces the earlier
-"a name is earned, the owner says when" rule, which was the wrong answer twice — it
+the "a name is earned" rule, which was the wrong answer twice — it
 kept a naming slot alive and therefore kept generating the question.)
 
 **The owner decides what counts as a VERSION** — the first slot, what the app IS. That
@@ -819,7 +819,7 @@ anything. Taking more than they have asked for is not a technical matter, it is 
 question of how the owner's work treats good-faith actors, and the answer is settled:
 we operate inside their published terms or we do not operate.
 
-THE POSTURE, and the failure that produced it (photo-pointer, 2026-07-26 — the owner:
+THE POSTURE, and the failure that produced it (photo-pointer, 2026-07-26 —
 "we have not been following industry standard and have instead, as an amateur,
 bumbled through good faith actors' work with disregard"). The rules had been
 INFERRED from whatever error codes came back rather than READ from what the
@@ -992,7 +992,47 @@ NOTES, in the app, reachable from a place a reader already goes.
 instrument. Show it on request, or once per release at most, and never in front
 of something they are trying to use.
 
-### 7d.1 "You" is the reader. There is no "I". Nobody is asked to send anything.
+### 0d. His words are not repo material — never quote him, never attribute by name
+
+**These repos are public and carry his name.** What goes in them is read by his
+peers, his family, and anyone who follows a link from an app he wrote. A repo is
+not a private workspace and a comment is not a message thread.
+
+**THE RULE.** Never quote him. Never attribute a decision, a complaint, a report
+or a screenshot to him by name or by role. Not in a source comment, not in
+`NOTES.md`, not in a commit message, not in a release note, not in this file.
+
+**WHY IT HAPPENS ANYWAY.** Quoting whoever found a defect *feels* like
+provenance — it looks like careful sourcing, it makes a comment vivid, and it
+seems to honour the person who caught the thing. It is none of those. It is
+republishing somebody's private messages, in public, under their own name,
+without ever asking. It reached **787 sites across two repositories** before
+anyone said so, including his ordinary frustration and his swearing, and
+including the files that exist to define what must never land in a repo.
+
+**WHAT TO WRITE INSTEAD.** The engineering fact, which never needed him in it:
+
+- not "he said the radar was bigger than the horizon" — **"the scope measured
+  269px against the horizon's 217"**
+- not "he asked why the range buttons are on the right" — **"a column beside the
+  scope costs it nothing on a landscape screen; a row below costs a quarter of
+  the circle"**
+
+**A defect's cause and its measurement are repo material. Who reported it, and
+in what words, are not.** If a sentence needs a person in it to make sense, it
+is not an engineering note.
+
+**WHAT IS STILL ALLOWED.** His name as a byline, a link, a handle, or product
+copy on his own site — that is his choice and his voice. The violation is
+ATTRIBUTION: a quotation beside his name or role, or reported speech naming him
+as the source.
+
+**GATED, not written down.** `privacy-check.mjs` fails on attribution as a
+second class beside disclosure, in every repo's CI. It reads the working tree
+only; commit messages and anything already published are outside its reach and
+are the owner's call, never a session's.
+
+## 7d.1 "You" is the reader. There is no "I". Nobody is asked to send anything.
 
 **A patch note is product copy, not correspondence, and the difference is
 invisible from inside the session that writes it.** It has to be a separate rule

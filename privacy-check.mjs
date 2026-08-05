@@ -41,7 +41,7 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
-import { DISCLOSURE, REGION_FORBIDDEN, split } from './privacy-patterns.mjs';
+import { ATTRIBUTION, DISCLOSURE, REGION_FORBIDDEN, split } from './privacy-patterns.mjs';
 
 const argv = process.argv.slice(2);
 const ri = argv.indexOf('--repo');
@@ -65,6 +65,22 @@ for (const f of files) {
     // exists to exclude. The line number is enough to fix it.
     if (m) hits.push(`  ${f}:${body.slice(0, m.index).split('\n').length}`);
   }
+  /**
+   * ATTRIBUTION IS A SECOND FAIL CLASS, not a lint.
+   *
+   * The disclosure patterns look for a diagnosis or a health fact attached to
+   * the owner. Quoting him does not look like that, so it ran unchecked for the
+   * life of these repos — 787 sites across two public repositories, his
+   * ordinary speech and his swearing, attributed to him by name, in repos his
+   * peers and family read.
+   *
+   * Same treatment as a disclosure: location only, never the matched text, and
+   * a non-zero exit. A gate that prints what it found republishes it.
+   */
+  for (const p of ATTRIBUTION) {
+    const m = p.exec(body);
+    if (m) hits.push(`  ${f}:${body.slice(0, m.index).split('\n').length}  (attribution — his words are not repo material)`);
+  }
   for (const [p, what] of REGION_FORBIDDEN) {
     if (p.test(region)) hits.push(`  ${f}: the sentinel-skipped region contains ${what}`);
   }
@@ -75,7 +91,9 @@ if (hits.length) {
   console.error(`\nFAIL STATE — ${hits.length} personal disclosure(s) about the owner.`);
   console.error('Locations only; the matched text is deliberately not printed.\n');
   for (const h of hits) console.error(h);
-  console.error('\nRemove the sentence, not the gate. Design statements stay; who he is does not.');
+  console.error('\nRemove the sentence, not the gate. Design statements stay; who he is —');
+  console.error('and anything he said — does not. Write what was wrong and what it measured,');
+  console.error('never who reported it or in what words.');
   process.exit(1);
 }
 console.log('no personal disclosures in tracked files.');

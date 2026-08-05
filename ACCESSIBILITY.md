@@ -70,7 +70,7 @@ the text sits where it did, the hit area grew. `.foot-links` `margin-top`
 dropped 10px→0 to absorb the added height.
 **Status:** FIXED 2026-07-28. Verified: gate re-run, 0 failures.
 
-### F-02 · "← Back to the owner Jefferson's apps" was 216.8×16px
+### F-02 · "← Back to Noah Jefferson's apps" was 216.8×16px
 **Found:** 2026-07-28 · first run of `a11y-gate.mjs`
 **Rule:** Doctrine §4 (targets ≥44px)
 **Detail:** `public/accessibility.html` `.foot a` measured **216.8 × 16 px** in
