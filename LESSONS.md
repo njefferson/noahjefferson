@@ -4464,12 +4464,27 @@ the gate files is worse than none, because the one repo it is guaranteed to run
 against is the one that contains it.
 
 **What the gate cannot reach, said plainly: git history.** A pushed sentence
-lives in old commits whether or not the tree is clean. Rewriting public
-history, making a repo private, or accepting the residue are the OWNER's
-calls, never a session's — the gate keeps the present clean and makes the
-next violation loud at commit time, which is where the recording reflex fires.
+lives in old commits whether or not the tree is clean — the gate keeps the
+PRESENT clean and makes the next violation loud at commit time, which is where
+the recording reflex fires.
 
-*(Quietkeep and the hub, 2026-08-04.)*
+**And the history question is now CLOSED — this lesson is not an invitation to
+re-open it.** Quietkeep's history was rewritten on his word (2026-08-05, by
+pattern, locations-only, verified against a fresh clone from GitHub). What
+survives that is accepted. He then said: *"I'm not making repos private or
+contacting GitHub. Drop those."* So making a repo private and asking GitHub
+Support to purge cached commits are DECLINED, permanently and in every repo. A
+session that finds residue records it and moves on.
+
+Worth saying because the failure is specific and it is a documentation failure,
+not a judgement one: the previous wording here ended "report it to him plainly,
+with the options". A red history scan in an unvisited sibling would have read
+as new, and the same two remedies would have gone back in front of him with the
+same confidence. **A record that instructs a session to offer something is a
+record that will keep offering it — so when a standing question is answered,
+the answer belongs where the question was asked, not only in the log.**
+
+*(Quietkeep and the hub, 2026-08-04; the history question closed 2026-08-05.)*
 
 ---
 

@@ -593,9 +593,18 @@ the push, not a courtesy a session may remember to extend.
   violation: git history is out of the gate's reach, permanently.
 - **What the gate cannot reach, stated so nobody mistakes the coverage: git
   history.** A pushed sentence lives in old commits whether or not the tree
-  is clean. Rewriting public history, making a repo private, or accepting the
-  residue are the OWNER's calls, never a session's — a session that finds
-  residue reports it to him plainly, with the options, and stops.
+  is clean.
+- **THE HISTORY QUESTION IS SETTLED. Do not re-open it.** Noah, 2026-08-05:
+  *"I'm not making repos private or contacting GitHub. Drop those."* Quietkeep's
+  history was rewritten on his word and the remaining residue is **ACCEPTED**.
+  **Making a repo private and contacting GitHub Support to purge cached commits
+  are DECLINED remedies. A session does not propose either, in any repo, ever
+  again** — not when a history scan comes back red, not when a new repo adopts
+  the gate, not because the residue looks fresh in a repo nobody has checked
+  before. A session that finds history residue RECORDS the locations and
+  carries on. It does not present options he has already ruled out, and it does
+  not ask him to reconsider. Rewriting history remains his call and his alone,
+  offered only if he raises it.
 - **Writing ABOUT this rule: name the term first, the person second** ("a
   diagnosis attached to the owner", never the reverse order). Meta-prose that
   leads with the person reads, to the gate, exactly like a disclosure — the

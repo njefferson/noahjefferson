@@ -44,6 +44,15 @@ Every item below has actually happened.
   tiles, icons. Removal is his call too. (Doctrine §0c. Noah, 2026-08-04:
   *"ONLY *I* DECIDE WHAT GOES ON THE HUB"* — and, on being told it was written
   down nowhere, *"IT SHOULDN'T BE NECESSARY."*)
+- **THE GIT-HISTORY QUESTION IS SETTLED — never offer "make it private" or
+  "contact GitHub Support" again.** Noah, 2026-08-05: *"I'm not making repos
+  private or contacting GitHub. Drop those."* Quietkeep's history was rewritten
+  on his word; the residue that survives is ACCEPTED. A history scan coming back
+  red is not new information and is not a reason to re-open it — record the
+  locations and carry on. This is the same shape as the branch-deletion and
+  metadata items above: a remedy that keeps getting re-offered because the
+  record used to say "report it with the options". It no longer does.
+  (Doctrine §9b.)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
   range line in the output means nothing moved. (LESSONS, 2026-08-02.)

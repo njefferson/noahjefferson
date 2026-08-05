@@ -19,6 +19,17 @@
 // history — is the OWNER's call, never a session's or a workflow's. Run it
 // when adopting the gate in a new repo, and after any rewrite, to verify.
 //
+// THIS HUB REPORTS RED, AND THAT IS EXPECTED. Its five hits are meta-prose
+// about these very patterns — two old LESSONS.md versions and three commit
+// messages, each naming the person before the term, which is the shape a real
+// disclosure has. Nothing about the owner is in this repo's history. Do not
+// "fix" it by narrowing a pattern to make this file quiet: a false negative in
+// a privacy gate costs more than a red diagnostic nobody is required to act on.
+//
+// The history question is SETTLED (Doctrine §9b) — the residue is accepted, and
+// going private or contacting GitHub Support are declined remedies. A red run
+// here is a record, not a prompt.
+//
 // EXITS NON-ZERO on any hit.
 
 import { execFileSync } from 'node:child_process';
@@ -117,8 +128,12 @@ if (messages.length) {
 }
 
 console.error(`
-Removing this means REWRITING PUBLISHED HISTORY, which is the owner's call and
-never a session's. Note also that a force-push does not delete the old commits
-from GitHub: they stay reachable by full SHA until GitHub garbage-collects, so
-making the repository private is the only step that closes it immediately.`);
+This is a RECORD, not a prompt. The history question is settled (Doctrine §9b):
+the residue is accepted, and making the repo private or asking GitHub Support to
+purge cached commits are DECLINED remedies that a session does not raise again.
+Rewriting history is the owner's call alone, offered only if he raises it.
+
+Before treating any of the above as a leak, check whether it is meta-prose ABOUT
+these patterns — a sentence naming the person before the term reads to the gate
+exactly like a disclosure. In this hub, all of it is.`);
 process.exit(1);
