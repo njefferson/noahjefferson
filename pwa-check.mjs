@@ -4,8 +4,7 @@
 //
 //   node pwa-check.mjs --repo ../myapp
 //
-// WHY (Doctrine §7h, LESSONS §31). Noah, 2026-08-03: "Knowing that the app could
-// not show if it was old and stuck seems like something all my apps need to fix."
+// WHY (Doctrine §7h, LESSONS §31).
 //
 // The failure is invisible by construction — caching IS the business of not
 // asking the network, so a stale app looks perfectly fine. It is just old. There
@@ -148,7 +147,7 @@ if (!noticesUpdate) {
 //
 // Searching ONLY markup made it blind: Quietkeep and photo-pointer both have a
 // real update prompt whose words live in TypeScript and are written into the DOM
-// at runtime, and this reported them as telling nobody. Three of Noah's six apps
+// at runtime, and this reported them as telling nobody. Three of the owner's six apps
 // were called broken when they were not — the same false-alarm failure the cache
 // check had, in the check written to avoid it.
 //
@@ -223,7 +222,7 @@ if (!/caches\s*\??\.\s*keys\(\)/.test(appSrc)) {
 // requirement is that the name CHANGES when the release does — and it is met by
 // a semver, by a plain counter (`horizon-v57`), by an interpolation, by
 // concatenation, and by a build-time placeholder. An earlier version of this
-// check demanded a semver triplet and reported two of Noah's six apps as broken
+// check demanded a semver triplet and reported two of the owner's six apps as broken
 // when both were fine. Two false positives out of six is how a gate gets
 // ignored, which costs more than the check is worth.
 //

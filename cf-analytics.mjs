@@ -85,7 +85,7 @@ async function gqlSoft(query, variables = {}) {
 // and answers 1000 "Invalid API Token" for one it cannot find there, even when
 // that token works: the hub's deploy token, which ships the live site on every
 // push, fails this exact call. Gating on it blocked good credentials for five
-// runs and sent Noah re-creating a token that was fine. The authoritative test
+// runs and sent the owner re-creating a token that was fine. The authoritative test
 // is the GraphQL query itself, so this only prints what it saw.
 async function preflight() {
   let res;
@@ -890,7 +890,7 @@ async function people(opts) {
 // eyeball only, scanner excluded, complete UTC days — the verified defaults.
 
 /** Fold host variants into one app: drop a :port suffix and a leading www.,
- *  but keep staging.* separate (it is Noah's own testing, not an audience). */
+ *  but keep staging.* separate (it is the owner's own testing, not an audience). */
 function canonHost(host) {
   let h = String(host || '(none)').replace(/:\d+$/, '');
   if (h.startsWith('www.')) h = h.slice(4);
@@ -1064,7 +1064,7 @@ async function snapshot(opts) {
 
 // ------------------------------------------------------------------ humans
 
-// "What are real users?" answered the way Noah framed it: phones and tablets
+// "What are real users?" answered the way the owner framed it: phones and tablets
 // are the hardest traffic to fake, so distinct mobile/tablet IPs are the
 // high-confidence humans; the desktop bucket is then INVESTIGATED rather than
 // trusted or discarded. Uses Cloudflare's own clientDeviceType (better than

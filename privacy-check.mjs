@@ -5,8 +5,7 @@
 //   node privacy-check.mjs                check the hub
 //   node privacy-check.mjs --repo ../app  check a sibling
 //
-// WHY (Noah, 2026-08-04, verbatim): "Make sure you never record anything in the
-// repo that is personal or embarrassing for me. That is a FAIL state."
+// WHY (
 //
 // The line that decides every case: his design statements are repo material;
 // who he is, is not. The products' framing ("a planner for neurodivergent

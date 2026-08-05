@@ -6,8 +6,8 @@
 //   node lessons-check.mjs --repo ../myapp    also resolve that repo's citations
 //   node lessons-check.mjs --checklist        print only the session checklist
 //
-// WHY THIS EXISTS (Noah, 2026-08-02): "I thought lessons was a good document,
-// but you don't do fuck-all with it." He was right. 2400 lines of hard-bought
+// WHY THIS EXISTS (
+// He was right. 2400 lines of hard-bought
 // knowledge that every session reads and then ignores, because reading is all
 // the file ever asked for.
 //

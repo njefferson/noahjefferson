@@ -5,7 +5,7 @@
 //   node handoff-check.mjs --repo ../myapp
 //   node handoff-check.mjs --repo ../myapp --ack=deploy-green,deploy-url,evidence,attachments,manual-steps
 //
-// WHY (LESSONS §26, Noah 2026-08-02). A build shipped with four green gates and
+// WHY (LESSONS §26, the owner 2026-08-02). A build shipped with four green gates and
 // a handoff that broke four doctrine rules — every one of them prose-only:
 //   · deployed to staging four times and never handed over the URL (§7)
 //   · told him to add Cloudflare secrets that already existed (§5b)
@@ -98,7 +98,7 @@ if (!deployWf) {
       if (!found) {
         failures.push(
           `NOTES.md records no ${project}.pages.dev URL. Doctrine §7: hand over the preview URL and `
-          + 'leave a durable "waiting on Noah" signal, so a staged candidate is not invisible '
+          + 'leave a durable "waiting on the owner" signal, so a staged candidate is not invisible '
           + 'once the session ends.',
         );
       } else {
@@ -125,7 +125,7 @@ if (!deployWf) {
         // `package.json` held anything true — the fall-through produced `0.1.0`,
         // a scaffold number nobody bumps, while the app on screen said 1.16.0.
         // The only way to go green was to write a version that did not exist,
-        // into a handoff, about a build Noah was being asked to test.
+        // into a handoff, about a build the owner was being asked to test.
         //
         // **A gate whose green state is a lie is worse than no gate**, and both
         // repos reached it by the same route: a fallback that succeeds on the
@@ -176,7 +176,7 @@ for (const [file, text] of prose) {
     if (m) {
       failures.push(
         `${file}:${n + 1}: tells the reader to fetch "${m[2]}" from the repo. `
-        + 'Noah is iPad-first (§2) — ATTACH the file instead of naming a path on a machine he is not on.',
+        + 'the owner is iPad-first (§2) — ATTACH the file instead of naming a path on a machine he is not on.',
       );
     }
   });
@@ -194,7 +194,7 @@ const MUST_ACK = [
    * fauxplane pushed four releases — 1.24.1, 1.25.0, 1.25.1, 1.26.0 — and
    * verified each one the way the lessons demand: read the REMOTE, confirm the
    * range line, confirm the SHA. Every push was real. Every DEPLOY had failed,
-   * on a CI gate added the same afternoon. Noah's device sat on 1.24.0 for four
+   * on a CI gate added the same afternoon. The owner's device sat on 1.24.0 for four
    * releases while each was reported as shipped, and it surfaced only when he
    * asked "What. Button." about a feature that had never left the branch.
    *

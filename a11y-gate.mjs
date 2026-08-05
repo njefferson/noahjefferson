@@ -39,7 +39,7 @@ const axeSrc = readFileSync('node_modules/axe-core/axe.min.js', 'utf8');
 //               control's own edge is visible. Same loud-failure rule as
 //               `registry`: a selector that stops matching FAILS, never skipped.
 //
-//               LIVE since 2026-07-29 (F-07, Noah's call): --line was raised to
+//               LIVE since 2026-07-29 (F-07, the owner's call): --line was raised to
 //               computed 3:1 values in both themes, so these selectors are
 //               registered and guarded. Adding a new bordered control? Register
 //               it here in the SAME commit that introduces it — the same rule
@@ -380,7 +380,7 @@ console.log(`pages: ${PAGES.length} x themes: ${THEMES.length} x viewports: ${VI
 if (exemptions.size) {
   console.log(`\nEXEMPTED (${exemptions.size}) — reported, never silent:`);
   for (const e of exemptions) console.log('  · ' + e);
-  console.log('  §4 carries the inline exception explicitly (Noah, 2026-07-29; WCAG 2.2 SC 2.5.8).');
+  console.log('  §4 carries the inline exception explicitly (the owner, 2026-07-29; WCAG 2.2 SC 2.5.8).');
 }
 if (failures.length) {
   console.log(`\nFAILURES (${failures.length}):`);

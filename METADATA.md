@@ -1,12 +1,12 @@
 # Repo metadata — every app, one file (Doctrine §10)
 
 The GitHub-side metadata the session token cannot set: description, website,
-topics, social preview, default branch. Each is a Settings-page step Noah
+topics, social preview, default branch. Each is a Settings-page step the owner
 performs by hand; this file is the single place the VALUES live, so a session
 proposes here and the GitHub UI copies from here — never the other way round,
 and never typed fresh in chat where it evaporates.
 
-**Status is tracked per item.** An item is `set` only after Noah has actually
+**Status is tracked per item.** An item is `set` only after the owner has actually
 applied it and said so; `proposed` means the value below is awaiting his
 confirm. Never report a repo "set up" while any item says proposed (§10).
 
@@ -29,7 +29,7 @@ instead and look at the `og:image` host:
 
 - `repository-images.githubusercontent.com` — a card was really uploaded.
 - `opengraph.githubassets.com` — GitHub is auto-generating one, and the upload
-  did not land.
+ did not land.
 
 A markdown-converting fetcher drops the `<head>`, so this needs the raw HTML.
 
@@ -44,10 +44,8 @@ Live on GitHub now:
 > A glass cockpit for your desk — airliner instruments driven by your device's
 > own sensors and live aviation data. Not a simulator; never for navigation.
 
-**Proposed revision** — 2026-08-03, from how Noah actually describes the app to
-his friends: *"You can follow a flight, or use it on a flight to see like the
-pilot, or use it in a car while you drive!"* The live description says **"for
-your desk"**, which is the one reader's case and silently excludes the two uses
+**Proposed revision** — 2026-08-03, from how the owner actually describes the app to
+his friends: The live description says **, which is the one reader's case and silently excludes the two uses
 that make the panel come alive. The app is undersold by its own copy.
 
 > Airliner instruments on your phone or tablet, driven by its own sensors and
@@ -65,14 +63,14 @@ that make the panel come alive. The app is undersold by its own copy.
 
 **Social preview** — set 2026-08-03
 
-The icon-art card, Noah's pick. Source is `scripts/social-card-icon.html`; the
+The icon-art card, the owner's pick. Source is `scripts/social-card-icon.html`; the
 same image serves as the page's og:image.
 
 **Default branch** — set 2026-08-03
 
 `main`. It was `claude/jet-panel-pwa-amendments-f07ygu`, a harness branch this
 repo's policy says to ignore (Doctrine §11) — so the landing page, the default
-clone and every new PR base pointed at stale code until Noah moved it. It was
+clone and every new PR base pointed at stale code until the owner moved it. It was
 never on this list; a verification pass found it.
 
 ---

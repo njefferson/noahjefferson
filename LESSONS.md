@@ -1,7 +1,7 @@
 # Cross-app lessons
 
 Things that turned out to be true, cost real time to find out, and are **not
-specific to one app**. Every session on any of Noah's apps should read this
+specific to one app**. Every session on any of the owner's apps should read this
 alongside [`DOCTRINE.md`](DOCTRINE.md).
 
 **The difference between the two files:** the Doctrine says what you must do.
@@ -21,30 +21,29 @@ opinion, and opinions are what this file exists to replace.
 
 ## This file is ENFORCED, not just read
 
-Noah, 2026-08-02: *"I thought lessons was a good document, but you don't do
-fuck-all with it."* He was right — 2400 lines that every session read and then
+He was right — 2400 lines that every session read and then
 ignored, because reading was all the file ever asked for. §26 is the autopsy:
 in one build every **gated** rule held and every **prose** rule lost.
 
 So each lesson now has to say how it is enforced. Run it:
 
 ```
-node lessons-check.mjs               # every lesson declares its enforcement
-node lessons-check.mjs --checklist   # the steps no script can do — read at handoff
-npm run security                    # §8, §25, Doctrine §16.1 — zizmor, pinned + strict
-node pin-check.mjs      --repo ../x  # §8 — the npm hygiene zizmor does not do
-node handoff-check.mjs  --repo ../x  # §10, §26 — the handoff is a deliverable
+node lessons-check.mjs # every lesson declares its enforcement
+node lessons-check.mjs --checklist # the steps no script can do — read at handoff
+npm run security # §8, §25, Doctrine §16.1 — zizmor, pinned + strict
+node pin-check.mjs --repo ../x # §8 — the npm hygiene zizmor does not do
+node handoff-check.mjs --repo ../x # §10, §26 — the handoff is a deliverable
 ```
 
 **Every `## ` section carries an `**Enforced by:**` line**, naming one of:
 
 - **`GATE <repo>:<path>`** — an executable check. `lessons-check.mjs` verifies
-  the file EXISTS. A cited gate that is not there is the precise failure §7g and
-  Doctrine §4 both describe, so it FAILS rather than reading as coverage.
+ the file EXISTS. A cited gate that is not there is the precise failure §7g and
+ Doctrine §4 both describe, so it FAILS rather than reading as coverage.
 - **`CHECKLIST <id>`** — a session-time step no script can perform. Printed by
-  `--checklist` so it is read at the moment it matters.
+ `--checklist` so it is read at the moment it matters.
 - **`JUDGEMENT`** — genuinely not automatable. Must also carry a **`Smell:`**
-  line, so the lesson is recognisable when you are standing in it.
+ line, so the lesson is recognisable when you are standing in it.
 
 **A section with no declaration FAILS.** That is deliberate: it makes the
 un-gated lessons countable instead of letting them blend in with the gated ones.
@@ -357,8 +356,8 @@ destroys working behaviour the reporter never complained about.
 strike-through read as *deleted*, not *off*. The standard filter-chip pattern —
 filled when selected, outlined when not, with a tick — communicates it without
 being explained.
-*(photo-pointer, 2026-07-25. Noah: "Use actual accepted design principles
-instead of making shit up.")*
+*(photo-pointer, 2026-07-25.
+)*
 
 **Meaning must never ride on hue alone**, and at more than a handful of
 categories the hues stop being distinguishable anyway. The glyph carries the
@@ -366,7 +365,7 @@ meaning; colour reinforces it. See Doctrine §4 — this is a hard gate, not a
 preference.
 
 **A format that does not render is not a format.** Markdown tables were used
-repeatedly in Noah's chat replies, and then again in a plan file written for him
+repeatedly in the owner's chat replies, and then again in a plan file written for him
 to read — after he had already said they do not work. On iPad they do not
 display: the reader gets pipes and dashes, and the information inside them is
 lost entirely. Every one of those tables was written by a session that could see
@@ -393,7 +392,7 @@ serving the exact subdomain the app wanted. One unscoped query,
 The narrow query is a weak probe wearing a thorough one's clothes: it returns a
 confident empty result. Run the unscoped *name + software* query FIRST, before
 any category query and before the name is shown to anyone.
-*(Horizons/planner, 2026-07-28 — Noah found the taken subdomain on his phone in
+*(Horizons/planner, 2026-07-28 — the owner found the taken subdomain on his phone in
 seconds after the session had put it on his to-do list.)*
 
 **Search results about a topic are not results about a product.** Adding
@@ -427,11 +426,11 @@ class 9). The name that landed came out of a seam the earlier deaths pointed at.
 **Write the record so a candidate can be reconsidered, not so the search can be
 declared over** — and do not editorialise about when someone should stop. It is
 their search.
-*(Horizons/planner, 2026-07-28 — Noah: "A graveyard is not evidence that nothing
-exists. It is a breadcrumb trail of progress.")*
+*(Horizons/planner, 2026-07-28 —
+)*
 
 **Naming bans in a repo's voice rules bind the session, not the owner.** This
-repo's doctrine bars military vocabulary in naming. When Noah proposed one
+repo's doctrine bars military vocabulary in naming. When the owner proposed one
 himself, the session cited the ban back at him instead of checking the candidate.
 A house style constrains what a session *proposes*; it does not overrule the
 person the style belongs to. Check what the owner asks you to check, and if it is
@@ -450,7 +449,7 @@ names that collide with your feature vocabulary — *Lens*, *Gauge*, *Alignment*
 all died here) · 3. unscoped name+software search · 4. npm and GitHub ·
 5. store and trademark searches on the owner's device. Steps 1 and 2 are free and
 instant, and were being run last or not at all.
-*(Horizons/planner, 2026-07-28 — caught by Noah after the name had already landed
+*(Horizons/planner, 2026-07-28 — caught by the owner after the name had already landed
 on `staging`; the staging gate contained it and it cost nothing.)*
 
 ## 7b · Gates you never watched
@@ -464,21 +463,21 @@ had unescaped double quotes inside a script string. Meanwhile every session
 verified the same code by invoking the tools *directly*
 (`node --experimental-strip-types --test …`, `npx tsc --noEmit`), which bypass
 `package.json` and pass. So the local check was green, the CI check was red, and a
-commit message reading *"Verified: 14/14 tests, tsc clean"* sat on a SHA with a
+commit message reading sat on a SHA with a
 failing run attached. Every statement was individually true and the picture they
 painted was false.
 
 Three things fall out of it, all cheap:
 
 - **If you cite a workflow as verification, open the run.** A gate nobody has
-  watched pass is a file, not a gate — the same finding as the accessibility gate
-  that had no `process.exit` in it, in a second place.
+ watched pass is a file, not a gate — the same finding as the accessibility gate
+ that had no `process.exit` in it, in a second place.
 - **Exercise the entry point CI uses, not a shortcut around it.** `npm run test`
-  and `node --test …` are not the same command; only one of them parses
-  `package.json`.
+ and `node --test …` are not the same command; only one of them parses
+ `package.json`.
 - **`package.json` is executable configuration — validate it.**
-  `python3 -c "import json;json.load(open('package.json'))"` costs nothing and
-  catches the whole class.
+ `python3 -c "import json;json.load(open('package.json'))"` costs nothing and
+ catches the whole class.
 
 *(Quietkeep, 2026-07-28 — found only because a rename touched `package.json` and
 the failure finally surfaced locally. It had been red for a day.)*
@@ -488,18 +487,18 @@ repos that hold the rule.** Both are the same shape and neither needed anything
 clever to catch — one API call would have done it.
 
 - **photo-field-tools CI: red on its last three runs, unnoticed.** The
-  `doctrine` job died on
-  `Cannot find module '.../hub/pin-check.mjs'`. The job checks the hub out at
-  its **default branch**, and the hub instruments it calls only existed on a
-  working branch. Every gate had been run locally and passed; nobody opened the
-  run. **A cross-repo gate depends on the OTHER repo's default branch, not on
-  your working copy — landing the caller before the callee is red CI by
-  construction.**
+ `doctrine` job died on
+ `Cannot find module '.../hub/pin-check.mjs'`. The job checks the hub out at
+ its **default branch**, and the hub instruments it calls only existed on a
+ working branch. Every gate had been run locally and passed; nobody opened the
+ run. **A cross-repo gate depends on the OTHER repo's default branch, not on
+ your working copy — landing the caller before the callee is red CI by
+ construction.**
 - **The hub's own `doctrine.yml` had never executed, not once.** It was written
-  `on: push: branches: [main]` in a repo whose work happens on `claude/*`
-  branches. So the workflow created *specifically to stop rules from being
-  prose* was, itself, prose — a file that had never exited any code at all. It
-  now also runs on `claude/**`.
+ `on: push: branches: [main]` in a repo whose work happens on `claude/*`
+ branches. So the workflow created *specifically to stop rules from being
+ prose* was, itself, prose — a file that had never exited any code at all. It
+ now also runs on `claude/**`.
 
 **Ask of a new workflow: on which branch does this actually fire, and have I
 seen it fire?** An unrun workflow and a missing workflow are the same artefact.
@@ -518,8 +517,8 @@ session's own diff, not by the gates.)*
 logos.** Two icon candidates for Quietkeep were spirals, and every check run on
 them was a *collision* check — does this look like another brand, an app icon, a
 loading spinner. All of that passed or was fixable, and I rejected them on
-legibility. Noah rejected them on meaning: *"a spiral is the loss of control, and
-anxiety laden."* **A spiral is the shape of tightening inward with no way out.**
+legibility.
+**A spiral is the shape of tightening inward with no way out.**
 For an app that exists to meet people at exactly that moment, putting it on the
 front door says the app is the feeling rather than the answer to it.
 
@@ -546,7 +545,7 @@ rejected variants so the choice is visible rather than argued.
 *(Quietkeep, 2026-07-28.)*
 
 **Checking is not the same as checking with the right instrument — and a cached
-index is the wrong one.** Two sessions running told Noah a repo topic still had a
+index is the wrong one.** Two sessions running told the owner a repo topic still had a
 typo in it. He had fixed it before the first report. The reports were not guesses;
 they quoted a GitHub **search** API response, which is a *cached index*, not a read
 of current state — and the proof was sitting in the same payload, an `updated_at`
@@ -557,18 +556,18 @@ no live read available at all.
 Two rules, both cheap:
 
 - **Ask any "current state" response when it last changed**, and check that against
-  what you know has happened since. A stale timestamp beside stale data is the
-  instrument confessing.
+ what you know has happened since. A stale timestamp beside stale data is the
+ instrument confessing.
 - **When the owner is the only witness, ask clearly and believe the answer.** The
-  failure here was not the stale read — it was reporting "read back from the API,
-  not assumed" as though it outranked his word. It did not. Doctrine §10 already
-  says confirmation *is* the verification; a cache was being smuggled in as a
-  second opinion.
+ failure here was not the stale read — it was reporting "read back from the API,
+ not assumed" as though it outranked his word. It did not. Doctrine §10 already
+ says confirmation *is* the verification; a cache was being smuggled in as a
+ second opinion.
 
 *(Quietkeep, 2026-07-28.)*
 
 **A detail visible in a screenshot is not a fact you were told.** Debugging a
-site that would not load on Noah's iPad, a session noticed the status bar read
+site that would not load on the owner's iPad, a session noticed the status bar read
 LTE, inferred that earlier failed attempts must have been on Wi-Fi, and wrote
 "the likelier cause is a network-level block" into a permanent verification
 record as reasoning. **He had been on LTE the entire time, same device, one
@@ -641,8 +640,7 @@ called fixed.)*
 **A comment stating a rationale is a claim, and an unverified one costs more
 than no comment at all — because it stops the next reader checking.** Quietkeep's
 sync driver ran every arriving event back through the app's write boundary, under
-a comment reading *"an event over a wire is still an event; law 1 is enforced on
-them exactly as on a keystroke."* That sentence is why the design survived
+a comment reading That sentence is why the design survived
 several passes: it sounds like the careful choice, and each reader in turn
 declined to re-examine something already argued.
 
@@ -653,12 +651,12 @@ ran on the device that wrote it, and its repairs are in the log beside the
 events that needed them. Re-running the boundary on history
 
 - writes a SECOND repair carrying the same derived id as the one already there —
-  not rejected, just written, and then refused by the store's unique index at the
-  append, so the failure surfaces a layer away from its cause;
+ not rejected, just written, and then refused by the store's unique index at the
+ append, so the failure surfaces a layer away from its cause;
 - refuses the same shard delivered twice, as a creation landing on a node that
-  already exists, which is the ordinary case for anyone using two devices;
+ already exists, which is the ordinary case for anyone using two devices;
 - refuses anything whose subject is still in the next chunk — a re-parenting, a
-  dependency, a rename — which over a wire is not an error but a Tuesday.
+ dependency, a rename — which over a wire is not an error but a Tuesday.
 
 Three lessons, in increasing order of how much time they save.
 
@@ -701,17 +699,16 @@ specific enough to name: a comment or a piece of user-facing copy states a
 guarantee that the code *nearly* provides, rounded up to the clean version.
 
 The three, in order:
-- *"The relay is handed the sealed body and nothing more."* True of the request
-  BODY; false of the transport, which still exposes the sync id, IP, size and
-  timing.
-- *"[The compression-oracle] channel does not exist here — the relay cannot put
-  events into somebody's log."* The first clause is true and the conclusion is
-  not: a `?text=` capture endpoint is exactly an injection leg, so the channel
-  exists and needed padding to close.
-- *"[The relay] deliberately cannot tell how MUCH you sync."* Padding blurs a
-  size into a bucket, so it defeats the fine-grained oracle — but a bigger
-  planner is still visibly bigger (more chunks, larger buckets), so "cannot tell
-  how much" overstates it.
+- True of the request
+ BODY; false of the transport, which still exposes the sync id, IP, size and
+ timing.
+- The first clause is true and the conclusion is
+ not: a `?text=` capture endpoint is exactly an injection leg, so the channel
+ exists and needed padding to close.
+- Padding blurs a
+ size into a bucket, so it defeats the fine-grained oracle — but a bigger
+ planner is still visibly bigger (more chunks, larger buckets), so "cannot tell
+ how much" overstates it.
 
 Each was found by an adversarial audit or by the owner reading the words, never
 by the 600-plus passing tests — **because a prose claim has nothing asserting it.**
@@ -730,8 +727,7 @@ without one is a hope with good grammar.
 
 **Corollary on who to trust.** The model wrote all three wrong sentences and was
 confident in each. The owner, reading them against what he understood the system
-to do, was right every time. When a non-expert says *"I don't believe your
-security assurances"*, that is not a knowledge gap to reassure away — it is the
+to do, was right every time. When a non-expert says , that is not a knowledge gap to reassure away — it is the
 most reliable detector in the room, and the correct response is an adversarial
 re-audit that treats the model's own prior claims as the prime suspects.
 
@@ -748,7 +744,7 @@ walls.)*
 **Plant the fault. A check you have never seen go red is not evidence, and it
 is indistinguishable from a check that works.** Intersecting Parallels shipped a
 roof — inclined planes, a new kind of vanishing point — with a headless check
-reading *"and Solid shades the roof planes as well as the walls — ok"*. It had
+reading . It had
 been green from the moment it was written. Deleting **an entire roof plane** did
 not move it: the check counted the TOTAL shaded pixels on the canvas, and the
 two walls alone (42,939px) cleared its threshold of 500 without the roof
@@ -778,17 +774,17 @@ reads, in the log, exactly like proof.
 Three things that turn this around, cheap enough to be unconditional:
 
 - **Make it fail on purpose before you believe it.** Break the specific thing it
-  names — delete the face, disable the reseat, negate the rule — and watch that
-  check and only that check go red. If it stays green, the check is not about
-  what its name says.
+ names — delete the face, disable the reseat, negate the rule — and watch that
+ check and only that check go red. If it stays green, the check is not about
+ what its name says.
 - **Measure the DIFFERENCE the change makes, not the total afterwards.** A total
-  is dominated by whatever was already there. Almost every empty check in this
-  family was a total that a pre-existing thing was already satisfying.
+ is dominated by whatever was already there. Almost every empty check in this
+ family was a total that a pre-existing thing was already satisfying.
 - **Assert the fixture, not just the result.** A check whose setup silently puts
-  the subject off-screen, off-canvas or out of range proves nothing and says so
-  in the same words as a real pass. Make it state that the thing it is about is
-  actually there — *every corner above the horizon AND on the page* — so a broken
-  fixture fails loudly instead of passing quietly.
+ the subject off-screen, off-canvas or out of range proves nothing and says so
+ in the same words as a real pass. Make it state that the thing it is about is
+ actually there — *every corner above the horizon AND on the page* — so a broken
+ fixture fails loudly instead of passing quietly.
 
 This is the practical edge of 7d. Adversarial *reviewers* catch the code the
 author's model got wrong; planting catches the **gate** the author's model got
@@ -832,8 +828,7 @@ passed both repos. Installing **zizmor**, a maintained off-the-shelf auditor,
 took thirty seconds and immediately found 18 template injections and 5
 credential-persistence issues — including two in workflows written *that same
 afternoon, alongside the bespoke checker that missed them*. Owner, on being
-shown the growing pile of hand-rolled infrastructure: *"WHY THE FUCK AM I
-HAVING TO CREATE ALL THIS INDUSTRY STANDARD STUFF?"*
+shown the growing pile of hand-rolled infrastructure:
 **Reach for the standard tool FIRST. Write a bespoke gate only for what is
 genuinely specific to this work** — acceptance criteria, a palette's own roles,
 an app's offline behaviour, the handoff. Everything else already exists, is
@@ -868,7 +863,7 @@ not the safe half of the job; verifying it against the thing it must match is.
 *(hub, 2026-07-28.)*
 
 **A program that never exits, piped, produces no output at all.** `a11y-scan.mjs`
-never calls `browser.close()`, and Node block-buffers stdout when it is a pipe —
+never calls `browser.close`, and Node block-buffers stdout when it is a pipe —
 so `node a11y-scan.mjs | head -30` printed nothing for three minutes and looked
 like a hang. Redirected to a file instead, the same run had already produced its
 full report. Worse, the empty pipe was used as *evidence* for a specific
@@ -883,7 +878,7 @@ taken all the way to adoption on the strength of five clean checks — npm, GitH
 the App Store, trademark, and a grep of the app's own spec. Every one of them was
 a REGISTRY check, and registries only catch collisions with *products*. The name
 was *Wynts*; said aloud it is a near-homophone of **wince**, which for an app
-whose stated voice is calm and shame-free is disqualifying. Noah caught it in the
+whose stated voice is calm and shame-free is disqualifying. The owner caught it in the
 time it took to read it back. The check costs nothing and it runs first now:
 say it, say it in a sentence, ask what it rhymes with and what it is one letter
 from. A registry cannot hear.
@@ -914,7 +909,7 @@ for `opacity` on text.
 *(Frame 3.1.4 / Photo Pointer 1.14.2, 2026-07-28.)*
 
 **A "never re-fix this" entry blesses the PATTERN, not every number in it.**
-Studio's audit list records *"look-button state as TEXT (norm/R⇄B) not hue"* as
+Studio's audit list records as
 audited-correct — right call, it is the non-hue channel someone who cannot
 separate the colours depends on. It shipped at **8px**. So the accessibility fix
 was real and the thing implementing it was too small to read, and the register
@@ -937,13 +932,12 @@ release with their own reasoning.
 
 **The session git relay cannot delete a remote branch, and the GitHub MCP has no
 tool that can either.** `git push origin --delete <b>` and the equivalent
-`git push origin :refs/heads/<b>` both die the same way — *"send-pack: unexpected
-disconnect while reading sideband packet / the remote end hung up unexpectedly"* —
+`git push origin :refs/heads/<b>` both die the same way — —
 then print a misleading `Everything up-to-date`, so a careless read looks like
 success. The relay drops the connection on any ref *deletion*; pushes that create
 or advance a ref work fine. The GitHub MCP offers `create_branch` and
 `list_branches` but nothing to remove one. So deleting a branch is a manual step
-for Noah (GitHub → Branches → the bin icon), and it should be handed over as one
+for the owner (GitHub → Branches → the bin icon), and it should be handed over as one
 rather than retried. Delete the LOCAL branch from the session by all means — that
 part works — but verify with `git ls-remote --heads origin` before reporting a
 branch gone. This is why stale `claude/*` branches accumulate in every repo.
@@ -1051,7 +1045,7 @@ happened".** Quietkeep's calendar button had a live region directly above it,
 which is fine on a short surface. That panel had grown past ten thousand pixels,
 so the button was reached by scrolling *down* — and the confirmation then updated
 off the top of the reader's view. It had worked correctly for three releases;
-the owner reported it as doing nothing at all. **On any surface long enough to
+The owner reported it as doing nothing at all. **On any surface long enough to
 scroll, the confirmation goes BELOW the control**, and the same reasoning applies
 to error text, counts, and anything else that answers a press. A related finding
 in the same session: the only way to close that panel was beneath every release
@@ -1073,8 +1067,8 @@ at the viewport it targets rather than by reading the CSS.
 *(Quietkeep 0.10.1, 2026-07-29.)*
 
 **A "replace" that clears before it writes will eventually clear and then fail.**
-Quietkeep's import validated a file, called it ready, then ran `reset()` followed
-by `append()`. A file with two records sharing an id passed validation — which
+Quietkeep's import validated a file, called it ready, then ran `reset` followed
+by `append`. A file with two records sharing an id passed validation — which
 never looked at ids — and the append hit the store's unique-id constraint *after*
 the clear. The user's real data was gone, replaced by whichever rows happened to
 land first, with a raw database error on screen, underneath a shipped patch note
@@ -1173,7 +1167,7 @@ stated in two places and one of them is probably stale.
 
 **Free text the user typed will break any document you paste it into.** A
 captured item title containing newlines and a `##` turned a Quietkeep status
-report into one that read **"Nothing to report."** while reporting real work —
+report into one that read ** while reporting real work —
 the title ended the bullet list, opened a heading, and contributed a bare line of
 its own. The app stores titles verbatim deliberately (a share-target capture
 composes title/text/url with newlines, so multi-line titles are *normal*, not
@@ -1257,9 +1251,8 @@ it fails, fix the shape of the algorithm rather than the threshold in the test.
 
 **A gate that checks a LABEL passes while the thing the label describes is
 broken.** Intersecting Parallels' browser walk asserted that every drawn stroke
-"binds to a guide, not to nothing" — and it was green on the build where Noah
-drew four lines at a vanishing point and reported *"the lines do not converge on
-the vanishing point."* Every stroke did carry a binding. The binding was
+"binds to a guide, not to nothing" — and it was green on the build where the owner
+drew four lines at a vanishing point and reported Every stroke did carry a binding. The binding was
 `horizontal`, which is a **parallel** family: lines bound to it converge
 nowhere. The check was reading the app's own word for what it had done instead
 of measuring what it had drawn. The replacement computes the perpendicular
@@ -1290,10 +1283,10 @@ different signal the user already gave you.**
 
 **A `display` rule on a `<dialog>` silently defeats the browser's own hiding.**
 Adding `#about { display: flex }` to lay out a dialog beat the user-agent's
-`dialog:not([open]) { display: none }` on specificity — so `close()` succeeded,
+`dialog:not([open]) { display: none }` on specificity — so `close` succeeded,
 `dialog.open` went false, every handler ran, and **the panel stayed on screen**.
 A worse version of the bug being fixed, shipped by the fix. It was caught only
-because the check asked the browser `checkVisibility()` after the close instead
+because the check asked the browser `checkVisibility` after the close instead
 of trusting that closing had closed it. **Any `display` you set on a `<dialog>`
 must be scoped to `[open]`**, and any test of "did it close" must assert the
 thing is *gone*, not that its state flag flipped.
@@ -1310,7 +1303,7 @@ fires the same name — `cancel`, `close`, `toggle`, `change`, `input`, `error` 
 *(Quietkeep 0.21.1, 2026-07-29 — introduced and caught within minutes, by the
 headless walk rather than by review.)*
 
-**A positioning complaint is often a length problem.** Noah reported twice that
+**A positioning complaint is often a length problem.** the owner reported twice that
 the close control on a panel was in a terrible position and moved when he
 scrolled. Both true. But the reason it was ever far from his thumb was that the
 panel rendered every release note ever written and measured **17,000 to 25,000
@@ -1328,7 +1321,7 @@ printer the modal dialog it was launched from, the entire app behind that, and n
 print stylesheet whatsoever, because the repo had none. **Every check passed on
 the day it was broken.** The generalisation is not about printing: if the point of
 a control is to make a file, a page, a printout or a message, at least one check
-must inspect that output. For print specifically, stub `window.print()` and assert
+must inspect that output. For print specifically, stub `window.print` and assert
 what *would* have gone to paper.
 *(Quietkeep 0.16.0→0.21.0, 2026-07-29.)*
 
@@ -1359,13 +1352,12 @@ without earning it.** So the same defect shipped twice on the same panel while
 both rules were technically on the books. **A requirement scattered across two
 sections in two vocabularies is not captured.** If the owner can state it in one
 sentence, the doctrine should contain that sentence.
-*(Quietkeep 0.21.1, 2026-07-29 — Noah asked "is all of that captured?", and the
+*(Quietkeep 0.21.1, 2026-07-29 — the owner asked "is all of that captured?", and the
 honest answer was no.)*
 
 **Acting on unrecognised input is a failure even when the action is correct.**
 A screenshot of one app arrived in the session for a different one. The right
-first move was one sentence — *"this isn't an app I have here, did you mean
-another session?"* — and instead the session reasoned about a bug whose code it
+first move was one sentence — — and instead the session reasoned about a bug whose code it
 could not see and began attaching a repository. Worse, when told to stop, it kept
 the one instruction in the message that generalised and committed that, because
 that part was genuinely asked for and app-independent. **That is the trap: partial
@@ -1375,7 +1367,7 @@ plain disobedience.** The asymmetry is the whole argument — a clarifying quest
 costs one message and the owner answers in his own words; a guess produces
 confident output he can only evaluate by reading it, and he is the expensive
 resource. **Unrecognised subject → question first, tool calls never.**
-*(Cross-app, 2026-07-29 — Noah, in anger, and correctly.)*
+*(Cross-app, 2026-07-29 — the owner, in anger, and correctly.)*
 
 **A test that compares two failures is not a test that a failure says nothing.**
 The check asserted that a wrong-key refusal and a tampered-blob refusal produced
@@ -1391,8 +1383,7 @@ not depend on X", the test has to vary X.*
 *(Quietkeep sync stage 2, 2026-07-29.)*
 
 **A test named for a claim is the one most likely to be theatre, because its name
-does the reassuring.** The test called THE CLAIM existed solely to assert *"the
-relay cannot read anything"* — and it passed with the plaintext on the wire. It
+does the reassuring.** The test called THE CLAIM existed solely to assert — and it passed with the plaintext on the wire. It
 searched the base64 envelope for the secret, and base64 of "roofer" does not
 contain "roofer". Four unrelated round-trip tests happened to red on the same
 break, so it would not have shipped; that is luck, not a gate, and luck does not
@@ -1445,9 +1436,9 @@ next reader; it misdirects the test you write next.**
 *(Quietkeep sync stage 3, 2026-07-29.)*
 
 **A denylist has to name the claim, not the letters.** Banning the word "lost"
-fired on the correct sentence *"nothing here is lost"* — the reassurance the rule
+fired on the correct sentence — the reassurance the rule
 existed to protect. The identical mistake had already happened with a check that
-banned `"by "` and rejected the right answer *"put by"*. **Twice is a pattern:
+banned `"by "` and rejected the right answer . **Twice is a pattern:
 substring bans on prose reject correct output at least as often as wrong output,
 because the forbidden word is usually forbidden as an ASSERTION and appears
 legitimately under negation.** Ban "was lost" and "data loss"; assert the good
@@ -1464,7 +1455,7 @@ vs absent, `0` vs unset. Send OPTIONS in the tests.
 
 **A gate that measures the wrong thing and is right most of the time is worse
 than no gate, because its green is evidence.** Two smoke checks compared the app's
-correct LOCAL day against `new Date().toISOString().slice(0, 10)`, which is UTC,
+correct LOCAL day against `new Date.toISOString.slice(0, 10)`, which is UTC,
 in a browser context deliberately pinned to America/Denver. They passed for
 eighteen hours a day and red for the six when the two zones are on different
 dates. One reported the app as accepting a date in the past; the other computed
@@ -1583,12 +1574,10 @@ something other than what you meant.
 above, which is its own kind of evidence.)*
 
 **When an owner objects to a behaviour, separate the property they object to
-from the mechanism that provides it — then remove only the property.** Noah, in
-capitals: *"WHY is there ANYTHING besides VPs, and perfect vertical and
-horizontal lines acting as ANCHORS FOR MY LINES?!"* The response was to delete
+from the mechanism that provides it — then remove only the property.** the owner, in
+capitals: The response was to delete
 endpoint joining entirely. Two releases later he was back with screenshots of a
-cube falling apart: *"Being unable to connect line ends means everything breaks
-when you do adjustments."* Both statements were right, because the one mechanism
+cube falling apart: Both statements were right, because the one mechanism
 was doing two separable things: joining decided a line's DIRECTION (which he was
 objecting to, because it bent lines off their guides) and also WHERE ALONG that
 direction the line ended (which he needed, because shared corners are what hold
@@ -1644,7 +1633,7 @@ it where the target is, or remove the need to aim.**
 calibrate it or label it.** A headless repro of finger drawing used ±6px of
 high-frequency wobble over a 35px sample — far coarser than a real fingertip —
 and produced "5 of 14 strokes stray", which was reported as though it described
-the owner's experience. It described the noise model. The genuine defect
+The owner's experience. It described the noise model. The genuine defect
 underneath was found only by measuring a POSITION (an affordance 985px away from
 where it implied) rather than a rate. **State the model's parameters next to any
 number it produces**, and prefer a measurement that does not depend on simulated
@@ -1688,7 +1677,7 @@ ones people meet while already under strain.
 *(Quietkeep 0.23.0, 2026-07-30.)*
 
 **A share tile with no words on it is an unfinished tile — and the rule to
-finish it was already written.** Noah: *"The social preview tile has no words."*
+finish it was already written.** *
 The doctrine already said (§3) that AI-generated imagery must be prompted
 wordless "and all lettering is overlaid afterwards by us"; the artwork was
 generated wordless, the overlay never happened, and the bare gradient shipped as
@@ -1709,7 +1698,7 @@ the middle. What worked: render the tile TWICE, once with the text hidden
 image inside each text run, take the lightest pixel found — worst case for light
 text — and compute the real WCAG ratio against the real text colour, printing
 the offending pixel's rgb AND coordinates. Two things fell out of it immediately.
-First, sample the LINE rects (`Range.getClientRects()`), not the element box: a
+First, sample the LINE rects (`Range.getClientRects`), not the element box: a
 block is as wide as its container, so the first run failed all three lines on
 backdrop out where the sun is and no letter is ever drawn — the instrument was
 wrong before the design was. Second, when a line did genuinely fail (a tagline
@@ -1728,7 +1717,7 @@ the text from the people who cannot see it.)*
 and compute the structure.** Three rounds of increasingly precise prompts asked
 an image model for three-point perspective. Every render drew the two horizon
 points, drew the third point, and then drew the vertical edges PARALLEL — the
-third point was decoration. Noah: *"It CANNOT draw in 3 point perspective."* He
+third point was decoration. * He
 was right, and the prompt was never the problem: consistency across every line
 in a picture is not a thing a describe-and-hope interface can be asked for. The
 artwork is now projected through a real camera (~200 lines), and the model's job
@@ -1750,14 +1739,13 @@ mechanism deleted.
 *(Intersecting Parallels, 2026-07-30.)*
 
 **Some layouts an owner asks for are not merely ugly, they are impossible — say
-which, and name the way out.** Noah's wide social tile put the two horizon
+which, and name the way out.** the owner's wide social tile put the two horizon
 vanishing points 1076px apart and the third 502px below. No real camera has
 those three points: the principal point is the orthocentre of their triangle,
 f² = -(A-P)·(B-P), and there it comes out NEGATIVE. The constraint is
 d > s — the third point must be farther out than half the spread of the other
 two — and his own hand-drawn reference sits just inside it, at d=835 to s=795.
-The useful refusal is not "invalid input" but *"move the horizon points 44px
-closer together, or the third point 44px farther out"*, so the answer names both
+The useful refusal is not "invalid input" but , so the answer names both
 exits and lets him choose the one that costs him less. **A validator that only
 says no makes the owner guess; one that says which way is a collaborator.**
 *(Intersecting Parallels, 2026-07-30.)*
@@ -1768,8 +1756,8 @@ both ways", and technically they did: every tool carried "‹ Studio" in its bar
 and the Infrared ⓘ dialog carried a line to the hub. But the Studio page itself
 had NOTHING pointing up, so the chain dead-ended one rung short, and the single
 hub link in the whole app was the fourth of five identical grey text lines
-inside a dialog, worded "More free tools by Noah Jefferson" — which describes a
-category, not a way back. Noah couldn't find it on device. **Cross-app links
+inside a dialog, worded "More free tools by the owner Jefferson" — which describes a
+category, not a way back. The owner couldn't find it on device. **Cross-app links
 are the easiest thing to mark done and the hardest thing to notice are broken,
 because the person who added them always knows where they are.** The check that
 would have caught it costs nothing: walk it from the far end, on a phone, and
@@ -1787,7 +1775,7 @@ producing a confident wrong answer: sampling a rail at the tangent of a
 999px-radius pill reads pure antialiasing and under-reports by ~0.5; a gradient
 backdrop CHANGES with position, so a rail must be compared against the pixel
 touching it, not a convenient patch elsewhere; and `:focus-visible` never
-matches a scripted `.focus()` in Chromium, so a perfectly good focus ring
+matches a scripted `.focus` in Chromium, so a perfectly good focus ring
 reports as `outline: 0px none` until the harness presses a real Tab. **If a
 visual property is worth asserting, assert it on real painted pixels off a
 screenshot, and drive it the way a person would.**
@@ -1862,10 +1850,10 @@ perceptible (ΔE ≥ 2.3), not that they ascend.
 don't know" beats a confident wrong answer, every time.** Asked where to edit
 GitHub repo metadata from an iPhone, the session invented tap-paths ("gear next
 to About", "Request Desktop Website"), and when each was refuted it adjusted the
-guess rather than establishing the truth — costing Noah minutes of proving each
+guess rather than establishing the truth — costing the owner minutes of proving each
 answer wrong. Then, writing THIS very lesson, it did the same thing again: it
 asserted repo metadata "cannot be edited from the mobile site or app at all,"
-another unverified absolute — and Noah corrected it, because the GitHub mobile
+another unverified absolute — and the owner corrected it, because the GitHub mobile
 app *can* edit the description. So the honest state of what is actually known is
 small: the description is editable in the app; what else the mobile surfaces
 allow was never verified and must not be claimed either way. The failure is the
@@ -1878,15 +1866,15 @@ either direction, spends the other person's time to discover it was empty.
 *(Quietkeep, 2026-07-30 — and the entry itself had to be corrected once.)*
 
 **A session CANNOT edit repo metadata. Stop trying, stop hunting for a way,
-stop sending Noah on UI expeditions — it is his manual step, full stop.**
+stop sending the owner on UI expeditions — it is his manual step, full stop.**
 Description, website, topics and social-preview are not editable by any tool a
 session has: there is no GitHub MCP call for them, and there is no back door.
-Noah has said this every time an app is set up, and every time a session tries
+The owner has said this every time an app is set up, and every time a session tries
 anyway — searches for a tool, proposes tap-paths, offers to "just do it" — which
 is worse than useless because it burns his time proving the wall is still a wall.
 Doctrine §10 already says the values are his to set; this says the behaviour that
 rule keeps failing to produce. When metadata comes up: state the exact values
-once, in plain text, say they are Noah's to paste in whenever he is at it, and
+once, in plain text, say they are the owner's to paste in whenever he is at it, and
 move on. Do NOT attempt it, do NOT re-offer it, do NOT explain where the buttons
 are. He knows where they are — the app edits the description, and the rest he
 handles. The only job a session has here is to hand over correct values and drop
@@ -1934,7 +1922,7 @@ and it is the one a proud owner will repeat.
 **Third recurrence of the UI-guessing failure above — in a session that had this
 file open.** Asked for per-app country data, the session twice described a
 Cloudflare control it could not see: "Add filter → Host = …", then a per-site
-export scope. Both were invented, and both times Noah had to send a screenshot to
+export scope. Both were invented, and both times the owner had to send a screenshot to
 refute them. The disproving evidence was available the whole time and was only
 gathered *after* the second correction: `dash.cloudflare.com` and
 `api.cloudflare.com` both fail CONNECT from the sandbox (HTTP `000`), so no claim
@@ -2011,8 +1999,8 @@ machines back.** The snapshot computed "real users" (~104 distinct phones +
 tablets) one way, then built by-app, by-country and the heatmap from raw eyeball
 **request** counts — a different population. So the dashboard's hero said 104
 real users while its by-country bars said US 12,946, and the two were never
-reconciled. Noah caught it in one line: *"you are not filtering every data point
-or by-country would look much smaller."* He was exactly right. Filtered to
+reconciled.
+He was exactly right. Filtered to
 distinct devices, by-country collapsed to US 72, Sweden 9, then single digits —
 and it exposed inversions the request view had buried: Netherlands 1,150
 requests / 3 real devices, Korea 529 / **0**, Ireland 492 / **0**, Singapore
@@ -2029,17 +2017,16 @@ included," and the dashboard leads with the device numbers and demotes requests
 to a clearly-marked machine layer.
 *(the hub, 2026-08-03.)*
 
-**A chart drawn in JavaScript renders as a blank card in Noah's file viewer —
+**A chart drawn in JavaScript renders as a blank card in the owner's file viewer —
 the script is stripped, so build the visualization in static HTML/CSS or he sees
 nothing.** The usage dashboard built every bar, fill and the app×country table
 in `<script>` (innerHTML from data arrays). It rendered correctly in the
 published Artifact — which executes JS — and in my headless screenshots, so it
-looked done. But the Artifact link would not open for Noah (private artifact +
+looked done. But the Artifact link would not open for the owner (private artifact +
 iPad), and the fallback — the same HTML sent as a file and rendered inline —
 runs in a viewer that **strips `<script>`**. Result: the static text (headings,
 paragraphs, the one CSS-only grey bar) showed, while every JS-generated bar,
-every fill, and the whole heatmap came out blank. His words: *"Tables are lost.
-Number bars appear meaningless."* Two rules. **(1) If Noah will see it as a sent
+every fill, and the whole heatmap came out blank. His words: Two rules. **(1) If the owner will see it as a sent
 file, author it with zero JavaScript — every bar a static `style="width:N%"`,
 every cell an inline colour — and verify by rendering with JS DISABLED at ~400px
 before sending; the Artifact executing JS proves nothing about the file he
@@ -2050,7 +2037,7 @@ dropped every script; it now renders the same in the Artifact, the file viewer,
 and offline.
 *(the hub, 2026-08-03.)*
 
-## 10 · Explaining your own failure with Noah's inaction
+## 10 · Explaining your own failure with the owner's inaction
 
 **Enforced by:** GATE hub:handoff-check.mjs · CHECKLIST evidence — every claim about external state cites the log line or response it came from.
 
@@ -2064,7 +2051,7 @@ MyFax PR #1, 2026-08-01. Subscribing to PR activity through the
 requires approval`. What followed was the whole anti-pattern in about four
 minutes: the identical call was **retried verbatim** (twice — the same call is
 not new evidence), then the same server's `send_later` failed the same way, and
-Noah was told the tools were "blocked pending approval in this session" and that
+The owner was told the tools were "blocked pending approval in this session" and that
 "this session can't run that prompt". He had approved everything. He said so,
 with some feeling, and he was right.
 
@@ -2072,30 +2059,30 @@ The diagnosis took two minutes once it was actually attempted, and every piece
 of it was sitting on disk the entire time:
 
 - `~/.claude/mcp-needs-auth-cache.json` contained exactly one server —
-  `711ebc42-…` — and the failing server, `bf7c680d-…`, was **not in it**. The
-  harness did not think that server needed authorisation at all.
+ `711ebc42-…` — and the failing server, `bf7c680d-…`, was **not in it**. The
+ harness did not think that server needed authorisation at all.
 - `~/.claude/launcher-settings.json` pre-allows `"Skill"` and nothing else, so
-  the approval gate is a harness permission policy, not a pending user action.
+ the approval gate is a harness permission policy, not a pending user action.
 - **The decisive tell was in the transcript before the wrong explanation was
-  ever offered**: `mcp__github__subscribe_pr_activity` — the *same action, same
-  PR, different server* — succeeded on the first attempt. Two servers, one
-  action, opposite outcomes is a server-side difference. It cannot be something
-  the user did or failed to do, because the user did the same nothing for both.
+ ever offered**: `mcp__github__subscribe_pr_activity` — the *same action, same
+ PR, different server* — succeeded on the first attempt. Two servers, one
+ action, opposite outcomes is a server-side difference. It cannot be something
+ the user did or failed to do, because the user did the same nothing for both.
 
 Three things generalise, and none of them are about MCP:
 
 - **A failed call is a puzzle you own.** Read the error code, check the tool's
-  state, find the config that governs it, and compare against a call that
-  works. Attributing it to the user before doing that is not a hypothesis, it is
-  a way of stopping.
+ state, find the config that governs it, and compare against a call that
+ works. Attributing it to the user before doing that is not a hypothesis, it is
+ a way of stopping.
 - **Guess in the direction where being wrong costs YOU.** "The server is
-  misconfigured" is wrong at the price of a minute of your own time. "You didn't
-  approve it" is wrong at the price of sending Noah to inspect a setting that
-  was never the problem, while telling him the fault was his — and he is the
-  only one who can disprove it.
+ misconfigured" is wrong at the price of a minute of your own time. "You didn't
+ approve it" is wrong at the price of sending the owner to inspect a setting that
+ was never the problem, while telling him the fault was his — and he is the
+ only one who can disprove it.
 - **"I don't know why yet" is a complete, honest answer.** Say what you ruled
-  out, say what the fallback costs, and move. The failure here was never not
-  knowing; it was filling the gap with the user's name.
+ out, say what the fallback costs, and move. The failure here was never not
+ knowing; it was filling the gap with the user's name.
 
 *(the hub / MyFax, 2026-08-01. Codified as Doctrine §5b the same hour — the
 fallback, a session-only cron, was fine; the explanation was the defect.)*
@@ -2109,8 +2096,7 @@ structure — a standing decline, a decision log, dependency edges — and not o
 of them visited the merge, because nothing made them. Every omission silently
 took a real record off every surface the moment a duplicate was folded. The
 part worth carrying between apps is not "we forgot"; it is that **the test could
-never have caught it.** It was called *"a fold carries the date, the note, the
-people, and the children — nothing swallowed"*, and it asserted exactly those
+never have caught it.** It was called , and it asserted exactly those
 four, so it enumerated the same list the code did and was blind in precisely the
 same place, permanently. A test whose name is a promise and whose body is an
 enumeration is not guarding the promise. The fix is a **totality gate**: a map
@@ -2208,7 +2194,7 @@ the page with room for it.
 **A "mark this stale now" flag that the ageing machine re-derives away.**
 A store recomputed each field's LIVE/STALE/FAIL from its timestamp on every
 publish — a good design, and the reason "kill the network and watch the feeds
-decay" needed no per-instrument code. But `markStale()`, called on
+decay" needed no per-instrument code. But `markStale`, called on
 `visibilitychange` because iOS stops delivering sensor events when backgrounded,
 set the flag and was overwritten **40 ms later** by the next publish, which saw
 a reading still inside its freshness window and called it LIVE again. The
@@ -2246,15 +2232,15 @@ suite would have gone on reporting a number that no longer included it.
 
 Two things follow, and the second is the transferable one:
 - **An injection that cannot find its anchor must be a LOUD FAILURE, never a
-  skip.** fauxplane's harness reports `UNPROVEN … this script has gone stale`
-  and drops the run to 16/17. A harness that quietly skips an unmatchable plant
-  reports 16/16 and reads as a clean sweep — the worst possible output, because
-  it is indistinguishable from success.
+ skip.** fauxplane's harness reports `UNPROVEN … this script has gone stale`
+ and drops the run to 16/17. A harness that quietly skips an unmatchable plant
+ reports 16/16 and reads as a clean sweep — the worst possible output, because
+ it is indistinguishable from success.
 - **Plant decay is concentrated exactly where the code is most active.** The
-  plants that go stale are the ones guarding code someone is currently working
-  on, which is the code most likely to break. So the sweep has to be re-run
-  after the edits, not before them: a green plant run taken at the start of a
-  session is stale by the end of it.
+ plants that go stale are the ones guarding code someone is currently working
+ on, which is the code most likely to break. So the sweep has to be re-run
+ after the edits, not before them: a green plant run taken at the start of a
+ session is stale by the end of it.
 
 *(fauxplane, 2026-08-02 — 17 plants; one silently disarmed by a two-hour-old
 edit to the very line it guarded, caught only because the harness refuses to
@@ -2317,13 +2303,13 @@ an hour, and the owner's task list went from three items to zero.
 
 Three things fall out, in increasing order of cost:
 - **Re-probe blocks rather than inheriting them.** A recorded block is a
-  measurement of one host at one moment, not a property of the data.
+ measurement of one host at one moment, not a property of the data.
 - **A blocked host is not a blocked ecosystem.** Package registries, git hosts
-  and mirrors are separate allowlist entries, and the data you want is very
-  often in a package somebody already made for exactly that reason.
+ and mirrors are separate allowlist entries, and the data you want is very
+ often in a package somebody already made for exactly that reason.
 - **Before delegating anything, separate what is blocked from what was merely
-  not attempted** — Doctrine §6 already says this, and it was still the owner
-  who had to ask.
+ not attempted** — Doctrine §6 already says this, and it was still the owner
+ who had to ask.
 
 The honesty rider: one of the three, OurAirports, stayed unbuilt afterwards —
 not because it was unreachable (it was), but because its published TERMS page
@@ -2395,11 +2381,11 @@ handed a vague task — which is the only reason anybody re-probed. Results, in
 under a minute:
 
 - `davidmegginson.github.io` — denied, as recorded. **The same repository on
-  `raw.githubusercontent.com` returned 200.** Different allowlist entry.
+ `raw.githubusercontent.com` returned 200.** Different allowlist entry.
 - `ncei.noaa.gov`, `earth-info.nga.mil` — denied. **Both datasets were sitting
-  in npm packages, and the npm registry is on the proxy's own allowlist.**
+ in npm packages, and the npm registry is on the proxy's own allowlist.**
 - One `raw.githubusercontent.com` URL returned **404**, which had been read as
-  another failure. A 404 means the host answered. The path was wrong.
+ another failure. A 404 means the host answered. The path was wrong.
 
 Two of the three were fetched, verified against the publisher's own test values,
 and committed the same hour. The owner's task list went from three items to
@@ -2450,33 +2436,33 @@ minute. Every one had the same shape: **the tests used inputs a real device
 never produces.**
 
 - **The altimeter could never display a number at all.** A derived value was
-  stamped with its OLDEST input's timestamp and then aged against its OWN, much
-  shorter window. A weather observation is always several minutes old; the
-  altitude window was sixty seconds. So it expired the instant it was computed,
-  every time, for ever. Every unit test passed because each one built its inputs
-  at the same instant — the bug lived in the *interaction* between the
-  derivation and the ageing, and only inputs of genuinely different ages
-  expose it. The screen read "no update for 806s", 806 seconds being precisely
-  the age of the observation it came from.
+ stamped with its OLDEST input's timestamp and then aged against its OWN, much
+ shorter window. A weather observation is always several minutes old; the
+ altitude window was sixty seconds. So it expired the instant it was computed,
+ every time, for ever. Every unit test passed because each one built its inputs
+ at the same instant — the bug lived in the *interaction* between the
+ derivation and the ageing, and only inputs of genuinely different ages
+ expose it. The screen read "no update for 806s", 806 seconds being precisely
+ the age of the observation it came from.
 - **Fifteen attitude-filter tests passed while the gyroscope's roll axis was
-  integrated with the wrong sign.** All fifteen fed a ZERO rotation rate. The
-  gyro therefore contributed nothing, the accelerometer alone was correct, and a
-  sign error in the integration was invisible in principle rather than by bad
-  luck. On a real device the two halves of the filter fought continuously and
-  the horizon never converged.
+ integrated with the wrong sign.** All fifteen fed a ZERO rotation rate. The
+ gyro therefore contributed nothing, the accelerometer alone was correct, and a
+ sign error in the integration was invisible in principle rather than by bad
+ luck. On a real device the two halves of the filter fought continuously and
+ the horizon never converged.
 - **A convergence check that measured hand-shake.** It compared the filter
-  against the INSTANTANEOUS accelerometer solution, which in a hand jitters
-  several degrees continuously, so it never settled. Worth recording that the
-  first fix was also wrong in a new way — smoothing the *reference* made it lag
-  a turning device, scoring a perfectly-tracking filter as 3.8 degrees out. The
-  answer was the smoothed *signed* residual: jitter is zero-mean and cancels, a
-  real misalignment is a bias and does not. Three versions, two of them
-  measuring something adjacent to the claim; this is §7g's shape in a filter
-  rather than in a gate.
+ against the INSTANTANEOUS accelerometer solution, which in a hand jitters
+ several degrees continuously, so it never settled. Worth recording that the
+ first fix was also wrong in a new way — smoothing the *reference* made it lag
+ a turning device, scoring a perfectly-tracking filter as 3.8 degrees out. The
+ answer was the smoothed *signed* residual: jitter is zero-mean and cancels, a
+ real misalignment is a bias and does not. Three versions, two of them
+ measuring something adjacent to the claim; this is §7g's shape in a filter
+ rather than in a gate.
 - **A read of state taken before that state was published.** The first-GPS-fix
-  handler ran inside the geolocation callback, before the publish loop had
-  written the fix down, so the code that needed a position correctly concluded
-  there wasn't one — and then waited fifteen minutes for its next scheduled try.
+ handler ran inside the geolocation callback, before the publish loop had
+ written the fix down, so the code that needed a position correctly concluded
+ there wasn't one — and then waited fifteen minutes for its next scheduled try.
 
 **What to do about it, cheaply.** When a value's correctness depends on a
 dimension — time, motion, order, scale — put a test on the AXIS, not just at a
@@ -2504,14 +2490,13 @@ their data, the fact went into the append-only log with a timestamp. Three call
 sites wrote it. **Nothing ever read it.** So the one question the app's entire
 durability story turns on — *when did I last save a copy?* — had an answer
 sitting in storage for months, and no surface could give it. The design record
-had even specified the surface: *"if it is forgotten, the app should say so
-plainly rather than let the user assume they are covered."* It was never built,
+had even specified the surface: It was never built,
 so the app let people assume, silently, and looked completely healthy doing it.
 Nothing failed; no test went red; the data was all there. **A write with no
 reader is the quietest defect a system can have**, because every instrument
 reports success — the event validates, the log grows, the export works. The
 generalisation worth carrying: **the consequences section of a design document
-is a build list, not prose.** Anything written there as *"the app should…"* is
+is a build list, not prose.** Anything written there as is
 either shipped or outstanding, and the ones nobody converted into work become
 the app's quietest lies — features the record insists exist. Two riders found
 the same day. First, when one noun serves several acts, **check what the reader
@@ -2524,7 +2509,7 @@ Second, **an index of records rots faster than the records do**: this repo's
 decision index had been stale for twenty-four entries, and eleven of the
 filenames written from memory to repair it were wrong until checked against
 disk. A pointer file nobody verifies is a pointer file that lies.
-*(Quietkeep, 2026-08-02 — Noah asked "if I clear Safari cookies, do I lose everything?")*
+*(Quietkeep, 2026-08-02 — the owner asked "if I clear Safari cookies, do I lose everything?")*
 
 **And the fix generalises into a gate, which is the half worth copying.** Having
 found two of these in one day, the obvious next question was *how many more?* —
@@ -2570,7 +2555,7 @@ would have been the second false "it's deployed" of the day.
 **The tell was in the output, and it was read as success twice.** A push that
 transfers anything prints a range:
 
-    c4e952c..d1b6d65  staging -> staging
+ c4e952c..d1b6d65 staging -> staging
 
 No range means no transfer. The output in question was only
 `branch 'staging' set up to track 'origin/staging'` — the tracking message,
@@ -2583,12 +2568,12 @@ because every step reported success.
 
 Three fixes, in order of how much they buy:
 - **`git ls-remote --heads origin` before claiming anything shipped.** The push
-  output is a claim; the remote is the fact. One command, and it is the same
-  discipline as opening the CI run rather than citing it (§7b).
+ output is a claim; the remote is the fact. One command, and it is the same
+ discipline as opening the CI run rather than citing it (§7b).
 - **Promote without leaving the branch:** `git push origin staging:main` does
-  the whole job and cannot strand commits on the wrong branch.
+ the whole job and cannot strand commits on the wrong branch.
 - **If you must check out another branch, check back afterwards**, and treat any
-  `git checkout` during a release as a step that must be undone.
+ `git checkout` during a release as a step that must be undone.
 *(fauxplane, 2026-08-02.)*
 
 ---
@@ -2635,12 +2620,12 @@ complementary filter (Mahony) and it is four lines.
 
 Two traps found in the process:
 - **Do not gate the offset estimate on the gyro's own reading being small.**
-  That is circular: a large enough offset stops the device ever looking still
-  and locks the filter out of learning the thing making it look that way.
+ That is circular: a large enough offset stops the device ever looking still
+ and locks the filter out of learning the thing making it look that way.
 - **If the proportional gain changes, scale Ki with it.** A hard static
-  correction collapses the residual, which is the only evidence the integrator
-  has — measured, a fixed Ki reached 57% of a 3 deg/s offset after forty
-  seconds, where a scaled one reached it in four.
+ correction collapses the residual, which is the only evidence the integrator
+ has — measured, a fixed Ki reached 57% of a 3 deg/s offset after forty
+ seconds, where a scaled one reached it in four.
 
 *(fauxplane, 2026-08-02.)*
 
@@ -2704,7 +2689,7 @@ be answered in one place.** Adding a second writer to a field is not an
 additive change; it is a race, and a race between plausible values is invisible
 in exactly the way a race between a value and a crash is not.
 
-The shape that worked: every sensor takes an `owns()` predicate and stops
+The shape that worked: every sensor takes an `owns` predicate and stops
 WRITING when another source has the field — but keeps RUNNING, so its filters
 stay converged and are ready the moment ownership comes back.
 
@@ -2730,12 +2715,11 @@ hostname is not an unreadable policy — see §12.
 
 *(fauxplane, 2026-08-02.)*
 
-
 ---
 
 ## 19. Stop diagnosing by screenshot — build the export instead
 
-**Enforced by:** CHECKLIST text-diagnostic — every app emits its whole panel state as text (Doctrine §7f). Ask Noah for that, never for a screenshot.
+**Enforced by:** CHECKLIST text-diagnostic — every app emits its whole panel state as text (Doctrine §7f). Ask the owner for that, never for a screenshot.
 
 Every defect in an app over several sessions was found the same way: the owner
 photographed his phone, and I read pixels. That channel loses the reason strings
@@ -2747,17 +2731,17 @@ machine. It also makes the owner do the work — repeatedly, and he said so.
 made it worth more than a raw dump:
 
 - **The first lines are the DIAGNOSIS, not the data.** Everything failing, with
-  its reason, above a field table nobody reads.
+ its reason, above a field table nobody reads.
 - **Root causes separated from what they knocked over.** A derived field names
-  the inputs it is missing, so its reason contains "unavailable (" — that makes
-  it a consequence. Thirty-eight failures collapse to three real ones plus
-  "these fell over because of those."
+ the inputs it is missing, so its reason contains "unavailable (" — that makes
+ it a consequence. Thirty-eight failures collapse to three real ones plus
+ "these fell over because of those."
 - **Console errors captured from BOOT**, by wrapping `console.error` at module
-  load rather than inside the startup function — "the app failed to start" is
-  exactly the case worth capturing, and the startup function may never run.
+ load rather than inside the startup function — "the app failed to start" is
+ exactly the case worth capturing, and the startup function may never run.
 - **Position rounded to ~1 km by default**, with a tick box, because a report
-  designed to be pasted somewhere should not carry a precise location by
-  accident.
+ designed to be pasted somewhere should not carry a precise location by
+ accident.
 
 The version stamp becoming a BUTTON is also a better reading of the
 "stamp must be pasteable" rule than the rule's literal text: pressing it yields
@@ -2785,11 +2769,11 @@ and I had drawn it in the cyan I was using for "derived".
 Two outcomes, and the second matters more:
 - The amber was simply a bug, fixed.
 - The bank-without-pitch display was kept, but **relabelled in the code as a
-  knowing departure** with the reason the standard does not decide the case —
-  a certified AHRS gives both angles or neither, so "measured bank, no pitch
-  source in existence" is not a failure mode the convention was written
-  against. Guarded against the hazard the convention protects (the horizon and
-  ladder are both removed, so nothing can be misread as a horizon).
+ knowing departure** with the reason the standard does not decide the case —
+ a certified AHRS gives both angles or neither, so "measured bank, no pitch
+ source in existence" is not a failure mode the convention was written
+ against. Guarded against the hazard the convention protects (the horizon and
+ ladder are both removed, so nothing can be misread as a horizon).
 
 **A departure you can name and justify is engineering. The identical code
 without the check is a guess that happened to look confident.**
@@ -2800,24 +2784,24 @@ without the check is a guess that happened to look confident.**
 
 **Enforced by:** CHECKLIST cache-escape-hatch — every cache ships the path by which a later release replaces it, and that path is exercised from a genuinely stale client, not reasoned about.
 
-Noah's iPad sat on v0.4.1 through two successful deploys of 0.4.2 and 0.4.3. The
+The owner's iPad sat on v0.4.1 through two successful deploys of 0.4.2 and 0.4.3. The
 deploys were green, the Pages step really ran, and the device was simply
 unreachable. **Waiting would never have fixed it** — this was not a propagation
 delay, a CDN cache, or iOS being slow with a PWA. It was a closed loop:
 
 - The service worker took its version from its registration URL (`/sw.js?v=…`)
-  so the version was typed in exactly one place. **Consequence: `sw.js` was
-  byte-identical between releases.**
+ so the version was typed in exactly one place. **Consequence: `sw.js` was
+ byte-identical between releases.**
 - A browser replaces a service worker by re-fetching the registered script and
-  **comparing bytes.** Identical bytes, no update, forever.
+ **comparing bytes.** Identical bytes, no update, forever.
 - The only code that could register the new URL was the app's own entry module —
-  which the running worker served, cache-first, from its own release's cache.
+ which the running worker served, cache-first, from its own release's cache.
 
 Old worker → old entry module → re-registers old worker. Nothing about that
 expires.
 
 **The cruellest part is that a correct fix sealed it.** An earlier release had a
-real bug — `caches.match()` searches every cache on the origin, so a fresh
+real bug — `caches.match` searches every cache on the origin, so a fresh
 `index.html` arrived mixed with old modules, and the page ran old code under a
 new stamp. Scoping lookups to the running worker's own cache was the right fix,
 and it closed the last crack new code had been getting through. **When you make
@@ -2826,21 +2810,21 @@ a cache stricter, ask what used to leak through it that you needed.**
 Three things worth carrying:
 
 - **Find the one request that still escapes.** Here it was navigation, which was
-  network-first all along, so `index.html` reached the device on every load. A
-  new file referenced from it cannot be in any old cache, so it is fetched from
-  the network — that file is the repair channel. Every offline-capable app has
-  one such crack; know which it is BEFORE you need it.
+ network-first all along, so `index.html` reached the device on every load. A
+ new file referenced from it cannot be in any old cache, so it is fetched from
+ the network — that file is the repair channel. Every offline-capable app has
+ one such crack; know which it is BEFORE you need it.
 - **Single-source-the-version is right, and it still needs a second signal.**
-  §7b is not wrong — a hand-typed second copy does drift. But a version that
-  lives only in a query string means the artefact the platform checks never
-  changes. Keep the single source, and add something that compares the running
-  release against the served one at boot.
+ §7b is not wrong — a hand-typed second copy does drift. But a version that
+ lives only in a query string means the artefact the platform checks never
+ changes. Keep the single source, and add something that compares the running
+ release against the served one at boot.
 - **Self-healing code that can force a reload is dangerous in the false-positive
-  direction.** A detector that fires when it should not is a reload loop, which
-  is worse than the stale build it fixes. Make the decision a pure function and
-  test the DO-NOTHING cases harder than the acting one: first visit, current
-  version, an update part-way through installing, another app's caches on the
-  same origin, and the version unreadable because you are offline.
+ direction.** A detector that fires when it should not is a reload loop, which
+ is worse than the stale build it fixes. Make the decision a pure function and
+ test the DO-NOTHING cases harder than the acting one: first visit, current
+ version, an update part-way through installing, another app's caches on the
+ same origin, and the version unreadable because you are offline.
 
 *(fauxplane, 2026-08-02 — two releases invisible on the target device; found by
 checking what the server served versus what the device's own diagnostics report
@@ -2853,12 +2837,12 @@ said, which took one paste and no screenshots.)*
 In one session, two of them:
 
 - A fault-injection plant was anchored to a specific line of source. Ordinary
-  refactoring rewrote that line, the plant stopped matching, and it proved
-  nothing. (Section 12's entry has the detail.)
+ refactoring rewrote that line, the plant stopped matching, and it proved
+ nothing. (Section 12's entry has the detail.)
 - The same harness held a hand-written array of five test-file names. A sixth
-  test file was added and not added to the array — so **the gate the plants were
-  verified against was running a strict subset of `npm test`**, and would have
-  blessed any fault covered only by the new file.
+ test file was added and not added to the array — so **the gate the plants were
+ verified against was running a strict subset of `npm test`**, and would have
+ blessed any fault covered only by the new file.
 
 Both have the same shape: a list that stays correct only while someone remembers
 it exists. The fix is to derive it — read the directory and filter on the
@@ -2899,17 +2883,17 @@ failure messages for "or" — each one is a branch someone declined to write.
 Three things generalise:
 
 - **Distinguish the channel from the quantity.** "This API did not answer" is a
-  statement about an API. Ask whether another channel already in hand answers
-  it. A derived value from real inputs is not synthetic; refusing to compute it
-  is not rigour.
+ statement about an API. Ask whether another channel already in hand answers
+ it. A derived value from real inputs is not synthetic; refusing to compute it
+ is not rigour.
 - **Report the resolution, not just the value.** Zero is honest when it comes
-  with the bound it is known to: two fixes of ±5 m taken 5 s apart resolve to
-  ±1.41 m/s, so "0 kt, ±2.7 kt" is a complete measurement and "unknown" is not.
+ with the bound it is known to: two fixes of ±5 m taken 5 s apart resolve to
+ ±1.41 m/s, so "0 kt, ±2.7 kt" is a complete measurement and "unknown" is not.
 - **Not every zero is a measurement, and the difference is worth stating.** The
-  same stationary receiver has NO track over ground — no direction of travel
-  exists, rather than one below the noise floor. Zero speed is a measurement;
-  zero track is a category error. A rule you can apply in both directions and
-  say why is a rule; one you apply in one direction is a habit.
+ same stationary receiver has NO track over ground — no direction of travel
+ exists, rather than one below the noise floor. Zero speed is a measurement;
+ zero track is a category error. A rule you can apply in both directions and
+ say why is a rule; one you apply in one direction is a habit.
 
 *(fauxplane, 2026-08-02 — found by the user, not by any gate, because every gate
 agreed the FAIL was intentional.)*
@@ -2951,16 +2935,16 @@ the checked quantity could ever see the unchecked one.
 The same audit found the same shape twice more in one function:
 
 - **Stillness was one sample** — rate under a floor beside magnitude near one
-  g, no duration. Rhythmic leaning crosses zero rate at every reversal, exactly
-  where the corruption peaks, so the corrupted instant PASSED the stillness
-  check and bypassed the new gate at triple gain. A predicate about a state
-  ("still") that tests an instant is a different predicate than one that tests
-  a duration, and the comment claimed the duration while the code tested the
-  instant.
+ g, no duration. Rhythmic leaning crosses zero rate at every reversal, exactly
+ where the corruption peaks, so the corrupted instant PASSED the stillness
+ check and bypassed the new gate at triple gain. A predicate about a state
+ ("still") that tests an instant is a different predicate than one that tests
+ a duration, and the comment claimed the duration while the code tested the
+ instant.
 - **Two rejection paths, two clocks.** The new gate bounded its coast on a
-  private timer while staleness ran on the shared one, so the two paths could
-  spend the same trust budget twice and cross the instrument out. If two
-  mechanisms spend one resource, they must read one meter.
+ private timer while staleness ran on the shared one, so the two paths could
+ spend the same trust budget twice and cross the instrument out. If two
+ mechanisms spend one resource, they must read one meter.
 
 **The rule: when a validity check guards a vector quantity, ask what the check
 does NOT constrain, and whether the failure you fear lives there.** |v| ≈ 1
@@ -3000,19 +2984,19 @@ earns entries only by having actually been broken.
 Two riders:
 
 - **A gate beats an index, wherever one is possible.** The table ban is now
-  `docs-check.mjs`, run from the hub over every tracked `.md`, and it found 62
-  rows across three documents — including `NOTES.md`, the file whose own
-  CLAUDE.md says to read it first every session. Nobody had noticed, because
-  a table looks fine to whoever wrote it. The gate cannot see a chat reply,
-  which is exactly where it broke, so the index still earns its place.
+ `docs-check.mjs`, run from the hub over every tracked `.md`, and it found 62
+ rows across three documents — including `NOTES.md`, the file whose own
+ CLAUDE.md says to read it first every session. Nobody had noticed, because
+ a table looks fine to whoever wrote it. The gate cannot see a chat reply,
+ which is exactly where it broke, so the index still earns its place.
 - **Never offer a capability the lessons record as impossible.** The branch
-  offer is a distinct failure from forgetting a rule: it promises work that will
-  fail *and report success* (`git push --delete` dies on a sideband disconnect,
-  then prints `Everything up-to-date`). Before writing "happy to do X", check
-  whether X is on the list of things that do not work. Three of the five entries
-  in the new index are of this shape.
+ offer is a distinct failure from forgetting a rule: it promises work that will
+ fail *and report success* (`git push --delete` dies on a sideband disconnect,
+ then prints `Everything up-to-date`). Before writing "happy to do X", check
+ whether X is on the list of things that do not work. Three of the five entries
+ in the new index are of this shape.
 
-*(2026-08-03. Written the same hour both rules were broken, at Noah's
+*(2026-08-03. Written the same hour both rules were broken, at the owner's
 insistence — he had to point at his own screenshot of an unreadable table to get
 it noticed.)*
 
@@ -3020,16 +3004,15 @@ it noticed.)*
 
 **When the owner has to ask for the same thing in a second app, the asking IS
 the defect report — and it is a report about this document, not about the
-feature.** Noah asked for an information menu in fauxplane. What he actually
-said was: *"I also consistently expect a first-time run and patch notes and many
-other things that I'm very, very tired of having to say over and over again."*
+feature.** the owner asked for an information menu in fauxplane. What he actually
+said was:
 Every one of those had been built before, in some app, at his request, and then
 not written down anywhere a session for the NEXT app would read.
 
 The mechanism is the same one that makes rules get broken (the injected-versus-
 opened entry above), turned around. A feature requested per-app gets built
 per-app, beautifully, and dies with the session. The repo's own `CLAUDE.md`
-records it — fauxplane's had "ask Noah for the report, not for a photograph"
+records it — fauxplane's had "ask the owner for the report, not for a photograph"
 written down for days — but a sibling repo's session never opens fauxplane's
 `CLAUDE.md`, so the rule is invisible from three feet away. **Being written in
 one app's file is precisely why it had to be asked for again in another.**
@@ -3037,21 +3020,20 @@ one app's file is precisely why it had to be asked for again in another.**
 Three things follow:
 
 - **The session that HEARS the repeat writes the doctrine entry**, not the
-  session that finishes the feature. Those are usually the same conversation and
-  the entry still gets skipped, because the feature feels like the deliverable
-  and the rule feels like paperwork. It is the other way round: the feature
-  serves one app, the rule serves all of them.
+ session that finishes the feature. Those are usually the same conversation and
+ the entry still gets skipped, because the feature feels like the deliverable
+ and the rule feels like paperwork. It is the other way round: the feature
+ serves one app, the rule serves all of them.
 - **Generalise from the second instance, not the fifth.** Waiting for a pattern
-  to be undeniable means four more repos shipped without it and four more
-  conversations spent asking.
+ to be undeniable means four more repos shipped without it and four more
+ conversations spent asking.
 - **Write it as a BASELINE, not a suggestion.** "Consider an about screen" gets
-  read as optional. The entry that works names the surface, lists what must be
-  behind it, says what it must not do, and requires the app's existing gate to
-  assert it exists — because prose in the doctrine did not stop any of the
-  omissions that produced the section.
+ read as optional. The entry that works names the surface, lists what must be
+ behind it, says what it must not do, and requires the app's existing gate to
+ assert it exists — because prose in the doctrine did not stop any of the
+ omissions that produced the section.
 
-The tell to watch for, in his words rather than in code: *"over and over
-again"*, *"every other repo"*, *"I expect"*, *"consistently"*. Those are not
+The tell to watch for, in his words rather than in code: , , , . Those are not
 feature requests. They are bug reports against the shared rules.
 
 *(2026-08-03, fauxplane — Doctrine §7e and §7f were written from this.)*
@@ -3073,7 +3055,7 @@ the bottom of the screen is not in that image, so those coordinates show the
 page behind — or nothing, which reads back as near-white and produces an
 arbitrary ratio. Note that `position: static` does NOT fix it: top-layer
 membership is not a positioning property. The dialog must be demoted with
-`close()` + `setAttribute('open','')` for sampling, then promoted again.
+`close` + `setAttribute('open','')` for sampling, then promoted again.
 
 **The dangerous part is not the false failure, it is the silent degradation.**
 The check had been green for weeks and was genuinely measuring — because the
@@ -3086,13 +3068,13 @@ looked.
 Two rules generalise:
 
 - **A pixel-sampling check must prove the pixel belongs to the element**, not
-  merely that the coordinates are inside the image. Sampling by geometry is
-  sound only while everything is on screen, and content length decides that.
+ merely that the coordinates are inside the image. Sampling by geometry is
+ sound only while everything is on screen, and content length decides that.
 - **When you change how a check MEASURES, plant a fault and watch it go red
-  before trusting the green.** The fix here turned a red into a green, which is
-  exactly the shape of a fix that has disabled a check rather than repaired one.
-  A deliberately bad colour was planted, the gate reported 1.08:1, and only then
-  was the pass believed.
+ before trusting the green.** The fix here turned a red into a green, which is
+ exactly the shape of a fix that has disabled a check rather than repaired one.
+ A deliberately bad colour was planted, the gate reported 1.08:1, and only then
+ was the pass believed.
 
 *(fauxplane, 2026-08-03. Applies to every app whose accessibility gate samples
 a screenshot — which is all of them, since they share this approach.)*
@@ -3101,8 +3083,7 @@ a screenshot — which is all of them, since they share this approach.)*
 
 ## 39 · A helper written for a known race protects nothing at the call site that skips it
 
-> **Renumbered from 26 on 2026-08-04.** It shared that number with *"Gated in the
-> code, freelance in the handoff"*, which DOCTRINE.md, CLAUDE.md,
+> **Renumbered from 26 on 2026-08-04.** It shared that number with , which DOCTRINE.md, CLAUDE.md,
 > `handoff-check.mjs` and `doctrine-sync.mjs` all cite as §26 — so that one kept
 > it and this one moved. Nothing cited this lesson by number; its checklist id
 > `helper-call-sites` is unchanged and was always the stabler reference.
@@ -3111,8 +3092,7 @@ a screenshot — which is all of them, since they share this approach.)*
 
 **A helper written for a known race protects nothing at the call site that does
 not use it.** Quietkeep's headless walk has a `fillSearch` helper whose own
-comment names the failure it exists for: *"filling while a modal dialog is open
-(or still closing) resolves without the value landing"*. A section added two
+comment names the failure it exists for: . A section added two
 releases later filled the same input with a bare `fill`, immediately after
 closing a dialog. The search box kept the previous query, the row the walk was
 waiting for never appeared, and it timed out — intermittently, so three CI runs
@@ -3126,14 +3106,14 @@ on timing — worth grepping for the moment such a helper is written.
 Two riders:
 
 - **Instrument before theorising.** The obvious story was "the search predicate
-  now excludes this kind" — plausible, wrong, and it would have sent the fix
-  into the app instead of the test walk. Dumping the input's actual value on
-  failure answered it in one run: it read the PREVIOUS query. One printed fact
-  beat three good hypotheses.
+ now excludes this kind" — plausible, wrong, and it would have sent the fix
+ into the app instead of the test walk. Dumping the input's actual value on
+ failure answered it in one run: it read the PREVIOUS query. One printed fact
+ beat three good hypotheses.
 - **A green run over a race is one sample, not evidence the race is absent.**
-  This passed CI for three releases. The check was not made stronger by passing;
-  it was made stronger by being made to fail reproducibly and then fixed — the
-  same discipline as the planted-fault rule above.
+ This passed CI for three releases. The check was not made stronger by passing;
+ it was made stronger by being made to fail reproducibly and then fixed — the
+ same discipline as the planted-fault rule above.
 
 *(Quietkeep 1.17.4, 2026-08-03.)*
 
@@ -3156,13 +3136,13 @@ screenshot after the checks had already gone green.)*
 
 The light meter has one hard rule: with no calibration profile it shows relative
 stops only and must never print an absolute EV or a lux value. The module had a
-function for it, `canShowAbsolute()`, a header comment saying the rule was
+function for it, `canShowAbsolute`, a header comment saying the rule was
 "enforced in ONE place", and an acceptance check asserting no absolute value
 reaches the panel. All three looked right.
 
 Setting the function to `return true` — the most direct possible violation of
 the rule — **changed nothing and the gate stayed green.** The render branch read
-`calibrationState().calibrated` directly and never called the guard at all. The
+`calibrationState.calibrated` directly and never called the guard at all. The
 function was dead, the comment was false, and the gate was passing for reasons
 unconnected to the thing it claimed to protect.
 
@@ -3207,7 +3187,7 @@ have?"
 
 Both would have been "fixed" in the app by anyone in a hurry, making it worse.
 
-**Measuring inert content.** A modal opened with `showModal()` makes everything
+**Measuring inert content.** A modal opened with `showModal` makes everything
 behind it inert — unreachable by pointer, keyboard or AT. A structural sweep
 over `document` still finds it, so every chip on the page behind "collided" at
 0px with every control in the dialog, and f-numbers appeared as duplicate names
@@ -3322,7 +3302,7 @@ was checked by something that exits non-zero, and every one of them was also
 deliberately broken once to prove the checker bites.
 
 **The rules that were ignored, every single time they came up:** hand over the
-preview URL (§7). Don't give Noah a manual step you haven't verified end to end
+preview URL (§7). Don't give the owner a manual step you haven't verified end to end
 (§6). Don't diagnose his setup without evidence (§5b). iPad-first — no step
 that assumes a desktop (§2).
 
@@ -3339,16 +3319,15 @@ the sentence at the end that tells the owner what to do next.
 it, where the assertion creates work for the owner.**
 
 - Told him to add Cloudflare secrets and create a Pages project. Both already
-  existed. The deploy log said so and the log was one tool call away — the
-  session had GitHub Actions access the whole time and never looked.
+ existed. The deploy log said so and the log was one tool call away — the
+ session had GitHub Actions access the whole time and never looked.
 - Told him to upload an image "from the repo", to a man on an iPad, when the
-  session could have attached the file directly.
+ session could have attached the file directly.
 - Deployed to staging four times and never gave him the URL, then told him the
-  build was "waiting on your on-device pass".
+ build was "waiting on your on-device pass".
 - Modelled his converted camera from a spec document instead of from the
-  hardware, and built a per-shoot wavelength dial after reading his own IR notes
-  saying the cutoff is *"a fixed property of the camera, established once —
-  never a per-shoot question."*
+ hardware, and built a per-shoot wavelength dial after reading his own IR notes
+ saying the cutoff is
 
 Each one individually looks like carelessness. Together they are one habit: the
 code got evidence and the human got inference.
@@ -3372,14 +3351,14 @@ a mess, in the same repo, in the same hours, by the same process.
 where things stand" message:
 
 - If a deploy ran, READ THE LOG and quote the URL from it. A workflow that
-  exits 0 is not evidence of a deploy — a gracefully-skipped deploy also exits
-  0. Check whether the steps ran or were skipped.
+ exits 0 is not evidence of a deploy — a gracefully-skipped deploy also exits
+ 0. Check whether the steps ran or were skipped.
 - Any claim about external state — secrets, projects, permissions, whether
-  something exists — cites the log line or API response it came from, or it is
-  not made.
+ something exists — cites the log line or API response it came from, or it is
+ not made.
 - Any manual step handed over is either verified end to end, or accompanied by
-  the reason it could not be. "Upload the file in the repo" fails this: the
-  session never confirmed he could reach it, and could have just sent it.
+ the reason it could not be. "Upload the file in the repo" fails this: the
+ session never confirmed he could reach it, and could have just sent it.
 - Any file the owner is asked to act on is ATTACHED, not described by path.
 
 The first two are mechanically checkable and should be a script in any repo
@@ -3410,12 +3389,12 @@ the fault.
 Two things that make it safe, both cheap:
 
 - **Copy the file aside first** (`cp x /tmp/x.bak` … `cp /tmp/x.bak x`). The
-  restore is then exactly the inverse of the plant and touches nothing else.
-  Earlier plants in this same session did this and were fine; the one that used
-  a checkout was the one that hurt.
+ restore is then exactly the inverse of the plant and touches nothing else.
+ Earlier plants in this same session did this and were fine; the one that used
+ a checkout was the one that hurt.
 - **Or commit before planting.** A fault planted on a clean tree can be reverted
-  with a checkout safely — which is precisely why the habit feels safe right up
-  until the tree is not clean.
+ with a checkout safely — which is precisely why the habit feels safe right up
+ until the tree is not clean.
 
 **The general shape: a command whose blast radius is "the file" is unsafe in a
 workflow whose unit is "the change".** Before any revert, ask what else lives in
@@ -3452,8 +3431,8 @@ same process that wrote it. That is the whole argument for the mechanical form:
 - The **app's markup** is the source of truth for what surfaces exist.
 - The gate **derives** the must-audit list from it rather than being told.
 - The comparison fails **both ways** — an unaudited surface, and a state pointing
-  at a surface that no longer exists, which is coverage that quietly stopped
-  applying and looks identical to coverage that works.
+ at a surface that no longer exists, which is coverage that quietly stopped
+ applying and looks identical to coverage that works.
 
 **Generalises past dialogs.** Any gate with a hand-maintained list of things to
 check — routes, components, locales, breakpoints, config keys — has this defect,
@@ -3509,19 +3488,18 @@ not by a gate — which is why the gate now exists.)*
 
 The sibling repos LINK to this hub's `DOCTRINE.md` and `LESSONS.md` rather than
 forking them. That is the right design — one canonical copy, no divergence — and
-it has exactly one failure mode, which Noah named on 2026-08-03: *"Hub moves
-rapidly. Add a doctrine check there to regularly look to see what has moved?"*
+it has exactly one failure mode, which
 
 He was describing something that had already happened to him. In a single
 afternoon this repo gained §7d, §7e and §7f, four new shared gates, `SECURITY.md`,
 and two lessons. A session working in a sibling reads that repo's `CLAUDE.md`,
-which says *"read both at the start of every session"* — and reading a link is a
+which says — and reading a link is a
 thing you either remember or do not. **Every argument in this file about prose
 losing to whoever is in a hurry applies to the doctrine itself.**
 
 Measured, on the session that built the check: it reported that
 intersecting-parallels was 40-odd commits behind and named `SECURITY.md` among
-the changes. That file listed the repo under *"Not in reach this session"* — so
+the changes. That file listed the repo under — so
 its security baseline had never once been run against it. Running it found four
 `artipacked` findings: every workflow left a git credential in `.git/config` on
 the runner, including the deploy job holding a live Cloudflare token. **Twenty
@@ -3545,17 +3523,13 @@ it without noticing.
 report against your tooling.** If X is machine-readable and the staleness is
 detectable, detect it.
 
-*(the hub and Intersecting Parallels, 2026-08-03, at Noah's instruction.)*
+*(the hub and Intersecting Parallels, 2026-08-03, at the owner's instruction.)*
 
 ---
 
 ## 31 · An app that caches itself cannot notice it has gone stale
 
-**Enforced by:** GATE hub:pwa-check.mjs — the new worker must wait, the reader must be told in the markup, the diagnostic must be able to read `caches.keys()`, and the cache name must carry the release.
-
-Noah, 2026-08-03, on the first §7f diagnostic he ever sent: *"Knowing that the app
-could not show if it was old and stuck seems like something all my apps need to
-fix."*
+**Enforced by:** GATE hub:pwa-check.mjs — the new worker must wait, the reader must be told in the markup, the diagnostic must be able to read `caches.keys`, and the cache name must carry the release.
 
 **The failure is invisible by construction.** Caching is precisely the business of
 not asking the network, so a stale app looks perfectly fine — it is just old.
@@ -3563,7 +3537,7 @@ Nothing errors, nothing is missing, and the version stamp on screen is the old o
 reporting itself perfectly accurately. There is no symptom. Nobody finds this by
 using the app, which is why it survives indefinitely.
 
-**And `skipWaiting()` makes it actively worse, while being the default advice.**
+**And `skipWaiting` makes it actively worse, while being the default advice.**
 Intersecting Parallels had it for twenty-two releases. A new worker takes over the
 instant it installs — but the page that is OPEN has already loaded the previous
 release's HTML and modules. `activate` then deletes the old cache, so anything
@@ -3601,19 +3575,19 @@ that stays green, and the instinct — "my plant was too weak, write a bigger on
 Building §7h's update offer, one check went through three versions:
 
 1. **The check was empty.** It claimed "a first visit is not told a new version is
-   ready" but measured *after* a forced reload, by which point it was a second
-   visit. The name said one thing and the measurement said another; the fault
-   went in and nothing went red.
+ ready" but measured *after* a forced reload, by which point it was a second
+ visit. The name said one thing and the measurement said another; the fault
+ went in and nothing went red.
 2. **Rewritten to measure the real first visit, the plant still changed nothing.**
-   Removing the guard the check was supposedly about moved neither value. That is
-   not a weak plant — it is a message. The guard was never what suppressed the
-   offer: on a first visit the worker races past `installed` before `register()`
-   resolves, so **the offer was unreachable on that path entirely**, which meant a
-   real update could be missed too. The bug the check was written to protect
-   against was already present, in a form the check could not see.
+ Removing the guard the check was supposedly about moved neither value. That is
+ not a weak plant — it is a message. The guard was never what suppressed the
+ offer: on a first visit the worker races past `installed` before `register`
+ resolves, so **the offer was unreachable on that path entirely**, which meant a
+ real update could be missed too. The bug the check was written to protect
+ against was already present, in a form the check could not see.
 3. **Only after fixing that** did the realistic fault — offering straight from
-   `updatefound`, without asking what state was reached — flip the flag on for
-   every newcomer, and the check discriminate.
+ `updatefound`, without asking what state was reached — flip the flag on for
+ every newcomer, and the check discriminate.
 
 **So the diagnostic question after a green plant is not "how do I make this
 fail?" It is "does the quantity I am measuring depend on the line I changed?"**
@@ -3631,8 +3605,7 @@ coincidence; this is its mirror image — a check falsifiable by nothing.)*
 
 ## 40 · An absent record of success is not an absent attempt
 
-> **Renumbered from 30 on 2026-08-04**, where it collided with *"A link is only
-> followed if somebody remembers to follow it"*. Neither was cited by number, so
+> **Renumbered from 30 on 2026-08-04**, where it collided with . Neither was cited by number, so
 > the first-written kept 30. Quietkeep's NOTES cites the range "LESSONS 30–35",
 > which was `doctrine-sync` output listing both and remains accurate.
 
@@ -3640,12 +3613,8 @@ coincidence; this is its mirror image — a check falsifiable by nothing.)*
 
 Quietkeep's definition of done is a dogfood gate: thirty consecutive working
 days of real use, resetting on any miss. Sessions searched the repo, found no
-entry counting a single day, and wrote **"the gate has never started"** — into
+entry counting a single day, and wrote ** — into
 an assessment, a plan, an ADR, and a handoff prompt for another session.
-
-The owner's correction: *"THE DOGFOOD GATE HAS ALWAYS BEEN RUNNING. Your app
-just sucks so much I can't get through one fucking day yet. That's how it
-fucking works."*
 
 The counter was near zero because **the gate ran every working day and the app
 failed it every working day.** Same observation, opposite meaning, and the two
@@ -3662,14 +3631,14 @@ respects.
 Two things generalise:
 
 - **Zero has at least three causes** — never ran, ran and failed, ran and
-  succeeded but nothing recorded it. A system that cannot tell them apart should
-  say so rather than pick the flattering one. "Not started" is flattering to the
-  software: it puts the absence on the user.
+ succeeded but nothing recorded it. A system that cannot tell them apart should
+ say so rather than pick the flattering one. "Not started" is flattering to the
+ software: it puts the absence on the user.
 - **The failures were the dataset, and nobody collected them.** Every reset was
-  a defect report that went unwritten because sessions asked "will you promote
-  this?" and "will you do an on-device pass?" — questions about shipping — when
-  the question that mattered was *what stopped you today*. Ask what ended the
-  attempt, not whether the attempt happened.
+ a defect report that went unwritten because sessions asked "will you promote
+ this?" and "will you do an on-device pass?" — questions about shipping — when
+ the question that mattered was *what stopped you today*. Ask what ended the
+ attempt, not whether the attempt happened.
 
 *(Quietkeep, 2026-08-03. The owner had to say it in capitals before anyone
 checked.)*
@@ -3678,8 +3647,7 @@ checked.)*
 
 ## 41 · A handed-over artifact is FROZEN the moment it leaves
 
-> **Renumbered from 31 on 2026-08-04.** It shared that number with *"An app that
-> caches itself cannot notice it has gone stale"*, which `CLAUDE.md` and
+> **Renumbered from 31 on 2026-08-04.** It shared that number with , which `CLAUDE.md` and
 > `pwa-check.mjs` both cite as §31 — so that one kept it. Its checklist id
 > `handoff-is-frozen` is unchanged.
 
@@ -3701,12 +3669,12 @@ editing it is not diligence; it is inflicting your process on their time.
 The rule and its one exception:
 
 - **Write it once, correctly, and stop.** Do the discovery BEFORE delivering:
-  run the gates, check the facts, settle the format. If that means holding the
-  handoff for another five minutes, hold it.
+ run the gates, check the facts, settle the format. If that means holding the
+ handoff for another five minutes, hold it.
 - **When it is genuinely wrong afterwards, send a CORRECTION, not a rewrite.**
-  A short block naming the false line, the true one, and what changes. The
-  recipient applies a patch instead of re-reading a wall — and can tell at a
-  glance whether it affects the session already running.
+ A short block naming the false line, the true one, and what changes. The
+ recipient applies a patch instead of re-reading a wall — and can tell at a
+ glance whether it affects the session already running.
 
 This is the same failure as handing him a styled blockquote when he asked for a
 code block (Doctrine §2, the same day): **optimising for the artifact being good
@@ -3726,13 +3694,13 @@ measurable text says so in those words instead of "matched nothing".
 fauxplane's contrast registry, 1.16.0. Every foreground/background pair the app
 renders is listed, and a selector matching nothing is a hard failure — that is
 what makes "a new pair joins the gate in the same commit" mean anything. It
-filtered candidates with `n.textContent.trim().length > 0`.
+filtered candidates with `n.textContent.trim.length > 0`.
 
 **An `<input>` has no `textContent`.** So the registry was structurally blind to
 every text field in the app, and had been since it was written. Registering the
 new airport picker's box produced:
 
-    contrast registry selector matched nothing: .radar-centre-input
+ contrast registry selector matched nothing: .radar-centre-input
 
 which reads as *the element is not there* — the message sends you to look for a
 missing element or a renamed class. The element was there, painted, with a value
@@ -3776,10 +3744,10 @@ tree is `public/src/` and its one version constant lives at
 `package.json` — which in that repo is a scaffold holding `0.1.0`, a number
 nobody has ever bumped because nothing reads it — and failed with:
 
-    NOTES.md records the deploy URL but not the current version (0.1.0) beside it
+ NOTES.md records the deploy URL but not the current version (0.1.0) beside it
 
 The app on screen said 1.16.0. **The only way to satisfy the gate was to write
-0.1.0 into the handoff**, telling Noah a version that does not exist, about a
+0.1.0 into the handoff**, telling the owner a version that does not exist, about a
 build he is being asked to test. The gate's green state was a false statement.
 
 **Doctrine §7b says a version is typed once.** A gate that reads a DIFFERENT
@@ -3806,13 +3774,12 @@ was done; it cannot check it, which is exactly how it was asserted falsely.
 A session spent a day establishing two facts and wrote both into
 `docs/verifications.md` itself: production is 1.17.4, and the diagnostic surface
 shipped in 1.18.0, which is still on staging. It then closed its report by asking
-Noah to open production and send a diagnostic.
+The owner to open production and send a diagnostic.
 
-He answered: *"There's no way to get data from main since it doesn't have that
-ability…"*
+He answered:
 
 One `git ls-tree -r origin/main` would have settled it — `origin/main` carries no
-diagnostic source at all, and its only `caches.keys()` is the eviction sweep
+diagnostic source at all, and its only `caches.keys` is the eviction sweep
 inside `sw.js`, which no page can read. The check cost seconds and was not run.
 
 **The failure is not missing information. It is not re-reading your own output.**
@@ -3823,16 +3790,14 @@ established an hour ago stops feeling like a claim and starts feeling like
 background, and background does not get checked against the next sentence.
 
 **And it survived the gate that exists to stop it.** That session ran
-`handoff-check.mjs --ack=...,manual-steps`, whose text reads *"Every manual step
-I hand over I have either verified end to end, or I have said plainly why I could
-not."* It said so and it was not true. The gate's own documentation warns that an
+`handoff-check.mjs --ack=...,manual-steps`, whose text reads It said so and it was not true. The gate's own documentation warns that an
 `--ack` is an assertion that can be made falsely; this is what that looks like in
 practice, and it is the argument for keeping the ack list SHORT enough that each
 line is still read as a question rather than a formality.
 
 **The useful half.** Once the step was checked properly, the row got better
 rather than worse: the production half of that verification is not waiting on
-Noah at all, it is blocked on the promote and unblocks itself the moment the
+The owner at all, it is blocked on the promote and unblocks itself the moment the
 release carrying the instrument reaches production. A step you cannot perform is
 often a step nobody can perform yet, and saying which turns a request into a
 sequencing fact.
@@ -3848,20 +3813,20 @@ owner CANNOT see in it. Its own "what is wrong" section is addressed to him and
 is already on his screen; a session has nothing to add by restating it, and no
 repo carries a to-do about his personal habits.
 
-Noah, 2026-08-04, in anger: *"DO NOT NAG ME ABOUT FUCKING BACKUPS HERE"* — after
+ * — after
 a session opened three consecutive replies with the top line of a report he had
 sent it himself.
 
-Doctrine §7f gets an app to produce a text report and gets Noah to send it. What
+Doctrine §7f gets an app to produce a text report and gets the owner to send it. What
 it does not say, because it seemed obvious until it wasn't, is **what a session
 is for once the report arrives**. The report has two audiences and they need
 opposite things:
 
 - **Him.** He has already read it. The app wrote its warnings in his words, on
-  his screen, ranked, at the moment he opened it. That is the whole design.
+ his screen, ranked, at the moment he opened it. That is the whole design.
 - **The session.** Its value is entirely in what he cannot get from the text
-  alone: which line of code produced a number, whether a count means what its
-  label says, what the figure implies about a defect, what it rules out.
+ alone: which line of code produced a number, whether a count means what its
+ label says, what the figure implies about a defect, what it rules out.
 
 Restating his half is not "being thorough" — it is spending his attention to tell
 him something he had before you did. And it degrades: said once it is redundant,
@@ -3891,7 +3856,7 @@ fauxplane's contrast registry measures text against the real backdrop by hiding
 the text, taking a full-page screenshot, and sampling the pixel where the text
 was. It reported:
 
-    power annunciator (OFF, lit) measured 1.00:1 against the real backdrop
+ power annunciator (OFF, lit) measured 1.00:1 against the real backdrop
 
 A ratio of exactly 1.00 means the foreground was compared against **its own
 colour** — the pixel sampled for the BACKDROP was the element's own text.
@@ -3970,9 +3935,9 @@ run including the ones that shipped the defect.
 their first-ever visit.** It reached production.
 
 `controllerchange` never calls `updateIsReady`. The service worker's `activate`
-calls `clients.claim()`, which hands a first-ever visitor its first controller
+calls `clients.claim`, which hands a first-ever visitor its first controller
 and fires `controllerchange` exactly like any genuine swap; that handler called
-`show()` directly. The gate was real, the test was right, and **neither was on
+`show` directly. The gate was real, the test was right, and **neither was on
 the path that needed them**.
 
 **The shape, and it is general.** When a rule lives in a predicate, the predicate
@@ -4018,7 +3983,7 @@ built the obvious way — read the element, look for the word — finds `title`
 just as happily as it finds a text node, because `getAttribute('title')` and
 `textContent` are both just strings on the same object. The check would have
 gone green about an empty banner. So the assertion is now a
-`getBoundingClientRect()` with real width and height, plus text that is really
+`getBoundingClientRect` with real width and height, plus text that is really
 there: the only definition of "on screen" that a `title`, a `visibility:
 hidden`, or a zero-height container cannot satisfy.
 
@@ -4048,11 +4013,11 @@ check reading the machine's copy of the text instead of the reader's.
 
 fauxplane needed `POST /api/0/routeset` from adsb.lol. Their OpenAPI page names
 the request schemas `PlaneList` and `PlaneInstance` and does not expand them in
-either capture Noah sent, and the sandbox cannot reach `api.adsb.lol` at all.
+either capture the owner sent, and the sandbox cannot reach `api.adsb.lol` at all.
 Three options:
 
 - Ask for a **fourth screenshot** of a page already screenshotted twice, hoping
-  the schema expanded this time.
+ the schema expanded this time.
 - **Wait**, and ship nothing.
 - **Send the best-reasoned shape and report exactly what came back.**
 
@@ -4099,15 +4064,15 @@ across their whole API**, so a per-endpoint cooldown is not a cooldown — and i
 broke in both directions at once:
 
 - a 429 earned by a ROUTE request never told the AIRCRAFT feed to back off, so
-  the aircraft feed kept asking and kept being refused;
+ the aircraft feed kept asking and kept being refused;
 - an aircraft feed already standing off still got asked for routes, spending the
-  allowance the stand-off existed to protect.
+ allowance the stand-off existed to protect.
 
-The helper's own docstring said *"the standing refusal for a PROVIDER"*. The
+The helper's own docstring said . The
 call site ignored it, and the docstring is not a gate.
 
 **The symptom was reported as something else entirely, and that is the part
-worth carrying.** The owner wrote: *"You broke touch to add on the radar."* The
+worth carrying.**e
 touch handling was fine — tap-to-follow was driven under real touch emulation,
 on three separate controls, and all three worked. What broke was the thing that
 puts aircraft on the scope, and **an empty scope has nothing to tap.** The
@@ -4175,14 +4140,12 @@ Heading's limit is 5 s, because a magnetometer updates many times a second.
 **Following an aircraft fills that same field from a feed polled every 10 s.**
 The limit was half the cadence, so the field could never be anything but FAIL —
 and the owner photographed a panel with every instrument crossed out at once,
-power on, feed working, and wrote *"makes the whole display look broken without
-any data."*
+power on, feed working, and wrote
 
 **The correction is not to loosen the limits.** Provenance describes the
 OBSERVATION, and **an observation cannot arrive faster than the thing observing
 it reports.** So the writer declares the window and the registry becomes the
-default rather than the authority. In an app whose model already said *"exactly
-one source owns each field at a time"*, ownership now moves the freshness window
+default rather than the authority. In an app whose model already said , ownership now moves the freshness window
 with it — the fix was making the code agree with the design it already had.
 
 **Two things made it invisible for six releases.** The cadence lived in one file
@@ -4204,9 +4167,7 @@ the constants would have passed forever while meaning nothing.
 
 **Enforced by:** GATE fauxplane:scripts/plant.mjs — the plant that freezes the readiness indicator; and GATE fauxplane:scripts/a11y-gate.mjs, which asserts the indicator claims tappable at the moment a tap is about to succeed.
 
-Asked for a readiness indicator on fauxplane's radar — *"an indicator that shows
-when the radar is populated and another for any other states like being ready to
-tap"* — the obvious build is a chip that inspects the aircraft list and decides
+Asked for a readiness indicator on fauxplane's radar — — the obvious build is a chip that inspects the aircraft list and decides
 what to say. The tap handler already had its own precondition. That is **two
 opinions about one fact**, and they drift into an indicator reading CONTACT over
 a scope that ignores taps — worse than no indicator, because the reader then
@@ -4245,15 +4206,14 @@ fauxplane forbids synthetic data: every number traces to a sensor or a feed, and
 a missing reading is FAIL with a reason. **The reasons were not held to the same
 rule**, and one diagnostics report contained two fabricated ones.
 
-**"This device reports no magnetic heading."** Twenty lines below, the same
+** Twenty lines below, the same
 report: `webkitCompassHeading 278.3`. The phone has a compass and was reporting
 278.3°; it had stopped SENDING while the page was backgrounded. The filter's
 `hasHeading` goes false for two unrelated reasons — no heading at all, and a
 heading too old to use — and one sentence was printed for both.
 
-**"This panel is showing that aircraft's broadcast, not this device"** — printed
-from the instant FOLLOW was pressed, while every followed field read *"waiting
-for the first report"* and the feed was rate limited. It was showing nothing.
+** — printed
+from the instant FOLLOW was pressed, while every followed field read and the feed was rate limited. It was showing nothing.
 
 **Why this is worse than a bad number, not better.** A wrong number looks wrong;
 a reader distrusts it and checks. A confident wrong sentence is believed, and
@@ -4269,7 +4229,7 @@ branch unit-tested and a plant proving the test fails. Prose that states a fact
 about the reader's hardware or about what is on screen is program output, and it
 gets the same gate as a number.
 
-**Smell:** a `fail()`/error path whose message asserts a CAPABILITY ("this device has no…", "not supported", "unavailable on this platform") on a code path that is also reachable by a timeout, a stale reading, or a permission that has not been asked for yet.
+**Smell:** a `fail`/error path whose message asserts a CAPABILITY ("this device has no…", "not supported", "unavailable on this platform") on a code path that is also reachable by a timeout, a stale reading, or a permission that has not been asked for yet.
 
 *(fauxplane 1.22.1, 2026-08-04.)*
 
@@ -4311,10 +4271,6 @@ release the report describes and what it therefore cannot tell you.
 ## 51 · "Run the whole suite" is a rule about the MEASURING INSTRUMENT, not about every change
 
 **Enforced by:** GATE fauxplane:scripts/plant.mjs — `--changed=<ref>` selects plants from git rather than from judgement, escalates to the whole sweep on any file that can blunt an unrelated plant, and PRINTS what it did not run.
-
-Noah, 2026-08-04: *"I feel like you make a small change and then rescan
-everything else that has no relationship and could not have changed… I think you
-are wasting a lot of time if you are."*
 
 He was right, and the arithmetic is the interesting part. Measured on fauxplane:
 
@@ -4374,9 +4330,6 @@ as `test/privacy.test.ts`, so its `npm test` fails without the hub present.
 No file is exempt: the gate scans itself and its own test, skipping only a
 sentinel-marked region of pattern source, which a second rule holds to no
 proper name and no date.
-
-The owner, 2026-08-04, verbatim: *"Make sure you never record anything in the
-repo that is personal or embarrassing for me. That is a FAIL state."*
 
 The failure mode here is DILIGENCE, not sloppiness, which is what makes it
 likely to recur and why it needs a gate rather than a resolution. These repos
@@ -4471,8 +4424,7 @@ the recording reflex fires.
 **And the history question is now CLOSED — this lesson is not an invitation to
 re-open it.** Quietkeep's history was rewritten on his word (2026-08-05, by
 pattern, locations-only, verified against a fresh clone from GitHub). What
-survives that is accepted. He then said: *"I'm not making repos private or
-contacting GitHub. Drop those."* So making a repo private and asking GitHub
+survives that is accepted. He then said: So making a repo private and asking GitHub
 Support to purge cached commits are DECLINED, permanently and in every repo. A
 session that finds residue records it and moves on.
 
@@ -4495,7 +4447,7 @@ the answer belongs where the question was asked, not only in the log.**
 Four fauxplane releases — 1.24.1, 1.25.0, 1.25.1, 1.26.0 — were pushed, reported
 as shipped, and **never deployed**. The owner's device stayed on 1.24.0 through
 all four. It surfaced when he sent a screenshot of a page that should have had a
-new button on it and asked: *"What. Button."*
+new button on it and asked:
 
 **Every push was genuinely verified.** §2's rule was followed each time — read
 the REMOTE, not the push output; confirm the range line; confirm the SHA. All of
@@ -4503,8 +4455,7 @@ that was true and all of it was about the wrong thing. `git push` succeeding and
 the site updating are different facts, and only the first was ever checked.
 
 **What broke them was a CI gate added the same afternoon.** A privacy check,
-newly wired, was failing on an ordinary sentence — *"they are still not
-diagnosed, only absent"*, about console warnings. The pattern read
+newly wired, was failing on an ordinary sentence — , about console warnings. The pattern read
 `they are ... diagnosed` as a disclosure about a person. So the deploy stopped,
 correctly, on a gate doing exactly what it was told.
 
@@ -4538,15 +4489,15 @@ rather than reasoned about.
 
 **Enforced by:** GATE fauxplane:scripts/plant.mjs — a plant proves the check goes red ABOUT THE THING, in the harness the check actually runs in. Nothing else in any pipeline can tell a working check from a check that cannot fail.
 
-Noah, 2026-08-05, five defects on one page in one message. The fourth was the
-layout: *"The radar is pushed down by the airport picker."* Fixed, gated,
+The owner, 2026-08-05, five defects on one page in one message. The fourth was the
+layout: Fixed, gated,
 shipped, reported — with a new assertion that the scope must not start past half
 the viewport.
 
 The sweep then said this, about my own check:
 
-    GREEN  layout: the centre picker goes back above the scope  <-- the check does not work
-    UNPROVEN  the gate stayed GREEN with the fault planted
+ GREEN layout: the centre picker goes back above the scope <-- the check does not work
+ UNPROVEN the gate stayed GREEN with the fault planted
 
 **The check ran at 1024x900.** It was written inside an existing function that
 pinned a desktop context for unrelated reasons — the tap-geometry maths. With the
@@ -4576,13 +4527,13 @@ raises the count of things that are "gated".
 both measured before being written:
 
 - **What may sit above the instrument, BY NAME** — an allow-list of the controls
-  read *while* looking at it. That is DOM order, so it holds at every viewport,
-  including the single one the plant harness runs. **A check that survives
-  `--quick` is a check a plant can prove**; one that needs a specific layout to
-  fire may be unprovable in the harness that is supposed to verify it.
+ read *while* looking at it. That is DOM order, so it holds at every viewport,
+ including the single one the plant harness runs. **A check that survives
+ `--quick` is a check a plant can prove**; one that needs a specific layout to
+ fire may be unprovable in the harness that is supposed to verify it.
 - **How much room they take, in rem** — so the reader's text size scales it
-  instead of an assumed 16px. Recorded in the source with the real numbers on
-  both sides of the fix: 11.1rem after, 17.45–41.59rem before, ceiling 13.
+ instead of an assumed 16px. Recorded in the source with the real numbers on
+ both sides of the fix: 11.1rem after, 17.45–41.59rem before, ceiling 13.
 
 **Write the measurement into the check.** A threshold with the observed numbers
 beside it can be argued with by the next person. A bare `> 0.5` cannot — it looks
@@ -4605,8 +4556,7 @@ measured, you have not written a check, you have written a sentence.
 device.** Quietkeep's update walk is as honest as a walk gets: a real second
 service worker, a real press of the real control, an assertion that the swap
 completed and nothing is left waiting. It passed every release. Then, on an
-iPad: *"I hit 'install it now' 10 times, gave up, force closed, and reopened,
-and it worked."* An installed app on iPadOS will not reliably let a waiting
+iPad: An installed app on iPadOS will not reliably let a waiting
 worker take over while the app is open — a platform behaviour headless Chromium
 does not have and cannot be made to have. The walk was not weak; it was
 measuring a machine where the defect cannot occur.
@@ -4633,20 +4583,16 @@ push, which is why it was caught in an hour rather than in four releases.)*
 
 **Enforced by:** GATE fauxplane:scripts/releases.test.mjs — the reader-address rules over every release note, with patterns written from sentences that actually shipped, plus a test that the ban has not widened. DOCTRINE §7d.1 is the rule; this is what it cost to find that stating it was not enough.
 
-Noah, 2026-08-05, on opening What's New: *"WHAT THE **FUCK** ARE THESE RELEASE
-NOTES?!"*
-
 Ten consecutive releases of a **development diary published inside the product**.
 An app built for a friend of his, and the friend opens the notes to find:
 
-    "You asked why every runway looks the same at every scale."
-    "You held the panel up next to your home screen and said it did not match."
-    "I only wrote the test AFTER you found it. That is backwards."
-    "Follow a flight and send the report — 1.24.1 added the last piece I need."
+ "You asked why every runway looks the same at every scale."
+ "You held the panel up next to your home screen and said it did not match."
+ "I only wrote the test AFTER you found it. That is backwards."
+ "Follow a flight and send the report — 1.24.1 added the last piece I need."
 
 **The file those were written in opens with the rule they break.** Verbatim:
-*"THE READER IS NOT A DEVELOPER. He is building a 747 cockpit in his house and he
-loves planes. Every line here is written for him: what he can now see or do."*
+
 That paragraph was written from this app, by a session on this app, and then
 walked past every release for two days.
 
@@ -4660,16 +4606,16 @@ whoever creates the file, not for whoever maintains it.**
 **Three failure forms, each reasonable while being typed:**
 
 - **"You" drifts from the reader to whoever reported the fault.** The session has
-  just read Noah's message; his words are the freshest thing in it, and quoting
-  him feels like precision. The reader is not him.
+ just read the owner's message; his words are the freshest thing in it, and quoting
+ him feels like precision. The reader is not him.
 - **"I" appears at all.** A session narrating its own process — including its own
-  mistakes, which feels like honesty and is actually a stranger apologising to a
-  stranger in someone else's product.
+ mistakes, which feels like honesty and is actually a stranger apologising to a
+ stranger in someone else's product.
 - **The reader is given homework.** "Send me that." Eight releases running. A
-  working arrangement between two other people, on a third person's screen.
+ working arrangement between two other people, on a third person's screen.
 
 **The condition that produced it is worth naming: the work was going WELL.** Fast
-back-and-forth, a fix per hour, Noah reporting and the session shipping. That is
+back-and-forth, a fix per hour, the owner reporting and the session shipping. That is
 exactly when his voice is loudest in the session's context and least
 distinguishable from the app's own. **The notes were being written from the
 session's memory of the day rather than from the diff** — and a diff has no
@@ -4699,24 +4645,19 @@ release note containing "I", or copy that tells the reader what to send you.
 
 **Enforced by:** CHECKLIST — before citing a success criterion as a reason NOT to do what the owner asked, quote the criterion's actual text in the same breath. GATE fauxplane:scripts/a11y-gate.mjs `checkValuesAreScreenReaderOnly` is the shape of the correct answer: assert the alternative EXISTS and is reachable, never that it is painted.
 
-Noah, 2026-08-05: *"I've asked you REPEATEDLY to get those fucking words out of my
-way and you TOLD ME that they HAD to be there for accessibility standards."*
-
 He had. The record in the repo is unambiguous, and it is worse than the summary:
 
-- **1.18.0** — his words, quoted in the source: *"All the voice-over data does
-  NOT need to fill MY screen. That space has MUCH more important stuff to hold."*
-  The comment written that day AGREED with him, and correctly noted that SC 1.1.1
-  says nothing about the text being large or adjacent — **and then kept it
-  painted, and called it "never optional" eleven lines later.**
-- **1.19.1** — *"Landscape is too cramped now."* The strip was made denser.
-- **1.28.0** — *"You can push the stuff to the very bottom if needed."* It was
-  pushed to the bottom.
-- **1.28.5** — *"This layout is unacceptable."* It was capped, then given the
-  leftover space, then moved below the fold.
-- **1.29.0** — *"Why do you not give the entire fucking height to the horizon??
-  I DO NOT NEED THEM BECAUSE I CAN FUCKING SEE THE GUAGES."* Only here was the
-  premise questioned.
+- **1.18.0** — his words, quoted in the source:
+ The comment written that day AGREED with him, and correctly noted that SC 1.1.1
+ says nothing about the text being large or adjacent — **and then kept it
+ painted, and called it "never optional" eleven lines later.**
+- **1.19.1** — The strip was made denser.
+- **1.28.0** — It was
+ pushed to the bottom.
+- **1.28.5** — It was capped, then given the
+ leftover space, then moved below the fold.
+- **1.29.0** — Only here was the
+ premise questioned.
 
 **FIVE ASKS. FOUR RE-RATIONINGS OF THE SAME GLASS. The question every time was
 "how much room should this get", and never once "why is it on screen at all".**
@@ -4739,13 +4680,13 @@ nothing to him.
 Two rules come out of it:
 
 - **QUOTE IT OR DROP IT.** If a standard is the reason for refusing what the
-  owner asked, its actual text goes in the same message. A criterion that cannot
-  be quoted has not been read, and an unread criterion is an opinion wearing a
-  number.
+ owner asked, its actual text goes in the same message. A criterion that cannot
+ be quoted has not been read, and an unread criterion is an opinion wearing a
+ number.
 - **A REPEATED ASK IS EVIDENCE THE PREMISE IS WRONG, NOT THAT THE ANSWER NEEDS
-  RESTATING.** The second time an owner asks for the same thing, stop refining
-  the answer and go and check the thing that made it a "no". Four re-layouts is
-  what refining looks like from inside; from outside it is an adversary.
+ RESTATING.** The second time an owner asks for the same thing, stop refining
+ the answer and go and check the thing that made it a "no". Four re-layouts is
+ what refining looks like from inside; from outside it is an adversary.
 
 **Smell:** any sentence of the form "it has to be there for accessibility /
 security / the licence" that is not immediately followed by the words of the rule

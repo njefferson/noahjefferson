@@ -2,7 +2,7 @@
 /**
  * docs-check.mjs — the no-grid gate (Doctrine §3).
  *
- * Markdown tables do not display on Noah's iPad. They arrive as pipe-and-dash
+ * Markdown tables do not display on the owner's iPad. They arrive as pipe-and-dash
  * noise with the right-hand columns simply gone, so the content inside them is
  * lost — not degraded, LOST, and silently, because the prose around them reads
  * fine. The doctrine has banned them since the beginning and they kept coming

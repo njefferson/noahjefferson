@@ -6,8 +6,7 @@
 //   node doctrine-sync.mjs --repo ../myapp --adopt  record that it has now been read
 //   node doctrine-sync.mjs --repo ../myapp --quiet  exit code only, for a hook
 //
-// WHY. Noah, 2026-08-03: "Hub moves rapidly. Add a doctrine check there to
-// regularly look to see what has moved?"
+// WHY.
 //
 // The sibling repos LINK to this hub's DOCTRINE.md and LESSONS.md rather than
 // forking them, which is the right design and has one failure mode: a link is
