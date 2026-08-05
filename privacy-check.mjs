@@ -42,66 +42,12 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { DISCLOSURE, REGION_FORBIDDEN, split } from './privacy-patterns.mjs';
 
 const argv = process.argv.slice(2);
 const ri = argv.indexOf('--repo');
 const REPO = ri >= 0 && argv[ri + 1] ? resolve(argv[ri + 1]) : process.cwd();
 const NAME = REPO.split('/').pop();
-
-// privacy-gate:patterns-begin
-const DISCLOSURE = [
-  /\b(?:noah|the owner|he|she|they)\s+(?:is|was|are|were|being|remains)\s+(?:\w+\s+){0,2}?(?:audhd|adhd|autistic|neurodivergent)\b/i,
-  // `diagnosed` only counts as a disclosure when something is diagnosed WITH
-  // something. Bare "diagnosed" is ordinary engineering English about a FAULT,
-  // and this pattern used to swallow it: fauxplane's release note "they are
-  // still not diagnosed, only absent" — about console warnings — failed the
-  // gate and blocked FOUR consecutive deploys before anyone noticed, because
-  // "they are ... diagnosed" matched. Four releases sat on a branch, reported
-  // as shipped, while the owner's device stayed on the last one that deployed.
-  //
-  // Requiring "with" keeps every real disclosure ("he was diagnosed with X")
-  // and releases the technical sense outright. A gate that fires on ordinary
-  // prose is a gate people learn to route around, which is the one failure a
-  // privacy check cannot afford.
-  /\b(?:noah|the owner|he|she|they)\s+(?:is|was|are|were|being|remains)\s+(?:\w+\s+){0,2}?diagnosed\s+with\b/i,
-  /\b(?:audhd|adhd|autistic|neurodivergent)\s+(?:owner|maker|author)\b/i,
-  /\bconfirmed\b[^\n]{0,50}\b(?:he|she|they)\s+(?:is|are)\s+neurodivergent\b/i,
-  /\b(?:noah|the owner)\b[^\n]{0,30}\b(?:medication|therapy|diagnosis|diagnosed)\b/i,
-];
-// privacy-gate:patterns-end
-
-// What the skipped region may never contain, once its regex literals are set
-// aside. A pattern's source legitimately names the owner token — that IS the
-// anchor it matches on — so the guard reads the region's PROSE and probes: the
-// comments and string literals, which are the only places a real sentence could
-// hide. Neither needs a proper name or a date.
-const REGION_FORBIDDEN = [
-  [/\bnoah\b/i, 'the owner’s name outside a pattern'],
-  [/\b20\d\d-\d\d-\d\d\b/, 'a date'],
-];
-
-// A line that opens with `/` but not `//` is a regex literal, not prose.
-const isPatternSource = line => /^\s*\/(?!\/)/.test(line);
-
-const BEGIN = 'privacy-gate:patterns-begin';
-const END = 'privacy-gate:patterns-end';
-
-// Split a file into the lines the disclosure patterns read, and the lines the
-// sentinels exclude. Blanking rather than dropping keeps line numbers honest.
-function split(text) {
-  const body = [];
-  const region = [];
-  let inside = false;
-  for (const line of text.split('\n')) {
-    if (line.includes(BEGIN)) { inside = true; body.push(''); continue; }
-    if (line.includes(END)) { inside = false; body.push(''); continue; }
-    if (inside) {
-      if (!isPatternSource(line)) region.push(line);
-      body.push('');
-    } else { body.push(line); }
-  }
-  return { body: body.join('\n'), region: region.join('\n') };
-}
 
 const files = execFileSync('git', ['-C', REPO, 'ls-files'], { encoding: 'utf8' })
   .split('\n')

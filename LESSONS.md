@@ -4430,6 +4430,18 @@ list is the first place to audit, because it is the only place the scanner
 guarantees it is not looking.** Ask what an exclusion is load-bearing FOR,
 then make it the narrowest thing that carries that load.
 
+**A CI-blocking pattern that exists in more than one place is a deploy outage
+waiting for someone to fix a false positive.** This list ended up in THREE
+files — the tree gate, the history gate, and Quietkeep's deliberate offline
+mirror — and the narrowing that §53 paid four deploys to learn reached exactly
+one of them. The stale copies were not "slightly out of date": they were a
+different gate, still carrying the pattern that stops releases. Fixed by making
+GATE hub:privacy-patterns.mjs the one source that both hub gates IMPORT, and by
+holding the one copy that must stay a copy to GATE
+hub:privacy-mirror-check.mjs, which fails on any drift. The test to apply to
+any shared rule: **if I narrow this to unblock someone, how many other places
+keep the old behaviour, and what does each of them block?**
+
 **A gate that quotes what it found republishes it.** Both this gate and its
 Quietkeep test printed the matched sentence into the failure message. On a
 public repo the Actions log is public, so every red run would have broadcast

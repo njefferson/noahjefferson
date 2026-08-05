@@ -125,7 +125,7 @@ doctrine rule changes, edit it HERE and tell the sibling repos to re-point
 (their `CLAUDE.md` files link to this copy). Never fork the doctrine into
 another repo — link to it.
 
-## Nine gates live here and serve every repo
+## Ten gates live here and serve every repo
 Never fork these either — they take `--repo ../app` (or a path) so a sibling
 runs them without copying them, which is what stops five divergent versions
 existing.
@@ -180,6 +180,18 @@ existing.
   workflow's. Run it when adopting the privacy gate in a new repo, and again
   after any rewrite, to verify. This is the gate that answers "what about the
   history" — the question `privacy-check.mjs` has always had to decline.
+
+- [`privacy-mirror-check.mjs`](privacy-mirror-check.mjs) — a sibling that must
+  fail `npm test` OFFLINE has to carry its own copy of the disclosure patterns,
+  and that copy is a liability the moment the canon moves. This compares the
+  regex literals in the repo's sentinel region against
+  [`privacy-patterns.mjs`](privacy-patterns.mjs) — **the one source, which both
+  hub gates now import rather than inline** — and fails on any difference.
+  Wire it beside the privacy gate in the job that already checks the hub out.
+  It exists because a narrowing fix reached one of three copies, and the stale
+  ones kept the over-broad pattern that had already blocked four consecutive
+  deploys (LESSONS §53). A stale mirror is not a smaller gate, it is a
+  DIFFERENT one.
 
 - [`doctrine-sync.mjs`](doctrine-sync.mjs) — **run this FIRST in any sibling
   session**: `node ../noahjefferson/doctrine-sync.mjs --repo .`. It says what has
