@@ -50,7 +50,11 @@ const NAME = REPO.split('/').pop();
 
 const files = execFileSync('git', ['-C', REPO, 'ls-files'], { encoding: 'utf8' })
   .split('\n')
-  .filter(f => /\.(md|ts|mjs|js|html|txt)$/.test(f));
+  // yml/yaml/json ARE IN THIS LIST NOW. The history gate has always scanned
+  // them and this one did not, so a workflow comment naming him was invisible
+  // to the gate that runs in CI and visible only to the one nobody runs. Two
+  // file lists for the same rule is one gate lying about its coverage.
+  .filter(f => /\.(md|ts|mjs|js|html|txt|json|yml|yaml)$/.test(f));
 
 const hits = [];
 for (const f of files) {
