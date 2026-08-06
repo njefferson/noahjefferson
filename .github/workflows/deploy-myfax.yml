@@ -82,7 +82,7 @@ jobs:
         run: |
           # Strip whitespace/newlines that sneak in when a secret is pasted —
           # a trailing newline corrupts the Authorization header (Cloudflare 6111).
-          # Two tokens by design (Noah, 2026-07-25): the long-standing hub token
+          # Two tokens by design: the long-standing hub token
           # stays Pages-only; the Worker deploys with its own Workers-scoped token.
           TOKEN=$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')
           WTOKEN=$(printf '%s' "$RAW_WORKER_TOKEN" | tr -d '[:space:]')

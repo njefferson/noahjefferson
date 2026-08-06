@@ -48,13 +48,28 @@ const ri = argv.indexOf('--repo');
 const REPO = ri >= 0 && argv[ri + 1] ? resolve(argv[ri + 1]) : process.cwd();
 const NAME = REPO.split('/').pop();
 
+/**
+ * Binary extensions, and NOTHING ELSE, are skipped.
+ *
+ * THIS USED TO BE AN ALLOW-LIST and that is exactly how it failed. It named
+ * md/ts/mjs/js/html/txt, then grew json/yml/yaml when a workflow comment turned
+ * out to be invisible — and its own comment recorded the lesson ("two file lists
+ * for the same rule is one gate lying about its coverage") while the list stayed
+ * a list. `.css` was never on it, and five by-name attributions sat in a
+ * stylesheet served verbatim from production, one of them a quoted complaint,
+ * with both gates green. Green meant NOT LOOKED AT, for the second time, in the
+ * gate written because green had meant not-looked-at the first time.
+ *
+ * An allow-list has to be extended every time the repo grows a file type, by
+ * somebody who happens to remember this gate exists. A deny-list of binaries is
+ * total by default: a new text format is covered on the day it lands, and the
+ * only way to lose coverage is to add a binary extension deliberately.
+ */
+const BINARY = /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|svgz|pdf|woff2?|ttf|otf|eot|zip|gz|tgz|bz2|xz|7z|mp[34]|m4a|wav|ogg|webm|mov|avi|wasm|db|sqlite3?)$/i;
+
 const files = execFileSync('git', ['-C', REPO, 'ls-files'], { encoding: 'utf8' })
   .split('\n')
-  // yml/yaml/json ARE IN THIS LIST NOW. The history gate has always scanned
-  // them and this one did not, so a workflow comment naming him was invisible
-  // to the gate that runs in CI and visible only to the one nobody runs. Two
-  // file lists for the same rule is one gate lying about its coverage.
-  .filter(f => /\.(md|ts|mjs|js|html|txt|json|yml|yaml)$/.test(f));
+  .filter(f => f && !BINARY.test(f));
 
 const hits = [];
 for (const f of files) {

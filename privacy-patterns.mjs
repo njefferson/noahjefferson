@@ -108,6 +108,43 @@ export const ATTRIBUTION = [
   // The name token excludes handles and domains, which are his own product copy
   // and were caught by the first draft of this rule.
   /\b(?:noah(?![.\w])|the owner)(?:'s|\u2019s)\s+(?:words|quote|message|complaint|wording|phrasing|screenshot|exact)\b/i,
+
+  // ATTRIBUTION WITHOUT QUOTATION MARKS. Every rule above requires a quote
+  // character somewhere, and that was the defect.
+  //
+  // All 787 original sites carried quotation marks, so the patterns were fitted
+  // to that shape and the shape was mistaken for the class. Five sites in a
+  // sibling's stylesheet \u2014 served verbatim from production \u2014 attributed findings
+  // by name with no quote mark anywhere: a parenthetical after an observation, a
+  // finding verb, and a possessive naming a device. Widening the file filter to
+  // reach the stylesheet found nothing, because the patterns could not see the
+  // sentences even once they were being read. Two separate failures wearing one
+  // green tick.
+  //
+  // ANCHORED ON THE NAME ONLY, never on the role. The anonymised role is the
+  // CORRECT form and appears throughout the lessons doing load-bearing work: a
+  // sentence recording that a human caught a defect where no test did is a fact
+  // about gate coverage, and a rule firing on it would teach sessions to route
+  // around the gate \u2014 which this file already records as the one thing a privacy
+  // check cannot afford. The name is what republishes a person; the role is what
+  // records an engineering fact.
+
+  // A parenthetical carrying the name, e.g. a provenance tag after an
+  // observation. The commonest habit, and pure attribution \u2014 the finding is
+  // already in the sentence, and the name adds only who said it.
+  /\(\s*noah(?!\s+jefferson)(?![.\w@-])[^)\n]*\)/i,
+
+  // A finding verb with the name in front of it. Deliberately NOT "decides",
+  // "reads", "wants" or "owns" \u2014 those are the hub's rules ABOUT whose call a
+  // thing is, which are legitimate and must stay sayable. These are the verbs of
+  // reporting a defect, which is exactly what must be recorded without a
+  // reporter.
+  /\bnoah(?![.\w@-])\s+(?:found|finds|noticed|notices|caught|spotted|reported|reports|flagged|observed|hit|saw|sees)\b/i,
+
+  // The name possessing a device or an instance. Narrow on purpose: the same
+  // possessive in front of a decision noun is the doctrine talking about whose
+  // call a thing is, and stays legal.
+  /\bnoah(?![.\w@-])(?:'s|\u2019s)\s+(?:ipad|iphone|device|phone|screen|browser|machine|laptop|tablet|instance|store|install)\b/i,
 ];
 export const HIS_LIFE = [
   // Anchored on him: a life noun tied to the owner by a possessive. "his
