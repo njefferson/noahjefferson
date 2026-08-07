@@ -102,5 +102,54 @@ URL this entry used to give were both 404 until then. Regenerate with
 
 ---
 
+# njefferson/3d-printing-pal
+
+The app is **print-tracker**; the repo keeps the name it was created with. Every
+item below is `proposed` — none of it is set until Noah applies it and says so.
+
+**Description** — proposed 2026-08-07
+
+> Track 3D print jobs, filament and models on your own device. Offline, no account.
+
+Written for what the app IS rather than what it currently does: no feature, no
+module and no version in it, because those change and the description should not.
+Which parts exist today belongs in the README.
+
+**Website** — proposed 2026-08-07
+
+> https://3d-printing-pal.pages.dev
+
+This URL does not exist yet. Cloudflare derives it from the Pages project name,
+which the deploy workflow creates as `3d-printing-pal` on the first push to
+`main` with both secrets present. Set this only once a deployment has actually
+been read in a log.
+
+**Topics** — proposed 2026-08-07
+
+> `3d-printing` `filament` `kanban` `pwa` `offline-first` `indexeddb` `local-first` `no-account`
+
+**Social preview** — proposed 2026-08-07
+
+Not made yet. When it is: it carries the app's NAME in real type, and its
+contrast is measured rather than looked at — render the tile once with the text
+hidden, sample the real backdrop inside each LINE's tight rect rather than the
+element box, take the lightest pixel found, and compute against the real text
+colour.
+
+**Default branch** — proposed 2026-08-07
+
+> `main`
+
+**This one is not cosmetic and it blocks the deploy.** The repository was created
+empty and had no commits and no branches at all when the app was written, so
+`main` does not exist yet. The deploy workflow triggers on `main`, and Cloudflare
+Pages deploys from a production branch — so until `main` exists, nothing deploys
+and no website URL above can become real. A repo whose default branch was left
+pointing at a working branch has happened here before: the landing page, the
+default clone and every new PR base pointed at stale code until it was moved by
+hand.
+
+---
+
 New app? Add its section here in the same commit that creates the repo, and
 point its CLAUDE.md §10 note at this file.
