@@ -115,52 +115,49 @@ Written for what the app IS rather than what it currently does: no feature, no
 module and no version in it, because those change and the description should not.
 Which parts exist today belongs in the README.
 
-**Website** — proposed 2026-08-07
+**Website** — proposed 2026-08-08
 
 > https://3d-printing-pal.pages.dev
 
-**The Pages project now exists** — it was created by the first push to `staging`
-on 2026-08-08, and that deploy's log was read rather than inferred. But this
-apex address serves the PRODUCTION deployment, and there has not been one: `main`
-does not exist yet, so nothing has been promoted.
-
-So this value is right and is not yet true. Set it once something reaches `main`
-and that deploy has been read in a log. The staged candidate lives at
-`https://staging.3d-printing-pal.pages.dev` in the meantime, recorded in the
-repo's own NOTES.md where the handoff gate reads it.
+**This is now true.** 0.1.0 was promoted to `main` on the owner's say-so and the
+production deploy was read in its log rather than inferred — its steps ran, and
+wrangler reported the deployment complete. Ready to apply.
 
 **Topics** — proposed 2026-08-07
 
 > `3d-printing` `filament` `kanban` `pwa` `offline-first` `indexeddb` `local-first` `no-account`
 
-**Social preview** — proposed 2026-08-07
+**Social preview** — proposed 2026-08-08
 
-Not made yet. When it is: it carries the app's NAME in real type, and its
-contrast is measured rather than looked at — render the tile once with the text
-hidden, sample the real backdrop inside each LINE's tight rect rather than the
-element box, take the lightest pixel found, and compute against the real text
-colour.
+Made. Delivered in chat as `social-preview.png` (1280x640), which is the size
+GitHub asks for. Source is the repo's own `social-card.html`, rendered by
+`tools/render-social.mjs`; the same template also produces `public/og.png` at
+1200x630, which the app serves as its `og:image`, so the two cannot drift into
+saying different things.
 
-**Default branch** — proposed 2026-08-07
+It carries the app's NAME in real type over the app's own wordless spool icon —
+name, tagline, and one plain line of what it is, which is all a card read at a
+third of its size beside a bare domain can carry.
 
-> `staging` for now, and `main` at the first promote.
+**Its contrast is measured rather than looked at**, by `tools/social-check.mjs`,
+which is the piece the hub's own card tooling does not have: it renders the card
+with the text hidden, takes each LINE's tight rect from `Range.getClientRects()`
+rather than the element box, samples the lightest pixel under it, and fails below
+4.5:1 at both aspect ratios. Worst line measures 10.78:1. It was planted red
+before it was trusted.
 
-**This one is not cosmetic and it blocks the deploy.** The repository was created
-empty, so `main` still does not exist. The repo's default branch currently names
-a branch that is not there, which means the landing page, the default clone and
-every new PR base all point at nothing. `staging` is where the candidate lives
-and is real code, so it is the honest interim; `main` takes over the moment
-something is promoted to production.
+**To verify after uploading it**, read the repo's raw HTML and look at the
+`og:image` host: `repository-images.githubusercontent.com` means the card really
+landed, `opengraph.githubassets.com` means GitHub is auto-generating one and the
+upload did not.
 
-Setting it to `staging` is not the failure mode this file has recorded before —
-that was a default left pointing at a stale working branch nobody had touched in
-weeks. This one is the branch the work is actually on, and it is expected to
-move.
+**Default branch** — proposed 2026-08-08
 
-**Until `main` exists, nothing reaches production** and no website URL above can
-become real. Cloudflare Pages deploys production from a production branch, and a
-branch preview alias may not resolve at all until the project has had one
-production deployment.
+> `main`
+
+`main` now exists and carries the production release, so the interim is over —
+the earlier proposal here was `staging`, only because `main` did not exist yet
+and the default was pointing at a branch that was not there.
 
 ---
 
