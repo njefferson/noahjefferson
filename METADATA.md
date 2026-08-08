@@ -127,24 +127,35 @@ wrangler reported the deployment complete. Ready to apply.
 
 > `3d-printing` `filament` `kanban` `pwa` `offline-first` `indexeddb` `local-first` `no-account`
 
-**Social preview** — proposed 2026-08-08
+**Social preview** — proposed 2026-08-08, REDRAWN 2026-08-08
 
-Made. Delivered in chat as `social-preview.png` (1280x640), which is the size
-GitHub asks for. Source is the repo's own `social-card.html`, rendered by
+**The card delivered earlier is superseded — upload the newer one.** The first
+carried the app's old spool mark, which read as an eye and has been replaced. A
+stale entry here is worse than a missing one, because this file is what the values
+get copied FROM.
+
+Delivered in chat as `social-preview.png` (1280x640), which is the size GitHub
+asks for. Source is the repo's own `social-card.html`, rendered by
 `tools/render-social.mjs`; the same template also produces `public/og.png` at
 1200x630, which the app serves as its `og:image`, so the two cannot drift into
 saying different things.
 
-It carries the app's NAME in real type over the app's own wordless spool icon —
-name, tagline, and one plain line of what it is, which is all a card read at a
-third of its size beside a bare domain can carry.
+It carries the app's NAME in real type above a printer farm — a whole machine at
+full contrast with one receded and cropped by each edge, so the row reads as
+continuing past the card. Name, tagline, and one plain line of what it is, which
+is all a card read at a third of its size beside a bare domain can carry.
+
+**The card's art is deliberately NOT the icon.** An icon carries one shape at
+favicon size and a farm shrunk that small is grey mush, so they are two drawings.
+Inside the card the machine is drawn once and placed three times, so the file
+cannot disagree with itself.
 
 **Its contrast is measured rather than looked at**, by `tools/social-check.mjs`,
 which is the piece the hub's own card tooling does not have: it renders the card
 with the text hidden, takes each LINE's tight rect from `Range.getClientRects()`
 rather than the element box, samples the lightest pixel under it, and fails below
-4.5:1 at both aspect ratios. Worst line measures 10.78:1. It was planted red
-before it was trusted.
+4.5:1 at both aspect ratios. Worst line on the new card measures 10.4:1. It was
+planted red before it was trusted.
 
 **To verify after uploading it**, read the repo's raw HTML and look at the
 `og:image` host: `repository-images.githubusercontent.com` means the card really
