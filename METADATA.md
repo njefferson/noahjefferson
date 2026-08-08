@@ -138,16 +138,24 @@ colour.
 
 **Default branch** — proposed 2026-08-07
 
-> `main`
+> `staging` for now, and `main` at the first promote.
 
 **This one is not cosmetic and it blocks the deploy.** The repository was created
-empty and had no commits and no branches at all when the app was written, so
-`main` does not exist yet. The deploy workflow triggers on `main`, and Cloudflare
-Pages deploys from a production branch — so until `main` exists, nothing deploys
-and no website URL above can become real. A repo whose default branch was left
-pointing at a working branch has happened here before: the landing page, the
-default clone and every new PR base pointed at stale code until it was moved by
-hand.
+empty, so `main` still does not exist. The repo's default branch currently names
+a branch that is not there, which means the landing page, the default clone and
+every new PR base all point at nothing. `staging` is where the candidate lives
+and is real code, so it is the honest interim; `main` takes over the moment
+something is promoted to production.
+
+Setting it to `staging` is not the failure mode this file has recorded before —
+that was a default left pointing at a stale working branch nobody had touched in
+weeks. This one is the branch the work is actually on, and it is expected to
+move.
+
+**Until `main` exists, nothing reaches production** and no website URL above can
+become real. Cloudflare Pages deploys production from a production branch, and a
+branch preview alias may not resolve at all until the project has had one
+production deployment.
 
 ---
 
