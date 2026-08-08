@@ -119,10 +119,15 @@ Which parts exist today belongs in the README.
 
 > https://3d-printing-pal.pages.dev
 
-This URL does not exist yet. Cloudflare derives it from the Pages project name,
-which the deploy workflow creates as `3d-printing-pal` on the first push to
-`main` with both secrets present. Set this only once a deployment has actually
-been read in a log.
+**The Pages project now exists** — it was created by the first push to `staging`
+on 2026-08-08, and that deploy's log was read rather than inferred. But this
+apex address serves the PRODUCTION deployment, and there has not been one: `main`
+does not exist yet, so nothing has been promoted.
+
+So this value is right and is not yet true. Set it once something reaches `main`
+and that deploy has been read in a log. The staged candidate lives at
+`https://staging.3d-printing-pal.pages.dev` in the meantime, recorded in the
+repo's own NOTES.md where the handoff gate reads it.
 
 **Topics** — proposed 2026-08-07
 
