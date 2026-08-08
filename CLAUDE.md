@@ -63,6 +63,13 @@ Every item below has actually happened.
   who found a defect FEELS like provenance; it is not provenance.
   A HARD gate: `privacy-check.mjs` fails on attribution as well as disclosure,
   and it was watched going red on 42 real sites in the pre-scrub tree.
+- **Multi-stage work carries a LIVE STATUS PAGE, and its link goes in EVERY
+ progress reply** — not once at creation. Chat scrolls; on an iPad a plan agreed
+ on Monday is unreachable by Wednesday. Published once, updated in place at the
+ same URL, showing every stage's state, the staging/production versions, the
+ last SHA verified green, what is waiting on HIM, and what was found and NOT
+ fixed. **Him having to ask for the link is the signal the rule was broken** —
+ which is what happened, twice, during a seven-release run. (Doctrine §7i.)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
  range line in the output means nothing moved. (LESSONS, 2026-08-02.)

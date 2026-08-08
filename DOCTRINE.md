@@ -1252,6 +1252,46 @@ mock proves the mock works.
 in that repo's CLAUDE.md; being in one app's file is why it had to be asked for
 again elsewhere.)*
 
+## 7i. Multi-stage work carries a LIVE STATUS PAGE, and its link is handed over every time
+
+Any piece of work that will take more than one release — a staged plan, a
+migration, an audit worked through over days — gets a published status artifact,
+and **the link is given in every reply that reports progress on it.**
+
+**Why a page and not a message.** Chat scrolls. A plan agreed on Monday is
+forty screens up by Wednesday, and on an iPad it is unreachable. What the owner
+needs is not a longer message but a place that is always current and always one
+tap away: what is done, what is in flight, what is not started, and what is
+waiting on him. A page can be reopened; a message has to be found.
+
+**What it must show, and each is load-bearing:**
+
+- **Every stage, with its state** — done, in flight, not started — and the state
+  read from FORM as well as colour, because this doctrine's own accessibility
+  rule binds the status page too.
+- **The version on staging, the version in production, and the last SHA verified
+  green.** Those three are the honest answer to "what am I actually looking at",
+  and a page reporting a stage as shipped while production is nine releases
+  behind is a page that lies by omission.
+- **What is waiting on HIM**, marked apart from what is waiting on the work.
+  This is the half a progress bar cannot express and the half he needs most.
+- **What was found and NOT fixed**, and what was verified as *not* a defect.
+  A status page that only lists wins is an advertisement.
+
+**Redeployed at each stage, to the SAME URL.** A new link per update is a new
+thing to lose, which is the problem this solves. Publish once, update in place.
+
+**HAND THE LINK OVER EVERY TIME.** Not once at creation and never again — every
+reply that says a stage landed carries the URL. He should never have to ask for
+it, and asking for it is the signal this rule was broken.
+
+**It is not a substitute for saying what happened.** The reply still states the
+finding in words; the page is where the shape of the whole thing lives.
+
+*(Stated here 2026-08-07, at the owner's instruction, after he had to ask for the
+link a second time during a seven-release run. Quietkeep's V2 page is the worked
+example; every repo with staged work owes the same.)*
+
 ## 16. Security and the supply chain
 
 > **The switch-on list lives in [`SECURITY.md`](SECURITY.md)** — what runs
