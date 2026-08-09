@@ -104,10 +104,12 @@ URL this entry used to give were both 404 until then. Regenerate with
 
 # njefferson/3d-printing-pal
 
-The app is **print-tracker**; the repo keeps the name it was created with. Every
-item below is `proposed` — none of it is set until Noah applies it and says so.
+The app is **print-tracker**; the repo keeps the name it was created with. Every item below is **set**, applied on 2026-08-09 and then VERIFIED rather than
+taken on trust — the description, website, topics and default branch read back
+from the repository API, and the social preview from the page's own `og:image`
+host.
 
-**Description** — proposed 2026-08-07
+**Description** — set 2026-08-09
 
 > Track 3D print jobs, filament and models on your own device. Offline, no account.
 
@@ -115,24 +117,24 @@ Written for what the app IS rather than what it currently does: no feature, no
 module and no version in it, because those change and the description should not.
 Which parts exist today belongs in the README.
 
-**Website** — proposed 2026-08-08
+**Website** — set 2026-08-09
 
 > https://3d-printing-pal.pages.dev
 
 **This is now true.** 0.1.0 was promoted to `main` on the owner's say-so and the
 production deploy was read in its log rather than inferred — its steps ran, and
-wrangler reported the deployment complete. Ready to apply.
+wrangler reported the deployment complete.
 
-**Topics** — proposed 2026-08-07
+**Topics** — set 2026-08-09
 
 > `3d-printing` `filament` `kanban` `pwa` `offline-first` `indexeddb` `local-first` `no-account`
 
-**Social preview** — proposed 2026-08-08, REDRAWN 2026-08-08
+**Social preview** — set 2026-08-09
 
-**The card delivered earlier is superseded — upload the newer one.** The first
-carried the app's old spool mark, which read as an eye and has been replaced. A
-stale entry here is worse than a missing one, because this file is what the values
-get copied FROM.
+**Confirmed live.** The repo page's `og:image` points at
+`repository-images.githubusercontent.com`, which means the uploaded card is really
+in place — `opengraph.githubassets.com` would have meant GitHub was still
+auto-generating one and the upload had not taken.
 
 Delivered in chat as `social-preview.png` (1280x640), which is the size GitHub
 asks for. Source is the repo's own `social-card.html`, rendered by
@@ -157,12 +159,7 @@ rather than the element box, samples the lightest pixel under it, and fails belo
 4.5:1 at both aspect ratios. Worst line on the new card measures 10.4:1. It was
 planted red before it was trusted.
 
-**To verify after uploading it**, read the repo's raw HTML and look at the
-`og:image` host: `repository-images.githubusercontent.com` means the card really
-landed, `opengraph.githubassets.com` means GitHub is auto-generating one and the
-upload did not.
-
-**Default branch** — proposed 2026-08-08
+**Default branch** — set 2026-08-09
 
 > `main`
 
