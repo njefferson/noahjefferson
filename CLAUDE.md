@@ -8,6 +8,20 @@
 > **repo-metadata confirm rule** (§10). **Where anything below overlaps the
 > Doctrine, the Doctrine wins.** This file keeps only what is specific to this repo.
 
+## Start here: the brief is printed for you
+`.claude/hooks/session-start.sh` runs at session start and prints
+[`session-brief.mjs`](session-brief.mjs) — which branch this is versus where work
+belongs, whether the doctrine has moved since this repo last reconciled, the repo
+family, and every LESSONS title. **It exists because all of that was already
+written down and none of it was being read.** A session loads exactly one file
+automatically, and every other rule here had to be opened by somebody who
+remembered it existed.
+
+[`REPOS.md`](REPOS.md) is the map: six repos, their branch models, deploy targets
+and what each still owes. It did not exist until 2026-08-10, which is why
+sessions kept asking questions that had already been answered — the repo list had
+never been written anywhere, so there was nothing to remember it from.
+
 ## The rules that get broken anyway — read these before typing
 This is an INDEX, not a fork; the canonical text is in `DOCTRINE.md` and
 `LESSONS.md`. It exists because those two files must be OPENED, while this one
