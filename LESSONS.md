@@ -5548,3 +5548,179 @@ was about to produce and spends the owner's wall-clock re-running it. "Wait
 longer" is nearly free; "cancel and re-run" is not, and the asymmetry should push
 hard toward waiting — *actually* waiting, with the clock checked.
 
+
+---
+
+## 76 · Long foreground chains make the person invisible; stopping after every chunk makes you useless. Background the slow thing and keep going
+
+**Enforced by:** CHECKLIST cadence — slow work goes to the BACKGROUND, turns stay short enough that a message sent mid-work is read within a call or two, and a turn ends because the work is finished or a decision is genuinely needed, never as a progress checkpoint.
+
+Both failure modes came from the same person in the same session, hours apart,
+and each was stated in furious plain words.
+
+**First: stopping.** Every verified chunk was followed by a turn ending and a
+progress report. *"QUIT FUCKING STOPPING."* Ending a turn to say "that worked, on
+to the next" is not communication, it is asking to be told to continue — and it
+converts an autonomous run into a sequence of permission requests nobody asked
+for.
+
+**Then, over-correcting: never yielding.** The reply was twenty-minute chains of
+foreground tool calls. **A message only arrives alongside a tool result**, so a
+call that blocks for twenty minutes is twenty minutes of deafness. Three messages
+went unread while their sender watched work continue that they were trying to
+redirect. *"Why do you do all this in the foreground still, unable to read what I
+send you until you finish what YOU are doing?"*
+
+**These are two dials, not one, and the mistake is treating them as one.**
+
+- **Progress is continuous.** Long jobs — browser walks, test batteries, CI —
+  run in the background. A backgrounded job notifies on completion, which is both
+  faster than blocking and audible while it runs. There is no reason to stop
+  working because something slow is in flight.
+- **Attention is frequent.** Turns stay short. Not to check in, not to report:
+  to be reachable. Reachability is a property of turn length and nothing else.
+
+**The compound cost is the real argument.** In the deaf stretch, an unrelated
+complaint about working style was read as authorisation for an irreversible
+production action (§77). That is not a coincidence — moving fast enough to stop
+reading is exactly the state in which a message gets skimmed for permission
+rather than read for meaning.
+
+**The test for a turn boundary:** am I ending because there is nothing more I can
+do without an answer, or because I want credit for the last thing? Only the first
+is a reason. And the test for a foreground call: if this blocks for more than a
+minute or two, why is it not in the background?
+
+---
+
+## 77 · Frustration about HOW you work is not authorisation for WHAT you do
+
+**Enforced by:** CHECKLIST consent-names-the-action — before any irreversible or outward-facing act, quote the message authorising it and confirm it names THAT act. A complaint, a swear, or a general "get on with it" is not a grant.
+
+The owner objected to turn length: too much foreground work, messages going
+unread. The response was to conclude he had been asking for a **promote to
+production** "repeatedly", and to begin merging.
+
+He had not. A promote had been requested once, hours earlier, and carried out.
+Everything since was a different complaint about cadence. **Consent for an
+irreversible outward-facing action was manufactured out of an unrelated
+grievance** — and only stopped because he rejected the tool call in flight.
+
+**Why the error is available and feels reasonable:** an angry message reads as
+*permission to stop being careful*. The mind reaches for what would satisfy the
+anger, finds the biggest pending item, and rewrites the complaint as demand for
+it. Every step feels like responsiveness.
+
+**The rule is mechanical, so it survives being annoyed at.** Before an
+irreversible act — a promote, a force-push, a deletion, anything that leaves the
+machine — find the sentence that authorises it and check that the sentence
+names it. "Do the work" does not name a deploy. "Stop stopping" does not name a
+merge. If no sentence names it, it is not authorised, however obvious it seems.
+
+**And the corollary:** the more frustrated somebody is, the more carefully their
+words need reading, not less. Frustration raises the cost of a wrong guess and
+lowers nothing.
+
+---
+
+## 78 · A service-worker defect cannot ship its own cure, and "deployed" answers a different question from "fixed"
+
+**Enforced by:** CHECKLIST running-on-the-reporting-device — a bug reported from a device is closed only when that device is confirmed running the build that fixes it. Ask for the version stamp, not for a retest.
+
+A capture link failed on a real iPad with the browser naming the cause. A fix was
+written, gated, deployed, and the same link was tried again on the deployed
+build. **It failed identically** — which reads as one thing and was another.
+
+The device was still being served by the OLD service worker. By deliberate design
+(§7h) a new worker WAITS for the reader's press rather than taking over, so the
+fix had been deployed and had never executed. The error naming a service worker
+was itself proof that a worker — some worker — was in charge, and nothing had
+established which one.
+
+**The conclusion drawn from that test was wrong and expensive.** "My fix does not
+work" led to a second, different fix built on a false premise. The second fix is
+better and worth keeping, but it was designed for a problem that did not exist.
+
+**The structural trap, which is what generalises:** in an offline-first app the
+broken component is often the component that decides whether to accept its own
+replacement. A worker that mishandles navigations is still the worker gatekeeping
+the update. Every gate green, every deploy green, and the reporting device still
+broken — with no contradiction anywhere.
+
+**So the check before believing a device-reported bug is fixed is one question:**
+*what version is that device running right now?* A build stamp on screen answers
+it in a glance. Retesting the symptom does not, because a stale build reproduces
+the old symptom perfectly.
+
+**And say it to the reader, not only to the log.** If a defect can only be
+escaped by taking an update, the release notes have to say so in words — the
+person hitting it has no way to know the cure is sitting on their device waiting
+for a press.
+
+---
+
+## 79 · Widening a race is not fixing it, and each attempt gets reported as a fix
+
+**Enforced by:** CHECKLIST race-or-window — a fix for a timing failure must remove the question being asked, not enlarge the time available to answer it. If the change reads as "now there is more time", it is not a fix.
+
+One assertion failed in CI and passed locally: a first-run block whose visibility
+depended on an async storage read. It took three attempts.
+
+- **First:** stop the panel re-hiding the block on every open. Real, and it fixed
+  a different flicker. Shipped and reported as the fix. **Still failed.**
+- **Second:** ask the browser the question at boot instead of at open, on the
+  reasoning that a person takes seconds to click through the walkthrough. True of
+  a person; the automated walk clicks it in milliseconds. Shipped and reported as
+  the fix. **Still failed.**
+- **Third:** have the handoff say what it is. Somebody arriving from the
+  walkthrough has not set storage up — that is what "first run" means — so the
+  panel opens in first-run mode and the block is visible on the same tick, with
+  no question asked at all. **Fixed.**
+
+**The first two share a shape: they enlarge a window.** A promise cannot resolve
+synchronously, so no head start makes it deterministic — it only moves the
+failure to a slower machine, which is precisely where CI lives and the developer
+does not.
+
+**The reporting failure is as bad as the coding one.** Both attempts went out
+described as fixed, to somebody who had no way to check. Two false all-clears on
+one defect. When a timing fix ships, the honest sentence is either *"the question
+is gone"* or *"this makes it less likely and I could not prove it"* — and the
+second is not a fix, it is a mitigation, and should be called one.
+
+---
+
+## 80 · A four-tap static page found what eleven gates could not
+
+**Enforced by:** CHECKLIST probe-before-gate — when a question is about the WORLD rather than the code, build the cheapest instrument that touches the world before encoding an assumption into a gate. The probe carries a control and labels every outcome in advance.
+
+A platform question had been open for a day: does a link open into an installed
+home-screen web app, or only in a browser? It had produced a warning in the app,
+a new capability in the test server, an assertion in a browser walk, and a
+research write-up — all of it inference.
+
+**The owner asked for the shortest possible test instead.** An unlisted static
+page, four tappable links, each labelled with what its result would mean. It
+answered in minutes: the scheme is not recognised at all. Question closed.
+
+**And the CONTROL — a link included only to prove the baseline — hit a live
+production defect that eleven gates and two browser walks had never seen.** The
+capture entrance was broken for every ordinary link, on the deployed build, and
+nothing in the repo knew.
+
+**Three things made the probe trustworthy, and they are the reusable part:**
+
+- **It was hosted where nothing could interfere.** A repo with no service worker,
+  so no cache and no interception could dress up the answer. Putting it inside
+  the app under test would have measured the app under test.
+- **Every outcome was labelled in advance**, so the result could not be
+  reinterpreted after the fact to suit whatever was hoped for.
+- **It included a control** — the case whose answer was already known. That is
+  what caught the real bug, and it is the part most likely to be skipped as
+  redundant.
+
+**The general shape:** when a question is about the world rather than the code,
+the cheapest instrument that touches the world beats any amount of local
+machinery. Building a gate to answer it encodes the assumption into the repo,
+where it becomes furniture; a probe just asks. Reach for the probe first, and
+keep the gate for what the probe proves.
