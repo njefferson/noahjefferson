@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>webapp:// test</title>
+<title>webapp:// test — answered</title>
 <style>
   :root { color-scheme: light dark; }
   body {
@@ -28,31 +28,31 @@
 </head>
 <body>
 
-<h1>webapp:// test</h1>
-<p class="lede">Four taps. Each one says what its result means. Nothing here writes
-anything except test 2 and 3, and both label what they wrote.</p>
+<h1>Answered &mdash; and one thing left to check</h1>
+<p class="lede">Test 1 came back <em>&ldquo;the address is invalid&rdquo;</em>: Safari does not know
+<code>webapp://</code> at all, so there is no way to open a link into the installed
+app on this device. That question is closed.</p>
+<p class="lede">Test 4 found something bigger. It is an ordinary link, and it failed with
+<em>&ldquo;Response served by service worker has redirections&rdquo;</em> &mdash; on
+<strong>production</strong>, which does not yet have the fix. The two taps below are
+the same link on each side.</p>
 
-<a class="t" href="webapp://quietkeep-sync.pages.dev">1 &nbsp;Does webapp:// open the installed app?</a>
-<p class="m"><strong>Quietkeep opens</strong> → the scheme works and the destination problem is solvable.<br>
-<strong>Safari opens, or nothing happens</strong> → it does not work here, and that is the end of the idea.</p>
+<a class="t" href="https://staging.quietkeep.pages.dev/capture?text=WEBAPPTEST-STAGING">A &nbsp;The capture link on STAGING (has the fix)</a>
+<p class="m"><strong>Quietkeep opens and says &ldquo;Held from a link&rdquo;</strong> &rarr; the fix works on your device. Promote it.<br>
+<strong>Same service-worker error</strong> &rarr; the fix does not hold here and I have more to do.</p>
 
-<a class="t" href="webapp://quietkeep-sync.pages.dev/capture?text=WEBAPPTEST-TWO">2 &nbsp;Does it carry the text?</a>
-<p class="m"><strong>App opens AND says “Held from a link”</strong> → the path and query survive; the research was wrong and this route works today.<br>
-<strong>App opens with nothing held</strong> → the query was dropped, as reported. The app is right, the note is gone.</p>
-
-<a class="t" href="webapp://quietkeep.pages.dev/capture?text=WEBAPPTEST-THREE">3 &nbsp;Same again, other edition</a>
-<p class="m">Only meaningful if you have the <em>non-Sync</em> Quietkeep on your Home Screen too. Skip it if you do not.</p>
-
-<a class="t" href="https://quietkeep-sync.pages.dev/capture?text=WEBAPPTEST-CONTROL">4 &nbsp;The control &mdash; an ordinary link</a>
-<p class="m">Expected to open <strong>Safari</strong> and hold the text there. If this opens the
-installed app instead, then everything above is measuring the wrong thing and
-iOS is capturing links after all.</p>
+<a class="t" href="https://quietkeep-sync.pages.dev/capture?text=WEBAPPTEST-PROD">B &nbsp;The same link on PRODUCTION (no fix)</a>
+<p class="m">Expected to fail with the service-worker error, as it just did. Only tap it if
+you want to see the two side by side &mdash; it proves the difference is the fix and not the day.</p>
 
 <hr>
 
-<p class="m">Anything held by 2, 3 or 4 is labelled <code>WEBAPPTEST-…</code> so you can
-find and bin it. Test 4 in particular lands in Safari&rsquo;s copy, which is the whole
-point of the exercise.</p>
+<p class="m"><strong>Note on A:</strong> staging is a different address from the app on your
+Home Screen, so it will open in Safari and hold the note in Safari&rsquo;s copy. That is
+expected and is not what is being tested here &mdash; what is being tested is whether the
+page loads at all.</p>
+
+<p class="m">Anything held is labelled <code>WEBAPPTEST-&hellip;</code> so you can find and bin it.</p>
 
 <p class="m">This page is unlisted scratch, not part of the site. Say the word and it goes.</p>
 
