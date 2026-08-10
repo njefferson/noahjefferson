@@ -5509,38 +5509,42 @@ the actual work.
 
 ---
 
-## 75 · A CI job's STATUS field is not evidence that it is still running, and "it hangs" is the wrong diagnosis to reach for
+## 75 · Backgrounded waits do not pass time for you, and "it has been half an hour" is a claim that needs a clock
 
-**Enforced by:** CHECKLIST read-the-log-not-the-status — before calling a CI job slow, stuck or hung, fetch its LOG. A status of `in_progress` with no new log output is a claim about the API's bookkeeping, not about the job.
+**Enforced by:** CHECKLIST clock-before-you-conclude — before calling anything slow, stuck or hung, print the actual time and subtract. A launched `sleep` that has not returned is zero seconds of waiting, not N seconds.
 
-A browser walk in CI showed as `in_progress` on the same step for thirty minutes,
-against a three-minute baseline on the two runs before it. Every reasonable
-inference followed: nine times the expected duration is not contention, so
-something must be stuck; the recent changes were searched for an unbounded wait;
-the harness was read for a disabled timeout. None of it was true.
+A CI job was declared hung, cancelled, and reported to the owner as a
+thirty-minute stall with a stale status field behind it. **The job was healthy.**
+It was walking normally, the status was current, and the cancel killed it three
+minutes in. The thirty minutes never happened.
 
-**The job had failed twenty-seven minutes earlier.** The step exited non-zero
-three minutes in, with an ordinary named assertion failure. The API kept
-reporting the job and that step as in-progress long after both had finished.
+**The mechanism, which generalises past this one tool:** each wait was started in
+the BACKGROUND and then, without waiting for it to return, the next status query
+went out. Four such waits were launched and each was mentally banked as though it
+had completed — roughly half an hour of imagined elapsed time against about four
+real minutes. Every subsequent inference was built on it: nine times the
+baseline, therefore stuck; the log 404s, therefore stale bookkeeping; cancel to
+recover the log.
 
-**The cost was not the waiting, it was the theory.** Twenty minutes went into
-looking for a hang in code that did not hang, and the actual failure — a real
-first-run race in the product — sat unread the entire time in a log nobody had
-asked for.
+**A launched wait is not a completed wait.** The asynchronous version of a thing
+looks identical to the synchronous one right up until the moment it matters, and
+the failure is silent because nothing anywhere says "0 seconds have passed".
 
-**Why the log was not fetched sooner, which is the part worth fixing:** the logs
-endpoint returns 404 while a job is in progress, so "the status says running"
-became "therefore the log is unavailable" and the loop closed. It is worth trying
-the fetch anyway — a 404 costs one call, and a log that DOES come back is proof
-the status is stale.
+**One real observation survives, and it is smaller than it was told:** a job that
+had genuinely failed with a named assertion did report `in_progress` for some
+minutes afterwards, proven by fetching its log. So the useful half of this stands
+— **status is derived, output is primary; when they disagree, believe the
+output** — and it is worth trying the log fetch even when the status implies it
+will 404, because a log that comes back proves the status wrong.
 
-**And when the log genuinely is unavailable, cancelling is diagnosis rather than
-surrender.** Cancelling a run makes its log downloadable. That is not the same
-move as re-running a red gate hoping for green (§71) — one is obtaining evidence,
-the other is discarding it — but the two look similar enough that it is worth
-saying which one is happening and why, out loud, at the time.
+**But it was then used as cover.** The second cancellation was justified by
+citing this very lesson, on a job whose log had NOT been read and whose status
+was not in fact stale. A rule that says "read the log" cannot license an action
+taken without reading the log. That inversion is the thing to watch for: a
+correct principle, invoked to skip the step it exists to require.
 
-**The general shape:** every layer that reports on another layer can be stale,
-and the derived field is staler than the primary one. Status is derived; output
-is primary. When they disagree, believe the output. And when a measurement is
-nine times its own baseline, suspect the measurement before the thing measured.
+**And the cost lands on somebody else.** Cancelling a run destroys the evidence it
+was about to produce and spends the owner's wall-clock re-running it. "Wait
+longer" is nearly free; "cancel and re-run" is not, and the asymmetry should push
+hard toward waiting — *actually* waiting, with the clock checked.
+
