@@ -5361,3 +5361,90 @@ The question is never "does it happen again", it is "what was different", and th
 answer is usually something asynchronous that nobody promised to wait for.
 Convert the timing into a condition you can set, or the next person to see it
 will have exactly as little to go on as you did.
+
+---
+
+## 72 · A gate that names ONE surface is satisfied by moving the content to a surface it does not name
+
+**Enforced by:** GATE quietkeep:tools/size-check.mjs — every destination measured by name, plus their SUM, so filing cannot pass as cutting.
+
+A budget on how much a reader has to get through was added after a report that
+an app read like an encyclopedia. It measured three things, and one of them was
+the rendered scroll height of the information panel: `#about-body`, at phone
+width, 9,000px.
+
+Two releases later that panel was split into six destinations. The number it had
+been measuring fell from 9,000-odd to 2,459 — **by three quarters, without one
+word being cut.** The reading did not go anywhere. It went somewhere the gate
+could not see, and the gate said *within budget* about an app that had exactly as
+much in it as the day the complaint was made.
+
+**This is not a bug in the gate. It is what a gate scoped to a name does.** The
+selector `#about-body` is an implementation detail wearing the costume of a
+measurement. Every refactor is free to satisfy it, and the more thorough the
+refactor the better it scores.
+
+**The fix has two halves and the second is the one that matters:**
+
+- **Enumerate the surfaces and measure each**, so a new screen is a new number
+  rather than a hiding place. This half is obvious once the failure is seen.
+- **Measure the SUM, and hold it.** Without it, "split it again" is always
+  available and always passes. The total is the only number that is about the
+  product rather than about the layout, and it is the one a reader's actual
+  experience tracks — they do not read one screen, they go looking.
+
+**And say what the total is FOR in the gate's own words.** Here the split moved
+10,830px around and cut nothing, and the comment beside the number says so:
+*"Set just above today's measurement, as a ratchet. It is not a target that has
+been met."* A budget set at what a thing currently measures is a ratchet; a
+budget described as an achievement is a false receipt. The same number, and the
+difference is one sentence nobody is forced to write.
+
+**The test for any budget, before trusting it:** name a refactor that would
+satisfy it without changing what a person experiences. If one exists, the gate is
+measuring the code's shape and not the product.
+
+---
+
+## 73 · Splitting one surface into five re-creates every per-surface obligation five times, and none of them are in the diff
+
+**Enforced by:** CHECKLIST split-repeats-the-obligations — when a surface becomes several, list what the ORIGINAL had that was hard-won (the way out, the repaint, the focus return, the overflow rule) and assert each on every new surface before believing the split.
+
+One dialog became six. Every element kept its id and its classes, no handler
+changed, the typecheck was clean and the structural walk was green. Three
+separate defects had shipped, and all three were things the original surface had
+solved years of releases earlier.
+
+- **The way out went off the bottom.** The original was a flex column that did
+  not scroll, with the close control outside the box that did — a fix recorded
+  in the CSS as *"found twice, on device"*. The new sheets were ordinary
+  dialogs: the whole box scrolled, and the Close sat after the body, inside it.
+  On three of five, at phone width, scrolling to the end put the way out off
+  screen. **The exact defect, reintroduced five times over, by a change that
+  touched no CSS at all.**
+- **The repaint stopped running.** Half of what those screens showed was read
+  from storage at open time, by the panel's own open handler. The elements moved
+  out from under it while the handler went on calling for them, so a screen
+  reached by the new route showed the state the app was in at boot. The file's
+  own comments record that same defect being fixed twice before.
+- **The accessibility gate stopped measuring three quarters of it.** Its registry
+  was one list because the surface was one dialog. Split by surface, nine entries
+  went red immediately — each one naming a control the gate had been claiming to
+  check on a screen it was not on.
+
+**The reason none of it appeared in review:** a split diff is almost entirely
+moved lines. The eye reads *this block is now over here*, correctly, and there is
+nothing on screen that says *and the property that block relied on came from its
+old parent*. Inherited behaviour has no diff.
+
+**So the move is to enumerate before splitting, not to review after.** Take the
+original surface and write down what it does that was expensive to learn — every
+comment beginning "found on device" is one. Each entry becomes an assertion, and
+each assertion runs against every new surface. Here that meant one loop over five
+ids asking the browser whether each Close was on screen and unobstructed at the
+bottom of its own scroll, and it went red on three the first time it ran.
+
+**The general shape:** a container's children inherit properties nobody wrote
+down, because the container was where they were written. Splitting the container
+is the moment those properties become five separate promises, and the moment
+nobody can see that they were ever one.
