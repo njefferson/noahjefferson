@@ -5506,3 +5506,41 @@ believed early; a missing capability in the rig is a boring answer, so it gets
 checked late. Reverse that. And when a planted defect passes, that is never
 reassurance — it means the plant did not reach the code, and finding out why is
 the actual work.
+
+---
+
+## 75 · A CI job's STATUS field is not evidence that it is still running, and "it hangs" is the wrong diagnosis to reach for
+
+**Enforced by:** CHECKLIST read-the-log-not-the-status — before calling a CI job slow, stuck or hung, fetch its LOG. A status of `in_progress` with no new log output is a claim about the API's bookkeeping, not about the job.
+
+A browser walk in CI showed as `in_progress` on the same step for thirty minutes,
+against a three-minute baseline on the two runs before it. Every reasonable
+inference followed: nine times the expected duration is not contention, so
+something must be stuck; the recent changes were searched for an unbounded wait;
+the harness was read for a disabled timeout. None of it was true.
+
+**The job had failed twenty-seven minutes earlier.** The step exited non-zero
+three minutes in, with an ordinary named assertion failure. The API kept
+reporting the job and that step as in-progress long after both had finished.
+
+**The cost was not the waiting, it was the theory.** Twenty minutes went into
+looking for a hang in code that did not hang, and the actual failure — a real
+first-run race in the product — sat unread the entire time in a log nobody had
+asked for.
+
+**Why the log was not fetched sooner, which is the part worth fixing:** the logs
+endpoint returns 404 while a job is in progress, so "the status says running"
+became "therefore the log is unavailable" and the loop closed. It is worth trying
+the fetch anyway — a 404 costs one call, and a log that DOES come back is proof
+the status is stale.
+
+**And when the log genuinely is unavailable, cancelling is diagnosis rather than
+surrender.** Cancelling a run makes its log downloadable. That is not the same
+move as re-running a red gate hoping for green (§71) — one is obtaining evidence,
+the other is discarding it — but the two look similar enough that it is worth
+saying which one is happening and why, out loud, at the time.
+
+**The general shape:** every layer that reports on another layer can be stale,
+and the derived field is staler than the primary one. Status is derived; output
+is primary. When they disagree, believe the output. And when a measurement is
+nine times its own baseline, suspect the measurement before the thing measured.
