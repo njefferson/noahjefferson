@@ -163,11 +163,24 @@ doctrine rule changes, edit it HERE and tell the sibling repos to re-point
 (their `CLAUDE.md` files link to this copy). Never fork the doctrine into
 another repo — link to it.
 
-## Ten gates live here and serve every repo
+## Eleven gates live here and serve every repo
 Never fork these either — they take `--repo ../app` (or a path) so a sibling
 runs them without copying them, which is what stops five divergent versions
 existing.
 
+- [`branch-guard.mjs`](branch-guard.mjs) — **refuses a commit on the wrong
+ branch**, which an instruction in a file never once managed. A session checks
+ production out to promote, does not switch back, and commits the next release
+ onto production; nothing about the act looks different at the time. Each repo
+ declares `.branch-guard` (`work=`, optional `promote=` and `escape=`) and this
+ GENERATES the hook — a hook has to be a real file in the repo, so the copy in a
+ sibling is an artefact like CHANGELOG.md, and running it without `--install`
+ fails on drift. **It installs into `.git/hooks`, never `core.hooksPath`**: the
+ first version pointed at the tracked directory and failed OPEN, because
+ checking out an older branch deletes the hook with it, and the branch most in
+ need of protecting is the one most likely to be older. Wire the install into
+ whatever the repo runs on setup — `npm ci` via `prepare` where there is a
+ package.json.
 - [`palette-check.mjs`](palette-check.mjs) — the colour floors (PALETTES.md).
 - [`docs-check.mjs`](docs-check.mjs) — the no-grid rule (Doctrine §2) over every
  tracked `.md`. `node docs-check.mjs .` from the hub, or
