@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>webapp:// test</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0; padding: 1.25rem;
+    font: 17px/1.5 -apple-system, system-ui, sans-serif;
+    max-width: 34rem;
+  }
+  h1 { font-size: 1.25rem; margin: 0 0 0.25rem; }
+  .lede { margin: 0 0 1.5rem; opacity: 0.75; }
+  a.t {
+    display: block; margin: 0 0 0.35rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid currentColor; border-radius: 10px;
+    text-decoration: none; font-weight: 600;
+    min-height: 44px; box-sizing: border-box;
+  }
+  p.m { margin: 0 0 1.5rem; font-size: 0.9375rem; opacity: 0.8; }
+  code { font-size: 0.875em; overflow-wrap: anywhere; }
+  hr { border: 0; border-top: 1px solid currentColor; opacity: 0.2; margin: 1.75rem 0; }
+</style>
+</head>
+<body>
+
+<h1>webapp:// test</h1>
+<p class="lede">Four taps. Each one says what its result means. Nothing here writes
+anything except test 2 and 3, and both label what they wrote.</p>
+
+<a class="t" href="webapp://quietkeep-sync.pages.dev">1 &nbsp;Does webapp:// open the installed app?</a>
+<p class="m"><strong>Quietkeep opens</strong> → the scheme works and the destination problem is solvable.<br>
+<strong>Safari opens, or nothing happens</strong> → it does not work here, and that is the end of the idea.</p>
+
+<a class="t" href="webapp://quietkeep-sync.pages.dev/capture?text=WEBAPPTEST-TWO">2 &nbsp;Does it carry the text?</a>
+<p class="m"><strong>App opens AND says “Held from a link”</strong> → the path and query survive; the research was wrong and this route works today.<br>
+<strong>App opens with nothing held</strong> → the query was dropped, as reported. The app is right, the note is gone.</p>
+
+<a class="t" href="webapp://quietkeep.pages.dev/capture?text=WEBAPPTEST-THREE">3 &nbsp;Same again, other edition</a>
+<p class="m">Only meaningful if you have the <em>non-Sync</em> Quietkeep on your Home Screen too. Skip it if you do not.</p>
+
+<a class="t" href="https://quietkeep-sync.pages.dev/capture?text=WEBAPPTEST-CONTROL">4 &nbsp;The control &mdash; an ordinary link</a>
+<p class="m">Expected to open <strong>Safari</strong> and hold the text there. If this opens the
+installed app instead, then everything above is measuring the wrong thing and
+iOS is capturing links after all.</p>
+
+<hr>
+
+<p class="m">Anything held by 2, 3 or 4 is labelled <code>WEBAPPTEST-…</code> so you can
+find and bin it. Test 4 in particular lands in Safari&rsquo;s copy, which is the whole
+point of the exercise.</p>
+
+<p class="m">This page is unlisted scratch, not part of the site. Say the word and it goes.</p>
+
+</body>
+</html>
