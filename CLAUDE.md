@@ -292,8 +292,20 @@ in the app, reachable from somewhere they already go — the current release at
 minimum, written in their words, **including what is still broken**, and
 generated from one source rather than typed twice. Added at the owner's instruction
 on 2026-08-03. The sibling repos inherit it and each needs the surface built.
-**Intersecting Parallels has one** (1.19.0, generated from CHANGELOG.md with a
-`notes:check` that fails on drift); the others still do not.
+
+**THREE HAVE ONE, and this paragraph said otherwise for a week.** Intersecting
+Parallels (1.19.0, generated from CHANGELOG.md with a `notes:check` that fails on
+drift), fauxplane (`releases.js`, one source, version-pinned by a test) and
+Quietkeep (`src/ui/changelog.ts`, held identical to CHANGELOG.md and to the
+service-worker triplet by `tools/changelog.mjs --check`). **3d-printing-pal and
+photo-pointer still do not.**
+
+This sentence used to read "Intersecting Parallels has one; the others still do
+not", which was true when written and was never updated as the other two built
+theirs — while the per-app list ninety lines above this said all three had them.
+**One file, two answers.** The per-app list is the one that gets maintained,
+because it is the one a session checks before offering to build a surface again;
+so this paragraph now points at it rather than restating it.
 
 ## Cross-app connective tissue
 This hub links OUT to every sibling app, and each app links back. It also hosts
