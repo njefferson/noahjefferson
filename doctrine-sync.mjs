@@ -31,14 +31,16 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { resolve, join, dirname } from 'node:path';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { repoFromArgv } from './gate-args.mjs';
 
 const HUB = dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
-const ri = argv.indexOf('--repo');
-const REPO = ri >= 0 && argv[ri + 1] ? resolve(argv[ri + 1]) : HUB;
-const NAME = REPO.split('/').pop();
+// A BARE PATH IS A TYPO, NOT A TARGET — see gate-args.mjs. A positional path
+// used to be discarded, and the gate then reported green for whichever repo it
+// was standing in, under that repo's name.
+const { REPO, NAME, GIVEN } = repoFromArgv(argv, { gate: 'doctrine-sync.mjs', fallback: HUB });
 const ADOPT = argv.includes('--adopt');
 const QUIET = argv.includes('--quiet');
 const NO_FETCH = argv.includes('--no-fetch');
@@ -85,7 +87,7 @@ if (!existsSync(MARKER)) {
   console.error(
     `\n${NAME} has no .doctrine-sync, so nothing records which doctrine it was written against.`
     + '\nRead DOCTRINE.md and LESSONS.md, then:'
-    + `\n  node doctrine-sync.mjs --repo ${argv[ri + 1] ?? '.'} --adopt`,
+    + `\n  node doctrine-sync.mjs --repo ${GIVEN} --adopt`,
   );
   process.exit(1);
 }
@@ -170,6 +172,6 @@ if (ADOPT) {
 console.error(
   `\n${relevant.length} file(s) this repo is held to have changed and have not been reconciled.`
   + '\nRead them, apply anything this repo now owes, then:'
-  + `\n  node doctrine-sync.mjs --repo ${argv[ri + 1] ?? '.'} --adopt`,
+  + `\n  node doctrine-sync.mjs --repo ${GIVEN} --adopt`,
 );
 process.exit(1);

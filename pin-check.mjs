@@ -19,13 +19,16 @@
 // EXITS NON-ZERO on any failure.
 
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
-import { resolve, join, dirname } from 'node:path';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { repoFromArgv } from './gate-args.mjs';
 
 const HUB = dirname(fileURLToPath(import.meta.url));
-const i = process.argv.indexOf('--repo');
-const REPO = i >= 0 && process.argv[i + 1] ? resolve(process.argv[i + 1]) : HUB;
-const NAME = REPO.split('/').pop();
+// A BARE PATH IS A TYPO, NOT A TARGET — see gate-args.mjs. A positional path
+// used to be discarded, and the gate then reported green for whichever repo it
+// was standing in, under that repo's name.
+const { REPO, NAME } = repoFromArgv(process.argv.slice(2),
+  { gate: 'pin-check.mjs', fallback: HUB });
 
 const failures = [];
 const notes = [];

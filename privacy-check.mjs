@@ -40,13 +40,12 @@
 
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { resolve } from 'node:path';
 import { ATTRIBUTION, DISCLOSURE, HIS_LIFE, REGION_FORBIDDEN, split } from './privacy-patterns.mjs';
+import { repoFromArgv } from './gate-args.mjs';
 
-const argv = process.argv.slice(2);
-const ri = argv.indexOf('--repo');
-const REPO = ri >= 0 && argv[ri + 1] ? resolve(argv[ri + 1]) : process.cwd();
-const NAME = REPO.split('/').pop();
+// A BARE PATH IS A TYPO, NOT A TARGET — see gate-args.mjs for what it used to
+// do instead, which was print a clean green under the wrong repo's name.
+const { REPO, NAME } = repoFromArgv(process.argv.slice(2), { gate: 'privacy-check.mjs' });
 
 /**
  * Binary extensions, and NOTHING ELSE, are skipped.

@@ -33,13 +33,14 @@
 // EXITS NON-ZERO on any hit.
 
 import { execFileSync } from 'node:child_process';
-import { resolve } from 'node:path';
 import { ATTRIBUTION, DISCLOSURE, REGION_FORBIDDEN, BEGIN, END, isPatternSource } from './privacy-patterns.mjs';
+import { repoFromArgv } from './gate-args.mjs';
 
 const argv = process.argv.slice(2);
-const ri = argv.indexOf('--repo');
-const REPO = ri >= 0 && argv[ri + 1] ? resolve(argv[ri + 1]) : process.cwd();
-const NAME = REPO.split('/').pop();
+// A BARE PATH IS A TYPO, NOT A TARGET — see gate-args.mjs. A positional path
+// used to be discarded, and the gate then reported green for whichever repo it
+// was standing in, under that repo's name.
+const { REPO, NAME } = repoFromArgv(argv, { gate: 'privacy-history-check.mjs' });
 
 const TEXT = /\.(md|ts|mjs|js|html|txt|json|yml|yaml)$/;
 const git = args => execFileSync('git', ['-C', REPO, ...args], { encoding: 'utf8', maxBuffer: 1 << 28 });
