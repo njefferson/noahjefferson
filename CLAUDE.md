@@ -84,6 +84,19 @@ Every item below has actually happened.
  last SHA verified green, what is waiting on HIM, and what was found and NOT
  fixed. **Him having to ask for the link is the signal the rule was broken** —
  which is what happened, twice, during a seven-release run. (Doctrine §7i.)
+- **CONFORMANCE IS NOT REACHABLE — ask who takes this route, with what hand.**
+ These apps are used on a TABLET, BY TOUCH, and every accessibility gate in the
+ family measures conformance, which is defined for input methods in general.
+ Quietkeep shipped the textbook skip-link — off-canvas until focused — from its
+ first commit, with `autofocus` in the SAME commit putting the document's focus
+ after it, so it was never reachable by tabbing forward either. Unreachable by
+ finger for 142 releases, with contrast, focus rings, targets and axe green
+ throughout in both themes, while the thing it was the only route to sat 4.9
+ screens down on a phone. **A feature nobody can reach is worse than a missing
+ one** — its presence in the source answers "have we handled this" for everyone
+ after. A focus-revealed control is a KEYBOARD route: keep it, and give the same
+ destination something a finger can reach. (Doctrine §4; LESSONS §95;
+ `quietkeep:tools/touch-check.mjs`.)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
  range line in the output means nothing moved. (LESSONS, 2026-08-02.)

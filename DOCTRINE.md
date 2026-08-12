@@ -181,6 +181,38 @@ The owner is iPad-first and often driving. So:
 
 ## 4. Accessibility is a hard gate (top priority, owner mandate)
 
+**AND CONFORMANCE IS NOT THE SAME AS REACHABLE. Ask who takes this route, with
+what hand, before writing it** — added 2026-08-12, and it is first here because
+everything below it can be green while the answer is *nobody*.
+
+Every app in this family is used on a TABLET, BY TOUCH. Every rule below this one
+measures conformance, and conformance is specified for input methods in general:
+a route built correctly for a keyboard passes all of it.
+
+Quietkeep carried the textbook WCAG 2.4.1 bypass-blocks pattern — a skip link at
+`left:-9999px`, revealed on `:focus` — from its first commit. The same commit
+gave the capture field `autofocus`, which puts the document's focus AFTER that
+link, so it was never reachable by tabbing forward either. **It was born
+unreachable for its own stated purpose and shipped that way for 142 releases**,
+while the thing it was the only route to sat 3.0 screens down at 820x1180 and 4.9
+at 390x844 on a full store. Contrast, focus rings, target sizes and axe were all
+green throughout, correctly, in both themes, at a stressed viewport.
+
+So, for anything whose job is to GET somewhere:
+
+- **NAME the input method that will use it, before writing it.** Not "is it
+ accessible" — which it was — but which hand takes this route.
+- **A focus-revealed control is a KEYBOARD route.** Keep it, it is the right
+ pattern; it is not sufficient on its own here. Give the same destination a
+ control a finger can reach, and DECLARE the pairing so a gate can check it
+ (`data-touch-partner="#id"`, `quietkeep:tools/touch-check.mjs`).
+- **Drive it in the walk the way it will actually be used.** A walk that reaches
+ a control by `Tab` has proved a keyboard can reach it and nothing else.
+- **A feature nobody can reach is worse than a missing one**, because its
+ presence in the source answers "have we handled this" for every future reader.
+
+(Hub LESSONS §95.)
+
 Hue-only encoding is a FAIL STATE — broken the same as a crash, not a taste
 issue.
 - DESIGN step: for each new or changed visual encoding, STATE its non-hue
