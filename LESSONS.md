@@ -6609,3 +6609,113 @@ there" feels like defensive care rather than like an escape hatch.
 **The tell when reviewing your own assertion:** ask what the gate would report if
 the feature were deleted entirely. If the answer is "green", it is not a check —
 whatever its output says.
+
+## 101 · A repo can have twenty tools that measure the app and none that shows it — and the one you write to fix that will render a state no person can reach
+
+**Enforced by:** CHECKLIST look-at-it — before answering any question about how a
+UI reads, render it and look. And a tool that drives the app for a picture uses
+REAL input events (`page.tap` / `page.click` with `hasTouch`), never
+`element.click()` inside `page.evaluate`: a synthetic click is not a user
+interaction, so the browser's focus modality stays wherever it was and the
+picture shows focus rings a finger never gets.
+
+An app was asked, in effect, whether the UI it had arrived at by iteration was
+the UI a version designed whole would have. The answer came back as pixel
+offsets, control counts and screens-to-first-thing. **The app was never rendered
+and looked at.** The repo had twenty gates — contrast, targets, separation,
+axe, budgets, vocabulary, a full two-theme walk of thirty-three states — and not
+one of them produced a picture.
+
+**Every defect reported from the device across seven releases was visible at a
+glance and came from none of the numbers.** Text that scaled the letters and not
+the boxes. A proof line cut through the middle of its own sentence. Two buttons
+touching. A screen showing exactly one task that was still too busy to begin in.
+Each was found by a person looking at a screen, and each was green in CI at the
+time, correctly — the gates measured what they measured.
+
+**What one picture had that no number did**, on a screen every gate passed:
+eleven outlined rounded rectangles of identical visual weight, so nothing led;
+the task itself drawn as a bordered box identical to the capture field above it
+and the input below it, so the one thing the app exists to hand somebody was
+rendered as a form to fill in; six verbs as six full-width boxes stacking one
+per line; three dark-filled buttons of equal loudness on one screen. **Visual
+weight is not a quantity any of those gates were built to hold**, and "nothing
+recedes so nothing leads" has no threshold to fail.
+
+**Then the looking tool did it too, within an hour.** Its first version drove the
+app with `element.click()` inside `page.evaluate`. Chromium does not count that
+as a user interaction, so the focus modality is left at whatever it was, and the
+picture it produced of the app's quietest mode had a 3px focus ring painted
+around the heading — the loudest box on a screen whose entire purpose is that
+nothing is loud. That ring is not in the app. Probed with a real tap:
+`:focus-visible` false, `outline` 0px. Probed with the keyboard: the ring, which
+is exactly correct. **A tool built to show the truth about a screen had been
+rendering a state no person can reach**, and it nearly bought a "fix" to
+behaviour that was already right.
+
+**That is this family's oldest defect wearing a new hat** — the check whose
+passing branch measures something other than the thing (§100), the audit that
+asked about intersection when the report was about abutment, the target list
+that hid four undersized controls for months. The novelty is only that this one
+produced a *picture*, and a picture is believed on sight in a way a number is
+argued with.
+
+**Three things to take:**
+
+- **A gate suite with no renderer is not complete**, however many gates it has.
+  Add the tool that draws the screen, give it a one-word command, and make it
+  assert nothing — its output is for a person's eyes, and an exit code would
+  only invite somebody to satisfy it instead of looking.
+- **Photograph the whole page, not the first screen.** What is below the fold is
+  the half nobody looks at and the half that grows without anyone deciding to.
+- **Verify before you fix what a picture shows you.** The instrument is part of
+  the picture. Reproduce the defect through the route a person takes — with the
+  right input modality — before changing a line.
+
+## 102 · Quoting the person who reported a defect, in the product's own release notes, is the attribution rule reaching a surface nobody checks
+
+**Enforced by:** JUDGEMENT — no gate. Detecting it means telling "you said it was
+hot" (the reader's own data, correct product voice) from "you said the screen was
+too busy" (somebody's report, republished), and a checker that cannot tell them
+apart teaches sessions to route around it, which is worse than none.
+
+**Smell:** a release note, commit message or PR body that opens by telling the
+reader what they said. "You said", "you told me", "you asked for", "what you
+said on <date>" — where the object is a judgement about the app rather than
+something the reader entered into it. If deleting the clause leaves the
+engineering fact intact, the clause was somebody's words and does not belong.
+
+The rule is already written down and already hard-gated in the files: never quote
+the person who found a defect, never attribute anything to them by name. Write
+what was wrong and what it measured. The gate that enforces it scans tracked
+files for disclosure and attribution patterns.
+
+**It was being broken in the shipped product, in the app's own patch notes**, and
+the gate was green throughout because the shape is not a disclosure pattern. Two
+releases opened with the reporter's words as the justification:
+
+- *"You said a screen showing exactly one task was terrifyingly busy and you did
+  not want to begin in it."*
+- *"This is the answer to what you said on 4 August — no feeling of being shown
+  the right things."*
+
+**The second-person voice is exactly what hides it.** Patch notes speak to the
+reader as "you" everywhere and correctly so — "the one you called hot", "you said
+not yet, and that holds" — so a sentence that begins "You said" reads as house
+style rather than as a quotation. To a stranger reading the notes, "you" is them.
+To the person who actually said it, it is their own frustration printed back at
+them under their own name, in a public repo and in the running app.
+
+**And the date makes the second one worse.** A dated report attached to a person
+is provenance, and provenance is the thing this rule exists to refuse: quoting
+the reporter FEELS like giving credit and is not.
+
+**The right shape was already in the same file, three releases earlier:**
+*"Reported from a device: X and Y overlap. They were 0.0 pixels apart."* That
+carries the whole engineering fact — what was wrong, and what it measured — and
+carries nobody's words.
+
+**The general form: a rule with a gate gets checked where the gate reaches, and
+the surface it does not reach is where the rule quietly stops applying.** Ask of
+any hard-gated rule which surfaces the gate actually scans, and go and read the
+ones it does not.
