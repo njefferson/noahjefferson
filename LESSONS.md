@@ -6959,6 +6959,26 @@ memory of a list that was on screen. The list says seven failures and three
 cancellations. A lesson that rounds its own evidence is teaching the habit it
 exists to correct.)
 
+**AND IT HAPPENED AGAIN IN THE SAME SESSION, AFTER THIS PARAGRAPH WAS WRITTEN.**
+A stalling CI step was reported as "25+ minutes on one run and 15+ on the next".
+The timestamps say **10m35s and about 3 minutes**, and both ended because the run
+was CANCELLED rather than because the step finished — against a healthy baseline
+of **24 seconds**, which is the number that made it a finding at all. The
+inflated figures reached a commit message, a workflow comment and a repo's NOTES
+before the timestamps were read.
+
+Both mistakes have one shape: **a duration or a count that came from how long
+something FELT while tool calls went past, presented in the same voice as a
+measurement.** There is no warning attached to it — an estimate reads exactly
+like a reading, in your own notes, an hour later.
+
+**So: any number that goes into a file, a commit message or a handoff is
+COPIED from its source in the same action that writes it.** Not recalled from a
+list seen four calls ago. The source was still there both times, and reading it
+took one command. The real figures were both more damning than the invented ones,
+which is the thing to notice — this is not a bias toward exaggeration, it is the
+absence of a check.
+
 **The step was watched passing locally, which is the one place it proves nothing
 about CI** — because locally the hook IS installed, which is the entire
 difference. This is hub LESSONS 53 a second time, in a different repo, in a
