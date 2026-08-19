@@ -73,16 +73,25 @@ if (!existsSync(declPath)) {
       escape=${(name ?? 'REPO').toUpperCase().replace(/[^A-Z0-9]/g, '_')}_PROMOTE
 
   A repo with a single branch declares only \`work=main\`.
+
+  Optionally, \`also=path/to/check\` (repeatable) names a repo-local executable
+  the hook runs before the branch rule, on every commit including a promote.
 `);
   process.exit(1);
 }
 
 const decl = {};
+/** `also=` may appear more than once — every other key is single-valued. */
+const also = [];
 for (const line of readFileSync(declPath, 'utf8').split('\n')) {
   const t = line.trim();
   if (!t || t.startsWith('#')) continue;
   const i = t.indexOf('=');
-  if (i > 0) decl[t.slice(0, i).trim()] = t.slice(i + 1).trim();
+  if (i <= 0) continue;
+  const key = t.slice(0, i).trim();
+  const value = t.slice(i + 1).trim();
+  if (key === 'also') { if (value) also.push(value); continue; }
+  decl[key] = value;
 }
 if (!decl.work) {
   console.error('  .branch-guard names no `work=` branch, which is the one thing it must say.\n');
@@ -105,6 +114,31 @@ const hook = () => {
   L.push('# Committing on the wrong branch looks exactly like committing on the right');
   L.push('# one, which is why an instruction in a file never caught it and this does.');
   L.push('');
+  // REPO-LOCAL CHECKS FIRST, declared with `also=` — one per line, each a path
+  // to an executable in the repo. They run on EVERY commit including a promote,
+  // because they are about what is being committed rather than about where.
+  //
+  // They exist because the branch rule is not the only thing that an instruction
+  // in a file has failed to enforce. Quietkeep's walkthrough ships photographs
+  // of its own UI, and a picture of a version that no longer exists is worse
+  // than no picture at all — that has to be caught at the moment the UI changes,
+  // which is here, not in a review nobody does.
+  //
+  // A MISSING OR NON-EXECUTABLE `also` SCRIPT IS A FAILURE, not a skip. A hook
+  // that quietly stops running one of its checks is the fail-open this whole
+  // file exists to avoid: the first version of the guard itself pointed at
+  // `core.hooksPath` and vanished on an older checkout.
+  for (const path of also) {
+    L.push(`if [ ! -x "${path}" ]; then`);
+    L.push(`  echo "" >&2`);
+    L.push(`  echo "  REFUSED — .branch-guard declares also=${path} and it is missing or not executable." >&2`);
+    L.push(`  echo "  A declared check that silently stops running is worse than no check." >&2`);
+    L.push(`  echo "" >&2`);
+    L.push('  exit 1');
+    L.push('fi');
+    L.push(`"${path}" || exit 1`);
+    L.push('');
+  }
   L.push("branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo '')");
   L.push('');
   L.push(`if [ "$branch" = "${decl.work}" ]; then exit 0; fi`);

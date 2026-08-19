@@ -196,7 +196,15 @@ runs them without copying them, which is what stops five divergent versions
 existing.
 
 - [`branch-guard.mjs`](branch-guard.mjs) — **refuses a commit on the wrong
- branch**, which an instruction in a file never once managed. A session checks
+ branch**, and now also runs whatever repo-local checks `.branch-guard` names
+ with `also=` (repeatable, one path per line, each an executable in the repo).
+ Those run on EVERY commit including a promote, because they are about WHAT is
+ being committed rather than where — and a missing or non-executable one is a
+ FAILURE, never a skip, because a declared check that quietly stops running is
+ the same fail-open the hook's own history is about. Quietkeep uses it to refuse
+ a commit that changes its UI without re-rendering the walkthrough photographs
+ it ships; the general shape is **anything generated FROM the app that would
+ otherwise go stale in the tree**, which an instruction in a file never once managed. A session checks
  production out to promote, does not switch back, and commits the next release
  onto production; nothing about the act looks different at the time. Each repo
  declares `.branch-guard` (`work=`, optional `promote=` and `escape=`) and this
