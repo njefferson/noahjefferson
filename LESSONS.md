@@ -6979,6 +6979,26 @@ took one command. The real figures were both more damning than the invented ones
 which is the thing to notice — this is not a bias toward exaggeration, it is the
 absence of a check.
 
+**A THIRD TIME, AND IT NAMES THE COMMON CAUSE.** The same slow step was then
+called *hanging* and *stalling*, in a workflow comment, a commit message and a
+repo's NOTES. It was not hanging: completed observations are 24s, 1m57s and
+4m45s, all successful. The one long reading ended because **that run was
+cancelled by a subsequent push** — three pushes inside ten minutes cancelled
+three runs in a row — so nothing was ever allowed to finish, and the truncated
+observations were read as evidence of a fault. They were evidence of the
+cancelling. **The pushes were the session's own.**
+
+**That is the shape behind all three: a conclusion drawn from an observation
+that was never allowed to complete.** A count read off a list still scrolling, a
+duration read off a step still running, a diagnosis read off a run the observer
+had just killed. Each was then written in the voice of a measurement, where
+nothing distinguishes it from one.
+
+**The check is a question, not a tool: WHAT ENDED THIS OBSERVATION?** If the
+answer is "I did", or "I stopped looking", there is no finding yet — only a
+reason to look again and let it run. Waiting is cheap; every one of these cost
+more to correct than the wait would have.
+
 **The step was watched passing locally, which is the one place it proves nothing
 about CI** — because locally the hook IS installed, which is the entire
 difference. This is hub LESSONS 53 a second time, in a different repo, in a
