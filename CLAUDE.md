@@ -220,8 +220,9 @@ existing.
  also asserts that `.git/hooks/pre-commit` is installed and current, which is a
  fact about ONE CLONE — and `actions/checkout` leaves `.git/hooks` empty by
  definition, so it can never hold on a runner. Quietkeep's Spine ran the plain
- check and was red for EIGHT consecutive pushes, from the commit that added the
- step; it had been watched passing locally, where the hook is installed, which is
+ check and NEVER ONCE went green — ten runs from the commit that added the step,
+ seven concluding failure and three cancelled by a superseding push; it had been
+ watched passing locally, where the hook is installed, which is
  the one place it proves nothing about CI. `--artefact` checks the tracked hook
  against `.branch-guard` and PRINTS the two checks it skipped. Never `--install`
  in CI instead: that WRITES the tracked file, repairing the drift the step exists

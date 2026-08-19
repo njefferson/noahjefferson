@@ -6946,11 +6946,18 @@ copy.
 A CI runner is a clone nobody commits from. `actions/checkout` leaves
 `.git/hooks` empty by definition, so the second pair can NEVER hold there.
 
-**A Spine step was added that ran the plain check. It failed on the first push
-and on the seven after it**, always with the same line — `.git/hooks/pre-commit
-is MISSING`. Every one of those pushes was verified against the remote,
-correctly, and reported as landed. The gate that was supposed to protect them was
-red the whole time, and it had never once been green.
+**A Spine step was added that ran the plain check, and it has never once been
+green.** Counted from the run list rather than estimated: **ten runs since the
+step was added — seven concluded FAILURE, three were cancelled by a superseding
+push, none succeeded.** Every failure carried the same line,
+`.git/hooks/pre-commit is MISSING`. Every one of those pushes was verified
+against the remote, correctly, and reported as landed. The gate that was supposed
+to protect them was red the whole time.
+
+(This paragraph first said "eight consecutive pushes", which was a count from
+memory of a list that was on screen. The list says seven failures and three
+cancellations. A lesson that rounds its own evidence is teaching the habit it
+exists to correct.)
 
 **The step was watched passing locally, which is the one place it proves nothing
 about CI** — because locally the hook IS installed, which is the entire
