@@ -216,6 +216,17 @@ existing.
  need of protecting is the one most likely to be older. Wire the install into
  whatever the repo runs on setup — `npm ci` via `prepare` where there is a
  package.json.
+ **IN CI, RUN IT WITH `--artefact` OR IT WILL FAIL EVERY TIME.** The plain check
+ also asserts that `.git/hooks/pre-commit` is installed and current, which is a
+ fact about ONE CLONE — and `actions/checkout` leaves `.git/hooks` empty by
+ definition, so it can never hold on a runner. Quietkeep's Spine ran the plain
+ check and was red for EIGHT consecutive pushes, from the commit that added the
+ step; it had been watched passing locally, where the hook is installed, which is
+ the one place it proves nothing about CI. `--artefact` checks the tracked hook
+ against `.branch-guard` and PRINTS the two checks it skipped. Never `--install`
+ in CI instead: that WRITES the tracked file, repairing the drift the step exists
+ to find. **If any sibling runs this in CI, check which spelling it uses.**
+ (LESSONS §107.)
 - [`palette-check.mjs`](palette-check.mjs) — the colour floors (PALETTES.md).
 - [`docs-check.mjs`](docs-check.mjs) — the no-grid rule (Doctrine §2) over every
  tracked `.md`. `node docs-check.mjs .` from the hub, or
