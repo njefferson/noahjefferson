@@ -57,6 +57,41 @@ const args = process.argv.slice(2);
 const repoAt = args.indexOf('--repo');
 const repo = resolve(repoAt >= 0 ? args[repoAt + 1] : '.');
 const install = args.includes('--install');
+
+// --artefact: CHECK THE TRACKED HOOK ONLY, AND SAY THAT IS WHAT HAPPENED.
+//
+// This tool checks four things, and only two of them are facts about the REPO:
+// that `.githooks/pre-commit` exists, and that it matches what `.branch-guard`
+// declares. The other two — that `.git/hooks/pre-commit` exists and matches it —
+// are facts about ONE CLONE, and a CI runner is a clone nobody commits from.
+// `actions/checkout` leaves `.git/hooks` empty by definition, so those two can
+// never hold there.
+//
+// Without this flag, a CI step running the plain check FAILS EVERY TIME on
+// "`.git/hooks/pre-commit` is MISSING". Quietkeep's Spine did exactly that for
+// eight consecutive pushes: the step was added, it was watched passing locally —
+// where the hook IS installed — and it had never once passed in CI. That is hub
+// LESSONS 53's shape precisely, and this is the second time it has been paid
+// for: adding a hard gate to a pipeline creates a new way for the work to
+// silently not arrive, and the session that adds it is the least likely to look.
+//
+// NOT solved by having CI run `--install` first. `--install` WRITES the tracked
+// file, so a drifted artefact would be repaired on the spot and the check would
+// then pass over the one defect it exists to find.
+//
+// The two skipped checks are PRINTED as skipped rather than dropped. A check
+// that quietly stops applying is the fail-open this tool's own history is about.
+const artefactOnly = args.includes('--artefact');
+
+const KNOWN = new Set(['--repo', '--install', '--artefact']);
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--repo') { i++; continue; }
+  if (args[i].startsWith('-') && !KNOWN.has(args[i])) {
+    console.error(`\n  ${args[i]} is not a flag this tool has. Use --repo <path>, --install, --artefact.\n`);
+    process.exit(2);
+  }
+}
+
 const name = repo.split('/').filter(Boolean).pop();
 
 console.log(`\n=== branch guard · ${name} ===`);
@@ -203,9 +238,19 @@ if (have !== want) {
   console.error('  A stale guard is not a smaller guard, it is a different one. Re-run with --install.\n');
   process.exit(1);
 }
+if (artefactOnly) {
+  console.log('  ok    .githooks/pre-commit matches what .branch-guard declares');
+  console.log('  --    .git/hooks/pre-commit NOT checked (--artefact): whether a hook is');
+  console.log('        installed is a fact about one clone, and this is not the clone');
+  console.log('        anybody commits from. Every developer clone still gets both checks.');
+  console.log(`\nThe tracked guard is current — commits on '${decl.work}'${decl.promote ? `, promote on '${decl.promote}' via ${decl.escape}` : ''}.\n`);
+  process.exit(0);
+}
 if (live === null) {
   console.error('  .git/hooks/pre-commit is MISSING — the tracked copy is not the one git runs.');
-  console.error('  Nothing is guarded. Re-run with --install.\n');
+  console.error('  Nothing is guarded. Re-run with --install.');
+  console.error('  (In CI there is no clone to guard — use --artefact, which checks the');
+  console.error('   tracked hook against .branch-guard and says which checks it skipped.)\n');
   process.exit(1);
 }
 if (live !== want) {

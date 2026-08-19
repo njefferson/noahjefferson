@@ -6931,3 +6931,46 @@ anything starting with a dash, so the flag selected nothing and all twenty-two
 gates ran. A full audit is many minutes and drives a browser repeatedly, so
 "this is taking a while" reads as normal — the output was misread in the same
 session. LESSONS 103's tour tool learned this; the audit had not.
+
+## 107 · A check that asserts a fact about ONE CLONE cannot be run in CI, and the session that wires it there will have watched it pass locally
+
+**Enforced by:** GATE noahjefferson:branch-guard.mjs `--artefact` — the mode that
+checks the tracked hook against `.branch-guard` and PRINTS which checks it
+skipped and why. Any repo running the guard in CI uses it.
+
+`branch-guard.mjs` asserts four things. Two are about the REPO — the tracked
+`.githooks/pre-commit` exists, and it matches what `.branch-guard` declares. Two
+are about ONE CLONE — `.git/hooks/pre-commit` exists, and it matches the tracked
+copy.
+
+A CI runner is a clone nobody commits from. `actions/checkout` leaves
+`.git/hooks` empty by definition, so the second pair can NEVER hold there.
+
+**A Spine step was added that ran the plain check. It failed on the first push
+and on the seven after it**, always with the same line — `.git/hooks/pre-commit
+is MISSING`. Every one of those pushes was verified against the remote,
+correctly, and reported as landed. The gate that was supposed to protect them was
+red the whole time, and it had never once been green.
+
+**The step was watched passing locally, which is the one place it proves nothing
+about CI** — because locally the hook IS installed, which is the entire
+difference. This is hub LESSONS 53 a second time, in a different repo, in a
+different mechanism, and the shape did not change: **a session that adds a hard
+gate to a pipeline has just built a new way for its own work to silently not
+arrive, and is at its least likely to look because it just watched the tool
+succeed.**
+
+**`--install` first is not the fix, and it is the tempting one.** `--install`
+WRITES the tracked file, so a drifted artefact would be repaired on the spot and
+the check would then pass over the one defect it exists to find. A repair step
+standing in for a verification step is a green tick with nothing behind it.
+
+**Print the skipped checks; never drop them.** `--artefact` says which two it did
+not run and why, in the passing output. A check that quietly stops applying is
+the fail-open this tool's own history is about — the first version pointed at the
+tracked directory via `core.hooksPath` and failed open the same way.
+
+**Smell, and it is checkable in a minute:** for any check you are about to put in
+CI, ask which of its assertions are about the repository and which are about the
+machine it is running on. Then look at the run — not the push, the RUN — and read
+the conclusion for that exact SHA. The push output has never once known.
