@@ -75,8 +75,17 @@ Every item below has actually happened.
   in what words** — "the scope was 269px against the horizon's 217" is the whole
   engineering fact, and everything else is somebody's message. Quoting the person
   who found a defect FEELS like provenance; it is not provenance.
-  A HARD gate: `privacy-check.mjs` fails on attribution as well as disclosure,
-  and it was watched going red on 42 real sites in the pre-scrub tree.
+  TWO HARD GATES, because the rule has two halves and only one was covered.
+  `privacy-check.mjs` fails on attribution as well as disclosure, and was watched
+  going red on 42 real sites in the pre-scrub tree — but every pattern in it
+  anchors on his NAME, so it cannot see a verbatim sentence of his speech.
+  **Six of those were found by hand in two repos with every gate green.**
+  `quote-check.mjs` is the other half: every set-apart quotation is declared as
+  *document*, *product-copy* or *analysis* in a repo-local `.quote-allow`.
+  It is a LIST rather than a pattern because three pattern rules were measured
+  against the real violations and flagged 39, 138 and 227 files of honest prose —
+  the shape of his speech and the shape of the product's voice are the same shape
+  (LESSONS §108). **Every sibling repo owes the wiring.**
 - **Multi-stage work carries a LIVE STATUS PAGE, and its link goes in EVERY
  progress reply** — not once at creation. Chat scrolls; on an iPad a plan agreed
  on Monday is unreachable by Wednesday. Published once, updated in place at the
@@ -277,6 +286,12 @@ existing.
  after any rewrite, to verify. This is the gate that answers "what about the
  history" — the question `privacy-check.mjs` has always had to decline.
 
+- [`quote-check.mjs`](quote-check.mjs) — the privacy rule's SECOND half: never
+ in what words. Finds every set-apart quotation (a `> *"…` blockquote) and
+ requires each to be declared in the repo's `.quote-allow`. `--list` prints a
+ seed. A quotation of the owner is never declarable — rewrite it as what was
+ wrong and what it measured. Both directions, so a scrub cannot silently
+ un-cover a file. LESSONS §108 is why it is a list and not a pattern.
 - [`privacy-mirror-check.mjs`](privacy-mirror-check.mjs) — a sibling that must
  fail `npm test` OFFLINE has to carry its own copy of the disclosure patterns,
  and that copy is a liability the moment the canon moves. This compares the

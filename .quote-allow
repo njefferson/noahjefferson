@@ -1,0 +1,19 @@
+# Every set-apart quotation in this repo — a `> *"…` blockquote — and whose words
+# it is. Held by `quote-check.mjs`; see that file for why this is a list and not
+# a pattern (three mechanical rules were tried and each flagged tens of files of
+# honest prose).
+#
+# A quotation of the OWNER is not declarable and never becomes declarable. Write
+# what was wrong and what it measured — never who reported it, never in what
+# words. Five sentences of his own speech survived every other gate in these two
+# repos before this existed.
+#
+#   file | document | product-copy | analysis | the quotation's opening words
+#
+#   document     — a canonical text: the doctrine, a law, an ADR, a research entry
+#   product-copy — an app's own strings, or a tagline
+#   analysis     — a previous session's own writing, quoted to argue with or correct
+#
+LESSONS.md | analysis | what he is describing wants a lens — a filter you switch on
+LESSONS.md | analysis | Binding constraint if a lens is built: law 1 does not bend f
+LESSONS.md | analysis | Still owed, and it is your call rather than a build

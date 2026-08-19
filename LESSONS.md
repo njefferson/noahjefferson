@@ -7021,3 +7021,60 @@ tracked directory via `core.hooksPath` and failed open the same way.
 CI, ask which of its assertions are about the repository and which are about the
 machine it is running on. Then look at the run — not the push, the RUN — and read
 the conclusion for that exact SHA. The push output has never once known.
+
+
+## 108 · The rule said never quote him and never name him; only the NAME half was gated, and five sentences of his own speech sat in two repos with every check green
+
+**Enforced by:** GATE noahjefferson:quote-check.mjs — every set-apart quotation
+(`> *"…`) is declared in a repo-local `.quote-allow` as *document*,
+*product-copy* or *analysis*, both directions checked. Every sibling repo owes
+the same wiring.
+
+The rule has two halves: **never attribute anything to him by name, and never in
+what words.** `privacy-check.mjs` enforces the first — every pattern in it
+anchors on `noah` or `the owner`, which is correct and was fitted to 787 real
+sites that all carried a name.
+
+**A verbatim sentence of somebody's speech carries no name.** Six were found by
+hand, all green on every gate in both repos:
+
+- Two introduced by an attribution phrase and nothing else — one after
+  *"Settled:"*, one after *"what was reported from the device"*, which is the
+  *who reported it* pattern the rule names in terms.
+- Three set apart as blockquotes under an explicit attribution line — *the owner,
+  on…*, *reported from a device*, *recording the owner's own framing* — two of
+  them first-person paragraphs, one carrying a typo, which is what raw message
+  text looks like.
+- One a copy of another, in a second record, found only because the first was.
+
+**THREE MECHANICAL RULES WERE TRIED AGAINST THEM AND ALL THREE FAILED.** The
+counts are the argument, and they were measured rather than guessed:
+
+- **A speech cue near a quotation** — *settled*, *reported*, then a quote mark —
+  flagged **39 files**. `settled` is a variable name in a UI module.
+- **A block quotation with no source named in the lines before it** flagged
+  **138**. Wrapped prose beginning with a quote character is everywhere.
+- **A quotation carrying a first-person pronoun** flagged **227**. First person
+  is the PRODUCT'S idiom: *"what am I waiting on Sam for"* is UI copy, and the
+  reader's own voice is quoted on purpose throughout.
+
+Every one would have been a gate firing on honest prose — which
+`privacy-check.mjs` already records as the one thing a privacy gate cannot
+afford, because a false positive teaches sessions to route around it. **The
+third attempt is the instructive one: the shape of his speech and the shape of
+the product's voice are the same shape.** No pattern separates them.
+
+**So the gate does not guess — it makes a LIST.** One narrow construction, the
+blockquote that exists to reproduce somebody's words, of which there were
+nineteen across two repos. Nineteen is a list a person can read. Each is declared
+with a reason from a closed set, and a new one fails until somebody says which it
+is. Same shape as the a11y contrast registry and the plain-mode lists, and for
+the same reason as LESSONS 103: the only thing that has ever stopped this class
+is a check at the moment of the change.
+
+**Smell:** any rule with two clauses where one is gated. Read the gate's patterns
+and ask which clause each one serves — here every pattern served the same clause,
+and the file's own header described it as covering both. **A gate that covers
+half a rule reports green about the other half**, and the description of it will
+say otherwise, because the description was written from the rule and not from the
+patterns.
