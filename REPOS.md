@@ -50,40 +50,83 @@ a session's confident wrong answer.
 
 ## njefferson/fauxplane
 
-- **Deploys to:** https://fauxplane.pages.dev
-- **Branches:** unknown — read that repo's `CLAUDE.md` before assuming.
-- **Branch guard:** NOT installed.
+- **Deploys to:** https://fauxplane.pages.dev, and `staging` to
+  https://staging.fauxplane.pages.dev
+- **Branches:** `staging` and `main`. Staging is a HARD release gate — every
+  product change lands there and waits for the on-device pass; `main` only on an
+  explicit promote. The harness's `claude/*` branch is ignored.
+- **Branch guard:** installed 2026-08-20. `work=staging`, `promote=main` via
+  `FAUXPLANE_PROMOTE=1`. `package.json` reinstalls it on `npm ci`.
+- **Gates wired in CI:** `deploy.yml` checks the hub out and runs
+  `privacy-check.mjs`, `quote-check.mjs` and `branch-guard.mjs --artefact`. Its
+  own `npm test` (583) runs there too; the accessibility gate does NOT — it needs
+  a browser the runner would have to download, and is run locally before a push.
 - **Known:** the §7e baseline is complete (2026-08-03). Its `checkUpdateStrip`
   drives a REAL second worker and is worth copying. It is the repo that pushed
-  four releases which never deployed (LESSONS §53).
-- **Owes:** the privacy CI step, and the branch guard.
+  four releases which never deployed (LESSONS §53) — and the repo whose privacy
+  gate read green while it carried roughly sixty attribution sites, because an
+  earlier pass had rewritten the token that gate anchors on (LESSONS §109).
+- **Owes:** nothing outstanding on gates.
 
 ## njefferson/3d-printing-pal
 
-- **Deploys to:** https://3d-printing-pal.pages.dev
-- **Branches:** unknown — read that repo's `CLAUDE.md` before assuming.
-- **Branch guard:** NOT installed.
-- **Owes:** the §7e baseline (ask its NOTES first), the privacy CI step, and the
-  branch guard.
+- **Deploys to:** https://3d-printing-pal.pages.dev, and `staging` to
+  https://staging.3d-printing-pal.pages.dev
+- **Branches:** `staging` and `main`. Push to `main` deploys production;
+  `staging` is the candidate that waits for the on-device pass.
+- **Branch guard:** installed 2026-08-20. `work=staging`, `promote=main` via
+  `PAL_PROMOTE=1`. `package.json` reinstalls it on `npm ci`.
+- **Gates wired in CI:** `gates.yml` checks the hub out and runs
+  `privacy-check.mjs` (already there), plus `quote-check.mjs` and
+  `branch-guard.mjs --artefact` (added 2026-08-20), beside docs, pins, pwa,
+  palette, textsize and this repo's own gates. `security` job runs zizmor.
+- **Known:** the only one of the four scanned on 2026-08-20 that was genuinely
+  clean of personal material — 17 quotation candidates, every one legitimate.
+- **Owes:** the §7e baseline (ask its NOTES first).
 
-## njefferson/intersecting-parallels
+## njefferson/Intersecting-parallels
 
-- **Deploys to:** unknown.
-- **Branches:** unknown — read that repo's `CLAUDE.md` before assuming.
-- **Branch guard:** NOT installed.
+**Note the capital I** — the repo is `njefferson/Intersecting-parallels`; the
+Pages project is lowercase. GitHub URLs are case-insensitive, a local clone path
+is not.
+
+- **Deploys to:** https://intersecting-parallels.pages.dev, and `staging` to
+  https://staging.intersecting-parallels.pages.dev
+- **Branches:** `staging` and `main`. Every product change lands on `staging` →
+  preview URL → on-device pass → explicit promote → `main`. Docs-only may land on
+  `main` directly. The harness's `claude/*` branch is ignored.
+- **Branch guard:** installed 2026-08-20. `work=staging`, `promote=main` via
+  `IP_PROMOTE=1`. `package.json` reinstalls it on `npm ci`.
+- **Gates wired in CI:** five workflows — `tests.yml` (`npm test`, notes:check),
+  `a11y.yml`, `walk.yml`, `deploy.yml`, and `security.yml`, which checks the hub
+  out at `main` and runs `pin-check.mjs`, `docs-check.mjs` and — added
+  2026-08-20 — `privacy-check.mjs`, `quote-check.mjs` and
+  `branch-guard.mjs --artefact`.
 - **Known:** the §7e baseline is complete (2026-08-03). Patch notes generated
   from CHANGELOG.md with a drift gate, worth copying. Its a11y gate is cited by
-  LESSONS §28.
-- **Owes:** the privacy CI step, and the branch guard.
+  LESSONS §28. The `walk.mjs` app walk is 225 checks, start screen to offline
+  relaunch, and is the thing to run when `public/` changes.
+- **Owes:** nothing outstanding on gates.
 
 ## njefferson/photo-pointer
 
-- **Deploys to:** unknown.
-- **Branches:** unknown — read that repo's `CLAUDE.md` before assuming.
-- **Branch guard:** NOT installed.
-- **Known:** cited by LESSONS as owning `scripts/check-etiquette.mjs`.
-- **Owes:** the §7e baseline (ask its NOTES first), the privacy CI step, and the
-  branch guard.
+- **Deploys to:** https://photo-pointer.pages.dev, and `staging` to
+  https://staging.photo-pointer.pages.dev
+- **Branches:** `staging` and `main` only, and NO pull requests — they are not
+  used there. Every build lands on `staging`, waits for the on-device pass, and
+  reaches `main` only on an explicit promote. Docs-only may go straight to
+  `main`. There is also a long-lived `accessibility` branch.
+- **Branch guard:** installed 2026-08-20. `work=staging`, `promote=main` via
+  `POINTER_PROMOTE=1`. `package.json` reinstalls it on `npm ci`.
+- **Gates wired in CI:** `ci.yml` runs `node --test`, `check-contrast.mjs`,
+  `check-etiquette.mjs` and `ingest.mjs validate`, and — added 2026-08-20 — a
+  SHA-pinned hub checkout running `privacy-check.mjs`, `quote-check.mjs` and
+  `branch-guard.mjs --artefact`.
+- **Known:** cited by LESSONS as owning `scripts/check-etiquette.mjs`. Its
+  `README.md` still carries a markdown TABLE, which `docs-check.mjs` fails on —
+  found 2026-08-20, NOT fixed, and `docs-check` is not in its CI.
+- **Owes:** the §7e baseline (ask its NOTES first), the README table, and
+  `docs-check.mjs` in CI.
 
 ---
 
@@ -91,11 +134,15 @@ a session's confident wrong answer.
 
 One line each, so it is not a memory test:
 
-- **The branch guard** — `node ../noahjefferson/branch-guard.mjs --repo . --install`
-  after writing a `.branch-guard`. Four repos are unguarded.
-- **The privacy CI step** — the hub's `privacy-check.mjs` and
-  `privacy-mirror-check.mjs` run in CI, per Doctrine §9b. Only the hub and
-  Quietkeep have it.
+- **The branch guard** — installed everywhere as of 2026-08-20. Nothing owed.
+- **The privacy CI step** — `privacy-check.mjs` AND `quote-check.mjs` now run in
+  every repo listed above, per Doctrine §9b and its second half. Each was watched
+  going red on a synthetic plant and green with it removed, and each was
+  confirmed to have RUN on a real runner rather than been skipped.
+  `privacy-mirror-check.mjs` is still Quietkeep-only, which is correct — it is
+  owed only by a repo that mirrors the patterns for an offline test.
+- **`docs-check.mjs` in CI** — photo-pointer is the one repo above that neither
+  runs it nor passes it.
 - **`doctrine-sync.mjs --repo .`** run FIRST in any sibling session, and
   `--adopt` only after the drift is actually read.
 
