@@ -2509,7 +2509,8 @@ Second, **an index of records rots faster than the records do**: this repo's
 decision index had been stale for twenty-four entries, and eleven of the
 filenames written from memory to repair it were wrong until checked against
 disk. A pointer file nobody verifies is a pointer file that lies.
-*(Quietkeep, 2026-08-02 — the owner asked "if I clear Safari cookies, do I lose everything?")*
+*(Quietkeep, 2026-08-02 — the question that surfaced it was whether clearing
+Safari's cookies loses everything the app is holding.)*
 
 **And the fix generalises into a gate, which is the half worth copying.** Having
 found two of these in one day, the obvious next question was *how many more?* —
