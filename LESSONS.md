@@ -7072,6 +7072,30 @@ is. Same shape as the a11y contrast registry and the plain-mode lists, and for
 the same reason as LESSONS 103: the only thing that has ever stopped this class
 is a check at the moment of the change.
 
+**AND THE FIRST SCRUB MISSED THREE OF SEVEN, BECAUSE THE GATE READS MARKDOWN.**
+Four violations were blockquotes and were fixed; the same sentences were also
+sitting inline in **source comments** — two in `src/`, one in a walk — and in
+three more places in a NOTES file, all found only by grepping for the exact
+sentences afterwards. **Fixing the instances a new gate can see, and calling the
+class closed, is the gate's coverage mistaken for the rule's scope.** After
+writing a gate, grep for the literal thing it just found, everywhere, in every
+file type.
+
+**One of them was self-inflicted and is the sharpest part.** The gate's audit
+plant used the REAL sentence — so proving the gate catches republished speech
+put republished speech into a tracked file permanently, in the tool whose job is
+that proof. A synthetic quotation tests it identically. **Any fixture built from
+a real violation carries the violation**, and the file that hunts a class is the
+last place anyone looks for it.
+
+**What is NOT covered, stated because the alternative is a false receipt.** The
+emphasised shape `*"…"*` in source is a LIVE IDIOM — comments cite the event
+vocabulary, a product law and the app's own strings that way twenty-three times
+in one repo — so gating it would demand a declaration for every legitimate
+citation. And a plain `"…"` in a `//` comment, which is what hid one of the
+seven, matches 305 lines in one repo: a list nobody reads is the same as no list.
+`--sweep` prints the readable half and the header names the stone left unturned.
+
 **Smell:** any rule with two clauses where one is gated. Read the gate's patterns
 and ask which clause each one serves — here every pattern served the same clause,
 and the file's own header described it as covering both. **A gate that covers

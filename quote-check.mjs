@@ -6,6 +6,7 @@
 //   node quote-check.mjs                    check the hub
 //   node quote-check.mjs --repo ../app      check a sibling
 //   node quote-check.mjs --repo ../app --list   print what is undeclared, seed-shaped
+//   node quote-check.mjs --repo ../app --sweep  SEARCH source comments (never fails)
 //
 // ## Why this is a LIST and not a pattern
 //
@@ -42,12 +43,33 @@
 // controls manifest, and for the same reason (LESSONS 103): the only thing that
 // has ever stopped this class is a check at the moment of the change.
 //
-// ## What it deliberately does NOT do
+// ## What it deliberately does NOT do, and this is the honest half
 //
-// Inline quotations are not touched. The apps quote their own UI copy constantly
-// and in the reader's voice, and a rule reaching those is the third failure above.
-// This catches the set-apart quotation — the one that exists to reproduce
-// somebody's words — and nothing else. It is a floor, not a ceiling.
+// It reads MARKDOWN only, and it catches ONE shape. Inline quotations are not
+// touched: the apps quote their own UI copy constantly and in the reader's voice,
+// and a rule reaching those is the third failure above.
+//
+// **THREE OF THE SEVEN VIOLATIONS WERE IN SOURCE COMMENTS, AND THIS GATE WOULD
+// NOT HAVE CAUGHT THEM.** They were found by the `--sweep` below, by hand. Two
+// wore the emphasised shape `*"…"*` and one wore a plain `"…"` in a `//`
+// comment, so no single narrow rule covers both — and the emphasised shape is a
+// LIVE IDIOM here: source comments cite the event vocabulary, product law 4 and
+// the app's own strings in exactly that form, twenty-three times in one repo.
+// Gating it would demand a declaration for every legitimate citation, which is
+// the false positive this file exists to avoid.
+//
+// So the coverage is: a set-apart quotation in a markdown file, gated. A
+// quotation in a code comment, NOT gated — run `--sweep` and read it, which is a
+// readable list because it looks for the emphasised shape only.
+//
+// AND ONE STONE STAYS UNTURNED, NAMED HERE RATHER THAN LEFT IMPLIED: a plain
+// `"…"` inside a `//` comment is caught by neither the gate nor the sweep. One of
+// the seven wore exactly that, in `tools/smoke.mjs`. Matching it flags 305 lines
+// in one repo, and a list nobody reads is the same as no list.
+//
+// That is a floor, not a ceiling, and saying so here is the point: a gate whose
+// description overstates it is how the NAME half came to be described as
+// covering both halves of the rule for months.
 
 import { readFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
@@ -58,11 +80,13 @@ const repoAt = args.indexOf('--repo');
 const repo = resolve(repoAt >= 0 ? args[repoAt + 1] : '.');
 const LIST = args.includes('--list');
 
-const KNOWN = new Set(['--repo', '--list']);
+const SWEEP = args.includes('--sweep');
+
+const KNOWN = new Set(['--repo', '--list', '--sweep']);
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--repo') { i++; continue; }
   if (args[i].startsWith('-') && !KNOWN.has(args[i])) {
-    console.error(`\n  ${args[i]} is not a flag this tool has. Use --repo <path>, --list.\n`);
+    console.error(`\n  ${args[i]} is not a flag this tool has. Use --repo <path>, --list, --sweep.\n`);
     process.exit(2);
   }
 }
@@ -120,6 +144,40 @@ if (existsSync(listPath)) {
     const [file, reason, ...rest] = line.split('|').map((s) => s.trim());
     declared.push({ file, reason, gist: rest.join('|').trim() });
   }
+}
+
+// --sweep: A SEARCH, NOT A GATE. Exits 0 whatever it finds.
+//
+// Every quotation in a source comment, for a person to read. This is how the
+// three source-file violations were found, and it is the only thing that finds
+// them — see the header for why this cannot be a gate without flagging the
+// vocabulary citations that share its shape. Run it in a scrub, not on a push.
+if (SWEEP) {
+  let src;
+  try {
+    src = execSync('git ls-files', { cwd: repo }).toString().split('\n')
+      .filter((f) => /\.(ts|mjs|js|css|html)$/.test(f));
+  } catch { src = []; }
+  // The EMPHASISED shape only. A plain `"…"` in a comment was tried and matched
+  // 305 lines in one repo — a list nobody reads is the same as no list, and the
+  // sweep's whole value is that a person can get through it. One real violation
+  // wore exactly that plain shape, in `smoke.mjs`, and it is stated in the header
+  // that neither the gate nor this finds it. Saying which stone is unturned beats
+  // printing three hundred.
+  const QUOTED = /[*_]{1,2}["“][^"”\n]{12,}["”][*_]{1,2}/;
+  let n = 0;
+  console.log('  A SWEEP, NOT A GATE — nothing here fails. Read each one and ask');
+  console.log('  whose words it is. A person\'s words are the violation; the event');
+  console.log('  vocabulary, a product law and the app\'s own strings are not.\n');
+  for (const f of src) {
+    let lines;
+    try { lines = readFileSync(join(repo, f), 'utf8').split('\n'); } catch { continue; }
+    lines.forEach((l, i) => {
+      if (QUOTED.test(l)) { n++; console.log(`  ${f}:${i + 1}  ${l.trim().slice(0, 96)}`); }
+    });
+  }
+  console.log(`\n  ${n} quotation(s) in source comments across ${src.length} file(s).\n`);
+  process.exit(0);
 }
 
 if (LIST) {
