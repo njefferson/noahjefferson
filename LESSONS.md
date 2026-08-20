@@ -7096,6 +7096,22 @@ citation. And a plain `"…"` in a `//` comment, which is what hid one of the
 seven, matches 305 lines in one repo: a list nobody reads is the same as no list.
 `--sweep` prints the readable half and the header names the stone left unturned.
 
+**AND AN EIGHTH, IN THE MIRROR IMAGE, FOUND AFTER ALL OF THE ABOVE.** Every
+attribution pattern in `privacy-check.mjs` reads left to right — role, then a
+colon or a speech verb, then the quotation. **Written the other way round it is
+the same act and matched nothing**: a bolded sentence of his speech, closed, then
+the role and a date, sitting in a repo's own question log. Now covered, and the
+narrowing is the interesting part — the closing quote must carry a markdown
+emphasis close, which is what separates a finished quotation from an HTML
+attribute (a site's own `content="…"` metadata fired on all six otherwise), and
+the possessive role is excluded because *the owner's call* is the anonymised form
+the lessons depend on. Measured: 0 hits in one repo across 41 files, 1 in the
+other across 363, and that 1 was the violation.
+
+**The generalisable bit: a pattern encodes a word ORDER, and nobody notices,
+because the order feels like part of the meaning.** For every attribution or
+disclosure rule, write the same sentence backwards and run it.
+
 **Smell:** any rule with two clauses where one is gated. Read the gate's patterns
 and ask which clause each one serves — here every pattern served the same clause,
 and the file's own header described it as covering both. **A gate that covers
