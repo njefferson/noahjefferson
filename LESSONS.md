@@ -7145,3 +7145,115 @@ and the file's own header described it as covering both. **A gate that covers
 half a rule reports green about the other half**, and the description of it will
 say otherwise, because the description was written from the rule and not from the
 patterns.
+
+## 109 · A fix that names its own scope stops exactly there, and the release note reads as if it were complete
+
+**Enforced by:** JUDGEMENT, plus GATE quietkeep:tools/a11y.mjs (the region
+accounting and the two ceilings) and GATE quietkeep:tools/plain.mjs (the card's
+pair, since 2.10.0).
+
+Quietkeep's *Just one thing* is the minimum state — the mode for the day when
+operating the tool is itself one of the skills that has gone. It stripped the
+offer card, and 2.10.0 found on a device that the screen was still too busy to
+begin in, so the strip was extended to the app's own chrome. That release's own
+sentence: **the strip only ever reached inside the card.**
+
+It then reached the header and stopped. Rendered and counted at 390×844 four
+releases later, with the mode ON: five controls on the card and **fourteen
+controls and 65 words of standing text standing underneath it — the same
+fourteen and the same 65 as with the mode off.** The runway ran to 2.18 screens.
+Nothing below the offer had ever been in scope, because the defect had been
+reported about the top of the screen and the fix was made where the reporter was
+looking.
+
+**The two hardest lines on the surface were among them.** A replan queue saying
+one date has gone by, and a person lens saying one thing is with someone else,
+printed underneath a card that had just had its explanation removed for being
+one thing too many to read. Not a subtle miss — the loudest possible one, on the
+one screen built for the worst day.
+
+**The reasoning was already in the repo, at one third the scale.** The release
+immediately before had added three names of what else a returning place holds,
+and the strip list refuses that line in terms: three names beside the offer are
+the pile arriving in miniature. A held list, a sort queue and a replan queue
+beneath it are the pile arriving whole, and no property makes three too many and
+a complete inventory acceptable. The argument did not have to be found. It had
+to be applied one surface further out than the person writing it was looking.
+
+**Smell:** a fix whose note says what it reached. *The strip only ever reached
+inside the card* is a scope statement, and a scope statement is a boundary drawn
+by where the defect was noticed, not by where the reasoning ends. Read the next
+release's note and ask what is on the other side of the sentence.
+
+This is hub LESSONS §95's sibling. There, a feature existed and nobody could
+reach it; here, a fix existed and reached part of the thing it was for. Both are
+invisible for the same reason: **the source answers "have we handled this" for
+everyone who comes after**, and the answer it gives is yes.
+
+## 110 · A "hide these" list that grows from chrome to sections has changed class, and setting `hidden` in a loop silently stops working
+
+**Enforced by:** JUDGEMENT, plus GATE quietkeep:tools/smoke.mjs (asks the screen
+via `checkVisibility()`, never the attribute).
+
+Three attempts, and only a measurement caught two of them. The source read
+correctly through all three.
+
+**One: the loop.** The list had held three selectors — a clock, a Contents
+button, a capture accessory — and setting `hidden` on them at the top of the
+refresh worked because nothing repaints them. Grown to fifteen sections, every
+one has an owner: six paint in the list-rerender, one is painted deliberately
+AFTER the work refresh because it has to read what everything else did, and one
+is refreshed from two call sites outside the refresh chain entirely. **There is
+no last word to hold.** Any ordering that works is one call site away from
+silently not working.
+
+**Two: the injected stylesheet.** Generating a `<style>` element from the list at
+mount gives one copy of the selectors and cannot be outrun by a repaint. **The
+app's CSP is `style-src 'self'` and refused it** — correctly. The console said
+so; the mode went on stripping nothing; every gate that read the source agreed
+it was stripped. A runtime-generated stylesheet is not available to any app with
+a strict CSP, which in this family is all of them.
+
+**Three, which shipped: a generated artefact.** The rule is written into the
+stylesheet by the tool that owns the list, and the gate fails on drift — the same
+shape as CHANGELOG.md and the pre-commit hook. **A second copy held by a gate is
+not the same object as a second copy nobody checks.**
+
+**And the mechanism change broke a gate that was reading the wrong thing.** A
+smoke assertion read `.hidden` on one of the elements and went red, because the
+element was not displayed and the attribute was not set. That is the gate working
+— and the reason to ask `checkVisibility()` rather than an attribute in the first
+place. An attribute is one of several ways a thing can be off the screen; the
+screen is the only thing the reader has.
+
+**Smell:** a list whose members changed KIND while the code that consumes it
+stayed the same shape. Chrome nothing repaints and sections with owners are not
+the same object, and the loop over them looks identical.
+
+## 111 · A both-directions check that filters by a naming convention covers only the members that follow it — and the misfiled entry is exactly the one that does not
+
+**Enforced by:** GATE quietkeep:tools/plain.mjs
+
+The offer card's two lists must together account for every element of the card,
+and the gate checks both directions — an element in neither list fails, and a
+list naming an element that is not there fails too. That pair has held since it
+was written; the card has not gone stale once.
+
+The reverse check reads: every id in either list that begins `nextup-` must still
+be on the card. **`#upkeep` was in the card's hidden list and is a section of the
+work surface**, put there the day the mode was built. It begins with nothing, so
+the reverse check skipped it, and the forward check only walks the card's own
+elements, so it never asked. **The one runway section the mode did strip was the
+one nothing was checking** — and it was in the wrong list for four releases in a
+file whose entire subject is lists that go stale.
+
+The prefix was not a mistake at the time: the check had to distinguish card ids
+from everything else, and a convention was the cheapest way. **The cost is that
+the filter and the misfiling have the same cause.** An entry lands in the wrong
+list precisely because it does not look like its neighbours, which is the same
+property the filter uses to exclude it.
+
+**Smell:** any `.filter(x => x.startsWith(…))` inside a completeness check. The
+filter defines the population the check is complete over, and that population is
+smaller than the list. Ask what is in the list and not in the population — it is
+one line, and it is where the answer will be.
