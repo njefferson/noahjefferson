@@ -158,25 +158,78 @@ if (SWEEP) {
     src = execSync('git ls-files', { cwd: repo }).toString().split('\n')
       .filter((f) => /\.(ts|mjs|js|css|html)$/.test(f));
   } catch { src = []; }
+  // ACROSS LINE BREAKS, because a comment WRAPS and the first version did not.
+  //
+  // A ninth violation was found by reading `src/plain.ts`, not by this sweep: an
+  // attribution and a first-person sentence, in the emphasised shape this looks
+  // for, split over two `*` comment lines. A single-line regex cannot see it, and
+  // a comment long enough to be worth quoting inside is a comment long enough to
+  // wrap — so the shape this hunts is MORE likely to be wrapped than not.
+  //
+  // The comment leaders are stripped and the file is matched whole.
+  //
   // The EMPHASISED shape only. A plain `"…"` in a comment was tried and matched
   // 305 lines in one repo — a list nobody reads is the same as no list, and the
   // sweep's whole value is that a person can get through it. One real violation
   // wore exactly that plain shape, in `smoke.mjs`, and it is stated in the header
   // that neither the gate nor this finds it. Saying which stone is unturned beats
   // printing three hundred.
-  const QUOTED = /[*_]{1,2}["“][^"”\n]{12,}["”][*_]{1,2}/;
+  const QUOTED = /[*_]{1,2}["“][^"”]{12,240}["”][*_]{1,2}/;
   let n = 0;
   console.log('  A SWEEP, NOT A GATE — nothing here fails. Read each one and ask');
   console.log('  whose words it is. A person\'s words are the violation; the event');
   console.log('  vocabulary, a product law and the app\'s own strings are not.\n');
   for (const f of src) {
-    let lines;
-    try { lines = readFileSync(join(repo, f), 'utf8').split('\n'); } catch { continue; }
-    lines.forEach((l, i) => {
-      if (QUOTED.test(l)) { n++; console.log(`  ${f}:${i + 1}  ${l.trim().slice(0, 96)}`); }
-    });
+    let text;
+    try { text = readFileSync(join(repo, f), 'utf8'); } catch { continue; }
+    // Strip the comment leaders so a wrapped quotation reads as one span, and
+    // keep a line number by counting newlines up to each match.
+    const flat = text.replace(/^[ \t]*(?:\/\/|\*|#)[ \t]?/gm, '');
+    const lineOf = (idx) => flat.slice(0, idx).split('\n').length;
+    for (const m of flat.matchAll(new RegExp(QUOTED.source, 'gs'))) {
+      n++;
+      console.log(`  ${f}:${lineOf(m.index)}  ${m[0].replace(/\s+/g, ' ').slice(0, 96)}`);
+    }
   }
   console.log(`\n  ${n} quotation(s) in source comments across ${src.length} file(s).\n`);
+
+  // AND THE ATTRIBUTED ONES IN MARKDOWN, which the gate above cannot see.
+  //
+  // The gate catches the `> *"…` blockquote. It does not catch a quotation set
+  // in ORDINARY WRAPPED PROSE, and five of the owner's sentences were sitting in
+  // exactly that — including the privacy rule itself, recorded verbatim in the
+  // file the rule governs.
+  //
+  // The emphasised shape alone is useless here: 287 hits in one repo, almost all
+  // of them the app's own UI copy being quoted, which is the third failed rule
+  // in this file's header arriving again. What separates them is an ATTRIBUTION
+  // CUE before the quotation — the thing every real violation had and no piece
+  // of quoted UI copy has.
+  //
+  // Two exclusions make it readable. A DOCUMENT named in the gap is a citation,
+  // not attribution. And a NON-HUMAN reporter — the surface, the walk, a gate —
+  // is the app or a tool being quoted, which is a measurement.
+  //
+  // Measured with both: 10 hits across 131 markdown files, of which 5 were real
+  // and the 3 that survive the fix are a self-citation, an ADR citation, and one
+  // window crossing into the next section's title. Ten is a list a person reads.
+  const CUE = String.raw`(?:settled|reported|recording|verbatim|own framing|on being told|the owner[,:])`;
+  const DOC = String.raw`(?:§|ADR-\d|Q-\d\d?|NOTES|LESSONS|CHANGELOG|Doctrine|docs/|law \d|B-\d\d|entry \d)`;
+  const NONHUMAN = /(?:the surface|the walk|the gate|the app|the check|axe|the tool|the fold|the panel|the card)\s+(?:reported|says|said|read)/i;
+  const ATTRIBUTED = new RegExp(`${CUE}(?:(?!${DOC})[^"“]){0,90}[*_]{1,2}["“]`, 'gis');
+  let m = 0;
+  console.log('  AND IN MARKDOWN, a quotation with an attribution cue in front of it:\n');
+  for (const f of files) {
+    let text;
+    try { text = readFileSync(join(repo, f), 'utf8'); } catch { continue; }
+    for (const hit of text.matchAll(ATTRIBUTED)) {
+      if (NONHUMAN.test(text.slice(Math.max(0, hit.index - 60), hit.index + hit[0].length))) continue;
+      m++;
+      const line = text.slice(0, hit.index).split('\n').length;
+      console.log(`  ${f}:${line}  ${hit[0].replace(/\s+/g, ' ').slice(0, 92)}`);
+    }
+  }
+  console.log(`\n  ${m} attributed quotation(s) across ${files.length} markdown file(s).\n`);
   process.exit(0);
 }
 

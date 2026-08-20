@@ -6438,9 +6438,9 @@ six live blocks on the **small** thirteen-item sample, and eight blocks with the
 list starting 4.9 screens down on a phone with a real store. There was no index
 of what was on the page and no way to reach any block but the two at the ends.
 
-Nineteen days later it was reported again, from a device, as *"there is still no
-way for me to do anything other than scroll the entire front page to get to each
-section, so it is just one very very long to-do list"*.
+Nineteen days later the same defect was found again on a device, unchanged:
+**there was still no way to reach any section except by scrolling the whole
+front page**, so the surface read as one very long to-do list.
 
 **Why this is worth its own entry rather than being filed under §96.** In §96 a
 requirement was translated into a mechanism and lost. Here the requirement was
@@ -7111,6 +7111,28 @@ other across 363, and that 1 was the violation.
 **The generalisable bit: a pattern encodes a word ORDER, and nobody notices,
 because the order feels like part of the meaning.** For every attribution or
 disclosure rule, write the same sentence backwards and run it.
+
+**AND FIVE MORE AFTER ALL OF THAT, in ordinary wrapped markdown prose.** The
+gate catches the `> *"…` blockquote; it does not catch a quotation sitting in a
+normal paragraph, and that is where the rest were — **including the privacy rule
+itself, recorded as a verbatim quotation of him, in the file the rule governs.**
+
+The emphasised shape alone is useless in markdown: **287 hits in one repo**,
+almost all of it the app's own UI copy being quoted. What separates a
+republished sentence from quoted UI copy is an **ATTRIBUTION CUE in front of
+it** — *settled*, *reported*, *verbatim*, *the owner,* — which every real
+violation had and no piece of quoted product copy does. Two exclusions make it
+readable: a DOCUMENT named in the gap is a citation, and a NON-HUMAN reporter
+("the surface reported", "the walk reported") is a measurement. Measured: **10
+hits across 131 markdown files, 5 of them real**, and the 3 that survive the fix
+are two citations and one window crossing into the next section's title.
+
+**So the count went 8 → 9 → 14 across one session, and every jump came from
+widening WHERE the tool looked rather than from looking harder.** Blockquotes,
+then source comments, then wrapped comments, then wrapped prose. Each time the
+previous number felt like the total, because a scan that returns nothing new
+feels like completeness and is indistinguishable from a scan pointed the wrong
+way.
 
 **Smell:** any rule with two clauses where one is gated. Read the gate's patterns
 and ask which clause each one serves — here every pattern served the same clause,
