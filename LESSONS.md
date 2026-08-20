@@ -4585,14 +4585,18 @@ push, which is why it was caught in an hour rather than in four releases.)*
 **Enforced by:** GATE fauxplane:scripts/releases.test.mjs — the reader-address rules over every release note, with patterns written from sentences that actually shipped, plus a test that the ban has not widened. DOCTRINE §7d.1 is the rule; this is what it cost to find that stating it was not enough.
 
 Ten consecutive releases of a **development diary published inside the product**.
-An app built for a friend of his, and the friend opens the notes to find:
+An app built for one reader, and that reader opens the notes to find four
+sentences of the same shape: two telling them what they had asked and what they
+had done with the device in their hands, one narrating the session's own process
+and admitting a test was written late, and one addressing them directly about a
+feature request. **Every one of them a fact about a person, published in a
+product they use.**
 
- "You asked why every runway looks the same at every scale."
- "You held the panel up next to your home screen and said it did not match."
- "I only wrote the test AFTER you found it. That is backwards."
- "Follow a flight and send the report — 1.24.1 added the last piece I need."
+The sentences are described rather than reproduced, which is the rule the lesson
+is about applied to the lesson itself — quoting them to prove they were quoted
+republishes them one more time, in a public file, for as long as it exists.
 
-**The file those were written in opens with the rule they break.** Verbatim:
+**The file those were written in opens with the rule they break.**
 
 That paragraph was written from this app, by a session on this app, and then
 walked past every release for two days.
