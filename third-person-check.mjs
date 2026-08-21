@@ -103,11 +103,16 @@ try {
  *  fragments that are not words. Both are noise that would train a reader to
  *  skim this gate's output, which is how a real find gets missed. */
 const SKIP = /\.(png|jpe?g|gif|webp|ico|svg|woff2?|ttf|pdf|zip|mp4|webm)$/i;
+/** The allow file itself. A list of declared exceptions has to NAME the words it
+ *  declares, so scanning it means the gate fails on its own list — which it did,
+ *  the moment that file was first committed rather than left untracked. Exactly
+ *  the shape that caught this gate's own header on its first tracked run. */
+const OWN_LIST = /(^|\/)\.third-person-allow$/;
 const LOCKS = /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$/;
 
 const found = [];
 for (const f of files) {
-  if (SKIP.test(f) || LOCKS.test(f)) continue;
+  if (SKIP.test(f) || LOCKS.test(f) || OWN_LIST.test(f)) continue;
   let text;
   try { text = readFileSync(join(repo, f), 'utf8'); } catch { continue; }
 
