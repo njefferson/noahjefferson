@@ -196,8 +196,8 @@ const MUST_ACK = [
    * fauxplane pushed four releases — 1.24.1, 1.25.0, 1.25.1, 1.26.0 — and
    * verified each one the way the lessons demand: read the REMOTE, confirm the
    * range line, confirm the SHA. Every push was real. Every DEPLOY had failed,
-   * on a CI gate added the same afternoon. The owner's device sat on 1.24.0 for four
-   * releases while each was reported as shipped, and it surfaced only when the
+   * on a CI gate added the same afternoon. A device in the field sat on 1.24.0 for four
+   * releases while each was reported as shipped, and it surfaced only when a
    * asked "What. Button." about a feature that had never left the branch.
    *
    * `deploy-url` above covers reading a log you already opened. This covers the
