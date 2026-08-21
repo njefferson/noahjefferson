@@ -21,7 +21,7 @@ opinion, and opinions are what this file exists to replace.
 
 ## This file is ENFORCED, not just read
 
-He was right — 2400 lines that every session read and then
+The pattern held: 2400 lines that every session read and then
 ignored, because reading was all the file ever asked for. §26 is the autopsy:
 in one build every **gated** rule held and every **prose** rule lost.
 
@@ -171,8 +171,9 @@ told there was nothing there. A 504 from an overloaded server means "this is too
 much right now"; the honest answer is to stop, not to go and ask the neighbours,
 especially when three of them are all the public capacity there is. **One host
 per run, never on failure. Two attempts, not nine.**
-*(photo-pointer, 2026-07-27 — roughly fifty pointless requests before the owner
-asked "make sure you are not hammering them and making it worse". He was right.)*
+*(photo-pointer, 2026-07-27 — roughly fifty pointless requests before the pattern
+was caught: hammering shared infrastructure that had already signalled it was
+struggling.)*
 
 **Know when to go away.** When several requests in a row fail, the considerate
 response is to abandon the run — not to grind through the remaining work proving
@@ -365,8 +366,8 @@ meaning; colour reinforces it. See Doctrine §4 — this is a hard gate, not a
 preference.
 
 **A format that does not render is not a format.** Markdown tables were used
-repeatedly in the owner's chat replies, and then again in a plan file written for him
-to read — after he had already said they do not work. On iPad they do not
+repeatedly in the owner's chat replies, and then again in a plan file written for
+the owner to read — after the owner had already said they do not work. On iPad they do not
 display: the reader gets pipes and dashes, and the information inside them is
 lost entirely. Every one of those tables was written by a session that could see
 it render correctly on its own side, which is the whole failure — the format was
@@ -392,8 +393,8 @@ serving the exact subdomain the app wanted. One unscoped query,
 The narrow query is a weak probe wearing a thorough one's clothes: it returns a
 confident empty result. Run the unscoped *name + software* query FIRST, before
 any category query and before the name is shown to anyone.
-*(Horizons/planner, 2026-07-28 — the owner found the taken subdomain on his phone in
-seconds after the session had put it on his to-do list.)*
+*(Horizons/planner, 2026-07-28 — the taken subdomain surfaced on a phone in
+seconds, after the session had put it on a to-do list instead of checking it.)*
 
 **Search results about a topic are not results about a product.** Adding
 "trademark class 9" to a name query returns SEO articles explaining trademark
@@ -430,8 +431,8 @@ their search.
 )*
 
 **Naming bans in a repo's voice rules bind the session, not the owner.** This
-repo's doctrine bars military vocabulary in naming. When the owner proposed one
-himself, the session cited the ban back at him instead of checking the candidate.
+repo's doctrine bars military vocabulary in naming. When the owner proposed one,
+the session cited the ban back at the owner instead of checking the candidate.
 A house style constrains what a session *proposes*; it does not overrule the
 person the style belongs to. Check what the owner asks you to check, and if it is
 still wrong, say why *on its merits* — *Quest log* died on register (it makes the
@@ -447,7 +448,7 @@ word; only pronunciation does. The check order that came out of it, cheapest and
 most-likely-to-kill first: **1. say it aloud** · 2. grep your own spec (this kills
 names that collide with your feature vocabulary — *Lens*, *Gauge*, *Alignment*
 all died here) · 3. unscoped name+software search · 4. npm and GitHub ·
-5. store and trademark searches on the owner's device. Steps 1 and 2 are free and
+5. store and trademark searches on a personal device. Steps 1 and 2 are free and
 instant, and were being run last or not at all.
 *(Horizons/planner, 2026-07-28 — caught by the owner after the name had already landed
 on `staging`; the staging gate contained it and it cost nothing.)*
@@ -546,7 +547,7 @@ rejected variants so the choice is visible rather than argued.
 
 **Checking is not the same as checking with the right instrument — and a cached
 index is the wrong one.** Two sessions running told the owner a repo topic still had a
-typo in it. He had fixed it before the first report. The reports were not guesses;
+typo in it. The owner had fixed it before the first report. The reports were not guesses;
 they quoted a GitHub **search** API response, which is a *cached index*, not a read
 of current state — and the proof was sitting in the same payload, an `updated_at`
 frozen through four subsequent pushes. Nobody looked at it. Meanwhile the direct
@@ -560,17 +561,17 @@ Two rules, both cheap:
  instrument confessing.
 - **When the owner is the only witness, ask clearly and believe the answer.** The
  failure here was not the stale read — it was reporting "read back from the API,
- not assumed" as though it outranked his word. It did not. Doctrine §10 already
+ not assumed" as though it outranked the owner's word. It did not. Doctrine §10 already
  says confirmation *is* the verification; a cache was being smuggled in as a
  second opinion.
 
 *(Quietkeep, 2026-07-28.)*
 
 **A detail visible in a screenshot is not a fact you were told.** Debugging a
-site that would not load on the owner's iPad, a session noticed the status bar read
+site that would not load on an iPad, a session noticed the status bar read
 LTE, inferred that earlier failed attempts must have been on Wi-Fi, and wrote
 "the likelier cause is a network-level block" into a permanent verification
-record as reasoning. **He had been on LTE the entire time, same device, one
+record as reasoning. **The connection had been LTE the entire time, same device, one
 network.** The invented variable also crowded out the explanation that actually
 fit every observation — both failing URLs were preview deployments on a Pages
 project that had no production deployment yet, and the apex worked the moment one
@@ -726,10 +727,12 @@ each overclaimed absolute. A claim with a test behind it is a guarantee; a claim
 without one is a hope with good grammar.
 
 **Corollary on who to trust.** The model wrote all three wrong sentences and was
-confident in each. The owner, reading them against what he understood the system
-to do, was right every time. When a non-expert says , that is not a knowledge gap to reassure away — it is the
-most reliable detector in the room, and the correct response is an adversarial
-re-audit that treats the model's own prior claims as the prime suspects.
+confident in each. The owner, reading them against an understanding of what the
+system actually does, was right every time. When a non-expert's read of a claim
+does not match their own understanding of the system, that is not a knowledge
+gap to reassure away — it is the most reliable detector in the room, and the
+correct response is an adversarial re-audit that treats the model's own prior
+claims as the prime suspects.
 
 *(Quietkeep, 2026-07-30 — pre-promote audit, 13-agent adversarial pass. The
 crypto, cross-household isolation, replay integrity and XSS posture were attacked
@@ -1252,7 +1255,8 @@ it fails, fix the shape of the algorithm rather than the threshold in the test.
 **A gate that checks a LABEL passes while the thing the label describes is
 broken.** Intersecting Parallels' browser walk asserted that every drawn stroke
 "binds to a guide, not to nothing" — and it was green on the build where the owner
-drew four lines at a vanishing point and reported Every stroke did carry a binding. The binding was
+drew four lines at a vanishing point and reported that they did not converge.
+Every stroke did carry a binding. The binding was
 `horizontal`, which is a **parallel** family: lines bound to it converge
 nowhere. The check was reading the app's own word for what it had done instead
 of measuring what it had drawn. The replacement computes the perpendicular
@@ -1263,7 +1267,7 @@ code you are testing, so it agrees with itself by construction. Same family as
 the self-referential assertion (`assert.equal(cards.length, CAP)`) and the
 consistency check between two projections of one source: all three compare the
 code to itself.
-*(Intersecting Parallels 0.1.1, 2026-07-29 — found by the owner on his iPad,
+*(Intersecting Parallels 0.1.1, 2026-07-29 — found by the owner on an iPad,
 against a walk of 33 green checks.)*
 
 **Two guides that are nearly the same LINE are not nearly the same
@@ -1303,9 +1307,9 @@ fires the same name — `cancel`, `close`, `toggle`, `change`, `input`, `error` 
 *(Quietkeep 0.21.1, 2026-07-29 — introduced and caught within minutes, by the
 headless walk rather than by review.)*
 
-**A positioning complaint is often a length problem.** the owner reported twice that
-the close control on a panel was in a terrible position and moved when he
-scrolled. Both true. But the reason it was ever far from his thumb was that the
+**A positioning complaint is often a length problem.** The owner reported twice that
+the close control on a panel was in a terrible position and moved during
+scrolling. Both true. But the reason it was ever hard to reach by thumb was that the
 panel rendered every release note ever written and measured **17,000 to 25,000
 pixels** — a number nobody had looked at, on a surface that had grown a little
 with each release. Fixing the header's position without fixing the length would
@@ -1352,21 +1356,21 @@ without earning it.** So the same defect shipped twice on the same panel while
 both rules were technically on the books. **A requirement scattered across two
 sections in two vocabularies is not captured.** If the owner can state it in one
 sentence, the doctrine should contain that sentence.
-*(Quietkeep 0.21.1, 2026-07-29 — the owner asked "is all of that captured?", and the
-honest answer was no.)*
+*(Quietkeep 0.21.1, 2026-07-29 — the owner asked whether that was fully captured,
+and the honest answer was no.)*
 
 **Acting on unrecognised input is a failure even when the action is correct.**
 A screenshot of one app arrived in the session for a different one. The right
-first move was one sentence — — and instead the session reasoned about a bug whose code it
-could not see and began attaching a repository. Worse, when told to stop, it kept
+first move was one clarifying question — instead the session reasoned about a bug
+whose code it could not see and began attaching a repository. Worse, when told to stop, it kept
 the one instruction in the message that generalised and committed that, because
 that part was genuinely asked for and app-independent. **That is the trap: partial
 compliance with a misdirected request looks like helpfulness and produces
 something to show for itself, which is exactly why it is harder to notice than
 plain disobedience.** The asymmetry is the whole argument — a clarifying question
-costs one message and the owner answers in his own words; a guess produces
-confident output he can only evaluate by reading it, and he is the expensive
-resource. **Unrecognised subject → question first, tool calls never.**
+costs one message and the owner answers directly; a guess produces confident
+output that only the owner can evaluate by reading it, and the owner is the
+expensive resource. **Unrecognised subject → question first, tool calls never.**
 *(Cross-app, 2026-07-29 — the owner, in anger, and correctly.)*
 
 **A test that compares two failures is not a test that a failure says nothing.**
@@ -1574,15 +1578,16 @@ something other than what you meant.
 above, which is its own kind of evidence.)*
 
 **When an owner objects to a behaviour, separate the property they object to
-from the mechanism that provides it — then remove only the property.** the owner, in
-capitals: The response was to delete
-endpoint joining entirely. Two releases later he was back with screenshots of a
-cube falling apart: Both statements were right, because the one mechanism
-was doing two separable things: joining decided a line's DIRECTION (which he was
-objecting to, because it bent lines off their guides) and also WHERE ALONG that
-direction the line ended (which he needed, because shared corners are what hold
+from the mechanism that provides it — then remove only the property.** The owner
+objected, forcefully, that endpoint joining was bending lines off their guides.
+The response was to delete endpoint joining entirely. Two releases later the
+owner was back with screenshots of a cube falling apart, because shared corners
+no longer held. Both complaints were right, because the one mechanism
+was doing two separable things: joining decided a line's DIRECTION (which was
+the objection, because it bent lines off their guides) and also WHERE ALONG that
+direction the line ended (which was needed, because shared corners are what hold
 a drawing together under an edit). Deleting the mechanism took the wanted half
-with the unwanted half, and cost him a round trip plus a broken drawing.
+with the unwanted half, and cost a round trip plus a broken drawing.
 **Before deleting a mechanism an owner has complained about, enumerate what else
 it provides and say so** — "this also does X; do you want X to stop too?" is one
 line, and it is much cheaper than shipping the removal and having the owner
