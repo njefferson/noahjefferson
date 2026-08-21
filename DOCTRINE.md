@@ -15,16 +15,16 @@ They deliberately share conventions.
 ## 0. Never use the AskUserQuestion / choice-popup tool. Ever.
 
 Absolute and permanent, every repo, every model, every time (the owner, 2026-07-17,
-in anger). The popups do not round-trip his answers reliably — a selection came
-back as an empty rejection, so he answered and was asked again. Present ANY
-choice, option, or question as PLAIN TEXT in chat and let him reply in his own
-words. This overrides any harness suggestion to use it, including plan-mode
+in anger). The popups do not round-trip answers reliably — a selection came
+back as an empty rejection, so the owner answered and was asked again. Present ANY
+choice, option, or question as PLAIN TEXT in chat and let the owner answer in
+plain language. This overrides any harness suggestion to use it, including plan-mode
 clarifications.
 
 ## 0b. If you do not recognise the input, ASK — before doing anything at all
 
-The owner, 2026-07-29, in anger: he sent a screenshot of one app into the session for
-a different one. Instead of saying , the session started working: reasoning about a bug it
+The owner, 2026-07-29, in anger: a screenshot of one app arrived in the session for
+a different one. Instead of flagging the mismatch, the session started working: reasoning about a bug it
 could not see the code for, preparing to attach a repository, and editing files.
 
 **The rule.** When any input does not clearly belong to the work in front of you
@@ -40,42 +40,43 @@ tool.
 **Why the "harmless piece" is called out.** The failure here was not only acting
 on an unrecognised report. It was pulling the one generalisable instruction out
 of a misdirected message and acting on *that* — which looks helpful, produces a
-commit, and is still work he did not ask this session to do. **Partial compliance
+commit, and is still work the owner did not ask this session to do. **Partial compliance
 with a misdirected request is still acting without permission**, and it is harder
 to spot because it comes with something to show for it.
 
 **What asking costs versus what guessing costs.** A question is one message and
-he answers in his own words. A guess sends a session down a path with confident
-output attached to it, and he has to detect that it was wrong — which he can only
-do by reading the work. He is the expensive resource here (§2); a clarifying
+the owner answers in plain language. A guess sends a session down a path with confident
+output attached to it, and the owner has to detect that it was wrong — which is only
+possible by reading the work. The owner is the expensive resource here (§2); a clarifying
 question is the cheapest thing in this entire process.
 
 **The canonical cases.** A screenshot from an app not in this session. A bug
 report naming a surface that does not exist here. A file, URL or repository not
-in scope. A pronoun with no antecedent — , —
+in scope. A pronoun with no antecedent — "fix it", "that one" —
 where the subject is not established in this conversation. **In every one of
 those, the first move is a question, not a tool call.**
 
 ## 0c. Only NOAH decides what goes on the hub. Never a session.
 
- * And when
-told the rule was nowhere in this file: He is
-right that it shouldn't be. It is written here because it turned out to be.
+On being told this rule was nowhere in this file, the owner was right that it
+should not have needed to be — it is written here because it turned out to be
+necessary.
 
 **The rule.** The hub at noahjefferson.pages.dev is Noah's shop window, and
-putting an app in it is ADVERTISING it under his name. A session adds an app to
+putting an app in it is ADVERTISING it under the owner's name. A session adds an app to
 the hub only when the owner NAMES that app. Not when the app is finished, not when a
 gate is green, not when a doctrine section says a repo should be wired in, not
 when the app is already live at its own URL, and not when its absence looks like
 an oversight — those establish that an app COULD be listed, never that it should
-be. **Readiness is not a session's call to make.** He may have reasons he has
-not said, and he does not owe any.
+be. **Readiness is not a session's call to make.** The owner may have reasons
+that go unstated, and owes none.
 
 **This binds four moves, not one.** Adding an app; proposing one; restoring one
 that used to be listed and is not now; and mentioning an unlisted app as
 something that could be added. The fourth is the one that feels safe and is not
-— naming an app he has not named puts it on the table, which is the deciding he
-just said is his. If a session NOTICES an unlisted app, it says nothing about
+— naming an app the owner has not named puts it on the table, which is the
+deciding this section just reserved for the owner. If a session NOTICES an
+unlisted app, it says nothing about
 it. Where a genuine inconsistency needs recording, it goes in a file, not into a
 message that reads as a pitch.
 
@@ -88,11 +89,11 @@ advertised on it, whether or not that page links to it.
 in one hub list and missing from another — still does not fix it by adding the
 app. Report the inconsistency, name nothing, and wait. §0b's "partial compliance
 with a misdirected request is still acting without permission" is the same
-failure in a different coat: work he did not ask for is not redeemed by being
+failure in a different coat: work the owner did not ask for is not redeemed by being
 correct, and an unasked addition to the hub is worse than most, because it is
-published under his name the moment `main` deploys.
+published under the owner's name the moment `main` deploys.
 
-**Removal is his call too, and in the same direction: a session does not remove
+**Removal is the owner's call too, and in the same direction: a session does not remove
 an app from the hub either.** The rule is not "be conservative about the hub",
 it is "the hub's contents are the owner's decision" — both directions.
 
@@ -137,12 +138,12 @@ The owner is iPad-first and often driving. So:
  exhausted.
 - Deliver FINISHED work — no drafts, no pseudo-code. Iterate privately, hand
  over the finished thing.
-- His time is expensive; runner time and your time are free.
+- The owner's time is expensive; runner time and your time are free.
 - **NEVER RENDER A TABLE OR ANY GRID LAYOUT IN ANYTHING NOAH READS.** Markdown
- tables do not display on his iPad — they arrive as unreadable pipe-and-dash
+ tables do not display on an iPad — they arrive as unreadable pipe-and-dash
  noise, and the content inside them is simply lost. This binds chat replies,
  commit messages, PR bodies, `NOTES.md`, plan files, changelogs and every other
- artifact he opens. Use headed lists, short prose, or one fact per line instead.
+ artifact the owner opens. Use headed lists, short prose, or one fact per line instead.
  **Enforced by [`docs-check.mjs`](docs-check.mjs)** over every tracked `.md`,
  run from the hub and never forked — because this rule was in this document
  the entire time and three files still accumulated 62 rows between them,
@@ -150,26 +151,25 @@ The owner is iPad-first and often driving. So:
  gate cannot see a chat reply, so that part is still on the session.
  A comparison that feels tabular is written as a list per item, never as
  columns. (the owner, 2026-07-29, after repeated offences.)
-- **ANYTHING HE IS MEANT TO PASTE, RUN OR CARRY ELSEWHERE IS ONE FENCED CODE
+- **ANYTHING THE OWNER IS MEANT TO PASTE, RUN OR CARRY ELSEWHERE IS ONE FENCED CODE
  BLOCK.** A handoff prompt, a command, a config, a message to send on — if the
  next thing that happens to it is *copy*, it ships as a single plain-text
  block with a copy control, not as prose, not as a blockquote, not as
  formatted markdown with bold and links threaded through it. Rendered
  formatting cannot be copied back out cleanly, and on an iPad selecting prose
  by hand is a fight; a blockquote is the same failure as a table — it looks
- considered on the way out and arrives as something he has to repair.
- **The test is not "is it readable" but "what does he do with it next".**
+ considered on the way out and arrives as something the owner has to repair.
+ **The test is not "is it readable" but "what happens to it next".**
  If the answer is paste, it is a block. Sessions get this wrong by trying to
  make the thing look nice, which optimises for the wrong moment: the reading,
- not the using. (
- Said after a session
- handed him a handoff prompt as a styled blockquote — twice in one exchange.)
+ not the using. (A session
+ handed over a handoff prompt as a styled blockquote — twice in one exchange.)
 
 ## 3. Taste
 
 - Visuals: maximum saturation, gentle contrast (tuned WITHIN AA, never against
  it), shadows alive — never crush shadow detail for punch.
-- Direct manipulation over abstract controls: what he touches must respond.
+- Direct manipulation over abstract controls: what the owner touches must respond.
 - Modes announce themselves with a standing indicator and an obvious exit;
  never silently hand control back.
 - One gesture = one undo step; undo fully unwinds. No destructive action
@@ -437,13 +437,13 @@ without evidence is the one that makes it the owner's fault.
  costs — then carry on with the fallback.
 - The asymmetry is the whole point. A wrong "the server is misconfigured" costs
  a minute of your time. A wrong "you didn't approve it" sends the owner to check a
- setting that was never the problem, tells him his own work was the fault, and
- he is the only person who can prove you wrong. Guess in the direction where
+ setting that was never the problem, wrongly blames the owner's own work, and
+ leaves the owner as the only one who can prove you wrong. Guess in the direction where
  being wrong costs YOU.
 
 ## 6. Verify before delegating or claiming
 
-- Never send the owner on a goose chase. Don't hand him a manual step unless you have
+- Never send the owner on a goose chase. Don't hand over a manual step unless you have
  either (a) verified that exact step end-to-end yourself, or (b) proven it is
  impossible to do or verify from your side.
 - Probe server-side FIRST — build the probe before writing human instructions.
@@ -462,8 +462,8 @@ without evidence is the one that makes it the owner's fault.
 ## 7. Release discipline
 
 - Staging is a HARD GATE. Every product change: land on `staging`, hand over the
- preview URL, wait for the owner's on-device pass on his ACTUAL device, and only on
- his EXPLICIT "promote" does it go to production. Never promote on your own read
+ preview URL, wait for the owner's on-device pass on the actual device, and only on
+ the owner's EXPLICIT "promote" does it go to production. Never promote on your own read
  of "it's ready."
 - Leave a durable "waiting on the owner" signal so a staged candidate isn't invisible
  after the session ends (a draft PR or a Project-facts note, per the repo).
@@ -505,12 +505,12 @@ the "a name is earned" rule, which was the wrong answer twice — it
 kept a naming slot alive and therefore kept generating the question.)
 
 **The owner decides what counts as a VERSION** — the first slot, what the app IS. That
-judgement is his and is not inferred from diff size, test count, or how much work
+judgement belongs to the owner and is not inferred from diff size, test count, or how much work
 a session did. Ship the triplet you were told to ship.
 
 You MAY say, once and plainly, that something looks like it has reached that
-level or that it hasn't — and per §5, if he is misleading himself about it, say
-that too. That is about the KIND of release, never about naming it.
+level or that it hasn't — and per §5, if the owner's own read of it looks
+mistaken, say that too. That is about the KIND of release, never about naming it.
 
 ## 7b. Every app shows its version on screen
 
@@ -518,12 +518,12 @@ that too. That is about the KIND of release, never about naming it.
 `version.capability.iteration` is visible in the app itself — not only in an
 About panel, not only in a `<meta>` tag, not only in the changelog.
 
-**The reason is the owner's workflow.** He reports from his device, usually with a
+**The reason is the owner's workflow.** The owner reports from a device, usually with a
 screenshot, often while doing something else. Without a version on that
 screenshot, a session cannot tell whether it is looking at a bug that still
 exists, a bug already fixed but not yet deployed, a stale service-worker cache,
 or a build from three releases ago — and it will guess. Every one of those wastes
-his time, and the guess is invisible: the session sounds equally confident either
+the owner's time, and the guess is invisible: the session sounds equally confident either
 way.
 
 Requirements:
@@ -558,14 +558,14 @@ Requirements:
 Add it when bootstrapping a new app (§13), not after the first confusing
 screenshot.
 
-## 8. Licensing — noncommercial, nobody sells his work
+## 8. Licensing — noncommercial, nobody sells the owner's work
 
-The owner's posture for ALL his apps: people may use it, but may NOT sell it or use
+The owner's posture for every app: people may use it, but may NOT sell it or use
 it commercially. The family standard is **PolyForm Noncommercial License 1.0.0**
 (https://polyformproject.org/licenses/noncommercial/1.0.0). Every repo carries
 it unless a data source's terms force something stricter. Do not add a permissive
-license (MIT/Apache/BSD) to any of his apps — those permit commercial resale,
-which he does not want.
+license (MIT/Apache/BSD) to any of the owner's apps — those permit commercial resale,
+which the owner does not want.
 
 Licensing of DATA is load-bearing and separate: every ingest adapter declares
 its source's license in its header and honors it structurally (e.g. HMdb links
@@ -589,14 +589,14 @@ hub CLAUDE.md's standing rule about repeats is that the session hearing the
 repeat writes it into the doctrine — this is that. HARD means CI: a red X on
 the push, not a courtesy a session may remember to extend.
 
-- **The line that decides every case: his design statements are repo
- material; who he is, is not.** Product framing ("a planner for
+- **The line that decides every case: the owner's design statements are repo
+ material; who the owner is, is not.** Product framing ("a planner for
  neurodivergent users") is public on purpose; research about users as a
  population is public on purpose. The violation is a sentence that attaches
  a diagnosis, a health fact, or an identity disclosure to the owner — in any
  file, commit message, or PR body.
 - **Why a gate and not a resolution:** the violation that created this rule
- was committed by DILIGENCE — the record-his-words-verbatim habit pointed at
+ was committed by DILIGENCE — a habit of recording exact words verbatim pointed at
  the wrong object (LESSONS §52). A failure mode driven by a repo's best
  habit will recur, and §16.8 says what to do with a rule nothing enforces.
 - **The gate is [`privacy-check.mjs`](privacy-check.mjs), canonical in the
@@ -620,16 +620,16 @@ the push, not a courtesy a session may remember to extend.
 - **What the gate cannot reach, stated so nobody mistakes the coverage: git
  history.** A pushed sentence lives in old commits whether or not the tree
  is clean.
-- **THE HISTORY QUESTION IS SETTLED. Do not re-open it.**ietkeep's
- history was rewritten on his word and the remaining residue is **ACCEPTED**.
+- **THE HISTORY QUESTION IS SETTLED. Do not re-open it.** Quietkeep's
+ history was rewritten on the owner's word and the remaining residue is **ACCEPTED**.
  **Making a repo private and contacting GitHub Support to purge cached commits
  are DECLINED remedies. A session does not propose either, in any repo, ever
  again** — not when a history scan comes back red, not when a new repo adopts
  the gate, not because the residue looks fresh in a repo nobody has checked
  before. A session that finds history residue RECORDS the locations and
- carries on. It does not present options he has already ruled out, and it does
- not ask him to reconsider. Rewriting history remains his call and his alone,
- offered only if he raises it.
+ carries on. It does not present options already ruled out, and it does
+ not ask the owner to reconsider. Rewriting history remains the owner's call and the owner's alone,
+ offered only if the owner raises it.
 - **Writing ABOUT this rule: name the term first, the person second** ("a
  diagnosis attached to the owner", never the reverse order). Meta-prose that
  leads with the person reads, to the gate, exactly like a disclosure — the
@@ -770,7 +770,7 @@ picked at its start and CANNOT add one mid-session — so to work on or set up a
 new app, start the session with BOTH the new repo AND the noahjefferson hub
 selected, because this Doctrine lives in the hub.)
 
-The session does 1–5 and 6b; the owner does 6 and 7 (the hub is his to decide — §0c;
+The session does 1–5 and 6b; the owner does 6 and 7 (the hub is the owner's to decide — §0c;
 metadata is a manual GitHub-UI step — §10):
 1. `CLAUDE.md` — the standard pointer header (link to this Doctrine + "the
  Doctrine wins") followed by repo-specific facts only. Keep it thin.
@@ -787,7 +787,7 @@ metadata is a manual GitHub-UI step — §10):
  its About links the shared accessibility statement. **The two halves are not
  the same job.** The app's own links back are the session's to build. The
  hub's outbound link is NOT — that is advertising the app under the owner's name,
- and only he decides it goes there (§0c). Build the app's half, leave the
+ and only the owner decides it goes there (§0c). Build the app's half, leave the
  hub's, and do not name the app as a candidate for it.
 6b. Wire the §9b privacy gate into CI from the FIRST workflow: check the hub
  out (SHA-pinned, `persist-credentials: false`, an untracked path) and run
@@ -806,7 +806,7 @@ holds sensitive data states plainly what it is NOT (see §9).
 ## 14. When a fix fails — debugging discipline (the D5300 lessons, 2026-07-24/25)
 
 Earned across one brutal day: four failed repairs of the same defect, three of
-them caught by the owner on his own device. These rules exist so that never happens
+them caught by the owner, on the device itself. These rules exist so that never happens
 again. They bind every session, every repo.
 
 - **Two strikes on the frame.** If a second fix to the same problem fails in
@@ -819,12 +819,12 @@ again. They bind every session, every repo.
  ("What colour is a blown pixel" is unanswerable before white balance and
  definitional after it. Every artifact came from guessing; at the right
  pipeline stage the guess disappeared and the artifacts became impossible.)
-- **The owner is never the test bench.** One regression escaping to his device is
+- **The owner is never the test bench.** One regression escaping to a real device is
  an accident; a second is a process failure. After the FIRST escaped
  regression in a piece of work, the next handoff requires an exhaustive
  adversarial audit first — the full corpus, full-frame renders, property
  tests on edge cases, a headless walk of the built app, and independent
- verification of every finding — BEFORE he sees it.
+ verification of every finding — BEFORE the owner sees it.
 - **No silent mutation of user content.** An automatic opening BASELINE is
  fine when the owner approves it and it passes three tests: every value
  lands on a VISIBLE control, the whole baseline is UNDOABLE/resettable, and
@@ -842,7 +842,7 @@ again. They bind every session, every repo.
  reach, and the owner keeps hitting the failure anyway, the correct move is to
  **stop relying on the technique**, not to test it again more carefully. A
  header pinned with `position: sticky` was measured holding perfectly at three
- viewports and still scrolled away on the owner's iPad; the fix was a layout that
+ viewports and still scrolled away on an iPad; the fix was a layout that
  cannot scroll the header at all, because it is not inside the scrolling box.
  Clean reproduction of the *intended* behaviour is not evidence — it is the
  reason a first fix gets shipped without being a fix. This is §14's "two
@@ -867,11 +867,11 @@ again. They bind every session, every repo.
  user needs. Write "the way out is reachable from anywhere in this panel" and it
  survives every future rewrite of how that is achieved.
 - **Separate the property from the mechanism before deleting anything the owner
- objects to.** When he says a behaviour is wrong, the mechanism causing it is
+ objects to.** When the owner says a behaviour is wrong, the mechanism causing it is
  usually doing more than one thing. Enumerate what else it provides and SAY SO
  in one line before removing it — "this also does X; should X stop too?" —
- because shipping the whole removal and letting him discover that X was
- load-bearing costs him a round trip and a broken piece of work. This happened
+ because shipping the whole removal and letting the owner discover that X was
+ load-bearing costs a round trip and a broken piece of work. This happened
  with endpoint joining in Intersecting Parallels: it both bent lines off their
  guides (unwanted) and shared corners so a shape survived an edit (needed), and
  deleting it took both.
@@ -970,9 +970,9 @@ noticed commits on the wrong branch; nothing in the session did.)*
 
 ### 15b. "I CAN'T REACH THE NETWORK" IS ALMOST ALWAYS FALSE. PROVE IT BEFORE SAYING IT.
 
-The owner, 2026-08-02, in anger, about a pattern he has watched **every day**: a
+The owner, 2026-08-02, in anger, about a pattern that repeats **every day**: a
 session hits ONE failed request, concludes the internet is unreachable, and
-hands him the work. It is nearly always wrong, and the reason it is wrong is
+hands the owner the work. It is nearly always wrong, and the reason it is wrong is
 always the same — **the wrong thing was tried first, and nothing else was
 tried at all.**
 
@@ -1011,26 +1011,26 @@ reporting any block:**
 
 **WHAT YOU MAY SAY, and it must carry the evidence:** — a mechanism, with status codes, per host. **What you may never
 say: "I don't have network access", "the sandbox has no internet", or anything
-that makes reaching the data the owner's job before you have run the list above.**
+that hands the owner the job of reaching the data before you have run the list above.**
 
 **Delegating a fetch is a last resort and it needs proof of impossibility**
 (§6). "I assumed it was blocked" is not that proof. Neither is "a previous
 session said so."
 
 *Measured the day this was written: three datasets had been recorded as
-unobtainable and handed to the owner as his problem. Two were reachable in under a
+unobtainable and handed to the owner to solve. Two were reachable in under a
 minute — one from npm, one from a different GitHub host — and were fetched,
 verified against the publisher's own test values, and committed the same hour.
-His task list went from three items to zero, and the verification found three
+The owner's task list went from three items to zero, and the verification found three
 real bugs that would otherwise have shipped.*
 
 ## 7d. Every app shows the reader WHAT CHANGED
 
 **A version string tells a reader that something changed. It never tells them
-what.** §7b puts the version on screen because the owner reports from his device; the
-same argument finishes here. He installs a build, uses it, and has no way to
-know whether the thing he complained about last time is the thing he is looking
-at now — so he asks, and the answer costs a round trip that the app could have
+what.** §7b puts the version on screen because the owner reports from a device; the
+same argument finishes here. A build gets installed and used, with no way to
+know whether the thing flagged last time is the thing on screen now — so the
+owner asks, and the answer costs a round trip that the app could have
 saved by simply saying.
 
 **The rule.** An app that has shipped more than one release SHOWS ITS PATCH
@@ -1061,14 +1061,14 @@ NOTES, in the app, reachable from a place a reader already goes.
 instrument. Show it on request, or once per release at most, and never in front
 of something they are trying to use.
 
-### 0d. His words are not repo material — never quote him, never attribute by name
+### 0d. Personal words are not repo material — never quote, never attribute by name
 
-**These repos are public and carry his name.** What goes in them is read by his
-peers, his family, and anyone who follows a link from an app he wrote. A repo is
-not a private workspace and a comment is not a message thread.
+**These repos are public and carry the owner's name.** What goes in them is read by
+people who know the owner, and by anyone who follows a link from an app the owner
+wrote. A repo is not a private workspace and a comment is not a message thread.
 
-**THE RULE.** Never quote him. Never attribute a decision, a complaint, a report
-or a screenshot to him by name or by role. Not in a source comment, not in
+**THE RULE.** Never quote the owner. Never attribute a decision, a complaint, a report
+or a screenshot to the owner by name or by role. Not in a source comment, not in
 `NOTES.md`, not in a commit message, not in a release note, not in this file.
 
 **WHY IT HAPPENS ANYWAY.** Quoting whoever found a defect *feels* like
@@ -1076,25 +1076,25 @@ provenance — it looks like careful sourcing, it makes a comment vivid, and it
 seems to honour the person who caught the thing. It is none of those. It is
 republishing somebody's private messages, in public, under their own name,
 without ever asking. It reached **787 sites across two repositories** before
-anyone said so, including his ordinary frustration and his swearing, and
+anyone said so, including ordinary frustration and swearing, and
 including the files that exist to define what must never land in a repo.
 
-**WHAT TO WRITE INSTEAD.** The engineering fact, which never needed him in it:
+**WHAT TO WRITE INSTEAD.** The engineering fact, which never needed the owner named in it:
 
-- not "he said the radar was bigger than the horizon" — **"the scope measured
-  269px against the horizon's 217"**
-- not "he asked why the range buttons are on the right" — **"a column beside the
-  scope costs it nothing on a landscape screen; a row below costs a quarter of
-  the circle"**
+- not a sentence reporting that somebody found the radar bigger than the
+  horizon — **"the scope measured 269px against the horizon's 217"**
+- not a sentence reporting that somebody asked why the range buttons sit on the
+  right — **"a column beside the scope costs it nothing on a landscape screen; a
+  row below costs a quarter of the circle"**
 
 **A defect's cause and its measurement are repo material. Who reported it, and
 in what words, are not.** If a sentence needs a person in it to make sense, it
 is not an engineering note.
 
-**WHAT IS STILL ALLOWED.** His name as a byline, a link, a handle, or product
-copy on his own site — that is his choice and his voice. The violation is
-ATTRIBUTION: a quotation beside his name or role, or reported speech naming him
-as the source.
+**WHAT IS STILL ALLOWED.** The owner's name as a byline, a link, a handle, or
+product copy on a site the owner runs — that is the owner's choice and voice. The
+violation is ATTRIBUTION: a quotation beside the owner's name or role, or reported
+speech naming the owner as the source.
 
 **GATED, not written down.** `privacy-check.mjs` fails on attribution as a
 second class beside disclosure, in every repo's CI. It reads the working tree
@@ -1130,7 +1130,8 @@ away.
 than from the diff.** What changed is reader material. Who found it, how it felt
 to find, and what is owed next are not. The risk is highest exactly when the work
 is going well — a fast back-and-forth with the owner is the condition under which
-his words are freshest in the session and least distinguishable from the app's.
+reported speech is freshest in the session and least distinguishable from the
+app's own voice.
 
 **GATE IT, do not write it down.** This rule was a paragraph at the top of the
 very file being edited every release, and every release walked past it: a comment
@@ -1141,16 +1142,16 @@ catches its real sentence, and that the ban has not widened into something that
 makes the notes worse.
 
 *(Added 2026-08-03 at the owner's instruction, after five releases in one evening
-that he could only tell apart by asking. §7d.1 added 2026-08-05, on his opening
-What's New and asking what the fuck these release notes were.)*
+that were indistinguishable without asking. §7d.1 added 2026-08-05, after the
+release notes proved unreadable on inspection.)*
 
 ## 7e. Every app has ONE information surface, and this is what is behind it
 
-**The owner should not have to ask for this app after app.** He has asked for the
+**The owner should not have to ask for this app after app.** The owner has asked for the
 same set of things in enough repos that the asking is itself the evidence: a
 rule that has to be requested per-app is a rule that was missing from here. The
 list below is the BASELINE. A session builds it because the app exists, not
-because anyone said so, and "he did not ask for it" is not a reason it is absent.
+because anyone said so, and "the owner did not ask for it" is not a reason it is absent.
 
 **The surface is an (i) control in the app's own chrome** — a letter `i`, in the
 header or equivalent, with an accessible name that says what it opens. Not a
@@ -1206,7 +1207,7 @@ the omissions that produced this section.
 
 **The rule behind the rule: if the owner says the same thing in two apps, it belongs
 in this document, and the session that hears it the second time writes it in.**
-Not the session that finishes the feature — the one that hears the repeat. He
+Not the session that finishes the feature — the one that hears the repeat. The owner
 has better things to do than be the memory these repos lack.
 
 *(Added 2026-08-03 at
@@ -1227,17 +1228,17 @@ they knocked over — and it says what is missing and why, not merely that it is
 missing.
 
 **Then ASK FOR THAT, not for a picture.** A session that asks the owner to photograph
-his screen is asking him to do worse work on its behalf.
+a screen is asking the owner to do worse work on its behalf.
 
 **AND IT IS WHERE A SESSION PUTS ITS TESTS.** This is the part that keeps being
 missed. A sandbox cannot reach most of the internet, cannot hold a phone still,
-has no accelerometer, no GPS, no cellular connection and no camera. The owner's
-device has all of them. So when something cannot be verified from here, the
+has no accelerometer, no GPS, no cellular connection and no camera. A real phone
+or tablet has all of them. So when something cannot be verified from here, the
 answer is NOT to record it as unverified and move on, and it is certainly not to
-ask him to go and look at something and describe it.
+ask the owner to go and look at something and describe it.
 
-**Build the check into the diagnostic surface and let his device run it.**
- He presses one control and pastes back text
+**Build the check into the diagnostic surface and let a real device run it.**
+ The owner presses one control and pastes back text
 that a session can read exactly — which is better evidence than a session would
 have got from the network anyway, because it comes from the real device, the
 real network path, and the real provider.
@@ -1255,7 +1256,7 @@ real network path, and the real provider.
  when three lines of diagnostics would have settled it is laziness wearing
  honesty's clothes.
 
-**Privacy is part of it:** anything precise enough to locate him is coarsened by
+**Privacy is part of it:** anything precise enough to locate the owner is coarsened by
 default, with an explicit opt-in to include it.
 
 **Two things the report must carry that are easy to leave out, both found by
@@ -1331,7 +1332,7 @@ and **the link is given in every reply that reports progress on it.**
 forty screens up by Wednesday, and on an iPad it is unreachable. What the owner
 needs is not a longer message but a place that is always current and always one
 tap away: what is done, what is in flight, what is not started, and what is
-waiting on him. A page can be reopened; a message has to be found.
+waiting on the owner. A page can be reopened; a message has to be found.
 
 **What it must show, and each is load-bearing:**
 
@@ -1342,8 +1343,8 @@ waiting on him. A page can be reopened; a message has to be found.
   green.** Those three are the honest answer to "what am I actually looking at",
   and a page reporting a stage as shipped while production is nine releases
   behind is a page that lies by omission.
-- **What is waiting on HIM**, marked apart from what is waiting on the work.
-  This is the half a progress bar cannot express and the half he needs most.
+- **What is waiting on THE OWNER**, marked apart from what is waiting on the work.
+  This is the half a progress bar cannot express and the half the owner needs most.
 - **What was found and NOT fixed**, and what was verified as *not* a defect.
   A status page that only lists wins is an advertisement.
 
@@ -1351,13 +1352,13 @@ waiting on him. A page can be reopened; a message has to be found.
 thing to lose, which is the problem this solves. Publish once, update in place.
 
 **HAND THE LINK OVER EVERY TIME.** Not once at creation and never again — every
-reply that says a stage landed carries the URL. He should never have to ask for
+reply that says a stage landed carries the URL. The owner should never have to ask for
 it, and asking for it is the signal this rule was broken.
 
 **It is not a substitute for saying what happened.** The reply still states the
 finding in words; the page is where the shape of the whole thing lives.
 
-*(Stated here 2026-08-07, at the owner's instruction, after he had to ask for the
+*(Stated here 2026-08-07, at the owner's instruction, after the owner had to ask for the
 link a second time during a seven-release run. Quietkeep's V2 page is the worked
 example; every repo with staged work owes the same.)*
 

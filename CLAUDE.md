@@ -39,13 +39,13 @@ Every item below has actually happened.
  Hand mechanical work to a cheaper model in a subagent; top tier is for
  judgement. (Doctrine §11b.)
 - **NEVER A TABLE OR GRID, anywhere the owner reads** — chat, commits, PR bodies,
- `NOTES.md`, all of it. They do not render on his iPad; the columns are lost
+ `NOTES.md`, all of it. They do not render on an iPad; the columns are lost
  silently while the prose around them looks fine. Headed lists instead.
  (Doctrine §2. Files are gated by `docs-check.mjs`; chat replies are not, and
  chat is where it happened again on 2026-08-03.)
-- **ANYTHING HE IS MEANT TO PASTE IS ONE FENCED CODE BLOCK** — handoff prompts,
+- **ANYTHING THE OWNER IS MEANT TO PASTE IS ONE FENCED CODE BLOCK** — handoff prompts,
  commands, configs, a message to send on. Not prose, not a blockquote, not
- styled markdown. The test is not "is it readable" but "what does he do with
+ styled markdown. The test is not "is it readable" but "what happens to
  it next"; if the answer is *copy*, it is a block. (Doctrine §2.
 - **A session CANNOT delete a remote branch.** The git relay drops the
  connection on any ref deletion and then prints `Everything up-to-date`, so it
@@ -56,28 +56,29 @@ Every item below has actually happened.
  preview, default branch are all GitHub-UI steps. Propose in `METADATA.md`;
  never report a repo set up while a row says proposed. (Doctrine §10.)
 - **ONLY NOAH DECIDES WHAT GOES ON THE HUB.** Adding an app here is advertising
- it under his name. A session adds one only when he NAMES it — not because it
+ it under the owner's name. A session adds one only when the owner NAMES it — not because it
  is finished, not because it is already live, not because §13.6 says a repo
  gets wired in, not because its absence looks like an oversight. It binds
  proposing and restoring and *mentioning an unlisted app as a candidate*, which
  is the one that feels safe and is not. Every deployed surface counts, not just
  the front page: the noscript list, the accessibility statement's app list,
- tiles, icons. Removal is his call too. (Doctrine §0c.and, on being told it was written
- down nowhere, )
+ tiles, icons. Removal is the owner's call too. (Doctrine §0c — on being told
+ this rule was nowhere in this file, the owner was right that it should not
+ have needed to be; it is written here because it turned out to be necessary.)
 - **THE GIT-HISTORY QUESTION IS SETTLED — never offer "make it private" or
  "contact GitHub Support" again.**
  Quietkeep's history was rewritten
- on his word; the residue that survives is ACCEPTED. A history scan coming back
+ on the owner's word; the residue that survives is ACCEPTED. A history scan coming back
  red is not new information and is not a reason to re-open it — record the
  locations and carry on. This is the same shape as the branch-deletion and
  metadata items above: a remedy that keeps getting re-offered because the
  record used to say "report it with the options". It no longer does.
  (Doctrine §9b.)
-- **NEVER QUOTE HIM, AND NEVER ATTRIBUTE ANYTHING TO HIM BY NAME, IN ANY REPO.**
+- **NEVER QUOTE THE OWNER, AND NEVER ATTRIBUTE ANYTHING TO THE OWNER BY NAME, IN ANY REPO.**
   Not in a comment, not in `NOTES.md`, not in a commit message, not in a release
-  note, not in the doctrine or the lessons. These repos are PUBLIC and carry his
-  name; what went in them was his ordinary speech, his frustration and his
-  swearing, republished under his own name where his peers and family read it.
+  note, not in the doctrine or the lessons. These repos are PUBLIC and carry the owner's
+  name; what went in them was ordinary speech, frustration and swearing,
+  republished under a real name in a public place.
   787 sites across two repos before it was caught, including inside the files
   that define what must never land in a repo.
   **Write what was wrong and what it measured. Never who reported it, and never
@@ -87,20 +88,21 @@ Every item below has actually happened.
   TWO HARD GATES, because the rule has two halves and only one was covered.
   `privacy-check.mjs` fails on attribution as well as disclosure, and was watched
   going red on 42 real sites in the pre-scrub tree — but every pattern in it
-  anchors on his NAME, so it cannot see a verbatim sentence of his speech.
+  anchors on the owner's NAME, so it cannot see a verbatim quotation that carries
+  no name at all.
   **Six of those were found by hand in two repos with every gate green.**
   `quote-check.mjs` is the other half: every set-apart quotation is declared as
   *document*, *product-copy* or *analysis* in a repo-local `.quote-allow`.
   It is a LIST rather than a pattern because three pattern rules were measured
   against the real violations and flagged 39, 138 and 227 files of honest prose —
-  the shape of his speech and the shape of the product's voice are the same shape
+  ordinary speech and the product's voice are the same shape
   (LESSONS §108). **Every sibling repo owes the wiring.**
 - **Multi-stage work carries a LIVE STATUS PAGE, and its link goes in EVERY
  progress reply** — not once at creation. Chat scrolls; on an iPad a plan agreed
  on Monday is unreachable by Wednesday. Published once, updated in place at the
  same URL, showing every stage's state, the staging/production versions, the
- last SHA verified green, what is waiting on HIM, and what was found and NOT
- fixed. **Him having to ask for the link is the signal the rule was broken** —
+ last SHA verified green, what is waiting on THE OWNER, and what was found and NOT
+ fixed. **The owner having to ask for the link is the signal the rule was broken** —
  which is what happened, twice, during a seven-release run. (Doctrine §7i.)
 - **CONFORMANCE IS NOT REACHABLE — ask who takes this route, with what hand.**
  These apps are used on a TABLET, BY TOUCH, and every accessibility gate in the
@@ -132,7 +134,7 @@ The shape of three of these is the same: **do not offer a capability the
 lessons already record as impossible.** Check before promising, not after.
 
 ## The baseline every app ships without being asked (Doctrine §7e, §7f)
-The owner should not have to request these per repo; he has, repeatedly, and the
+The owner should not have to request these per repo; the owner has, repeatedly, and the
 asking was the evidence the doctrine was missing a rule. Build them because the
 app exists.
 
@@ -151,7 +153,7 @@ app exists.
  waits, the reader is TOLD in a standing indicator, and a newcomer never is.
  Gated by `pwa-check.mjs`.
 
-**And the rule behind them: if he says the same thing in two apps, it belongs
+**And the rule behind them: if the owner says the same thing in two apps, it belongs
 in `DOCTRINE.md`, and the session that hears the repeat writes it in.**
 
 **Where each app stands (keep this current — it is the thing a new session
@@ -379,5 +381,5 @@ is a site change — verify the rendered page before pushing.
 Description / website / topics / social-preview are GitHub-UI steps the session
 token cannot perform. **The values for every app live in
 [`METADATA.md`](METADATA.md)** — propose there, the owner applies from there, and
-the per-item status flips to `set` only on his say-so. Never report any repo
+the per-item status flips to `set` only on the owner's say-so. Never report any repo
 "set up" while a row says proposed.

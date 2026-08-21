@@ -119,6 +119,7 @@ for (const f of files) {
   // person the rule is for. `privacy-check.mjs` reached the same conclusion
   // about itself; this is the shared spelling of it.
   let inSentinel = false;
+  const scannable = [];
   lines.forEach((line, i) => {
     if (SENTINEL_OPEN.test(line)) { inSentinel = true; return; }
     if (SENTINEL_CLOSE.test(line)) { inSentinel = false; return; }
@@ -127,8 +128,29 @@ for (const f of files) {
     // base64 is not a word. 300 is well past any hand-written line here.
     if (line.length > 300) return;
     for (const m of line.matchAll(PRONOUN_G)) found.push({ f, n: i + 1, w: m[0] });
-    for (const m of line.matchAll(POSSESSIVE_G)) found.push({ f, n: i + 1, w: m[0] });
+    scannable.push([i, line]);
   });
+
+  // RULE 2 RUNS OVER THE JOINED TEXT, and that is not tidiness. The possessive
+  // is two tokens with whitespace between them, and prose wraps: the role noun
+  // can end one line with the possession starting the next. A line-by-line scan
+  // cannot see that pair, and the first real one was found by hand in
+  // DOCTRINE.md §7f with this gate reporting the file clean.
+  //
+  // The pronoun rule stays per-line because a pronoun is one word and cannot
+  // straddle a break.
+  //
+  // Sentinel lines and over-long lines are dropped rather than blanked, so a
+  // pattern's own source cannot be stitched to the prose after it; the line
+  // number carried alongside each line keeps the report honest.
+  const joined = scannable.map(([, l]) => l).join('\n');
+  const lineOf = (index) => {
+    const upto = joined.slice(0, index).split('\n').length - 1;
+    return (scannable[upto]?.[0] ?? 0) + 1;
+  };
+  for (const m of joined.matchAll(POSSESSIVE_G)) {
+    found.push({ f, n: lineOf(m.index), w: m[0].replace(/\s+/g, ' ') });
+  }
 }
 
 /** Declared exceptions: `file | reason | the matched word`. Text rather than a
