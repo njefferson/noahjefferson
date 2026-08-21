@@ -16,24 +16,24 @@
 // because a pattern's source legitimately carries the anchor token.
 
 /**
- * ATTRIBUTION — quoting the owner, or putting his words in a repo at all.
+ * ATTRIBUTION — quoting the owner, or putting that speech in a repo at all.
  *
  * A SEPARATE FAILURE FROM A DISCLOSURE, and it went unnoticed for the entire
  * life of these repos because the disclosure patterns look for a diagnosis or a
- * health fact and this is neither. It is his ordinary speech — reports,
- * decisions, frustration, swearing — quoted verbatim, attributed to him by
- * name, in PUBLIC repositories bearing that name. 787 sites across two repos on
- * 2026-08-05, including in the very files that define what must never land in
- * one.
+ * health fact and this is neither. It is ordinary speech — reports, decisions,
+ * frustration, swearing — quoted verbatim and attributed by name, in PUBLIC
+ * repositories bearing that name. 787 sites across two repos on 2026-08-05,
+ * including in the very files that define what must never land in one.
  *
  * It grew because quoting whoever found a defect FEELS like provenance. It is
  * not provenance. It is republishing somebody's private messages, in public,
  * under their own name, without asking, in a place their peers and family read.
  *
- * WHAT IS AND IS NOT CAUGHT. His name is allowed to exist — it is his site, his
- * byline, his link in a footer. What is forbidden is ATTRIBUTION: a quotation
- * beside his name or role, or reported speech naming him as the source. Write
- * what was wrong and what it measured; never who said it or what they said.
+ * WHAT IS AND IS NOT CAUGHT. The name is allowed to exist — it is a personal
+ * site, a byline, a link in a footer. What is forbidden is ATTRIBUTION: a
+ * quotation beside that name or role, or reported speech naming a person as the
+ * source. Write what was wrong and what it measured; never who said it or what
+ * they said.
  *
  * The engineering reason a defect was found does not require the sentence that
  * reported it. "The scope was 269px against the horizon's 217" is the whole
@@ -41,30 +41,37 @@
  */
 
 /**
- * HIS_LIFE — the owner's actual circumstances, as opposed to his person or his
- * words. A THIRD fail class, and the one the doctrine claimed to cover and did
- * not.
+ * OWNER_LIFE — the owner's actual circumstances, as opposed to the person or
+ * the words. A THIRD fail class, and the one the doctrine claimed to cover and
+ * did not.
  *
- * WHAT HAPPENED. He described a real morning to shape the product — medication
- * running low, a medical device needing supplies, appointments to make, a
- * workplace matter, his family's plans. A session's next move was to write all
- * of it into a public NOTES.md as "evidence", hours after that same session had
- * finished removing every quotation of him for the identical reason. He stopped
- * it. Neither of the two existing classes would have: DISCLOSURE looks for a
- * diagnosis beside his name, ATTRIBUTION looks for his words, and a paraphrased
- * account of his day is neither.
+ * WHAT HAPPENED. A real morning was described in order to shape the product,
+ * in the ordinary detail a real morning has. A session's next move was to write
+ * all of it into a public NOTES.md as "evidence" — hours after that same
+ * session had finished removing every quotation for the identical reason. It
+ * was stopped from outside the session, which is the part that should worry
+ * anyone reading this: neither existing class would have caught it. DISCLOSURE
+ * looks for a diagnosis beside a name, ATTRIBUTION looks for quoted words, and
+ * a paraphrase of somebody's day is neither.
  *
- * THE LINE. The SHAPE of what he reports is product design and belongs here —
- * "a standing arrangement whose failure mode is silence" is a noun worth having.
- * The INSTANCE is his life and belongs nowhere in a repository.
+ * THIS COMMENT IS UNDER ITS OWN RULE. What that morning contained is not
+ * written here, and no later edit may restore it "for clarity". The categories
+ * are as much the disclosure as the sentences were, and an earlier version of
+ * this very paragraph listed them — in the canonical file, mirrored into a
+ * second public repo, for sixteen days. Describe the SHAPE, never the instance;
+ * a gate's own header is not an exemption from the gate.
+ *
+ * THE LINE. The SHAPE of what gets reported is product design and belongs here
+ * — "a standing arrangement whose failure mode is silence" is a noun worth
+ * having. The INSTANCE is somebody's life and belongs nowhere in a repository.
  *
  * WHY THIS IS NOT A WORD LIST. This app is a PLANNER: its own sample data says
  * dentist, appointment, doctor, family, car — ten files use "dentist" alone.
  * Banning everyday nouns would fail the product's own fixtures on the first run,
  * which this file already records as the one thing a privacy gate cannot afford.
- * So the broad rule ANCHORS ON HIM — a life noun tied to him by a possessive or
- * a verb — and only a short list of specifics with no possible product meaning
- * is banned outright.
+ * So the broad rule ANCHORS ON THE OWNER — a life noun tied to the owner by a
+ * possessive or a verb — and only a short list of specifics with no possible
+ * product meaning is banned outright.
  */
 
 // privacy-gate:patterns-begin
@@ -104,15 +111,15 @@ export const ATTRIBUTION = [
   // numbers look like" is ordinary guidance prose and fired on the first run;
   // "the owner said: <quote>" is the thing.
   /\b(?:noah|the owner)\b\s+(?:said|says|reported|complained|wrote|told|put it|called it)\b[^\n]{0,60}["“]/i,
-  // His words, his message, his screenshot — attribution without a quote mark.
-  // The name token excludes handles and domains, which are his own product copy
+  // A named person's words, message or screenshot — attribution with no quote
+  // mark on it. The name token excludes handles and domains, which are product
   // and were caught by the first draft of this rule.
   /\b(?:noah(?![.\w])|the owner)(?:'s|\u2019s)\s+(?:words|quote|message|complaint|wording|phrasing|screenshot|exact)\b/i,
 
   // THE MIRROR IMAGE: QUOTE FIRST, ATTRIBUTION AFTER.
   // Every rule above reads left to right — role, then colon or verb, then the
   // quotation. The reverse order is the same act and went unseen for a month: a
-  // bolded sentence of his speech, closed, then the role and a date, in a repo's
+  // bolded sentence of reported speech, closed, then the role and a date, in a
   // own question log, green on this file the whole time.
   //
   // The closing quote must carry a markdown EMPHASIS close. That is what
@@ -164,9 +171,9 @@ export const ATTRIBUTION = [
   // call a thing is, and stays legal.
   /\bnoah(?![.\w@-])(?:'s|\u2019s)\s+(?:ipad|iphone|device|phone|screen|browser|machine|laptop|tablet|instance|store|install)\b/i,
 ];
-export const HIS_LIFE = [
-  // Anchored on him: a life noun tied to the owner by a possessive. "his
-  // prescriptions", "the owner's supervisor", "his wife". The app's own
+export const OWNER_LIFE = [
+  // Anchored on the owner: a life noun tied to the owner by a possessive.
+  // A prescription, a supervisor, a spouse. The app's own
   // fixtures say "dentist" and "appointment" freely and are untouched, because
   // nothing there belongs to anybody.
   /\b(?:noah(?![.\w])|the owner|his)(?:'s|\u2019s)?\s+(?:\w+\s+){0,2}?(?:prescription|prescriptions|pharmacy|refill|refills|medication|medications|dose|dosage|inhaler|appointment|appointments|doctor|dentist|optician|optometrist|surgery|clinic|therapist|supervisor|employer|workplace|payroll|wife|husband|partner|spouse|kids|children|daughter|son|truck|car|vehicle|mortgage|landlord)\b/i,

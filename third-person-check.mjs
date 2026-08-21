@@ -64,13 +64,18 @@ const repoAt = argv.indexOf('--repo');
 const repo = repoAt >= 0 && argv[repoAt + 1] ? argv[repoAt + 1] : '.';
 const listing = argv.includes('--list');
 
-/** The marked region. A file that must CONTAIN these shapes to match on them
- *  wraps just that region, never the whole file — see the note at the scan.
- *  Written split so this pair of lines does not itself open a region. */
-const SENTINEL_OPEN = new RegExp('third-person' + '-check: sentinel start');
-const SENTINEL_CLOSE = new RegExp('third-person' + '-check: sentinel end');
+/** The marked region, and it is THE FAMILY'S EXISTING SPELLING rather than a
+ *  new one. `privacy-patterns.mjs` already exports these two markers and every
+ *  gate keying off them skips the region for scanning, because a pattern's
+ *  source legitimately carries the token it matches on. A second spelling would
+ *  mean a file had to carry two sets of markers to be exempt from two gates,
+ *  and the one somebody forgets is the one that matters.
+ *
+ *  Built by concatenation so these two lines do not themselves open a region. */
+const SENTINEL_OPEN = new RegExp('privacy-gate:' + 'patterns-begin');
+const SENTINEL_CLOSE = new RegExp('privacy-gate:' + 'patterns-end');
 
-// third-person-check: sentinel start
+// privacy-gate:patterns-begin
 const PRONOUN_G = /\b(?:he|his|him|himself)\b/gi;
 // A POSSESSION, never an act. Acts are governance and stay.
 const POSSESSIONS = [
@@ -81,7 +86,7 @@ const POSSESSIONS = [
 ];
 const POSSESSIVE_G = new RegExp(
   String.raw`\bthe owner['’]s\s+(?:` + POSSESSIONS.join('|') + String.raw`)\b`, 'gi');
-// third-person-check: sentinel end
+// privacy-gate:patterns-end
 
 const name = repo.split('/').filter(Boolean).pop() || 'repo';
 console.log(`\n=== third-person gate - ${name} ===`);

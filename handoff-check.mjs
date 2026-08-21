@@ -8,9 +8,9 @@
 // WHY (LESSONS §26, the owner 2026-08-02). A build shipped with four green gates and
 // a handoff that broke four doctrine rules — every one of them prose-only:
 //   · deployed to staging four times and never handed over the URL (§7)
-//   · told him to add Cloudflare secrets that already existed (§5b)
+//   · told the owner to add Cloudflare secrets that already existed (§5b)
 //   · told a man on an iPad to fetch a file "from the repo" (§2, §6)
-//   · modelled his hardware from a document instead of from him (§6)
+//   · modelled the hardware from a document instead of from the device (§6)
 // The gated rules all held. The prose rules all lost. So: gate the prose.
 //
 // HONEST ABOUT ITS OWN CEILING. The first group below is MECHANICAL — the
@@ -178,7 +178,7 @@ for (const [file, text] of prose) {
     if (m) {
       failures.push(
         `${file}:${n + 1}: tells the reader to fetch "${m[2]}" from the repo. `
-        + 'the owner is iPad-first (§2) — ATTACH the file instead of naming a path on a machine he is not on.',
+        + 'the owner is iPad-first (§2) — ATTACH the file instead of naming a path on a machine that is not there.',
       );
     }
   });
@@ -197,7 +197,7 @@ const MUST_ACK = [
    * verified each one the way the lessons demand: read the REMOTE, confirm the
    * range line, confirm the SHA. Every push was real. Every DEPLOY had failed,
    * on a CI gate added the same afternoon. The owner's device sat on 1.24.0 for four
-   * releases while each was reported as shipped, and it surfaced only when he
+   * releases while each was reported as shipped, and it surfaced only when the
    * asked "What. Button." about a feature that had never left the branch.
    *
    * `deploy-url` above covers reading a log you already opened. This covers the
@@ -216,7 +216,7 @@ const MUST_ACK = [
   ['evidence', 'Every claim I make about external state — secrets, projects, permissions, '
     + 'whether a thing exists — cites the log line or response it came from. '
     + 'No claim that makes it the owner\'s problem goes out on inference (§5b, §10).'],
-  ['attachments', 'Every file I ask him to act on is ATTACHED, not described by path (§2).'],
+  ['attachments', 'Every file the owner is asked to act on is ATTACHED, not described by path (§2).'],
   ['manual-steps', 'Every manual step I hand over I have either verified end to end, or '
     + 'I have said plainly why I could not (§6). No goose chases.'],
 ];

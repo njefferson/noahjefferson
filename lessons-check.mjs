@@ -7,7 +7,7 @@
 //   node lessons-check.mjs --checklist        print only the session checklist
 //
 // WHY THIS EXISTS (
-// He was right. 2400 lines of hard-bought
+// That was right. 2400 lines of hard-bought
 // knowledge that every session reads and then ignores, because reading is all
 // the file ever asked for.
 //

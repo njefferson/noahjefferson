@@ -151,11 +151,11 @@ heatmap cell an inline colour, no `<script>` at all.** the owner reads on an iPa
 the file viewer that shows a sent HTML file **strips scripts**: a chart drawn in
 JS renders as a blank card with floating numbers (happened 2026-08-03, LESSONS
 §9). Static HTML/CSS renders identically in the Artifact, the file viewer, and
-offline. **Avoid a `<table>` for the cross-tab** — tables collapse for him;
+offline. **Avoid a `<table>` for the cross-tab** — tables collapse on the target device;
 use bars. Verify by rendering with JS DISABLED at ~400px width before sending.
 
 **Deliver it two ways**: publish the Artifact (a link) AND send the standalone
-file via the file tool with inline render — the link needs him signed in and can
+file via the file tool with inline render — the link needs a signed-in reader and can
 fail to open on the iPad, the file always renders. Do not build a standing app or
 put the analytics token in a browser: the token is a GitHub Actions secret and
 must stay server-side.
@@ -167,7 +167,7 @@ must stay server-side.
 - Do not present the account-wide (all-source) totals as usage; always eyeball.
 - Do not present **request** counts as **users**. Requests are the machine layer;
  lead with distinct mobile+tablet devices. The owner caught this once — a by-country
- view in the thousands that was mostly crawlers. Do not make him catch it twice.
+ view in the thousands that was mostly crawlers. Do not leave it to be caught twice.
 - Do not multiply by `sampleInterval`.
 - Do not call requests "visits" or "people".
 - Do not print raw client IPs into any public place — the workflow log is

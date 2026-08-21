@@ -353,7 +353,7 @@ NON-NEGOTIABLE:
  the real device.
 
 HAND BACK: what the gate found before and after, what you changed, what you
-deliberately did NOT change and why, and anything that needs his eye.
+deliberately did NOT change and why, and anything that needs the owner's eye.
 ```
 
 **Adjust per app.** An app with no settings surface should take the default

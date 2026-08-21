@@ -136,7 +136,7 @@ console.error(`
 This is a RECORD, not a prompt. The history question is settled (Doctrine §9b):
 the residue is accepted, and making the repo private or asking GitHub Support to
 purge cached commits are DECLINED remedies that a session does not raise again.
-Rewriting history is the owner's call alone, offered only if he raises it.
+Rewriting history is the owner's call alone, and is raised only from that side.
 
 Before treating any of the above as a leak, check whether it is meta-prose ABOUT
 these patterns — a sentence naming the person before the term reads to the gate

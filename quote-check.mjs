@@ -11,7 +11,7 @@
 // ## Why this is a LIST and not a pattern
 //
 // The rule it serves is the second half of the privacy rule: never quote the
-// owner, and never attribute anything to him — "write what was wrong and what it
+// owner, and never attribute anything to the owner — "write what was wrong and
 // measured, never who reported it, and never in what words". `privacy-check.mjs`
 // enforces the NAME half and cannot see this one: it anchors every pattern on
 // `noah` or `the owner`, and a verbatim sentence of somebody's speech carries
@@ -280,8 +280,8 @@ if (stale.length === 0) {
 
 if (failed > 0) {
   console.error(`\n${failed} problem(s).`);
-  console.error('\nThe rule: never quote the owner, and never attribute anything to him.');
-  console.error('Write what was wrong and what it measured. Five sentences of his own');
+  console.error('\nThe rule: never quote the owner, and never attribute anything to them.');
+  console.error('Write what was wrong and what it measured. Five sentences of ordinary');
   console.error('speech survived every other gate in two repos before this existed.\n');
   process.exit(1);
 }

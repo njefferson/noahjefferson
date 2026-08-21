@@ -7,7 +7,7 @@ proposes here and the GitHub UI copies from here — never the other way round,
 and never typed fresh in chat where it evaporates.
 
 **Status is tracked per item.** An item is `set` only after the owner has actually
-applied it and said so; `proposed` means the value below is awaiting his
+applied it and said so; `proposed` means the value below is awaiting the owner's
 confirm. Never report a repo "set up" while any item says proposed (§10).
 
 **No tables in this file, ever** (Doctrine §3). One item per heading, its value
@@ -44,9 +44,10 @@ Live on GitHub now:
 > A glass cockpit for your desk — airliner instruments driven by your device's
 > own sensors and live aviation data. Not a simulator; never for navigation.
 
-**Proposed revision** — 2026-08-03, from how the owner actually describes the app to
-his friends: The live description says **, which is the one reader's case and silently excludes the two uses
-that make the panel come alive. The app is undersold by its own copy.
+**Proposed revision** — 2026-08-03. The live description frames the app *for
+your desk*, which is one reader's case and silently excludes the two uses that
+make the panel come alive: following a real flight while on it, and clamping it
+in the car. The app is undersold by its own copy.
 
 > Airliner instruments on your phone or tablet, driven by its own sensors and
 > live aviation data. Follow a real flight, take it on one, or clamp it in the

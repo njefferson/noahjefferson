@@ -7,8 +7,8 @@
 //
 // WHY (
 //
-// The line that decides every case: his design statements are repo material;
-// who he is, is not. The products' framing ("a planner for neurodivergent
+// The line that decides every case: the owner's design statements are repo
+// material; who the owner is, is not. The products' framing ("a planner for neurodivergent
 // users") and research about users as a population are public on purpose. The
 // violation is a sentence whose predicate is a diagnosis, a health fact, or an
 // identity disclosure and whose subject is the OWNER — and every pattern below
@@ -40,7 +40,7 @@
 
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { ATTRIBUTION, DISCLOSURE, HIS_LIFE, REGION_FORBIDDEN, split } from './privacy-patterns.mjs';
+import { ATTRIBUTION, DISCLOSURE, OWNER_LIFE, REGION_FORBIDDEN, split } from './privacy-patterns.mjs';
 import { repoFromArgv } from './gate-args.mjs';
 
 // A BARE PATH IS A TYPO, NOT A TARGET — see gate-args.mjs for what it used to
@@ -87,9 +87,9 @@ for (const f of files) {
    * ATTRIBUTION IS A SECOND FAIL CLASS, not a lint.
    *
    * The disclosure patterns look for a diagnosis or a health fact attached to
-   * the owner. Quoting him does not look like that, so it ran unchecked for the
-   * life of these repos — 787 sites across two public repositories, his
-   * ordinary speech and his swearing, attributed to him by name, in repos his
+   * the owner. A quotation does not look like that, so it ran unchecked for the
+   * life of these repos — 787 sites across two public repositories: ordinary
+   * speech and swearing, attributed by name, in repositories that
    * peers and family read.
    *
    * Same treatment as a disclosure: location only, never the matched text, and
@@ -97,12 +97,12 @@ for (const f of files) {
    */
   for (const p of ATTRIBUTION) {
     const m = p.exec(body);
-    if (m) hits.push(`  ${f}:${body.slice(0, m.index).split('\n').length}  (attribution — his words are not repo material)`);
+    if (m) hits.push(`  ${f}:${body.slice(0, m.index).split('\n').length}  (attribution — reported speech is not repo material)`);
   }
 
-  for (const p of HIS_LIFE) {
+  for (const p of OWNER_LIFE) {
     const m = p.exec(body);
-    if (m) hits.push(`  ${f}:${body.slice(0, m.index).split('\n').length}  (his life — the instance is not repo material)`);
+    if (m) hits.push(`  ${f}:${body.slice(0, m.index).split('\n').length}  (a life — the instance is not repo material)`);
   }
   for (const [p, what] of REGION_FORBIDDEN) {
     if (p.test(region)) hits.push(`  ${f}: the sentinel-skipped region contains ${what}`);
@@ -114,8 +114,8 @@ if (hits.length) {
   console.error(`\nFAIL STATE — ${hits.length} personal disclosure(s) about the owner.`);
   console.error('Locations only; the matched text is deliberately not printed.\n');
   for (const h of hits) console.error(h);
-  console.error('\nRemove the sentence, not the gate. Design statements stay; who he is —');
-  console.error('and anything he said — does not. Write what was wrong and what it measured,');
+  console.error('\nRemove the sentence, not the gate. Design statements stay; the person —');
+  console.error('and anything the owner said — does not. Write what was wrong and what it measured,');
   console.error('never who reported it or in what words.');
   process.exit(1);
 }
