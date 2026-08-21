@@ -693,7 +693,7 @@ Two consequences, both non-optional:
 - Verify deployed builds by serving the app locally (no build step in several
  apps); some sandboxes block pages.dev and most third-party APIs — probe first.
 
-## 11b. The credit is his money. Spend it like it is.
+## 11b. The credit is the owner's money. Spend it like it is.
 
 Added 2026-08-21, after a session ran browser walks, accessibility gates, CI
 polling and whole-file reads across a long autonomous stretch and consumed a
@@ -711,22 +711,24 @@ nothing. Never say "I'll keep an eye on it"; there is nothing to keep an eye on.
  question: one gate with `--only=`, one grep, one `sed -n` range instead of a
  whole file. Re-render only what changed.
 - **Say what it will cost BEFORE a long run**, in seconds or minutes, and let
- him stop it. A silent five minutes is the shape of the failure this section
+ it be stopped. A silent five minutes is the shape of the failure this section
  exists for.
 - **"Continue" is not authority for a new project.** It resumes the work in
  front of you. Starting a self-directed sweep, audit or refactor off one word
- — the thing that produced this rule — is spending his money on your own idea.
+ — the thing that produced this rule — is spending the owner's money on your
+ own idea.
  Name the next piece of work and its rough cost first.
 - **Push work DOWN a tier.** A session cannot change the model serving it —
- that is `/model` and it is his call — but it can do two things. Say plainly
- when the work in front of it does not need the top tier, so he can switch. And
+ that is `/model` and it is the owner's call — but it can do two things. Say
+ plainly when the work in front of it does not need the top tier, so it can be
+ switched. And
  hand mechanical work to a cheaper model in a subagent rather than doing it at
  the top tier: find-and-replace sweeps, classifying a long list against a stated
  rule, running a gate and reporting its exit code, reformatting, counting.
  **Top tier is for judgement** — a design decision that binds later releases, a
  defect nobody has diagnosed, anything where being wrong is expensive.
 - **Batch the questions.** Three cheap calls in one turn beat three turns.
-- **A hard cap is the only real stop, and it is his to set** — Anthropic
+- **A hard cap is the only real stop, and it is the owner's to set** — Anthropic
  Console, billing, spending limits. `/cost` shows what a session has spent so
  far. Say so when it matters; never imply a session can enforce a limit.
 

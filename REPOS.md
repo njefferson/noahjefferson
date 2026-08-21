@@ -147,8 +147,8 @@ One line each, so it is not a memory test:
   `--adopt` only after the drift is actually read.
 - **The third-person sweep — owed by THIS REPO and by Quietkeep, and by nothing
   else.** LESSONS 113's scrub covered four siblings and found the sweep for
-  references carrying no name at all — *his iPad*, *he found*, *the owner's
-  device* — worth 49 more sites in one and 84 in another after every named
+  references carrying no name at all — a pronoun, or a possessive naming a
+  machine — worth 49 more sites in one and 84 in another after every named
   attribution was already gone. **The two repos it did not cover are the two
   that had been scrubbed earlier for the NAME and QUOTATION halves only**, which
   is exactly why they look done. Measured 2026-08-20 on that scrub's own
@@ -158,7 +158,8 @@ One line each, so it is not a memory test:
   **60 here** (32 in `LESSONS.md`, 18 in `DOCTRINE.md`, 6 in `CLAUDE.md`).
   Quietkeep's broader third-person count is 418 across 388 tracked files, most
   of which are ROLE references — *the owner decides what is a VERSION* is
-  governance and stays; *what ends his day* is a fact about a person and does
+  governance and stays; a phrase about how somebody's day goes is a fact about a
+  person and does
   not. **The count is not the job; reading them is**, which is the whole reason
   LESSONS 113 files the scan as a checklist and not a gate.
 

@@ -29,7 +29,7 @@ is loaded into every session automatically — so a rule that lives only there
 gets read once at the start of a long session and broken four hours later.
 Every item below has actually happened.
 
-- **THE CREDIT IS HIS MONEY AND A SESSION CANNOT SEE THE BALANCE.** No warning
+- **THE CREDIT IS THE OWNER'S MONEY AND A SESSION CANNOT SEE THE BALANCE.** No warning
  will ever arrive, so the restraint is unconditional. Nothing expensive by
  reflex — a browser walk, an a11y run, a CI poll loop, re-reading a file already
  read — each is a deliberate spend. Say what a long run will cost BEFORE
