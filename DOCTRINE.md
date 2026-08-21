@@ -693,6 +693,43 @@ Two consequences, both non-optional:
 - Verify deployed builds by serving the app locally (no build step in several
  apps); some sandboxes block pages.dev and most third-party APIs — probe first.
 
+## 11b. The credit is his money. Spend it like it is.
+
+Added 2026-08-21, after a session ran browser walks, accessibility gates, CI
+polling and whole-file reads across a long autonomous stretch and consumed a
+$250 credit grant. **The owner found out from the balance, not from the
+session.**
+
+**A SESSION CANNOT SEE BILLING.** Not the plan, not the balance, not what a
+turn cost. There is no number to watch and no warning that will ever arrive, so
+the discipline cannot be triggered by one — it is unconditional or it is
+nothing. Never say "I'll keep an eye on it"; there is nothing to keep an eye on.
+
+- **Nothing expensive by reflex.** A full browser walk, an accessibility run,
+ `look`/`tour-shots`, a CI poll loop, re-reading a file already read this
+ session — each is a deliberate spend. Run the narrowest thing that answers the
+ question: one gate with `--only=`, one grep, one `sed -n` range instead of a
+ whole file. Re-render only what changed.
+- **Say what it will cost BEFORE a long run**, in seconds or minutes, and let
+ him stop it. A silent five minutes is the shape of the failure this section
+ exists for.
+- **"Continue" is not authority for a new project.** It resumes the work in
+ front of you. Starting a self-directed sweep, audit or refactor off one word
+ — the thing that produced this rule — is spending his money on your own idea.
+ Name the next piece of work and its rough cost first.
+- **Push work DOWN a tier.** A session cannot change the model serving it —
+ that is `/model` and it is his call — but it can do two things. Say plainly
+ when the work in front of it does not need the top tier, so he can switch. And
+ hand mechanical work to a cheaper model in a subagent rather than doing it at
+ the top tier: find-and-replace sweeps, classifying a long list against a stated
+ rule, running a gate and reporting its exit code, reformatting, counting.
+ **Top tier is for judgement** — a design decision that binds later releases, a
+ defect nobody has diagnosed, anything where being wrong is expensive.
+- **Batch the questions.** Three cheap calls in one turn beat three turns.
+- **A hard cap is the only real stop, and it is his to set** — Anthropic
+ Console, billing, spending limits. `/cost` shows what a session has spent so
+ far. Say so when it matters; never imply a session can enforce a limit.
+
 ## 12. Source-of-truth files (naming convention)
 
 - `NOTES.md` — the repo's source of truth: thesis, roadmap, settled decisions,

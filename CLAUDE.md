@@ -29,6 +29,15 @@ is loaded into every session automatically — so a rule that lives only there
 gets read once at the start of a long session and broken four hours later.
 Every item below has actually happened.
 
+- **THE CREDIT IS HIS MONEY AND A SESSION CANNOT SEE THE BALANCE.** No warning
+ will ever arrive, so the restraint is unconditional. Nothing expensive by
+ reflex — a browser walk, an a11y run, a CI poll loop, re-reading a file already
+ read — each is a deliberate spend. Say what a long run will cost BEFORE
+ starting it. **"Continue" resumes the work in front of you; it is not authority
+ to start a sweep of your own** — that is the exact act that burned a $250 grant
+ in one session, unannounced, while the owner watched a silent five minutes.
+ Hand mechanical work to a cheaper model in a subagent; top tier is for
+ judgement. (Doctrine §11b.)
 - **NEVER A TABLE OR GRID, anywhere the owner reads** — chat, commits, PR bodies,
  `NOTES.md`, all of it. They do not render on his iPad; the columns are lost
  silently while the prose around them looks fine. Headed lists instead.
