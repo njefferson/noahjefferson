@@ -77,6 +77,9 @@ const SENTINEL_CLOSE = new RegExp('privacy-gate:' + 'patterns-end');
 
 // privacy-gate:patterns-begin
 const PRONOUN_G = /\b(?:he|his|him|himself)\b/gi;
+// Not prose: an unbroken run no hand ever typed. See the scan loop for the cost
+// of the line-length heuristic this replaced.
+const MACHINE_RUN = /\S{80,}/;
 // A POSSESSION, never an act. Acts are governance and stay.
 const POSSESSIONS = [
   'device', 'devices', 'ipad', 'iphone', 'phone', 'mac', 'laptop', 'screen',
@@ -130,8 +133,17 @@ for (const f of files) {
     if (SENTINEL_CLOSE.test(line)) { inSentinel = false; return; }
     if (inSentinel) return;
     // A hash or a minified bundle is not prose, and a word boundary inside
-    // base64 is not a word. 300 is well past any hand-written line here.
-    if (line.length > 300) return;
+    // base64 is not a word. **The test is an unbroken RUN, never the line's
+    // length** — this read `line.length > 300` for its first eleven days and
+    // that number was measured against nothing. A sibling writes markdown one
+    // paragraph per line with soft-wrap off, so 632 of its tracked lines cleared
+    // 300 characters as ordinary prose and the pronoun rule never ran on any of
+    // them: 12 real references stood in three files, one of them the repo's own
+    // source of truth, with this gate reporting the tree clean. Hand-written
+    // prose has no 80-character word; a hash, a data URI and a minified bundle
+    // are nothing but. Measured over both repos after the change: the same 45
+    // and 44 machine lines skipped, and zero prose lines lost.
+    if (MACHINE_RUN.test(line)) return;
     for (const m of line.matchAll(PRONOUN_G)) found.push({ f, n: i + 1, w: m[0] });
     scannable.push([i, line]);
   });
