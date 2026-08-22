@@ -123,8 +123,15 @@ Every item below has actually happened.
  If you genuinely must stop, the FIRST line says so in those words — *stopping
  here, waiting on you for X* — because "I'll hold" at the end of a long report
  reads as "I am continuing", and the silence gets discovered by being asked
- what happened. Three times in one session, twice after it had been ruled out.
- (Doctrine §11c.)
+ what happened. Four times in one session, and the fourth was AFTER this rule
+ existed and was indexed right here — on the sentence "I'm waiting on it",
+ about a background CI poll.
+ **So it is a `Stop` hook now, not a paragraph** — [`stop-guard.mjs`](stop-guard.mjs),
+ wired per repo in `.claude/settings.json`. It reads the reply just written and
+ REFUSES the stop when that reply says the work is still running and does not
+ open with the declaration. Waiting for the thing and carrying on is the
+ expected way past it. Same escalation as `branch-guard.mjs`: an instruction in
+ a file never once refused the commit it forbade. (Doctrine §11c.)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
  range line in the output means nothing moved. (LESSONS, 2026-08-02.)

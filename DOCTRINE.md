@@ -770,6 +770,33 @@ invisible from the owner's side. A session that stops without saying so is
 indistinguishable from a session that is still working, and the cost is
 measured in hours nobody was watching.
 
+### It has teeth now, because the paragraph did not hold
+
+**Everything above was written on 2026-08-22 and broken the same day, in the
+session that wrote it.** The reply ended `I'm waiting on it` — a background CI
+poll — and went quiet. That is the fourth time, and the second time AFTER the
+rule existed and was indexed in two `CLAUDE.md` files.
+
+So the escalation is not a fifth paragraph. **[`stop-guard.mjs`](stop-guard.mjs)
+is a `Stop` hook**, wired in each repo's `.claude/settings.json` through a
+`.claude/hooks/stop-guard.sh` shim. It reads the reply the session just wrote
+and **refuses the stop** — exit 2, message fed back as the next instruction —
+when that reply says the work is still running and does not open with the
+declaration this section requires. Either wait for the thing and carry on, or
+say *stopping here, waiting on you for X* as the first line.
+
+It is narrow by design: it fires only on a reply that both admits waiting and
+omits the declaration, which is the exact shape of all four incidents. A hook
+that fired on every turn would be noise within a week, and noise gets switched
+off — a switched-off guard being strictly worse than none. It honours
+`stop_hook_active`, so it can never loop, and it FAILS OPEN when the hub is not
+checked out beside the repo.
+
+**This is the same escalation `branch-guard.mjs` is built on.** An instruction
+in a file never once refused the commit it forbade. The rule a session has to
+remember at the end of four hours is not the same object as the rule the
+harness runs regardless.
+
 ## 12. Source-of-truth files (naming convention)
 
 - `NOTES.md` — the repo's source of truth: thesis, roadmap, settled decisions,
