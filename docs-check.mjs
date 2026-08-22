@@ -24,7 +24,7 @@
  * Exits non-zero, naming file and line, with the offending text.
  */
 
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 /** Directories never worth walking. */
@@ -32,7 +32,22 @@ import { join, relative, resolve } from 'node:path';
 // these gates without forking them. Auditing it from the sibling means auditing
 // the hub's docs twice, from a repo that cannot fix them — and the sibling's
 // build goes red for a file it does not own. The hub audits itself.
+//
+// THE NAME WAS NOT THE RULE, and listing one name meant the rule held for one
+// sibling. Quietkeep checks the hub out at `.hub-gates`, so this walk read the
+// hub's 11 markdown files as that repo's own — 135 files instead of 124 —
+// and any grid landing in the hub would have turned a sibling's build red for a
+// file nobody there could fix, which is the exact outcome the paragraph above
+// was written to prevent. Caught by running the CI command with the hub really
+// checked out at the path CI uses, rather than by the sibling path a developer
+// types, where the directory does not exist and the bug cannot appear.
+//
+// The rule the name was standing in for: A NESTED GIT REPOSITORY IS NOT THIS
+// REPOSITORY'S CONTENT. That holds whatever anybody calls the directory.
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.wrangler', '.hub']);
+
+/** A checkout of some other repo, whatever it has been named. */
+const isNestedRepo = (dir) => existsSync(join(dir, '.git'));
 
 /**
  * A GFM table is only a table if it has a DELIMITER row — `|---|---|`. A line
@@ -90,8 +105,10 @@ function markdownFiles(root) {
     for (const entry of readdirSync(dir)) {
       if (SKIP_DIRS.has(entry)) continue;
       const full = join(dir, entry);
-      if (statSync(full).isDirectory()) walk(full);
-      else if (entry.endsWith('.md')) out.push(full);
+      if (statSync(full).isDirectory()) {
+        if (full !== root && isNestedRepo(full)) continue;
+        walk(full);
+      } else if (entry.endsWith('.md')) out.push(full);
     }
   };
   walk(root);
