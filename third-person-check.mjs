@@ -127,10 +127,11 @@ for (const f of files) {
   // person the rule is for. `privacy-check.mjs` reached the same conclusion
   // about itself; this is the shared spelling of it.
   let inSentinel = false;
+  let openedAt = 0;
   const scannable = [];
   lines.forEach((line, i) => {
-    if (SENTINEL_OPEN.test(line)) { inSentinel = true; return; }
-    if (SENTINEL_CLOSE.test(line)) { inSentinel = false; return; }
+    if (SENTINEL_OPEN.test(line)) { inSentinel = true; openedAt = i + 1; return; }
+    if (SENTINEL_CLOSE.test(line)) { inSentinel = false; openedAt = 0; return; }
     if (inSentinel) return;
     // A hash or a minified bundle is not prose, and a word boundary inside
     // base64 is not a word. **The test is an unbroken RUN, never the line's
@@ -168,6 +169,16 @@ for (const f of files) {
   for (const m of joined.matchAll(POSSESSIVE_G)) {
     found.push({ f, n: lineOf(m.index), w: m[0].replace(/\s+/g, ' ') });
   }
+
+  // AN UNCLOSED REGION IS A FAILURE, NEVER A SKIP TO END-OF-FILE. A document
+  // explaining these markers has to name them, and a sentence naming the
+  // opening marker opens a region as surely as the marker itself does —
+  // silently swallowing everything after it while the gate reports the tree
+  // clean. It is the same shape as the length cap this file already carries a
+  // note about: a skip whose condition is wider than the hazard it was written
+  // for. Reported as an undeclarable finding rather than a warning, because a
+  // warning here is a line of output nobody reads.
+  if (openedAt) found.push({ f, n: openedAt, w: 'UNCLOSED SENTINEL REGION' });
 }
 
 /** Declared exceptions: `file | reason | the matched word`. Text rather than a

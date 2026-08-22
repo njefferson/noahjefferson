@@ -207,13 +207,30 @@ export function split(text) {
   const body = [];
   const region = [];
   let inside = false;
-  for (const line of text.split('\n')) {
-    if (line.includes(BEGIN)) { inside = true; body.push(''); continue; }
-    if (line.includes(END)) { inside = false; body.push(''); continue; }
+  let openedAt = 0;
+  text.split('\n').forEach((line, i) => {
+    if (line.includes(BEGIN)) { inside = true; openedAt = i + 1; body.push(''); return; }
+    if (line.includes(END)) { inside = false; openedAt = 0; body.push(''); return; }
     if (inside) {
       if (!isPatternSource(line)) region.push(line);
       body.push('');
     } else { body.push(line); }
-  }
-  return { body: body.join('\n'), region: region.join('\n') };
+  });
+  // AN UNCLOSED REGION IS A FAILURE, NEVER A SKIP TO END-OF-FILE, and the
+  // reason is that a document EXPLAINING these markers has to name them. A
+  // sentence naming the opening marker whole — the `patterns-begin` half with
+  // its `privacy-gate:` prefix attached — opens a region as surely as the
+  // marker itself does, and nothing after it in that file is ever read again:
+  // silently, under a gate reporting the tree clean.
+  //
+  // It happened to the paragraph warning that one marker with two meanings is
+  // a trap. Naming the marker made the fourteen lines after it invisible, and
+  // what caught it was the unrelated rule that a skipped region may hold no
+  // date — so prose without a date would have gone on being unscanned
+  // indefinitely. This comment did it too, on the first run after the check
+  // landed, and the check caught it.
+  //
+  // The sources dodge it by building the markers with `+`, which prose cannot
+  // do; a document naming them writes the two halves apart, as above.
+  return { body: body.join('\n'), region: region.join('\n'), openedAt };
 }

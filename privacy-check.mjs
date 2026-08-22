@@ -71,10 +71,16 @@ const files = execFileSync('git', ['-C', REPO, 'ls-files'], { encoding: 'utf8' }
   .filter(f => f && !BINARY.test(f));
 
 const hits = [];
+// Files the gate could not fully read. A separate list from `hits` on purpose:
+// see the report block for why a coverage failure filed as a find misdirects.
+const blind = [];
+const LINES = new Map();
+const total = (f) => LINES.get(f) ?? 0;
 for (const f of files) {
   let text;
   try { text = readFileSync(`${REPO}/${f}`, 'utf8'); } catch { continue; }
-  const { body, region } = split(text);
+  const { body, region, openedAt } = split(text);
+  if (openedAt) LINES.set(f, text.split('\n').length - openedAt);
   for (const p of DISCLOSURE) {
     const m = p.exec(body);
     // LOCATION ONLY, never the matched text. On a public repo the Actions log
@@ -107,9 +113,23 @@ for (const f of files) {
   for (const [p, what] of REGION_FORBIDDEN) {
     if (p.test(region)) hits.push(`  ${f}: the sentinel-skipped region contains ${what}`);
   }
+  // A region opened and never closed swallows the rest of the file. See split().
+  // Reported SEPARATELY from a disclosure, because it is a different fact and
+  // the remedy is different: nothing was found, the gate could not look. Filed
+  // under the disclosure count it would read as a sentence about a person, and
+  // whoever went looking for that sentence would not find one.
+  if (openedAt) blind.push(`  ${f}:${openedAt}  a sentinel region opens here and never closes — the ${total(f)} lines after it are unscanned`);
 }
 
 console.log(`=== privacy gate · ${NAME} ===`);
+if (blind.length) {
+  console.error(`\nFAIL STATE — ${blind.length} file(s) the gate could not fully read.`);
+  console.error('This is a COVERAGE failure, not a find. Nothing was detected in the');
+  console.error('unread lines because nothing looked at them.\n');
+  for (const b of blind) console.error(b);
+  console.error('\nClose the region, or — if a document is naming the marker rather than');
+  console.error('using it — write the two halves apart, the way prose has to.');
+}
 if (hits.length) {
   console.error(`\nFAIL STATE — ${hits.length} personal disclosure(s) about the owner.`);
   console.error('Locations only; the matched text is deliberately not printed.\n');
@@ -117,6 +137,6 @@ if (hits.length) {
   console.error('\nRemove the sentence, not the gate. Design statements stay; the person —');
   console.error('and anything the owner said — does not. Write what was wrong and what it measured,');
   console.error('never who reported it or in what words.');
-  process.exit(1);
 }
+if (hits.length || blind.length) process.exit(1);
 console.log('no personal disclosures in tracked files.');
