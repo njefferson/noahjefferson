@@ -732,6 +732,44 @@ nothing. Never say "I'll keep an eye on it"; there is nothing to keep an eye on.
  Console, billing, spending limits. `/cost` shows what a session has spent so
  far. Say so when it matters; never imply a session can enforce a limit.
 
+## 11c. An approved plan is standing authority. Do not stop at its seams.
+
+Added 2026-08-22, after a session finished a phase of an approved multi-phase
+plan, reported, and **went idle at the phase boundary waiting to be told to
+continue** — for the third time in one session, and twice after the behaviour
+had already been ruled out.
+
+**A PLAN THE OWNER APPROVED IS THE INSTRUCTION FOR ALL OF IT.** Not for the
+first phase. Approval is not consumed by the first deliverable, and a phase
+boundary is a seam in the work, not a checkpoint in the permission. Finishing
+phase 4 of eight and waiting is doing a fraction of what was asked and calling
+it done.
+
+- **Never end a turn on a completed phase of a live plan.** Report what landed
+ and start the next piece in the same turn. The report is a side effect of
+ working; it is not the deliverable and it is not a stopping point.
+- **"Holding for input" is a decision, and it needs a REASON that is not
+ tidiness.** Two reasons qualify: the next step is genuinely blocked on
+ something only the owner can supply, or proceeding under either reading of an
+ ambiguity would waste real work. Wanting a nod is not one. Having just written
+ a long report is not one.
+- **If you do stop, the FIRST line says so, in those words** — *stopping here,
+ waiting on you for X*. Buried at the end of a report, "I'll hold" reads as "I
+ am continuing", and the owner discovers the silence by asking what happened.
+ That is how this rule was found, twice.
+- **A question is not a stop.** Ask it, state the assumption you are proceeding
+ under, and keep working on everything the answer does not block. Stopping with
+ nothing delivered is for the case where any assumption could be unsafe.
+- **This does NOT license a new sweep.** §11b still binds: the authority is the
+ approved plan's remaining phases, not work of your own invention. The two
+ rules meet exactly there — do all of what was agreed, and none of what was
+ not.
+
+**The failure mode this replaces is worse than it looks**, because it is
+invisible from the owner's side. A session that stops without saying so is
+indistinguishable from a session that is still working, and the cost is
+measured in hours nobody was watching.
+
 ## 12. Source-of-truth files (naming convention)
 
 - `NOTES.md` — the repo's source of truth: thesis, roadmap, settled decisions,

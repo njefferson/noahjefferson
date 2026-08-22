@@ -117,6 +117,14 @@ Every item below has actually happened.
  after. A focus-revealed control is a KEYBOARD route: keep it, and give the same
  destination something a finger can reach. (Doctrine §4; LESSONS §95;
  `quietkeep:tools/touch-check.mjs`.)
+- **AN APPROVED PLAN IS AUTHORITY FOR ALL OF IT — never stop at a phase seam.**
+ Finishing a phase and going idle to be told to continue is doing a fraction of
+ what was asked. Report what landed and start the next piece IN THE SAME TURN.
+ If you genuinely must stop, the FIRST line says so in those words — *stopping
+ here, waiting on you for X* — because "I'll hold" at the end of a long report
+ reads as "I am continuing", and the silence gets discovered by being asked
+ what happened. Three times in one session, twice after it had been ruled out.
+ (Doctrine §11c.)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
  range line in the output means nothing moved. (LESSONS, 2026-08-02.)
