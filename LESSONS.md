@@ -7914,3 +7914,85 @@ person whose hands have to relearn it* — tracked five controls, and the one
 whose placement was the defect was not among them. All it reported was a
 neighbouring button drifting one place in the tab order as a side effect. **A
 compatibility surface that excludes the control that moved is not covering it.**
+
+## 125 · Three gates in one day read commented-out markup as markup, and the third had 7.5KB of prose between it and the tag it was looking for
+
+**Enforced by:** CHECKLIST strip-before-offset — any gate that finds an element
+by searching an HTML file for `<tag` or `id="x"` blanks comments FIRST, before
+the search, not after the slice. · GATE quietkeep:tools/plain.mjs — its
+non-empty guard is what surfaced the third one, in the same run that introduced
+it.
+
+An HTML file that explains itself is mostly explanation. Quietkeep's
+`public/index.html` carries a paragraph of reasoning above most elements, and
+those paragraphs quote the markup they are about. Three separate gates searched
+that file for a tag or an id and got prose:
+
+- `controls.mjs` builds a landmark stack by matching `<section …>`. A comment
+  quoting `<section id="held">` pushed a region that never opened and never
+  popped, so **every control after it reported the wrong region** — and the gate
+  correctly demanded a release note for a move that had not happened. Its own
+  header already confesses two earlier bugs in that same function, both of which
+  "produced a confident wrong answer rather than an error". This was the third.
+- `narrows-check.mjs` had it **on its first run**, from the comment written to
+  explain the fix it was shipping with.
+- `plain.mjs` sliced `<main>` out of the raw file. The first `<main` in that
+  file is in a comment, **7.5KB before the real one**, so the slice was prose
+  and the region list came back EMPTY.
+
+**Two of the three would have been silently wrong; the third was caught by a
+guard that exists for exactly that.** `plain.mjs` asserts a minimum count before
+iterating — 0 regions found, expected at least 8 — which is §100, a check whose
+passing branch is "the feature is absent" measures nothing. Without it the
+"every region is declared" loop would have iterated an empty list and reported
+green about a surface it never read.
+
+**The fix is ordering, not cleverness.** Blank comments to SPACES rather than
+deleting them, so offsets stay offsets and a line number stays a line number,
+and do it before any search — including before the slice. `surfaces.mjs` had
+done this since it was written; the sentence is one line and its absence is
+invisible until the file's prose happens to quote the right tag.
+
+**Why it clusters:** a gate's own explanation is inside the gate's input. The
+commit that adds a check is the commit most likely to write a comment quoting
+the markup the check is about, so the defect and its trigger arrive together.
+Expect it rather than being surprised by it.
+
+## 126 · The gate said "a new surface answers this in the commit that creates it", and the half that could answer at commit time was the half that ran in a browser
+
+**Enforced by:** GATE quietkeep:tools/plain.mjs — the "every region of `<main>`
+is declared" direction is now static, and was planted by undeclaring the three
+regions that shipped undeclared. · CHECKLIST walks-after-markup — a change that
+moves markup runs the walks that DRIVE states, not only the ones that take
+pictures.
+
+Quietkeep's "Just one thing" mode strips the work surface to one offer.
+`src/plain.ts` declares, region by region, what survives it and what does not,
+and its docstring says the gate "walks the rendered header, `<main>` and the
+footer and fails on any region in neither — **so a new surface answers 'does
+this survive the worst day' in the commit that creates it**, rather than four
+releases later when somebody counts."
+
+That sentence is true of the a11y WALK. It was not true of `npm run plain:check`,
+which shares its name and its source file.
+
+**The asymmetry was exact.** For the offer card the static gate checked BOTH
+directions — every element declared, and every declaration real. For the chrome
+it checked only *declared → exists*. The *exists → declared* direction, the one
+that catches a region nobody accounted for, ran only in the browser.
+
+**So three regions moved out of a container that had covered them by covering
+it, every static gate went green, the release shipped, and CI failed ten minutes
+later** on the mode built for the worst day — which had grown a filter asking
+*where are you, how long have you got*, two questions to answer before anything
+can begin, on the day nobody can answer them.
+
+**The regions of `<main>` are readable from the file.** The static check is not a
+smaller copy of the walk — the walk sees runtime-inserted regions this cannot —
+but it catches the case that actually happens, which is markup being moved, and
+it catches it at the commit.
+
+**The general shape: when a gate exists in a fast form and a slow form, check
+which assertions live in which.** A session runs the fast one, reads a docstring
+describing the slow one, and concludes correctly from a false premise. The
+docstring is not lying; it is describing a sibling.
