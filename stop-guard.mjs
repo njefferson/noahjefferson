@@ -14,13 +14,19 @@
 //
 // ## What it refuses
 //
-// A turn that ENDS while saying it is waiting, without declaring the stop.
+// TWO shapes, because the first version caught only one and would have lost the
+// requirement behind the mechanism (LESSONS §96 — the defect where a need is
+// answered as the thing somebody built for it).
 //
-// That narrow shape is deliberate. Every real incident had the same two halves:
-// the reply said something was still running, and the reply did not say
-// "stopping here". Both halves are readable in the transcript, so both are
-// checkable. A hook that fired on every turn would be noise inside a week, and
-// noise gets switched off — which is a worse outcome than no hook.
+//   1. WAITING. The turn ends saying something is still running.
+//   2. PARKING. The turn ends asking to be told to continue — "let me know",
+//      "want me to", "ready when you are". This is the ORIGINAL §11c incident:
+//      phase four of eight finished, reported, and handed back for a nod. It
+//      contains no waiting sentence at all, so shape 1 sails straight past it.
+//
+// Both are narrow by design: each needs its tell AND the absence of the
+// declaration. A hook that fired on every turn would be noise inside a week,
+// and noise gets switched off — which is a worse outcome than no hook.
 //
 // The way past it is either of the two honest things:
 //
@@ -67,6 +73,19 @@ const WAITING = [
   /\bwill (?:report|confirm|check) back\b/i,
 ];
 
+/** Handing the turn back for permission. The original §11c shape: the work is
+ *  not blocked on anything, it is just being parked for a nod. Anchored to the
+ *  END of the reply, because "let me know if that reads wrong" mid-report is a
+ *  courtesy and the same words as the last sentence are a hand-off. */
+const PARKING = [
+  /\b(?:let me know|tell me|say the word|just say)\b[^.?!]*(?:\bif\b|\bwhen\b|\band I(?:'| w)ll\b|\bto (?:continue|go on|proceed|carry on)\b)/i,
+  /\b(?:want|would you like) me to (?:continue|go on|carry on|proceed|start|keep going|move on)\b/i,
+  /\bshall I (?:continue|go on|carry on|proceed|start|keep going|move on)\b/i,
+  /\bready (?:when you are|for (?:your|the) (?:go|word|nod))\b/i,
+  /\b(?:happy to|I can) (?:continue|carry on|keep going|move on)[^.?!]*(?:if|when|whenever) you\b/i,
+  /\bawaiting (?:your|the) (?:go|word|nod|instruction|direction)/i,
+];
+
 /** The declaration §11c requires, and it has to be the FIRST line. */
 const DECLARED = /^\s*(?:[#*_>\s-]*)stopping here[,:]?\s*waiting on you\b/i;
 
@@ -89,22 +108,47 @@ if (!reply) process.exit(0);
 // A declared stop is allowed, and is the whole point of having a way through.
 if (DECLARED.test(reply)) process.exit(0);
 
-const hit = WAITING.find((re) => re.test(reply));
-if (!hit) process.exit(0);
+// PARKING is judged on the LAST SENTENCE only, and that is not a nicety.
+// "Let me know if that placement reads wrong — meanwhile I have started the
+// tablet render" is a courtesy inside continuing work; the identical clause as
+// the final thing said is a hand-off. A first version tested the last two
+// paragraphs and refused that sentence, which is the false positive that
+// teaches people to switch a guard off.
+const sentences = reply.split(/(?<=[.!?])\s+|\n+/).map((x) => x.trim()).filter(Boolean);
+const tail = sentences[sentences.length - 1] ?? '';
 
-const quote = (reply.match(hit) ?? [''])[0];
+/** …and even in the last sentence it is not a hand-off if the same breath says
+ *  work is proceeding. Splitting by sentence was not enough: "Let me know if
+ *  that reads wrong — meanwhile I have started the tablet render" is ONE
+ *  sentence carrying both halves, and refusing it is the false positive that
+ *  gets a guard switched off. Parking means asking for permission with nothing
+ *  in flight; if something is in flight, it is a courtesy. */
+const CONTINUING = /\b(?:meanwhile|in the meantime|meantime|carrying on|moving on|next up I|I(?:'| ha)?ve (?:started|kicked off|begun)|I(?:'| wi)?ll (?:fold|carry on|keep going|continue|start|move on)|starting (?:on |the )?(?:the )?next|going on with)\b/i;
 
-process.stderr.write(`STOP REFUSED — this reply says the work is not finished ("${quote}") and does not declare a stop.
+const waitHit = WAITING.find((re) => re.test(reply));
+const parkHit = CONTINUING.test(tail) ? undefined : PARKING.find((re) => re.test(tail));
+if (!waitHit && !parkHit) process.exit(0);
 
-Doctrine §11c. Ending a turn while something is still running is the failure
-that has now happened four times, twice after it had been ruled out, and the
-owner has found out each time by asking what happened.
+const hit = waitHit ?? parkHit;
+const quote = ((waitHit ? reply : tail).match(hit) ?? [''])[0].trim().slice(0, 80);
+const why = waitHit
+  ? 'says the work is not finished'
+  : 'hands the turn back for permission to continue';
+
+process.stderr.write(`STOP REFUSED — this reply ${why} ("${quote}") and does not declare a stop.
+
+Doctrine §11c. Ending a turn while the work is unfinished — still running, or
+parked for a nod — is the failure that has now happened four times, twice after
+it had been ruled out, and the owner has found out each time by asking what
+happened.
 
 Two ways forward, and only these two:
 
-  1. WAIT AND CONTINUE — poll the background task or the CI run, read the
-     result, act on it, and carry on with the plan's remaining work. This is
-     the expected route. An approved plan is authority for all of it.
+  1. CONTINUE. If something is running, poll it, read it, act on the result.
+     If nothing is running, start the next piece. An approved plan is authority
+     for ALL of its phases; a phase boundary is a seam in the work, not a
+     checkpoint in the permission. This is the expected route and it is what
+     was wanted in the first place.
 
   2. DECLARE IT — make the FIRST line of your reply, verbatim:
        Stopping here, waiting on you for <the specific thing>
