@@ -30,7 +30,7 @@
 //
 // EXITS NON-ZERO on any failure.
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -135,10 +135,26 @@ for (let k = 0; k < heads.length - 1; k++) {
       const [, repo, path] = gate;
       gates.push({ title, repo, path });
       // Resolve what we can, and PRINT what we cannot — never skip silently.
+      //
+      // CASE-INSENSITIVELY, because a citation is written in prose and a clone
+      // is named by whoever cloned it. Three real citations to a sibling read
+      // UNVERIFIED for as long as this compared exactly: the lessons say
+      // `quietkeep:` and the working copy beside the hub is `Quietkeep`. An
+      // unverifiable citation is the weaker form of the hazard this check
+      // exists for — a gate named in a lesson reads as coverage whether or not
+      // anybody could confirm it is there.
+      const eq = (a, b) => a.toLowerCase() === b.toLowerCase();
       let base = null;
       if (repo === 'hub') base = HUB;
-      else if (repoArg && repoArg.endsWith(repo)) base = repoArg;
-      else if (existsSync(join(HUB, '..', repo))) base = join(HUB, '..', repo);
+      else if (repoArg && eq(repoArg.split('/').filter(Boolean).pop() || '', repo)) base = repoArg;
+      else {
+        const siblings = join(HUB, '..');
+        const match = existsSync(siblings)
+          ? readdirSync(siblings, { withFileTypes: true })
+            .filter((e) => e.isDirectory()).map((e) => e.name).find((n) => eq(n, repo))
+          : undefined;
+        if (match) base = join(siblings, match);
+      }
 
       if (!base) {
         unverified.push(`${where}: cites GATE ${repo}:${path} — ${repo} is not checked out here, so its existence is UNVERIFIED.`);
