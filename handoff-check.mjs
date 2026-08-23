@@ -95,8 +95,20 @@ if (!deployWf) {
     if (!notes_md) {
       failures.push('deploys to staging but has no NOTES.md to record the candidate in (§7, §12).');
     } else {
-      const urlRe = new RegExp(`https?://[\\w.-]*${project}\\.pages\\.dev`, 'i');
-      const found = urlRe.exec(notes_md);
+      // EVERY occurrence, not the first. NOTES.md accumulates deploy addresses —
+      // a status page, a probe, each shipped release — and the first one in the
+      // file is whichever section happens to sit highest, which is a fact about
+      // document order and nothing else. The first version took `exec` and
+      // measured the window around match one; 3d-printing-pal then gained a
+      // "The status page" section 85 lines above its staged-candidate record,
+      // and the gate started reporting a candidate with no version beside a URL
+      // that was never the candidate's. The record was correct and complete.
+      // A gate anchored on "the first match" moves what it measures whenever a
+      // paragraph is added above it, and reports on the wrong text without ever
+      // saying which text it read.
+      const urlRe = new RegExp(`https?://[\\w.-]*${project}\\.pages\\.dev`, 'gi');
+      const matches = [...notes_md.matchAll(urlRe)];
+      const found = matches[0];
       if (!found) {
         failures.push(
           `NOTES.md records no ${project}.pages.dev URL. Doctrine §7: hand over the preview URL and `
@@ -146,14 +158,17 @@ if (!deployWf) {
           })();
         if (vm) {
           const version = vm[1];
-          const block = notes_md.slice(Math.max(0, found.index - 400), found.index + 400);
-          if (!block.includes(version)) {
+          const beside = matches.find((m) => notes_md
+            .slice(Math.max(0, m.index - 400), m.index + 400)
+            .includes(version));
+          if (!beside) {
             failures.push(
-              `NOTES.md records the deploy URL but not the current version (${version}) beside it. `
-              + 'A staged-candidate note that does not say WHICH build is staged cannot be acted on.',
+              `NOTES.md records ${matches.length} ${project}.pages.dev URL(s) and the current `
+              + `version (${version}) is beside none of them. A staged-candidate note that does `
+              + 'not say WHICH build is staged cannot be acted on.',
             );
           } else {
-            passed.push(`the recorded candidate names the current version (${version})`);
+            passed.push(`the recorded candidate names the current version (${version}) — ${beside[0]}`);
           }
         }
       }
