@@ -8051,3 +8051,69 @@ definition nothing checks goes narrow, or in this case simply wrong.
 **The general shape: whenever the same list has to exist in two files, the thing
 that compares them is a gate, and it goes in both.** Every repo in this family
 that names its CI gates individually owes this check.
+
+## 128 · The line that says where production is went stale three times in four days, and each time it was found by accident — because a maintained-looking line is the one nobody re-reads
+
+**Enforced by:** GATE quietkeep:tools/branch-state-check.mjs — the two URL
+bullets in NOTES.md's branch-state block are compared against the triplet in
+`public/sw.js` in the tree and at `origin/main`, as a commit guard rather than a
+CI step; planted six ways, including a missing `origin/main`, which FAILS rather
+than skipping. · CHECKLIST every-repo-owes-it — every sibling has a block like
+this and none of them has the check.
+
+Quietkeep's `NOTES.md` carries a short block naming the version on staging and
+the version in production. It was wrong three times:
+
+- 2.12.2 / 2.11.0 until 2026-08-20, through two promotes.
+- 2.14.1 / 2.13.0 until 2026-08-22, through eleven releases and a promote.
+- 2.24.0 / 2.24.1 until 2026-08-23, through five releases and two promotes.
+
+**No gate found any of them, and the three discoveries were all luck.** The
+first was caught by `handoff-check.mjs`, which is not in that repo's Spine and
+has to be remembered. The second by a lesson landing from another repo's session
+while this one happened to be working in the file. The third only because a
+production version came back from the device and the block had to be opened to
+record it — and that third recurrence was in the same block, on the same day,
+as the paragraph written into it about the second.
+
+**Two notes and no gate is what produces a third note.** The block itself
+carried the defect's own history, in bold, directly above the wrong numbers.
+Writing the lesson into the artefact that has the defect does not fix the
+defect; the doctrine already says this and it still took a third time.
+
+**The failure mode is specific and worth naming: a line that looks maintained
+is the one nobody re-reads.** Nothing about a version number beside a URL looks
+stale. Every other kind of rot in these repos announces itself — a broken link
+404s, a stale generated file fails its `--check`, a missing surface fails the
+walk. A prose fact just sits there being wrong, and it is read as current by
+everyone including the session that wrote the note about it being wrong.
+
+**Ask of any hand-written fact: is it derivable?** Both numbers here were —
+the release triplet lives in `public/sw.js`, which git holds at every ref, so
+the check is two file reads and a `git show` with no network at all. The rule
+generalises past versions: a hand-maintained fact that some file already knows
+is not documentation, it is a second copy waiting to disagree.
+
+**And where a derived check runs is part of its design, not a detail.** This one
+is a commit guard and deliberately NOT a CI step, because it compares against
+`origin/main` as of the moment of the commit. On a runner at a promote,
+`origin/main` is already the merge, so the step would be red by construction on
+every promote — and a gate that is red for a window teaches everyone to ignore
+red. Same reasoning the hub gives for keeping `doctrine-sync.mjs` out of CI, and
+the same shape as `branch-guard.mjs`'s `.git/hooks` assertion being a fact about
+one clone. **Before wiring a new gate, ask what its assertion is true OF** — a
+tree, a clone, a ref, a moment — and put it where that thing exists.
+
+The SHAs beside each version are left ungated on purpose. A commit cannot name
+its own hash, and gating production's would leave the block unfixable for a
+window after every promote. All three failures were version failures; gating
+what actually broke beats gating everything on the line.
+
+**And it must SAY it is out on purpose, where the next reader will look.** 127
+is the mirror of this: two gates missing from a workflow by accident, invisible
+for a release and longer, and the fix there is a parity check comparing the
+check chain against the workflow's steps. A gate deliberately absent from CI
+looks exactly like those two to a parity check. So this one is not in
+`npm run check` either — it is declared in `.branch-guard`, which is the list it
+actually belongs to — and the reason is in the first screen of the gate's own
+file rather than in a commit message nobody will open.
