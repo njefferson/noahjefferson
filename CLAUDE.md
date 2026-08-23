@@ -220,10 +220,23 @@ The doctrine says what to do; the lessons say what it cost to find out; palettes
 says what colour has to clear before taste gets a vote.
 
 Append to LESSONS.md from any app's session whenever something is learned that
-would have saved time elsewhere; never fork it into another repo. When a
-doctrine rule changes, edit it HERE and tell the sibling repos to re-point
-(their `CLAUDE.md` files link to this copy). Never fork the doctrine into
-another repo — link to it.
+would have saved time elsewhere; never fork it into another repo. **Writing one
+is not a decision to put to the owner.** A session that has just learned
+something and asks whether it should be recorded has turned a standing
+instruction into a request for permission, and the answer was already written
+down before the session started.
+
+**The general rule, because this was the second time in one session: STANDING
+PRACTICE IS NEVER A QUESTION.** Anything already settled in this file, in
+`DOCTRINE.md` or in `LESSONS.md` is authority to act, not a candidate to
+propose. Asking costs a round trip, arrives in the middle of something else,
+and teaches that the rule is optional — which is the opposite of what writing it
+down was for. Ask about scope, cost and taste; never about whether a rule that
+already exists applies.
+
+When a doctrine rule changes, edit it HERE and tell the sibling repos to
+re-point (their `CLAUDE.md` files link to this copy). Never fork the doctrine
+into another repo — link to it.
 
 ## Eleven gates live here and serve every repo
 Never fork these either — they take `--repo ../app` (or a path) so a sibling
