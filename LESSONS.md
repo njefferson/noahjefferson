@@ -8193,3 +8193,82 @@ turns "the document says this" into "the first paragraph says this", and nothing
 about it looks conditional at the call site. Planted red both ways: with the
 version removed from the candidate paragraph it fails and says how many URLs it
 checked; restored, it passes and names the alias.
+
+---
+
+## 130 · A measurement state that mutates the fixture charges every check around it, and "put it last" is not the fix, because there is always work after the last thing in a list
+
+**Enforced by:** GATE 3d-printing-pal:tools/a11y.mjs — the `undo-empty` state
+reaches an emptied undo journal by RELOADING, which is the app's own behaviour and
+costs nothing, and the state list asserts that nothing is queued after it. ·
+CHECKLIST any-state-that-acts — before adding a state to a browser gate, ask what
+it leaves behind for the states and the checks that follow.
+
+A browser gate measures a list of STATES against one seeded app, and adding a state
+is the ordinary way to cover a new appearance. print-tracker needed one: an Undo
+button that is dimmed and dashed when there is nothing to undo is a second set of
+colours on the same element, and a `.btn[aria-disabled]` rule nothing has looked at
+on screen is a rule nobody has checked against the floors.
+
+The obvious way to reach it is to press Undo until the journal empties, and that is
+correct by this repo's own rule — a state should be reached through the app rather
+than staged by setting an attribute. **It also empties the database.** The card-shape
+check and the 320px-at-200% outcome question run after the state loop; both found an
+empty board and reported the app broken.
+
+**Putting it last did not fix it, and the reason generalises.** A list of states is
+not the end of the run — there is always work after the last item, and it does not
+live in the list, so nothing about "last" is visible from inside the state that
+depends on it. Re-seeding afterwards then failed differently, because the seed is
+not idempotent: it built a second set of records and the card check read the wrong
+one.
+
+**The fix was to find a route to the same state that costs nothing.** The undo
+journal is in memory and everything else is in IndexedDB, so a RELOAD empties the
+journal and keeps every record — and it is a state every reader meets, because every
+session begins in it. Not a workaround: a better answer to "how does a reader get
+here", which is the question a staged state is always avoiding.
+
+**Ask of any new state: what does it leave behind?** A state that only opens a
+dialog leaves nothing. A state that presses a destructive control leaves an
+application the next check inherits, and the failure surfaces somewhere else
+entirely, which is what makes it expensive to read.
+
+---
+
+## 131 · Three releases were spent making one wrong object quieter, and each fix was a smaller version of the same mistake
+
+**Enforced by:** JUDGEMENT — nothing can measure this. The signal is in the shape of
+the commit history, and only a person reading it back notices.
+
+**Smell:** the second fix to the same object is smaller than the first. Stop and ask
+what the reader was reaching for, and whether this object can ever be it.
+
+print-tracker's undo lived in a strip across the page: a standing band that appeared
+after any change and described it. It was too loud, so it lost its raised
+background. Still too loud, so its rails went from 2px to 1px. Still there, so it
+got a ✕ to dismiss — which cost the reader that one undo, and had to say so. Each
+step was a real improvement, measured, and shipped.
+
+**The band was never the thing a reader wanted.** They know what they just did; what
+they want is somewhere to take it back. That is a button in the app's chrome, where
+every other program on the device keeps it — and no amount of tuning a band arrives
+at a button. The whole line of work was refinement of an object that should not have
+existed.
+
+**The signal is repetition at decreasing size.** One fix is a fix. A second fix to
+the same object, smaller, is a hint. A third is the answer: the object is wrong, and
+each iteration is buying a smaller share of the same defect while looking like
+progress, because every individual step measures better than the one before it.
+
+**It is invisible from inside a release** and obvious across three, which is why it
+belongs here rather than in a gate. The question to ask at the second fix — not the
+third — is what the reader was actually reaching for, and whether this object can
+ever be it.
+
+Two side benefits, both signals in themselves. The replacement is available BEFORE
+the first change rather than appearing after it, so the app answers "can this undo"
+before the answer is needed; and it deleted a piece of focus management that existed
+only because the old control removed itself from under the reader's finger. **Code
+that exists to manage a thing's disappearance is evidence the thing should not
+disappear.**
