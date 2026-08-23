@@ -8126,6 +8126,33 @@ file rather than in a commit message nobody will open.
 
 ---
 
+**THE DEFECT MOVED HOUSE WITHIN MINUTES OF THE GATE PASSING.** Asked what was
+still open, the session opened `docs/plan-routed.md` and found its own resume
+block naming Production 2.24.1 and Staging 2.24.1 — five releases and three
+promotes out of date, in a file the new gate does not read. Adopting the gate
+into 3d-printing-pal turned up THREE copies in that repo, because its live
+status page carries the same two facts in a lede and in a row block as well.
+
+**So the answer is not to police every copy — it is to refuse the copy.** The
+block in NOTES.md complains about "one file, two answers" three paragraphs above
+where it was itself wrong. The gate's second half fails on a present-tense
+bullet claiming what a branch carries in any tracked markdown but the one
+source, **whatever version it names, a correct one included**: a copy that is
+right today is a copy that goes wrong on the next promote.
+
+Narrow on purpose. It matches the bullet shape these blocks use with a triplet
+on the same line and leaves prose recounting what production HELD in the past
+alone. A false positive is the one failure a gate cannot recover from, because
+the next session routes around it and every later assertion in the file goes
+with it.
+
+**And when a gate grows a second assertion, its ADVICE has to fork with it.**
+This one printed "fix the block in NOTES.md" while the block was correct and
+only a copy was stale — sending somebody to the one file that was right. The
+failure message is part of the gate: a correct refusal with misdirecting advice
+costs the time the gate was built to save, and it is invisible until the new
+half fails on its own, which is a case worth planting deliberately.
+
 ## 129 · A gate anchored on the FIRST match measures whichever paragraph happens to sit highest, and adding an unrelated section above it silently moved what it was reading
 
 **Enforced by:** GATE noahjefferson:handoff-check.mjs — the staged-candidate check
