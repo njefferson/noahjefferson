@@ -8060,8 +8060,12 @@ that names its CI gates individually owes this check.
 bullets in NOTES.md's branch-state block are compared against the triplet in
 `public/sw.js` in the tree and at `origin/main`, as a commit guard rather than a
 CI step; planted six ways, including a missing `origin/main`, which FAILS rather
-than skipping. · CHECKLIST every-repo-owes-it — every sibling has a block like
-this and none of them has the check.
+than skipping. · GATE 3d-printing-pal:tools/branch-state-check.mjs — the same
+check adapted to a repo that writes the two facts THREE times, because its live
+status page (§7i) carries them in a lede and in a row block as well as in
+NOTES.md; same placement and the same six plants. · CHECKLIST
+still-owed-by-the-rest — Intersecting Parallels, fauxplane and photo-pointer each
+have a block like this and none of them has the check.
 
 Quietkeep's `NOTES.md` carries a short block naming the version on staging and
 the version in production. It was wrong three times:
