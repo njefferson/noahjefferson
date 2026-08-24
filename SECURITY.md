@@ -112,12 +112,22 @@ are a few taps, and all work on an iPad.
 
 ## Part 3 — the current state of the repos in reach
 
-Verified 2026-08-02, by running the checks rather than assuming:
+Verified by running the checks rather than assuming. **Each entry carries its own
+date, because one date at the top of a list that grows an entry at a time is a
+claim about repos nobody re-checked.**
 
-- **photo-field-tools** — zizmor clean, npm audit clean, no credential
+**NO GATE HERE PROTECTS AGAINST A MALICIOUS PUSH, and that is worth stating at
+the top of this section rather than leaving to be inferred.** Every check in Part
+1 measures what is IN a commit. None of them can stop a commit being MADE. What
+stands between this code and somebody else's change is entirely Part 2: two-factor
+auth on the account, push protection, branch protection on `main`, and the scope
+and expiry of every token that can write. A repo can be clean on every automated
+check in this file and still be one leaked credential from anything.
+
+- **photo-field-tools** — audited 2026-08-02. zizmor clean, npm audit clean, no credential
  patterns in any tracked file, nothing secret-shaped ever added in history,
  every workflow `contents: read`, lockfile committed, all Actions SHA-pinned.
-- **noahjefferson** — same, with one carried exception recorded in
+- **noahjefferson** — audited 2026-08-02, same, with one carried exception recorded in
  `.github/zizmor.yml`: 19 template-injection sites in `cf-analytics.yml` and
  `deploy-myfax.yml`. Real, assessed, and not yet fixed — both are
  `workflow_dispatch` only, so triggering one needs repo access you would
@@ -140,6 +150,37 @@ Verified 2026-08-02, by running the checks rather than assuming:
  twenty releases through four green workflows; nothing was wrong with the
  code, and the credential sat there the whole time because no audit had ever
  been pointed at it.
+
+- **3d-printing-pal** — audited 2026-08-24, and it had never been on this list:
+ the repo was built after the 2026-08-02 pass and shipped twenty-odd releases
+ without an audit ever being pointed at it. **A repo created after the audit line
+ does not join it by being new and tidy.** Clean on every check run rather than
+ assumed: zizmor `--strict-collection` clean; `npm audit` zero vulnerabilities
+ with and without dev; no credential-shaped string in any tracked file; 59
+ commits across every ref scanned for token shapes and private-key headers, none
+ found; all four Action uses SHA-pinned with version comments; both workflows
+ `permissions: contents: read`; `persist-credentials: false` on every checkout;
+ lockfile committed; `dependabot.yml` present; `pull_request_target` used
+ nowhere. The Cloudflare secrets are read into job `env` and masked, and
+ deliberately never into step outputs — outputs persist in the run and are
+ readable through the API.
+
+ **TWO MEDIUM FINDINGS CARRIED, and they are the same one twice:**
+ `secrets-outside-env` on both Cloudflare secrets in `deploy.yml`. The token is
+ a repo secret rather than an **environment** secret, so it is reachable from
+ every trigger that workflow has — a push to `staging` and a `workflow_dispatch`
+ on any branch, not only a promote to `main`. Nothing is leaking; the blast
+ radius is simply wider than the job needs. The fix is paired and neither half
+ works alone: a `production` GitHub Environment restricted to `main` with the
+ two secrets moved into it (Part 2, owner-only), and `environment: production`
+ on the deploy job (a one-line workflow change). **Do not do the workflow half
+ first** — it creates an unprotected environment and changes nothing.
+
+ **And the standing gap that is not zizmor's to find:** Gates and Deploy are
+ separate workflows with no dependency, so a red gate does not stop a deploy.
+ That is recorded in this repo's own status page as found-and-not-fixed, and it
+ is a security fact as well as a quality one — a bad commit reaching `main` is
+ not held back by anything measuring it.
 
 **Not in reach this session:** photo-pointer, clear-horizons,
 Bird-location-scouting, Jefferson-Photography-Studio, ND-toolbox, Quietkeep.
