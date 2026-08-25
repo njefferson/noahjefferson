@@ -155,10 +155,14 @@ is not.
   the runner after the deploy.
 - **No runtime dependencies at all.** Node strips the TypeScript; the only
   package in the tree is the type checker.
+- **Promoted 2026-08-25.** 0.4.4 is on `main` and deployed; the promote was a
+  clean fast-forward, so no commit was made on production and the guard's escape
+  was never needed. Repo metadata is fully applied.
 - **Owes:** a Content-Security-Policy, the ViewBoard and Chromebook on-device
-  passes, a required reviewer on the `production` environment, its repo metadata
-  applied from `METADATA.md`, and the promote to `main` that makes the
-  production URL answer.
+  passes, a required reviewer on the `production` environment, and somebody
+  actually fetching `https://molebridge.pages.dev` — the deploy job's checks
+  passed against the per-deploy host rather than the apex, which is fixed in the
+  workflow but is proved by the NEXT promote and not before.
 
 ---
 
