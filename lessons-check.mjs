@@ -30,7 +30,7 @@
 //
 // EXITS NON-ZERO on any failure.
 
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -42,7 +42,68 @@ const repoArg = (() => {
 })();
 const CHECKLIST_ONLY = args.includes('--checklist');
 
-const src = readFileSync(join(HUB, 'LESSONS.md'), 'utf8');
+/* ------------------------------------------------------------------ *
+ * ONE FILE PER LESSON, AND AN INDEX GENERATED FROM THEM (2026-08-25)
+ *
+ * This read a single file of 8,697 lines that every session appended to, so the
+ * LAST LINE was the one line every writer touched: two sessions recording two
+ * entirely unrelated lessons conflicted, always. The ADRs solved this long ago
+ * by being one file each; the lessons had not carried it across.
+ *
+ * `lessons/NNN-slug.md` now, sorted by name, which sorts by number because the
+ * number is zero-padded. `LESSONS.md` keeps the prose contract and carries a
+ * GENERATED index, so every link to it still resolves and every citation still
+ * means what it meant — the number is the address and the filename carries it.
+ *
+ * `--index` regenerates the list. The check below refuses an index that has
+ * drifted from the files, in BOTH directions, because a row pointing at nothing
+ * and a file listed nowhere are the same defect from opposite ends.
+ * ------------------------------------------------------------------ */
+const LESSON_DIR = join(HUB, 'lessons');
+const REGEN = args.includes('--index');
+
+const lessonFiles = existsSync(LESSON_DIR)
+  ? readdirSync(LESSON_DIR).filter((f) => f.endsWith('.md')).sort()
+  : [];
+if (!lessonFiles.length) {
+  console.error('lessons-check: no lessons/*.md found — is the hub checked out and current?');
+  process.exit(1);
+}
+
+const indexPath = join(HUB, 'LESSONS.md');
+const indexSrc = readFileSync(indexPath, 'utf8');
+
+// The rows the index claims, and what the files actually say.
+const rows = new Map();
+for (const m of indexSrc.matchAll(/^- \*\*§(\d+[a-z]?)\*\* — \[(.+?)\]\((lessons\/[^)]+)\)$/gm)) {
+  rows.set(m[1], { title: m[2], file: m[3] });
+}
+const onDisk = new Map();
+for (const f of lessonFiles) {
+  const body = readFileSync(join(LESSON_DIR, f), 'utf8');
+  const h = /^##\s*(\d+[a-z]?)\s*[.·]?\s*(.*)$/m.exec(body);
+  if (!h) {
+    failures.push(`lessons/${f}: no "## <number> · <title>" heading. Every lesson names itself.`);
+    continue;
+  }
+  onDisk.set(h[1], { title: h[2].trim(), file: `lessons/${f}`, body });
+}
+
+if (REGEN) {
+  const head = indexSrc.split('\n- **§')[0].replace(/\n+$/, '');
+  const list = [...onDisk.entries()]
+    .sort((a, b) => (parseInt(a[0], 10) - parseInt(b[0], 10)) || a[0].localeCompare(b[0]))
+    .map(([n, e]) => `- **§${n}** — [${e.title}](${e.file})`);
+  writeFileSync(indexPath, `${head}\n\n${list.join('\n')}\n`);
+  console.log(`lessons-check: index regenerated — ${list.length} lessons.`);
+  process.exit(0);
+}
+
+// The rest of this file reads every lesson as one stream, exactly as it did
+// when they were one file — so nothing below had to learn about the split.
+const src = [indexSrc.split('\n## The lessons')[0], ...lessonFiles.map(
+  (f) => readFileSync(join(LESSON_DIR, f), 'utf8'),
+)].join('\n\n');
 const lines = src.split('\n');
 
 let lessonCount = 0;
@@ -51,6 +112,27 @@ const unverified = [];
 const checklist = [];
 const gates = [];
 const judgements = [];
+
+/* --- the index against the files, BOTH directions ------------------------- *
+ *
+ * PLACED HERE, AFTER `failures` EXISTS, and that is not a detail. Written above
+ * the declaration it pushes into, this crashed with a ReferenceError the moment
+ * it had anything to report — and passed silently on a clean tree, because the
+ * failing path never ran. A plant of all three drifts printed JavaScript source
+ * instead of a message, which is the only reason it was found.
+ *
+ * A gate that has never failed has not been tested. §138 is about exactly this
+ * and it still took a plant to see it here.
+ */
+for (const [n, e] of onDisk) {
+  const row = rows.get(n);
+  if (!row) failures.push(`lessons/${e.file.split('/')[1]} is in no index row. Run \`node lessons-check.mjs --index\`.`);
+  else if (row.file !== e.file) failures.push(`§${n} is indexed as ${row.file} and lives at ${e.file}.`);
+  else if (row.title !== e.title) failures.push(`§${n}'s index row says "${row.title.slice(0, 40)}" and the file says "${e.title.slice(0, 40)}".`);
+}
+for (const [n, row] of rows) {
+  if (!onDisk.has(n)) failures.push(`the index lists §${n} (${row.file}) and no such lesson exists. A citation to it resolves to nothing.`);
+}
 
 /* ------------------------------------------------------------------ *
  * parse

@@ -51,7 +51,7 @@ const MARKER = join(REPO, '.doctrine-sync');
 // baseline, and the shared gates themselves — a gate changing its behaviour is
 // as much a change to the contract as a rule changing its wording.
 const WATCHED = [
-  'DOCTRINE.md', 'LESSONS.md', 'PALETTES.md', 'SECURITY.md', 'METADATA.md',
+  'DOCTRINE.md', 'LESSONS.md', 'lessons/', 'PALETTES.md', 'SECURITY.md', 'METADATA.md',
   'docs-check.mjs', 'lessons-check.mjs', 'pin-check.mjs', 'handoff-check.mjs',
   'palette-check.mjs', 'doctrine-sync.mjs',
   '.github/requirements-ci.txt', '.github/zizmor.yml',

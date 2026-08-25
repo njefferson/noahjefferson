@@ -30,7 +30,7 @@
 // that silently omits the hub because the hub is not checked out is worse than
 // one that says so.
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
@@ -155,15 +155,21 @@ say();
 //
 // Titles, never bodies. The point is to make a session able to find the four
 // that apply, not to read it 5,500 lines it will skim.
-const lessons = join(hub, 'LESSONS.md');
-if (existsSync(lessons)) {
+// ONE FILE PER LESSON SINCE 2026-08-25, read from `lessons/` rather than from
+// the index — the index is generated, and a brief that reads the generated copy
+// reports what was last generated rather than what is there. The gate holds the
+// two together; this reads the source of truth anyway, because a brief that
+// undercounts is a brief that lies.
+const lessonDir = join(hub, 'lessons');
+if (existsSync(lessonDir)) {
   // Both heading shapes, and the lettered ones. The first version matched only
   // `## N · ` and reported 64 of 90 — a brief that undercounts is a brief that
   // lies, and it would have quietly hidden the earliest lessons, which are the
   // ones a new session is least likely to know exist.
-  const titles = readFileSync(lessons, 'utf8')
-    .split('\n').filter((l) => /^## \d+[a-z]?[ .·]/.test(l)).map((l) => l.slice(3).trim());
-  say(`LESSONS (${titles.length}) — titles only; read the ones that apply in noahjefferson/LESSONS.md:`);
+  const titles = readdirSync(lessonDir).filter((f) => f.endsWith('.md')).sort()
+    .flatMap((f) => readFileSync(join(lessonDir, f), 'utf8')
+      .split('\n').filter((l) => /^## \d+[a-z]?[ .·]/.test(l)).map((l) => l.slice(3).trim()));
+  say(`LESSONS (${titles.length}) — titles only; each is its own file in noahjefferson/lessons/:`);
   for (const t of titles) say(`  ${t}`);
 } else {
   say('LESSONS: the hub is not checked out, so the cross-app record is UNAVAILABLE this session.');
