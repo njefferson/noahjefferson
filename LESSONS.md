@@ -8730,3 +8730,80 @@ is not that the toolchain is always wrong — it is that adding one should be a
 decision rather than the first line of a new repo.** This one was reached for by
 reflex in every previous repo here, and in at least one of them nothing but
 `tsc` and a test runner was ever needed.
+
+---
+
+## 142 · A gate placed after an expensive optional step is a gate that stops running when that step breaks
+
+**Enforced by:** CHECKLIST gate-order — in any workflow, the cheap gates that
+must never be skipped go BEFORE anything that downloads, builds or drives a
+browser. · JUDGEMENT reading a red run means reading which steps were SKIPPED,
+not only which one failed.
+
+MoleBridge's first full workflow ran, in order: type check, tests, build,
+palette, install a browser, walk the app, the accessibility gate, and then the
+doctrine gates — privacy, quotations, grids, npm hygiene, zizmor.
+
+The build failed, because it renders icons by driving a browser and the browser
+install sat after it. Every step after the failure was **skipped**, including
+`privacy-check.mjs`, which Doctrine §9b calls a HARD gate in every repository.
+
+**So the run was red for a reason that had nothing to do with privacy, and the
+privacy gate did not run.** Nobody would have noticed: the log ends at the
+failure, the summary names the failed step, and a skipped step looks exactly
+like a step that was not needed.
+
+**The general shape.** A gate's coverage is not what it checks — it is what it
+checks TIMES the probability everything before it succeeded. Put it behind a
+network download and its coverage is the download's reliability. Put it behind a
+browser and its coverage is the browser's. The gates that must never be skipped
+are usually the cheapest ones, so this costs nothing to get right and is
+invisible when it is wrong.
+
+**This is LESSONS 139's neighbour rather than its repeat.** That one is a run
+that fails in the middle and keeps going, so the tail is green. This one is a
+run that fails in the middle and stops, so everything after it is silently
+uncovered. Same underlying question — *which of these steps actually executed* —
+and the two answers look identical from the summary line.
+
+**The rule.** Order a workflow cheapest-and-most-important first. And when
+reading a red run, look at what was skipped: those steps did not pass, and on
+the next green run they will pass for the first time.
+
+---
+
+## 143 · A generated file that is gitignored makes CI the first fresh clone the repository has ever had
+
+**Enforced by:** GATE MoleBridge:package.json — the generate step is a
+prerequisite of `typecheck` and `build` rather than a thing to remember. ·
+CHECKLIST fresh-clone — before pushing a change to what is generated or ignored,
+clone into a temporary directory and run the checks there.
+
+MoleBridge generates its in-app patch notes from CHANGELOG.md into
+`src/ui/releases.ts`, which is not committed — a build artefact in the tree goes
+stale in the tree. A source file imports it.
+
+Every local run passed for hours. The file was sitting there from an earlier
+build, so the type check always found it. The first machine that had never built
+was the CI runner, and it failed immediately: a source importing a module that
+did not exist.
+
+**The trap is that the working tree accumulates state the repository does not
+have.** Generated files, installed browsers, caches, a `.env` somebody made
+once. Every one of them makes the local checks measure a different repository
+from the one anybody else clones — and the gap only ever shows up somewhere
+nobody is watching, which by then is a red build in front of a reviewer.
+
+**Two fixes, and the first is the real one.** Make the generation a
+PREREQUISITE in the scripts, so `typecheck` and `build` cannot run without it —
+then the ordering is enforced rather than remembered. And when the change is to
+what is generated or ignored, clone the repository into a temporary directory
+and run the checks there before pushing; it takes twenty seconds and it is the
+only way to see what a stranger sees.
+
+**A note on what NOT to do.** The first instinct was to add a drift check —
+regenerate, compare, fail on difference. Against a file that is never committed
+that check can never fail, because whatever it compares against was written a
+moment earlier by the same command. It would have been a permanently green step
+that reads like coverage. Structurally impossible beats detectable; a gate that
+cannot fail is worse than no gate at all.
