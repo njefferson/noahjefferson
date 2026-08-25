@@ -128,6 +128,38 @@ is not.
 - **Owes:** the §7e baseline (ask its NOTES first), the README table, and
   `docs-check.mjs` in CI.
 
+## njefferson/MoleBridge
+
+- **What:** a step-gated stoichiometry trainer for one high school chemistry
+  classroom. Students enter every intermediate value; the app attributes a wrong
+  number to a conceptual failure and hands the teacher a completion code that
+  decodes to a class-wide error histogram. Static PWA, no backend, no accounts,
+  no cookies, no network at runtime, and NO student PII — identity is a
+  teacher-assigned roster number.
+- **Branches:** `staging` and `main`, as of 2026-08-25. Work lands on `staging`;
+  `main` is the Cloudflare Pages production branch, so promotion is a merge. The
+  harness's `claude/*` branch is kept pointing at the same commit as `staging`
+  and gates deliberately do NOT run on it — two runs on one SHA is not twice the
+  confidence.
+- **Deploys to:** https://molebridge.pages.dev from `main` — **empty today**,
+  because nothing has been promoted yet. Every other branch lands as a preview
+  on its own URL.
+- **Branch guard:** installed 2026-08-25. `work=staging`, `promote=main` via
+  `MOLEBRIDGE_PROMOTE=1`, with `also=tools/version-check.mjs` holding the release
+  triplet on every commit. `package.json` reinstalls it on `npm ci`.
+- **Gates wired in CI:** `gates.yml` checks the hub out SHA-pinned and runs
+  `privacy-check.mjs`, `quote-check.mjs`, `docs-check.mjs`, `pin-check.mjs`,
+  `branch-guard.mjs --artefact`, `palette-check.mjs` and zizmor — all ahead of
+  the browser work, so a Chromium that will not download cannot skip them. Then
+  its own journey walk, accessibility gate, and a LIVE header check made from
+  the runner after the deploy.
+- **No runtime dependencies at all.** Node strips the TypeScript; the only
+  package in the tree is the type checker.
+- **Owes:** a Content-Security-Policy, the ViewBoard and Chromebook on-device
+  passes, a required reviewer on the `production` environment, its repo metadata
+  applied from `METADATA.md`, and the promote to `main` that makes the
+  production URL answer.
+
 ---
 
 ## What every sibling still owes

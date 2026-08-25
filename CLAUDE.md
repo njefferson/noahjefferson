@@ -17,7 +17,7 @@ written down and none of it was being read.** A session loads exactly one file
 automatically, and every other rule here had to be opened by somebody who
 remembered it existed.
 
-[`REPOS.md`](REPOS.md) is the map: six repos, their branch models, deploy targets
+[`REPOS.md`](REPOS.md) is the map: seven repos, their branch models, deploy targets
 and what each still owes. It did not exist until 2026-08-10, which is why
 sessions kept asking questions that had already been answered — the repo list had
 never been written anywhere, so there was nothing to remember it from.
