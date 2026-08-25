@@ -187,14 +187,15 @@ The temptation here is to lead with "no accounts, works offline", which is true
 and is the wrong first sentence — it describes the constraints rather than the
 thing.
 
-**Website** — proposed 2026-08-25, and **not yet live**
+**Website** — proposed 2026-08-25, and **production is still empty**
 
 > https://molebridge.pages.dev
 
-Nothing is deployed. There is no user interface yet: session 1 built the domain
-engine, the completion-code codec and the test suite, deliberately without a
-screen, because that is where the correctness risk is. Do not set this item
-until the first deploy actually answers on that host.
+The app is built and a candidate is deployed, but on a PREVIEW URL: `main` is
+the Cloudflare Pages production branch and the code is not on `main` yet, so
+this host answers with nothing until somebody promotes. Do not set this item
+until a deploy from `main` actually answers there — a preview URL is not this
+address and never becomes it.
 
 **Topics** — proposed 2026-08-25
 
@@ -211,9 +212,11 @@ looked at.
 
 > `main`
 
-The family convention is `staging` and `main` with `staging` as a hard release
-gate. `staging` does not exist yet and is owed before session 2 ships anything;
-`main` is the right default either way.
+`staging` now exists — the owner called it on 2026-08-25 — so the family
+convention holds here: work commits to `staging`, `main` is production, and
+`.branch-guard` generates a pre-commit hook that refuses anything else.
+`main` is the right default either way, because it is what a reader lands on
+and it is what Cloudflare Pages treats as production.
 
 ---
 
