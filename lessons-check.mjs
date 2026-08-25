@@ -86,6 +86,43 @@ for (const [head] of heads) {
   if (!byNumber.has(n)) byNumber.set(n, []);
   byNumber.get(n).push(head.replace(/^##\s*/, '').trim());
 }
+// AND A GAP IS THE SAME FAULT WEARING THE OTHER FACE (2026-08-25).
+//
+// Two sessions writing 141 collide and are caught above. A session working from
+// a STALE CLONE does not collide — it writes 141 while the file it cannot see
+// ends at 139, and nothing is ambiguous afterwards. What is wrong is that §140
+// now resolves to nothing, and a citation to it reads as a lesson that was
+// never learned rather than one that was never fetched.
+//
+// This happened: a clone 45 commits behind produced an entry numbered against a
+// months-old file. Git rejected the push, which is the only reason it surfaced.
+// Rejection is not a gate — it depends on somebody else having pushed first.
+//
+// A DELIBERATELY RETIRED LESSON KEEPS ITS HEADING and says it is retired. A
+// citation must always land somewhere: "this was withdrawn, and why" is an
+// answer, and silence is not.
+const nums = [...byNumber.keys()].map((n) => parseInt(n, 10)).filter(Number.isFinite);
+if (nums.length > 1) {
+  const sorted = [...new Set(nums)].sort((a, b) => a - b);
+  const missing = [];
+  for (let n = sorted[0]; n < sorted[sorted.length - 1]; n += 1) {
+    if (!sorted.includes(n)) missing.push(n);
+  }
+  if (missing.length) {
+    failures.push(
+      `LESSONS.md skips ${missing.length === 1 ? 'lesson' : 'lessons'} ${missing.join(', ')}, `
+      + `between ${sorted[0]} and ${sorted[sorted.length - 1]}. A citation to §${missing[0]} `
+      + 'resolves to nothing.\n'
+      + '      A gap usually means the entry was written against a clone that had not\n'
+      + '      been fetched — the number was chosen from a file that was already behind.\n'
+      + '      Fetch, renumber off the real end, and check the entry still says something\n'
+      + '      the newer lessons have not already said.\n'
+      + '      If a lesson was RETIRED, keep its heading and say so there. A citation has\n'
+      + '      to land somewhere; "withdrawn, and why" is an answer and silence is not.',
+    );
+  }
+}
+
 for (const [n, titles] of byNumber) {
   if (titles.length < 2) continue;
   failures.push(
