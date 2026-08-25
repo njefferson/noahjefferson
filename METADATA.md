@@ -172,11 +172,13 @@ and the default was pointing at a branch that was not there.
 
 # njefferson/MoleBridge
 
-Added 2026-08-25, with the repository's session-1 engine. **Every item below is
-proposed** — nothing here is set, and this repository must not be reported set
-up until the owner has applied these and said so.
+Added 2026-08-25, with the repository's session-1 engine. Description and topics
+are SET. **Website, social preview and default branch are still proposed**, so
+this repository must not be reported set up: the website row in particular
+cannot be set until a deploy from `main` answers on that host, and `main` is
+still the initial commit.
 
-**Description** — proposed 2026-08-25
+**Description** — **SET** 2026-08-25, applied and confirmed by the owner
 
 > A step-gated stoichiometry trainer. Students enter every intermediate value;
 > the app names which step failed and why, and hands the teacher a completion
@@ -197,7 +199,8 @@ this host answers with nothing until somebody promotes. Do not set this item
 until a deploy from `main` actually answers there — a preview URL is not this
 address and never becomes it.
 
-**Topics** — proposed 2026-08-25
+**Topics** — **SET** 2026-08-25, applied and confirmed by the owner; read back
+from the repository as all ten
 
 > chemistry, stoichiometry, education, high-school, teaching-tool, pwa,
 > offline-first, typescript, no-backend, static-site
