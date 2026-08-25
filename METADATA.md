@@ -177,12 +177,11 @@ and default branch were read back off the repository rather than assumed; the
 social preview is on the owner's word, because the API does not expose it and
 there is nothing to read.
 
-One thing that is set but not yet CONFIRMED, kept here rather than tidied away:
-nobody has fetched `https://molebridge.pages.dev` itself. 0.4.4 deployed from
-`main` and the deploy job's checks all passed — against the immutable per-deploy
-host, which is not that address. Whether the apex follows a push depends on
-Cloudflare's project configuration, and this sandbox's proxy refuses
-`*.pages.dev`, so it is a question for a browser.
+`https://molebridge.pages.dev` was opened and answers — confirmed by the owner
+on 2026-08-25, which is the check no gate here could perform: this sandbox's
+proxy refuses `*.pages.dev`, and the deploy job's own assertions had only ever
+run against the immutable per-deploy host. The apex follows a push, so the
+Cloudflare project's production branch is correctly set.
 
 **Description** — **SET** 2026-08-25, applied and confirmed by the owner
 

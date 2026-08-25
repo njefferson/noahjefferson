@@ -158,11 +158,23 @@ is not.
 - **Promoted 2026-08-25.** 0.4.4 is on `main` and deployed; the promote was a
   clean fast-forward, so no commit was made on production and the guard's escape
   was never needed. Repo metadata is fully applied.
-- **Owes:** a Content-Security-Policy, the ViewBoard and Chromebook on-device
-  passes, a required reviewer on the `production` environment, and somebody
-  actually fetching `https://molebridge.pages.dev` — the deploy job's checks
-  passed against the per-deploy host rather than the apex, which is fixed in the
-  workflow but is proved by the NEXT promote and not before.
+- **Owes:** a Content-Security-Policy, and the ViewBoard and Chromebook
+  on-device passes. The production URL was opened and answers.
+- **NOT owed, and recorded so it stops being re-proposed: a required reviewer on
+  the `production` environment.** A session wrote it into this repo's notes as
+  "worth adding" and then carried it as an obligation for six turns. Doctrine
+  §16.5 does not ask for one — it names a required reviewer only inside its
+  description of the BAD UI, and offers "a protected environment, or a typed
+  confirmation, or both". No sibling has one. On a single-maintainer repo it
+  means approving your own deploy, which is a dialog rather than a second pair
+  of eyes, and it would stall a promote waiting for a click. The friction §16.5
+  wants is already there three times: the branch guard refuses a commit on
+  `main` without the escape, promotion is a deliberate merge, and the deploy
+  cannot start until every gate is green.
+- **The environment split IS worth keeping** — `production` from `main`,
+  `preview` from anything else. It came from a real zizmor `secrets-outside-env`
+  finding, it costs nothing, and it means a protection rule is one click away if
+  one is ever actually wanted.
 
 ---
 
