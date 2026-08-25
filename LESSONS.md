@@ -8657,3 +8657,76 @@ artefact everybody reads agree with the artefact nobody reads.
 terminal verdict. If any repo here runs steps with `if: ${{ !cancelled() }}` or
 `continue-on-error`, it has this defect until the last thing in the log says
 whether the run passed. And when reading a run: the conclusion, not the tail.
+
+---
+
+## 140 · A validity check applied uniformly across categories silently DELETED a whole category, and the surface it emptied looked healthy
+
+**Enforced by:** GATE MoleBridge:test/problem.test.ts — the generator sweep
+asserts that every problem KIND actually appears in ten thousand draws, not
+merely that every draw is valid. · CHECKLIST every-category-appears — any filter
+applied across kinds owes a test that each kind survives it.
+
+MoleBridge's problem generator draws a candidate and rejects it if it breaks any
+generation guarantee. One guarantee keeps quantities physical: nothing smaller
+than a milligram, nothing larger than ten thousand, because a classroom balance
+cannot show either. It was applied to every value the solution computes.
+
+One problem kind asks how many PARTICLES the reaction makes. The answer is about
+1.4e24, which is the correct answer to the question rather than an absurd one,
+and the guarantee rejected every single one. **Two thousand five hundred draws
+in that tier produced two thousand five hundred problems and not one of that
+kind.** The tier generated cleanly, every problem in it was valid, every test
+passed, and a fifth of the product's coverage was gone.
+
+**What makes this shape hard to see is that the survivors are all correct.** A
+filter that is too strict does not produce bad output; it produces less output,
+all of it good. Nothing is malformed, nothing throws, no assertion fails. The
+only visible symptom is a count nobody was counting.
+
+**It is the same shape as a11y surface lists** (LESSONS 28): a check that runs
+over a LIST silently covers only what is on the list, and a check that
+FILTERS a stream silently drops whatever the filter did not anticipate. Both
+report success about the things they saw.
+
+**The rule.** When one rule is applied across categories that differ in kind —
+units, ranges, shapes — assert that each category still comes out the other
+side. The assertion is one line and it is not the same as asserting the output
+is valid. "Everything that got through is correct" and "everything that should
+have got through did" are different claims, and only the first one is free.
+
+---
+
+## 141 · Node strips TypeScript itself now, so a TypeScript project can carry ZERO runtime dependencies and one build one
+
+**Enforced by:** GATE noahjefferson:pin-check.mjs — the existing npm-hygiene
+gate already fails on an undeclared dependency, and a tree with none passes it
+trivially. · CHECKLIST no-toolchain-by-reflex — before adding a bundler or a test
+runner, check whether Node alone does it.
+
+MoleBridge is TypeScript, strict, no `any`, 107 tests, and its
+`node_modules` holds the type checker and the Node type definitions. Nothing
+else. No bundler, no transpiler, no test framework, no build step: `node
+src/thing.ts` runs, and `node --test 'test/**/*.test.ts'` runs the suite.
+
+Node 22.18 and later strip type annotations at load. It is not a compiler — it
+erases types and runs the rest — so the code has to stay erasable: no `enum`, no
+namespaces, no parameter properties, explicit `.ts` in import specifiers, and
+`import type` where the import is only a type. TypeScript's own
+`erasableSyntaxOnly` flag enforces exactly that set, so the type checker refuses
+anything Node would choke on.
+
+**Why this is worth a lesson rather than a footnote.** Doctrine §16 says the
+realistic threat to these repos is a compromised package pulled in for a script
+nobody thinks about, executing on a runner holding a live token. The cheapest
+defence is not pinning; it is **not having the package**. A test runner and a
+bundler together are hundreds of transitive dependencies, every one of which
+executes during `npm ci` on that runner.
+
+**What it costs.** `node --test` has no watch-and-rerun worth using, no snapshot
+testing, and its default reporter is TAP, which is verbose. Those are real, and
+for a repo with a browser-driven suite a real runner may still win. **The point
+is not that the toolchain is always wrong — it is that adding one should be a
+decision rather than the first line of a new repo.** This one was reached for by
+reflex in every previous repo here, and in at least one of them nothing but
+`tsc` and a test runner was ever needed.

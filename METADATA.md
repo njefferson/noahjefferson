@@ -170,5 +170,52 @@ and the default was pointing at a branch that was not there.
 
 ---
 
+# njefferson/MoleBridge
+
+Added 2026-08-25, with the repository's session-1 engine. **Every item below is
+proposed** — nothing here is set, and this repository must not be reported set
+up until the owner has applied these and said so.
+
+**Description** — proposed 2026-08-25
+
+> A step-gated stoichiometry trainer. Students enter every intermediate value;
+> the app names which step failed and why, and hands the teacher a completion
+> code that decodes to a class-wide error histogram.
+
+The description says what the app IS rather than what it is made of, per §10.
+The temptation here is to lead with "no accounts, works offline", which is true
+and is the wrong first sentence — it describes the constraints rather than the
+thing.
+
+**Website** — proposed 2026-08-25, and **not yet live**
+
+> https://molebridge.pages.dev
+
+Nothing is deployed. There is no user interface yet: session 1 built the domain
+engine, the completion-code codec and the test suite, deliberately without a
+screen, because that is where the correctness risk is. Do not set this item
+until the first deploy actually answers on that host.
+
+**Topics** — proposed 2026-08-25
+
+> chemistry, stoichiometry, education, high-school, teaching-tool, pwa,
+> offline-first, typescript, no-backend, static-site
+
+**Social preview** — proposed 2026-08-25, artwork not yet drawn
+
+No card exists. Whatever is drawn must be wordless, with any lettering overlaid
+afterwards in real type (Doctrine §3), and its contrast measured rather than
+looked at.
+
+**Default branch** — proposed 2026-08-25
+
+> `main`
+
+The family convention is `staging` and `main` with `staging` as a hard release
+gate. `staging` does not exist yet and is owed before session 2 ships anything;
+`main` is the right default either way.
+
+---
+
 New app? Add its section here in the same commit that creates the repo, and
 point its CLAUDE.md §10 note at this file.
