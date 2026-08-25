@@ -232,3 +232,4 @@ and the filename carries it.
 - **§138** — [A new check passed a plant of the exact bug it was written for, because every record in the fixture had exactly one child](lessons/138-a-new-check-passed-a-plant-of-the-exact-bug-it-was-written.md)
 - **§139** — [Three releases shipped with a CI gate failing, because every step after a failure keeps running and the last twenty lines of a red run are green](lessons/139-three-releases-shipped-with-a-ci-gate-failing-because-ever.md)
 - **§140** — [Fourteen correct fixes to one file, all the same shape, and "why are there fourteen" was never asked from inside the work](lessons/140-fourteen-correct-fixes-to-one-file-all-the-same-shape-and.md)
+- **§141** — [A check derived its own population from the fix it enforced, so it could only ever confirm the surfaces already fixed](lessons/141-a-check-derived-its-population-from-the-fix-it-enforced.md)
