@@ -104,8 +104,9 @@ Every item below has actually happened.
  named and a recommendation first, answerable in one word. Two or three; four at
  the outside. Nothing already settled, nothing a session can do itself, and the
  standing manual steps are a status line at most, never re-served as a to-do
- list. **The failure, in the owner's words: a long list to do with no choices to
- make, and nothing marking what is being answered.** (Doctrine §2.)
+ list. **The failure this names: a report that is a long list of things to do,
+ with no choices in it to make, and nothing marking what is being answered.**
+ (Doctrine §2.)
 - **Multi-stage work carries a LIVE STATUS PAGE, and its link goes in EVERY
  progress reply** — not once at creation. Chat scrolls; on an iPad a plan agreed
  on Monday is unreachable by Wednesday. Published once, updated in place at the

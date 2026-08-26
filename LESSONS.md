@@ -253,3 +253,4 @@ and the filename carries it.
 - **§159** — [An internal key leaked into the question and asked a reader to rearrange an equation for a letter that was not in it](lessons/159-an-internal-key-leaked-into-the-question-and-asked-a-rea.md)
 - **§160** — [A control that had existed since the first release did nothing in six of its fourteen positions, and nothing could have noticed](lessons/160-a-control-that-has-existed-since-release-one-and-never-be.md)
 - **§161** — [A push that creates no workflow run at all leaves the last commit's green tick standing in its place](lessons/161-a-push-that-creates-no-workflow-run-at-all-shows-a-green.md)
+- **§162** — [A filtered API query served stale results, agreed with itself three times, and a session reported a production outage that was not happening](lessons/162-a-filtered-api-query-served-stale-results-and-a-session-c.md)
