@@ -9,7 +9,9 @@ Any surprise about the tree — a file you wrote missing, a gate answering about
 work you remember doing, a hook gone — is a staleness symptom before it is
 anything else. · GATE noahjefferson:session-brief.mjs — §0 fetches both clones
 and refuses to be quiet about either being behind, which is the right check
-running at the wrong frequency.
+running at the wrong frequency. · GATE quietkeep:tools/branch-state-check.mjs —
+fetches `origin/main` before reading it, and when the fetch does not land says
+the answer is from the last fetch rather than printing it as current.
 
 **Smell:** a guard against an environment hazard, wired to a lifecycle event. Ask
 what the hazard's actual arrival rate is. If it can happen at ANY moment and the
@@ -57,3 +59,12 @@ file exists because of.
 **Cheap and correct:** fetch the one ref before reading it, and when the network
 is not there, SAY the answer is from the last fetch rather than printing it as
 current. Both branches of that are one line of output each.
+
+**Done, in that repo, the same night.** The fetch is bounded to five seconds,
+because a commit guard may not hang on a network, and the offline branch prints
+*the fetch failed, so this is the last fetch, not the remote*. Planted both ways:
+against a deliberately stale ref the new code fetches and answers correctly where
+the old code went red on the same input, and with the transport refused it labels
+the stale reading instead of dressing it as fresh. The advice text that used to
+carry the remedy now points at that label, because the remedy is no longer the
+reader's job.
