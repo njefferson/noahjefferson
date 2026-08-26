@@ -234,3 +234,4 @@ and the filename carries it.
 - **§140** — [Fourteen correct fixes to one file, all the same shape, and "why are there fourteen" was never asked from inside the work](lessons/140-fourteen-correct-fixes-to-one-file-all-the-same-shape-and.md)
 - **§141** — [A check derived its own population from the fix it enforced, so it could only ever confirm the surfaces already fixed](lessons/141-a-check-derived-its-population-from-the-fix-it-enforced.md)
 - **§142** — [A visual gate read computed style, where `outline-width` is 3px whether or not one of those pixels reaches the screen](lessons/142-a-visual-gate-read-computed-style-where-outline-width-is.md)
+- **§143** — [The stale-clone guard ran at session start, and the clone was replaced four hours later — with the remote-tracking refs stale alongside it](lessons/143-the-stale-clone-guard-ran-at-session-start-and-the-clone.md)
