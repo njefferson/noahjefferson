@@ -97,6 +97,15 @@ Every item below has actually happened.
   against the real violations and flagged 39, 138 and 227 files of honest prose —
   ordinary speech and the product's voice are the same shape
   (LESSONS §108). **Every sibling repo owes the wiring.**
+- **A REPORT ENDS IN DECISIONS OR IT ENDS IN NOTHING.** A list of everything
+ outstanding is work handed back, not a handover — the owner should never have
+ to read a summary and work out which parts are theirs. Close with a SHORT
+ numbered list of what only they can settle, each a question with the options
+ named and a recommendation first, answerable in one word. Two or three; four at
+ the outside. Nothing already settled, nothing a session can do itself, and the
+ standing manual steps are a status line at most, never re-served as a to-do
+ list. **The failure, in the owner's words: a long list to do with no choices to
+ make, and nothing marking what is being answered.** (Doctrine §2.)
 - **Multi-stage work carries a LIVE STATUS PAGE, and its link goes in EVERY
  progress reply** — not once at creation. Chat scrolls; on an iPad a plan agreed
  on Monday is unreachable by Wednesday. Published once, updated in place at the

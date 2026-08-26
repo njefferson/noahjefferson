@@ -165,6 +165,23 @@ The owner is iPad-first and often driving. So:
  not the using. (A session
  handed over a handoff prompt as a styled blockquote — twice in one exchange.)
 
+- **A REPORT ENDS IN DECISIONS OR IT ENDS IN NOTHING.** A list of everything
+ outstanding is not a handover, it is work handed back. If the owner has to read
+ a summary and work out which parts are theirs, the session has done the easy
+ half and left the sorting.
+ So the close of any report is a SHORT numbered list of the things only the
+ owner can settle, each written as a question with the options named and a
+ recommendation first, answerable in one word. Two or three. Never more than
+ four — past that, rank them and hold the rest.
+ What does NOT go in that list: anything already settled, anything a session can
+ do itself, anything the owner has already been told twice, and the standing
+ manual steps (metadata, the Pages project, the default branch) which are a
+ status line at most and never a to-do list re-served each time.
+ **The failure it names, in the owner's terms: a long list to do with no choices
+ to make, and nothing marking what is being answered.** Written after a session
+ closed three replies running with an inventory of outstanding work — accurate
+ every time, and not once a question.
+
 ## 3. Taste
 
 - Visuals: maximum saturation, gentle contrast (tuned WITHIN AA, never against
