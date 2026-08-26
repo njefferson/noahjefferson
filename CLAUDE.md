@@ -144,6 +144,15 @@ Every item below has actually happened.
  has just added a new way for its own work to silently not arrive**, and is at
  its least likely to look because it watched that gate pass locally.
  (LESSONS §53; `handoff-check.mjs --ack=deploy-green`.)
+ **AND ITS SIBLING: A PUSH IS NOT A CI RUN.** Two releases were pushed to a repo
+ whose gates run on every push, both verified against the remote, and NEITHER
+ CREATED A RUN. Nothing was red because nothing had run, and the newest green row
+ in the list belonged to the commit before them — a missing run is an absence,
+ and the eye reads the row above it as the answer. So the question is never "is
+ the newest run green" but **"is there a run whose head SHA is this commit, and
+ what did its log say"**. Dispatching the workflow by hand against the branch is
+ the fallback, and saying the release was verified by that dispatch is more
+ honest than saying the push was green. (LESSONS §161.)
 
 The shape of three of these is the same: **do not offer a capability the
 lessons already record as impossible.** Check before promising, not after.

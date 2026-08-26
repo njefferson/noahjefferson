@@ -252,3 +252,4 @@ and the filename carries it.
 - **§158** — [A stylesheet block that never landed passes every accessibility check, because none of them ask where the words are](lessons/158-a-stylesheet-block-that-never-landed-passes-every-access.md)
 - **§159** — [An internal key leaked into the question and asked a reader to rearrange an equation for a letter that was not in it](lessons/159-an-internal-key-leaked-into-the-question-and-asked-a-rea.md)
 - **§160** — [A control that had existed since the first release did nothing in six of its fourteen positions, and nothing could have noticed](lessons/160-a-control-that-has-existed-since-release-one-and-never-be.md)
+- **§161** — [A push that creates no workflow run at all leaves the last commit's green tick standing in its place](lessons/161-a-push-that-creates-no-workflow-run-at-all-shows-a-green.md)
