@@ -250,3 +250,4 @@ and the filename carries it.
 - **§156** — [A drift check regenerates from the same generator, so it can only catch a wrong artefact — never a wrong generator](lessons/156-a-drift-check-regenerates-from-the-same-generator-so-it.md)
 - **§157** — [`clients.claim()` fires `controllerchange` exactly as a replacement does, so "reload when the worker changes" reloads every first-time visitor](lessons/157-clients-claim-fires-controllerchange-exactly-as-a-replac.md)
 - **§158** — [A stylesheet block that never landed passes every accessibility check, because none of them ask where the words are](lessons/158-a-stylesheet-block-that-never-landed-passes-every-access.md)
+- **§159** — [An internal key leaked into the question and asked a reader to rearrange an equation for a letter that was not in it](lessons/159-an-internal-key-leaked-into-the-question-and-asked-a-rea.md)
