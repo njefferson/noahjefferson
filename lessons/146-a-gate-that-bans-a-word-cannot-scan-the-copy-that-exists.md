@@ -48,3 +48,37 @@ and an exemption is one line.
 narrowed gate can still be planted red. A filename dropped into a carried note
 fails, on the right line, with the right reason. An exemption cannot be planted
 at all, which is what makes it feel safe.
+
+---
+
+**It recurred four more times the same day it was written**, which is what moved
+the fix from a per-case judgement to two structural rules.
+
+- A test asserting a session has no accommodation field failed on its own
+  header, which names the fields it must never have.
+- The §7f diagnostic's `maxTouchPoints` line matched a ban on *points* — and
+  that property is the one thing that tells an iPad from a Mac, since iPadOS
+  Safari reports itself as macOS, so the doctrine effectively requires the line
+  to exist.
+- A browser walk asserting that praise is ABSENT has to spell the praise out:
+  `check(!/streak|badge|great job/i.test(closing), 'nothing congratulating anybody')`.
+- And the release notes again, from a second direction.
+
+**Two fixes, not four exemptions.** The word gate now strips REGEX LITERALS as
+well as comments — a pattern is not copy, nothing inside `/…/` is ever shown to
+anybody, and the same file's plain strings are still read, so a harness that
+actually printed praise is still caught. And the *points* rule was narrowed to
+points-as-a-reward rather than the bare word.
+
+The stripper is deliberately conservative about what counts as a regex, because
+`/` is also division and a stripper that guessed wrong would silently delete
+real copy; anything ambiguous stays in and is therefore still scanned. Planted
+both ways: praise after a division is still caught, and ordinary division does
+not trip it.
+
+**The frequency is the finding.** Four recurrences in one sitting says this is
+not a special case — it is what happens to every word gate once the codebase
+starts documenting, testing and asserting the rule the gate enforces. Expect it,
+and answer it with a syntactic rule about where copy can live rather than with a
+list of files that are allowed to be wrong.
+

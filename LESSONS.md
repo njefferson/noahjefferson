@@ -246,3 +246,5 @@ and the filename carries it.
 - **§152** — [An app offered the reader a new version, they took it, and nothing ever said what changed](lessons/152-an-app-offered-an-update-and-never-said-what-it-changed.md)
 - **§153** — [A check's sentence and its predicate are two different things, and only one of them runs](lessons/153-a-checks-sentence-and-its-predicate-are-two-different-thi.md)
 - **§154** — [A button class that omits `display` means something else on an `<a>`, and the floor it declares is silently inert](lessons/154-a-button-class-that-omits-display-means-something-else-on.md)
+- **§155** — [`exclude` is inherited through `extends`, so a whole directory was checked by neither project while both exited 0](lessons/155-exclude-is-inherited-through-extends-so-a-directory-was.md)
+- **§156** — [A drift check regenerates from the same generator, so it can only catch a wrong artefact — never a wrong generator](lessons/156-a-drift-check-regenerates-from-the-same-generator-so-it.md)
