@@ -170,5 +170,53 @@ and the default was pointing at a branch that was not there.
 
 ---
 
+# njefferson/solve-ent
+
+**Every item below is `proposed`.** Nothing here has been applied, and this
+repository must not be reported as set up while that is true (§10).
+
+**Description** — proposed 2026-08-26
+
+> Learn the algebra chemistry needs. Every wrong answer is traced to the
+> mistake that produced it, not marked wrong.
+
+Written for what the app IS rather than what it currently does. No topic list,
+no version and no feature in it — the seven topics belong in the README, where
+they are cheap to change. The second sentence is there because it is the whole
+product: free tools already solve these, and none of them says which
+misconception produced a particular number.
+
+**Website** — proposed 2026-08-26
+
+> https://solve-ent.pages.dev
+
+**NOT TRUE YET, and it must not be applied until it is.** There is no screen, no
+Cloudflare Pages project and nothing deployed. A website field pointing at a
+404 is worse than an empty one: it reads as a shipped app to anybody who finds
+the repository. Apply this one only after the Pages project exists and answers.
+
+**Topics** — proposed 2026-08-26
+
+> `algebra` `chemistry-education` `stoichiometry` `education` `pwa`
+> `offline-first` `local-first` `no-account` `accessibility`
+
+**Social preview** — proposed 2026-08-26
+
+**Nothing to upload yet.** The card carries the app's name in real type over
+wordless art (§3, §10), and neither the art nor the palette exists — this
+repository has no screen and no colours. It is listed here so the obligation is
+visible rather than discovered later.
+
+**Default branch** — proposed 2026-08-26
+
+> `staging`
+
+**Deliberately `staging` and not `main`, for now.** `main` is production and
+carries nothing; a default branch pointing at an empty branch is what a visitor
+lands on. This flips to `main` on the first promotion, exactly as
+3d-printing-pal's did.
+
+---
+
 New app? Add its section here in the same commit that creates the repo, and
 point its CLAUDE.md §10 note at this file.

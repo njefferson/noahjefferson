@@ -5,9 +5,16 @@ asking questions that had already been answered.**
 
 A session starts with no memory. The only file loaded automatically is
 `CLAUDE.md`. Nothing anywhere named the repos in this family, so "which repos are
-there" had nothing to be read *from* — the six below were discovered by grepping
+there" had nothing to be read *from* — the first six were discovered by grepping
 `LESSONS.md` for `GATE <repo>:` citations, which is an accident of how lessons
 cite their gates rather than a design.
+
+**And the accident kept a repo out.** MoleBridge cites no hub gate by that
+spelling, so the grep never saw it and nothing has ever listed it here — it was
+added on 2026-08-26 by a session that had to read its `CLAUDE.md` and `NOTES.md`
+for another reason. That is the failure this file exists to stop, wearing the
+shape of the thing that created it: a list assembled by a side effect is a list
+of whatever happens to have that side effect.
 
 **Keep this current. It is loaded into every session by the SessionStart hook**
 (`.claude/hooks/session-start.sh`), which is the difference between a fact being
@@ -127,6 +134,72 @@ is not.
   found 2026-08-20, NOT fixed, and `docs-check` is not in its CI.
 - **Owes:** the §7e baseline (ask its NOTES first), the README table, and
   `docs-check.mjs` in CI.
+
+## njefferson/MoleBridge
+
+**Listed here from 2026-08-26.** It had never been in this file: the grep that
+assembled the original six keyed on `GATE <repo>:` citations in `LESSONS.md`,
+and MoleBridge cites none.
+
+- **What:** a step-gated stoichiometry trainer for one high school chemistry
+  classroom. Static PWA, installable, offline after first load, no backend, no
+  accounts, no cookies. Students on managed Chromebooks; a board at the front of
+  the room running Chromium.
+- **Branches:** `staging` and `main`. `main` is the Cloudflare Pages production
+  branch, so a commit landing there lands on the address a class opens.
+  Promotion is a merge.
+- **Deploys to:** https://molebridge.pages.dev — confirmed answering on a real
+  device 2026-08-25, along with the iPad pass.
+- **Branch guard:** installed. `work=staging`, `promote=main` via
+  `MOLEBRIDGE_PROMOTE`, with `also=tools/version-check.mjs`.
+- **Gates wired in CI:** `gates.yml` checks the hub out SHA-pinned and runs
+  `privacy-check.mjs`, `quote-check.mjs`, `docs-check.mjs`, `pin-check.mjs` and
+  `branch-guard.mjs --artefact`, plus its own type check, tests,
+  `verify-chemistry.mjs`, `version-check.mjs`, `tokens-check.mjs`,
+  `permissions-check.mjs`, the journey walk and the accessibility gate at
+  `--all-palettes`. The deploy job takes the GATED build as an artifact rather
+  than rebuilding, and fetches the live page to check its headers.
+- **Known:** the §7e baseline is complete. Worth copying: `tools/a11y.mjs`'s
+  ROLE INVARIANT, which reverse-maps every rendered colour to its token and
+  fails on anything mapping to nothing; `tools/verify-chemistry.mjs`, which
+  checks the domain from outside the engine; and `src/report/readout.ts`, where
+  a student sees their completion code DECODED rather than described.
+- **Owes:** the ViewBoard and a Chromebook, which no session can test against.
+
+---
+
+## njefferson/solve-ent
+
+- **What:** an algebra-skills trainer for one high school chemistry classroom,
+  and a sibling to MoleBridge — the same teacher, the same students, the same
+  board at the front of the room. Static, no backend, no accounts, no cookies.
+- **Branches:** `staging` and `main`. Work lands on `staging`; `main` is
+  production and is EMPTY on purpose.
+- **Deploys to:** nothing yet. There is no Cloudflare Pages project and no
+  screen to put on one — session 1 built the domain engine and the error
+  taxonomy and stopped there deliberately. **Do not write a deploy URL into
+  this entry until one has answered.**
+- **Branch guard:** installed 2026-08-26. `work=staging`, `promote=main` via
+  `SOLVENT_PROMOTE`, with `also=tools/version-check.mjs`. `package.json`
+  reinstalls it on `npm ci`.
+- **Gates wired in CI:** `gates.yml` checks the hub out SHA-pinned and runs
+  `privacy-check.mjs`, `quote-check.mjs`, `docs-check.mjs`, `pin-check.mjs` and
+  `branch-guard.mjs --artefact` — all of them AHEAD of the repo's own tests, so
+  a broken test run cannot skip the §9b gate. Each of the three doctrine gates
+  was watched going red on a LOCAL plant and restored. `zizmor` runs
+  `--offline --strict-collection` from the hub's hash-pinned requirements.
+- **Known:** the product is ATTRIBUTION, not solving. A taxonomy collision
+  fails the build and there is no tiebreak anywhere. Two numbers are printed by
+  `npm test` and by `node tools/cli.ts scan`: collisions, which must be 0, and
+  the E-UNCLASSIFIED rate, which is reported rather than suppressed. Its
+  `verify-algebra.mjs` is worth copying — its strongest check substitutes the
+  app's answer back INTO the relation rather than recomputing it the same way,
+  so it cannot share a mistake with the solver.
+- **Owes:** everything a screen brings — the §7e baseline, a measured palette,
+  an accessibility gate, a browser walk, a completion code, a teacher's page.
+  And the repo metadata, every row of which says proposed.
+
+---
 
 ---
 
