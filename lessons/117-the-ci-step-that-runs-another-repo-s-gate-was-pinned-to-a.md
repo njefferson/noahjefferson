@@ -1,8 +1,27 @@
 ## 117 · The CI step that runs another repo's gate was pinned to a commit from before that gate existed, and it was watched passing locally, which is the one place a pinned checkout proves nothing
 
-**Enforced by:** CHECKLIST — adding a step that invokes a hub gate means moving
-that workflow's hub pin in the SAME commit, and verifying the named file exists
-at the new SHA rather than at the sibling clone's HEAD.
+**Enforced by:** GATE solve-ent:tools/hub-pin-check.mjs for the half a script can
+see — the reconciliation marker and the workflow's `HUB_SHA` are the same fact
+written in two files, and it refuses a commit where they disagree in either
+direction. Plus CHECKLIST for the half it cannot: adding a step that invokes a
+hub gate means verifying the named file exists AT THAT SHA rather than at the
+sibling clone's HEAD.
+
+**It recurred as a checklist and became a gate on 2026-08-26.** Solve-ent adopted
+§146, the marker moved to the new hub commit, the pin stayed on the old one, and
+it was caught by hand — by somebody grepping the workflow, on the way to
+something else. A pin behind the marker is CI running the shared gates from
+before the rules the repository has already read: every gate green, the new rule
+enforced nowhere, and the marker asserting it was read and applied. **Adopting is
+one command and editing a workflow is another, and nothing about the tree looks
+different after the second one is skipped.** Every sibling that pins the hub owes
+this check — **and it cannot be a hub gate, which is the part worth keeping.**
+CI fetches the hub AT that pin, so a shared gate validating the pin would be
+fetched at the very commit it is checking; a pin left behind far enough checks
+out a hub without the file, and the step fails with a missing module rather than
+a diagnosis. That is this lesson one level up, wearing the costume of its own
+fix. The check has to be repo-local, read only files in its own repository, and
+need the hub for nothing.
 
 A sibling repo runs the canonical gates by checking the hub out SHA-pinned into
 an untracked path, which is right: a cross-repo gate must depend on the other
