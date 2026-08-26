@@ -1,4 +1,4 @@
-## 148 · A gate placed after an expensive optional step is a gate that stops running when that step breaks
+## 149 · A gate placed after an expensive optional step is a gate that stops running when that step breaks
 
 **Enforced by:** CHECKLIST gate-order — in any workflow, the cheap gates that
 must never be skipped go BEFORE anything that downloads, builds or drives a

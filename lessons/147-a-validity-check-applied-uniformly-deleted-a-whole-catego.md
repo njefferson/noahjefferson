@@ -1,4 +1,4 @@
-## 146 · A validity check applied uniformly across categories silently DELETED a whole category, and the surface it emptied looked healthy
+## 147 · A validity check applied uniformly across categories silently DELETED a whole category, and the surface it emptied looked healthy
 
 **Enforced by:** GATE MoleBridge:test/problem.test.ts — the generator sweep
 asserts that every problem KIND actually appears in ten thousand draws, not

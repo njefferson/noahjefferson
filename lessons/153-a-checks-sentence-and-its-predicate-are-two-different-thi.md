@@ -1,4 +1,4 @@
-## 152 · A check's sentence and its predicate are two different things, and only one of them runs
+## 153 · A check's sentence and its predicate are two different things, and only one of them runs
 
 **Enforced by:** CHECKLIST what-would-make-this-red — for any assertion carrying
 a LITERAL, name the change that would make it fail. If the honest answer is

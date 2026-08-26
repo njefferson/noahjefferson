@@ -1,4 +1,4 @@
-## 151 · An app offered the reader a new version, they took it, and nothing ever said what changed
+## 152 · An app offered the reader a new version, they took it, and nothing ever said what changed
 
 **Enforced by:** GATE MoleBridge:tools/walk.mjs — the after-an-update panel is
 walked in five states: a newcomer is not shown it, a returning reader is, it is

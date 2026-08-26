@@ -1,4 +1,4 @@
-## 147 · Node strips TypeScript itself now, so a TypeScript project can carry ZERO runtime dependencies and one build one
+## 148 · Node strips TypeScript itself now, so a TypeScript project can carry ZERO runtime dependencies and one build one
 
 **Enforced by:** GATE noahjefferson:pin-check.mjs — the existing npm-hygiene
 gate already fails on an undeclared dependency, and a tree with none passes it

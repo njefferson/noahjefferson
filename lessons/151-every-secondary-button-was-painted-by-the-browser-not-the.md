@@ -1,4 +1,4 @@
-## 150 · Every secondary button in a shipped app was painted by the browser, not by the theme — and every gate was green
+## 151 · Every secondary button in a shipped app was painted by the browser, not by the theme — and every gate was green
 
 **Enforced by:** GATE molebridge:tools/a11y.mjs — every rendered colour is
 reverse-mapped to the role token it came from, and a colour mapping to nothing

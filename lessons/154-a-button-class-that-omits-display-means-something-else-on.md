@@ -1,4 +1,4 @@
-## 153 · A button class that omits `display` means something else on an `<a>`, and the floor it declares is silently inert
+## 154 · A button class that omits `display` means something else on an `<a>`, and the floor it declares is silently inert
 
 **Enforced by:** GATE MoleBridge:tools/a11y.mjs — every control in every state
 is measured against the 44px target floor, which is what found this at 36px. ·
