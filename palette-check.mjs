@@ -23,6 +23,7 @@
 //       "hairline": "rgba(255,255,255,.17)",             // decorative, exempt
 //       "text":     ["#eaeaea", "#d2d2d2", "#c1c1c1"],   // primary, secondary, tertiary
 //       "accents":  { "primary": "#9fc2f5" },            // >=1; all are checked AS TEXT
+//       "onAccent": "#10233d",          // text ON the accent fill — a primary button
 //       "accentSoftAlpha": 0.15         // if the app tints a fill with its accent
 //     }
 //   }
@@ -105,9 +106,45 @@ const FLOOR = {
 };
 const ASPIRE = { textAAA: 7.0, tertiary: 5.0, fill: 1.5, chroma: 0.02, peak: 15.0 };
 
+/* The fill names this file uses, in the CSS-role spelling an app's own gate
+   reports. Only needed where a pairing key is built. */
+const ROLE_NAME = {
+  page: '--page', pageAlt: '--page-alt',
+  surface: '--surface-1', surface2: '--surface-2', surface3: '--surface-3',
+};
+
 /* ---------- the gate ---------- */
-function checkPalette(name, p, verbose) {
+function checkPalette(name, p, verbose, renders) {
   const fails = [], notes = [], lines = [];
+
+  /*
+    ---- WHAT THE APP ACTUALLY PAINTS ----
+
+    `renders` is the list of role pairings the app was OBSERVED to render, in
+    "--text-2 on --accent-soft" form. When a spec supplies it, a pairing that
+    misses a floor and is NOT on the list becomes a note rather than a failure —
+    because it is a forecast about a screen nobody has built, not a defect on a
+    screen somebody ships.
+
+    WHY IT MATTERS. This gate measures the full cross product of roles, which is
+    what makes a palette PORTABLE: cleared against every pairing, it can be
+    dropped into any app that paints role tokens with no browser run at all.
+    Cleared against only the eighteen pairings one app happens to paint today,
+    it stops being valid the first time somebody puts a hint on a highlighted
+    row. Both facts are worth having, and they are not the same severity.
+
+    Omit it and everything is hard, which is what every other repo gets today.
+
+    The list must be MEASURED, never typed — MoleBridge's comes out of its own
+    accessibility gate, which reverse-maps every rendered colour to the token it
+    came from, and a `--pairs` mode fails when the recorded list and the
+    observed one differ.
+  */
+  const renderedSet = Array.isArray(renders) ? new Set(renders) : null;
+  const floorFail = (pairing, message) => {
+    if (renderedSet === null || renderedSet.has(pairing)) fails.push(message);
+    else notes.push(`${message} — not painted by this app today, so it is a forecast rather than a defect`);
+  };
   const kind = p.kind === 'tiles' ? 'tiles' : 'app';
 
   const page = parseColor(p.page).ink;
@@ -186,13 +223,58 @@ function checkPalette(name, p, verbose) {
     }
   }
 
-  /* 6. text on an accent-tinted fill (a real regression source) */
+  /* 6. text on an accent-tinted fill (a real regression source)
+
+     THE WHOLE LADDER, not just text[0]. It checked the primary only, and an
+     app rendering text-2 on an accent-soft panel — a hint under a highlighted
+     row, a secondary line in a selected card — was outside what this measured.
+     Found by instrumenting MoleBridge's accessibility gate to reverse-map every
+     rendered colour to the role token it came from and reading off the pairings
+     the app ACTUALLY paints: `--text-2 on --accent-soft` was one of eighteen,
+     and this gate had never looked at it. */
   if (p.accentSoftAlpha && accents.length && text.length) {
     const [, primary] = accents[0];
     for (const [fn, fc] of fills) {
-      const r = contrast(text[0], composite(primary, p.accentSoftAlpha, fc));
-      if (r < FLOOR.text) fails.push(`${name}: text on accent-tinted ${fn} = ${r.toFixed(2)}`);
+      const tinted = composite(primary, p.accentSoftAlpha, fc);
+      for (const [i, t] of text.entries()) {
+        const r = contrast(t, tinted);
+        if (r < FLOOR.text) {
+          // THE FILL IS PART OF THE KEY. A tint over the page and the same tint
+          // over surface-3 are different colours with different contrast, and a
+          // key that dropped the fill turned three real near-misses on screens
+          // nobody has built into three reported defects.
+          floorFail(
+            `--${names[i]} on --accent-soft over ${ROLE_NAME[fn] ?? '--' + fn}`,
+            `${name}: ${names[i]} on accent-tinted ${fn} = ${r.toFixed(2)}`,
+          );
+        }
+        if (verbose) lines.push(`    ${names[i]} on accent-tinted ${fn}: ${r.toFixed(2)}`);
+      }
     }
+  }
+
+  /* 6b. THE TEXT ON THE ACCENT FILL, which is the loudest pairing in an app and
+     was measured by nothing here.
+
+     A primary button is the accent as a FILL with its own text colour on top,
+     and that colour cannot be one of the text tokens: in a light theme the page
+     is a warm tan and tan lettering on a dark green button is a pairing nobody
+     chose, it just falls out of borrowing a token for a job it was not for. So
+     an app declares `onAccent` and this measures it.
+
+     Optional, because a palette with no accent-filled control does not need
+     one — but declared-and-unmeasured is the state this was in, so an app that
+     declares it gets it checked, and one that renders it without declaring it
+     is caught by its own role-pairing gate rather than here. */
+  if (p.onAccent && accents.length) {
+    const onAccent = parseColor(p.onAccent).ink;
+    for (const [an, ac] of accents) {
+      const r = contrast(onAccent, ac);
+      if (r < FLOOR.text) fails.push(`${name}: onAccent on accent ${an} = ${r.toFixed(2)} (floor ${FLOOR.text})`);
+      else if (verbose) lines.push(`    onAccent on accent ${an}: ${r.toFixed(2)}`);
+    }
+  } else if (accents.length) {
+    notes.push(`${name}: no onAccent declared — if anything paints text on the accent fill, nothing here measures it`);
   }
 
   /* 7. aspirations — reported, never fatal */
@@ -245,12 +327,16 @@ try {
   process.exit(2);
 }
 
-// Keys beginning with "_" are commentary, not palettes.
+// Keys beginning with "_" are commentary, not palettes. `_renders` is the one
+// exception with meaning: the role pairings the app was OBSERVED to paint,
+// shared by every palette in the file because which roles pair is a fact about
+// the app rather than about the colours. An entry may override it with its own
+// `renders` if one palette is used somewhere the others are not.
 const entries = Object.entries(spec).filter(([k, v]) => !k.startsWith('_') && v && typeof v === 'object');
 if (!entries.length) { console.error(`${specPath} declares no palettes`); process.exit(2); }
 let results;
 try {
-  results = entries.map(([name, p]) => checkPalette(name, p, verbose));
+  results = entries.map(([name, p]) => checkPalette(name, p, verbose, p.renders ?? spec._renders));
 } catch (e) {
   // A malformed spec is a FAILURE, not a crash to be shrugged at — say which
   // palette, and exit non-zero like every other failure path.

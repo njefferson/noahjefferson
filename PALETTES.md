@@ -46,7 +46,10 @@ Studio `--txt`, `--txt-2`, `--txt-3`; hub `--text`, `--muted`.
 **`accents{}`** — anything used as coloured **text**, ring or band.
 Studio `--accent`; the hub has five categoricals.
 
-Two roles get confused constantly and must not be:
+**`onAccent`** — text sitting **on** the accent as a fill: the label on a
+primary button. MoleBridge `--on-accent`.
+
+Three roles get confused constantly and must not be:
 
 - **`rail` vs `hairline`.** A rail says *this is where the control ends* and is
  held to 3:1 (WCAG 1.4.11). A hairline is decoration between rows and is
@@ -56,6 +59,16 @@ Two roles get confused constantly and must not be:
  the ring floor, because these apps use accents for "Open →", link labels and
  counts. An accent that only ever painted a 4px band would be a ring; none of
  ours is.
+- **`onAccent` is not one of the `text[]` tokens, and borrowing one is the
+ mistake it exists to prevent.** In a light theme with a warm page, the primary
+ text token is a warm near-black — and warm near-black lettering on a dark green
+ button is a pairing nobody chose, it just falls out of using a token for a job
+ it was not for. **It was also unmeasured by anything for months**: MoleBridge
+ declared `--on-accent`, painted every primary button with it, and this gate had
+ no field for it, so the only thing checking the loudest pairing in the app was
+ a per-palette browser run. Declare it. An app that renders it without declaring
+ it is caught by its own rendered-pairing list instead, which is the slower way
+ to find out.
 
 ---
 
@@ -271,6 +284,54 @@ a result looks absurd, **suspect the instrument first** (Doctrine §14).
  overlay is the *wrong* tool in a dense bar: at ±21px the ring lands on
  neighbouring controls, which win `elementFromPoint`, so the target never grows
  and would steal their taps if it did.
+
+---
+
+## 7b. Swapping a colour set wholesale, with no browser run
+
+The question this answers: *given a set that already clears every floor here,
+can it replace the current one without re-running the app's accessibility gate
+against it?*
+
+**Yes — once two things are true, and neither is true by default.**
+
+**One: the app paints only role tokens.** Every colour that reaches a screen has
+to resolve from the palette. This is the half that feels obviously true and is
+not; grep cannot establish it, because a literal can arrive from a browser
+default, an inherited value or a script writing `.style` directly. The way to
+establish it is to reverse-map every rendered colour back to the token it came
+from and fail on anything that maps to nothing. MoleBridge's a11y gate does this,
+and on its first honest run it found every secondary button in the app painted
+by Chromium's own default button styling — cold grey, unmoved by the theme,
+passing every gate because UA colours are legible and nothing was looking.
+
+**Two: the pairings the app actually makes are recorded from a real run.** This
+gate measures the full cross product of roles, which is what makes a palette
+*portable*. An app paints a fraction of it — nineteen pairings, in MoleBridge's
+case. The two facts are different and both are worth having, so a spec may carry
+`_renders`: a list of pairings, in `--text-2 on --accent-soft over --surface-1`
+form. A floor missed on a recorded pairing is a **failure**; one missed off the
+list is reported as a **forecast** — true about the palette, about a screen
+nobody has built.
+
+**The fill is part of the key.** A tint over the page and the same tint over the
+top surface are different colours with different contrast. Dropping the fill
+from the key turned three real near-misses into three reported defects.
+
+**Never type the list.** It comes out of a run, and the gate that produced it
+fails when the recorded list and the observed one differ — in both directions. A
+stale list is not a smaller gate, it is a gate pointed at the wrong screens.
+
+**And the list is only authoritative from a full sweep.** Two roles can share a
+value in one palette and mask a pairing — a print palette collapsing everything
+to black on white does exactly that. Sweep one palette for the fast loop, all of
+them in CI.
+
+With both in place the arithmetic changes: the app's browser gate runs one
+palette instead of every one, and a new colour set is cleared by this gate alone.
+MoleBridge went from 16,586 measurements to 5,526 for its default run, and gave
+up nothing — because the two thirds it dropped were re-measuring what `npm run
+palette` already proves.
 
 ---
 
