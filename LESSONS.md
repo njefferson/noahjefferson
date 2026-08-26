@@ -237,3 +237,4 @@ and the filename carries it.
 - **§143** — [The stale-clone guard ran at session start, and the clone was replaced four hours later — with the remote-tracking refs stale alongside it](lessons/143-the-stale-clone-guard-ran-at-session-start-and-the-clone.md)
 - **§144** — [Two guards covering one condition make each other unplantable, and each reads as load-bearing on its own](lessons/144-two-guards-covering-one-condition-make-each-other-unplant.md)
 - **§145** — [A tolerance on a COUNTED quantity has nothing to absorb, and the first thing it does is reject something correct](lessons/145-a-tolerance-on-a-counted-quantity-has-nothing-to-absorb.md)
+- **§146** — [A gate that bans a word cannot scan the copy that exists to say the word is absent](lessons/146-a-gate-that-bans-a-word-cannot-scan-the-copy-that-exists.md)
