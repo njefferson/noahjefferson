@@ -46,6 +46,9 @@
 //   work=staging              the branch commits belong on
 //   promote=main              optional: the branch that is production
 //   escape=QUIETKEEP_PROMOTE  optional: env var that permits a commit there
+//   escape-also=QUIETKEEP_DEFER  optional: env var that DEFERS the `also=` checks
+//                                for one commit. Every `also=` check must also be
+//                                a CI step, so this moves when, never whether.
 //
 // A repo with one branch declares `work=main` and nothing else, and then every
 // other branch is refused — which is the same protection pointed the other way.
@@ -132,6 +135,23 @@ if (!decl.work) {
   console.error('  .branch-guard names no `work=` branch, which is the one thing it must say.\n');
   process.exit(1);
 }
+// `escape-also=` IS A DIFFERENT PERMISSION FROM `escape=` and the difference is
+// the point. `escape=` says WHERE a commit may land; this says the repo-local
+// checks may be deferred on THIS commit. Deferring is not skipping: every
+// `also=` check named here is also a CI step, so what the override buys is the
+// order the work happens in, never whether it happens.
+//
+// IT EXISTS BECAUSE THE ALTERNATIVE IS `--no-verify`, WHICH IS WORSE. Without a
+// named way past a four-minute check, the way past it is git's own bypass — and
+// that switches off the BRANCH rule too, which is the thing this file was
+// written for. An override that names what it defers and prints it is strictly
+// safer than one that silently defers everything. A guard with no door has one
+// anyway; it is just not one you can see from the outside.
+if (decl['escape-also'] && also.length === 0) {
+  console.error('  .branch-guard names `escape-also=` but declares no `also=` checks for it to defer.');
+  console.error('  An override for nothing is a door in a wall with no room behind it.\n');
+  process.exit(1);
+}
 if (decl.promote && !decl.escape) {
   console.error('  .branch-guard names a `promote=` branch but no `escape=` variable.');
   console.error('  A production branch with no declared way in is a guard nobody can get past.\n');
@@ -163,6 +183,20 @@ const hook = () => {
   // that quietly stops running one of its checks is the fail-open this whole
   // file exists to avoid: the first version of the guard itself pointed at
   // `core.hooksPath` and vanished on an older checkout.
+  // The override is read ONCE, before the loop, and SAYS SO when it fires. A
+  // deferral nobody can see in the terminal is indistinguishable from a check
+  // that quietly stopped running, which is the fail-open this file exists for.
+  if (decl['escape-also'] && also.length > 0) {
+    L.push(`if [ -n "$${decl['escape-also']}" ]; then`);
+    L.push('  echo "" >&2');
+    L.push(`  echo "  ${decl['escape-also']} is set — deferring ${also.length} repo-local check(s):" >&2`);
+    for (const path of also) L.push(`  echo "      ${path}" >&2`);
+    L.push('  echo "" >&2');
+    L.push('  echo "  DEFERRED, NOT SKIPPED. Every one of these is also a CI step," >&2');
+    L.push('  echo "  so this changes when the work happens and never whether." >&2');
+    L.push('  echo "" >&2');
+    L.push('else');
+  }
   for (const path of also) {
     L.push(`if [ ! -x "${path}" ]; then`);
     L.push(`  echo "" >&2`);
@@ -172,6 +206,10 @@ const hook = () => {
     L.push('  exit 1');
     L.push('fi');
     L.push(`"${path}" || exit 1`);
+    L.push('');
+  }
+  if (decl['escape-also'] && also.length > 0) {
+    L.push('fi');
     L.push('');
   }
   L.push("branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo '')");
