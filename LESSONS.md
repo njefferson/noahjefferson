@@ -262,3 +262,4 @@ and the filename carries it.
 - **§168** — [An author `display` rule silently disables the `hidden` attribute, and the element paints beside the sentence explaining it is not being offered](lessons/168-an-author-display-rule-silently-disables-the-hidden-attri.md)
 - **§169** — [Comparing two apps by READING one is not comparison — enumerate both sets, or you find the first difference and stop](lessons/169-comparing-two-apps-by-reading-one-and-picking-things-out.md)
 - **§170** — [A destructive git command that assumes its working directory will eventually run in the wrong repository](lessons/170-a-destructive-git-command-that-assumes-its-working-direc.md)
+- **§171** — [A new repo was missing the one file every sibling already has, and three round trips were spent asking a person to do what CI does](lessons/171-a-new-repo-was-missing-the-deploy-workflow-every-sibling.md)
