@@ -259,3 +259,4 @@ and the filename carries it.
 - **§165** — [Lengthening a displayed string loosens every substring check that reads it](lessons/165-lengthening-a-displayed-string-loosens-every-substring-c.md)
 - **§166** — [A reduced view hides a list of selectors, and with them everything those elements were the only carrier of](lessons/166-a-reduced-view-hides-a-list-of-selectors-and-with-them-e.md)
 - **§167** — [A `value` or `placeholder` attribute is copy, and no proofread of the prose reaches it](lessons/167-a-value-or-placeholder-attribute-is-copy-and-no-proofrea.md)
+- **§168** — [An author `display` rule silently disables the `hidden` attribute, and the element paints beside the sentence explaining it is not being offered](lessons/168-an-author-display-rule-silently-disables-the-hidden-attri.md)
