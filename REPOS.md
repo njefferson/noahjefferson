@@ -174,11 +174,11 @@ and MoleBridge cites none.
   and a sibling to MoleBridge — the same teacher, the same students, the same
   board at the front of the room. Static, no backend, no accounts, no cookies.
 - **Branches:** `staging` and `main`. Work lands on `staging`; `main` is
-  production and is EMPTY on purpose.
-- **Deploys to:** nothing yet. There is no Cloudflare Pages project and no
-  screen to put on one — session 1 built the domain engine and the error
-  taxonomy and stopped there deliberately. **Do not write a deploy URL into
-  this entry until one has answered.**
+  production and deploys.
+- **Deploys to:** **solve-ent.pages.dev**, from `main`, via `deploy.yml`. The
+  address answers — confirmed by the owner opening it, because this environment's
+  egress policy refuses `*.pages.dev` and a session that curls it gets a 403
+  from the proxy rather than a page. **That 403 is policy, not an outage.**
 - **Branch guard:** installed 2026-08-26. `work=staging`, `promote=main` via
   `SOLVENT_PROMOTE`, with `also=tools/version-check.mjs`. `package.json`
   reinstalls it on `npm ci`.
@@ -195,9 +195,27 @@ and MoleBridge cites none.
   `verify-algebra.mjs` is worth copying — its strongest check substitutes the
   app's answer back INTO the relation rather than recomputing it the same way,
   so it cannot share a mistake with the solver.
-- **Owes:** everything a screen brings — the §7e baseline, a measured palette,
-  an accessibility gate, a browser walk, a completion code, a teacher's page.
-  And the repo metadata, every row of which says proposed.
+- **Has a screen, and the whole §7e baseline with it:** the ⓘ control, first-run
+  orientation that survives the thing a reader presses to begin, patch notes from
+  one source (drift-gated, bounded at five, opening a page in this app), the §7f
+  text diagnostic, and §7h's waiting worker driven by a real second worker in
+  `tools/update-walk.mjs`. The palette is generated from
+  `palettes/solve-ent.json` — the file the hub's gate measures — so what was
+  measured and what is painted cannot differ. `tools/a11y.mjs` covers every
+  state in both modes with the dialogs open, and `tools/walk.mjs` walks the
+  primary journey with a step wrong on purpose. The completion code and the
+  teacher's page are built.
+- **Chrome carries three controls** — a calculator, a problem report and the ⓘ —
+  plus the §7b version stamp. Two of the three were adopted from MoleBridge, and
+  the calculator was adopted only after somebody reported it as ABSENT from a
+  screenshot of the screen it was on: it existed, below the fold. Hub LESSONS
+  §169.
+- **Repo metadata:** every row in `METADATA.md` says `set`, applied by the owner
+  on 2026-08-27.
+- **Owes:** a viewport gate. Every browser check runs at 390x844, which is a
+  phone with no keyboard up — the one condition under which this app's two
+  worst defects were both invisible. MoleBridge measures its diagnosis inside a
+  390x380 viewport and that is the check to copy.
 
 ---
 

@@ -251,6 +251,19 @@ checks before offering to build one of these again):**
  what changed — that gap is now a dialog after the reload, which is the only
  moment anything in the app KNOWS, since the page showing the strip is the old
  build and has never heard of the release it is offering.
+- **Solve-ent** — all of them, and it was absent from this list for its whole
+ life with a screen while having built every one, which is the failure this
+ list exists to be: one file, two answers. The ⓘ, the first-run move, patch
+ notes from `CHANGELOG.md` through `tools/changelog.mjs` (bounded at five,
+ opening a page in the app), the §7f diagnostic and §7h's waiting worker are
+ all asserted rather than assumed. Two things worth copying. Its
+ `tools/copy-check.mjs` refuses a score, a streak, a praise word and any
+ sentence locating a failure in the reader, on every commit — and the
+ `.copy-allow` beside it is how a gate that bans a word handles the copy whose
+ job is to say the word is absent, as a DECLARED LIST rather than a pattern,
+ with every covered line printed on every run. And its `verify-algebra.mjs`
+ substitutes the app's answer back INTO the relation rather than recomputing it
+ the same way, so it cannot share a mistake with the solver.
 - **Every other sibling** — still owed. Ask that repo's NOTES before assuming.
 
 The two omissions worth knowing before building one: a new surface must join the

@@ -40,6 +40,17 @@ here rather than sloppy: this is the one declaration that must outrank every
 layout rule in the file, and the alternative is remembering, at every new
 control, that hiding it needs a class as well as an attribute.
 
+**MOLEBRIDGE FOUND THIS FIRST, and it is written in their stylesheet.** Their
+`.update-strip { display: flex }` had been showing the stale-app strip on every
+load — the one element whose entire purpose is to appear only when a new version
+is genuinely waiting — and their fix is the same declaration in the same place,
+with a comment ending *caught by looking at the screen; nothing else would have*.
+Solve-ent re-derived it months later. **This lesson is a second occurrence, not
+a discovery**, and the reason it was second is §164: a defect a sibling app has
+already found is one this app probably has, and reading their MARKUP is not
+reading their repository. Their stylesheet had the answer and their NOTES had
+the reasoning.
+
 **Why no amount of reading finds it:** the stylesheet is right, the markup is
 right, and the code that sets the attribute is right. Nothing is wrong in any
 file. The defect lives in the cascade between a rule and an attribute written
