@@ -190,10 +190,16 @@ misconception produced a particular number.
 
 > https://solve-ent.pages.dev
 
-**NOT TRUE YET, and it must not be applied until it is.** There is no screen, no
-Cloudflare Pages project and nothing deployed. A website field pointing at a
-404 is worse than an empty one: it reads as a shipped app to anybody who finds
-the repository. Apply this one only after the Pages project exists and answers.
+**THE DEPLOY HAS RUN — and that is not the same as this being true yet.** On
+2026-08-26 `deploy.yml` uploaded thirty files to the `solve-ent` Pages project
+and reported `Deployment complete`. What no session has been able to check is
+whether the address ANSWERS: the environment's egress policy refuses
+`*.pages.dev`, so the deploy log is the end of what can be seen from here.
+
+A website field pointing at a 404 is worse than an empty one — it reads as a
+shipped app to anybody who finds the repository. So this stays `proposed` until
+somebody opens the URL and sees the app. That is a five-second check and it is
+the owner's, not because of a permission but because of a network policy.
 
 **Topics** — proposed 2026-08-26
 
