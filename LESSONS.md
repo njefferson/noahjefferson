@@ -266,3 +266,4 @@ and the filename carries it.
 - **§172** — [Every gate agreed the label was there, visible and correctly styled, and on a phone it opened outside the frame](lessons/172-no-gate-asked-whether-a-thing-that-opens-can-be-seen.md)
 - **§173** — [A 200 from a static host is not evidence the page exists, and the client may be lying about why it cannot reach it](lessons/173-a-200-from-a-static-host-is-not-evidence-the-page-exist.md)
 - **§174** — [The geometry gate assumed the screen starts at y = 0, and certified something behind the header](lessons/174-the-geometry-gate-assumed-the-screen-starts-at-y-zero.md)
+- **§175** — [A dialog with no focus target of its own opens wherever the engine decides, and the two engines decide differently](lessons/175-a-dialog-with-no-focus-target-opens-wherever-the-engine.md)
