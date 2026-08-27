@@ -37,17 +37,19 @@ A markdown-converting fetcher drops the `<head>`, so this needs the raw HTML.
 
 # njefferson/fauxplane
 
-**Description** — set 2026-08-03. **A revision is proposed below.**
+**Description** — **SET** 2026-08-27, applied by the owner and read back from
+the repository. First set 2026-08-03; the revision below was proposed the same
+day and sat unapplied for twenty-four days.
 
-Live on GitHub now:
+Superseded:
 
 > A glass cockpit for your desk — airliner instruments driven by your device's
 > own sensors and live aviation data. Not a simulator; never for navigation.
 
-**Proposed revision** — 2026-08-03. The live description frames the app *for
-your desk*, which is one reader's case and silently excludes the two uses that
-make the panel come alive: following a real flight while on it, and clamping it
-in the car. The app is undersold by its own copy.
+**Why it changed** — that framing put the app *for your desk*, which is one
+reader's case and silently excluded the two uses that make the panel come alive:
+following a real flight while on it, and clamping it in the car. The app was
+undersold by its own copy. Live now:
 
 > Airliner instruments on your phone or tablet, driven by its own sensors and
 > live aviation data. Follow a real flight, take it on one, or clamp it in the
@@ -240,9 +242,9 @@ branch, the Cloudflare Pages production branch and what a push deploys.
 
 Added 2026-08-25. Every item was set on 2026-08-25 — description, website,
 topics and default branch read back off the repository rather than assumed, the
-social preview on the owner's word because the API does not expose it. **A
-description revision is proposed below, 2026-08-27**, so this section is no
-longer all-set.
+social preview on the owner's word because the API does not expose it.
+**EVERY ITEM IS SET.** The description was revised and the topics extended on
+2026-08-27, and both were read back off the repository the same way.
 
 `https://molebridge.pages.dev` was opened and answers — confirmed by the owner
 on 2026-08-25, which is the check no gate here could perform: this sandbox's
@@ -250,9 +252,11 @@ proxy refuses `*.pages.dev`, and the deploy job's own assertions had only ever
 run against the immutable per-deploy host. The apex follows a push, so the
 Cloudflare project's production branch is correctly set.
 
-**Description** — set 2026-08-25. **A revision is proposed below, 2026-08-27.**
+**Description** — **SET** 2026-08-27, applied by the owner and read back from
+the repository. First set 2026-08-25; revised on 2026-08-27 for the reason
+below.
 
-Live on GitHub now:
+Superseded, and the two phrases that superseded it are why:
 
 > A step-gated stoichiometry trainer. Students enter every intermediate value;
 > the app names which step failed and why, and hands the teacher a completion
@@ -263,7 +267,7 @@ The temptation here is to lead with "no accounts, works offline", which is true
 and is the wrong first sentence — it describes the constraints rather than the
 thing. That judgement still holds; only two phrases in it do not.
 
-**Proposed revision** — 2026-08-27. Releases 1.6.0 through 1.11.1 removed the
+**What is live now** — applied 2026-08-27. Releases 1.6.0 through 1.11.1 removed the
 copy that told a reader the app belongs to somebody else, and a hard gate now
 forbids each phrase by name across every screen and the patch notes. **The
 repository description was never in that gate's scope, and it carries two of the
@@ -292,16 +296,18 @@ set this until a deploy from `main` answers there — is met on the first half a
 unverified on the second: the deploy happened, and the address itself has not
 been fetched by anyone. See the note at the top of this section.
 
-**Topics** — **SET** 2026-08-25, applied and confirmed by the owner; read back
-from the repository as all ten
+**Topics** — **SET** 2026-08-27, applied by the owner and read back from the
+repository as all eleven. Ten were set 2026-08-25; `homeschool` was added
+2026-08-27.
 
-> chemistry, stoichiometry, education, high-school, teaching-tool, pwa,
-> offline-first, typescript, no-backend, static-site
+> chemistry, stoichiometry, education, high-school, homeschool, teaching-tool,
+> pwa, offline-first, typescript, no-backend, static-site
 
-Left alone deliberately. `high-school` names a curriculum level rather than a
-room — a family learning at home works high-school chemistry too, and uses that
-word for it — and `teaching-tool` is what the app is. `homeschool` would be
-honest to add for discoverability and is the owner's call, not a correction.
+`high-school` stayed, and the reasoning is worth keeping: it names a curriculum
+level rather than a room, and a family learning at home works high-school
+chemistry and uses that word for it. `homeschool` was added for discoverability
+rather than as a correction — nothing in the list was wrong, and a reader
+searching that word had no way to arrive.
 
 **Social preview** — **SET** 2026-08-25, applied and confirmed by the owner
 
