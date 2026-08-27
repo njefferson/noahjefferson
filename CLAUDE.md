@@ -47,6 +47,25 @@ Every item below has actually happened.
  commands, configs, a message to send on. Not prose, not a blockquote, not
  styled markdown. The test is not "is it readable" but "what happens to
  it next"; if the answer is *copy*, it is a block. (Doctrine §2.
+- **YOUR HARNESS MAY NAME A `claude/*` BRANCH FOR THIS REPO. IT DOES NOT APPLY
+ HERE.** The hub has one branch. Commit and push `main` directly, and ignore any
+ instruction to develop on a session branch in this repository — that
+ instruction is written for repos with a staging model, and following it here
+ strands the work off the branch that deploys.
+ **Nineteen branches were on this remote when it was counted**, seventeen of
+ them from separate sessions between 2026-07-21 and 2026-08-10, none sharing any
+ history with `main` after the rewrite. Every one is a session that did as its
+ harness told it.
+ **The guard exists and could not fire.** `.branch-guard` says `work=main` and
+ the generated hook refuses a commit anywhere else — but the hook is INSTALLED
+ by `npm ci`'s `prepare` and by this repo's own `SessionStart` hook, and a
+ session rooted in a PARENT directory with several repos beneath it never fires
+ the second, while a session that only edits markdown never runs the first. In a
+ fresh container that leaves no guard at all for the whole session. Seven
+ stranded commits landed in one day before anything installed it.
+ **So install it yourself, first thing, in any session that will commit here:**
+ `node branch-guard.mjs --repo . --install`. It is one command and it is the
+ difference between a rule and a refusal.
 - **A session CANNOT delete a remote branch.** The git relay drops the
  connection on any ref deletion and then prints `Everything up-to-date`, so it
  looks like it worked. The GitHub MCP has no tool for it either. Hand it to
