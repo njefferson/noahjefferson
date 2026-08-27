@@ -190,16 +190,19 @@ misconception produced a particular number.
 
 > https://solve-ent.pages.dev
 
-**THE DEPLOY HAS RUN — and that is not the same as this being true yet.** On
-2026-08-26 `deploy.yml` uploaded thirty files to the `solve-ent` Pages project
-and reported `Deployment complete`. What no session has been able to check is
-whether the address ANSWERS: the environment's egress policy refuses
-`*.pages.dev`, so the deploy log is the end of what can be seen from here.
+**THE ADDRESS ANSWERS.** `deploy.yml` uploaded thirty files to the `solve-ent`
+Pages project on 2026-08-26 and reported `Deployment complete`; the owner opened
+the URL and confirmed the app is there. This value is ready to apply.
 
-A website field pointing at a 404 is worse than an empty one — it reads as a
-shipped app to anybody who finds the repository. So this stays `proposed` until
-somebody opens the URL and sees the app. That is a five-second check and it is
-the owner's, not because of a permission but because of a network policy.
+It stays `proposed` here until the field is actually set in the GitHub UI, which
+is §10 working as intended: the row is a record of what IS, not of what somebody
+means to do.
+
+**A SESSION CANNOT CHECK THIS ONE ITSELF.** The environment's egress policy
+refuses `*.pages.dev`, so a session that curls the deployed site gets a 403 from
+the proxy gateway rather than a page. That is a network policy, not an outage —
+and reading it as one is precisely §162. The deploy log is the end of what a
+session can see; the confirmation has to come from somebody with a browser.
 
 **Topics** — proposed 2026-08-26
 
