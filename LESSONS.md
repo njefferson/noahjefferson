@@ -256,3 +256,5 @@ and the filename carries it.
 - **§162** — [A filtered API query served stale results, agreed with itself three times, and a session reported a production outage that was not happening](lessons/162-a-filtered-api-query-served-stale-results-and-a-session-c.md)
 - **§163** — [A guard installed by a lifecycle hook does not exist in a session rooted somewhere else](lessons/163-a-guard-installed-by-a-lifecycle-hook-does-not-exist-in-a.md)
 - **§164** — [A defect a sibling app already found is one this app probably has, and their NOTES is where it is written down](lessons/164-a-defect-a-sibling-app-already-found-is-one-this-app-pro.md)
+- **§165** — [Lengthening a displayed string loosens every substring check that reads it](lessons/165-lengthening-a-displayed-string-loosens-every-substring-c.md)
+- **§166** — [A reduced view hides a list of selectors, and with them everything those elements were the only carrier of](lessons/166-a-reduced-view-hides-a-list-of-selectors-and-with-them-e.md)
