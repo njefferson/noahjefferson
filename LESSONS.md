@@ -255,3 +255,4 @@ and the filename carries it.
 - **§161** — [A push that creates no workflow run at all leaves the last commit's green tick standing in its place](lessons/161-a-push-that-creates-no-workflow-run-at-all-shows-a-green.md)
 - **§162** — [A filtered API query served stale results, agreed with itself three times, and a session reported a production outage that was not happening](lessons/162-a-filtered-api-query-served-stale-results-and-a-session-c.md)
 - **§163** — [A guard installed by a lifecycle hook does not exist in a session rooted somewhere else](lessons/163-a-guard-installed-by-a-lifecycle-hook-does-not-exist-in-a.md)
+- **§164** — [A defect a sibling app already found is one this app probably has, and their NOTES is where it is written down](lessons/164-a-defect-a-sibling-app-already-found-is-one-this-app-pro.md)
