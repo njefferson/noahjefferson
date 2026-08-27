@@ -263,3 +263,4 @@ and the filename carries it.
 - **§169** — [Comparing two apps by READING one is not comparison — enumerate both sets, or you find the first difference and stop](lessons/169-comparing-two-apps-by-reading-one-and-picking-things-out.md)
 - **§170** — [A destructive git command that assumes its working directory will eventually run in the wrong repository](lessons/170-a-destructive-git-command-that-assumes-its-working-direc.md)
 - **§171** — [A new repo was missing the one file every sibling already has, and three round trips were spent asking a person to do what CI does](lessons/171-a-new-repo-was-missing-the-deploy-workflow-every-sibling.md)
+- **§172** — [Every gate agreed the label was there, visible and correctly styled, and on a phone it opened outside the frame](lessons/172-no-gate-asked-whether-a-thing-that-opens-can-be-seen.md)
