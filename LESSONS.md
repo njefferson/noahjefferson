@@ -258,3 +258,4 @@ and the filename carries it.
 - **§164** — [A defect a sibling app already found is one this app probably has, and their NOTES is where it is written down](lessons/164-a-defect-a-sibling-app-already-found-is-one-this-app-pro.md)
 - **§165** — [Lengthening a displayed string loosens every substring check that reads it](lessons/165-lengthening-a-displayed-string-loosens-every-substring-c.md)
 - **§166** — [A reduced view hides a list of selectors, and with them everything those elements were the only carrier of](lessons/166-a-reduced-view-hides-a-list-of-selectors-and-with-them-e.md)
+- **§167** — [A `value` or `placeholder` attribute is copy, and no proofread of the prose reaches it](lessons/167-a-value-or-placeholder-attribute-is-copy-and-no-proofrea.md)
