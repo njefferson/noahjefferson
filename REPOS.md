@@ -212,10 +212,14 @@ and MoleBridge cites none.
   §169.
 - **Repo metadata:** every row in `METADATA.md` says `set`, applied by the owner
   on 2026-08-27.
-- **Owes:** a viewport gate. Every browser check runs at 390x844, which is a
-  phone with no keyboard up — the one condition under which this app's two
-  worst defects were both invisible. MoleBridge measures its diagnosis inside a
-  390x380 viewport and that is the check to copy.
+- **`tools/fold-check.mjs` is worth copying into every sibling.** It opens the
+  app at 390x380 — a phone with the keyboard up — and holds a declared list of
+  MOMENTS to two strengths: the whole box on screen for anything a finger hits,
+  the top edge for prose. The usable area is read off the sticky chrome's own
+  box rather than assumed to start at zero, which is the mistake its first
+  version made. Hub LESSONS §174.
+- **Owes:** nothing outstanding as of 1.0.0. What is deliberately NOT built is
+  named in that repo's NOTES rather than owed.
 
 ---
 
