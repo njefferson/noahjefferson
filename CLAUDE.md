@@ -222,6 +222,16 @@ checks before offering to build one of these again):**
  `checkOrientationTypes` in its `tools/a11y.mjs`, which holds that welcome's prose
  to the app's own `TYPES` table — it exists because 0.8.0 added a fourth job type
  and left the welcome describing three, and nothing failed.
+- **MoleBridge** — all of them, and two are worth copying. Patch notes come from
+ CHANGELOG.md through `tools/changelog.mjs` into a file that is NOT COMMITTED, so
+ drift is impossible rather than merely detectable; the app shows the newest five
+ and links to `/changes/`, a page inside the app that carries every release and
+ is cached with it, because a panel a reader must scroll past thirty releases to
+ leave punishes them for opening it. §7h's strip was there and its other half was
+ not: the app offered a new version, the reader took it, and nothing ever said
+ what changed — that gap is now a dialog after the reload, which is the only
+ moment anything in the app KNOWS, since the page showing the strip is the old
+ build and has never heard of the release it is offering.
 - **Every other sibling** — still owed. Ask that repo's NOTES before assuming.
 
 The two omissions worth knowing before building one: a new surface must join the
