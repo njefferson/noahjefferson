@@ -238,10 +238,11 @@ branch, the Cloudflare Pages production branch and what a push deploys.
 
 # njefferson/MoleBridge
 
-Added 2026-08-25. **EVERY ITEM BELOW IS NOW SET.** Description, website, topics
-and default branch were read back off the repository rather than assumed; the
-social preview is on the owner's word, because the API does not expose it and
-there is nothing to read.
+Added 2026-08-25. Every item was set on 2026-08-25 — description, website,
+topics and default branch read back off the repository rather than assumed, the
+social preview on the owner's word because the API does not expose it. **A
+description revision is proposed below, 2026-08-27**, so this section is no
+longer all-set.
 
 `https://molebridge.pages.dev` was opened and answers — confirmed by the owner
 on 2026-08-25, which is the check no gate here could perform: this sandbox's
@@ -249,7 +250,9 @@ proxy refuses `*.pages.dev`, and the deploy job's own assertions had only ever
 run against the immutable per-deploy host. The apex follows a push, so the
 Cloudflare project's production branch is correctly set.
 
-**Description** — **SET** 2026-08-25, applied and confirmed by the owner
+**Description** — set 2026-08-25. **A revision is proposed below, 2026-08-27.**
+
+Live on GitHub now:
 
 > A step-gated stoichiometry trainer. Students enter every intermediate value;
 > the app names which step failed and why, and hands the teacher a completion
@@ -258,7 +261,27 @@ Cloudflare project's production branch is correctly set.
 The description says what the app IS rather than what it is made of, per §10.
 The temptation here is to lead with "no accounts, works offline", which is true
 and is the wrong first sentence — it describes the constraints rather than the
-thing.
+thing. That judgement still holds; only two phrases in it do not.
+
+**Proposed revision** — 2026-08-27. Releases 1.6.0 through 1.11.1 removed the
+copy that told a reader the app belongs to somebody else, and a hard gate now
+forbids each phrase by name across every screen and the patch notes. **The
+repository description was never in that gate's scope, and it carries two of the
+exact phrases the gate forbids** — one naming who receives the code, one naming
+the group it summarises.
+
+It is also the FIRST surface most readers meet: it is what GitHub search returns,
+what the social card shows, and what the hub links under. A family learning at
+home is told the app is not theirs before the app has loaded. The revision keeps
+the sentence structure and the §10 judgement above, and changes only the room:
+
+> A step-gated stoichiometry trainer. Students enter every intermediate value;
+> the app names which step failed and why, and hands back a completion code that
+> decodes to an error histogram across everyone who worked the same key.
+
+**The general shape, which is worth checking in every repo: a word gate scans
+the working tree, and a repository description does not live there.** Nothing
+about the app can fail on it.
 
 **Website** — **SET** 2026-08-25, read back from the repository
 
@@ -274,6 +297,11 @@ from the repository as all ten
 
 > chemistry, stoichiometry, education, high-school, teaching-tool, pwa,
 > offline-first, typescript, no-backend, static-site
+
+Left alone deliberately. `high-school` names a curriculum level rather than a
+room — a family learning at home works high-school chemistry too, and uses that
+word for it — and `teaching-tool` is what the app is. `homeschool` would be
+honest to add for discoverability and is the owner's call, not a correction.
 
 **Social preview** — **SET** 2026-08-25, applied and confirmed by the owner
 
