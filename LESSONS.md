@@ -261,3 +261,4 @@ and the filename carries it.
 - **§167** — [A `value` or `placeholder` attribute is copy, and no proofread of the prose reaches it](lessons/167-a-value-or-placeholder-attribute-is-copy-and-no-proofrea.md)
 - **§168** — [An author `display` rule silently disables the `hidden` attribute, and the element paints beside the sentence explaining it is not being offered](lessons/168-an-author-display-rule-silently-disables-the-hidden-attri.md)
 - **§169** — [Comparing two apps by READING one is not comparison — enumerate both sets, or you find the first difference and stop](lessons/169-comparing-two-apps-by-reading-one-and-picking-things-out.md)
+- **§170** — [A destructive git command that assumes its working directory will eventually run in the wrong repository](lessons/170-a-destructive-git-command-that-assumes-its-working-direc.md)
