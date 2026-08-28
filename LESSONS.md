@@ -269,3 +269,4 @@ and the filename carries it.
 - **§175** — [A dialog with no focus target of its own opens wherever the engine decides, and the two engines decide differently](lessons/175-a-dialog-with-no-focus-target-opens-wherever-the-engine.md)
 - **§176** — [A phone's screen is not its viewport, and a suite that measures the screen is 27% too generous forever](lessons/176-a-phones-screen-is-not-its-viewport-and-the-suite-measu.md)
 - **§177** — [A receipt for a long walk is stamped from the tree at the END, and four minutes is long enough to edit the thing it certifies](lessons/177-a-receipt-for-a-long-walk-is-stamped-from-the-tree-at-th.md)
+- **§178** — [A failure that names a number instead of a cause sends the next attempt guessing, and a swallowed timeout inside a retry loop spins in silence](lessons/178-a-driven-state-that-cannot-be-reached-and-a-failure-that.md)
