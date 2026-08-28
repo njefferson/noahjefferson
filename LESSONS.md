@@ -268,3 +268,4 @@ and the filename carries it.
 - **§174** — [The geometry gate assumed the screen starts at y = 0, and certified something behind the header](lessons/174-the-geometry-gate-assumed-the-screen-starts-at-y-zero.md)
 - **§175** — [A dialog with no focus target of its own opens wherever the engine decides, and the two engines decide differently](lessons/175-a-dialog-with-no-focus-target-opens-wherever-the-engine.md)
 - **§176** — [A phone's screen is not its viewport, and a suite that measures the screen is 27% too generous forever](lessons/176-a-phones-screen-is-not-its-viewport-and-the-suite-measu.md)
+- **§177** — [A receipt for a long walk is stamped from the tree at the END, and four minutes is long enough to edit the thing it certifies](lessons/177-a-receipt-for-a-long-walk-is-stamped-from-the-tree-at-th.md)

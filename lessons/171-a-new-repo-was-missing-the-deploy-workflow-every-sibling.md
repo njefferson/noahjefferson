@@ -38,7 +38,8 @@ correct findings, each one deepening a conclusion that was wrong at the root,
 because all three were answers to "why can *this session* not deploy" and none
 of them to "whose job is deploying".
 
-It ended when the owner said he had never had to do this much setup before.
+It ended on the observation that no sibling repo had ever needed this much
+setup by hand — which is the fact that the three findings had walked past.
 
 **The general shape: a capability question answered from inside the session's
 own reach.** "I cannot do X" is not the same as "X needs a person", and the
