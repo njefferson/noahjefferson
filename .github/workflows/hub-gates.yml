@@ -17,6 +17,14 @@ name: Hub gates (reusable)
 #         with:
 #           pwa: true
 #
+# The inputs are the only thing a caller declares, and each names a FACT about
+# the repo rather than a preference: `pwa` for a repo with a service worker,
+# `mirror` for one carrying its own offline copy of the disclosure patterns,
+# `docs-path` for one whose prose is not at the root. A repo that has the fact
+# and leaves the input off is running a smaller gate than it looks like it is,
+# which is the drift this file exists to end — so the flag is a description,
+# never a way to switch a failing gate off.
+#
 # Adding a gate here adds it to every repo that has bumped its pin. Removing
 # one removes it everywhere. There is one answer again.
 
@@ -29,6 +37,14 @@ on:
         default: '22'
       pwa:
         description: Run pwa-check — for any repo with a service worker.
+        type: boolean
+        default: false
+      mirror:
+        description: >-
+          Run privacy-mirror-check — for a repo that must fail `npm test`
+          OFFLINE and therefore carries its own copy of the disclosure
+          patterns. That copy is a liability the moment the canon moves, and
+          a stale mirror is not a smaller gate, it is a DIFFERENT one.
         type: boolean
         default: false
       docs-path:
@@ -88,13 +104,17 @@ jobs:
       - name: The owner's person is not repo material
         run: node hub/privacy-check.mjs --repo app
 
+      - name: An offline copy of the patterns has not drifted from the canon
+        if: inputs.mirror
+        run: node hub/privacy-mirror-check.mjs --repo app
+
       - name: Every set-apart quotation says whose words it is
         run: node hub/quote-check.mjs --repo app
 
       # Through the environment, not interpolated into the command: an input
       # expanded straight into a `run:` block is code injection, and zizmor
-       # said so on the first run of this file. The env route is the same one
-       # the workflow_ref step above already takes.
+      # said so on the first run of this file. The env route is the same one
+      # the workflow_ref step above already takes.
       - name: No tables or grids in anything the owner reads
         env:
           DOCS_PATH: ${{ inputs.docs-path }}
