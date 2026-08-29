@@ -93,17 +93,39 @@ jobs:
           persist-credentials: false
 
       # The hub, at EXACTLY the version of this file the caller pinned.
-      # github.workflow_ref is
-      #   njefferson/noahjefferson/.github/workflows/hub-gates.yml@<ref>
-      # so the ref after the @ is the pin the caller wrote. Taking it from
-      # there rather than from an input means the gates and the wiring can
-      # never be two different versions, and a caller cannot half-bump.
+      #
+      # `job_workflow_ref`, NOT `workflow_ref`. Both exist and only one is this
+      # file: inside a reusable workflow `github.workflow_ref` is the CALLER's
+      # entry workflow — `njefferson/solve-ent/.github/workflows/gates.yml@refs/heads/staging`
+      # — so reading the pin off it yielded `refs/heads/staging` and the
+      # checkout below died with exit 128 looking for that branch in the hub.
+      #
+      # IT DID NOT FAIL FOR THE FIRST CALLER, WHICH IS THE WHOLE PROBLEM. That
+      # repo works on `main`, the hub HAS a `main`, so the ref resolved and the
+      # job went green — checking the gates out of the hub's MOVING DEFAULT
+      # BRANCH while the comment here claimed a caller could not end up on a
+      # different version than it pinned. A pinned call was running unpinned
+      # gates and every run was green.
+      #
+      # `job_workflow_ref` is the ref of the reusable workflow itself:
+      #   njefferson/noahjefferson/.github/workflows/hub-gates.yml@<the caller's pin>
+      # so the ref after the @ is the commit the caller actually wrote, and the
+      # gates and the wiring cannot be two different versions.
       - name: Work out which hub this call pinned
         id: hub
         env:
-          WORKFLOW_REF: ${{ github.workflow_ref }}
+          WORKFLOW_REF: ${{ github.job_workflow_ref }}
         run: |
           REF="${WORKFLOW_REF##*@}"
+          # A CALLER MUST PIN A COMMIT. Anything else — a branch, a tag — is a
+          # mutable pointer, and the failure it produces is a green run against
+          # gates nobody chose, which is invisible. Refuse it here rather than
+          # let the checkout succeed against whatever that name means today.
+          if ! printf '%s' "$REF" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::hub-gates.yml must be called at a full 40-character commit SHA."
+            echo "::error::This call resolved to: $REF"
+            exit 1
+          fi
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "Gates will be run from the hub at: $REF"
 
