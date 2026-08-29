@@ -168,6 +168,43 @@ and MoleBridge cites none.
 
 ---
 
+## njefferson/Cv-Thalweg
+
+**Listed here from 2026-08-29**, the day it was named for the hub.
+
+- **What:** depth, tide and flow for the Central Valley fall-run fishery — the
+  Sacramento, Feather, American and Mokelumne and the Delta they run into.
+  Static, no build step, no framework, no CDN, no account, no analytics.
+  Leaflet 1.9.4 is vendored into the repo. Offline after first load.
+- **What it deliberately is not:** it does not say where fish are being caught,
+  and there is no bite forecast or spot predictor. No live catch feed exists for
+  these rivers, and a hunt through SacPAS and CDFW on 2026-08-28 confirmed no
+  machine-readable in-season adult count exists either. "Not for navigation" is
+  in the header at all times, because DWR's own metadata says the surveys are
+  not a navigation aid and that constraint travels with the data.
+- **Branches:** `main` only. A push to `main` deploys.
+- **Deploys to:** https://cv-thalweg.pages.dev — every release verified by
+  `tools/check-deploy.mjs`, which asks the live site which commit it is serving
+  through a Pages Function rather than trusting the push.
+- **Proxy:** the app ships its own bathymetry proxy as a Pages Function
+  (`functions/bathy/[[path]].js` over `worker.js`), allow-listed by prefix to
+  two upstreams so it cannot be used as an open proxy. 52 checks cover it.
+- **Gates:** `tools/a11y.mjs` (182 checks across six viewport geometries and two
+  browser engines, including WebKit and a keyboard-raised phone),
+  `render-test.mjs`, `test-worker.mjs`, `live-test.mjs` against the real
+  services, and the hub's `docs-check`, `privacy-check`, `quote-check`,
+  `pin-check` and `pwa-check`.
+- **Known:** the §7e baseline is complete. Worth copying: the WebKit pass in
+  `tools/a11y.mjs`, which found a first-run defect every Chromium check called
+  correct (LESSONS §175); the phone geometries taken from Playwright's device
+  registry rather than from spec sheets (§176); and the landing-weight gate,
+  which holds a first-time reader's cold open under a megabyte after it was
+  measured at 5.56MB.
+- **Owes:** CI does not yet run the hub gates — they are run by hand each
+  release. Repo metadata is unset; see METADATA.md.
+
+---
+
 ## njefferson/solve-ent
 
 - **What:** an algebra-skills trainer for one high school chemistry classroom,

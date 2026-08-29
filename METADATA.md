@@ -333,3 +333,33 @@ reader lands on and it is what Cloudflare Pages treats as production.
 
 New app? Add its section here in the same commit that creates the repo, and
 point its CLAUDE.md §10 note at this file.
+
+---
+
+# njefferson/Cv-Thalweg
+
+Added 2026-08-29, the day the app was named for the hub. **NOTHING IS SET.**
+Every item below is PROPOSED: a session cannot set repository metadata, and
+none of these has been read back off the repository.
+
+**Description** — proposed:
+
+Depth, tide and flow for the Central Valley fall-run fishery — the Sacramento,
+Feather, American and Mokelumne, and the Delta. Published surveys and gauges
+only. Not for navigation.
+
+**Website** — proposed:
+
+https://cv-thalweg.pages.dev
+
+**Topics** — proposed:
+
+california, sacramento-river, delta, bathymetry, tides, usgs, noaa, dwr, cdfw,
+salmon, fishing, pwa, offline-first, leaflet, cloudflare-pages, no-tracking
+
+**Social preview** — not proposed yet. The app's own icon is a channel section
+with the thalweg marked; a preview image has not been made.
+
+**Default branch** — `main`, which is already the only branch and the Cloudflare
+Pages production branch. Nothing to change, but it has not been read back off
+the repository either, so it is listed rather than assumed.
