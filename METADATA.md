@@ -338,31 +338,48 @@ point its CLAUDE.md §10 note at this file.
 
 # njefferson/Cv-Thalweg
 
-Added 2026-08-29, the day the app was named for the hub. **NOTHING IS SET.**
-Every item below is PROPOSED: a session cannot set repository metadata, and
-none of these has been read back off the repository.
+Added 2026-08-29. Applied by the owner the same day. **THREE OF FOUR ARE SET**
+and were read back off the repository rather than assumed; topics landed
+fourteen of sixteen; the social preview is still awaiting the owner's word,
+because the API does not expose that field and nothing else can confirm it.
 
-**Description** — proposed:
+**Description** — **SET** 2026-08-29, read back off the repository and
+identical to what was proposed:
 
 Depth, tide and flow for the Central Valley fall-run fishery — the Sacramento,
 Feather, American and Mokelumne, and the Delta. Published surveys and gauges
 only. Not for navigation.
 
-**Website** — proposed:
+**Website** — **SET** 2026-08-29, read back off the repository:
 
 https://cv-thalweg.pages.dev
 
-**Topics** — proposed:
+**Topics** — **PARTLY SET** 2026-08-29. Fourteen of the sixteen proposed are on
+the repository, read back off it:
 
-california, sacramento-river, delta, bathymetry, tides, usgs, noaa, dwr, cdfw,
-salmon, fishing, pwa, offline-first, leaflet, cloudflare-pages, no-tracking
+bathymetry, cdfw, cloudflare-pages, delta, dwr, fishing, leaflet, no-tracking,
+noaa, offline-first, pwa, salmon, tides, usgs
 
-**Social preview** — proposed. `social-preview.png` in the Cv-Thalweg repo
-root, 1280x640 at 2x, built from `social-card.html` in the app's own palette
-with real type (`node tools/render-social.mjs` regenerates it). Upload it at
-GitHub → the repo → Settings → General → Social preview. The API does not
-expose this field, so it can only ever be confirmed on the owner's word.
+Two are NOT there and are still proposed. Both are valid GitHub topics, so
+this is a paste that lost two entries rather than a rule refusing them:
 
-**Default branch** — `main`, which is already the only branch and the Cloudflare
-Pages production branch. Nothing to change, but it has not been read back off
-the repository either, so it is listed rather than assumed.
+california, sacramento-river
+
+They are the two that place the app geographically, which is most of what a
+topic is for on a repo about four particular rivers — so this row stays open
+rather than being rounded up to set.
+
+**Social preview** — still PROPOSED, and it cannot be checked. The image is
+`social-preview.png` in the Cv-Thalweg repo root, 1280x640 at 2x, built from
+`social-card.html` in the app's own palette with real type
+(`node tools/render-social.mjs` regenerates it), and it also ships with the
+site at https://cv-thalweg.pages.dev/social-preview.png so it can be saved on
+a tablet. Upload it at GitHub → the repo → Settings → General → Social
+preview. **The API does not expose this field**, so unlike the four above it
+can never be read back — it flips only on the owner's say-so, and saying the
+metadata was updated is not the same as saying this one was.
+
+**Default branch** — **SET**, confirmed 2026-08-29 by reading `default_branch`
+off the repository: `main`. It is the only branch and the Cloudflare Pages
+production branch, so there was nothing to change; it is recorded because
+"nothing to change" and "checked" are different claims.
