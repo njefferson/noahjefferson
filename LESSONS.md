@@ -271,3 +271,5 @@ and the filename carries it.
 - **§177** — [A receipt for a long walk is stamped from the tree at the END, and four minutes is long enough to edit the thing it certifies](lessons/177-a-receipt-for-a-long-walk-is-stamped-from-the-tree-at-th.md)
 - **§178** — [A failure that names a number instead of a cause sends the next attempt guessing, and a swallowed timeout inside a retry loop spins in silence](lessons/178-a-driven-state-that-cannot-be-reached-and-a-failure-that.md)
 - **§179** — [A suite audits STATES; a reader lives through a SEQUENCE — and every defect a walkthrough found was in the seconds between them](lessons/179-a-suite-audits-states-and-a-reader-lives-through-a-seque.md)
+- **§180** — [A gate that keys on copy pins the copy — and pins the defect with it](lessons/180-a-gate-that-keys-on-copy-pins-the-copy-and-the-defect.md)
+- **§181** — [An observer that writes what another observer watches is a loop, and the loop presents as a timeout somewhere else](lessons/181-an-observer-that-writes-what-another-observer-watches.md)
