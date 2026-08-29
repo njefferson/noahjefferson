@@ -114,16 +114,38 @@ jobs:
       - name: Work out which hub this call pinned
         id: hub
         env:
-          WORKFLOW_REF: ${{ github.job_workflow_ref }}
+          # `job_workflow_sha` IS THE COMMIT OF THIS FILE, which is the fact
+          # wanted, with no string to parse. Two spellings were tried first and
+          # both are recorded here because the failures are instructive:
+          #
+          # `github.workflow_ref` is the CALLER's entry workflow, not this one.
+          # A sibling on `staging` resolved to refs/heads/staging, which is not
+          # a ref in the hub, and the checkout died with git exit 128 — while
+          # the ONE caller that works on `main` went green for days, quietly
+          # running the gates out of the hub's moving default branch.
+          #
+          # `github.job_workflow_ref` is documented as this file's own ref and
+          # arrives EMPTY on the runner. That failure was loud rather than
+          # silent only because the guard below refuses anything that is not a
+          # 40-character commit — which is the whole reason to write the guard
+          # before trusting the value.
+          JOB_WORKFLOW_SHA: ${{ github.job_workflow_sha }}
+          # Printed, not used: if this ever needs diagnosing again, one run
+          # says what each context actually held instead of another guess.
+          JOB_WORKFLOW_REF: ${{ github.job_workflow_ref }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
         run: |
-          REF="${WORKFLOW_REF##*@}"
-          # A CALLER MUST PIN A COMMIT. Anything else — a branch, a tag — is a
-          # mutable pointer, and the failure it produces is a green run against
-          # gates nobody chose, which is invisible. Refuse it here rather than
-          # let the checkout succeed against whatever that name means today.
+          echo "job_workflow_sha: $JOB_WORKFLOW_SHA"
+          echo "job_workflow_ref: $JOB_WORKFLOW_REF"
+          echo "workflow_ref:     $WORKFLOW_REF"
+          REF="$JOB_WORKFLOW_SHA"
+          # A CALLER MUST RESOLVE TO A COMMIT. Anything else — a branch, a tag,
+          # an empty context — is a mutable or unknown pointer, and the failure
+          # it produces is a green run against gates nobody chose, which is
+          # invisible. Refuse it here rather than check something out and hope.
           if ! printf '%s' "$REF" | grep -Eq '^[0-9a-f]{40}$'; then
-            echo "::error::hub-gates.yml must be called at a full 40-character commit SHA."
-            echo "::error::This call resolved to: $REF"
+            echo "::error::hub-gates.yml could not resolve the commit it was called at."
+            echo "::error::job_workflow_sha was: '$JOB_WORKFLOW_SHA'"
             exit 1
           fi
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
