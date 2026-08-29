@@ -273,13 +273,10 @@ and MoleBridge cites none.
 
 ## The gate wiring is called from the hub now, not copied
 
-`.github/workflows/hub-gates.yml` in the hub is a `workflow_call` workflow.
-A sibling calls it and gets every hub gate; it does not copy a job that runs
-them. **This is the answer to why four repos ran five gates and three ran
-three: the gates were shared and the wiring was not.**
-
-`Cv-Thalweg` is the first caller. **Every other sibling owes the swap**, which
-is deleting its hub-gate steps and writing:
+`.github/workflows/hub-gates.yml` in the hub is a `workflow_call` workflow. A
+sibling calls it and gets every hub gate; it does not copy a job that runs them.
+**This is the answer to why four repos ran five gates and three ran three: the
+gates were shared and the wiring was not.**
 
     jobs:
       hub-gates:
@@ -287,21 +284,106 @@ is deleting its hub-gate steps and writing:
         with:
           pwa: true
 
-`pwa: true` for any repo with a service worker. The repo's OWN gates — its
-tests, its walks, its domain checks — stay in its own workflow; only the hub's
-are called. Quietkeep is deliberately not listed as owing this yet: its Spine
-is more involved than a line in this file can describe, and the session that
-holds it should make that call.
+**Seven repos call it as of 2026-08-29** — Cv-Thalweg, fauxplane,
+3d-printing-pal, Intersecting-parallels, photo-pointer, MoleBridge and Solve-ent.
+Quietkeep's swap is written and NOT settled: it was pushed to that repo's
+`staging` while another session was working there, which it should not have been,
+and it waits on the owner.
+
+**The pin is read out of the CALLING workflow file**, not from a context. Three
+context properties were tried and all three failed — see LESSONS §184, including
+the one that went green for days while running the hub's moving default branch.
+The value used is literally the string in the `uses:` line, so the gates and the
+wiring cannot be two versions and there is nothing to half-bump.
+
+### The inputs, and what they mean
+
+Each names a FACT about the repo rather than a preference. A repo that has the
+fact and leaves the input off is running a smaller gate than it looks like it is.
+
+- **`pwa`** — the repo has a service worker. Runs `pwa-check.mjs`.
+- **`mirror`** — the repo carries its own offline copy of the disclosure
+  patterns. Quietkeep only. Runs `privacy-mirror-check.mjs`.
+- **`third-person`** — defaults ON, and should stay on. Every repo passes it.
+- **`palette-path`** — the palette JSON to hold to the colour floors.
+- **`textsize-paths`** — CSS/HTML to check for a reader who enlarges only their
+  default text size.
+- **`zizmor`** — audit the caller's workflows at the hub's version- and
+  hash-pinned build.
+- **`docs-path`**, **`node-version`** — where the prose is, and which Node.
+
+**Where a flag is off on a repo that has the fact, it is a DEBT and it is
+written down twice** — in a comment where the flag would go, carrying the actual
+figures, and in the list below. That is the difference between a gate that is
+owed and a gate that quietly stopped running. It is not a way to switch a
+failing gate off, and two of them are currently open.
+
+### The debts this surfaced
+
+- **photo-pointer owes §7h.** It has a service worker and `pwa` is off, on three
+  real findings: `sw.js` calls `skipWaiting()` during install so a new worker
+  takes over under the open page; nothing lets the reader trigger the update;
+  and nothing reads `caches.keys()`, so the §7f diagnostic cannot say which copy
+  a device holds. Clearing them means building an update strip a reader can see.
+- **3d-printing-pal owes four colour floors.** Its palette cleared them at the
+  pin CI used until 2026-08-29 and fails four at the current one, because the
+  floors tightened — the PALETTES §1 and §7b drift `doctrine-sync` has been
+  reporting for that repo. Text on accent-tinted surfaces: night 4.22, 4.58,
+  3.84; day 4.34. Clearing them is a colour decision, so it waits on the owner.
+- **Three repos owe zizmor.** photo-pointer (unpinned action references),
+  fauxplane and Quietkeep (template injection and cache poisoning, three high
+  each). Turning the flag on today would make them red without fixing anything.
+- **Two doctrine markers are dangling.** `fauxplane` and
+  `Intersecting-parallels` name hub commits that no longer exist after the
+  history rewrite, so `doctrine-sync.mjs` can tell a session in those repos
+  nothing at all. **photo-pointer has no `.doctrine-sync`.** Re-adopting is an
+  assertion the drift was read, so it is not a session's to do on the way past.
+
+### What the swap actually costs, per repo
+
+It is three lines plus whatever the repo built on top of the old shape, and the
+second part is the part that bites. Every one of these was found by a repo-local
+tool going red, which is the argument for having them:
+
+- **A `needs:` that stopped covering the gates.** MoleBridge's deploy job said
+  `needs: gates`, which covered the doctrine gates while they lived inside that
+  job. Moving them out would have let the deploy go ahead with them red.
+  fauxplane had the same shape.
+- **A parity tool reading the old spelling.** 3d-printing-pal's
+  `gates-parity.mjs` found which hub gates CI ran by scanning for
+  `node .hub/x.mjs`; after the swap it would have called every hub gate
+  in-the-chain-but-not-in-CI. It now reads the call and credits each conditional
+  gate only when the flag is passed — and it caught a real mistake in the same
+  commit, an `npm audit` step deleted along with the block it sat in.
+- **A pin that moved house.** Solve-ent's `hub-pin-check.mjs` held
+  `.doctrine-sync` equal to a `HUB_SHA` env var that no longer exists; it reads
+  the `uses:` line now.
+- **A local tool that ran a hub gate itself.** Solve-ent's `tools/palette.mjs`
+  ran the hub's palette gate out of the `.hub` checkout CI stopped making, and
+  refused to skip — correctly. It now requires positive evidence in the workflow
+  that `palette-path` names its palette, verified by changing the path and
+  watching it go red.
+- **A local runner of the CI list.** Quietkeep's `tools/spine.mjs` runs what CI
+  runs by reading the workflow, so the hub gates would have vanished from the
+  local chain. It synthesises them back from the call and its inputs — better
+  than before, where they were listed as un-runnable and left to somebody to
+  remember.
 
 ## What every sibling still owes
 
 One line each, so it is not a memory test:
 
 - **The branch guard** — installed everywhere as of 2026-08-20. Nothing owed.
-- **The privacy CI step** — `privacy-check.mjs` AND `quote-check.mjs` now run in
+- **The privacy CI step** — `privacy-check.mjs` AND `quote-check.mjs` run in
   every repo listed above, per Doctrine §9b and its second half. Each was watched
   going red on a synthetic plant and green with it removed, and each was
   confirmed to have RUN on a real runner rather than been skipped.
+  **THAT SENTENCE WAS TRUE AND IT WAS NOT THE QUESTION.** It says two gates run
+  everywhere; it never said how many of the NINE each repo ran, because nobody
+  had counted. Counted on 2026-08-29: two repos ran six, three ran five, two ran
+  three. `third-person-check.mjs` ran in two, and switched on in the other five
+  it found 110 sites — fifty-nine of them real, in a public repo carrying the
+  owner's name. Every repo now calls the whole set. LESSONS §183.
   `privacy-mirror-check.mjs` is still Quietkeep-only, which is correct — it is
   owed only by a repo that mirrors the patterns for an offline test.
 - **`docs-check.mjs` in CI** — photo-pointer is the one repo above that neither

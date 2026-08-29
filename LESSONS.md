@@ -274,3 +274,5 @@ and the filename carries it.
 - **§180** — [A gate that keys on copy pins the copy — and pins the defect with it](lessons/180-a-gate-that-keys-on-copy-pins-the-copy-and-the-defect.md)
 - **§181** — [An observer that writes what another observer watches is a loop, and the loop presents as a timeout somewhere else](lessons/181-an-observer-that-writes-what-another-observer-watches.md)
 - **§182** — [A feature that cannot be found reads as missing, and "build it" is the expensive wrong answer](lessons/182-a-feature-that-exists-and-cannot-be-found-reads-as-missin.md)
+- **§183** — [A gate that lives in the hub and runs in two repos is a gate that does not exist](lessons/183-a-shared-gate-that-two-repos-run-is-a-gate-that-does-not.md)
+- **§184** — [A reusable workflow cannot learn its own commit, and the wrong guess went green](lessons/184-a-reusable-workflow-cannot-learn-its-own-commit-and-the.md)

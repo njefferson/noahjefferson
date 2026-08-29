@@ -410,6 +410,21 @@ existing.
  deploys (LESSONS §53). A stale mirror is not a smaller gate, it is a
  DIFFERENT one.
 
+- [`third-person-check.mjs`](third-person-check.mjs) — **the privacy rule's
+ THIRD half: never in the third person either.** `privacy-check.mjs` anchors on
+ the NAME and `quote-check.mjs` finds the set-apart quotation; neither can see a
+ source comment recording that a report was correct and whose it was. It existed for weeks, ran in TWO repos,
+ and was switched on in the other five on 2026-08-29 — where it found **110
+ sites, fifty-nine of them real**, in comments in a shipped page, a fusion
+ filter, five test files and a design record, in a public repo carrying the
+ owner's name. **A gate that lives here and runs in two repos is a gate that
+ does not exist** (LESSONS §183). The pattern is a bare pronoun and blunt ON
+ PURPOSE — a narrower one cannot see an attribution with no name in it — so
+ `.third-person-allow` is what makes it usable: declared per file, checked BOTH
+ ways, and never declarable for a reference to the owner. In a chemistry app
+ that pronoun is element 2 and in an aeronautical one it is a runway's high end;
+ neither is a reason to weaken it.
+
 **AND THE WIRING IS SHARED NOW TOO, WHICH IT WAS NOT.**
 [`.github/workflows/hub-gates.yml`](.github/workflows/hub-gates.yml) is a
 `workflow_call` workflow: a sibling CALLS it instead of copying a job that
@@ -424,10 +439,18 @@ runs these gates. Three lines in the sibling.
 **Why it exists.** The gates were never forked — they take `--repo ../app`, and
 that is the whole reason five divergent copies do not exist. But the WORKFLOW
 that calls them was copied into eight repos by hand and drifted exactly the way
-a forked file does: four siblings run five hub gates, three run only privacy,
-quote and branch-guard, and nothing anywhere records why. **The gate was shared
-and the wiring was not, so "which gates does this repo run" had eight answers.**
-Adding a gate here now adds it to every repo that has bumped its pin.
+a forked file does. **The gate was shared and the wiring was not, so "which gates
+does this repo run" had eight answers** — and counted, they were: six, six, five,
+five, five, three, three. Adding a gate here now adds it to every repo that has
+bumped its pin.
+
+**THE PIN IS READ OUT OF THE CALLING WORKFLOW FILE, not from a context.** Three
+context properties were tried and all three failed — `github.workflow_ref` is the
+CALLER's workflow, and `job_workflow_ref` and `job_workflow_sha` both arrive
+EMPTY. The first did not error: the only caller at the time works on `main`, the
+hub has a `main`, so it went green for days while running the gates out of the
+hub's MOVING DEFAULT BRANCH, under a comment claiming that could not happen. The
+value was on disk all along, in the caller's own `uses:` line. (LESSONS §184.)
 
 It checks the hub out at **exactly the version of the workflow the caller
 pinned**, read off `github.workflow_ref` rather than taken as an input, so the
