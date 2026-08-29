@@ -92,64 +92,62 @@ jobs:
           path: app
           persist-credentials: false
 
-      # The hub, at EXACTLY the version of this file the caller pinned.
+      # The hub, at EXACTLY the version the caller pinned — READ OUT OF THE
+      # CALLER'S OWN WORKFLOW FILE, which the step above has just checked out.
       #
-      # `job_workflow_ref`, NOT `workflow_ref`. Both exist and only one is this
-      # file: inside a reusable workflow `github.workflow_ref` is the CALLER's
-      # entry workflow — `njefferson/solve-ent/.github/workflows/gates.yml@refs/heads/staging`
-      # — so reading the pin off it yielded `refs/heads/staging` and the
-      # checkout below died with exit 128 looking for that branch in the hub.
+      # Three context properties were tried first and all three are recorded
+      # here, because each failed differently and the differences are the
+      # lesson:
       #
-      # IT DID NOT FAIL FOR THE FIRST CALLER, WHICH IS THE WHOLE PROBLEM. That
-      # repo works on `main`, the hub HAS a `main`, so the ref resolved and the
-      # job went green — checking the gates out of the hub's MOVING DEFAULT
-      # BRANCH while the comment here claimed a caller could not end up on a
-      # different version than it pinned. A pinned call was running unpinned
-      # gates and every run was green.
+      #   github.workflow_ref      — the CALLER's entry workflow, not this file.
+      #                              A sibling on `staging` resolved the pin to
+      #                              refs/heads/staging, which is not a ref in
+      #                              the hub, and the checkout died with git
+      #                              exit 128. The one caller that works on
+      #                              `main` went GREEN for days, quietly running
+      #                              the gates out of the hub's moving default
+      #                              branch while the comment here claimed that
+      #                              could not happen.
+      #   github.job_workflow_ref  — documented as this file's own ref. Empty.
+      #   github.job_workflow_sha  — documented as this file's own commit. Empty.
       #
-      # `job_workflow_ref` is the ref of the reusable workflow itself:
-      #   njefferson/noahjefferson/.github/workflows/hub-gates.yml@<the caller's pin>
-      # so the ref after the @ is the commit the caller actually wrote, and the
-      # gates and the wiring cannot be two different versions.
-      - name: Work out which hub this call pinned
+      # So the pin is not available from the runtime at all. It IS available in
+      # the caller's repository, on disk, in the line that made this call — and
+      # taking it from there is better than any context would have been: the
+      # value used is literally the one written in the `uses:`, so the gates and
+      # the wiring cannot be two versions even in principle. There is nothing to
+      # half-bump because there is only one place to bump.
+      #
+      # workflow_ref names which file to read:
+      #   njefferson/photo-pointer/.github/workflows/ci.yml@refs/heads/staging
+      - name: Read the pin out of the workflow that made this call
         id: hub
         env:
-          # `job_workflow_sha` IS THE COMMIT OF THIS FILE, which is the fact
-          # wanted, with no string to parse. Two spellings were tried first and
-          # both are recorded here because the failures are instructive:
-          #
-          # `github.workflow_ref` is the CALLER's entry workflow, not this one.
-          # A sibling on `staging` resolved to refs/heads/staging, which is not
-          # a ref in the hub, and the checkout died with git exit 128 — while
-          # the ONE caller that works on `main` went green for days, quietly
-          # running the gates out of the hub's moving default branch.
-          #
-          # `github.job_workflow_ref` is documented as this file's own ref and
-          # arrives EMPTY on the runner. That failure was loud rather than
-          # silent only because the guard below refuses anything that is not a
-          # 40-character commit — which is the whole reason to write the guard
-          # before trusting the value.
-          JOB_WORKFLOW_SHA: ${{ github.job_workflow_sha }}
-          # Printed, not used: if this ever needs diagnosing again, one run
-          # says what each context actually held instead of another guess.
-          JOB_WORKFLOW_REF: ${{ github.job_workflow_ref }}
           WORKFLOW_REF: ${{ github.workflow_ref }}
         run: |
-          echo "job_workflow_sha: $JOB_WORKFLOW_SHA"
-          echo "job_workflow_ref: $JOB_WORKFLOW_REF"
-          echo "workflow_ref:     $WORKFLOW_REF"
-          REF="$JOB_WORKFLOW_SHA"
-          # A CALLER MUST RESOLVE TO A COMMIT. Anything else — a branch, a tag,
-          # an empty context — is a mutable or unknown pointer, and the failure
-          # it produces is a green run against gates nobody chose, which is
-          # invisible. Refuse it here rather than check something out and hope.
-          if ! printf '%s' "$REF" | grep -Eq '^[0-9a-f]{40}$'; then
-            echo "::error::hub-gates.yml could not resolve the commit it was called at."
-            echo "::error::job_workflow_sha was: '$JOB_WORKFLOW_SHA'"
+          # owner/repo/.github/workflows/x.yml@ref -> .github/workflows/x.yml
+          WITHOUT_REF="${WORKFLOW_REF%@*}"
+          FILE="app/${WITHOUT_REF#*/*/}"
+          echo "Caller workflow: $FILE"
+          if [ ! -f "$FILE" ]; then
+            echo "::error::hub-gates.yml could not find the calling workflow at $FILE"
+            echo "::error::workflow_ref was: $WORKFLOW_REF"
             exit 1
           fi
-          echo "ref=$REF" >> "$GITHUB_OUTPUT"
-          echo "Gates will be run from the hub at: $REF"
+          # Exactly one pin, and it must be a 40-character commit. A branch or a
+          # tag resolves to something, and what it resolves to is gates nobody
+          # chose, in a run that reports success — so anything else is refused
+          # here rather than checked out and hoped about.
+          PINS=$(grep -oE 'hub-gates\.yml@[0-9a-f]{40}' "$FILE" | sed 's/.*@//' | sort -u)
+          COUNT=$(printf '%s\n' "$PINS" | grep -c '^[0-9a-f]\{40\}$' || true)
+          if [ "$COUNT" -ne 1 ]; then
+            echo "::error::$FILE must call hub-gates.yml at exactly one full 40-character commit SHA."
+            echo "::error::found: $COUNT"
+            grep -n 'hub-gates\.yml@' "$FILE" || true
+            exit 1
+          fi
+          echo "ref=$PINS" >> "$GITHUB_OUTPUT"
+          echo "Gates will be run from the hub at: $PINS"
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
