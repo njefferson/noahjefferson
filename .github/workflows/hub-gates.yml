@@ -47,10 +47,36 @@ on:
           a stale mirror is not a smaller gate, it is a DIFFERENT one.
         type: boolean
         default: false
+      third-person:
+        description: >-
+          Run third-person-check — the privacy rule's third half. Defaults ON,
+          because every repo in the family passes it and a repo that could opt
+          out of a privacy gate would.
+        type: boolean
+        default: true
       docs-path:
         description: Which directory docs-check walks, relative to the repo.
         type: string
         default: '.'
+      palette-path:
+        description: >-
+          The palette JSON to hold to the colour floors, relative to the repo
+          (e.g. palettes/molebridge.json). Empty skips the gate.
+        type: string
+        default: ''
+      textsize-paths:
+        description: >-
+          Space-separated CSS/HTML paths to check for a reader who enlarges only
+          their default text size. Empty skips the gate.
+        type: string
+        default: ''
+      zizmor:
+        description: >-
+          Audit the caller's own workflows with zizmor, at the version and hash
+          the hub pins. Opt-in only while three repos still carry findings —
+          see REPOS.md, which names them and what each owes.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -111,6 +137,17 @@ jobs:
       - name: Every set-apart quotation says whose words it is
         run: node hub/quote-check.mjs --repo app
 
+      # The pattern is a bare `he|his|him` and it is blunt ON PURPOSE — a
+      # narrower one cannot see an attribution that carries no name, which is
+      # the whole half of the rule this gate covers. What makes a blunt pattern
+      # usable is `.third-person-allow`: a DECLARED list, checked both ways, so
+      # a scrub cannot quietly un-cover a file by leaving a stale line in it.
+      # `he` is helium in a chemistry app and a runway's high end in an
+      # aeronautical one; neither is a reason to weaken the pattern.
+      - name: Nothing is attributed to the owner in the third person
+        if: inputs.third-person
+        run: node hub/third-person-check.mjs --repo app
+
       # Through the environment, not interpolated into the command: an input
       # expanded straight into a `run:` block is code injection, and zizmor
       # said so on the first run of this file. The env route is the same one
@@ -126,3 +163,38 @@ jobs:
       - name: The new version waits and says so
         if: inputs.pwa
         run: node hub/pwa-check.mjs --repo app
+
+      - name: Every colour clears every hard floor, in both modes
+        if: inputs.palette-path != ''
+        env:
+          PALETTE_PATH: ${{ inputs.palette-path }}
+        working-directory: app
+        run: node ../hub/palette-check.mjs "$PALETTE_PATH"
+
+      # A reader who enlarges only their DEFAULT TEXT SIZE and not the page.
+      - name: Text set larger than the default still fits
+        if: inputs.textsize-paths != ''
+        env:
+          TEXTSIZE_PATHS: ${{ inputs.textsize-paths }}
+        working-directory: app
+        # Deliberately unquoted: the input is a space-separated LIST of paths.
+        run: node ../hub/scripts/check-textsize.mjs $TEXTSIZE_PATHS
+
+      # PINNED BY VERSION AND HASH IN THE HUB, so every repo audits with the
+      # same build. `pip install zizmor` floats on whatever PyPI served that
+      # morning, which is the same mutable-pointer problem as an unpinned tag.
+      - name: Install zizmor, at the hub's pin
+        if: inputs.zizmor
+        run: |
+          python3 -m venv "$RUNNER_TEMP/zizmor"
+          "$RUNNER_TEMP/zizmor/bin/pip" install --quiet --only-binary=:all: \
+            --require-hashes -r hub/.github/requirements-ci.txt
+
+      # --strict-collection is not optional. Without it an unparseable workflow
+      # is logged, skipped, and the audit still exits 0 with "No findings" — the
+      # file most likely to be wrong is the one excused.
+      - name: Workflow security audit
+        if: inputs.zizmor
+        run: |
+          "$RUNNER_TEMP/zizmor/bin/zizmor" --offline --strict-collection \
+            app/.github/workflows/
