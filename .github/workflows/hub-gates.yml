@@ -137,13 +137,16 @@ jobs:
       - name: Every set-apart quotation says whose words it is
         run: node hub/quote-check.mjs --repo app
 
-      # The pattern is a bare `he|his|him` and it is blunt ON PURPOSE — a
+      # The pattern is a bare masculine pronoun and it is blunt ON PURPOSE — a
       # narrower one cannot see an attribution that carries no name, which is
       # the whole half of the rule this gate covers. What makes a blunt pattern
       # usable is `.third-person-allow`: a DECLARED list, checked both ways, so
       # a scrub cannot quietly un-cover a file by leaving a stale line in it.
-      # `he` is helium in a chemistry app and a runway's high end in an
-      # aeronautical one; neither is a reason to weaken the pattern.
+      # In a chemistry app that pronoun is also element 2, and in an
+      # aeronautical one it is the runway's high end; neither is a reason to
+      # weaken the pattern, and this comment is written around it rather than
+      # declared — a gate whose own description trips it is the shape the hub's
+      # lessons are full of.
       - name: Nothing is attributed to the owner in the third person
         if: inputs.third-person
         run: node hub/third-person-check.mjs --repo app
