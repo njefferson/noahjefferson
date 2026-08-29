@@ -357,8 +357,11 @@ https://cv-thalweg.pages.dev
 california, sacramento-river, delta, bathymetry, tides, usgs, noaa, dwr, cdfw,
 salmon, fishing, pwa, offline-first, leaflet, cloudflare-pages, no-tracking
 
-**Social preview** — not proposed yet. The app's own icon is a channel section
-with the thalweg marked; a preview image has not been made.
+**Social preview** — proposed. `social-preview.png` in the Cv-Thalweg repo
+root, 1280x640 at 2x, built from `social-card.html` in the app's own palette
+with real type (`node tools/render-social.mjs` regenerates it). Upload it at
+GitHub → the repo → Settings → General → Social preview. The API does not
+expose this field, so it can only ever be confirmed on the owner's word.
 
 **Default branch** — `main`, which is already the only branch and the Cloudflare
 Pages production branch. Nothing to change, but it has not been read back off
