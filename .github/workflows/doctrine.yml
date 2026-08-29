@@ -67,6 +67,15 @@ jobs:
       - name: The owner's person is not repo material
         run: node privacy-check.mjs
 
+      # The privacy rule's SECOND half — never in what words — and the hub was
+      # the one repo not running it. Every pattern in privacy-check anchors on
+      # a NAME, so it cannot see a verbatim quotation carrying none; six of
+      # those were found by hand with every other gate green, which is the
+      # whole reason this file exists. It ran here only as part of the local
+      # `npm run check`, which is to say it ran when somebody remembered.
+      - name: Every set-apart quotation says whose words it is
+        run: node quote-check.mjs
+
       # zizmor is MAINTAINED and off-the-shelf. On its first run here it found
       # 18 template injections and 5 credential-persistence issues that a
       # hand-rolled checker written the same afternoon had no concept of.

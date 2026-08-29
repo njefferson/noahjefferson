@@ -338,9 +338,9 @@ point its CLAUDE.md §10 note at this file.
 
 # njefferson/Cv-Thalweg
 
-Added 2026-08-29. Applied by the owner the same day. **THREE OF FOUR ARE SET**
-and were read back off the repository rather than assumed; topics landed
-fourteen of sixteen; the social preview is still awaiting the owner's word,
+Added 2026-08-29 and applied by the owner the same day. **EVERY ITEM IS SET.**
+Description, website, topics and default branch were read back off the
+repository rather than assumed; the social preview is on the owner's word,
 because the API does not expose that field and nothing else can confirm it.
 
 **Description** — **SET** 2026-08-29, read back off the repository and
@@ -354,30 +354,25 @@ only. Not for navigation.
 
 https://cv-thalweg.pages.dev
 
-**Topics** — **PARTLY SET** 2026-08-29. Fourteen of the sixteen proposed are on
-the repository, read back off it:
+**Topics** — **SET** 2026-08-29. All sixteen, read back off the repository
+after `california` and `sacramento-river` were added in a second pass; the
+first paste had landed fourteen:
 
-bathymetry, cdfw, cloudflare-pages, delta, dwr, fishing, leaflet, no-tracking,
-noaa, offline-first, pwa, salmon, tides, usgs
+bathymetry, california, cdfw, cloudflare-pages, delta, dwr, fishing, leaflet,
+no-tracking, noaa, offline-first, pwa, sacramento-river, salmon, tides, usgs
 
-Two are NOT there and are still proposed. Both are valid GitHub topics, so
-this is a paste that lost two entries rather than a rule refusing them:
-
-california, sacramento-river
-
-They are the two that place the app geographically, which is most of what a
-topic is for on a repo about four particular rivers — so this row stays open
-rather than being rounded up to set.
-
-**Social preview** — still PROPOSED, and it cannot be checked. The image is
+**Social preview** — **SET** 2026-08-29, on the owner's word, which is the
+only evidence this row can ever have: the API does not expose the field. The
+image is
 `social-preview.png` in the Cv-Thalweg repo root, 1280x640 at 2x, built from
 `social-card.html` in the app's own palette with real type
 (`node tools/render-social.mjs` regenerates it), and it also ships with the
 site at https://cv-thalweg.pages.dev/social-preview.png so it can be saved on
-a tablet. Upload it at GitHub → the repo → Settings → General → Social
-preview. **The API does not expose this field**, so unlike the four above it
-can never be read back — it flips only on the owner's say-so, and saying the
-metadata was updated is not the same as saying this one was.
+a tablet. Re-uploading after a change is GitHub → the repo → Settings →
+General → Social preview.
+
+**EVERY ITEM IS SET.** Four were read back off the repository; this one was
+confirmed by the owner, because nothing else can confirm it.
 
 **Default branch** — **SET**, confirmed 2026-08-29 by reading `default_branch`
 off the repository: `main`. It is the only branch and the Cloudflare Pages

@@ -200,8 +200,16 @@ and MoleBridge cites none.
   registry rather than from spec sheets (§176); and the landing-weight gate,
   which holds a first-time reader's cold open under a megabyte after it was
   measured at 5.56MB.
-- **Owes:** CI does not yet run the hub gates — they are run by hand each
-  release. Repo metadata is unset; see METADATA.md.
+- **Gates wired in CI:** `gates.yml` checks the hub out SHA-pinned and runs
+  `branch-guard.mjs --artefact`, `privacy-check.mjs`, `quote-check.mjs`,
+  `docs-check.mjs`, `pin-check.mjs` and `pwa-check.mjs` against this repo,
+  plus its own `test-worker.mjs`, `render-test.mjs` and `a11y.mjs`. The live
+  suite is a SEPARATE job with `continue-on-error`, because it talks to USGS,
+  NOAA and DWR and a public agency having a bad morning must not read as this
+  repo being broken. Wired 2026-08-29; the first run failed on two things
+  invisible from the machine it was written on, and the second was green.
+- **Owes:** nothing outstanding on gates. Repo metadata is fully set; see
+  METADATA.md.
 
 ---
 
