@@ -200,10 +200,11 @@ and MoleBridge cites none.
   registry rather than from spec sheets (§176); and the landing-weight gate,
   which holds a first-time reader's cold open under a megabyte after it was
   measured at 5.56MB.
-- **Gates wired in CI:** `gates.yml` checks the hub out SHA-pinned and runs
-  `branch-guard.mjs --artefact`, `privacy-check.mjs`, `quote-check.mjs`,
-  `docs-check.mjs`, `pin-check.mjs` and `pwa-check.mjs` against this repo,
-  plus its own `test-worker.mjs`, `render-test.mjs` and `a11y.mjs`. The live
+- **Gates wired in CI:** `gates.yml` CALLS the hub's reusable
+  `hub-gates.yml`, pinned by SHA, which runs `branch-guard.mjs --artefact`,
+  `privacy-check.mjs`, `quote-check.mjs`, `docs-check.mjs`, `pin-check.mjs`
+  and `pwa-check.mjs`. Its own `test-worker.mjs`, `render-test.mjs` and
+  `a11y.mjs` stay in its own job. First caller of the reusable workflow. The live
   suite is a SEPARATE job with `continue-on-error`, because it talks to USGS,
   NOAA and DWR and a public agency having a bad morning must not read as this
   repo being broken. Wired 2026-08-29; the first run failed on two things
@@ -269,6 +270,28 @@ and MoleBridge cites none.
 ---
 
 ---
+
+## The gate wiring is called from the hub now, not copied
+
+`.github/workflows/hub-gates.yml` in the hub is a `workflow_call` workflow.
+A sibling calls it and gets every hub gate; it does not copy a job that runs
+them. **This is the answer to why four repos ran five gates and three ran
+three: the gates were shared and the wiring was not.**
+
+`Cv-Thalweg` is the first caller. **Every other sibling owes the swap**, which
+is deleting its hub-gate steps and writing:
+
+    jobs:
+      hub-gates:
+        uses: njefferson/noahjefferson/.github/workflows/hub-gates.yml@<sha>
+        with:
+          pwa: true
+
+`pwa: true` for any repo with a service worker. The repo's OWN gates — its
+tests, its walks, its domain checks — stay in its own workflow; only the hub's
+are called. Quietkeep is deliberately not listed as owing this yet: its Spine
+is more involved than a line in this file can describe, and the session that
+holds it should make that call.
 
 ## What every sibling still owes
 

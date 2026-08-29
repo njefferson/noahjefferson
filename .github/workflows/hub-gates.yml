@@ -1,0 +1,108 @@
+name: Hub gates (reusable)
+
+# EVERY REPO'S GATE WIRING, IN ONE PLACE.
+#
+# The gates themselves were never forked — they take `--repo ../app` so a
+# sibling runs the hub's copy rather than its own. But the WORKFLOW that calls
+# them was copied into eight repos by hand, and drifted exactly the way a
+# forked file does: four siblings run five hub gates, three run three of them,
+# and nothing records why. The gate was shared and the wiring was not, so the
+# question "which gates does this repo run" had eight answers.
+#
+# A sibling now calls this instead of copying it:
+#
+#     jobs:
+#       hub-gates:
+#         uses: njefferson/noahjefferson/.github/workflows/hub-gates.yml@<sha>
+#         with:
+#           pwa: true
+#
+# Adding a gate here adds it to every repo that has bumped its pin. Removing
+# one removes it everywhere. There is one answer again.
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: Node version the gates run under.
+        type: string
+        default: '22'
+      pwa:
+        description: Run pwa-check — for any repo with a service worker.
+        type: boolean
+        default: false
+      docs-path:
+        description: Which directory docs-check walks, relative to the repo.
+        type: string
+        default: '.'
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      # The CALLING repo. In a reusable workflow, a bare checkout takes the
+      # caller, which is what is being gated.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: app
+          persist-credentials: false
+
+      # The hub, at EXACTLY the version of this file the caller pinned.
+      # github.workflow_ref is
+      #   njefferson/noahjefferson/.github/workflows/hub-gates.yml@<ref>
+      # so the ref after the @ is the pin the caller wrote. Taking it from
+      # there rather than from an input means the gates and the wiring can
+      # never be two different versions, and a caller cannot half-bump.
+      - name: Work out which hub this call pinned
+        id: hub
+        env:
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: |
+          REF="${WORKFLOW_REF##*@}"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "Gates will be run from the hub at: $REF"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: njefferson/noahjefferson
+          ref: ${{ steps.hub.outputs.ref }}
+          path: hub
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      # --artefact, never the plain check and never --install. The plain check
+      # asserts .git/hooks/pre-commit is installed, which is a fact about ONE
+      # CLONE, and actions/checkout leaves .git/hooks empty by definition —
+      # Quietkeep's Spine ran the plain check and never once went green.
+      # --install would WRITE the tracked file and repair the drift the step
+      # exists to find.
+      - name: Branch guard (artefact only)
+        run: node hub/branch-guard.mjs --repo app --artefact
+
+      - name: The owner's person is not repo material
+        run: node hub/privacy-check.mjs --repo app
+
+      - name: Every set-apart quotation says whose words it is
+        run: node hub/quote-check.mjs --repo app
+
+      # Through the environment, not interpolated into the command: an input
+      # expanded straight into a `run:` block is code injection, and zizmor
+       # said so on the first run of this file. The env route is the same one
+       # the workflow_ref step above already takes.
+      - name: No tables or grids in anything the owner reads
+        env:
+          DOCS_PATH: ${{ inputs.docs-path }}
+        run: node hub/docs-check.mjs "app/$DOCS_PATH"
+
+      - name: npm hygiene
+        run: node hub/pin-check.mjs --repo app
+
+      - name: The new version waits and says so
+        if: inputs.pwa
+        run: node hub/pwa-check.mjs --repo app

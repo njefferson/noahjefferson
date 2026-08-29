@@ -410,6 +410,32 @@ existing.
  deploys (LESSONS §53). A stale mirror is not a smaller gate, it is a
  DIFFERENT one.
 
+**AND THE WIRING IS SHARED NOW TOO, WHICH IT WAS NOT.**
+[`.github/workflows/hub-gates.yml`](.github/workflows/hub-gates.yml) is a
+`workflow_call` workflow: a sibling CALLS it instead of copying a job that
+runs these gates. Three lines in the sibling.
+
+    jobs:
+      hub-gates:
+        uses: njefferson/noahjefferson/.github/workflows/hub-gates.yml@<sha>
+        with:
+          pwa: true
+
+**Why it exists.** The gates were never forked — they take `--repo ../app`, and
+that is the whole reason five divergent copies do not exist. But the WORKFLOW
+that calls them was copied into eight repos by hand and drifted exactly the way
+a forked file does: four siblings run five hub gates, three run only privacy,
+quote and branch-guard, and nothing anywhere records why. **The gate was shared
+and the wiring was not, so "which gates does this repo run" had eight answers.**
+Adding a gate here now adds it to every repo that has bumped its pin.
+
+It checks the hub out at **exactly the version of the workflow the caller
+pinned**, read off `github.workflow_ref` rather than taken as an input, so the
+gates and the wiring can never be two different versions and a caller cannot
+half-bump. Cv-Thalweg is the first caller. **Every other sibling owes the
+swap — it is deleting a job and writing three lines**, and the swap is the
+thing that stops this drifting again.
+
 - [`doctrine-sync.mjs`](doctrine-sync.mjs) — **run this FIRST in any sibling
  session**: `node ../noahjefferson/doctrine-sync.mjs --repo .`. It says what has
  landed in the hub since that repo last reconciled — which files, which commits,
