@@ -327,11 +327,16 @@ failing gate off, and two of them are currently open.
 
 ### The debts this surfaced
 
-- **photo-pointer owes §7h.** It has a service worker and `pwa` is off, on three
-  real findings: `sw.js` calls `skipWaiting()` during install so a new worker
-  takes over under the open page; nothing lets the reader trigger the update;
-  and nothing reads `caches.keys()`, so the §7f diagnostic cannot say which copy
-  a device holds. Clearing them means building an update strip a reader can see.
+- **photo-pointer's §7h is BUILT (1.21.0) and the gate is on.** The worker
+  waits, a standing strip says a new version is ready in words, pressing it is
+  what releases it, and the About panel lists the caches the device actually
+  holds. Watched against a real second worker before it was pushed — nine
+  checks, and the walk caught the first draft reloading the very first visit.
+  **What it owes now is the walk itself.** That repo has no browser tooling at
+  all, so the check that proved this works is not committed and not gated, and
+  the next change to the service worker has nothing standing behind it. Quietkeep
+  and Solve-ent both drive a real second worker in CI; this is the third that
+  should.
 - **The four colour floors are the HUB's, not 3d-printing-pal's.** That repo
   adopted the Instrument family verbatim as recommended, and its palette file is
   byte-identical to the family for every surface, text token, accent and alpha.
@@ -357,12 +362,12 @@ failing gate off, and two of them are currently open.
   repository's default token permissions, and a step output expanding into a
   `git commit -m`. All fixed; the pins used are ones sibling repos already run
   and whose CI went green on them the same day.
-  **Two findings are DECLARED rather than fixed**, each with its reasoning in
-  the file: fauxplane's setup-node caching inside the job that publishes — the
-  structural fix is MoleBridge's shape, where the caching job is not the token
-  job, and that is a change to a live deploy pipeline — and photo-pointer's
-  sixteen ingest workflows keeping their credential, which they need, since they
-  commit what they fetch.
+  **fauxplane's declaration is gone and the finding with it**: the install and
+  the tests are their own job now, so the job holding the token has no
+  `setup-node` and no cache to poison. The suppression was deleted rather than
+  kept. The one declaration that remains is photo-pointer's sixteen ingest
+  workflows keeping their git credential, which they need, since committing what
+  they fetch is their whole job.
 - **Quietkeep owes zizmor** — template injection and cache poisoning, three high.
   Not touched: a session was working in that repo and the owner said to leave it.
 - **Two doctrine markers are dangling.** `fauxplane` and
