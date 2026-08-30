@@ -337,37 +337,18 @@ failing gate off, and two of them are currently open.
   the next change to the service worker has nothing standing behind it. Quietkeep
   and Solve-ent both drive a real second worker in CI; this is the third that
   should.
-- **The four colour floors are the HUB's, not 3d-printing-pal's.** That repo
-  adopted the Instrument family verbatim as recommended, and its palette file is
-  byte-identical to the family for every surface, text token, accent and alpha.
-  `palette-check.mjs` widened its accent-tint test to the whole text ladder on
-  2026-08-25 and the families were never re-run through it: **seventeen
-  hard-floor failures across all sixteen palettes**, and PALETTES.md went on
-  saying all four clear every floor. Corrected there, with the figures.
-  Nothing caught it because no CI runs the gate over `families.json` — only the
-  hub's local `npm run check` does, so the hub gates every sibling's copy of the
-  data and not the original. **Clearing it is a restyle of all four families** —
-  the day palettes need a four-to-seven-step nudge to text-3, the night ones a
-  text-3 lift AND a cut to `accentSoftAlpha`, paper-night's roughly halved — so
-  it changes how a selected row looks in every app that adopted one, and waits
-  on the owner. LESSONS §186. Wiring the gate into the hub's CI waits on the
-  same answer, because switching it on today just makes the hub red.
-- **zizmor is on in fauxplane and photo-pointer** as of 2026-08-29, and what it
-  found is why it was the debt worth taking first. fauxplane expanded
-  `${{ github.ref_name }}` into a `run:` block twice — a branch name is written
-  by whoever can push a branch, the expansion happens before bash sees the
-  script, and the job holds a live Pages:Edit token. photo-pointer had
-  THIRTY-FIVE actions on mutable tags, two of them beside the Cloudflare token,
-  plus every checkout persisting a git credential, two workflows inheriting the
-  repository's default token permissions, and a step output expanding into a
-  `git commit -m`. All fixed; the pins used are ones sibling repos already run
-  and whose CI went green on them the same day.
-  **fauxplane's declaration is gone and the finding with it**: the install and
-  the tests are their own job now, so the job holding the token has no
-  `setup-node` and no cache to poison. The suppression was deleted rather than
-  kept. The one declaration that remains is photo-pointer's sixteen ingest
-  workflows keeping their git credential, which they need, since committing what
-  they fetch is their whole job.
+- **The colour floors are cleared, and the gate that missed them now runs in
+  CI.** They were never 3d-printing-pal's: its palette was Instrument verbatim,
+  and the family had been failing since the accent-tint check widened on
+  2026-08-25 with nothing running the gate over `families.json`. All sixteen
+  palettes clear every floor again — `accentSoftAlpha` 0.15→0.08 night and
+  0.12→0.10 day, with `text-2`/`text-3` lifted slightly and `text-1` untouched.
+  The text ladder came out better than it went in: every family now separates
+  its three tokens by ΔE 5.1–7.5, where two carried steps the gate calls faint.
+  print-tracker tracks the family again. **The gate also grew a floor it was
+  missing** — every check asked whether text stays readable ON the wash, so the
+  cheapest way to pass was a fainter wash, and nothing measured the wash itself.
+  It now fails one below JND. LESSONS §186.
 - **Quietkeep owes zizmor** — template injection and cache poisoning, three high.
   Not touched: a session was working in that repo and the owner said to leave it.
 - **Two doctrine markers are dangling.** `fauxplane` and

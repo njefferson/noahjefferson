@@ -177,47 +177,50 @@ below about L\* 92 and let the text carry the contrast.
 
 ---
 
-## 5. Four families, and the floor four of them currently miss
+## 5. Four families that pass, and what it took to make that true again
 
 Derived by a design council on 2026-07-30 (four independent proposals, adversarial
 verification, three judging lenses), then re-verified on one shared instrument.
 Exact values, including the tile variants for hub-shaped link pages, are in
 [`palettes/families.json`](palettes/families.json).
 
-**THIS SECTION SAID "ALL FOUR CLEAR EVERY HARD FLOOR IN BOTH MODES" AND THAT
-STOPPED BEING TRUE ON 2026-08-25**, when `palette-check.mjs` widened its
-accent-tint test from the primary text token to the WHOLE ladder (commit
-5cbee30). The families were never re-measured against the widened check, and
-nothing caught it: no CI anywhere runs the gate over `families.json` — only the
-hub's own `npm run check` does, and that is a local command.
+**All sixteen palettes clear every hard floor**, re-established on 2026-08-30
+after they had quietly stopped doing so.
 
-Seventeen hard-floor failures across the sixteen palettes, every one of them
-the same shape — quiet text on the accent-soft wash over a pale fill:
+**WHAT WENT WRONG, because the shape of it will happen again.** On 2026-08-25
+`palette-check.mjs` widened its accent-tint test from the primary text token to
+the WHOLE ladder — a good change, found by reverse-mapping one app's real
+pairings. The families were never re-run through the widened gate, and nothing
+noticed: no CI anywhere ran it over `families.json`, only the hub's local
+`npm run check`. Seventeen hard-floor failures sat there for five days while this
+section said all four cleared every floor, and an app that adopted Instrument
+verbatim inherited four of them and looked, from inside, like its own defect.
+LESSONS §186. **The gate now runs in the hub's own CI**, which is the part that
+stops the next one lasting five days.
 
-- **instrument-night** — text-3 on surface2 4.22, text-2 on surface3 4.58,
-  text-3 on surface3 3.84. **instrument-day** — text-3 on page 4.34.
-- **paper-night** — 4.10, 4.16, 3.59. **paper-day** — page 4.21, pageAlt 4.55.
-- **mono-night** — 4.26, 3.88. **mono-day** — page 4.44.
-- **soft-night** — 4.33, 4.58, 3.95. **soft-day** — page 4.24, pageAlt 4.59.
+**WHAT CHANGED IN THE COLOURS.** Every failure was the same shape — quiet text on
+the accent-soft wash over a pale fill — so the fix is the same two moves in every
+family, and the wash took most of it:
 
-The floor is 4.6, which is AA's 4.5 plus headroom, so these are near-misses
-rather than unreadable text — but a family is the PORTABLE thing here. An app
-that adopts one is entitled to paint any role on any role without a browser run,
-which is the entire argument for clearing the full cross product rather than the
-pairings one app happens to paint today.
+- `accentSoftAlpha` **0.15 → 0.08** in night, **0.12 → 0.10** in day. The wash is
+  still comfortably visible: ΔE 4.6 to 5.0 against the fill it sits on, about
+  twice the just-noticeable difference.
+- `text-2` and `text-3` lift slightly toward the page — four to fourteen steps
+  depending on the family. `text-1` is untouched everywhere.
 
-**An app inherits this by doing as it is told.** print-tracker adopted Instrument
-verbatim, as recommended, and its palette gate fails on exactly those four
-pairings — its own file is byte-identical to the family for every surface, text
-token, accent and alpha. It is not that app's defect to fix.
+The text ladder came out BETTER than it went in: every family now separates its
+three text tokens by ΔE 5.1 to 7.5, where two of them previously carried steps
+the gate calls faint. That was not luck — the solver was told to maximise the
+ladder rather than minimise the edit, after a first pass that cleared the floors
+and left paper-night's tokens ΔE 2.4 apart, barely distinguishable.
 
-**What clearing it costs, measured rather than guessed.** Every DAY palette needs
-only a nudge to text-3 with the accent wash untouched — four to seven steps.
-Every NIGHT palette needs both a lift to text-3 and a cut to `accentSoftAlpha`,
-and paper-night needs that wash roughly halved. That is a change to how a
-selected row looks in every app that adopted a family, so it is the owner's
-call and not a session's. Until it is made, this section says what is true
-instead of what was true in July.
+**AND THE GATE GREW A FLOOR IT WAS MISSING.** Every check here asks whether text
+stays readable ON the tint, so the cheapest way to pass all of them is to make
+the tint fainter — and nothing measured the tint itself. The gate would have
+accepted `accentSoftAlpha: 0` and called the palette clean. It now fails a wash
+below 2.3 ΔE against its own fill and notes one below 3.5, on the same reasoning
+the surface-state ladder already used: a state nobody can perceive is not a
+state. Watched failing on a planted wash and passing on the real one.
 
 **Instrument** *(the default)* — exact-neutral night, warm day.
 Night `page` → `surface`: `#1a1a1a` → `#3a3a3a`.

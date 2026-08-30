@@ -105,6 +105,14 @@ jobs:
       - name: npm hygiene (what zizmor does not cover)
         run: node pin-check.mjs
 
+      # THE HUB'S OWN CANONICAL DATA, and its absence here is why seventeen
+      # hard-floor failures sat in the four families for five days. The gate ran
+      # in every sibling against that app's copy of a palette, and the only
+      # thing running it against the ORIGINAL was `npm run check`, a local
+      # command. The hub gated every copy and not the source. LESSONS §186.
+      - name: The four families still clear every colour floor
+        run: node palette-check.mjs palettes/families.json
+
       # Printed on every run so the un-automatable rules are READ rather than
       # remembered. These are the ones that got broken.
       - name: The steps no script can perform

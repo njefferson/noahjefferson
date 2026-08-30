@@ -1,191 +1,339 @@
 {
   "_readme": "Four verified palette families, in ROLE terms (see PALETTES.md). Each family has a night and a day entry, plus tile variants for hub-shaped link pages. Every entry clears the hard floors — run: node palette-check.mjs palettes/families.json. Derived by the 2026-07-30 palette council; Instrument is the recommended default.",
-
   "instrument-night": {
     "kind": "app",
     "page": "#1a1a1a",
     "pageAlt": "#232323",
-    "surfaces": ["#3a3a3a", "#414141", "#484848"],
+    "surfaces": [
+      "#3a3a3a",
+      "#414141",
+      "#484848"
+    ],
     "rail": "rgba(255,255,255,.62)",
     "hairline": "rgba(255,255,255,.17)",
-    "text": ["#eaeaea", "#d2d2d2", "#c1c1c1"],
-    "accents": { "primary": "#9fc2f5" },
-    "accentSoftAlpha": 0.15
+    "text": [
+      "#eaeaea",
+      "#d9d9d9",
+      "#c9c9c9"
+    ],
+    "accents": {
+      "primary": "#9fc2f5"
+    },
+    "accentSoftAlpha": 0.08
   },
   "instrument-day": {
     "kind": "app",
     "page": "#c4bcab",
     "pageAlt": "#ccc4b3",
-    "surfaces": ["#eee6d6", "#f4ecdd", "#faf3e5"],
+    "surfaces": [
+      "#eee6d6",
+      "#f4ecdd",
+      "#faf3e5"
+    ],
     "rail": "rgba(39,33,25,.68)",
     "hairline": "rgba(39,33,25,.22)",
-    "text": ["#272119", "#363026", "#4a4436"],
-    "accents": { "primary": "#17458f" },
-    "accentSoftAlpha": 0.12
+    "text": [
+      "#272119",
+      "#363026",
+      "#464032"
+    ],
+    "accents": {
+      "primary": "#17458f"
+    },
+    "accentSoftAlpha": 0.1
   },
   "instrument-tiles-night": {
     "kind": "tiles",
     "page": "#14161d",
     "pageAlt": "#1c1f28",
-    "surfaces": ["#373c49", "#414755"],
+    "surfaces": [
+      "#373c49",
+      "#414755"
+    ],
     "rail": "#9aa3b8",
-    "text": ["#e7e9ee", "#c2c8d5"],
+    "text": [
+      "#e7e9ee",
+      "#c2c8d5"
+    ],
     "accents": {
-      "amber": "#fadfa2", "green": "#6ed194", "magenta": "#efa7c5",
-      "cyan": "#a5e9f8", "slate": "#beb4fb"
+      "amber": "#fadfa2",
+      "green": "#6ed194",
+      "magenta": "#efa7c5",
+      "cyan": "#a5e9f8",
+      "slate": "#beb4fb"
     }
   },
   "instrument-tiles-day": {
     "kind": "tiles",
     "page": "#c3c7d1",
     "pageAlt": "#d1d4dc",
-    "surfaces": ["#f4f6f9", "#eaedf3"],
+    "surfaces": [
+      "#f4f6f9",
+      "#eaedf3"
+    ],
     "rail": "#59606e",
-    "text": ["#23262c", "#2f333c"],
+    "text": [
+      "#23262c",
+      "#2f333c"
+    ],
     "accents": {
-      "amber": "#714408", "green": "#082f18", "magenta": "#6d1a44",
-      "cyan": "#0b5266", "slate": "#3f2585"
+      "amber": "#714408",
+      "green": "#082f18",
+      "magenta": "#6d1a44",
+      "cyan": "#0b5266",
+      "slate": "#3f2585"
     }
   },
-
   "paper-night": {
     "kind": "app",
     "page": "#141519",
     "pageAlt": "#191a1e",
-    "surfaces": ["#35373c", "#3e4045", "#484a4f"],
+    "surfaces": [
+      "#35373c",
+      "#3e4045",
+      "#484a4f"
+    ],
     "rail": "rgba(255,255,255,.64)",
     "hairline": "rgba(255,255,255,.16)",
-    "text": ["#e6e8ec", "#c9ccd2", "#babec6"],
-    "accents": { "primary": "#a3c4ff" },
-    "accentSoftAlpha": 0.15
+    "text": [
+      "#e6e8ec",
+      "#d7dae0",
+      "#c8ccd4"
+    ],
+    "accents": {
+      "primary": "#a3c4ff"
+    },
+    "accentSoftAlpha": 0.08
   },
   "paper-day": {
     "kind": "app",
     "page": "#c8c1b0",
     "pageAlt": "#cfc9ba",
-    "surfaces": ["#f2eee3", "#f6f3ea", "#fbf9f3"],
+    "surfaces": [
+      "#f2eee3",
+      "#f6f3ea",
+      "#fbf9f3"
+    ],
     "rail": "rgba(43,36,24,.66)",
     "hairline": "rgba(43,36,24,.24)",
-    "text": ["#322e25", "#433d30", "#4e493d"],
-    "accents": { "primary": "#164493" },
-    "accentSoftAlpha": 0.12
+    "text": [
+      "#322e25",
+      "#3e382b",
+      "#494438"
+    ],
+    "accents": {
+      "primary": "#164493"
+    },
+    "accentSoftAlpha": 0.1
   },
   "paper-tiles-night": {
     "kind": "tiles",
     "page": "#13151b",
     "pageAlt": "#191b22",
-    "surfaces": ["#333741", "#3b3f4a"],
+    "surfaces": [
+      "#333741",
+      "#3b3f4a"
+    ],
     "rail": "#9aa1b2",
-    "text": ["#e5e8ee", "#b7bdc9"],
+    "text": [
+      "#e5e8ee",
+      "#b7bdc9"
+    ],
     "accents": {
-      "amber": "#f8c157", "green": "#90e6a9", "magenta": "#fa8abd",
-      "cyan": "#5fd0ee", "slate": "#9ea7ff"
+      "amber": "#f8c157",
+      "green": "#90e6a9",
+      "magenta": "#fa8abd",
+      "cyan": "#5fd0ee",
+      "slate": "#9ea7ff"
     }
   },
   "paper-tiles-day": {
     "kind": "tiles",
     "page": "#c9c3b3",
     "pageAlt": "#d2ccbe",
-    "surfaces": ["#f3f0e8", "#faf8f2"],
+    "surfaces": [
+      "#f3f0e8",
+      "#faf8f2"
+    ],
     "rail": "#625e54",
-    "text": ["#26221a", "#4e493e"],
+    "text": [
+      "#26221a",
+      "#4e493e"
+    ],
     "accents": {
-      "amber": "#724009", "green": "#175a2c", "magenta": "#4a1230",
-      "cyan": "#084052", "slate": "#201a5e"
+      "amber": "#724009",
+      "green": "#175a2c",
+      "magenta": "#4a1230",
+      "cyan": "#084052",
+      "slate": "#201a5e"
     }
   },
-
   "mono-night": {
     "kind": "app",
     "page": "#131313",
     "pageAlt": "#1c1c1c",
-    "surfaces": ["#363636", "#3e3e3e", "#454545"],
+    "surfaces": [
+      "#363636",
+      "#3e3e3e",
+      "#454545"
+    ],
     "rail": "rgba(255,255,255,.62)",
     "hairline": "rgba(255,255,255,.14)",
-    "text": ["#e6e6e6", "#cfcfcf", "#bcbcbc"],
-    "accents": { "primary": "#93b9ea" },
-    "accentSoftAlpha": 0.15
+    "text": [
+      "#e6e6e6",
+      "#d4d4d4",
+      "#c3c3c3"
+    ],
+    "accents": {
+      "primary": "#93b9ea"
+    },
+    "accentSoftAlpha": 0.08
   },
   "mono-day": {
     "kind": "app",
     "page": "#c5c5c5",
     "pageAlt": "#cdcdcd",
-    "surfaces": ["#efefef", "#f5f5f5", "#fbfbfb"],
+    "surfaces": [
+      "#efefef",
+      "#f5f5f5",
+      "#fbfbfb"
+    ],
     "rail": "rgba(20,20,20,.60)",
     "hairline": "rgba(20,20,20,.24)",
-    "text": ["#252525", "#353535", "#494949"],
-    "accents": { "primary": "#274b86" },
-    "accentSoftAlpha": 0.12
+    "text": [
+      "#252525",
+      "#353535",
+      "#474747"
+    ],
+    "accents": {
+      "primary": "#274b86"
+    },
+    "accentSoftAlpha": 0.1
   },
   "mono-tiles-night": {
     "kind": "tiles",
     "page": "#14161b",
     "pageAlt": "#1b1e24",
-    "surfaces": ["#333640", "#393d47"],
+    "surfaces": [
+      "#333640",
+      "#393d47"
+    ],
     "rail": "#949baa",
-    "text": ["#e3e5ea", "#b1b6c0"],
+    "text": [
+      "#e3e5ea",
+      "#b1b6c0"
+    ],
     "accents": {
-      "amber": "#eda13f", "green": "#52bf84", "magenta": "#eba9ca",
-      "cyan": "#9ee0f7", "slate": "#a0acf8"
+      "amber": "#eda13f",
+      "green": "#52bf84",
+      "magenta": "#eba9ca",
+      "cyan": "#9ee0f7",
+      "slate": "#a0acf8"
     }
   },
   "mono-tiles-day": {
     "kind": "tiles",
     "page": "#cfd1d5",
     "pageAlt": "#d7d9dd",
-    "surfaces": ["#fafafa", "#edeff2"],
+    "surfaces": [
+      "#fafafa",
+      "#edeff2"
+    ],
     "rail": "#606468",
-    "text": ["#22252b", "#52565e"],
+    "text": [
+      "#22252b",
+      "#52565e"
+    ],
     "accents": {
-      "amber": "#7d4404", "green": "#0f4726", "magenta": "#97305f",
-      "cyan": "#0c5c75", "slate": "#1c1e55"
+      "amber": "#7d4404",
+      "green": "#0f4726",
+      "magenta": "#97305f",
+      "cyan": "#0c5c75",
+      "slate": "#1c1e55"
     }
   },
-
   "soft-night": {
     "kind": "app",
     "page": "#15161a",
     "pageAlt": "#1b1c21",
-    "surfaces": ["#36373c", "#3c3d43", "#43444a"],
+    "surfaces": [
+      "#36373c",
+      "#3c3d43",
+      "#43444a"
+    ],
     "rail": "#9da1a9",
     "hairline": "rgba(255,255,255,.17)",
-    "text": ["#e0e2e7", "#c9cbd1", "#babdc4"],
-    "accents": { "primary": "#97b8ec" },
-    "accentSoftAlpha": 0.15
+    "text": [
+      "#e0e2e7",
+      "#d0d2d8",
+      "#bfc2c9"
+    ],
+    "accents": {
+      "primary": "#97b8ec"
+    },
+    "accentSoftAlpha": 0.08
   },
   "soft-day": {
     "kind": "app",
     "page": "#bfbab0",
     "pageAlt": "#c7c2b8",
-    "surfaces": ["#e8e4da", "#eeebe2", "#f5f2ea"],
+    "surfaces": [
+      "#e8e4da",
+      "#eeebe2",
+      "#f5f2ea"
+    ],
     "rail": "#5f594c",
     "hairline": "rgba(46,41,33,.28)",
-    "text": ["#2e2921", "#3e392f", "#4a4438"],
-    "accents": { "primary": "#204478" },
-    "accentSoftAlpha": 0.12
+    "text": [
+      "#2e2921",
+      "#39342a",
+      "#453f33"
+    ],
+    "accents": {
+      "primary": "#204478"
+    },
+    "accentSoftAlpha": 0.1
   },
   "soft-tiles-night": {
     "kind": "tiles",
     "page": "#16181e",
     "pageAlt": "#1b1e25",
-    "surfaces": ["#32363e", "#3b3f47"],
+    "surfaces": [
+      "#32363e",
+      "#3b3f47"
+    ],
     "rail": "#9aa1b0",
-    "text": ["#e1e4ec", "#aab0c0"],
+    "text": [
+      "#e1e4ec",
+      "#aab0c0"
+    ],
     "accents": {
-      "amber": "#f4c581", "green": "#a9e6b2", "magenta": "#f094bb",
-      "cyan": "#66c8e8", "slate": "#a2adfa"
+      "amber": "#f4c581",
+      "green": "#a9e6b2",
+      "magenta": "#f094bb",
+      "cyan": "#66c8e8",
+      "slate": "#a2adfa"
     }
   },
   "soft-tiles-day": {
     "kind": "tiles",
     "page": "#dbdcdf",
     "pageAlt": "#e2e3e6",
-    "surfaces": ["#f4f4f2", "#eaedf2"],
+    "surfaces": [
+      "#f4f4f2",
+      "#eaedf2"
+    ],
     "rail": "#676e7e",
-    "text": ["#23262e", "#4d5464"],
+    "text": [
+      "#23262e",
+      "#4d5464"
+    ],
     "accents": {
-      "amber": "#8f4506", "green": "#0e5228", "magenta": "#6f1240",
-      "cyan": "#0f637b", "slate": "#1f2068"
+      "amber": "#8f4506",
+      "green": "#0e5228",
+      "magenta": "#6f1240",
+      "cyan": "#0f637b",
+      "slate": "#1f2068"
     }
   }
 }

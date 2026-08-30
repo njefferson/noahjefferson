@@ -234,6 +234,31 @@ function checkPalette(name, p, verbose, renders) {
      and this gate had never looked at it. */
   if (p.accentSoftAlpha && accents.length && text.length) {
     const [, primary] = accents[0];
+
+    /* AND THE WASH HAS TO BE VISIBLE, which nothing here measured until
+       2026-08-30. Every check below asks whether text stays readable ON the
+       tint, and the cheapest way to pass all of them is to make the tint
+       fainter — so this file, left as it was, would have accepted an
+       accentSoftAlpha of zero and called the palette clean. A selected row
+       nobody can see is not a selected row.
+
+       This is the same argument the surface-state ladder above already makes in
+       its own comment — a hover nobody can perceive is not a hover — applied to
+       the one fill it had not been applied to. Same threshold, 2.3 ΔE, because
+       it is the same question: is this a colour change a person can see.
+
+       It is not hypothetical. Clearing the text floors on the four families on
+       2026-08-30 meant cutting this wash — night 0.15 to 0.08 — and the only
+       thing that stopped it going further was somebody checking by hand. */
+    for (const [fn, fc] of fills) {
+      const washed = composite(primary, p.accentSoftAlpha, fc);
+      const seen = deltaE(fc, washed);
+      if (seen < 2.3)
+        fails.push(`${name}: the accent wash over ${fn} differs by ΔE ${seen.toFixed(1)} — below JND, so a selection is invisible`);
+      else if (seen < 3.5)
+        notes.push(`${name}: the accent wash over ${fn} is faint (ΔE ${seen.toFixed(1)})`);
+    }
+
     for (const [fn, fc] of fills) {
       const tinted = composite(primary, p.accentSoftAlpha, fc);
       for (const [i, t] of text.entries()) {
