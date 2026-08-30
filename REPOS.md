@@ -182,7 +182,14 @@ and MoleBridge cites none.
   machine-readable in-season adult count exists either. "Not for navigation" is
   in the header at all times, because DWR's own metadata says the surveys are
   not a navigation aid and that constraint travels with the data.
-- **Branches:** `main` only. A push to `main` deploys.
+- **Branches:** `staging` and `main`, since 2026-08-29. Work lands on `staging`
+  → https://staging.cv-thalweg.pages.dev → the on-device pass → an explicit
+  promote via `THALWEG_PROMOTE=1` → `main`, which is production. It ran on
+  `main` alone before that, decided when it was three days old, not deployed
+  and not linked anywhere — and the decision was never revisited when both
+  halves stopped being true. It is the app that needs the on-device pass MOST:
+  it is read one-handed on a riverbank and every defect found in its first week
+  appeared only on the real device.
 - **Deploys to:** https://cv-thalweg.pages.dev — every release verified by
   `tools/check-deploy.mjs`, which asks the live site which commit it is serving
   through a Pages Function rather than trusting the push.
