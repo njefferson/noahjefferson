@@ -332,11 +332,12 @@ failing gate off, and two of them are currently open.
   what releases it, and the About panel lists the caches the device actually
   holds. Watched against a real second worker before it was pushed — nine
   checks, and the walk caught the first draft reloading the very first visit.
-  **What it owes now is the walk itself.** That repo has no browser tooling at
-  all, so the check that proved this works is not committed and not gated, and
-  the next change to the service worker has nothing standing behind it. Quietkeep
-  and Solve-ent both drive a real second worker in CI; this is the third that
-  should.
+  **The walk is committed and gated too** (`scripts/update-walk.mjs`, ten
+  checks, green on a runner). It drives a real second worker by editing the
+  CACHE constant so the browser sees different bytes, and restores `sw.js` in a
+  `finally`. That gave the repo its first dependency — `playwright-core`, pinned
+  — and its CI job its first `npm ci`. Quietkeep, Solve-ent and photo-pointer
+  now all drive a real second worker.
 - **The colour floors are cleared, and the gate that missed them now runs in
   CI.** They were never 3d-printing-pal's: its palette was Instrument verbatim,
   and the family had been failing since the accent-tint check widened on
