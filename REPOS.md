@@ -332,11 +332,21 @@ failing gate off, and two of them are currently open.
   takes over under the open page; nothing lets the reader trigger the update;
   and nothing reads `caches.keys()`, so the §7f diagnostic cannot say which copy
   a device holds. Clearing them means building an update strip a reader can see.
-- **3d-printing-pal owes four colour floors.** Its palette cleared them at the
-  pin CI used until 2026-08-29 and fails four at the current one, because the
-  floors tightened — the PALETTES §1 and §7b drift `doctrine-sync` has been
-  reporting for that repo. Text on accent-tinted surfaces: night 4.22, 4.58,
-  3.84; day 4.34. Clearing them is a colour decision, so it waits on the owner.
+- **The four colour floors are the HUB's, not 3d-printing-pal's.** That repo
+  adopted the Instrument family verbatim as recommended, and its palette file is
+  byte-identical to the family for every surface, text token, accent and alpha.
+  `palette-check.mjs` widened its accent-tint test to the whole text ladder on
+  2026-08-25 and the families were never re-run through it: **seventeen
+  hard-floor failures across all sixteen palettes**, and PALETTES.md went on
+  saying all four clear every floor. Corrected there, with the figures.
+  Nothing caught it because no CI runs the gate over `families.json` — only the
+  hub's local `npm run check` does, so the hub gates every sibling's copy of the
+  data and not the original. **Clearing it is a restyle of all four families** —
+  the day palettes need a four-to-seven-step nudge to text-3, the night ones a
+  text-3 lift AND a cut to `accentSoftAlpha`, paper-night's roughly halved — so
+  it changes how a selected row looks in every app that adopted one, and waits
+  on the owner. LESSONS §186. Wiring the gate into the hub's CI waits on the
+  same answer, because switching it on today just makes the hub red.
 - **zizmor is on in fauxplane and photo-pointer** as of 2026-08-29, and what it
   found is why it was the debt worth taking first. fauxplane expanded
   `${{ github.ref_name }}` into a `run:` block twice — a branch name is written

@@ -177,13 +177,47 @@ below about L\* 92 and let the text carry the contrast.
 
 ---
 
-## 5. Four families that already pass
+## 5. Four families, and the floor four of them currently miss
 
 Derived by a design council on 2026-07-30 (four independent proposals, adversarial
 verification, three judging lenses), then re-verified on one shared instrument.
-**All four clear every hard floor in both modes.** Exact values, including the
-tile variants for hub-shaped link pages, are in
+Exact values, including the tile variants for hub-shaped link pages, are in
 [`palettes/families.json`](palettes/families.json).
+
+**THIS SECTION SAID "ALL FOUR CLEAR EVERY HARD FLOOR IN BOTH MODES" AND THAT
+STOPPED BEING TRUE ON 2026-08-25**, when `palette-check.mjs` widened its
+accent-tint test from the primary text token to the WHOLE ladder (commit
+5cbee30). The families were never re-measured against the widened check, and
+nothing caught it: no CI anywhere runs the gate over `families.json` — only the
+hub's own `npm run check` does, and that is a local command.
+
+Seventeen hard-floor failures across the sixteen palettes, every one of them
+the same shape — quiet text on the accent-soft wash over a pale fill:
+
+- **instrument-night** — text-3 on surface2 4.22, text-2 on surface3 4.58,
+  text-3 on surface3 3.84. **instrument-day** — text-3 on page 4.34.
+- **paper-night** — 4.10, 4.16, 3.59. **paper-day** — page 4.21, pageAlt 4.55.
+- **mono-night** — 4.26, 3.88. **mono-day** — page 4.44.
+- **soft-night** — 4.33, 4.58, 3.95. **soft-day** — page 4.24, pageAlt 4.59.
+
+The floor is 4.6, which is AA's 4.5 plus headroom, so these are near-misses
+rather than unreadable text — but a family is the PORTABLE thing here. An app
+that adopts one is entitled to paint any role on any role without a browser run,
+which is the entire argument for clearing the full cross product rather than the
+pairings one app happens to paint today.
+
+**An app inherits this by doing as it is told.** print-tracker adopted Instrument
+verbatim, as recommended, and its palette gate fails on exactly those four
+pairings — its own file is byte-identical to the family for every surface, text
+token, accent and alpha. It is not that app's defect to fix.
+
+**What clearing it costs, measured rather than guessed.** Every DAY palette needs
+only a nudge to text-3 with the accent wash untouched — four to seven steps.
+Every NIGHT palette needs both a lift to text-3 and a cut to `accentSoftAlpha`,
+and paper-night needs that wash roughly halved. That is a change to how a
+selected row looks in every app that adopted a family, so it is the owner's
+call and not a session's. Until it is made, this section says what is true
+instead of what was true in July.
 
 **Instrument** *(the default)* — exact-neutral night, warm day.
 Night `page` → `surface`: `#1a1a1a` → `#3a3a3a`.

@@ -277,3 +277,4 @@ and the filename carries it.
 - **§183** — [A gate that lives in the hub and runs in two repos is a gate that does not exist](lessons/183-a-shared-gate-that-two-repos-run-is-a-gate-that-does-not.md)
 - **§184** — [A reusable workflow cannot learn its own commit, and the wrong guess went green](lessons/184-a-reusable-workflow-cannot-learn-its-own-commit-and-the.md)
 - **§185** — [An offline suite that waits on a live service has an upstream's uptime in its verdict](lessons/185-a-suite-that-cannot-reach-a-service-is-not-the-same-as.md)
+- **§186** — [A gate was widened and the canonical data it measures was never re-run](lessons/186-a-gate-widened-and-the-canonical-data-it-measures-was-n.md)
