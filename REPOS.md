@@ -337,9 +337,24 @@ failing gate off, and two of them are currently open.
   floors tightened — the PALETTES §1 and §7b drift `doctrine-sync` has been
   reporting for that repo. Text on accent-tinted surfaces: night 4.22, 4.58,
   3.84; day 4.34. Clearing them is a colour decision, so it waits on the owner.
-- **Three repos owe zizmor.** photo-pointer (unpinned action references),
-  fauxplane and Quietkeep (template injection and cache poisoning, three high
-  each). Turning the flag on today would make them red without fixing anything.
+- **zizmor is on in fauxplane and photo-pointer** as of 2026-08-29, and what it
+  found is why it was the debt worth taking first. fauxplane expanded
+  `${{ github.ref_name }}` into a `run:` block twice — a branch name is written
+  by whoever can push a branch, the expansion happens before bash sees the
+  script, and the job holds a live Pages:Edit token. photo-pointer had
+  THIRTY-FIVE actions on mutable tags, two of them beside the Cloudflare token,
+  plus every checkout persisting a git credential, two workflows inheriting the
+  repository's default token permissions, and a step output expanding into a
+  `git commit -m`. All fixed; the pins used are ones sibling repos already run
+  and whose CI went green on them the same day.
+  **Two findings are DECLARED rather than fixed**, each with its reasoning in
+  the file: fauxplane's setup-node caching inside the job that publishes — the
+  structural fix is MoleBridge's shape, where the caching job is not the token
+  job, and that is a change to a live deploy pipeline — and photo-pointer's
+  sixteen ingest workflows keeping their credential, which they need, since they
+  commit what they fetch.
+- **Quietkeep owes zizmor** — template injection and cache poisoning, three high.
+  Not touched: a session was working in that repo and the owner said to leave it.
 - **Two doctrine markers are dangling.** `fauxplane` and
   `Intersecting-parallels` name hub commits that no longer exist after the
   history rewrite, so `doctrine-sync.mjs` can tell a session in those repos
