@@ -278,3 +278,4 @@ and the filename carries it.
 - **§184** — [A reusable workflow cannot learn its own commit, and the wrong guess went green](lessons/184-a-reusable-workflow-cannot-learn-its-own-commit-and-the.md)
 - **§185** — [An offline suite that waits on a live service has an upstream's uptime in its verdict](lessons/185-a-suite-that-cannot-reach-a-service-is-not-the-same-as.md)
 - **§186** — [A gate was widened and the canonical data it measures was never re-run](lessons/186-a-gate-widened-and-the-canonical-data-it-measures-was-n.md)
+- **§187** — [A cap applied across two populations hides the one the feature exists to surface](lessons/187-a-cap-across-two-populations-hides-the-one-the-feature.md)
