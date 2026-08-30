@@ -161,6 +161,18 @@ Every item below has actually happened.
  open with the declaration. Waiting for the thing and carrying on is the
  expected way past it. Same escalation as `branch-guard.mjs`: an instruction in
  a file never once refused the commit it forbade. (Doctrine §11c.)
+- **A BLOCKED HOST IS A QUESTION, NOT A FINDING — ask for the site to be added,
+ in the moment.** When a fetch fails because this session's egress refuses the
+ host rather than because the service said no, that is a fact about the
+ container and nothing whatever about the data. Name the exact hosts and ask;
+ never report the capability as unavailable and stop, never fall back on what
+ the model remembers about a public dataset, and never let "I could not reach
+ it" reach the owner dressed as "I could not confirm it exists". Three states
+ look identical from inside — the host published nothing, the host refused, the
+ request never left — and only the first two are about the data. It cost a
+ recommendation to leave boat-ramp data out of Thalweg, put as a decision with
+ the evidence missing, on hosts the owner could unblock in seconds.
+ (LESSONS §188, on the owner's instruction.)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
  range line in the output means nothing moved. (LESSONS, 2026-08-02.)
