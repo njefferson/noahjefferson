@@ -281,3 +281,5 @@ and the filename carries it.
 - **§187** — [A cap applied across two populations hides the one the feature exists to surface](lessons/187-a-cap-across-two-populations-hides-the-one-the-feature.md)
 - **§188** — [A blocked host is a question, not a finding](lessons/188-a-blocked-host-is-a-question-not-a-finding.md)
 - **§189** — [A qualifier written beside the answer appears only when there is an answer](lessons/189-a-qualifier-written-beside-the-answer-appears-only-when.md)
+- **§190** — [A miss that answers confidently is worse than a miss that does nothing](lessons/190-a-miss-that-answers-is-worse-than-a-miss-that-does-noth.md)
+- **§191** — [The view is a conversation, and the reader's last word has to win](lessons/191-the-view-is-a-conversation-and-the-readers-last-word-win.md)

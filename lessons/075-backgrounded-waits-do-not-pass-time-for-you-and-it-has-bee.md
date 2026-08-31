@@ -25,11 +25,10 @@ in most projects it would be. In this one the owner ships several a day, so it
 was a fortnight. The session converted RELEASE DISTANCE into CALENDAR TIME
 without reading a date, and the two have no fixed exchange rate.
 
-**Why it is worse than a wrong number.** It was told to the owner about work he
-had done the previous week, which invites the reply that the app is not even
-that old — and it is: a session that misdates his own work by an order of
-magnitude is a session guessing at the thing he can check fastest. Every other
-claim it makes is then worth less.
+**Why it is worse than a wrong number.** The claim was made about work done the
+previous week, to the one reader who knows exactly when it was done. A session
+that misdates recent work by an order of magnitude is guessing at the fact its
+reader can check fastest, and every other claim it makes is then worth less.
 
 **The mechanism, which generalises past this one tool:** each wait was started in
 the BACKGROUND and then, without waiting for it to return, the next status query
