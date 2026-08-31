@@ -283,3 +283,4 @@ and the filename carries it.
 - **§189** — [A qualifier written beside the answer appears only when there is an answer](lessons/189-a-qualifier-written-beside-the-answer-appears-only-when.md)
 - **§190** — [A miss that answers confidently is worse than a miss that does nothing](lessons/190-a-miss-that-answers-is-worse-than-a-miss-that-does-noth.md)
 - **§191** — [The view is a conversation, and the reader's last word has to win](lessons/191-the-view-is-a-conversation-and-the-readers-last-word-win.md)
+- **§192** — [A legend drawn outside its own picture answers "have we explained this" for everyone after](lessons/192-a-legend-drawn-outside-its-own-picture-answers-have-we-e.md)
