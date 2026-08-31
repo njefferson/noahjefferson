@@ -1,11 +1,35 @@
 ## 75 · Backgrounded waits do not pass time for you, and "it has been half an hour" is a claim that needs a clock
 
-**Enforced by:** CHECKLIST clock-before-you-conclude — before calling anything slow, stuck or hung, print the actual time and subtract. A launched `sleep` that has not returned is zero seconds of waiting, not N seconds.
+**Enforced by:** CHECKLIST clock-before-you-conclude — before calling anything slow, stuck or hung, print the actual time and subtract. A launched `sleep` that has not returned is zero seconds of waiting, not N seconds. · CHECKLIST date-before-you-age-it — before calling anything old, stale or behind, read a timestamp. `git log -1 --format=%cd` costs nothing; HOW MUCH CHANGED is not how long it took.
 
 A CI job was declared hung, cancelled, and reported to the owner as a
 thirty-minute stall with a stale status field behind it. **The job was healthy.**
 It was walking normally, the status was current, and the cancel killed it three
 minutes in. The thirty minutes never happened.
+
+**THE SAME RULE HAS A SECOND FACE, AND IT IS THE COMMONER ONE (2026-08-31).**
+The first is *how long have I been waiting*. The second is **how old is this
+thing**, and it fails the same way: by being estimated from evidence that is not
+a clock.
+
+A session's clone reverted to an earlier commit — routine in that container —
+and the session reported the working tree as **"four months behind"** and wrote
+it into a plan file as an established fact. The real gap was **eleven days**.
+The repository was **thirty-four days old**, so four months had never been
+possible, and the sentence could have been refused on its face by anybody who
+knew when the project started.
+
+**Where the number came from is the part worth keeping.** Nineteen capability
+releases separated the two commits. Nineteen releases *feels* like months —
+in most projects it would be. In this one the owner ships several a day, so it
+was a fortnight. The session converted RELEASE DISTANCE into CALENDAR TIME
+without reading a date, and the two have no fixed exchange rate.
+
+**Why it is worse than a wrong number.** It was told to the owner about work he
+had done the previous week, which invites the reply that the app is not even
+that old — and it is: a session that misdates his own work by an order of
+magnitude is a session guessing at the thing he can check fastest. Every other
+claim it makes is then worth less.
 
 **The mechanism, which generalises past this one tool:** each wait was started in
 the BACKGROUND and then, without waiting for it to return, the next status query
