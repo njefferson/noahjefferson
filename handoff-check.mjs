@@ -144,17 +144,30 @@ if (!deployWf) {
         // **A gate whose green state is a lie is worse than no gate**, and both
         // repos reached it by the same route: a fallback that succeeds on the
         // wrong file produces a plausible number instead of an error.
+        //
+        // Thalweg is the THIRD repo to arrive at the same fall-through, by a
+        // third route: its service worker DOES carry the release, as a plain
+        // `var VERSION = '1.2.0'` rather than inside a cache name, so the
+        // triplet regex missed it — and `package.json` answered `0.1.0`, the
+        // same scaffold number fauxplane produced, while the app said 1.2.0.
+        // So the worker is asked TWICE, for either spelling, before anything
+        // falls through; the single-file apps in this family keep their one
+        // constant in `public/index.html` and it is read too; and `0.1.0` joins
+        // `0.0.0` as a number that is a scaffold rather than a claim.
         const swText = read('public/sw.js') || read('sw.js');
+        const PLACEHOLDER = ['0.0.0', '0.1.0'];
         const vm = (swText && /CACHE\s*=\s*['"][\w-]*?-(\d+\.\d+\.\d+)['"]/.exec(swText))
+          || (swText && /VERSION\s*=\s*'([^']+)'/.exec(swText))
           || (() => {
             const vSrc =
               read('src/version.js')
               || read('public/src/core/version.js')
               || read('src/core/version.js')
+              || read('public/index.html')
               || read('package.json');
             const m = vSrc && (/VERSION\s*=\s*'([^']+)'/.exec(vSrc) || /"version":\s*"([^"]+)"/.exec(vSrc));
-            // `0.0.0` is the npm placeholder, not a claim about a release.
-            return m && m[1] !== '0.0.0' ? m : null;
+            // A scaffold number is not a claim about a release.
+            return m && !PLACEHOLDER.includes(m[1]) ? m : null;
           })();
         if (vm) {
           const version = vm[1];
