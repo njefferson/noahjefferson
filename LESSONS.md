@@ -288,3 +288,4 @@ and the filename carries it.
 - **§194** — [A control inside `role="img"` cannot be reached, and an SVG has no `offsetTop`](lessons/194-role-img-prunes-its-subtree-and-an-svg-has-no-offsettop.md)
 - **§195** — [A legend is a promise about behaviour, not only a decoder for colours](lessons/195-a-legend-is-a-promise-about-behaviour.md)
 - **§196** — [When the standard source does not cover your water, ask what is measured instead](lessons/196-when-the-standard-source-does-not-cover-your-water.md)
+- **§197** — [A missing input does not leave a blank — it becomes a confident false sentence](lessons/197-a-missing-input-became-a-confident-false-sentence.md)

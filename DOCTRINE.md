@@ -1122,12 +1122,12 @@ without asking has chosen the weaker answer over a question it declined to put,
 and it has done so silently, in a file that will be read later as if the
 limitation were real.
 
-**HOW TO ASK, and the shape matters because of what he does with it next
+**HOW TO ASK, and the shape matters because of what happens to the list next
 (§2):** ONE fenced code block, bare hostnames, one per line, **ordered so the
-top of the list does the most work** — because he may stop partway, and the
-first three should be the ones that unlock the most. Then, in prose beneath it,
-say what each tier buys and which single fetch matters most. Never a table, and
-never hostnames scattered through a paragraph he has to pick out by hand.
+top of the list does the most work** — the reader may stop partway, so the first
+three should be the ones that unlock the most. Then, in prose beneath it, say
+what each tier buys and which single fetch matters most. Never a table, and
+never hostnames scattered through a paragraph somebody has to pick out by hand.
 
 **PREFER AN API OVER A PAGE, and say so when you ask.** A metadata or search API
 answers a hundred questions in a handful of requests and is usually one
