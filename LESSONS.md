@@ -285,3 +285,4 @@ and the filename carries it.
 - **§191** — [The view is a conversation, and the reader's last word has to win](lessons/191-the-view-is-a-conversation-and-the-readers-last-word-win.md)
 - **§192** — [A legend drawn outside its own picture answers "have we explained this" for everyone after](lessons/192-a-legend-drawn-outside-its-own-picture-answers-have-we-e.md)
 - **§193** — [Each paragraph was written for a good reason and the sum of them was the defect](lessons/193-a-panel-that-explains-itself-before-it-does-anything.md)
+- **§194** — [A control inside `role="img"` cannot be reached, and an SVG has no `offsetTop`](lessons/194-role-img-prunes-its-subtree-and-an-svg-has-no-offsettop.md)
