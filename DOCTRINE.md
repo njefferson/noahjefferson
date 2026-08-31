@@ -1108,6 +1108,51 @@ verified against the publisher's own test values, and committed the same hour.
 The owner's task list went from three items to zero, and the verification found three
 real bugs that would otherwise have shipped.*
 
+### 15c. A DENIED HOST IS A QUESTION FOR THE OWNER, NEVER A FINDING. ASK FOR IT BY NAME.
+
+The owner's standing instruction, 2026-08-31. §15b ends where the probe order
+runs out: you have asked the proxy what it allows, tried the other host serving
+the same bytes, and the host is genuinely denied. **That is the beginning of the
+next step and not the end of the work.**
+
+**Never write "unverified", "could not check", "the source was unreachable" or
+"treat this as unconfirmed" until you have asked for the host.** The owner adds
+hosts to a session in seconds. A session that records a source as unverifiable
+without asking has chosen the weaker answer over a question it declined to put,
+and it has done so silently, in a file that will be read later as if the
+limitation were real.
+
+**HOW TO ASK, and the shape matters because of what he does with it next
+(§2):** ONE fenced code block, bare hostnames, one per line, **ordered so the
+top of the list does the most work** — because he may stop partway, and the
+first three should be the ones that unlock the most. Then, in prose beneath it,
+say what each tier buys and which single fetch matters most. Never a table, and
+never hostnames scattered through a paragraph he has to pick out by hand.
+
+**PREFER AN API OVER A PAGE, and say so when you ask.** A metadata or search API
+answers a hundred questions in a handful of requests and is usually one
+allowlist entry; a publisher page answers one question, is often paywalled, and
+frequently refuses automated fetches. Ask for the API first and the page only
+for what the API cannot settle. Say which claims still need the page, so the
+owner can judge whether that host is worth adding at all.
+
+**AND SEPARATE THE TWO HALVES OF A CITATION, because they need different
+hosts.** The bibliographic half — journal, volume, pages, year, authors — is
+settled by a metadata API. The CLAIM half — the number, the sample size, what
+actually replicated — needs an abstract or a full text. A session that verifies
+only the first half and reports the citation "verified" has checked the part
+that was never in doubt.
+
+*Measured the day this was written. Sixteen citations arrived stating they had
+been checked against publisher records. The hosts were asked for and added, and
+verification found three summaries that did not match their sources — one of
+which reversed the finding's meaning, and would have gone into a public document
+whose entire subject is epistemic care. Two identifiers were missing and were
+supplied, and one date ambiguity was resolved from the publisher record. None of
+that was reachable without asking.*
+
+---
+
 ## 7d. Every app shows the reader WHAT CHANGED
 
 **A version string tells a reader that something changed. It never tells them
