@@ -287,3 +287,4 @@ and the filename carries it.
 - **§193** — [Each paragraph was written for a good reason and the sum of them was the defect](lessons/193-a-panel-that-explains-itself-before-it-does-anything.md)
 - **§194** — [A control inside `role="img"` cannot be reached, and an SVG has no `offsetTop`](lessons/194-role-img-prunes-its-subtree-and-an-svg-has-no-offsettop.md)
 - **§195** — [A legend is a promise about behaviour, not only a decoder for colours](lessons/195-a-legend-is-a-promise-about-behaviour.md)
+- **§196** — [When the standard source does not cover your water, ask what is measured instead](lessons/196-when-the-standard-source-does-not-cover-your-water.md)
