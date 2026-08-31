@@ -280,3 +280,4 @@ and the filename carries it.
 - **§186** — [A gate was widened and the canonical data it measures was never re-run](lessons/186-a-gate-widened-and-the-canonical-data-it-measures-was-n.md)
 - **§187** — [A cap applied across two populations hides the one the feature exists to surface](lessons/187-a-cap-across-two-populations-hides-the-one-the-feature.md)
 - **§188** — [A blocked host is a question, not a finding](lessons/188-a-blocked-host-is-a-question-not-a-finding.md)
+- **§189** — [A qualifier written beside the answer appears only when there is an answer](lessons/189-a-qualifier-written-beside-the-answer-appears-only-when.md)
