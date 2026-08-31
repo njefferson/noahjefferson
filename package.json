@@ -27,7 +27,9 @@
     "security:install": "python3 -m venv .zizmor && ./.zizmor/bin/pip install --quiet --only-binary=:all: --require-hashes -r .github/requirements-ci.txt",
     "security": "test -x .zizmor/bin/zizmor || { echo \"zizmor is not installed. Run: npm run security:install\"; exit 1; }; ./.zizmor/bin/zizmor --offline --strict-collection .github/workflows/",
     "docs": "node docs-check.mjs .",
-    "prepare": "node branch-guard.mjs --repo . --install >/dev/null 2>&1 || true"
+    "prepare": "node branch-guard.mjs --repo . --install >/dev/null 2>&1 || true",
+    "essays": "node essay.mjs",
+    "essays:check": "node essay.mjs --check"
   },
   "devDependencies": {
     "axe-core": "4.10.2",

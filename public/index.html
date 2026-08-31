@@ -167,7 +167,13 @@
   @media (max-width:420px){ .approw .go span{display:none} }
 
   .foot{text-align:center;color:var(--muted);font-size:0.75rem;margin-top:40px;letter-spacing:0.01em;line-height:1.5}
-  .foot-links{text-align:center;margin-top:0}
+  /* A FLEX ROW WITH A GAP, not a text line with separators (2026-08-31). A
+     second link landed here and the two touched at 0px on a phone and at 320px,
+     in both themes — the a11y gate refused it as a mis-tap, which is the same
+     failure a sibling app's three-link footer produced. `text-align:center` on
+     a wrapping line gives no control over the space between two 44px boxes once
+     they stack; a gap does, on both axes at once. */
+  .foot-links{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:0}
   /* Doctrine §4: touch targets >= 44px. inline-flex grows the hit area without
      moving the text — the link reads the same, it is just reachable. */
   .foot-links a{color:var(--slate);font-size:0.75rem;text-decoration:underline;text-underline-offset:2px;
@@ -273,7 +279,7 @@
     </noscript>
 
     <p class="foot" id="foot">No paywall, no sign-up — free, and yours to keep. Made by Noah Jefferson.</p>
-    <p class="foot-links"><a href="/accessibility">Accessibility</a></p>
+    <p class="foot-links"><a href="/planning-vocabularies">Writing: three planning vocabularies</a><a href="/accessibility">Accessibility</a></p>
   </main>
 
 <script>
