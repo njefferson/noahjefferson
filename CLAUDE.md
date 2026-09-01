@@ -276,7 +276,29 @@ checks before offering to build one of these again):**
  with every covered line printed on every run. And its `verify-algebra.mjs`
  substitutes the app's answer back INTO the relation rather than recomputing it
  the same way, so it cannot share a mistake with the solver.
-- **Every other sibling** — still owed. Ask that repo's NOTES before assuming.
+- **Cv-Thalweg** — all of them, and this list said "still owed" while every one
+ of them was built, which is the failure the list exists to be. The ⓘ is
+ `#aboutbtn` in the app's own chrome and carries what it is, what it will not
+ do, install with each platform named, what changed, the sources with their
+ terms, how to report a problem, the hub's accessibility statement and the
+ licence. The first-run page MOVES into it — one "Show the first-visit page
+ again" button, not a copy. Patch notes are the `RELEASES` array, which nothing
+ else restates, and fourteen releases carry what is still not right;
+ `tools/notes-check.mjs` runs on every commit through `.branch-guard`'s `also=`.
+ The §7f diagnostic prints `maxTouchPoints` beside the browser string, which is
+ the whole point of it on an iPad. §7h's worker waits and says so.
+ **What was actually owed was a gate that a comment had already promised.**
+ `tools/copy-count.mjs` refuses a spelled number in reader-facing copy where it
+ equals the size of one of the app's own arrays — and on the run that wrote it,
+ the app's own first-run page, its About panel, its Home announcement and its
+ water-clarity key were all counting by hand. Worth copying: the gate is narrow
+ by MEASUREMENT rather than by taste — its first version flagged ninety honest
+ lines, so it stopped matching the shape of the sentence and started matching
+ the coincidence between the number and a table. (LESSONS §204.)
+- **Every other sibling** — still owed. Ask that repo's NOTES before assuming,
+ and **check the repo rather than this line** — this list has now been wrong in
+ both directions, claiming a surface that did not exist and denying five that
+ did.
 
 The two omissions worth knowing before building one: a new surface must join the
 a11y gate's surface list **in the same commit**, or it ships unmeasured (hub

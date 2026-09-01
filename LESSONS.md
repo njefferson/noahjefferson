@@ -295,3 +295,4 @@ and the filename carries it.
 - **§201** — [A relay that counts a refusal as an answer turns a blocked container into an agency outage](lessons/201-a-relay-that-counts-a-refusal-as-an-answer.md)
 - **§202** — [An incoherent fixture survives until the app starts DERIVING from it, and then it certifies the failure branch](lessons/202-an-incoherent-fixture-survives-until-something-derives.md)
 - **§203** — [A computed quantity can be checked against the WORLD, and two paths through one model must be made to close](lessons/203-computed-not-fetched-can-be-checked-against-the-world.md)
+- **§204** — [A comment that names the gate it needs is a rule in a file, and the file already says that does not hold](lessons/204-a-gate-named-in-a-comment-is-not-a-gate.md)
