@@ -292,3 +292,5 @@ and the filename carries it.
 - **§198** — [A quotation can be perfectly accurate and still carry the wrong citation — and nothing inside the document can see it](lessons/198-a-quotation-can-be-accurate-and-carry-the-wrong-citation.md)
 - **§199** — [A second statement of a fact a gate already guards will go stale, and the gate will stay green](lessons/199-a-second-statement-of-a-guarded-fact-will-lose.md)
 - **§200** — [A claim about what exists needs a search before it is said, and the search takes minutes](lessons/200-a-claim-about-what-exists-needs-a-search-first.md)
+- **§201** — [A relay that counts a refusal as an answer turns a blocked container into an agency outage](lessons/201-a-relay-that-counts-a-refusal-as-an-answer.md)
+- **§202** — [An incoherent fixture survives until the app starts DERIVING from it, and then it certifies the failure branch](lessons/202-an-incoherent-fixture-survives-until-something-derives.md)
