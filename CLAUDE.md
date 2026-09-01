@@ -489,9 +489,33 @@ value was on disk all along, in the caller's own `uses:` line. (LESSONS §184.)
 It checks the hub out at **exactly the version of the workflow the caller
 pinned**, read off `github.workflow_ref` rather than taken as an input, so the
 gates and the wiring can never be two different versions and a caller cannot
-half-bump. Cv-Thalweg is the first caller. **Every other sibling owes the
-swap — it is deleting a job and writing three lines**, and the swap is the
-thing that stops this drifting again.
+half-bump.
+
+**THE SWAP IS DONE EVERYWHERE, AND THIS PARAGRAPH SAID IT WAS NOT.** It read
+"Cv-Thalweg is the first caller, every other sibling owes the swap"; counted on
+2026-09-01, all eight repos call this workflow and not one of them still copies
+the job. That is the same defect as the per-app baseline list above — a line
+that was true when written and was never revisited — in the file that exists to
+be read at the start of every session.
+
+**What they owe instead is moving the pin, and one gate that catches a pin
+left behind.** Seven of the eight pin `e2a5b7c` and Quietkeep pins `4cd365e`,
+which PREDATES the §184 fix, so that one repo is still running the version that
+resolved the hub checkout off a context property rather than the caller's own
+line. And a repo's pin is the same fact as its `.doctrine-sync` marker, written
+in a second file: measured across all eight, only solve-ent's two agreed —
+photo-pointer has no marker at all, two name commits this hub clone does not
+contain, and the rest sit between six and a hundred and eleven commits behind.
+A marker ahead of the pin is CI enforcing rules the repo has not read; a marker
+behind it is the repo claiming to have applied rules CI never ran.
+
+`tools/hub-pin-check.mjs` is the gate, and it is the one thing in this family
+that is CORRECTLY a per-repo copy rather than a hub gate taking `--repo .`:
+CI fetches the hub AT the pin, so a gate validating the pin would be fetched at
+the very commit it is checking, and a pin far enough behind would check out a
+hub that does not contain the file. solve-ent wrote it and was the only repo
+with it; Cv-Thalweg has it now. **Every other sibling owes a copy**, wired into
+its `.branch-guard` `also=` list and into CI. (LESSONS §117, §184.)
 
 - [`doctrine-sync.mjs`](doctrine-sync.mjs) — **run this FIRST in any sibling
  session**: `node ../noahjefferson/doctrine-sync.mjs --repo .`. It says what has
