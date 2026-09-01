@@ -43,8 +43,28 @@ cleverer retry. It is to name the refusal, by host, at the point of refusal and
 again in the summary, so a red run is a question somebody can act on in one step
 rather than an afternoon of disbelieving four agencies.
 
+**And the same repo had a SECOND tool going direct, hiding behind the first.**
+Fixing the relay took twenty-seven failures to nine, and the nine were the local
+static server — which is not only static: it runs the site's own edge worker at
+one path, exactly as production does, and the app routes a second agency through
+that same path. So one missing re-exec produced failures about missing surveys
+AND about a river with no flow, and neither named the file. A tool that fetches
+on someone else's behalf is a tool that fetches; the fact that its job is
+described as "serving files" is what keeps it off the list.
+
+**A LONG-RUNNING TOOL'S RE-EXEC HAS TO FORWARD SIGNALS, AND A BAKE'S DOES NOT.**
+A bake re-execs with `spawnSync` and exits. A server is stopped with `kill $!`,
+and `$!` is the PARENT — so the first fix left a child holding the port after
+the kill, and the next run could not bind it. The suite after that would have
+measured a server it did not start, from a tree it does not know, which is a
+worse failure than the one being fixed. Forward SIGINT, SIGTERM and SIGHUP, exit
+when the child exits, and verify by killing it and checking the port is free.
+
 **What it cost.** Nothing shipped wrong. What it cost was the trust in the
 suite: a session reading that output has to either disbelieve twenty-seven
 checks or believe an impossible coincidence, and the honest thing — treating a
 blocked host as a question rather than a finding — is only available to somebody
-who has already worked out that the hosts were blocked.
+who has already worked out that the hosts were blocked. **And none of it is
+visible in CI**, where the runner's egress is open and the live job has always
+passed. It is only visible from behind a proxy, which is where the work is
+done.
