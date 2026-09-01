@@ -294,3 +294,4 @@ and the filename carries it.
 - **§200** — [A claim about what exists needs a search before it is said, and the search takes minutes](lessons/200-a-claim-about-what-exists-needs-a-search-first.md)
 - **§201** — [A relay that counts a refusal as an answer turns a blocked container into an agency outage](lessons/201-a-relay-that-counts-a-refusal-as-an-answer.md)
 - **§202** — [An incoherent fixture survives until the app starts DERIVING from it, and then it certifies the failure branch](lessons/202-an-incoherent-fixture-survives-until-something-derives.md)
+- **§203** — [A computed quantity can be checked against the WORLD, and two paths through one model must be made to close](lessons/203-computed-not-fetched-can-be-checked-against-the-world.md)
