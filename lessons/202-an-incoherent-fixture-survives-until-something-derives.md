@@ -40,3 +40,26 @@ invariants where it is built — a high is higher than the lows either side of i
 refuses incoherent input, test the refusal with *deliberately* incoherent input
 and test the ordinary path with the ordinary fixture, in the same run: a
 refusal that fires on both is indistinguishable from a feature that works.
+
+**AND IT HAPPENED AGAIN IN THE NEXT RELEASE, one level up.** The fixture was
+fixed to be a coherent tide — turns at the real extremes, a high genuinely
+higher than the lows either side of it. Then the app asked a question about the
+ENVELOPE: is today a big tide or a small one, against the fortnightly cycle.
+The fixture's amplitude was constant. Perfectly coherent, and with no cycle in
+it at all.
+
+That answer is not a crash and not a refusal. It is "every day is the same
+size", which the app's own guard correctly turns into "there is no cycle here
+to place today in" — so the new feature would have been measured entirely
+against a tide that exists nowhere on Earth, and reported green.
+
+**The pattern is not "fixtures go stale". It is that every new derivation reads
+a property of the data that no previous question touched, and that property has
+never been checked because nothing had reason to look at it.** First the
+relationship between adjacent turns. Then the relationship between one day's
+turns and the next fortnight's. A fixture built for "render this list" has
+neither, and gains them only when somebody notices.
+
+The habit that catches it: when adding a derivation, ask what property of the
+input it reads, and go and look at whether the fixture has that property —
+before writing the assertion, because the assertion will be written to pass.
