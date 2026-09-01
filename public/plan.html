@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Walk a plan — Noah Jefferson</title>
+<meta name="description" content="One page for thinking a plan through — mission, intent, facts, assumptions, tasks, information requirements, decision points, premortem — that hands you a file for Quietkeep carrying only what should come back to you, and the document that holds the rest.">
+<meta name="theme-color" content="#0B1020" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F4F6FB" media="(prefers-color-scheme: light)">
+<link rel="canonical" href="https://noahjefferson.pages.dev/plan">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>
+  :root{
+    --bg:#0B1020; --bg2:#0E1428; --surface:#151B30; --line:#646FA0;
+    --text:#EAECF5; --muted:#B7BFD6; --link:#8A97FF;
+  }
+  @media (prefers-color-scheme:light){
+    :root{
+      --bg:#F4F6FB; --bg2:#FBFCFE; --surface:#FFFFFF; --line:#7482A0;
+      --text:#171C2B; --muted:#4C5570; --link:#4A54C8;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font:1rem/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    padding:0 max(1rem,env(safe-area-inset-left)) 4rem max(1rem,env(safe-area-inset-right));
+  }
+  main{max-width:44rem;margin:0 auto;padding-top:1.25rem}
+  h1{font-size:1.7rem;line-height:1.25;margin:0.75rem 0 0.25rem}
+  h2{font-size:1.15rem;line-height:1.3;margin:0 0 0.35rem}
+  p{margin:0.5rem 0}
+  a{color:var(--link);text-underline-offset:2px}
+  a:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+  .back{display:inline-flex;align-items:center;min-height:44px;padding:0 0.25rem;font-size:0.9rem;text-decoration:underline}
+  .lead{color:var(--muted)}
+  .step{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:0.9rem 1rem;margin:1rem 0}
+  .step .k{display:inline-block;color:var(--muted);font-size:0.8rem;letter-spacing:0.04em;margin-right:0.4rem}
+  .hint{color:var(--muted);font-size:0.9rem;margin:0.25rem 0 0.5rem}
+  .doconly{color:var(--muted);font-size:0.8rem;border:1px solid var(--line);border-radius:6px;
+    padding:0.1rem 0.5rem;display:inline-block;margin-left:0.4rem;vertical-align:middle}
+  label{display:block;font-weight:600;margin:0.6rem 0 0.25rem}
+  textarea,input[type="text"]{
+    width:100%;color:var(--text);background:var(--bg2);
+    border:1px solid var(--line);border-radius:8px;padding:0.6rem 0.7rem;
+    font:inherit;min-height:44px;
+  }
+  textarea{min-height:5.2rem;resize:vertical}
+  textarea:focus-visible,input[type="text"]:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-height:44px;padding:0 1rem;margin:0.25rem 0.5rem 0.25rem 0;
+    color:var(--text);background:var(--bg2);border:1px solid var(--line);
+    border-radius:8px;font:inherit;font-weight:600;cursor:pointer;
+  }
+  .btn:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+  .out{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:0.9rem 1rem;margin:1rem 0}
+  .out-list{list-style:none;margin:0.5rem 0;padding:0}
+  .out-line{display:flex;align-items:flex-start;gap:0.6rem;border-top:1px solid var(--line);padding:0.35rem 0}
+  .out-line:first-child{border-top:0}
+  .out-line label{display:flex;align-items:flex-start;gap:0.6rem;font-weight:400;margin:0;min-height:44px;width:100%;cursor:pointer}
+  .out-line input[type="checkbox"]{width:24px;height:24px;margin-top:0.55rem;accent-color:var(--link);flex:none}
+  .out-line input[type="checkbox"]:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+  .out-line .t{padding-top:0.6rem;padding-bottom:0.4rem}
+  .out-line .n{display:block;color:var(--muted);font-size:0.9rem}
+  .out-line.off .t{color:var(--muted);text-decoration:line-through}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.92em}
+  .status{color:var(--muted);font-size:0.9rem;min-height:1.4em;margin:0.4rem 0 0}
+  .foot-note{color:var(--muted);font-size:0.85rem;border-top:1px solid var(--line);margin-top:2.2rem;padding-top:0.9rem}
+  .foot-note p{margin:0.4rem 0}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="/">&larr; noahjefferson.pages.dev</a>
+  <h1>Walk a plan</h1>
+  <p class="lead">One page for thinking a plan through before anything goes into a
+  tool. Work down it in order; every box takes plain lines. At the bottom it
+  hands you two things: <strong>a file for Quietkeep</strong> carrying only what
+  should come back to you, and <strong>the document</strong> that holds the rest
+  of the thinking. A draft stays in this browser and nothing is sent anywhere.</p>
+
+  <section class="step">
+    <h2><span class="k">1</span>The mission, in one sentence</h2>
+    <p class="hint">Who, what, when, where, why. This line names the project
+    everything else sits under.</p>
+    <label for="f-mission">The one sentence</label>
+    <input id="f-mission" type="text" autocomplete="off"
+      placeholder="Hand the directorate over complete by 1 Dec, so the incoming lead can act from day one">
+  </section>
+
+  <section class="step">
+    <h2><span class="k">2</span>Intent — so people can act without asking you</h2>
+    <p class="hint">Purpose, the few tasks that matter most, and what done looks
+    like. This travels into Quietkeep as the project&rsquo;s note, and it is the
+    piece most plans skip.</p>
+    <label for="f-intent">Purpose &middot; key tasks &middot; end state</label>
+    <textarea id="f-intent" spellcheck="true"></textarea>
+  </section>
+
+  <section class="step">
+    <h2><span class="k">3</span>Facts <span class="doconly">stays in the document</span></h2>
+    <p class="hint">What is true and checkable, one per line. A fact does not
+    come back to you, so it does not cross — it anchors the document.</p>
+    <label for="f-facts">One per line</label>
+    <textarea id="f-facts"></textarea>
+  </section>
+
+  <section class="step">
+    <h2><span class="k">4</span>Assumptions — each becomes a thing to confirm</h2>
+    <p class="hint">One per line. Add <span class="mono">-&gt;</span> and what
+    would turn it into a fact. Each line crosses as a
+    <em>Confirm:</em> task, because an assumption nobody re-checks stopped being
+    an assumption — untick any you would not spend a task on.</p>
+    <label for="f-assum">assumption -&gt; confirmed when</label>
+    <textarea id="f-assum" placeholder="The orders date holds -> orders are published"></textarea>
+  </section>
+
+  <section class="step">
+    <h2><span class="k">5</span>Constraints and restraints <span class="doconly">stays in the document</span></h2>
+    <p class="hint">Must-dos and must-nots, one per line. Statements, not
+    returns — they stay with the document.</p>
+    <label for="f-constraints">One per line</label>
+    <textarea id="f-constraints"></textarea>
+  </section>
+
+  <section class="step">
+    <h2><span class="k">6</span>Tasks — specified, implied, essential</h2>
+    <p class="hint">One per line in each box. Dates ride along as
+    <span class="mono">@due(2026-12-01)</span>. Name who holds a piece in the
+    line itself — names survive as words, and you link the person on the
+    item&rsquo;s own sheet afterwards, because an import never creates a person
+    link. Essential tasks arrive <em>hot</em> — interest, never a rank.</p>
+    <label for="f-spec">Specified — you were told</label>
+    <textarea id="f-spec"></textarea>
+    <label for="f-impl">Implied — necessary, and nobody said it</label>
+    <textarea id="f-impl" placeholder="The work between the parts. Asking people for their pieces never surfaces these."></textarea>
+    <label for="f-ess">Essential — without these it fails</label>
+    <textarea id="f-ess"></textarea>
+  </section>
+
+  <section class="step">
+    <h2><span class="k">7</span>What must reach you at once</h2>
+    <p class="hint">Write each as <span class="mono">If &hellip; -&gt; then &hellip;</span>
+    — the trigger, then what you will do or decide. Phrasing a trigger with its
+    action attached is the single best-evidenced move in the planning
+    literature, and it crosses as a task that carries both halves.</p>
+    <label for="f-ir">If this is learned -&gt; then this happens</label>
+    <textarea id="f-ir" placeholder="If the start slips -> re-order the brief sequence that day"></textarea>
+  </section>
+
+  <section class="step">
+    <h2><span class="k">8</span>Decision points</h2>
+    <p class="hint">One per line:
+    <span class="mono">decision @by(2026-11-15) @when(what makes it live)</span>.
+    The <span class="mono">@by</span> date is the last moment the decision keeps
+    all its options, and it crosses as the due date. No date — it still crosses,
+    just undated.</p>
+    <label for="f-dp">decision @by(date) @when(trigger)</label>
+    <textarea id="f-dp"></textarea>
+  </section>
+
+  <section class="step">
+    <h2><span class="k">9</span>Premortem — it failed; why?</h2>
+    <p class="hint">It is months from now and this plan quietly failed. One
+    cause per line, and after <span class="mono">-&gt;</span> what would have
+    headed it off. Lines <em>with</em> a heading-off cross as tasks; causes you
+    cannot act on stay in the document as named risks.</p>
+    <label for="f-pre">cause -&gt; what heads it off</label>
+    <textarea id="f-pre"></textarea>
+  </section>
+
+  <section class="out">
+    <h2>For Quietkeep — choose what crosses</h2>
+    <p class="hint">Everything starts on. Untick a line and it stays out of the
+    file and out of the clipboard — it is never created, so there is nothing to
+    delete later. Editing a line switches it back on.</p>
+    <ul id="out-list" class="out-list">
+      <li class="out-line" id="out-example"><label><input type="checkbox" checked>
+        <span class="t">Example — <span class="mono">Confirm: the venue is booked</span>
+        <span class="n">Confirmed when: the booking note arrives. Fill the walk above and this row is replaced by yours.</span></span></label></li>
+    </ul>
+    <p id="out-count" class="status" role="status" aria-live="polite"></p>
+    <button id="save-file" type="button" class="btn">Save the Quietkeep file</button>
+    <button id="copy-tp" type="button" class="btn">Copy it instead</button>
+    <p class="hint">Then, in Quietkeep: the &#9432; panel &rarr;
+    <em>Getting things in from somewhere else</em> &rarr; choose the file &rarr;
+    <em>Bring it in</em>. Bringing in <strong>adds</strong> — it removes nothing
+    that is already there, and the same file twice adds nothing twice.</p>
+    <p id="tp-status" class="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="out">
+    <h2>The document — everything, including what does not cross</h2>
+    <p class="hint">Facts, constraints, unactioned risks, and the plan itself.
+    Keep it wherever you keep documents; it is the half you re-read when an
+    assumption needs revisiting.</p>
+    <button id="copy-doc" type="button" class="btn">Copy the document</button>
+    <p id="doc-status" class="status" role="status" aria-live="polite"></p>
+    <h2>What does not cross, and why</h2>
+    <p class="hint">Facts, constraints and restraints, and causes with no
+    heading-off action: statements, not returns — Quietkeep only holds what has
+    to come back. People: names survive inside the task words, but no import
+    creates a person link — open each item&rsquo;s sheet and link them there.
+    Standing conditions you mean to watch: give the thing itself
+    <em>It runs itself</em> in Quietkeep and write the condition under
+    <em>What would change it?</em> — a file cannot set that field.</p>
+  </section>
+
+  <p><button id="start-over" type="button" class="btn">Start over</button></p>
+
+  <div class="foot-note">
+    <p><strong>Where this walk comes from.</strong> The order is mission
+    analysis as military planning doctrine teaches it — facts before
+    assumptions, implied tasks as their own category, intent written for people
+    out of contact. The doctrine is an institutional practice, not a controlled
+    finding. Two steps carry direct research: if&ndash;then phrasing is
+    implementation intentions (Gollwitzer &amp; Sheeran, 2006, <em>Advances in
+    Experimental Social Psychology</em>, 69&ndash;119 — a large meta-analysis),
+    and the premortem builds on prospective hindsight (Mitchell, Russo &amp;
+    Pennington, 1989, <em>Journal of Behavioral Decision Making</em> 2,
+    25&ndash;38). Citations checked against the publisher on 2026-09-01; effect
+    sizes deliberately not quoted here.</p>
+    <p><strong>Stored:</strong> a draft of these boxes lives in this browser
+    only, so a refresh does not eat your plan. <em>Start over</em> clears it.
+    Nothing is sent anywhere by this page.</p>
+    <p><a href="/planning-vocabularies">Three planning vocabularies</a> is the
+    companion piece — which system owns which idea, and why the split between
+    the file and the document falls where it does.</p>
+  </div>
+</main>
+<script>
+(function(){
+  'use strict';
+  var $ = function(id){ return document.getElementById(id); };
+  var FIELDS = ['f-mission','f-intent','f-facts','f-assum','f-constraints',
+                'f-spec','f-impl','f-ess','f-ir','f-dp','f-pre'];
+  var KEY = 'walk-a-plan-draft-v1';
+  var off = {};                    // entry key -> true when unticked
+
+  function lines(id){
+    return $(id).value.split('\n').map(function(s){return s.trim().replace(/^-\s+/,'');})
+      .filter(function(s){return s.length>0;});
+  }
+  function splitArrow(s){
+    var i = s.indexOf('->');
+    if(i<0) return [s.trim(), ''];
+    return [s.slice(0,i).trim(), s.slice(i+2).trim()];
+  }
+  function parseDp(s){
+    var by='', when='', rest=s;
+    rest = rest.replace(/@by\(([^)]*)\)/, function(_,d){ by=d.trim(); return ''; });
+    rest = rest.replace(/@when\(([^)]*)\)/, function(_,w){ when=w.trim(); return ''; });
+    return { text: rest.replace(/\s+/g,' ').trim(), by: by, when: when };
+  }
+
+  // Build the entry list: {key, task, note, doc:false} — task is the TaskPaper
+  // line body (no leading "- "), note rides beneath it.
+  function entries(){
+    var out = [];
+    var mission = $('f-mission').value.trim();
+    if(mission){
+      var note = $('f-intent').value.trim();
+      out.push({key:'project', project:true, task:mission.replace(/:+$/,''), note:note});
+    }
+    lines('f-assum').forEach(function(l,i){
+      var p = splitArrow(l);
+      out.push({key:'a'+i+'|'+l, task:'Confirm: '+p[0], note:p[1]?('Confirmed when: '+p[1]):''});
+    });
+    lines('f-spec').forEach(function(l,i){ out.push({key:'s'+i+'|'+l, task:l, note:''}); });
+    lines('f-impl').forEach(function(l,i){ out.push({key:'i'+i+'|'+l, task:l, note:''}); });
+    lines('f-ess').forEach(function(l,i){
+      out.push({key:'e'+i+'|'+l, task:(/@flagged\b/.test(l)?l:l+' @flagged'), note:''});
+    });
+    lines('f-ir').forEach(function(l,i){
+      var p = splitArrow(l);
+      var t = p[1] ? (p[0].replace(/^if\s*/i,'If ')+' — then '+p[1]) : l;
+      out.push({key:'r'+i+'|'+l, task:t, note:''});
+    });
+    lines('f-dp').forEach(function(l,i){
+      var d = parseDp(l);
+      var t = 'Decide: '+d.text + (d.by?(' @due('+d.by+')'):'');
+      out.push({key:'d'+i+'|'+l, task:t, note:(d.when?('When: '+d.when):'')});
+    });
+    lines('f-pre').forEach(function(l,i){
+      var p = splitArrow(l);
+      if(p[1]) out.push({key:'p'+i+'|'+l, task:p[1], note:'Heads off: '+p[0]});
+    });
+    return out;
+  }
+
+  function esc(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function render(){
+    var es = entries();
+    var list = $('out-list');
+    if(es.length===0){
+      $('out-example').hidden = false;
+      Array.prototype.slice.call(list.children).forEach(function(li){
+        if(li.id!=='out-example') li.remove();
+      });
+      $('out-count').textContent = '';
+      save();
+      return;
+    }
+    $('out-example').hidden = true;
+    var html = '';
+    es.forEach(function(e){
+      var isOff = !!off[e.key];
+      html += '<li class="out-line'+(isOff?' off':'')+'"><label><input type="checkbox" data-k="'+
+        esc(e.key)+'"'+(isOff?'':' checked')+'> <span class="t">'+
+        (e.project?'<strong>Project:</strong> ':'')+esc(e.task)+
+        (e.note?('<span class="n">'+esc(e.note)+'</span>'):'')+
+        '</span></label></li>';
+    });
+    Array.prototype.slice.call(list.children).forEach(function(li){
+      if(li.id!=='out-example') li.remove();
+    });
+    $('out-example').insertAdjacentHTML('afterend', html);
+    var on = es.filter(function(e){return !off[e.key];}).length;
+    $('out-count').textContent = on+' of '+es.length+' selected'+(on<es.length?' — unticked lines are never created.':'.');
+    save();
+  }
+
+  function taskpaper(){
+    var es = entries().filter(function(e){return !off[e.key];});
+    if(es.length===0) return '';
+    var t = '';
+    var proj = es.filter(function(e){return e.project;})[0];
+    var depth = '';
+    if(proj){
+      t += proj.task+':\n';
+      if(proj.note) proj.note.split('\n').forEach(function(n){ if(n.trim()) t += '\t'+n.trim()+'\n'; });
+      depth = '\t';
+    }
+    es.forEach(function(e){
+      if(e.project) return;
+      t += depth+'- '+e.task+'\n';
+      if(e.note) t += depth+'\t'+e.note+'\n';
+    });
+    return t;
+  }
+
+  function documentText(){
+    var d = [];
+    var m = $('f-mission').value.trim();
+    d.push('# '+(m||'A plan'), '');
+    var block = function(title, id, per){
+      var ls = lines(id);
+      if(id==='f-intent'){ var v=$('f-intent').value.trim(); if(!v) return; d.push('## '+title, v, ''); return; }
+      if(ls.length===0) return;
+      d.push('## '+title);
+      ls.forEach(function(l){ d.push('- '+(per?per(l):l)); });
+      d.push('');
+    };
+    block('Intent','f-intent');
+    block('Facts','f-facts');
+    block('Assumptions — and what would confirm each','f-assum');
+    block('Constraints and restraints','f-constraints');
+    block('Specified tasks','f-spec');
+    block('Implied tasks','f-impl');
+    block('Essential tasks','f-ess');
+    block('If this is learned, then','f-ir');
+    block('Decision points','f-dp');
+    var risks = lines('f-pre').filter(function(l){return splitArrow(l)[1]==='';});
+    if(risks.length){ d.push('## Named risks with no action yet'); risks.forEach(function(r){d.push('- '+r);}); d.push(''); }
+    var acted = lines('f-pre').filter(function(l){return splitArrow(l)[1]!=='';});
+    if(acted.length){ d.push('## Premortem — headed off'); acted.forEach(function(r){d.push('- '+r);}); d.push(''); }
+    return d.join('\n');
+  }
+
+  function save(){
+    try{
+      var s = {};
+      FIELDS.forEach(function(f){ s[f]=$(f).value; });
+      s._off = off;
+      localStorage.setItem(KEY, JSON.stringify(s));
+    }catch(e){/* a draft is a convenience, never a requirement */}
+  }
+  function restore(){
+    try{
+      var s = JSON.parse(localStorage.getItem(KEY)||'null');
+      if(!s) return;
+      FIELDS.forEach(function(f){ if(typeof s[f]==='string') $(f).value=s[f]; });
+      if(s._off && typeof s._off==='object') off = s._off;
+    }catch(e){/* same */}
+  }
+
+  function toClipboard(text, statusId, saidWhat){
+    var el = $(statusId);
+    if(!text){ el.textContent = 'Nothing to copy yet — the walk above is empty.'; return; }
+    var fail = function(){ el.textContent = 'Copying was refused here — use Save the Quietkeep file instead.'; };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ el.textContent = saidWhat; }, fail);
+    } else { fail(); }
+  }
+
+  $('out-list').addEventListener('change', function(ev){
+    var k = ev.target && ev.target.getAttribute('data-k');
+    if(k===null || k===undefined) return;
+    if(ev.target.checked) delete off[k]; else off[k]=true;
+    render();
+  });
+  FIELDS.forEach(function(f){ $(f).addEventListener('input', render); });
+
+  $('save-file').addEventListener('click', function(){
+    var t = taskpaper();
+    var el = $('tp-status');
+    if(!t){ el.textContent = 'Nothing selected yet — the walk above is empty.'; return; }
+    var blob = new Blob([t], {type:'text/plain'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'plan.taskpaper';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+    el.textContent = 'Saved as plan.taskpaper — in Quietkeep, bring that file in.';
+  });
+  $('copy-tp').addEventListener('click', function(){
+    toClipboard(taskpaper(), 'tp-status',
+      'Copied. Quietkeep takes a FILE, so paste this into a new plain-text file first — or just use Save the Quietkeep file.');
+  });
+  $('copy-doc').addEventListener('click', function(){
+    toClipboard(documentText(), 'doc-status', 'Copied — the whole document, including what does not cross.');
+  });
+
+  var overArmed = false;
+  $('start-over').addEventListener('click', function(){
+    if(!overArmed){
+      overArmed = true;
+      $('start-over').textContent = 'Press again to clear everything';
+      setTimeout(function(){ overArmed=false; $('start-over').textContent='Start over'; }, 6000);
+      return;
+    }
+    FIELDS.forEach(function(f){ $(f).value=''; });
+    off = {};
+    try{ localStorage.removeItem(KEY); }catch(e){}
+    overArmed = false;
+    $('start-over').textContent = 'Start over';
+    render();
+  });
+
+  restore();
+  render();
+})();
+</script>
+</body>
+</html>

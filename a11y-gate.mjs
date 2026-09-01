@@ -77,6 +77,18 @@ const PAGES = [
     // the way back, and it identifies itself by its words, which are measured
     // above — `code` carries a border but is text, not a control.
     nonText:  [] },
+  { file: 'public/plan.html',
+    // The plan walk (2026-09-01). Interactive — the only scripted page beside
+    // index. Every selector here matches at LOAD: the output panel ships one
+    // real example row so `.out-line` and its children exist before anything is
+    // typed, because a selector that appears only after input is a selector
+    // this gate can never see (the loud-failure rule, from the other side).
+    registry: ['h1','h2','p','.hint','.lead','label','.btn','.doconly','.mono',
+               '.out-line .t','.out-line .n','a'],
+    // Boundaries that identify controls: buttons and the two text-entry kinds.
+    // The checkbox is UA-drawn (accent-color only) and is not registered — the
+    // same reasoning the sibling app records for platform-painted widgets.
+    nonText:  ['.btn','textarea','input[type="text"]'] },
 ];
 
 const THEMES = ['light', 'dark'];
