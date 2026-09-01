@@ -289,3 +289,6 @@ and the filename carries it.
 - **§195** — [A legend is a promise about behaviour, not only a decoder for colours](lessons/195-a-legend-is-a-promise-about-behaviour.md)
 - **§196** — [When the standard source does not cover your water, ask what is measured instead](lessons/196-when-the-standard-source-does-not-cover-your-water.md)
 - **§197** — [A missing input does not leave a blank — it becomes a confident false sentence](lessons/197-a-missing-input-became-a-confident-false-sentence.md)
+- **§198** — [A quotation can be perfectly accurate and still carry the wrong citation — and nothing inside the document can see it](lessons/198-a-quotation-can-be-accurate-and-carry-the-wrong-citation.md)
+- **§199** — [A second statement of a fact a gate already guards will go stale, and the gate will stay green](lessons/199-a-second-statement-of-a-guarded-fact-will-lose.md)
+- **§200** — [A claim about what exists needs a search before it is said, and the search takes minutes](lessons/200-a-claim-about-what-exists-needs-a-search-first.md)
