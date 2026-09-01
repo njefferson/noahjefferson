@@ -297,3 +297,4 @@ and the filename carries it.
 - **§203** — [A computed quantity can be checked against the WORLD, and two paths through one model must be made to close](lessons/203-computed-not-fetched-can-be-checked-against-the-world.md)
 - **§204** — [A comment that names the gate it needs is a rule in a file, and the file already says that does not hold](lessons/204-a-gate-named-in-a-comment-is-not-a-gate.md)
 - **§205** — [A tracked-files gate run before `git add` scans none of the work it is vouching for](lessons/205-a-tracked-files-gate-run-before-git-add-scans-nothing.md)
+- **§206** — [A cold reader with only the release claims finds what green gates and the device both miss](lessons/206-a-cold-reader-finds-what-green-gates-and-the-device-both-miss.md)
