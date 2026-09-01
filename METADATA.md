@@ -375,6 +375,13 @@ General → Social preview.
 confirmed by the owner, because nothing else can confirm it.
 
 **Default branch** — **SET**, confirmed 2026-08-29 by reading `default_branch`
-off the repository: `main`. It is the only branch and the Cloudflare Pages
-production branch, so there was nothing to change; it is recorded because
-"nothing to change" and "checked" are different claims.
+off the repository: `main`. It is the Cloudflare Pages production branch, so
+there was nothing to change; it is recorded because "nothing to change" and
+"checked" are different claims.
+
+**That row said "it is the only branch" when it was written, and that stopped
+being true the same day.** The repo took a `staging` branch on 2026-08-29 —
+`.branch-guard` there reads `work=staging`, `promote=main` — so the sentence
+was describing the shape the repo had left. The default branch is unchanged
+and still correct; only the reason given for it was stale. Corrected
+2026-09-01.
