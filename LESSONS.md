@@ -301,3 +301,4 @@ and the filename carries it.
 - **§207** — [A link that renders is not a link that arrives, and a widget that is declared is not a widget that loaded](lessons/207-a-link-that-renders-is-not-a-link-that-arrives.md)
 - **§208** — [A finding made behind a wall becomes shipped copy, and nothing ever re-asks it](lessons/208-a-finding-made-behind-a-wall-becomes-shipped-copy.md)
 - **§209** — [A panel that explains a picture squeezed the picture to nothing, and the symptom was a test that looked broken](lessons/209-commentary-crushed-the-thing-it-commented-on.md)
+- **§210** — [A gate that refused to run is an open question, and it reads as harmless precisely when you caused the refusal](lessons/210-a-gate-that-refused-to-run-is-an-open-question.md)
