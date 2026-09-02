@@ -1,6 +1,6 @@
 ## 215 · A hidden element answers a query exactly as well as a shown one, so a suite full of `querySelector` can pass against a blank screen
 
-**Enforced by:** GATE `Cv-Thalweg:tools/render-test.mjs` — it walks whatever the
+**Enforced by:** GATE Cv-Thalweg:tools/render-test.mjs — it walks whatever the
 app's own tab list offers, presses each one, and asserts the panel is SHOWN, has
 content, reports itself selected, and is the only one showing. · CHECKLIST
 route-before-content — when a surface gains a way in (a tab, a route, a
