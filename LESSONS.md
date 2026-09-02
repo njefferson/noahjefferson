@@ -302,3 +302,4 @@ and the filename carries it.
 - **§208** — [A finding made behind a wall becomes shipped copy, and nothing ever re-asks it](lessons/208-a-finding-made-behind-a-wall-becomes-shipped-copy.md)
 - **§209** — [A panel that explains a picture squeezed the picture to nothing, and the symptom was a test that looked broken](lessons/209-commentary-crushed-the-thing-it-commented-on.md)
 - **§210** — [A gate that refused to run is an open question, and it reads as harmless precisely when you caused the refusal](lessons/210-a-gate-that-refused-to-run-is-an-open-question.md)
+- **§211** — [A once-a-night fetch turns an intermittent host into a dead one, and the record it leaves is a confident lie](lessons/211-one-shot-nightly-fetch-turns-a-flaky-host-into-a-dead-one.md)
