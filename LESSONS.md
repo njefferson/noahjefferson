@@ -309,3 +309,4 @@ and the filename carries it.
 - **§215** — [A hidden element answers a query exactly as well as a shown one, so a suite full of `querySelector` can pass against a blank screen](lessons/215-a-hidden-element-answers-a-query-as-well-as-a-shown-one.md)
 - **§216** — [A failure that still returns a row counts as an answer, and the answer it suppresses is the one that would have worked](lessons/216-an-empty-shell-counts-as-an-answer-and-suppresses-the-fallback.md)
 - **§217** — [A sentence of welcome is a claim about state, and nothing checks the welcome](lessons/217-a-sentence-of-welcome-is-a-claim-about-state.md)
+- **§218** — [A contrast gate measures the palette, and the defect was a pair nobody designed](lessons/218-a-contrast-gate-measures-the-palette-not-the-page.md)
