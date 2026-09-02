@@ -314,3 +314,4 @@ and the filename carries it.
 - **§220** — [A role granted inside the app is not a key to the door in front of it](lessons/220-a-role-in-the-app-is-not-a-key-to-the-door.md)
 - **§221** — [A list renumbered from 1 each time loses everything that was not answered in the same breath](lessons/221-a-list-renumbered-from-one-loses-what-was-not-answered.md)
 - **§222** — [The fix was already in a sibling repo, with a comment saying not to do what this one had just done](lessons/222-the-fix-was-in-a-sibling-repo-with-its-own-comment.md)
+- **§223** — [The host was unblocked, the library still would not load, and the check that saved it was in the document itself](lessons/223-the-document-was-reachable-the-library-was-not.md)
