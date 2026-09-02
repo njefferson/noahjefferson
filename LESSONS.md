@@ -307,3 +307,4 @@ and the filename carries it.
 - **§213** — [Counting results per page is not measuring depth — it can be the same page, five times](lessons/213-counting-results-per-page-is-not-measuring-depth.md)
 - **§214** — [The most important step ran last, so it was the first thing sacrificed — and nothing read the file could see it](lessons/214-the-most-important-step-ran-last-and-was-the-first-casualty.md)
 - **§215** — [A hidden element answers a query exactly as well as a shown one, so a suite full of `querySelector` can pass against a blank screen](lessons/215-a-hidden-element-answers-a-query-as-well-as-a-shown-one.md)
+- **§216** — [A failure that still returns a row counts as an answer, and the answer it suppresses is the one that would have worked](lessons/216-an-empty-shell-counts-as-an-answer-and-suppresses-the-fallback.md)
