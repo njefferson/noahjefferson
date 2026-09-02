@@ -317,3 +317,4 @@ and the filename carries it.
 - **§223** — [The host was unblocked, the library still would not load, and the check that saved it was in the document itself](lessons/223-the-document-was-reachable-the-library-was-not.md)
 - **§224** — [A tree walked one generation deep looks complete, because the level you stopped at is a valid node — and the first gate written for it was aimed at the symptom's shape](lessons/224-a-tree-walked-one-generation-looks-complete.md)
 - **§225** — [The platform limit decided the design, and the code shipped without anyone asking what it was](lessons/225-the-platform-limit-decided-the-design-and-nobody-asked-it.md)
+- **§226** — [A shallow clone answers "does this commit exist" with a fact about the fetch depth, and says nothing about doing so](lessons/226-a-shallow-clone-answers-does-this-exist-with-fetch-depth.md)
