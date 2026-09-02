@@ -498,24 +498,46 @@ the job. That is the same defect as the per-app baseline list above — a line
 that was true when written and was never revisited — in the file that exists to
 be read at the start of every session.
 
-**What they owe instead is moving the pin, and one gate that catches a pin
-left behind.** Seven of the eight pin `e2a5b7c` and Quietkeep pins `4cd365e`,
-which PREDATES the §184 fix, so that one repo is still running the version that
-resolved the hub checkout off a context property rather than the caller's own
-line. And a repo's pin is the same fact as its `.doctrine-sync` marker, written
-in a second file: measured across all eight, only solve-ent's two agreed —
-photo-pointer has no marker at all, two name commits this hub clone does not
-contain, and the rest sit between six and a hundred and eleven commits behind.
+**DONE, 2026-09-02: all eight pin `3f2a373`, all eight markers read the same,
+and all eight carry the gate that keeps them together.** This paragraph used to
+list the drift; what it should carry now is what the sweep found, because two of
+its own numbers were wrong.
+
+**Quietkeep did not pin `4cd365e`.** It pinned `8a92344`, which is well past the
+§184 fix. The local clone was seventy-four commits behind and the survey read
+the stale copy — the claim "that one repo is still running the version that
+resolved the hub checkout off a context property" was never true of the remote.
+
+**And "two markers name commits this hub clone does not contain" was a fact
+about the CLONE.** `.git/shallow` was present: 141 commits of a 443-commit
+history, and both "missing" commits were in the 302 that had been cut off. The
+markers were fine. Had the sweep acted on that reading it would have re-adopted
+two repositories' markers without ever reading their real drift. `git fetch
+--unshallow` first; a shallow clone answers "does this commit exist" with a fact
+about the fetch depth and no warning that it is doing so.
+
 A marker ahead of the pin is CI enforcing rules the repo has not read; a marker
-behind it is the repo claiming to have applied rules CI never ran.
+behind it is the repo claiming to have applied rules CI never ran. Both are now
+refused at commit time in every repo.
 
 `tools/hub-pin-check.mjs` is the gate, and it is the one thing in this family
 that is CORRECTLY a per-repo copy rather than a hub gate taking `--repo .`:
 CI fetches the hub AT the pin, so a gate validating the pin would be fetched at
 the very commit it is checking, and a pin far enough behind would check out a
-hub that does not contain the file. solve-ent wrote it and was the only repo
-with it; Cv-Thalweg has it now. **Every other sibling owes a copy**, wired into
-its `.branch-guard` `also=` list and into CI. (LESSONS §117, §184.)
+hub that does not contain the file. **All eight carry it now**, wired into each
+`.branch-guard` `also=` list and into each CI run, and the copies are
+BYTE-IDENTICAL — the heading is read off the directory rather than typed — so a
+diff between any two is a finding rather than a style difference.
+
+**It finds the workflow by its CALL, not by a filename**, and that was not
+optional: across the family the calling workflow is `gates.yml`, `deploy.yml`,
+`security.yml`, `ci.yml` and `spine.yml`. The original named `gates.yml`, so a
+straight copy would have reported "nothing runs the hub's gates" in four
+repositories that run them perfectly well — a gate whose failure message is
+wrong is worse than one that does not run, because somebody acts on it. Reading
+every workflow also catches what a constant could not: two workflows calling the
+hub at DIFFERENT commits. Five failure modes are planted and watched fail.
+(LESSONS §117, §184.)
 
 - [`doctrine-sync.mjs`](doctrine-sync.mjs) — **run this FIRST in any sibling
  session**: `node ../noahjefferson/doctrine-sync.mjs --repo .`. It says what has
