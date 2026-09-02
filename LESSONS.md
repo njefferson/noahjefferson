@@ -303,3 +303,4 @@ and the filename carries it.
 - **§209** — [A panel that explains a picture squeezed the picture to nothing, and the symptom was a test that looked broken](lessons/209-commentary-crushed-the-thing-it-commented-on.md)
 - **§210** — [A gate that refused to run is an open question, and it reads as harmless precisely when you caused the refusal](lessons/210-a-gate-that-refused-to-run-is-an-open-question.md)
 - **§211** — [A once-a-night fetch turns an intermittent host into a dead one, and the record it leaves is a confident lie](lessons/211-one-shot-nightly-fetch-turns-a-flaky-host-into-a-dead-one.md)
+- **§212** — [A gate that reads the file cannot see the defect that lives where the file meets the host](lessons/212-a-gate-that-reads-the-file-cannot-see-the-host.md)
