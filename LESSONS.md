@@ -304,3 +304,4 @@ and the filename carries it.
 - **§210** — [A gate that refused to run is an open question, and it reads as harmless precisely when you caused the refusal](lessons/210-a-gate-that-refused-to-run-is-an-open-question.md)
 - **§211** — [A once-a-night fetch turns an intermittent host into a dead one, and the record it leaves is a confident lie](lessons/211-one-shot-nightly-fetch-turns-a-flaky-host-into-a-dead-one.md)
 - **§212** — [A gate that reads the file cannot see the defect that lives where the file meets the host](lessons/212-a-gate-that-reads-the-file-cannot-see-the-host.md)
+- **§213** — [Counting results per page is not measuring depth — it can be the same page, five times](lessons/213-counting-results-per-page-is-not-measuring-depth.md)
