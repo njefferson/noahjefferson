@@ -312,3 +312,4 @@ and the filename carries it.
 - **§218** — [A contrast gate measures the palette, and the defect was a pair nobody designed](lessons/218-a-contrast-gate-measures-the-palette-not-the-page.md)
 - **§219** — [A container's contract holds in the state you audited and is broken in the three you did not — and the audit passing is what stops anyone looking](lessons/219-the-audit-ran-on-the-only-state-that-could-not-fail.md)
 - **§220** — [A role granted inside the app is not a key to the door in front of it](lessons/220-a-role-in-the-app-is-not-a-key-to-the-door.md)
+- **§221** — [A list renumbered from 1 each time loses everything that was not answered in the same breath](lessons/221-a-list-renumbered-from-one-loses-what-was-not-answered.md)
