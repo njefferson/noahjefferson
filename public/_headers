@@ -1,0 +1,21 @@
+# Security headers for noahjefferson.pages.dev — Doctrine §16.6
+#
+# These four cost nothing and break nothing on a static link page.
+#
+# There is deliberately NO Content-Security-Policy here yet, and that absence is
+# honest rather than an oversight: index.html carries its content model as an
+# inline <script> (the block labelled "EDIT HERE"), so a strict script-src 'self'
+# would reduce the site to its <noscript> fallback. A real CSP needs that script
+# and the inline <style> extracted to files first. Hash-pinning instead would
+# force regenerating the hash on every content edit, which is the wrong trade
+# when editing that file IS the workflow.
+#
+# No Strict-Transport-Security either: pages.dev is HTTPS-only and Cloudflare
+# handles TLS for it. Adding a header with lock-in semantics that cannot be
+# tested from here would be worse than leaving it to the platform.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()

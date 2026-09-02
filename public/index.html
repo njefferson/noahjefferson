@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noah Jefferson — photography & free tools</title>
+
+<!-- discovery + share tiles ---------------------------------------------- -->
+<meta name="description" content="Photography and free, no-account tools by Noah Jefferson — birds, infrared and macro, plus small web apps for enjoying the world. No sign-up, no install, works offline.">
+<meta name="theme-color" content="#0B1020" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F4F6FB" media="(prefers-color-scheme: light)">
+<link rel="canonical" href="https://noahjefferson.pages.dev/">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+
+<!-- Open Graph (Facebook / iMessage / WhatsApp / Slack / Discord) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Noah Jefferson">
+<meta property="og:title" content="Noah Jefferson — photography & free tools">
+<meta property="og:description" content="Birds, infrared & macro photography, plus free no-account web apps for enjoying the world.">
+<meta property="og:url" content="https://noahjefferson.pages.dev/">
+<meta property="og:image" content="https://noahjefferson.pages.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Noah Jefferson — photography and free tools. Free, no account, no install, works offline.">
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Noah Jefferson — photography & free tools">
+<meta name="twitter:description" content="Birds, infrared & macro photography, plus free no-account web apps for enjoying the world.">
+<meta name="twitter:image" content="https://noahjefferson.pages.dev/og.png">
+<meta name="twitter:image:alt" content="Noah Jefferson — photography and free tools.">
+
+<style>
+  :root{
+    --bg:#14161D;
+    --bg2:#1C1F28;
+    --surface:#373C49;
+    --surface-hi:#414755;
+    --line:#9AA3B8;
+    --text:#E7E9EE;
+    --muted:#C2C8D5;
+    /* false-color spectral accents */
+    --amber:#FADFA2;
+    --green:#6ED194;
+    --magenta:#EFA7C5;
+    --cyan:#A5E9F8;
+    --slate:#BEB4FB;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #232733 0%, rgba(35,39,51,0) 60%),
+      linear-gradient(180deg,var(--bg2),var(--bg));
+    color:var(--text);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100dvh;
+    padding:28px 20px 56px;
+  }
+  .wrap{max-width:560px;margin:0 auto}
+
+  /* header */
+  .head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:11px;margin-bottom:22px}
+  .mark{display:flex;gap:3px;align-items:center}
+  .mark span{width:8px;height:26px;border-radius:3px;display:block}
+  .mark span:nth-child(1){background:var(--amber)}
+  .mark span:nth-child(2){background:var(--magenta)}
+  .mark span:nth-child(3){background:var(--cyan)}
+  .name{font-size:1.6875rem;font-weight:650;letter-spacing:-0.02em;margin:0}
+  .rule{
+    width:64px;height:3px;border-radius:3px;
+    background:linear-gradient(90deg,var(--amber),var(--magenta),var(--cyan));
+    background-size:200% 100%;
+    animation:drift 6s linear infinite;
+  }
+  .tag{margin:0;color:var(--muted);font-size:0.90625rem;letter-spacing:0.01em}
+  @keyframes drift{to{background-position:200% 0}}
+
+  /* values strip */
+  .values{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin-top:2px}
+  .vchip{
+    font-size:0.6875rem;font-weight:600;letter-spacing:0.05em;
+    color:var(--text);background:var(--surface);
+    border:1px solid var(--line);border-radius:999px;padding:5px 11px 5px 9px;
+    display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+  }
+  .vchip::before{
+    content:"";width:6px;height:6px;border-radius:50%;
+    background:var(--band,var(--slate));flex:0 0 auto;
+  }
+
+  /* groups */
+  .group{margin-top:30px}
+  .group-title{
+    font-size:0.71875rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 12px 4px;
+  }
+  .tiles{display:flex;flex-direction:column;gap:11px}
+
+  /* link tile (Instagram rows) */
+  .tile{
+    position:relative;display:flex;align-items:center;gap:14px;
+    padding:15px 16px 15px 14px;border-radius:15px;
+    background:var(--surface);border:1px solid var(--line);
+    color:var(--text);text-decoration:none;overflow:hidden;
+    transition:transform .16s ease, background .16s ease, border-color .16s ease;
+  }
+  .tile::before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--band,var(--slate));
+  }
+  a.tile:hover{transform:translateY(-2px);background:var(--surface-hi);border-color:var(--line)}
+  a.tile:focus-visible{outline:2px solid var(--band,var(--slate));outline-offset:2px}
+
+  .ico{
+    flex:0 0 40px;height:40px;border-radius:11px;display:grid;place-items:center;
+    color:var(--band,var(--slate));
+    background:color-mix(in srgb, var(--band,var(--slate)) 15%, transparent);
+    border:1px solid color-mix(in srgb, var(--band,var(--slate)) 35%, transparent);
+  }
+  .ico svg{width:21px;height:21px}
+  .txt{min-width:0;flex:1}
+  .label{display:block;font-size:0.96875rem;font-weight:600;letter-spacing:-0.01em;line-height:1.2}
+  .sub{display:block;font-size:0.8125rem;color:var(--muted);margin-top:3px;line-height:1.2}
+  .arrow{color:var(--muted);opacity:0;transform:translateX(-3px);transition:opacity .16s ease, transform .16s ease}
+  a.tile:hover .arrow{opacity:1;transform:translateX(0)}
+
+  /* compact link row — for handle lists that don't need a full-height row */
+  .tiles.compact{gap:11px}
+  .tile.compact{padding:9px 13px 9px 12px;border-radius:12px;gap:11px}
+  .tile.compact::before{width:3px}
+  .tile.compact .ico{flex:0 0 30px;height:30px;border-radius:9px}
+  .tile.compact .ico svg{width:16px;height:16px}
+  .tile.compact .label{font-size:0.875rem}
+  .tile.compact .sub{font-size:0.75rem;margin-top:1px}
+
+  /* app row — a scannable menu entry: real app icon + name + one-liner + Open.
+     Compact so every app is visible at once and the page reads as a directory,
+     not a single-app landing. */
+  .approw{
+    position:relative;display:flex;align-items:center;gap:14px;
+    padding:12px 15px 12px 14px;border-radius:15px;
+    background:var(--surface);border:1px solid var(--line);
+    color:var(--text);text-decoration:none;overflow:hidden;
+    transition:transform .16s ease, background .16s ease, border-color .16s ease;
+  }
+  .approw::before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--band,var(--slate));
+  }
+  a.approw:hover{transform:translateY(-2px);background:var(--surface-hi);border-color:var(--line)}
+  a.approw:focus-visible{outline:2px solid var(--band,var(--slate));outline-offset:2px}
+  .approw .app-ico{
+    flex:0 0 52px;width:52px;height:52px;border-radius:14px;display:block;
+    box-shadow:0 3px 9px rgba(0,0,0,.20);
+  }
+  .approw .txt{min-width:0;flex:1}
+  .approw .app-name{display:block;font-size:1rem;font-weight:650;letter-spacing:-0.01em;line-height:1.2}
+  .approw .app-sub{display:block;font-size:0.8125rem;color:var(--muted);margin-top:3px;line-height:1.25}
+  .approw .go{
+    flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;
+    font-size:0.78125rem;font-weight:650;letter-spacing:0.01em;color:var(--band,var(--slate));
+  }
+  .approw .go svg{width:15px;height:15px}
+  @media (max-width:420px){ .approw .go span{display:none} }
+
+  .foot{text-align:center;color:var(--muted);font-size:0.75rem;margin-top:40px;letter-spacing:0.01em;line-height:1.5}
+  /* A FLEX ROW WITH A GAP, not a text line with separators (2026-08-31). A
+     second link landed here and the two touched at 0px on a phone and at 320px,
+     in both themes — the a11y gate refused it as a mis-tap, which is the same
+     failure a sibling app's three-link footer produced. `text-align:center` on
+     a wrapping line gives no control over the space between two 44px boxes once
+     they stack; a gap does, on both axes at once. */
+  .foot-links{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:0}
+  /* Doctrine §4: touch targets >= 44px. inline-flex grows the hit area without
+     moving the text — the link reads the same, it is just reachable. */
+  .foot-links a{color:var(--slate);font-size:0.75rem;text-decoration:underline;text-underline-offset:2px;
+    display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding-inline:14px}
+  .foot-links a:focus-visible{outline:2px solid var(--slate);outline-offset:2px}
+
+  @media (prefers-reduced-motion:reduce){
+    .rule{animation:none}
+    a.tile,a.approw{transition:none}
+    a.tile:hover,a.approw:hover{transform:none}
+  }
+
+  /* light theme — mirrors the dark palette; accents darkened so accent-as-text
+     (the "Open" go label, focus rings) still clears WCAG AA (>=4.5:1) on white */
+  @media (prefers-color-scheme:light){
+    :root{
+      --bg:#C3C7D1;
+      --bg2:#D1D4DC;
+      --surface:#F4F6F9;
+      --surface-hi:#EAEDF3;
+      --line:#59606E;
+      --text:#23262C;
+      --muted:#2F333C;
+      --amber:#714408;
+      --green:#082F18;
+      --magenta:#6D1A44;
+      --cyan:#0B5266;
+      --slate:#3F2585;
+    }
+    body{
+      background:
+        radial-gradient(1200px 700px at 50% -10%, #D6DAE4 0%, rgba(214,218,228,0) 60%),
+        linear-gradient(180deg,var(--bg2),var(--bg));
+    }
+  }
+
+  /* stronger borders + text when the reader asks for more contrast */
+  @media (prefers-contrast:more){
+    :root{--line:#B4BCCC;--muted:#DDE0E7}
+    @media (prefers-color-scheme:light){
+      :root{--line:#3E4450;--muted:#1E2128}
+    }
+    .tile,.approw,.vchip{border-width:2px}
+  }
+
+  /* Windows High Contrast / forced-colors: keep boundaries + focus visible */
+  @media (forced-colors:active){
+    .tile,.approw,.vchip{border:1px solid CanvasText}
+    a.tile:focus-visible,a.approw:focus-visible{outline:2px solid Highlight}
+    .tile::before,.approw::before{background:CanvasText}
+  }
+
+  /* no-JavaScript fallback list (hidden whenever JS runs) */
+  .ns-list{list-style:none;margin:0 0 6px;padding:0;display:flex;flex-direction:column;gap:9px}
+  .ns-list a{
+    display:block;padding:13px 15px;border-radius:13px;
+    background:var(--surface);border:1px solid var(--line);
+    color:var(--text);text-decoration:none;font-size:0.90625rem;line-height:1.35;
+  }
+  .ns-list a:focus-visible{outline:2px solid var(--slate);outline-offset:2px}
+  .ns-list b{font-weight:650}
+  .ns-list span{color:var(--muted)}
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="head">
+      <div class="mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <h1 class="name" id="name">Noah Jefferson</h1>
+      <div class="rule" aria-hidden="true"></div>
+      <p class="tag" id="tag">Photography, and small free tools for enjoying the world.</p>
+      <div class="values" id="values" role="group" aria-label="What every one of these is: free, no account, no install, works offline"></div>
+    </header>
+    <div id="groups"></div>
+
+    <noscript>
+      <section class="group">
+        <h2 class="group-title">Photography</h2>
+        <ul class="ns-list">
+          <li><a href="https://instagram.com/noah.jefferson.photo"><b>@noah.jefferson.photo</b> <span>— Birds &amp; wildlife (main)</span></a></li>
+          <li><a href="https://instagram.com/noah.jefferson.infrared"><b>@noah.jefferson.infrared</b> <span>— Infrared / false color</span></a></li>
+          <li><a href="https://instagram.com/noah.jefferson.macro"><b>@noah.jefferson.macro</b> <span>— Macro</span></a></li>
+        </ul>
+        <h2 class="group-title">Free web apps</h2>
+        <ul class="ns-list">
+          <li><a href="https://jefferson-photo-studio.pages.dev"><b>Photo Studio</b> <span>— Infrared editing &amp; focus stacking, in your browser</span></a></li>
+          <li><a href="https://bird-location-scouting.pages.dev"><b>Frame</b> <span>— Where &amp; when to photograph which birds</span></a></li>
+          <li><a href="https://photo-pointer.pages.dev"><b>Photo Pointer</b> <span>— A map of every place worth shooting</span></a></li>
+          <li><a href="https://clear-horizons.pages.dev"><b>Clear Horizons</b> <span>&mdash; Plan your night against your real treeline, not a flat 0&deg;</span></a></li>
+          <li><a href="https://quietkeep.pages.dev"><b>Quietkeep</b> <span>&mdash; A calm planner that brings back everything you put in</span></a></li>
+          <li><a href="https://nd-toolbox.pages.dev"><b>ND Toolbox</b> <span>— Calm tools for naming what&rsquo;s going on inside</span></a></li>
+          <li><a href="https://intersecting-parallels.pages.dev"><b>Intersecting Parallels</b> <span>— Where you stand and what you see: perspective drawing</span></a></li>
+          <li><a href="https://fauxplane.pages.dev"><b>fauxplane</b> <span>&mdash; Airliner instruments, from real sensors and real flights</span></a></li>
+          <li><a href="https://3d-printing-pal.pages.dev"><b>print-tracker</b> <span>&mdash; 3D print jobs, filament and models &mdash; on your own device</span></a></li>
+          <li><a href="https://molebridge.pages.dev"><b>MoleBridge</b> <span>&mdash; Stoichiometry one step at a time, and which mistake made your number</span></a></li>
+          <li><a href="https://cv-thalweg.pages.dev"><b>Thalweg</b> <span>&mdash; Depth, tide and flow for four Central Valley rivers</span></a></li>
+        </ul>
+        <h2 class="group-title">Code</h2>
+        <ul class="ns-list">
+          <li><a href="https://github.com/njefferson"><b>@njefferson</b> <span>— GitHub, the source behind these apps</span></a></li>
+        </ul>
+      </section>
+    </noscript>
+
+    <p class="foot" id="foot">No paywall, no sign-up — free, and yours to keep. Made by Noah Jefferson.</p>
+    <p class="foot-links"><a href="/plan">Walk a plan</a><a href="/planning-vocabularies">Writing: three planning vocabularies</a><a href="/accessibility">Accessibility</a></p>
+  </main>
+
+<script>
+/* =========================================================================
+   EDIT HERE.
+   Two kinds of section (set by "kind"):
+     kind:"links" -> Instagram-style rows (icon + name + sub). Empty url = "Soon".
+                     add compact:true on the group for tighter, shorter rows.
+     kind:"apps"  -> scannable app rows (real app icon + name + sub + Open).
+                     "icon" is the image path under public/icons/apps/ (a square
+                     app icon, 128px is plenty — it renders at 52px).
+   type (links): "ig" | "gh" | "app"
+   band: "amber" | "green" | "magenta" | "cyan" | "slate"
+   ========================================================================= */
+
+const PROFILE = {
+  name: "Noah Jefferson",
+  tag:  "Photography, and small free tools for enjoying the world.",
+  foot: "No paywall, no sign-up — free, and yours to keep.\nMade by Noah Jefferson."
+};
+
+/* the promises every one of these keeps (shown as chips under the name) */
+const VALUES = [
+  { t: "Free",          band: "amber"   },
+  { t: "No account",    band: "green"   },
+  { t: "No install",    band: "cyan"    },
+  { t: "Works offline", band: "magenta" },
+];
+
+const GROUPS = [
+  {
+    title: "Photography",
+    kind: "links",
+    compact: true,
+    tiles: [
+      { label: "@noah.jefferson.photo",    sub: "Birds & wildlife — main",  url: "https://instagram.com/noah.jefferson.photo",    type:"ig", band:"amber"   },
+      { label: "@noah.jefferson.infrared", sub: "Infrared / false color",   url: "https://instagram.com/noah.jefferson.infrared", type:"ig", band:"magenta" },
+      { label: "@noah.jefferson.macro",    sub: "Macro",                    url: "https://instagram.com/noah.jefferson.macro",    type:"ig", band:"green"   },
+    ]
+  },
+  {
+    title: "Free web apps",
+    kind: "apps",
+    tiles: [
+      {
+        name: "Photo Studio", sub: "Infrared editing & focus stacking, in your browser",
+        url: "https://jefferson-photo-studio.pages.dev",
+        icon: "icons/apps/studio.png", band: "magenta"
+      },
+      {
+        name: "Frame", sub: "Where & when to photograph which birds",
+        url: "https://bird-location-scouting.pages.dev",
+        icon: "icons/apps/frame.png", band: "amber"
+      },
+      {
+        name: "Photo Pointer", sub: "A map of every place worth shooting",
+        url: "https://photo-pointer.pages.dev",
+        icon: "icons/apps/pointer.png", band: "cyan"
+      },
+      {
+        name: "Clear Horizons", sub: "Plan your night against your real treeline, not a flat 0°",
+        url: "https://clear-horizons.pages.dev",
+        icon: "icons/apps/astro.png", band: "slate"
+      },
+      {
+        name: "Quietkeep", sub: "A calm planner that brings back everything you put in",
+        url: "https://quietkeep.pages.dev",
+        icon: "icons/apps/quietkeep.png", band: "slate"
+      },
+      {
+        name: "ND Toolbox", sub: "Calm tools for naming what’s going on inside",
+        url: "https://nd-toolbox.pages.dev",
+        icon: "icons/apps/ndtoolbox.png", band: "green"
+      },
+      {
+        name: "Intersecting Parallels", sub: "Where you stand and what you see — perspective drawing",
+        url: "https://intersecting-parallels.pages.dev",
+        icon: "icons/apps/parallels.png", band: "amber"
+      },
+      {
+        name: "fauxplane", sub: "Airliner instruments, from real sensors and real flights",
+        url: "https://fauxplane.pages.dev",
+        icon: "icons/apps/fauxplane.png", band: "cyan"
+      },
+      {
+        name: "print-tracker", sub: "3D print jobs, filament and models — on your own device",
+        url: "https://3d-printing-pal.pages.dev",
+        icon: "icons/apps/printtracker.png", band: "cyan"
+      },
+      {
+        name: "MoleBridge", sub: "Stoichiometry one step at a time — and which mistake made your number",
+        url: "https://molebridge.pages.dev",
+        icon: "icons/apps/molebridge.png", band: "green"
+      },
+      {
+        name: "Thalweg", sub: "Depth, tide and flow for four Central Valley rivers",
+        url: "https://cv-thalweg.pages.dev",
+        icon: "icons/apps/thalweg.png", band: "cyan"
+      }
+    ]
+  },
+  {
+    title: "Code",
+    kind: "links",
+    compact: true,
+    tiles: [
+      { label: "@njefferson", sub: "GitHub — the source behind these apps", url: "https://github.com/njefferson", type:"gh", band:"cyan" },
+    ]
+  }
+];
+
+/* ---- render (no need to edit below) ---- */
+const ICONS = {
+  ig:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.15" fill="currentColor" stroke="none"/></svg>`,
+  gh:`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.75.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.31-.54-1.52.12-3.17 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.65.24 2.86.12 3.17.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.93.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.21.7.82.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z"/></svg>`,
+  app:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>`
+};
+const ARROW    = `<svg class="arrow" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>`;
+const ARROW_GO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>`;
+
+/* Doctrine §16.7: build nodes and set text — never concatenate content into
+   innerHTML. innerHTML is used ONLY for the inert SVG constants above, which we
+   authored. Text goes through textContent, so an & or < in a label renders as
+   itself instead of breaking (or worse). */
+function span(cls, text){
+  const s=document.createElement("span");
+  if(cls) s.className=cls;
+  if(text!=null) s.textContent=text;
+  return s;
+}
+function svgSpan(cls, markup, hidden){
+  const s=span(cls);
+  if(hidden) s.setAttribute("aria-hidden","true");
+  s.innerHTML=markup;              // authored SVG constant, never user content
+  return s;
+}
+
+/* Instagram-style row */
+function tile(t, compact){
+  const cls = compact ? "tile compact" : "tile";
+  const txt=span("txt");
+  txt.append(span("label", t.label), span("sub", t.sub));
+  const ico=svgSpan("ico", ICONS[t.type]||ICONS.app, true);
+  if(t.url){
+    const a=document.createElement("a");
+    a.className=cls; a.href=t.url; a.target="_blank"; a.rel="noopener";
+    a.style.setProperty("--band",`var(--${t.band})`);
+    a.append(ico, txt, svgSpan(null, ARROW, true).firstChild);
+    return a;
+  }
+  const d=document.createElement("div");
+  d.className=cls+" soon";
+  d.style.setProperty("--band",`var(--${t.band})`);
+  d.append(ico, txt, span("chip","Soon"));
+  return d;
+}
+
+/* App row — real app icon + name + one-liner + Open. Compact so every app is
+   visible together and the page reads as a menu, not a single-app landing.
+   The icon is decorative (alt="") — the name beside it is the link's label. */
+function appRow(a){
+  const el=document.createElement("a");
+  el.className="approw"; el.href=a.url; el.target="_blank"; el.rel="noopener";
+  el.style.setProperty("--band",`var(--${a.band})`);
+  const img=document.createElement("img");
+  img.className="app-ico"; img.src=a.icon; img.alt="";
+  img.setAttribute("aria-hidden","true"); img.loading="lazy";
+  const txt=span("txt");
+  txt.append(span("app-name", a.name), span("app-sub", a.sub));
+  const go=span("go");
+  go.append(span(null,"Open"), " ", svgSpan(null, ARROW_GO, false).firstChild);
+  el.append(img, txt, go);
+  return el;
+}
+
+document.getElementById("name").textContent=PROFILE.name;
+document.getElementById("tag").textContent=PROFILE.tag;
+document.getElementById("foot").textContent=PROFILE.foot;
+
+const vhost=document.getElementById("values");
+VALUES.forEach(v=>{
+  const s=document.createElement("span");
+  s.className="vchip";
+  s.style.setProperty("--band",`var(--${v.band})`);
+  s.textContent=v.t;
+  vhost.appendChild(s);
+});
+
+const host=document.getElementById("groups");
+GROUPS.forEach(g=>{
+  const sec=document.createElement("section"); sec.className="group";
+  const h=document.createElement("h2"); h.className="group-title"; h.textContent=g.title;
+  const list=document.createElement("div"); list.className="tiles"+(g.compact?" compact":"");
+  g.tiles.forEach(t=>list.appendChild(g.kind==="apps" ? appRow(t) : tile(t, g.compact)));
+  sec.appendChild(h); sec.appendChild(list); host.appendChild(sec);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+# SECURITY.md — the baseline every repo is held to
+
+Canonical in the hub, like [`DOCTRINE.md`](DOCTRINE.md) and
+[`LESSONS.md`](LESSONS.md). **Never fork it — link to it.**
+
+Doctrine §16 says what the posture IS. This says **what to switch on, what
+runs automatically, and what only the owner can do**, so "are my repos secure?"
+has an answer you can work down rather than a feeling.
+
+No tables — Doctrine §2.
+
+---
+
+## The honest threat model
+
+Nobody is targeting the owner. The realistic path runs the other way: a
+compromised package pulled in for a script nobody thinks about, executing on
+a runner that is holding a live Cloudflare token. Supply-chain compromise is
+indiscriminate; it does not need to have heard of you.
+
+So the things that actually matter, in order:
+
+1. **A token leaking or being over-scoped.** Every deploy runs holding one.
+2. **A dependency or Action turning malicious.** It executes next to that token.
+3. **A workflow that turns input into code.** Injection in a `run:` block.
+4. Everything else.
+
+---
+
+## Part 1 — runs automatically, no thought required
+
+These are wired into CI and exit non-zero. If they pass, that layer is done.
+
+- **`zizmor --offline --strict-collection`** — the maintained GitHub Actions
+ auditor. Catches unpinned actions, template injection, credential
+ persistence, cache poisoning. **Use this rather than writing one.** A
+ hand-rolled pinning checker in this repo passed both apps clean while zizmor
+ found 23 real findings in the same files (LESSONS §8 postscript).
+
+ Two things about it are not the defaults and both are deliberate:
+
+ **`--strict-collection` is required.** Without it, a workflow with a YAML
+ error is logged at WARN, **skipped, and the run still exits 0 printing "No
+ findings to report. Good job!"** — so the file most likely to be wrong is
+ the one that never gets audited. This happened here (LESSONS §25).
+
+ **zizmor is itself pinned**, by version *and* hash, in
+ [`.github/requirements-ci.txt`](.github/requirements-ci.txt), installed with
+ `--require-hashes --only-binary=:all:`. `pip install zizmor` floats on
+ whatever PyPI serves that morning — an unpinned binary executing beside a
+ deploy token is threat #2 above, and it was live in this repo's own audit
+ workflow. That file is canonical in the hub: a sibling repo checks the hub
+ out in CI and installs from it, so every app is audited by the same build,
+ and Dependabot's `pip` ecosystem bumps the version and the hashes together.
+
+ Locally: `npm run security:install` once, then `npm run security` — and
+ `npm run check` runs it, failing with an install hint rather than skipping
+ when the tool is absent.
+- **[`pin-check.mjs`](pin-check.mjs)** — the npm half zizmor does not do:
+ lockfile present, `npm ci` never `npm install`, no undeclared dependencies.
+- **`npm audit`** — run it, and do not ship a known-vulnerable tree. If a fix
+ needs a major bump, take the major bump.
+- **Dependabot** — `.github/dependabot.yml` in every repo, for both
+ `github-actions` and `npm`. It is what keeps SHA pins from rotting.
+
+---
+
+## Part 2 — GitHub settings, ONLY NOAH CAN DO THESE
+
+Same class as the repo metadata in Doctrine §10: the session token cannot set
+them, so they get listed and confirmed rather than assumed. All are free, all
+are a few taps, and all work on an iPad.
+
+**Per repository → Settings → Code security:**
+
+- **Secret scanning: ON**
+- **Push protection: ON** — this is the one that matters most. It blocks a
+ credential at `git push`, before it is ever in history. A secret that
+ reaches GitHub must be treated as burned and rotated, even from a private
+ repo, so preventing the push is worth more than any scan afterwards.
+- **Dependabot alerts: ON**
+- **Dependabot security updates: ON**
+- **CodeQL / code scanning: ON** (default setup — one click, free on public
+ repos)
+- **Private vulnerability reporting: ON** on anything public
+
+**Per repository → Settings → Actions → General:**
+
+- **Workflow permissions → "Read repository contents and packages
+ permissions"** — the read-only default. Every workflow here already declares
+ `permissions: contents: read` itself, but the repo default is the backstop
+ for the next workflow somebody adds in a hurry.
+- **"Allow GitHub Actions to create and approve pull requests": OFF**
+- **Fork pull request workflows → "Require approval for all external
+ contributors"**
+
+**Per repository → Settings → Branches:**
+
+- **Protect `main`** — require the status checks to pass, and no force pushes.
+ On a solo repo this is not about other people; it is about a bad afternoon.
+
+**Cloudflare → My Profile → API Tokens:**
+
+- **One token per job, scoped to that job.** The hub already does this right
+ and it should stay that way: a Pages-only token for Pages, a Workers-only
+ token for the Worker. Never a Global API Key in a repo secret — that one is
+ account-wide and cannot be scoped.
+- **Set an expiry** on each, and rotate on the calendar rather than after an
+ incident.
+
+---
+
+## Part 3 — the current state of the repos in reach
+
+Verified by running the checks rather than assuming. **Each entry carries its own
+date, because one date at the top of a list that grows an entry at a time is a
+claim about repos nobody re-checked.**
+
+**NO GATE HERE PROTECTS AGAINST A MALICIOUS PUSH, and that is worth stating at
+the top of this section rather than leaving to be inferred.** Every check in Part
+1 measures what is IN a commit. None of them can stop a commit being MADE. What
+stands between this code and somebody else's change is entirely Part 2: two-factor
+auth on the account, push protection, branch protection on `main`, and the scope
+and expiry of every token that can write. A repo can be clean on every automated
+check in this file and still be one leaked credential from anything.
+
+- **photo-field-tools** — audited 2026-08-02. zizmor clean, npm audit clean, no credential
+ patterns in any tracked file, nothing secret-shaped ever added in history,
+ every workflow `contents: read`, lockfile committed, all Actions SHA-pinned.
+- **noahjefferson** — audited 2026-08-02, same, with one carried exception recorded in
+ `.github/zizmor.yml`: 19 template-injection sites in `cf-analytics.yml` and
+ `deploy-myfax.yml`. Real, assessed, and not yet fixed — both are
+ `workflow_dispatch` only, so triggering one needs repo access you would
+ already have. The fix is mechanical and awaits a go-ahead, because rewriting
+ live analytics and fax deploys that cannot be tested end to end from a
+ session is its own risk.
+
+- **Intersecting-parallels** — brought to this line 2026-08-03, and it was NOT
+ clean when the audit was first run on it. zizmor found four `artipacked`
+ findings: all four workflows checked out without `persist-credentials: false`,
+ so each left a git credential in `.git/config` on the runner — including the
+ deploy job, which runs holding a live Cloudflare token. That is threat #1 and
+ #2 in the same step. Fixed, re-audited clean. Also verified: npm audit clean,
+ every Action SHA-pinned, every workflow `contents: read`, lockfile committed,
+ no credential-shaped string in any tracked file, `dependabot.yml` present.
+ It now runs its own `security.yml` weekly and on every push, installing the
+ hash-pinned zizmor from this repo rather than forking the pin.
+
+ **The finding is the argument for the schedule.** This repo had shipped
+ twenty releases through four green workflows; nothing was wrong with the
+ code, and the credential sat there the whole time because no audit had ever
+ been pointed at it.
+
+- **3d-printing-pal** — audited 2026-08-24, and it had never been on this list:
+ the repo was built after the 2026-08-02 pass and shipped twenty-odd releases
+ without an audit ever being pointed at it. **A repo created after the audit line
+ does not join it by being new and tidy.** Clean on every check run rather than
+ assumed: zizmor `--strict-collection` clean; `npm audit` zero vulnerabilities
+ with and without dev; no credential-shaped string in any tracked file; 59
+ commits across every ref scanned for token shapes and private-key headers, none
+ found; all four Action uses SHA-pinned with version comments; both workflows
+ `permissions: contents: read`; `persist-credentials: false` on every checkout;
+ lockfile committed; `dependabot.yml` present; `pull_request_target` used
+ nowhere. The Cloudflare secrets are read into job `env` and masked, and
+ deliberately never into step outputs — outputs persist in the run and are
+ readable through the API.
+
+ **TWO MEDIUM FINDINGS CARRIED, and they are the same one twice:**
+ `secrets-outside-env` on both Cloudflare secrets in `deploy.yml`. The token is
+ a repo secret rather than an **environment** secret, so it is reachable from
+ every trigger that workflow has — a push to `staging` and a `workflow_dispatch`
+ on any branch, not only a promote to `main`. Nothing is leaking; the blast
+ radius is simply wider than the job needs. The fix is paired and neither half
+ works alone: a `production` GitHub Environment restricted to `main` with the
+ two secrets moved into it (Part 2, owner-only), and `environment: production`
+ on the deploy job (a one-line workflow change). **Do not do the workflow half
+ first** — it creates an unprotected environment and changes nothing.
+
+ **And the standing gap that is not zizmor's to find:** Gates and Deploy are
+ separate workflows with no dependency, so a red gate does not stop a deploy.
+ That is recorded in this repo's own status page as found-and-not-fixed, and it
+ is a security fact as well as a quality one — a bad commit reaching `main` is
+ not held back by anything measuring it.
+
+**Not in reach this session:** photo-pointer, clear-horizons,
+Bird-location-scouting, Jefferson-Photography-Studio, ND-toolbox, Quietkeep.
+A session can only see the repos picked when it started (Doctrine §11).
+**Nothing above should be read as a statement about them.** Start a session
+with a repo selected and it takes about ten minutes to bring it to this line —
+and on the evidence of intersecting-parallels, assume it will find something.
+
+---
+
+## The rule that keeps this from growing
+
+**Reach for the maintained tool first.** Every hand-written security check is
+one more thing the owner owns, maintains, and has to trust — and the evidence says
+the hand-written one is worse. Bespoke gates are for what is genuinely
+specific to this work: acceptance criteria, palette roles, offline behaviour,
+the handoff. Security tooling is not that. It exists, it is better, and
+keeping it correct is somebody else's job.
