@@ -306,3 +306,4 @@ and the filename carries it.
 - **§212** — [A gate that reads the file cannot see the defect that lives where the file meets the host](lessons/212-a-gate-that-reads-the-file-cannot-see-the-host.md)
 - **§213** — [Counting results per page is not measuring depth — it can be the same page, five times](lessons/213-counting-results-per-page-is-not-measuring-depth.md)
 - **§214** — [The most important step ran last, so it was the first thing sacrificed — and nothing read the file could see it](lessons/214-the-most-important-step-ran-last-and-was-the-first-casualty.md)
+- **§215** — [A hidden element answers a query exactly as well as a shown one, so a suite full of `querySelector` can pass against a blank screen](lessons/215-a-hidden-element-answers-a-query-as-well-as-a-shown-one.md)
