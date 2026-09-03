@@ -323,3 +323,4 @@ and the filename carries it.
 - **§229** — [Every improvement landed on the screen you see once, and the screen you come back to kept the first version](lessons/229-the-return-screen-kept-the-first-version.md)
 - **§230** — [The strings nobody has to state are the ones that get published wrong — a byline and a placeholder are read first and written once](lessons/230-the-strings-nobody-states-on-purpose.md)
 - **§231** — [A page that walks a reader into another app is that app's documentation, and it was built on the hub where nothing releases it and nobody asked for it](lessons/231-an-apps-documentation-built-on-the-hub.md)
+- **§232** — [A removed page outlives its removal at the edge, and the fetch that verified it is what put it there for a week](lessons/232-a-verification-fetch-caches-the-page-you-are-deleting.md)
