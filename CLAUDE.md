@@ -74,8 +74,14 @@ Every item below has actually happened.
 - **A session CANNOT set repo metadata** — description, website, topics, social
  preview, default branch are all GitHub-UI steps. Propose in `METADATA.md`;
  never report a repo set up while a row says proposed. (Doctrine §10.)
-- **ONLY NOAH DECIDES WHAT GOES ON THE HUB.** Adding an app here is advertising
- it under the owner's name. A session adds one only when the owner NAMES it — not because it
+- **ONLY NOAH DECIDES WHAT GOES ON THE HUB — AND THAT BINDS PAGES, NOT JUST
+ APPS.** The hub carried a nine-step planning walk, linked from the front page,
+ whose output was a sibling app's import file and whose instructions named that
+ app's ⓘ panel and menu item; it named that app twelve times. Nobody asked for
+ it. It is that app's onboarding documentation, built where it cannot ship in
+ that app's release, is covered by none of its tests, and goes stale silently
+ the moment a menu item is renamed. Removed 2026-09-03. Adding an app here is
+ advertising it under the owner's name. A session adds one only when the owner NAMES it — not because it
  is finished, not because it is already live, not because §13.6 says a repo
  gets wired in, not because its absence looks like an oversight. It binds
  proposing and restoring and *mentioning an unlisted app as a candidate*, which
@@ -310,9 +316,17 @@ checks before offering to build one of these again):**
 
 The two omissions worth knowing before building one: a new surface must join the
 a11y gate's surface list **in the same commit**, or it ships unmeasured (hub
-LESSONS §28 — now mechanical in that repo, worth copying), and an (i) button
-labelled with `aria-label` passes a substring SC 2.5.3 check by pure accident
-(§29). Both cost a release each here.
+LESSONS §28), and an (i) button labelled with `aria-label` passes a substring
+SC 2.5.3 check by pure accident (§29). Both cost a release each here.
+
+**This paragraph used to say that first one was "now mechanical in that repo".
+It was not.** §28's gate lives in Intersecting Parallels and reads that app's
+own dialogs; the hub's `a11y-gate.mjs` opened exactly the pages listed in it and
+had no idea whether any other page existed. It does now — every tracked page
+under `public/` must be in PAGES and every PAGES entry must be a tracked page,
+both directions — and that matters here beyond coverage, because a page arriving
+with nothing having to acknowledge it is how one got built, deployed and linked
+from the front page without being asked for. (LESSONS §231.)
 
 ## What this repo is
 The personal link hub at **noahjefferson.pages.dev** — photography accounts and

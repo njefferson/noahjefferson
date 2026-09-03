@@ -17,6 +17,7 @@
 import { chromium } from 'playwright-core';
 import { pathToFileURL } from 'node:url';
 import { readFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 
 // The session sandbox ships a Chromium at a fixed path (Doctrine §11) and
 // playwright-core is pinned to the matching revision — see package.json.
@@ -79,19 +80,37 @@ const PAGES = [
     // the way back, and it identifies itself by its words, which are measured
     // above — `code` carries a border but is text, not a control.
     nonText:  [] },
-  { file: 'public/plan.html',
-    // The plan walk (2026-09-01). Interactive — the only scripted page beside
-    // index. Every selector here matches at LOAD: the output panel ships one
-    // real example row so `.out-line` and its children exist before anything is
-    // typed, because a selector that appears only after input is a selector
-    // this gate can never see (the loud-failure rule, from the other side).
-    registry: ['h1','h2','p','.hint','.lead','label','.btn','.doconly','.mono',
-               '.out-line .t','.out-line .n','a'],
-    // Boundaries that identify controls: buttons and the two text-entry kinds.
-    // The checkbox is UA-drawn (accent-color only) and is not registered — the
-    // same reasoning the sibling app records for platform-painted widgets.
-    nonText:  ['.btn','textarea','input[type="text"]'] },
 ];
+
+// EVERY DEPLOYED PAGE IS IN THAT LIST, BOTH DIRECTIONS — asserted, not assumed.
+//
+// The list above is what this gate opens. Until now it was also the only record
+// that a page existed at all: a new `.html` under `public/` shipped unmeasured
+// and unannounced, because adding a page and adding it here are two separate
+// acts and only the first is forced by wanting the page. §28's shape, in the
+// repo that wrote §28 about a sibling.
+//
+// It matters here beyond coverage. This site is the hub, and what appears on it
+// is the owner's call (§0c) — so a page arriving with nothing anywhere having to
+// acknowledge it is exactly how one got built, deployed and linked from the
+// front page without ever being asked for. This does not make that decision;
+// it makes the page impossible to add in silence.
+const onDisk = execFileSync('git', ['ls-files', 'public'], { encoding: 'utf8' })
+  .split('\n').filter((f) => f.endsWith('.html'));
+const listed = new Set(PAGES.map((p) => p.file));
+const unlisted = onDisk.filter((f) => !listed.has(f));
+const missing = [...listed].filter((f) => !onDisk.includes(f));
+if (unlisted.length || missing.length) {
+  console.error('=== a11y gate ===\n');
+  for (const f of unlisted) {
+    console.error(`  FAIL  ${f} is deployed and is not in PAGES — it would ship unmeasured.`);
+  }
+  for (const f of missing) {
+    console.error(`  FAIL  PAGES lists ${f}, which is not a tracked page — a removed page leaves its entry behind.`);
+  }
+  console.error('\nA page nothing opens is a page nothing measures (§4, §28).');
+  process.exit(1);
+}
 
 const THEMES = ['light', 'dark'];
 

@@ -322,3 +322,4 @@ and the filename carries it.
 - **§228** — [An explanation is not a route, and the build that swapped one for the other was the environment built for testing](lessons/228-an-explanation-is-not-a-route.md)
 - **§229** — [Every improvement landed on the screen you see once, and the screen you come back to kept the first version](lessons/229-the-return-screen-kept-the-first-version.md)
 - **§230** — [The strings nobody has to state are the ones that get published wrong — a byline and a placeholder are read first and written once](lessons/230-the-strings-nobody-states-on-purpose.md)
+- **§231** — [A page that walks a reader into another app is that app's documentation, and it was built on the hub where nothing releases it and nobody asked for it](lessons/231-an-apps-documentation-built-on-the-hub.md)
