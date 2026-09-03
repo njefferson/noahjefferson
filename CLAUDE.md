@@ -78,7 +78,9 @@ Every item below has actually happened.
  APPS.** The hub carried a nine-step planning walk, linked from the front page,
  whose output was a sibling app's import file and whose instructions named that
  app's ⓘ panel and menu item; it named that app twelve times. Nobody asked for
- it. It is that app's onboarding documentation, built where it cannot ship in
+ it. The essay beside it went the same day and for the same reason — a session
+ wrote it, and what appears here is not a session's call. Both removed
+ 2026-09-03; the hub's foot is back to one link. It is that app's onboarding documentation, built where it cannot ship in
  that app's release, is covered by none of its tests, and goes stale silently
  the moment a menu item is renamed. Removed 2026-09-03. Adding an app here is
  advertising it under the owner's name. A session adds one only when the owner NAMES it — not because it
@@ -104,9 +106,11 @@ Every item below has actually happened.
  whole life because the footer string came in with the converter from a sibling
  repo; a session wrote the essay. The plan walk loaded with four examples taken
  from a real plan rather than an invented one, on a public page. Both are strings
- nothing asserts, nobody re-reads and everybody reads first. Authorship is now a
- declared `author` key with no default (`essay.mjs`), and every example is
- declared in `.example-allow` (`example-check.mjs`). (Doctrine §5; LESSONS §230.)
+ nothing asserts, nobody re-reads and everybody reads first. Every example is
+ declared in `.example-allow` (`example-check.mjs`). **The byline half has no
+ gate now** — it was `essay.mjs`, and that went with the essay when the hub
+ stopped carrying one, so the next document surface here rebuilds it in the same
+ commit that creates the surface. (Doctrine §5; LESSONS §230.)
 - **NEVER QUOTE THE OWNER, AND NEVER ATTRIBUTE ANYTHING TO THE OWNER BY NAME, IN ANY REPO.**
   Not in a comment, not in `NOTES.md`, not in a commit message, not in a release
   note, not in the doctrine or the lessons. These repos are PUBLIC and carry the owner's
