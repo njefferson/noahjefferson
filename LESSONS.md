@@ -326,3 +326,4 @@ and the filename carries it.
 - **§232** — [A removed page outlives its removal at the edge, and the fetch that verified it is what put it there for a week](lessons/232-a-verification-fetch-caches-the-page-you-are-deleting.md)
 - **§233** — [A claims walk asks "can you find X" and never "what was that like", so it cannot see the writing](lessons/233-a-claims-walk-asks-can-you-find-x-never-what-was-that-like.md)
 - **§234** — [The second door was on a different hostname from the room, so it guarded the door](lessons/234-the-second-door-was-on-a-different-hostname.md)
+- **§235** — [A character is not an icon, and the two complaints about it were one cause](lessons/235-a-character-is-not-an-icon.md)
