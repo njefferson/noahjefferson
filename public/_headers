@@ -19,3 +19,36 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
   Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+
+# CACHE POLICY FOR THE PAGES — and what it does NOT fix, which is the honest half.
+#
+# MEASURED 2026-09-03 against the live site, before writing this: every path
+# already returns `public, max-age=0, must-revalidate` from the origin — the
+# pages, the icons, the stylesheet, all of it, because that is Cloudflare Pages'
+# default. `/accessibility` came back with no `cf-cache-status` at all, so a live
+# page here is not being served from an edge cache in the first place.
+#
+# WHAT PROMPTED IT. Two pages were deleted and both kept serving from
+# Cloudflare's edge for days afterwards, under `s-maxage=604800` — a directive
+# the origin never sent. Those entries are edge-side and pre-date the removals,
+# and a `*.pages.dev` hostname is not a zone in the account, so there is nothing
+# here that can purge or shorten them. THIS BLOCK DOES NOT FIX THAT. It cannot.
+#
+# What it does is say the intent out loud: `s-maxage=0` is the one directive
+# beyond the platform default, and it addresses shared caches specifically rather
+# than relying on `max-age=0` being read that way. If a page is deleted, the next
+# request revalidates and the stale copy dies with it.
+#
+# HTML ONLY, ROUTE BY ROUTE. `/*` would sweep the icons in with it, and a
+# blanket rule is how a site loses asset caching it might later want. The `.html`
+# forms need no entry — Pages 308s them to the clean URL (verified). A new page
+# joins this list in the SAME commit that creates it, and `a11y-gate.mjs`
+# refuses a commit where it has not: the list of deployed pages lives there
+# already, and a second copy of that list is the drift this family keeps writing
+# lessons about.
+
+/
+  Cache-Control: public, max-age=0, s-maxage=0, must-revalidate
+
+/accessibility
+  Cache-Control: public, max-age=0, s-maxage=0, must-revalidate
