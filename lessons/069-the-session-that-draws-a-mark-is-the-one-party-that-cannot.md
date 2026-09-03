@@ -14,7 +14,8 @@ from inside.
 inside a rounded body is the shape of a pupil, and nothing else in the drawing
 overrides it. It is in the file rather than in the beholder — `circle r="34"`
 filled near-black with `circle r="16"` filled pale blue, centred on a rounded
-green body. It shipped in two releases and was caught by the owner in seconds.
+green body. It shipped in two releases and was caught in seconds by the first person to
+look at it on a screen.
 
 **No gate catches this, and adding one is not the answer.** Contrast can be
 measured, target size can be measured, the served copy can be held to its source

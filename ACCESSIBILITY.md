@@ -151,8 +151,7 @@ does not bite, because each card contains link text that already passes AA, so t
 component identifies itself and the card is grouping rather than the identifier.
 Doctrine §3 says gentle contrast is tuned *within* AA, never against it, which
 points at fixing it.
-**Status:** FIXED 2026-07-29, on the owner's word ("what do you suggest?" → fix it,
-plan approved). `--line` raised to COMPUTED values on both deployed pages:
+**Status:** FIXED 2026-07-29, on the owner's word (plan approved). `--line` raised to COMPUTED values on both deployed pages:
 dark `#26304F` → `#646FA0` (**3.29:1**), light `#D5DCEA` → `#7482A0` (**3.32:1**),
 each against the worst gradient stop. The `prefers-contrast: more` block was
 recomputed so the preference still strengthens rather than newly weakening:

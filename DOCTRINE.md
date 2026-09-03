@@ -890,7 +890,7 @@ holds sensitive data states plainly what it is NOT (see §9).
 ## 14. When a fix fails — debugging discipline (the D5300 lessons, 2026-07-24/25)
 
 Earned across one brutal day: four failed repairs of the same defect, three of
-them caught by the owner, on the device itself. These rules exist so that never happens
+them caught on the device itself, after shipping. These rules exist so that never happens
 again. They bind every session, every repo.
 
 - **Two strikes on the frame.** If a second fix to the same problem fails in

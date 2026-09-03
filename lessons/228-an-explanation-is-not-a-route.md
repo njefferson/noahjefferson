@@ -21,9 +21,9 @@ therefore deleted `crew/` and replaced the three links to it in the app with a
 sentence — the console is not published here, use the live app.
 
 Every word of that is true, and what it left on the screen was a section headed
-"The Bridge" with no Bridge behind it. The report back was that the settings
-page appeared to be calling ITSELF the Bridge, and that there was no way to
-reach the real one.
+"The Bridge" with no Bridge behind it. The section then reads as naming the
+page it is on, and there is no route to the real console from anywhere in the
+app.
 
 Two things made it worse than a missing link. The console was reachable from
 exactly one place — a fieldset most of the way down a settings page, which is a
