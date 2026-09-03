@@ -1,10 +1,10 @@
 ## 225 · The platform limit decided the design, and the code shipped without anyone asking what it was
 
-**Enforced by:** GATE Jefferson-Line:tools/help-check.mjs — a scanned
+**Enforced by:** GATE unlisted-app:tools/help-check.mjs — a scanned
 credential must land on the install-first screen rather than the credential
 form, the app must say in words that a scan on iOS lands in the browser, and
 no square may be drawn where scanning it cannot complete the task. · GATE
-Jefferson-Line:tools/worker-check.mjs — the lookup a scan needs discloses
+unlisted-app:tools/worker-check.mjs — the lookup a scan needs discloses
 exactly what the link lookup discloses and no more. · CHECKLIST
 name-the-handoff-target — for any credential that leaves the app and comes
 back through another program (a camera, a mail client, a password manager),
@@ -18,7 +18,7 @@ a QR, a deep link, a mailto, a share sheet — without having written down which
 application that is on each platform. Also: a fix that makes a payload shorter
 or tidier and quietly changes where it lands.
 
-**Jefferson Line, 2026-09-02.** A QR carrying a plain code was reported reading
+**The unlisted app, 2026-09-02.** A QR carrying a plain code was reported reading
 correctly on an iPad and then offering a web search. The fix was to carry a URL
 instead, which the camera would open. That much was right.
 

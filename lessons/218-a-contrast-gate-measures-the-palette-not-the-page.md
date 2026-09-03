@@ -1,6 +1,6 @@
 ## 218 · A contrast gate measures the palette, and the defect was a pair nobody designed
 
-**Enforced by:** GATE Jefferson-Line:tools/contrast-check.mjs — beyond the
+**Enforced by:** GATE unlisted-app:tools/contrast-check.mjs — beyond the
 declared token pairs it now refuses any colour set outside the tokens in
 markup or view code, and any button class scoped to the element rather than
 the class. · CHECKLIST rendered-pairs-need-a-browser — a token-pair gate
@@ -14,7 +14,7 @@ different element (`button.quiet` where `<a class="button quiet">` exists).
 Also: any inline colour, and especially one added to fix a contrast
 complaint — it is a value in the one place nothing measures.
 
-**Jefferson Line, 2026-09-02.** Six of the app's navigation links were
+**The unlisted app, 2026-09-02.** Six of the app's navigation links were
 unreadable in both themes from the first release. Settings, Cabins, Cruises,
 the availability grid, the manual, and the link out to an event's source.
 Measured after the report: **1.30:1 in the light theme and 1.64:1 in the dark,

@@ -1,6 +1,6 @@
 ## 220 · A role granted inside the app is not a key to the door in front of it
 
-**Enforced by:** GATE Jefferson-Line:tools/help-check.mjs — the crew manual
+**Enforced by:** GATE unlisted-app:tools/help-check.mjs — the crew manual
 must say that granting the role is two steps, name the infrastructure policy
 as the half the app cannot perform, and tell apart the three different codes
 that land on somebody during one first visit. · CHECKLIST
@@ -15,7 +15,7 @@ Zero Trust, a VPN, an IP allowlist, HTTP auth at the edge — with an in-app
 "make them an admin" button beside it. The button will look like the whole
 operation because from inside the app it IS the whole operation.
 
-**Jefferson Line, 2026-09-02.** The owner promoted a second person to the
+**The unlisted app, 2026-09-02.** The owner promoted a second person to the
 admin role and asked how to tell them to sign in. The honest answer was that
 the instructions would not have worked: the console sits behind Cloudflare
 Access, which knows nothing about the app, has never heard of its roles, and

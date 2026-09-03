@@ -1,6 +1,6 @@
 ## 214 · The most important step ran last, so it was the first thing sacrificed — and nothing read the file could see it
 
-**Enforced by:** GATE Jefferson-Line:tools/worker-check.mjs — asserts the
+**Enforced by:** GATE unlisted-app:tools/worker-check.mjs — asserts the
 ORDER, not just the outcome: the backup's write must happen before the job's
 first network fetch, a missing bucket is a reported error rather than a quiet
 skip, a failure carries its reason, and the record of the last SUCCESS
@@ -15,7 +15,7 @@ then do the work, then save a copy — rather than by what survives being cut
 short. Also: any promise made to users in prose ("backups are kept for thirty
 days") with no assertion anywhere that the thing exists.
 
-**Jefferson Line, 2026-09-02.** The privacy page had promised nightly
+**The unlisted app, 2026-09-02.** The privacy page had promised nightly
 snapshots with thirty-day retention since the first deploy. The bucket was
 empty. Not one snapshot had ever been written.
 

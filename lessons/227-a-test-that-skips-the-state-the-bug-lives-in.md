@@ -1,6 +1,6 @@
 ## 227 · A test that skips the state a bug lives in certifies the bug, and the first one written here did
 
-**Enforced by:** GATE Jefferson-Line:tools/panel-shot.mjs — opens the app in a
+**Enforced by:** GATE unlisted-app:tools/panel-shot.mjs — opens the app in a
 real browser at two viewport sizes, presses through the first-run screen, and
 measures whether the way out of the panel is inside it, on screen,
 unobscured by anything painted over it, and still reachable with the body
@@ -16,7 +16,7 @@ get to the interesting part", where the skipped step is the one that moves,
 mounts or repositions the thing under test. Also: a fix verified only by a
 test written after it.
 
-**Jefferson Line, 2026-09-02.** A release moved a dialog's title into a new
+**The unlisted app, 2026-09-02.** A release moved a dialog's title into a new
 header bar. Elsewhere, the code returning a first-run block to that dialog
 placed it with `home.after(block)`, where `home` was that title. So from that
 release on, the block was inserted INTO the bar — which was deliberately the

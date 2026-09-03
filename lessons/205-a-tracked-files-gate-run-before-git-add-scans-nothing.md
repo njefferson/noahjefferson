@@ -11,7 +11,7 @@ not created its files yet — and then trusting that green after the files
 exist. Also: a gate that passes locally and fails in CI on the same commit,
 which here was not an environment difference but a *population* difference.
 
-**Jefferson Line, first commit, 2026-09-01.** A session building a new repo
+**The unlisted app, first commit, 2026-09-01.** A session building a new repo
 ran all four hub prose gates locally and watched them pass — then committed
 33 new files and had CI fail the third-person gate at the hub pin, on a bare
 pronoun in a test-file comment. The local run had been honest: "no

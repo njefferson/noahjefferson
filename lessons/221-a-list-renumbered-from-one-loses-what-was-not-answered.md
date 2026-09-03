@@ -1,6 +1,6 @@
 ## 221 · A list renumbered from 1 each time loses everything that was not answered in the same breath
 
-**Enforced by:** GATE Jefferson-Line:tools/questions-check.mjs — refuses a
+**Enforced by:** GATE unlisted-app:tools/questions-check.mjs — refuses a
 reused number, refuses a gap in the sequence (a gap is a deletion under a
 tidier name), and requires options and a recommendation on anything still
 open; prints the full open list on every run, wired into `.branch-guard` so
@@ -15,7 +15,7 @@ ended "1. … 2. … 3. …" and the two lists are not the same questions. Also:
 any recurring correspondence where the reply can address items by number and
 the numbers are assigned per message.
 
-**Jefferson Line, 2026-09-02.** Reports closed with a short numbered list of
+**The unlisted app, 2026-09-02.** Reports closed with a short numbered list of
 decisions, which is the right shape and was the standing rule. Every report
 numbered its list from 1. The owner answered by number.
 
