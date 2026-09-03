@@ -336,6 +336,47 @@ point its CLAUDE.md §10 note at this file.
 
 ---
 
+# njefferson/Jefferson-Line
+
+Added 2026-09-03. **EVERY ITEM IS PROPOSED. NOTHING IS SET.** These are
+GitHub-UI steps a session token cannot perform; the status on each row flips to
+SET only when it has been applied and, where possible, read back off the
+repository.
+
+**The repo is public and the app is not.** Nothing here should invite anybody
+to try the app — there is no open door, and a description that reads like a
+product page collects people who cannot get in. It describes what the code is.
+
+**Description** — **proposed**:
+
+An invite-only day sheet for one family and the friends they invite. Cloudflare
+Workers, D1 and Pages. No accounts, no passwords, no email, no feed.
+
+**Website** — **proposed**:
+
+https://jefferson-line.pages.dev
+
+**Topics** — **proposed**, twelve:
+
+cloudflare-d1, cloudflare-pages, cloudflare-workers, family, invite-only,
+no-tracking, offline-first, pwa, privacy-by-design, capability-urls,
+service-worker, static-site
+
+**Social preview** — **proposed**. The image is `social-preview.png` in the
+repo root, 1280x640, and it also ships with the site at
+https://jefferson-line.pages.dev/social-preview.png so it can be saved on a
+tablet — the upload is done from one, and "fetch the file out of the repo" is
+not an instruction that works there. It is GENERATED from the app's own
+`public/icon.svg` by `node tools/render-social.mjs` rather than drawn
+separately, because a card maintained by hand drifts from the icon the first
+time either changes and the drift shows up where nobody looks. Upload at
+GitHub -> the repo -> Settings -> General -> Social preview.
+
+**Default branch** — **proposed**: `main`, which is what it already is and what
+Cloudflare Pages deploys. Recorded so that "nothing to change" and "checked"
+are not the same claim; it needs reading off the repository to become SET.
+
+
 # njefferson/Cv-Thalweg
 
 Added 2026-08-29 and applied by the owner the same day. **EVERY ITEM IS SET.**
