@@ -72,7 +72,9 @@ const PAGES = [
     // FAILURE here, not a skip, so `h3`, `code` and `blockquote` came straight
     // back out — this essay uses none of them. A later essay that does must add
     // them in the commit that introduces it.
-    registry: ['h1','h2','p','li','a','.back','footer'],
+    // .byline added 2026-09-03 with the authorship line under the title. §4: a
+    // new fg/bg pair joins this gate in the SAME commit as the markup for it.
+    registry: ['h1','h2','p','li','a','.back','.byline','footer'],
     // Nothing here is a UI component in WCAG 1.4.11's sense. The one control is
     // the way back, and it identifies itself by its words, which are measured
     // above — `code` carries a border but is text, not a control.

@@ -197,10 +197,18 @@ const hook = () => {
     L.push('  echo "" >&2');
     L.push('else');
   }
-  for (const path of also) {
+  for (const declared of also) {
+    // ANCHORED TO THE REPO, NEVER TO $PATH. `sh` resolves a bare word against
+    // $PATH, so `also=example-check.mjs` looked for a command of that name and
+    // refused every commit with "missing or not executable" while the file sat
+    // in the working tree, executable. It failed CLOSED, which is why it is a
+    // trap rather than a hole: the first repo to declare a check at its root
+    // gets a refusal that names the wrong cause. Every sibling declares
+    // `tools/...`, which contains a slash and has always worked.
+    const path = /^[./]/.test(declared) ? declared : `./${declared}`;
     L.push(`if [ ! -x "${path}" ]; then`);
     L.push(`  echo "" >&2`);
-    L.push(`  echo "  REFUSED — .branch-guard declares also=${path} and it is missing or not executable." >&2`);
+    L.push(`  echo "  REFUSED — .branch-guard declares also=${declared} and it is missing or not executable." >&2`);
     L.push(`  echo "  A declared check that silently stops running is worse than no check." >&2`);
     L.push(`  echo "" >&2`);
     L.push('  exit 1');

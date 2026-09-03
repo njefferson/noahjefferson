@@ -321,3 +321,4 @@ and the filename carries it.
 - **§227** — [A test that skips the state a bug lives in certifies the bug, and the first one written here did](lessons/227-a-test-that-skips-the-state-the-bug-lives-in.md)
 - **§228** — [An explanation is not a route, and the build that swapped one for the other was the environment built for testing](lessons/228-an-explanation-is-not-a-route.md)
 - **§229** — [Every improvement landed on the screen you see once, and the screen you come back to kept the first version](lessons/229-the-return-screen-kept-the-first-version.md)
+- **§230** — [The strings nobody has to state are the ones that get published wrong — a byline and a placeholder are read first and written once](lessons/230-the-strings-nobody-states-on-purpose.md)
