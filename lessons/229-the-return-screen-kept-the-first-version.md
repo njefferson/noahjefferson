@@ -1,6 +1,6 @@
 ## 229 · Every improvement landed on the screen you see once, and the screen you come back to kept the first version
 
-**Enforced by:** GATE Jefferson-Line:tools/help-check.mjs — every Settings
+**Enforced by:** GATE unlisted-app:tools/help-check.mjs — every Settings
 section named in prose anywhere in the app, the front page, the guide, the
 Commodore's manual or the console's own welcome must match a legend the Settings
 screen actually renders; it found four more on its first run, two of them
@@ -14,7 +14,7 @@ one somebody was looking at while building it.
 screen. Also: any handover — a code, a link, an address — that one screen dresses
 properly and another prints into a span.
 
-**Jefferson Line, 2026-09-03.** Signing a second device in needs a short code,
+**The unlisted app, 2026-09-03.** Signing a second device in needs a short code,
 and there are two places to get one: the welcome screen a reader sees once, and
 a button in Settings, which is the only one anybody will ever find again.
 

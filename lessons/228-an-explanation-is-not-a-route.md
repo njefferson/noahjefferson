@@ -1,6 +1,6 @@
 ## 228 · An explanation is not a route, and the build that swapped one for the other was the environment built for testing
 
-**Enforced by:** GATE Jefferson-Line:tools/help-check.mjs — the staging build's
+**Enforced by:** GATE unlisted-app:tools/help-check.mjs — the staging build's
 Bridge handling is asserted: the console's address is one constant, the staging
 build must REPOINT it at the live console rather than delete the links, and the
 app must still say on screen why they leave. · CHECKLIST a-variant-build-removes
@@ -13,7 +13,7 @@ destination under it reads as naming the page it is on.
 available here". Also: a heading, tab or section that survives a feature's
 removal, in the environment nobody browses because it is the one they test in.
 
-**Jefferson Line, 2026-09-03.** The admin console is not published to the
+**The unlisted app, 2026-09-03.** The admin console is not published to the
 staging origin, and the reason is sound: its door is a Cloudflare Access
 application scoped to the production hostname, so a copy at the staging address
 would be an admin surface with nothing in front of it. The staging build

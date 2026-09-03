@@ -1,10 +1,10 @@
 ## 217 · A sentence of welcome is a claim about state, and nothing checks the welcome
 
-**Enforced by:** GATE Jefferson-Line:tools/help-check.mjs — the join screen's
+**Enforced by:** GATE unlisted-app:tools/help-check.mjs — the join screen's
 "You have a cabin. Welcome." is held to the Worker function that has to make it
 true, and to the manual paragraph that repeats it; a fourth assertion refuses
 the old spelling of an invitation that two screens still carried. · GATE
-Jefferson-Line:tools/worker-check.mjs — asserts the invariant on every path
+unlisted-app:tools/worker-check.mjs — asserts the invariant on every path
 that puts somebody aboard, and on the way back out of a shared room. ·
 CHECKLIST welcome-copy-is-an-assertion — every sentence of arrival copy that
 says what the reader now HAS is written down as a claim and given something
@@ -15,7 +15,7 @@ are pleasantries is a reading, and no pattern can make it.
 test naming that state. Also: the same artefact rendered by three screens with
 three spellings of it, where only one of them is on the path anybody tests.
 
-**Jefferson Line, 2026-09-02.** The join screen had said "You have a cabin.
+**The unlisted app, 2026-09-02.** The join screen had said "You have a cabin.
 Welcome." since the first release. It was not true and had never been true.
 Redemption created a person, attached them to whatever scope the invitation
 named, and stopped; a line-scoped invitation — the ordinary kind, the kind the

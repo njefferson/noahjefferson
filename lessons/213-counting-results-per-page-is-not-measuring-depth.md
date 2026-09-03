@@ -14,7 +14,7 @@ else's server, and no gate can make it.
 there are more". Also: a coverage number quoted from a browser session being
 used to size a job that will run without one.
 
-**Jefferson Line, 2026-09-02.** A casino's event calendar was wired at fifteen
+**The unlisted app, 2026-09-02.** A casino's event calendar was wired at fifteen
 events, with a note that only the first page was read and roughly seventy-two
 existed. Deciding whether to read deeper, the pagination was probed: pages two
 through six answered 200 and yielded 15, 16, 15, 15, 16 event links. That reads

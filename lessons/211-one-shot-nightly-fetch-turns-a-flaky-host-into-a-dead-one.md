@@ -1,6 +1,6 @@
 ## 211 · A once-a-night fetch turns an intermittent host into a dead one, and the record it leaves is a confident lie
 
-**Enforced by:** GATE Jefferson-Line:tools/worker-check.mjs — asserts that a
+**Enforced by:** GATE unlisted-app:tools/worker-check.mjs — asserts that a
 request which never completed is retried exactly once, that the retry is what
 gets recorded, and that a REFUSAL is not retried at all. · JUDGEMENT — which
 outcomes deserve a second request is a decision about the other party's
@@ -11,7 +11,7 @@ and writes the result down as the state of that third party. The tell is a
 health display that can say "unreachable" without also saying when the thing
 last worked.
 
-**Jefferson Line 0.3.0, 2026-09-02.** The nightly pass fetched each event
+**the unlisted app 0.3.0, 2026-09-02.** The nightly pass fetched each event
 source once and recorded what came back. Probed from the deployed Worker
 immediately after shipping, the Folsom Chamber answered 200 with thirty
 events five times out of eight and dropped three requests entirely — no

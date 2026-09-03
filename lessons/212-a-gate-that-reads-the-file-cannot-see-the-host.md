@@ -1,6 +1,6 @@
 ## 212 · A gate that reads the file cannot see the defect that lives where the file meets the host
 
-**Enforced by:** GATE Jefferson-Line:tools/deployed-check.mjs — reads the
+**Enforced by:** GATE unlisted-app:tools/deployed-check.mjs — reads the
 service worker's own precache list and asserts, against the PUBLISHED site,
 that every entry answers 200 without redirecting, that the version served
 matches the checkout, and that the crew surface is not answering the open
@@ -15,7 +15,7 @@ BEHAVIOUR — "the app works offline", "the new version waits", "the link
 resolves". Also: any static host with clean-URL rewriting under a PWA, which
 is most of them.
 
-**Jefferson Line, 2026-09-02, found on the way to something else.** The
+**The unlisted app, 2026-09-02, found on the way to something else.** The
 service worker had listed `index.html`, `privacy.html` and two more in its
 precache array since the first commit. Cloudflare Pages 308s every `.html`
 path to its extensionless form, and `cache.put` refuses a response whose

@@ -1,10 +1,10 @@
 ## 222 · The fix was already in a sibling repo, with a comment saying not to do what this one had just done
 
-**Enforced by:** GATE Jefferson-Line:tools/help-check.mjs — refuses
+**Enforced by:** GATE unlisted-app:tools/help-check.mjs — refuses
 `position: sticky` anywhere in the stylesheet, asserts the panel is a flex
 column with `[open]` on the selector and its body the only scrolling box, and
 that every document opts into the same frame. · GATE
-Jefferson-Line:tools/qr-check.mjs — measures the encoder's real ceiling and
+unlisted-app:tools/qr-check.mjs — measures the encoder's real ceiling and
 every payload the app can build at FULL length, printing the headroom. ·
 CHECKLIST read-the-siblings-before-solving — before building a surface this
 family already has (an info panel, a way out of a long dialog, patch notes,
@@ -16,7 +16,7 @@ discoverable from a gate.
 first principles, on a machine that is not the device the app is read on.
 Also: a test fixture that is a shortened stand-in for the real value.
 
-**Jefferson Line, 2026-09-02.** The owner reported that the ⓘ panel was far
+**The unlisted app, 2026-09-02.** The owner reported that the ⓘ panel was far
 too long with the only way out at the very bottom, and added: *look at sister
 repos for their conventions.*
 

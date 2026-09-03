@@ -1,9 +1,9 @@
 ## 223 · The host was unblocked, the library still would not load, and the check that saved it was in the document itself
 
-**Enforced by:** GATE Jefferson-Line:tools/worker-check.mjs — eight dates from
+**Enforced by:** GATE unlisted-app:tools/worker-check.mjs — eight dates from
 the source document are asserted against the weekday the document prints
 beside them, and a separate assertion refuses any span claiming to be a
-move-in or move-out date. · GATE Jefferson-Line:tools/help-check.mjs — the
+move-in or move-out date. · GATE unlisted-app:tools/help-check.mjs — the
 dates must name the document they came from, say how the text was extracted,
 and say what the document does NOT contain. · CHECKLIST
 find-the-redundancy-in-the-source — when a document must be parsed by
@@ -17,7 +17,7 @@ for that document, and validating it by reading the output and finding it
 plausible. Also: an answer that is *nearly* what was asked for, sitting in the
 same table as the thing that is missing.
 
-**Jefferson Line, 2026-09-02.** The owner asked whether a university's academic
+**The unlisted app, 2026-09-02.** The owner asked whether a university's academic
 calendar could be imported. The hosts were blocked, which was reported as a
 question rather than a finding (§188), and the owner opened them in a minute.
 

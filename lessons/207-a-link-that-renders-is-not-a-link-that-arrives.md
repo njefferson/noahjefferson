@@ -1,6 +1,6 @@
 ## 207 · A link that renders is not a link that arrives, and a widget that is declared is not a widget that loaded
 
-**Enforced by:** GATE Jefferson-Line:tools/worker-check.mjs — every generated
+**Enforced by:** GATE unlisted-app:tools/worker-check.mjs — every generated
 user-facing link is asserted against the origin it must land on, not merely
 against being non-empty. · CHECKLIST follow-the-link — for any surface whose
 whole job is to send someone somewhere, fetch the destination and assert its
