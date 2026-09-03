@@ -196,6 +196,9 @@ if (!deployWf) {
 const prose = [
   ['NOTES.md', notes_md],
   ['README.md', read('README.md')],
+  // METADATA.md is where the owner's manual steps actually live, and it was
+  // not being read. That is where the instruction below was written.
+  ['METADATA.md', read('METADATA.md')],
 ].filter(([, t]) => t);
 
 for (const [file, text] of prose) {
@@ -207,6 +210,28 @@ for (const [file, text] of prose) {
       failures.push(
         `${file}:${n + 1}: tells the reader to fetch "${m[2]}" from the repo. `
         + 'the owner is iPad-first (§2) — ATTACH the file instead of naming a path on a machine that is not there.',
+      );
+    }
+
+    // AND THE SAME DEFECT WEARING THE FIX. The rule above was read as being
+    // about REPOS, so an instruction that failed for the same reason was
+    // written as a remedy for it: open the site's own copy of the file and
+    // save it from there. That fails harder. A LINK CANNOT LEAVE AN INSTALLED
+    // APP ON iOS — no target, no rel, no gesture — which is why these apps
+    // hand a code across with a copy button rather than opening anything, and
+    // somebody standing in the installed app, signed in, cannot reach that
+    // address at all.
+    //
+    // The general rule, which the repo half was only one case of: an
+    // instruction that requires OPENING SOMETHING fails for a reader who is
+    // inside an app that cannot open things. The remedy for both is the same
+    // and it is not another address — the session sends the file.
+    const u = /\b(download|save|fetch|get|grab|open|visit)\b[^.\n]{0,80}(https?:\/\/[^\s)"']+\.(png|jpg|jpeg|svg|json|zip|pdf))/i.exec(line);
+    if (u) {
+      failures.push(
+        `${file}:${n + 1}: tells the reader to open ${u[2]} and take the file from there. `
+        + 'a link cannot leave an installed app on iOS, so this fails for the reader it is written for '
+        + '(§2) — SEND the file into the conversation instead.',
       );
     }
   });
