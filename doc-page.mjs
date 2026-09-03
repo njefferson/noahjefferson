@@ -174,14 +174,41 @@ a:focus-visible{outline:2px solid var(--link);outline-offset:2px}
    first, and it is the only route off this page. */
 .back{display:inline-flex;align-items:center;min-height:44px;padding:0 0.25rem;
   font-family:ui-sans-serif,system-ui,sans-serif;font-size:0.9rem;text-decoration:underline}
+/* THE BYLINE SITS UNDER THE TITLE, NOT IN THE FOOT. Who wrote a document is
+   part of deciding whether to read it, and a foot strip is read after that
+   decision has already been made — the same reasoning Doctrine §15 gives for
+   keeping a disclaimer off the footer. */
+.byline{margin:0.25rem 0 1.75rem;color:var(--muted);font-size:0.9rem;
+  font-family:ui-sans-serif,system-ui,sans-serif}
 footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);
   color:var(--muted);font-size:0.85rem;font-family:ui-sans-serif,system-ui,sans-serif}
-footer a{color:var(--link)}
+/* THE FOOT LINK STANDS ALONE NOW. It used to sit at the end of the byline
+   sentence, where WCAG 2.2 SC 2.5.8's inline exception covered it; moving the
+   byline up under the title left it the only thing in the foot, and the gate
+   caught it in the same run. 44px, the same shape as the way back. */
+footer a{color:var(--link);display:inline-flex;align-items:center;
+  min-height:44px;padding:0 0.25rem}
 `;
 
-/** The page shell. Differs from Quietkeep's only in the title suffix, the way
- *  back, and the icon paths — this site keeps its icons at the root. */
+/** The page shell. Differs from Quietkeep's in the title suffix, the way back,
+ *  the icon paths — this site keeps its icons at the root — and the byline slot
+ *  below, which that repo has no need of because nothing there is published
+ *  under a person's name.
+ *
+ *  THE BYLINE IS REQUIRED AND IT IS PLACED HERE, not written into the essay's
+ *  markdown. A byline typed into prose is a sentence like any other, and the
+ *  one this page shipped with was a template string carried in from a sibling:
+ *  it named the site's owner as the author of a piece written in a session, and
+ *  survived because nothing ever had to state it on purpose. */
 export function page(bodyHtml, meta) {
+  if (!meta.byline) throw new Error(`${meta.slug}: no byline — who wrote this?`);
+  const lines = bodyHtml.split('\n');
+  const h1 = lines.findIndex((l) => l.startsWith('<h1>'));
+  // A document with no title has nowhere for a byline to sit, and silently
+  // dropping it would publish the page with no author at all.
+  if (h1 === -1) throw new Error(`${meta.slug}: no <h1> — the byline has nowhere to sit`);
+  lines.splice(h1 + 1, 0, `<p class="byline">${meta.byline}</p>`);
+  bodyHtml = lines.join('\n');
   return `<!doctype html>
 <html lang="en">
 <head>

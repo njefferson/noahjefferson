@@ -1,0 +1,21 @@
+# Every seeded example on a surface in this repo — the grey text in an empty
+# field, and any element marked `data-example` — and where it came from. Held by
+# `example-check.mjs`; that file says why this is a declared list and not a rule
+# about content (an invented plan and a real one are the same sentence).
+#
+# An example taken from somebody's actual work is not declarable and never
+# becomes declarable. Invent the scenario. The plan walk shipped four examples
+# lifted from a live plan of the owner's, on a public site, because they were the
+# plan in front of the session that built the page.
+#
+#   file | invented | product-copy | public-data | the example's opening words
+#
+#   invented     — a scenario made up for the page, resembling nobody's real work
+#   product-copy — the app's own strings, quoted back as a sample
+#   public-data  — a row from a published dataset, under its terms
+#
+public/plan.html | invented | Move the workshop into the new unit by 1 Dec
+public/plan.html | invented | The unit is free from November -> the signed lease comes back
+public/plan.html | invented | The work between the parts. Asking people for their pieces
+public/plan.html | invented | If the lease date slips -> move the first class and tell the group
+public/plan.html | invented | Example — Confirm: the unit is free from November

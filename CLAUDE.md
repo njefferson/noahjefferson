@@ -93,6 +93,14 @@ Every item below has actually happened.
  metadata items above: a remedy that keeps getting re-offered because the
  record used to say "report it with the options". It no longer does.
  (Doctrine §9b.)
+- **A BYLINE IS A CLAIM AND AN EXAMPLE IS PUBLISHED COPY — neither is ever
+ inherited.** The hub's first essay carried "Written by Noah Jefferson" for its
+ whole life because the footer string came in with the converter from a sibling
+ repo; a session wrote the essay. The plan walk loaded with four examples taken
+ from a real plan rather than an invented one, on a public page. Both are strings
+ nothing asserts, nobody re-reads and everybody reads first. Authorship is now a
+ declared `author` key with no default (`essay.mjs`), and every example is
+ declared in `.example-allow` (`example-check.mjs`). (Doctrine §5; LESSONS §230.)
 - **NEVER QUOTE THE OWNER, AND NEVER ATTRIBUTE ANYTHING TO THE OWNER BY NAME, IN ANY REPO.**
   Not in a comment, not in `NOTES.md`, not in a commit message, not in a release
   note, not in the doctrine or the lessons. These repos are PUBLIC and carry the owner's
@@ -339,7 +347,7 @@ When a doctrine rule changes, edit it HERE and tell the sibling repos to
 re-point (their `CLAUDE.md` files link to this copy). Never fork the doctrine
 into another repo — link to it.
 
-## Eleven gates live here and serve every repo
+## Twelve gates live here and serve every repo
 Never fork these either — they take `--repo ../app` (or a path) so a sibling
 runs them without copying them, which is what stops five divergent versions
 existing.
@@ -444,6 +452,14 @@ existing.
  deploys (LESSONS §53). A stale mirror is not a smaller gate, it is a
  DIFFERENT one.
 
+- [`example-check.mjs`](example-check.mjs) — **a placeholder is published copy,
+ and the nearest real scenario belongs to somebody.** Every placeholder and every
+ element marked `data-example` on a surface is declared in `.example-allow` with
+ where it came from, both directions, and the list prints on every run. The plan
+ walk shipped four examples lifted from a real plan, on a public page, past the
+ privacy, quote and third-person gates — none of which can see a string that
+ names nobody, quotes nobody and attributes nothing. `--list` seeds the file.
+ (LESSONS §230.)
 - [`third-person-check.mjs`](third-person-check.mjs) — **the privacy rule's
  THIRD half: never in the third person either.** `privacy-check.mjs` anchors on
  the NAME and `quote-check.mjs` finds the set-apart quotation; neither can see a

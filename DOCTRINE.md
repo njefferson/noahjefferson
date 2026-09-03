@@ -434,6 +434,19 @@ so. The reference implementation is now hub `a11y-gate.mjs`:
 - No false confidence: never present generated/placeholder content as if it
  were curated fact (the "generated park blurbs shown as field notes" lesson).
 - Data ages honestly — when a feed goes stale, say so; don't churn silently.
+- **A BYLINE IS A CLAIM, AND IT IS NEVER INHERITED.** Anything published on a
+ surface carrying a person's name is read as theirs. Whoever actually wrote it is
+ DECLARED, per document, from a fixed set of values with no default — never a
+ free-text string that arrives with a template and is then true of nothing.
+ The hub's first essay said the owner wrote it for the whole of its life; the
+ string came in with the converter from a sibling repo.
+ (`essay.mjs`; LESSONS §230.)
+- **AN EXAMPLE IS PUBLISHED COPY. INVENT IT.** A placeholder, a sample row, a
+ seeded value — read before anything else on the page, written once, asserted by
+ nothing. The nearest real scenario is the one in front of the session building
+ the page, and it belongs to somebody. Every one is declared in `.example-allow`
+ with where it came from; an example taken from real work is not declarable.
+ (`example-check.mjs`; LESSONS §230.)
 
 ## 5b. When a tool fails, diagnose it — never hand the owner the blame
 

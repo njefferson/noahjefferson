@@ -83,13 +83,22 @@
   should come back to you, and <strong>the document</strong> that holds the rest
   of the thinking. A draft stays in this browser and nothing is sent anywhere.</p>
 
+  <!-- EVERY EXAMPLE ON THIS PAGE IS INVENTED, and each one is declared as such
+       in `.example-allow` at the repo root, checked by `example-check.mjs` on
+       every commit. The first four were not: they were a real plan of the
+       owner's, typed in because they were the plan in front of the session that
+       built the page, and they then loaded into a stranger's browser on a
+       public site. An example is product copy — it is published, it is read
+       first, and it is the one string on a form nobody re-reads after the day
+       it was written. Invent the scenario; never reach for the nearest real
+       one. -->
   <section class="step">
     <h2><span class="k">1</span>The mission, in one sentence</h2>
     <p class="hint">Who, what, when, where, why. This line names the project
     everything else sits under.</p>
     <label for="f-mission">The one sentence</label>
     <input id="f-mission" type="text" autocomplete="off"
-      placeholder="Hand the directorate over complete by 1 Dec, so the incoming lead can act from day one">
+      placeholder="Move the workshop into the new unit by 1 Dec, so the first class there runs on the 2nd">
   </section>
 
   <section class="step">
@@ -116,7 +125,7 @@
     <em>Confirm:</em> task, because an assumption nobody re-checks stopped being
     an assumption — untick any you would not spend a task on.</p>
     <label for="f-assum">assumption -&gt; confirmed when</label>
-    <textarea id="f-assum" placeholder="The orders date holds -> orders are published"></textarea>
+    <textarea id="f-assum" placeholder="The unit is free from November -> the signed lease comes back"></textarea>
   </section>
 
   <section class="step">
@@ -149,7 +158,7 @@
     action attached is the single best-evidenced move in the planning
     literature, and it crosses as a task that carries both halves.</p>
     <label for="f-ir">If this is learned -&gt; then this happens</label>
-    <textarea id="f-ir" placeholder="If the start slips -> re-order the brief sequence that day"></textarea>
+    <textarea id="f-ir" placeholder="If the lease date slips -> move the first class and tell the group that day"></textarea>
   </section>
 
   <section class="step">
@@ -179,9 +188,9 @@
     file and out of the clipboard — it is never created, so there is nothing to
     delete later. Editing a line switches it back on.</p>
     <ul id="out-list" class="out-list">
-      <li class="out-line" id="out-example"><label><input type="checkbox" checked>
-        <span class="t">Example — <span class="mono">Confirm: the venue is booked</span>
-        <span class="n">Confirmed when: the booking note arrives. Fill the walk above and this row is replaced by yours.</span></span></label></li>
+      <li class="out-line" id="out-example" data-example><label><input type="checkbox" checked>
+        <span class="t">Example — <span class="mono">Confirm: the unit is free from November</span>
+        <span class="n">Confirmed when: the signed lease arrives. Fill the walk above and this row is replaced by yours.</span></span></label></li>
     </ul>
     <p id="out-count" class="status" role="status" aria-live="polite"></p>
     <button id="save-file" type="button" class="btn">Save the Quietkeep file</button>
