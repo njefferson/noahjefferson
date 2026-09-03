@@ -319,3 +319,5 @@ and the filename carries it.
 - **§225** — [The platform limit decided the design, and the code shipped without anyone asking what it was](lessons/225-the-platform-limit-decided-the-design-and-nobody-asked-it.md)
 - **§226** — [A shallow clone answers "does this commit exist" with a fact about the fetch depth, and says nothing about doing so](lessons/226-a-shallow-clone-answers-does-this-exist-with-fetch-depth.md)
 - **§227** — [A test that skips the state a bug lives in certifies the bug, and the first one written here did](lessons/227-a-test-that-skips-the-state-the-bug-lives-in.md)
+- **§228** — [An explanation is not a route, and the build that swapped one for the other was the environment built for testing](lessons/228-an-explanation-is-not-a-route.md)
+- **§229** — [Every improvement landed on the screen you see once, and the screen you come back to kept the first version](lessons/229-the-return-screen-kept-the-first-version.md)
