@@ -70,5 +70,5 @@ names that collide with your feature vocabulary — *Lens*, *Gauge*, *Alignment*
 all died here) · 3. unscoped name+software search · 4. npm and GitHub ·
 5. store and trademark searches on a personal device. Steps 1 and 2 are free and
 instant, and were being run last or not at all.
-*(Horizons/planner, 2026-07-28 — caught by the owner after the name had already landed
+*(Horizons/planner, 2026-07-28 — caught after the name had already landed
 on `staging`; the staging gate contained it and it cost nothing.)*

@@ -26,8 +26,9 @@ offers to search the web for it — which is why the square carries a link.
 
 The Settings button wrote `Code: XXXX (10 minutes)` into a span, exactly as it
 had on the day it was written. Every one of those findings was about the flow
-and none of them reached the second door into it. Reported as: pressed the
-button, got no QR.
+and none of them reached the second door into it. What that button does on a
+live install: prints a code, draws no square, says nothing about where it
+goes.
 
 **Why it survives.** It is not neglect, it is where the attention was. The
 welcome screen is where you land when you test a change to onboarding, so it is

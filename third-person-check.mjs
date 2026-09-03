@@ -30,6 +30,25 @@
 // same governance fact, and only one of them has a person in it. That is the
 // whole transformation, and it loses nothing an engineer needed.
 //
+// RULE 3 — WHO FOUND IT. A finding verb (caught, found, reported, noticed,
+// spotted, discovered) bound to a person, plus the two bare spellings that name
+// a reporter without naming anyone — a report credited to live use, and a
+// report credited back to whoever sent it. The literal forms are in the pattern
+// below rather than written out here, because this file scans itself and an
+// example of a violation is a violation; that is the gate working.
+//
+// This is the half of the rule the other two could not see: no name for
+// `privacy-check.mjs`, no blockquote for `quote-check.mjs`, no pronoun and no
+// possession for rules 1 and 2. Six sites in the hub and thirteen more in a
+// sibling, all of them in comments and lesson prose, with every gate green.
+//
+// MEASURED BEFORE IT SHIPPED, like the possession list. The first draft matched
+// governance too — "confirmed by the owner", "on the owner's say-so" — and
+// flagged twenty-two sites, sixteen of them the honest provenance for a manual
+// step no session can take. METADATA.md's "confirmed by the owner" IS the
+// evidence a social preview was applied, because nothing else can confirm it.
+// Narrowed to finding verbs, it flags six and every one is real.
+//
 // RULE 2 — "the owner's <thing>" where the thing is a POSSESSION rather than an
 // act. "The owner's word", "the owner's on-device pass" and "the owner's call"
 // are governance: they name a step in a process. A possession — a machine, a
@@ -89,6 +108,16 @@ const POSSESSIONS = [
 ];
 const POSSESSIVE_G = new RegExp(
   String.raw`\bthe owner['’]s\s+(?:` + POSSESSIONS.join('|') + String.raw`)\b`, 'gi');
+// RULE 3 — WHO FOUND IT. A finding verb bound to a person, and the two bare
+// spellings that name a reporter without naming anyone. Deliberately excludes
+// the governance verbs (confirmed, approved, applied, set, requested) and
+// "on the owner's word/say-so/instruction", which record a step only a human
+// can take and are the honest provenance for it.
+const ATTRIBUTION_G = new RegExp(
+  String.raw`\b(?:caught|found|reported|noticed|spotted|discovered)\s+by\s+`
+  + String.raw`(?:the\s+owner|him|her)\b`
+  + String.raw`|\bReported\s+(?:from\s+live\s+use|here\s+as|back\s+as)\b`
+  + String.raw`|\bthe\s+report\s+back\s+was\b`, 'gi');
 // privacy-gate:patterns-end
 
 const name = repo.split('/').filter(Boolean).pop() || 'repo';
@@ -167,6 +196,11 @@ for (const f of files) {
     return (scannable[upto]?.[0] ?? 0) + 1;
   };
   for (const m of joined.matchAll(POSSESSIVE_G)) {
+    found.push({ f, n: lineOf(m.index), w: m[0].replace(/\s+/g, ' ') });
+  }
+  // Joined, like the possessive rule, because an attribution wraps across a
+  // line as readily as anything else and six of these were written that way.
+  for (const m of joined.matchAll(ATTRIBUTION_G)) {
     found.push({ f, n: lineOf(m.index), w: m[0].replace(/\s+/g, ' ') });
   }
 

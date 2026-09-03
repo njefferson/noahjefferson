@@ -19,8 +19,8 @@ holding it", and only the second one catches this. Any product with a specific
 audience has vocabulary like this, verbal and visual; find out what it is before
 drawing, not after.
 
-*(Quietkeep, 2026-07-28 — caught by the owner, after a session had rejected the
-same two candidates for entirely different and lesser reasons.)*
+*(Quietkeep, 2026-07-28 — caught only after a session had rejected the same
+two candidates for entirely different and lesser reasons.)*
 
 **"Make it lighter" can be arithmetically impossible, and the arithmetic is worth
 running before answering.** A three-tone mark where each step needs 3:1 over the

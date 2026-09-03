@@ -234,8 +234,8 @@ has to be pinned — and once pinned, check it against WCAG 2.2 **2.4.11 Focus N
 Obscured**, because a sticky header that covers the control you just focused is
 its own AA failure. At 200% text on a 320px screen the first version of that
 header took **99% of the dialog**.
-*(Quietkeep 0.10.1, 2026-07-29; found by the owner on device, not by eight green
-CI gates.)*
+*(Quietkeep 0.10.1, 2026-07-29; found on device, not by eight green CI
+gates.)*
 
 **`rem` inside a media query resolves against the INITIAL root font size, never
 the current one.** A `@media (max-height: 32rem)` threshold written specifically
@@ -444,8 +444,8 @@ code you are testing, so it agrees with itself by construction. Same family as
 the self-referential assertion (`assert.equal(cards.length, CAP)`) and the
 consistency check between two projections of one source: all three compare the
 code to itself.
-*(Intersecting Parallels 0.1.1, 2026-07-29 — found by the owner on an iPad,
-against a walk of 33 green checks.)*
+*(Intersecting Parallels 0.1.1, 2026-07-29 — found on an iPad, against a walk
+of 33 green checks.)*
 
 **Two guides that are nearly the same LINE are not nearly the same
 CONSTRAINT.** The same defect had a second layer underneath. With both vanishing
