@@ -1,7 +1,7 @@
 ## 228 · An explanation is not a route, and the build that swapped one for the other was the environment built for testing
 
 **Enforced by:** GATE unlisted-app:tools/help-check.mjs — the staging build's
-Bridge handling is asserted: the console's address is one constant, the staging
+console handling is asserted: the console's address is one constant, the staging
 build must REPOINT it at the live console rather than delete the links, and the
 app must still say on screen why they leave. · CHECKLIST a-variant-build-removes
 -a-route-or-repoints-it-never-explains-it — when a build variant cannot ship a
@@ -17,11 +17,11 @@ removal, in the environment nobody browses because it is the one they test in.
 staging origin, and the reason is sound: its door is a Cloudflare Access
 application scoped to the production hostname, so a copy at the staging address
 would be an admin surface with nothing in front of it. The staging build
-therefore deleted `crew/` and replaced the three links to it in the app with a
-sentence — the console is not published here, use the live app.
+therefore deleted the console's directory and replaced the three links to it in
+the app with a sentence — the console is not published here, use the live app.
 
 Every word of that is true, and what it left on the screen was a section headed
-"The Bridge" with no Bridge behind it. The section then reads as naming the
+with the console’s name and no console behind it. The section then reads as naming the
 page it is on, and there is no route to the real console from anywhere in the
 app.
 

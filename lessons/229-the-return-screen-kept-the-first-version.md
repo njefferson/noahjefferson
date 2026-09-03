@@ -2,8 +2,8 @@
 
 **Enforced by:** GATE unlisted-app:tools/help-check.mjs — every Settings
 section named in prose anywhere in the app, the front page, the guide, the
-Commodore's manual or the console's own welcome must match a legend the Settings
-screen actually renders; it found four more on its first run, two of them
+administrator's manual or the console's own welcome must match a legend the
+Settings screen actually renders; it found four more on its first run, two of them
 invisible to a search for the phrase because the name was wrapped across a line.
 · CHECKLIST when-two-screens-do-one-job-diff-them — before shipping an
 improvement to a flow, find every other entry point into that flow and compare
@@ -37,8 +37,8 @@ the one a person uses on their eleventh day, which is a day no session has.
 
 **And renaming it cost six more.** Splitting that fieldset in two meant renaming
 "Link another device", and six other places sent a reader to look for it by that
-name — three screens in the app, the front page, the Commodore's manual, and the
-admin console's own welcome. The last two are the pages somebody reads when they
+name — three screens in the app, the front page, the administrator's manual,
+and the admin console's own welcome. The last two are the pages somebody reads when they
 are ALREADY stuck. Two of the six were invisible to a search for the phrase,
 because the name happened to wrap across a line break in the source. A label
 quoted in prose is an API, and nothing was holding the callers to it.

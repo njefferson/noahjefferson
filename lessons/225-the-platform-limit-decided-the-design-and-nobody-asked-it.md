@@ -70,7 +70,7 @@ four dates read out of a PDF by a hand-written decoder — two sources with no
 way to share a mistake. `planning_calendar` sounded exactly like the thing a
 family planner wants and is two hundred rows of class sections.
 
-Wiring the second by its name would have flooded a family's day sheet with
+Wiring the second by its name would have flooded that app's main surface with
 `ANTH 102 1 41567`, and wiring the first — the one that sounded administrative
 — would have been noise too, since almost all of it is add/drop and census
 deadlines. **The useful one was useful for a purpose neither name suggested:
