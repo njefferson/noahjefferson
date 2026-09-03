@@ -83,13 +83,30 @@ const onDisk = execFileSync('git', ['ls-files', 'public'], { encoding: 'utf8' })
 const listed = new Set(PAGES.map((p) => p.file));
 const unlisted = onDisk.filter((f) => !listed.has(f));
 const missing = [...listed].filter((f) => !onDisk.includes(f));
-if (unlisted.length || missing.length) {
+// AND EACH ONE DECLARES ITS CACHE POLICY. This is not an accessibility fact and
+// it lives here anyway, because `PAGES` is the only enumeration of deployed
+// pages in this repo and a second copy of that list is the drift half this
+// family's lessons are about (§22). A page whose route is absent from
+// `_headers` takes the platform default, which is fine until the day it is
+// deleted and somebody has to explain why the old copy is still being served.
+const headersFile = 'public/_headers';
+const headersSrc = existsSync(headersFile) ? readFileSync(headersFile, 'utf8') : '';
+const routeOf = (f) => f === 'public/index.html' ? '/' : '/' + f.slice(7, -5);
+const undeclared = onDisk.filter((f) => {
+  const route = routeOf(f);
+  return !new RegExp(`^${route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'm').test(headersSrc);
+});
+
+if (unlisted.length || missing.length || undeclared.length) {
   console.error('=== a11y gate ===\n');
   for (const f of unlisted) {
     console.error(`  FAIL  ${f} is deployed and is not in PAGES — it would ship unmeasured.`);
   }
   for (const f of missing) {
     console.error(`  FAIL  PAGES lists ${f}, which is not a tracked page — a removed page leaves its entry behind.`);
+  }
+  for (const f of undeclared) {
+    console.error(`  FAIL  ${f} has no ${routeOf(f)} rule in ${headersFile} — it would take the platform's cache default.`);
   }
   console.error('\nA page nothing opens is a page nothing measures (§4, §28).');
   process.exit(1);
