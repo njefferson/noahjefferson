@@ -1455,6 +1455,21 @@ for twenty-two releases.
  from the other end.
 5. **The cache name carries the release**, so a release cannot silently reuse it
  (LESSONS §21).
+6. **THE READER CAN ASK, AND CAN SEE WHAT THEY HAVE.** Rule 2 is the app
+ speaking when the browser happens to notice — and an installed app opened
+ rarely, or left open for days, may not check at all. So every app carries, in
+ its own chrome: **the version running on THIS device**, in words, on a screen
+ rather than only in the §7f diagnostic; and **a control that checks on
+ demand** and answers in all three cases. The boring answer is the load-bearing
+ one — *you are on the newest version* is what somebody actually needs to hear,
+ and a control that speaks only when there is news leaves them unsure it did
+ anything.
+ **Reported on 2026-09-03 as three absences at once** — no prompt, no version,
+ no button — on an app passing every part of rules 1 to 5, which is precisely
+ what this section says a stale app looks like: perfectly fine, and old. The
+ rules said the app must TELL; none of them said the reader may ASK.
+ Built first in the unlisted app (`#info-version`, `#info-checkupd`, asserted
+ in its `tools/panel-shot.mjs`). **Every sibling owes both.**
 
 **Test it with a REAL second worker**, not a mocked registration. Serve a
 genuinely different `sw.js` and let the browser's own update machinery run; a
