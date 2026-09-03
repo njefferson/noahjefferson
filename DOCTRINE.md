@@ -439,8 +439,10 @@ so. The reference implementation is now hub `a11y-gate.mjs`:
  DECLARED, per document, from a fixed set of values with no default — never a
  free-text string that arrives with a template and is then true of nothing.
  The hub's first essay said the owner wrote it for the whole of its life; the
- string came in with the converter from a sibling repo.
- (`essay.mjs`; LESSONS §230.)
+ string came in with the converter from a sibling repo. That essay and its
+ generator are gone, so this rule currently has no gate behind it anywhere —
+ the next document surface in this family builds one in the commit that creates
+ the surface. (LESSONS §230.)
 - **AN EXAMPLE IS PUBLISHED COPY. INVENT IT.** A placeholder, a sample row, a
  seeded value — read before anything else on the page, written once, asserted by
  nothing. The nearest real scenario is the one in front of the session building
