@@ -15,8 +15,9 @@ Also: any inline colour, and especially one added to fix a contrast
 complaint — it is a value in the one place nothing measures.
 
 **The unlisted app, 2026-09-02.** Six of the app's navigation links were
-unreadable in both themes from the first release. Settings, Cabins, Cruises,
-the availability grid, the manual, and the link out to an event's source.
+unreadable in both themes from the first release. Settings, two of the main
+list screens, the availability grid, the manual, and the link out to an event's
+source.
 Measured after the report: **1.30:1 in the light theme and 1.64:1 in the dark,
 against a floor of 4.5.** Found by somebody using the live app, not by any
 gate and not on any device the work was done on.

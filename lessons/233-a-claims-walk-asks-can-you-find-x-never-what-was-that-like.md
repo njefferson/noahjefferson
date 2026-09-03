@@ -25,8 +25,8 @@ Every gate was green. So was the browser walk. So was a device pass.
 specifies writing each release claim as a place to stand and a thing that must
 be visible there, handing the agent only that, and diffing its report against
 intent. That is verification against expectations BY CONSTRUCTION. It asks
-whether named things can be found. Nobody had ever claimed "the cabins screen
-opens with two sentences", so no walk could report that it opened with eight.
+whether named things can be found. Nobody had ever claimed "that screen opens
+with two sentences", so no walk could report that it opened with eight.
 
 §206 half-sees this — it records that a sibling model reads charitably and
 shares the author's blind spots, and concludes that its agreement is weak

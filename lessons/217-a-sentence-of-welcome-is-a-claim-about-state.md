@@ -51,7 +51,7 @@ look them up instead of inventing them.
 
 **And the thing found on the way was worse than the thing looked for.** Three
 screens in that app mint an invitation. One printed the app's origin with
-`#/join/` on it and the boarding code beside it; the other two printed the
+`#/join/` on it and the short spoken code beside it; the other two printed the
 WORKER's origin with no route and no code at all. Both were undeliverable —
 the link opened an API host, and the code that works for somebody who installs
 the app first, which is the order the app itself asks for, was never returned
