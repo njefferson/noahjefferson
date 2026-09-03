@@ -54,6 +54,15 @@ on:
           out of a privacy gate would.
         type: boolean
         default: true
+      examples:
+        description: >-
+          Run example-check — every placeholder and data-example on a surface is
+          declared in `.example-allow` with where it came from. Defaults ON, for
+          the same reason as third-person: a repo that could opt out of it is a
+          repo whose examples nobody reads. A repo with no surfaces declares an
+          empty list and the gate says so on every run.
+        type: boolean
+        default: true
       docs-path:
         description: Which directory docs-check walks, relative to the repo.
         type: string
@@ -192,6 +201,16 @@ jobs:
       - name: Nothing is attributed to the owner in the third person
         if: inputs.third-person
         run: node hub/third-person-check.mjs --repo app
+
+      # A placeholder is read before anything else on the page, written once,
+      # and asserted by nothing — and the nearest real scenario is the one in
+      # front of whoever is building the page, which is somebody's. The hub
+      # shipped four examples out of a real plan, on a public page, past the
+      # privacy, quote and third-person gates: none of them can see a string
+      # that names nobody, quotes nobody and attributes nothing.
+      - name: Every example on a surface is invented, and declared
+        if: inputs.examples
+        run: node hub/example-check.mjs --repo app
 
       # Through the environment, not interpolated into the command: an input
       # expanded straight into a `run:` block is code injection, and zizmor
