@@ -331,3 +331,4 @@ and the filename carries it.
 - **§237** — [A gate only CI runs is a gate that reports the defect after it has shipped](lessons/237-a-gate-that-only-ci-runs-catches-things-after-the-push.md)
 - **§238** — [A test double that is more permissive than the real thing proves nothing about the difference](lessons/238-a-double-that-is-more-permissive-than-production.md)
 - **§239** — [Removing markup leaves the line that touched it, and the screen still looks finished](lessons/239-deleting-markup-leaves-the-code-that-touched-it.md)
+- **§240** — [The index said the swap was done in all eight repositories; measured, it was two — and the gate that would have caught it is carried by three](lessons/240-the-index-counted-a-swap-that-six-repos-never-made.md)
