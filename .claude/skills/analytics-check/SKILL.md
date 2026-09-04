@@ -1,23 +1,34 @@
 ---
 name: analytics-check
 description: >-
- Report what can be known about who touches the owner's apps — totals, by-app,
- by-country, app x country, a device upper bound, and the trend over time — from
- Cloudflare's edge, with no tracking added to any app. Use whenever the owner asks
- what the numbers look like, who is using the apps, how many users/people/visitors
- there are, whether anything changed, or for /analytics-check. Runs the
- cf-analytics `snapshot` command in the hub, appends one row to the running trend,
- and presents every view with the caveats that keep it honest. Never a beacon;
- never claims requests are people; never claims DEVICES are people either — the
- device count is an upper bound that once read 150 against about five.
+ Report what is hitting the owner's apps and from where — traffic totals, by-app,
+ by-country, app x country, crawler and scanner activity, a device upper bound,
+ and the trend — from Cloudflare's edge, with no tracking added to any app. Use
+ whenever the owner asks what the numbers look like, what is hitting the apps,
+ whether anything changed or looks anomalous, or for /analytics-check. This
+ measures TRAFFIC, not people: it cannot answer "how many users do I have" and
+ must say so rather than answering anyway. Anchors every run against
+ jefferson-line, whose invite list is a known headcount, and reports the
+ overstatement factor that comes back. Never a beacon; never claims requests are
+ people; never claims DEVICES are people either — the device count is an upper
+ bound that once read 150 against about five.
 ---
 
 # analytics-check
 
-The recurring answer to "who is using my apps, and did it change." Everything it
-needs already exists in this repo: `cf-analytics.mjs` and the
-`.github/workflows/cf-analytics.yml` workflow. This skill drives them and keeps
-the trend.
+**What is hitting these apps, from where, and did the shape change.** Everything
+it needs already exists in this repo: `cf-analytics.mjs` and the
+`.github/workflows/cf-analytics.yml` workflow. This skill drives them, anchors
+them against the one app with a known headcount, and keeps the trend.
+
+**This is a traffic instrument, and it was re-scoped to be one on 2026-09-04
+after being read as a usage instrument and being wrong by ~30x** (LESSONS §241).
+It is good at: which surfaces are being touched at all, where from, what is
+crawling them, whether a scanner has appeared, and whether any of that moved. It
+is structurally incapable of counting people, because these apps have no accounts
+by design (Doctrine §1). **When the question is "how many people use my apps",
+the answer is the invite list and what the owner knows — not this tool.** Say
+that plainly; do not produce a number to fill the gap.
 
 ## The facts this rests on (verified 2026-08, see LESSONS.md §9)
 
@@ -103,6 +114,32 @@ far below it, unknowably far without a fact from outside the data. That is not a
 shortfall to apologise for; it is what no-tracking costs, and it is the right
 trade. What is NOT honest is quoting the bound as the count.
 
+## The control case: jefferson-line
+
+**jefferson-line is invite-only, so its real headcount is KNOWN.** That makes it
+the one place in the whole dataset where the tool's answer can be marked against
+the truth — and the factor that comes back is the only honest guide to how far
+off every other app's number is.
+
+The first measurement, week ending 2026-09-03: the tool reported **29 devices**
+for `jefferson-line.pages.dev`; the invite list held **3**. **A factor of ~9.7 on
+an app with no crawl surface at all** — nobody can link to an invite-only app, so
+that entire gap is IP churn, agent sessions and development traffic, with no
+crawler component to blame it on. Every other app carries that same inflation
+*plus* whatever crawls it.
+
+Each run: ask for the current invite count (a one-word answer), record it beside
+the reported device count, and quote the resulting factor when presenting
+anything else. **If the count is not available, leave the control columns blank
+and say the run is unanchored** — never carry the previous week's factor forward
+as if it were measured.
+
+Why this beats any filter improvement: the ratio check added in the same commit
+would have caught Sweden (4 devices, 5 requests) and would NOT have caught China
+(19 devices, ~45 requests each, and no real readers). No test inside the data
+separates a crawler with a good session shape from a person. Only the control
+does.
+
 ## Known scanner IPs to exclude
 
 ```
@@ -110,6 +147,11 @@ trade. What is NOT honest is quoting the bound as the count.
 ```
 
 ## Steps
+
+0. **Anchor first.** Ask for jefferson-line's current invite count before
+ reporting anything. It is one word, it is the only true number in the run, and
+ the lesson this skill was rewritten for is that no amount of care inside the
+ data substitutes for it.
 
 1. **Dispatch the snapshot.** Run the `cf-analytics.yml` workflow (repo
  `njefferson/noahjefferson`, ref `main`) with:
@@ -132,18 +174,26 @@ trade. What is NOT honest is quoting the bound as the count.
  — these are the **machine layer**, shown second.
 
 4. **Append to the trend.** Take everything **after** `TREND_ROW,` and append it
- as one line to `docs/usage-trend.csv` in this repo. If the file does not
- exist, create it with this header first:
+ to `docs/usage-trend.csv` in this repo, then add the two control fields. The
+ header is:
  ```
- date_end,days,total_requests,real_floor,real_ceiling,top_app,top_country
+ date_end,days,total_requests,device_upper_bound,device_upper_bound_loose,top_app_by_requests,top_country,control_devices,control_known
  ```
+ `TREND_ROW` supplies the first seven fields in that order. **`control_devices`
+ is what the run reported for `jefferson-line.pages.dev` in the REAL USERS (CSV)
+ block, and `control_known` is the invite count from step 0** — both blank if the
+ app was not live that week or the count was not given. The columns were renamed
+ from `real_floor`/`real_ceiling`/`top_app` on 2026-09-04; the recorded values
+ never changed, only the labels, which were the lie in file form.
  Do not append a duplicate row for a `date_end` already present (a re-run of
  the same window overwrites, not stacks). Commit and push to `main` with a
  one-line message. This is the only write the skill makes.
 
-5. **Present it as two bounds and a shape, never as a headcount:**
- - **Open with what is actually known**, if anything is — the invite count, the
- named reader. That is the only real number in the report.
+5. **Present it as traffic and a shape, never as a headcount:**
+ - **Open with the control.** jefferson-line reported N devices against an
+ invite list of M — a factor of N/M. State it first and let it caveat
+ everything below, because it is the only claim in the report that was checked
+ against the world.
  - **Devices** — stated as an upper bound in those words: "at most ~N
  phones/tablets, and the real figure is far below it." Give the
  requests-per-device ratio beside it; under ~10 the population is mostly
