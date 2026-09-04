@@ -333,3 +333,4 @@ and the filename carries it.
 - **§239** — [Removing markup leaves the line that touched it, and the screen still looks finished](lessons/239-deleting-markup-leaves-the-code-that-touched-it.md)
 - **§240** — [The index said the swap was done in all eight repositories; measured, it was two — and the gate that would have caught it is carried by three](lessons/240-the-index-counted-a-swap-that-six-repos-never-made.md)
 - **§241** — [A filter is named for what it was built to remove, and the name then argues for it — 150 "real users" against about five people](lessons/241-a-filter-named-real-users-is-evidence-about-a-filter.md)
+- **§242** — [A release that forgets to happen is perfectly self-consistent, so every consistency check passes it](lessons/242-a-release-that-forgot-to-happen-is-self-consistent.md)
