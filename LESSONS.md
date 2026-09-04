@@ -328,3 +328,4 @@ and the filename carries it.
 - **§234** — [The second door was on a different hostname from the room, so it guarded the door](lessons/234-the-second-door-was-on-a-different-hostname.md)
 - **§235** — [A character is not an icon, and the two complaints about it were one cause](lessons/235-a-character-is-not-an-icon.md)
 - **§236** — [The remedy for an instruction that could not be followed was another instruction that could not be followed](lessons/236-the-remedy-was-the-same-defect-in-a-different-app.md)
+- **§237** — [A gate only CI runs is a gate that reports the defect after it has shipped](lessons/237-a-gate-that-only-ci-runs-catches-things-after-the-push.md)
