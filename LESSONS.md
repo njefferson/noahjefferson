@@ -329,3 +329,5 @@ and the filename carries it.
 - **§235** — [A character is not an icon, and the two complaints about it were one cause](lessons/235-a-character-is-not-an-icon.md)
 - **§236** — [The remedy for an instruction that could not be followed was another instruction that could not be followed](lessons/236-the-remedy-was-the-same-defect-in-a-different-app.md)
 - **§237** — [A gate only CI runs is a gate that reports the defect after it has shipped](lessons/237-a-gate-that-only-ci-runs-catches-things-after-the-push.md)
+- **§238** — [A test double that is more permissive than the real thing proves nothing about the difference](lessons/238-a-double-that-is-more-permissive-than-production.md)
+- **§239** — [Removing markup leaves the line that touched it, and the screen still looks finished](lessons/239-deleting-markup-leaves-the-code-that-touched-it.md)
