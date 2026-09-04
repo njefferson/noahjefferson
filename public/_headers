@@ -52,3 +52,35 @@
 
 /accessibility
   Cache-Control: public, max-age=0, s-maxage=0, must-revalidate
+
+# ASSETS GET A REAL CACHE — one day, and the reason for the number is the
+# filenames.
+#
+# MEASURED 2026-09-04: every asset here was returning `public, max-age=0,
+# must-revalidate`, the platform default, so nothing on this site was cached at
+# the edge or in a browser at all. That is the whole of the performance that was
+# left on the table.
+#
+# ONE DAY RATHER THAN A YEAR, because none of these filenames carry a content
+# hash. `/icon-512.png` is the same URL before and after it is redrawn, so the
+# cache lifetime is also the time a replaced icon stays wrong on a device that
+# has already seen the old one. A year is the right answer only once the names
+# change with the bytes; until then a day is the trade — a repeat visit inside a
+# day skips the fetch, and a corrected icon is everywhere by tomorrow.
+#
+# `manifest.webmanifest` is deliberately NOT here. It carries the app list and
+# the icon set, so it is content rather than an asset, and it changes on exactly
+# the days somebody would most want the change to arrive.
+#
+# VERIFY BY MEASUREMENT, not by reading this file: after a deploy, request an
+# icon with a cache-busting query and read the `cache-control` that comes back.
+# A `_headers` rule that does not match its path fails silently.
+
+/icons/*
+  Cache-Control: public, max-age=86400
+
+/*.png
+  Cache-Control: public, max-age=86400
+
+/*.svg
+  Cache-Control: public, max-age=86400

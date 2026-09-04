@@ -525,53 +525,39 @@ pinned**, read off `github.workflow_ref` rather than taken as an input, so the
 gates and the wiring can never be two different versions and a caller cannot
 half-bump.
 
-**THE SWAP IS DONE EVERYWHERE, AND THIS PARAGRAPH SAID IT WAS NOT.** It read
-"Cv-Thalweg is the first caller, every other sibling owes the swap"; counted on
-2026-09-01, all eight repos call this workflow and not one of them still copies
-the job. That is the same defect as the per-app baseline list above — a line
-that was true when written and was never revisited — in the file that exists to
-be read at the start of every session.
+**THE SWAP IS NOT DONE, AND THIS PARAGRAPH CLAIMED IT WAS — TWICE.** It read
+"all eight repos call this workflow and not one of them still copies the job",
+and beneath it "DONE, 2026-09-02: all eight pin `3f2a373`, all eight markers read
+the same, and all eight carry the gate that keeps them together." Every workflow
+file in all eight was read on 2026-09-04. The counts are:
 
-**DONE, 2026-09-02: all eight pin `3f2a373`, all eight markers read the same,
-and all eight carry the gate that keeps them together.** This paragraph used to
-list the drift; what it should carry now is what the sweep found, because two of
-its own numbers were wrong.
+- **Two call the shared workflow** — Quietkeep from `spine.yml`, Cv-Thalweg from
+ `gates.yml` — and both pin `3f2a373`, which is the commit the old paragraph
+ named. That part was right.
+- **Four still copy the job**, checking the hub out and running the gates
+ directly. MoleBridge pins `a75d92d` (26 Aug), solve-ent `ac9fcd2` (27 Aug),
+ 3d-printing-pal `61a3f9a` (22 Aug) — and **fauxplane passes no `ref` at all**,
+ so `deploy.yml` runs the hub's privacy gate out of the MOVING DEFAULT BRANCH.
+ That is §184's failure exactly, recorded here as fixed while it was live.
+- **Two reference the hub in no workflow** — Intersecting-parallels (its
+ `a11y.yml` says it ships the hub's gate rather than calling it) and
+ photo-pointer.
+- **`tools/hub-pin-check.mjs` is carried by three**, not eight: Quietkeep,
+ Cv-Thalweg and solve-ent.
 
-**Quietkeep did not pin `4cd365e`.** It pinned `8a92344`, which is well past the
-§184 fix. The local clone was seventy-four commits behind and the survey read
-the stale copy — the claim "that one repo is still running the version that
-resolved the hub checkout off a context property" was never true of the remote.
+**WHAT THAT COSTS RIGHT NOW.** `example-check` was added to `hub-gates.yml` on
+2026-09-03 as `042400b`, defaulted on, under a commit saying it runs in every
+repo now. It can only reach a repo that CALLS that workflow, and only at a pin
+that contains it — and `042400b` is not an ancestor of `3f2a373`. **So it runs in
+none of the eight**, while three files say otherwise. Bumping the two callers'
+pins is what switches it on; the other six need the swap before the pin means
+anything.
 
-**And "two markers name commits this hub clone does not contain" was a fact
-about the CLONE.** `.git/shallow` was present: 141 commits of a 443-commit
-history, and both "missing" commits were in the 302 that had been cut off. The
-markers were fine. Had the sweep acted on that reading it would have re-adopted
-two repositories' markers without ever reading their real drift. `git fetch
---unshallow` first; a shallow clone answers "does this commit exist" with a fact
-about the fetch depth and no warning that it is doing so.
-
-A marker ahead of the pin is CI enforcing rules the repo has not read; a marker
-behind it is the repo claiming to have applied rules CI never ran. Both are now
-refused at commit time in every repo.
-
-`tools/hub-pin-check.mjs` is the gate, and it is the one thing in this family
-that is CORRECTLY a per-repo copy rather than a hub gate taking `--repo .`:
-CI fetches the hub AT the pin, so a gate validating the pin would be fetched at
-the very commit it is checking, and a pin far enough behind would check out a
-hub that does not contain the file. **All eight carry it now**, wired into each
-`.branch-guard` `also=` list and into each CI run, and the copies are
-BYTE-IDENTICAL — the heading is read off the directory rather than typed — so a
-diff between any two is a finding rather than a style difference.
-
-**It finds the workflow by its CALL, not by a filename**, and that was not
-optional: across the family the calling workflow is `gates.yml`, `deploy.yml`,
-`security.yml`, `ci.yml` and `spine.yml`. The original named `gates.yml`, so a
-straight copy would have reported "nothing runs the hub's gates" in four
-repositories that run them perfectly well — a gate whose failure message is
-wrong is worse than one that does not run, because somebody acts on it. Reading
-every workflow also catches what a constant could not: two workflows calling the
-hub at DIFFERENT commits. Five failure modes are planted and watched fail.
-(LESSONS §117, §184.)
+**AND MEASURE IT BY THE CALL.** The first attempt here probed the five workflow
+filenames listed above and got "no caller" from six repositories — a fact about
+five guesses, in repos carrying between one and eighteen workflows under other
+names. `hub-pin-check.mjs` reads every workflow for this reason; a session
+checking by hand has to do the same. (LESSONS §240.)
 
 - [`doctrine-sync.mjs`](doctrine-sync.mjs) — **run this FIRST in any sibling
  session**: `node ../noahjefferson/doctrine-sync.mjs --repo .`. It says what has
