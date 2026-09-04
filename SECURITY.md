@@ -98,6 +98,38 @@ are a few taps, and all work on an iPad.
 
 - **Protect `main`** — require the status checks to pass, and no force pushes.
  On a solo repo this is not about other people; it is about a bad afternoon.
+- **DO NOT tick "Require a pull request before merging" in any repo that
+ promotes by pushing a branch.** A promote here is `git push origin staging:main`
+ — a direct push — and that rule forbids exactly that. It does not slow the
+ release down; it stops it, and the session doing the promote finds out at the
+ push. The protection that is wanted is no-force-push plus required checks, both
+ of which a fast-forward promote satisfies because the checks already ran on that
+ same SHA on `staging`.
+- **Name the checks as they appear now.** In 3d-printing-pal they are `Gates`,
+ `hub-gates / gates` and `Deploy`; a job renamed later silently stops satisfying
+ a rule that names the old string, and the rule then passes on a check that no
+ longer runs.
+
+**Per repository → Settings → Environments — AND THE ORDER MATTERS:**
+
+Splitting a deploy secret into environments is four steps that only narrow
+anything if all four happen, and doing them in the wrong order breaks the
+staging deploy in between.
+
+- **Create `staging` first and put the two Cloudflare secrets in it**, before
+ touching anything else. Staging deploys run in that environment, so they lose
+ the secrets the moment the repo-level copies go.
+- **Then create `production`** and add the same two.
+- **Then give `production` a deployment branch rule limiting it to `main`.**
+ This is the step that does the actual work — it is what stops a push to
+ `staging`, or a `workflow_dispatch` on any branch, reaching the production
+ token.
+- **Then delete the repo-level secrets. Until this, nothing has narrowed** —
+ repo secrets resolve inside a named environment regardless, so a half-done
+ migration looks finished and changes nothing.
+- **Required reviewers is a separate decision, not part of this.** It pauses
+ every deploy until somebody approves it in the browser. On a solo repo that is
+ a manual step on every release for a threat the branch rule already covers.
 
 **Cloudflare → My Profile → API Tokens:**
 
