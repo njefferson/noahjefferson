@@ -75,9 +75,12 @@
 # VERIFY BY MEASUREMENT, not by reading this file: after a deploy, request an
 # icon with a cache-busting query and read the `cache-control` that comes back.
 # A `_headers` rule that does not match its path fails silently.
-
-/icons/*
-  Cache-Control: public, max-age=86400
+#
+# AND TWO RULES MATCHING ONE FILE CONCATENATE — they do not override. The first
+# version carried `/icons/*` as well, and `/icons/apps/quietkeep.png` came back
+# with `public, max-age=86400, public, max-age=86400`. `*` spans path separators
+# here, so `/*.png` already reaches every file in every directory and the second
+# rule was redundant as well as malformed. Measured, not reasoned.
 
 /*.png
   Cache-Control: public, max-age=86400
