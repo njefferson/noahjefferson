@@ -1,14 +1,15 @@
 ---
 name: analytics-check
 description: >-
- Report who is using the owner's apps — totals, by-app, by-country, app x country,
- the real-user count, and the trend over time — from Cloudflare's edge, with no
- tracking added to any app. Use whenever the owner asks what the numbers look like,
- who is using the apps, how many users/people/visitors there are, whether
- anything changed, or for /analytics-check. Runs the cf-analytics `snapshot`
- command in the hub, appends one row to the running trend, and presents every
- view with the caveats that keep the number honest. Never a beacon; never
- claims requests are people.
+ Report what can be known about who touches the owner's apps — totals, by-app,
+ by-country, app x country, a device upper bound, and the trend over time — from
+ Cloudflare's edge, with no tracking added to any app. Use whenever the owner asks
+ what the numbers look like, who is using the apps, how many users/people/visitors
+ there are, whether anything changed, or for /analytics-check. Runs the
+ cf-analytics `snapshot` command in the hub, appends one row to the running trend,
+ and presents every view with the caveats that keep it honest. Never a beacon;
+ never claims requests are people; never claims DEVICES are people either — the
+ device count is an upper bound that once read 150 against about five.
 ---
 
 # analytics-check
@@ -27,16 +28,37 @@ the trend.
  it the totals are ~2x higher and meaningless as "usage".
 - **`count` is already sampling-adjusted.** NEVER multiply by `sampleInterval`
  — an earlier version did and was 3–12x too high.
-- **Requests ≠ visits ≠ people, and this is the trap the owner caught.** The by-app,
- by-country and heatmap numbers are eyeball **requests** — `requestSource=eyeball`
- strips Cloudflare's own worker/cache traffic but NOT crawlers, monitors and
- scrapers, which are eyeball-class too. So a country can read thousands of
- requests and have **zero** real users (Korea, Ireland, Singapore did). "Real
- users" is distinct **mobile + tablet** IPs (the least-fakeable), with a softer
- ceiling that adds human-shaped desktop. `snapshot` now emits **real users by
- country and by app** (the `REAL USERS ...` sections and the `REAL USERS (CSV)`
- block) alongside the request views. **Lead with the real-user numbers; the
- request numbers are the machine layer, shown second and always labelled.**
+- **Requests ≠ visits ≠ people.** The by-app, by-country and heatmap numbers are
+ eyeball **requests** — `requestSource=eyeball` strips Cloudflare's own
+ worker/cache traffic but NOT crawlers, monitors and scrapers, which are
+ eyeball-class too. So a country can read thousands of requests and have zero
+ readers behind them (Korea, Ireland, Singapore did). `snapshot` emits a device
+ view alongside the request views — the `REAL USERS ...` sections and the
+ `REAL USERS (CSV)` block — which is distinct **mobile + tablet** IPs, with a
+ softer bound that adds human-shaped desktop.
+- **AND THE DEVICE COUNT IS NOT PEOPLE EITHER — measured 2026-09-04, wrong by
+ ~30x.** The sections above are named `REAL USERS` in the tool's output and that
+ name is doing the arguing. Week ending 2026-09-03 it read **150**; the actual
+ population was **about five** — three on the one invite-only app, one confirmed
+ reader elsewhere, and otherwise a phone, a tablet and a desktop in routine use
+ plus agent sessions and development traffic. Three reasons, each sufficient
+ alone: one person throws off many IPs in a week (see the ceiling section below,
+ which says exactly this and was not applied); a mobile user agent is a *string*
+ and scrapers send one routinely, so the filter selects a claim about hardware
+ rather than hardware; and building, testing and agent traffic is
+ indistinguishable from a reader at an edge with no accounts to key on.
+ **So: the device count is an UPPER BOUND, not a floor. Never present it as a
+ headcount, and never lead with it as the honest layer.** (LESSONS §241.)
+- **The one division that separates readers from crawlers: requests ÷ devices.**
+ A rendered page is a document plus stylesheet, scripts, icons and images, so a
+ real reader leaves tens of requests. Four "devices" against five requests for a
+ whole week — 1.25 each — is a distributed crawler, and on 2026-09-04 that exact
+ shape was written up as the clearest proof the filter worked. Compute the ratio
+ before quoting any device number.
+- **Anchor to something known before reporting anything.** For at least one app
+ somebody already knows the real answer — an invite list, a login count, a friend
+ who said so. Ask for that first; it is the only figure in the report that can be
+ checked, and it sizes the error for all the others.
 - **Exclude known scanners.** `185.177.72.22` is a secrets scanner that inflated
  one app. Keep the exclude list below current; if a new flooder appears, find
  it with the `top-ips` command and add its IP.
@@ -75,8 +97,11 @@ The answers are settled; re-deriving them wastes a session.
 
 The through-line: the web hands out no stable per-person identifier by design. An
 exact headcount would need logins/accounts, which these apps deliberately refuse
-(Doctrine §1). "Distinct phones+tablets as a band + a rough network-spread number"
-is the floor of what's knowable, and it is the honest, no-tracking answer anyway.
+(Doctrine §1). So the honest answer is an **upper bound plus a shape** — at most
+N devices touched these surfaces, concentrated here — and the true figure sits
+far below it, unknowably far without a fact from outside the data. That is not a
+shortfall to apologise for; it is what no-tracking costs, and it is the right
+trade. What is NOT honest is quoting the bound as the count.
 
 ## Known scanner IPs to exclude
 
@@ -116,25 +141,30 @@ is the floor of what's knowable, and it is the honest, no-tracking answer anyway
  the same window overwrites, not stacks). Commit and push to `main` with a
  one-line message. This is the only write the skill makes.
 
-5. **Present to the owner, real users FIRST, machine layer SECOND:**
- - **Real users** — the band (`~floor` phones+tablets to trust, `~ceiling`
- incl. human-shaped desktop).
- - **Real users by country** — descending; these sum to ~floor. Call out any
- inversion (a low-request country with real people, e.g. Sweden) — it's the
- clearest proof the filter matters.
- - **Real users by app** — descending; this is the true "which apps get used."
- Name the apps that had big request counts but few real devices.
- - **The machine layer** (labelled, second): total requests, and where they
- concentrate — the single-country request blocks that turned out to be ~0
- real users (crawlers). App × country heatmap lives here.
- - **Trend** — the last ~8 rows of `docs/usage-trend.csv`; week-over-week change
- on `real_floor` first, `total_requests` second. One week is noise, the slope
- is signal — and the floor is the slope that matters.
+5. **Present it as two bounds and a shape, never as a headcount:**
+ - **Open with what is actually known**, if anything is — the invite count, the
+ named reader. That is the only real number in the report.
+ - **Devices** — stated as an upper bound in those words: "at most ~N
+ phones/tablets, and the real figure is far below it." Give the
+ requests-per-device ratio beside it; under ~10 the population is mostly
+ machines.
+ - **By country and by app** — descending, useful as SHAPE (which surfaces get
+ touched at all, from where) and worthless as counts. Say so in the same
+ breath. A low-request country with several devices is a distributed crawler,
+ not an inversion worth celebrating — check the ratio before calling it people.
+ - **The request layer** (labelled): totals, and where they concentrate — the
+ single-country blocks that are plainly crawlers. App × country heatmap here.
+ - **Trend** — the last ~8 rows of `docs/usage-trend.csv`. Read the SLOPE, and
+ say plainly that every row is an upper bound measured the same way, so the
+ direction is meaningful and the level is not. New surfaces going live raise it
+ without anyone new arriving; say which ones are new.
 
-6. **Always attach the caveats** (short): two layers never conflated (real users
- vs requests); eyeball ≠ human (AI crawlers are eyeball-class); mobile/tablet
- is the trusted floor; single-digit country counts are sampling-noisy — trust
- the shape; read the trend not a single delta.
+6. **Always attach the caveats** (short): the device count is an upper bound and
+ has been ~30x over (LESSONS §241); eyeball ≠ human (AI crawlers are
+ eyeball-class, and they send mobile user agents); one person is many IPs in a
+ week; development and agent traffic is in every number and cannot be
+ subtracted; single-digit country counts are sampling-noisy — trust the shape;
+ read the trend, not a single delta.
 
 7. **If a run fails,** report the failure and the error line from the log. Never
  invent numbers to fill the gap — a missing week is an honest blank in the
@@ -165,9 +195,15 @@ must stay server-side.
 - Do not enable Cloudflare Web Analytics or any beacon — that is the §1
  violation this whole approach exists to avoid.
 - Do not present the account-wide (all-source) totals as usage; always eyeball.
-- Do not present **request** counts as **users**. Requests are the machine layer;
- lead with distinct mobile+tablet devices. The owner caught this once — a by-country
- view in the thousands that was mostly crawlers. Do not leave it to be caught twice.
+- Do not present **request** counts as **users**. A by-country view in the
+ thousands that was mostly crawlers was caught once already.
+- **Do not present DEVICE counts as users either** — that is the same mistake one
+ filter further along, and it shipped on 2026-09-04 reading 150 against about
+ five (LESSONS §241). The device sections are an upper bound. If a number is
+ going to be called people, it has to have been anchored to something known
+ outside the data first.
+- Do not repeat the tool's own `REAL USERS` wording back as a claim. It is a
+ column heading, not a finding.
 - Do not multiply by `sampleInterval`.
 - Do not call requests "visits" or "people".
 - Do not print raw client IPs into any public place — the workflow log is
