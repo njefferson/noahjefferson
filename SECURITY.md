@@ -96,8 +96,13 @@ are a few taps, and all work on an iPad.
 
 **Per repository → Settings → Branches:**
 
-- **Protect `main`** — require the status checks to pass, and no force pushes.
- On a solo repo this is not about other people; it is about a bad afternoon.
+- **Protect `main`, and NOT the branch work lands on first.** No force pushes
+ everywhere; required checks only where the rules below allow them. On a solo
+ repo this is not about other people; it is about a bad afternoon.
+- **Never put required checks on a WORK branch.** `staging` is where a new commit
+ arrives, and its checks can only run after it arrives — so a required-check rule
+ there rejects the push that would have produced the evidence. It deadlocks on
+ the first commit and looks like a broken remote.
 - **DO NOT tick "Require a pull request before merging" in any repo that
  promotes by pushing a branch.** A promote here is `git push origin staging:main`
  — a direct push — and that rule forbids exactly that. It does not slow the
@@ -105,10 +110,45 @@ are a few taps, and all work on an iPad.
  push. The protection that is wanted is no-force-push plus required checks, both
  of which a fast-forward promote satisfies because the checks already ran on that
  same SHA on `staging`.
-- **Name the checks as they appear now.** In 3d-printing-pal they are `Gates`,
- `hub-gates / gates` and `Deploy`; a job renamed later silently stops satisfying
- a rule that names the old string, and the rule then passes on a check that no
+- **A CHECK CAN ONLY BE REQUIRED ON A BRANCH IF IT ALREADY RAN ON THAT COMMIT
+ SOMEWHERE ELSE.** This is the rule the whole list follows from, and it is not
+ obvious. Required checks are evaluated against the COMMIT being pushed, and
+ check runs attach to a SHA rather than to a branch — so a promote satisfies them
+ for free, because the same SHA was measured on `staging` first. **A check that
+ only runs ON the protected branch can never be satisfied in advance, and
+ requiring it rejects every push forever.** It cannot be fixed by waiting; the
+ analysis only happens after the commit lands, and the commit cannot land.
+
+- **In 3d-printing-pal, require exactly these two on `main`:**
+
+       Gates
+       hub-gates / gates
+
+ They run on `[main, staging, claude/**]`, so a promoted SHA already carries
+ them. The second is a reusable-workflow call, and its check name is the CALLING
+ job's id and the called job's name joined by a slash — rename either and the
+ rule silently stops matching, which leaves a rule that passes on a check that no
  longer runs.
+
+- **NOT `Deploy`, though it would pass.** A promoted SHA does carry a green
+ `Deploy` from its staging push. But that makes production's protection depend on
+ A DEPLOYMENT HAVING HAPPENED rather than on the code being verified, so a
+ transient failure at the CDN blocks a promote for a reason that is nothing to do
+ with the code. Gate on measurement, not on delivery.
+
+- **NOT CodeQL — this one deadlocks.** Its checks are `Analyze (actions)` and
+ `Analyze (javascript-typescript)`. Default setup runs on the DEFAULT BRANCH,
+ pull requests to it, and a weekly schedule — measured in 3d-printing-pal across
+ thirty runs, there was exactly one CodeQL run and it was on `main`. So a
+ promoted SHA arrives with no CodeQL check on it at all, and requiring one
+ rejects the push.
+
+- **A REPO WITH ONE BRANCH CAN HAVE NO REQUIRED CHECKS AT ALL.** The hub pushes
+ every commit straight to `main`, so nothing has ever run on that SHA
+ beforehand and EVERY required check would reject it — the same deadlock as
+ protecting a work branch. Protect the hub's `main` with no-force-push and an
+ empty required-checks list. The protection worth having there is against a
+ force push, which is the one that loses history.
 
 **Per repository → Settings → Environments — AND THE ORDER MATTERS:**
 
