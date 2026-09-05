@@ -335,3 +335,4 @@ and the filename carries it.
 - **§241** — [A filter is named for what it was built to remove, and the name then argues for it — 150 "real users" against about five people](lessons/241-a-filter-named-real-users-is-evidence-about-a-filter.md)
 - **§242** — [A release that forgets to happen is perfectly self-consistent, so every consistency check passes it](lessons/242-a-release-that-forgot-to-happen-is-self-consistent.md)
 - **§243** — [Two gates carried two lists for one idea, and neither list was right](lessons/243-two-lists-for-one-idea-and-neither-was-right.md)
+- **§244** — [A gate that omits gives a false pass; a report that omits gives a false all-clear](lessons/244-a-report-that-omits-reads-as-an-all-clear.md)
