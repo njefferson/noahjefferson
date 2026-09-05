@@ -458,6 +458,18 @@ existing.
  seed. A quotation of the owner is never declarable — rewrite it as what was
  wrong and what it measured. Both directions, so a scrub cannot silently
  un-cover a file. LESSONS §108 is why it is a list and not a pattern.
+- [`binary-files.mjs`](binary-files.mjs) — **not a gate; the one list of "this
+ file is not prose"**, imported by `privacy-check.mjs` and
+ `third-person-check.mjs`. It exists because those two carried two lists for
+ the same idea and the lists were NOT the same: one had `otf` and `wasm`, the
+ other did not, and NEITHER had `pfb`. A repo vendoring a PDF library brought
+ sixteen font files, and one gate reported two finds inside Type 1 glyph data
+ while the other did not look at all — both answers wrong, in opposite
+ directions. The privacy gate's own header had already written the diagnosis —
+ two file lists for one rule is one gate lying about its coverage — directly
+ above one of the two lists. It is a DENY-list of binaries, never an allow-list
+ of text: an allow-list has to be extended every time a repo grows a file type,
+ by somebody who remembers the gate exists. (LESSONS §243.)
 - [`privacy-mirror-check.mjs`](privacy-mirror-check.mjs) — a sibling that must
  fail `npm test` OFFLINE has to carry its own copy of the disclosure patterns,
  and that copy is a liability the moment the canon moves. This compares the

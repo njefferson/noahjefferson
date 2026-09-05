@@ -42,6 +42,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { ATTRIBUTION, DISCLOSURE, OWNER_LIFE, REGION_FORBIDDEN, split } from './privacy-patterns.mjs';
 import { repoFromArgv } from './gate-args.mjs';
+import { BINARY } from './binary-files.mjs';
 
 // A BARE PATH IS A TYPO, NOT A TARGET — see gate-args.mjs for what it used to
 // do instead, which was print a clean green under the wrong repo's name.
@@ -64,7 +65,11 @@ const { REPO, NAME } = repoFromArgv(process.argv.slice(2), { gate: 'privacy-chec
  * total by default: a new text format is covered on the day it lands, and the
  * only way to lose coverage is to add a binary extension deliberately.
  */
-const BINARY = /\.(png|jpe?g|gif|webp|avif|bmp|tiff?|ico|svgz|pdf|woff2?|ttf|otf|eot|zip|gz|tgz|bz2|xz|7z|mp[34]|m4a|wav|ogg|webm|mov|avi|wasm|db|sqlite3?)$/i;
+// THE LIST ITSELF MOVED, and the reasoning above is why it had to. This one
+// and third-person-check's were two lists for the same idea, they were not the
+// same list, and neither had `pfb` — so a vendored font library was two finds
+// inside Type 1 glyph data over there and unread over here. binary-files.mjs is
+// the one list now, which is what the paragraph above was asking for.
 
 const files = execFileSync('git', ['-C', REPO, 'ls-files'], { encoding: 'utf8' })
   .split('\n')
