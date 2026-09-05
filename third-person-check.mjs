@@ -70,6 +70,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { join } from 'node:path';
+import { BINARY, LOCKFILE } from './binary-files.mjs';
 
 const argv = process.argv.slice(2);
 const known = new Set(['--repo', '--list']);
@@ -133,14 +134,19 @@ try {
 
 /** Binaries carry no prose, and a lockfile's hashes carry word-boundaried
  *  fragments that are not words. Both are noise that would train a reader to
- *  skim this gate's output, which is how a real find gets missed. */
-const SKIP = /\.(png|jpe?g|gif|webp|ico|svg|woff2?|ttf|pdf|zip|mp4|webm)$/i;
+ *  skim this gate's output, which is how a real find gets missed.
+ *
+ *  THE LIST IS SHARED NOW. This one and privacy-check's were two lists for the
+ *  same idea and were not the same list — and neither had `pfb`, so a vendored
+ *  font library produced two finds inside Type 1 glyph data here and nothing at
+ *  all there. See binary-files.mjs. */
+const SKIP = BINARY;
 /** The allow file itself. A list of declared exceptions has to NAME the words it
  *  declares, so scanning it means the gate fails on its own list — which it did,
  *  the moment that file was first committed rather than left untracked. Exactly
  *  the shape that caught this gate's own header on its first tracked run. */
 const OWN_LIST = /(^|\/)\.third-person-allow$/;
-const LOCKS = /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$/;
+const LOCKS = LOCKFILE;
 
 const found = [];
 for (const f of files) {
