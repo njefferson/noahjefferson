@@ -365,7 +365,13 @@ When a doctrine rule changes, edit it HERE and tell the sibling repos to
 re-point (their `CLAUDE.md` files link to this copy). Never fork the doctrine
 into another repo — link to it.
 
-## Twelve gates live here and serve every repo
+## The shared gates live here and serve every repo
+**This heading used to say "Twelve gates".** It listed fourteen, and had for
+weeks — a count in a heading is a second answer to a question the list below
+already answers, and it is the answer nobody re-derives. Removed rather than
+corrected, for the same reason the patch-notes paragraph now points at the
+per-app list instead of restating it.
+
 Never fork these either — they take `--repo ../app` (or a path) so a sibling
 runs them without copying them, which is what stops five divergent versions
 existing.
@@ -490,6 +496,20 @@ existing.
  privacy, quote and third-person gates — none of which can see a string that
  names nobody, quotes nobody and attributes nothing. `--list` seeds the file.
  (LESSONS §230.)
+- [`svg-check.mjs`](svg-check.mjs) — **every tracked `.svg` parses as XML**,
+ which is the parser a browser uses when it loads one AS AN IMAGE: a favicon, a
+ manifest icon, an `<img src>`, a CSS `url()`. Inlined into a page instead, the
+ same file goes through the HTML parser, which forgives what XML refuses — and
+ an icon renderer inlines. print-tracker's icon carried two hyphens in a row
+ inside a comment, where XML forbids them. Its renderer drew four flawless PNGs
+ from it; its drift check held the source and the served copy byte for byte and
+ found them identical, because both were equally malformed. Meanwhile the
+ manifest offered that file as the app's largest icon, Chromium picked it, could
+ not decode it, and **stopped offering to install the app** — never falling back
+ to the two correct PNGs in the same list. It is a real well-formedness scanner
+ rather than a grep for the last failure, and its verdict was compared against a
+ real XML parser over twenty-one files, agreeing in both directions.
+ (LESSONS §245.)
 - [`third-person-check.mjs`](third-person-check.mjs) — **the privacy rule's
  THIRD half: never in the third person either.** `privacy-check.mjs` anchors on
  the NAME and `quote-check.mjs` finds the set-apart quotation; neither can see a
@@ -543,19 +563,23 @@ and beneath it "DONE, 2026-09-02: all eight pin `3f2a373`, all eight markers rea
 the same, and all eight carry the gate that keeps them together." Every workflow
 file in all eight was read on 2026-09-04. The counts are:
 
-- **Two call the shared workflow** — Quietkeep from `spine.yml`, Cv-Thalweg from
- `gates.yml` — and both pin `3f2a373`, which is the commit the old paragraph
- named. That part was right.
-- **Four still copy the job**, checking the hub out and running the gates
- directly. MoleBridge pins `a75d92d` (26 Aug), solve-ent `ac9fcd2` (27 Aug),
- 3d-printing-pal `61a3f9a` (22 Aug) — and **fauxplane passes no `ref` at all**,
- so `deploy.yml` runs the hub's privacy gate out of the MOVING DEFAULT BRANCH.
- That is §184's failure exactly, recorded here as fixed while it was live.
+- **Three call the shared workflow** — Quietkeep from `spine.yml`, Cv-Thalweg
+ from `gates.yml`, and 3d-printing-pal from its own `gates.yml`.
+ **That last one is a correction, measured 2026-09-08 by reading the file:** the
+ census below had it copying the job at `61a3f9a`, and it has not done that for
+ some time. Everything else here is as counted on 2026-09-04 and has not been
+ re-read since, so treat the rest as a date rather than as a fact.
+- **Three still copy the job**, checking the hub out and running the gates
+ directly. MoleBridge pins `a75d92d` (26 Aug) and solve-ent `ac9fcd2` (27 Aug)
+ — and **fauxplane passes no `ref` at all**, so `deploy.yml` runs the hub's
+ privacy gate out of the MOVING DEFAULT BRANCH. That is §184's failure exactly,
+ recorded here as fixed while it was live.
 - **Two reference the hub in no workflow** — Intersecting-parallels (its
  `a11y.yml` says it ships the hub's gate rather than calling it) and
  photo-pointer.
-- **`tools/hub-pin-check.mjs` is carried by three**, not eight: Quietkeep,
- Cv-Thalweg and solve-ent.
+- **`tools/hub-pin-check.mjs` is carried by four**, not eight: Quietkeep,
+ Cv-Thalweg, solve-ent and 3d-printing-pal — the last one measured 2026-09-08,
+ by the same read that corrected its row above.
 
 **WHAT THAT COSTS RIGHT NOW.** `example-check` was added to `hub-gates.yml` on
 2026-09-03 as `042400b`, defaulted on, under a commit saying it runs in every

@@ -224,6 +224,17 @@ jobs:
       - name: npm hygiene
         run: node hub/pin-check.mjs --repo app
 
+      # An SVG is read by the HTML parser when it is inlined and by the XML
+      # parser when it is loaded as an image, and a repo tends to own only the
+      # forgiving one. print-tracker's icon renderer inlined the file and drew
+      # four flawless PNGs from a source no XML parser would accept; the manifest
+      # then offered that file as the app's largest icon, Chromium picked it,
+      # could not decode it, and stopped offering to install the app at all —
+      # never falling back to the two correct PNGs beside it. Unconditional,
+      # because a repo with no SVGs passes in a line. (LESSONS §245.)
+      - name: Every SVG parses as XML, not just as markup
+        run: node hub/svg-check.mjs --repo app
+
       - name: The new version waits and says so
         if: inputs.pwa
         run: node hub/pwa-check.mjs --repo app

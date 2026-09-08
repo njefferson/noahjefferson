@@ -336,3 +336,4 @@ and the filename carries it.
 - **§242** — [A release that forgets to happen is perfectly self-consistent, so every consistency check passes it](lessons/242-a-release-that-forgot-to-happen-is-self-consistent.md)
 - **§243** — [Two gates carried two lists for one idea, and neither list was right](lessons/243-two-lists-for-one-idea-and-neither-was-right.md)
 - **§244** — [A gate that omits gives a false pass; a report that omits gives a false all-clear](lessons/244-a-report-that-omits-reads-as-an-all-clear.md)
+- **§245** — [The same file, two parsers, and only the forgiving one was ever asked](lessons/245-an-svg-renders-inline-and-is-refused-as-an-image.md)
