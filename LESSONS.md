@@ -338,3 +338,4 @@ and the filename carries it.
 - **§244** — [A gate that omits gives a false pass; a report that omits gives a false all-clear](lessons/244-a-report-that-omits-reads-as-an-all-clear.md)
 - **§245** — [The same file, two parsers, and only the forgiving one was ever asked](lessons/245-an-svg-renders-inline-and-is-refused-as-an-image.md)
 - **§246** — [A rename strands every sentence that named the control, and the guide still reads perfectly](lessons/246-a-rename-strands-every-sentence-that-names-the-control.md)
+- **§247** — [A pre-commit gate that diffs against HEAD is reading the commit before the one it is guarding](lessons/247-a-pre-commit-gate-that-diffs-against-head.md)
