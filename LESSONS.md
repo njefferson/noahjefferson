@@ -342,3 +342,4 @@ and the filename carries it.
 - **§248** — [The same tree, two branch-guards, opposite verdicts — and the losing one told the reader to create the drift](lessons/248-a-local-gate-run-from-an-unpinned-hub.md)
 - **§249** — [Verifying a push by comparing HEAD to the remote passes loudest when the commit never happened](lessons/249-a-push-check-that-passes-when-nothing-was-committed.md)
 - **§250** — [A search whose error you discarded reports "nothing found", and nothing found is an answer](lessons/250-a-search-that-never-ran-reports-nothing-found.md)
+- **§251** — [A `??` chain reaches past the value it was written for, and reads somebody else's bookkeeping out as a promise](lessons/251-a-fallback-chain-promotes-bookkeeping-to-a-promise.md)
