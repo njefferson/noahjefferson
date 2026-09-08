@@ -340,3 +340,4 @@ and the filename carries it.
 - **§246** — [A rename strands every sentence that named the control, and the guide still reads perfectly](lessons/246-a-rename-strands-every-sentence-that-names-the-control.md)
 - **§247** — [A pre-commit gate that diffs against HEAD is reading the commit before the one it is guarding](lessons/247-a-pre-commit-gate-that-diffs-against-head.md)
 - **§248** — [The same tree, two branch-guards, opposite verdicts — and the losing one told the reader to create the drift](lessons/248-a-local-gate-run-from-an-unpinned-hub.md)
+- **§249** — [Verifying a push by comparing HEAD to the remote passes loudest when the commit never happened](lessons/249-a-push-check-that-passes-when-nothing-was-committed.md)
