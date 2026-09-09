@@ -35,6 +35,65 @@ A markdown-converting fetcher drops the `<head>`, so this needs the raw HTML.
 
 ---
 
+# njefferson/Quietkeep
+
+**Every item below is APPLIED and was READ BACK from GitHub on 2026-09-09**, by
+the method this file's own header describes — the search API for description,
+website, topics and default branch, and the repository's raw HTML for the
+social preview. That is a measurement of live state, not the owner's confirm;
+the owner applied these at some point this file never recorded.
+
+**THE REASON THIS SECTION DID NOT EXIST IS THE POINT OF IT.** Six repos were
+tracked here and the flagship was not one of them, so the standing instruction
+in Quietkeep's own CLAUDE.md — list the values and ask the owner to confirm
+each — was the only thing a session found, and it describes a TASK. A session
+read it as a STATUS and reported the metadata as outstanding on a repo where
+all five items were live. An absent record does not read as absent; it reads as
+nothing done.
+
+**Description** — applied, read back 2026-09-09
+
+> Out of sight. Never out of mind. A free, local-first planner that brings back
+> everything you put in — no accounts, no telemetry, no server.
+
+The tagline, then what it is and what it refuses. No version and no feature
+list, so it does not go stale on a release.
+
+**Website** — applied, read back 2026-09-09
+
+> https://quietkeep.pages.dev/
+
+**THE ADDRESS ANSWERS, AND A SESSION CAN CHECK THAT NOW.** `deployed:check
+--prod` read production back by content on 2026-09-09 and found 3.23.7 on both
+editions, plus `manual.html`, `paths.html` and `why.html` each served as
+themselves rather than falling back to the app shell.
+
+**Topics** — applied, read back 2026-09-09
+
+> `accessibility` `cloudflare-pages` `coga` `dexie` `event-sourcing`
+> `indexeddb` `local-first` `neurodiversity` `offline-first` `planner` `pwa`
+> `typescript` `wcag`
+
+Thirteen. `coga` and `wcag` are there because the accessibility claim is the
+product rather than a badge, and `neurodiversity` names the audience the
+refusals are aimed at.
+
+**Social preview** — applied, read back 2026-09-09
+
+The `og:image` on the repository's own page is served from
+`repository-images.githubusercontent.com`, which is the header's test for a card
+that was really uploaded — `opengraph.githubassets.com` would have meant GitHub
+was auto-generating one and the upload never landed.
+
+**Default branch** — applied, read back 2026-09-09
+
+> `main`
+
+Which is also the Cloudflare Pages production branch, and what a promote merges
+into. Work lands on `staging` and waits for the owner's on-device pass.
+
+---
+
 # njefferson/fauxplane
 
 **Description** — **SET** 2026-08-27, applied by the owner and read back from
@@ -175,9 +234,17 @@ and the default was pointing at a branch that was not there.
 # njefferson/solve-ent
 
 **Every item below is `set`**, applied by the owner on 2026-08-27 and confirmed
-by them here — which is the only thing that flips a row (§10). A session cannot
-see a repository's description, topics or social preview, so it cannot check
-this and must never mark a row itself.
+by them here — which is the only thing that flips a row to `set` (§10).
+
+**THE SENTENCE THAT USED TO FOLLOW WAS FALSE, AND IT COST A REPO ITS SECTION.**
+It read: a session cannot see a repository's description, topics or social
+preview, so it cannot check this and must never mark a row itself. The first
+half is wrong twice over — this file's own "How to verify an item" header says
+description, website, topics and default branch come back from the search API,
+and the social preview is readable from the repository's `og:image` host. The
+second half still stands: only the owner's word flips a row to `set`. A session
+may MEASURE and record what it measured, which is a different claim and a
+stronger one.
 
 **Description** — **set** 2026-08-27
 
@@ -201,11 +268,15 @@ confirmed the app is there, and only then was the field set. A website field
 pointing at a 404 is worse than an empty one — it reads as a shipped app to
 anybody who finds the repository.
 
-**A SESSION CANNOT CHECK THIS ONE ITSELF.** The environment's egress policy
-refuses `*.pages.dev`, so a session that curls the deployed site gets a 403 from
-the proxy gateway rather than a page. That is a network policy, not an outage —
-and reading it as one is precisely §162. The deploy log is the end of what a
-session can see; the confirmation has to come from somebody with a browser.
+**A SESSION COULD NOT CHECK THIS ONE FROM THE CONTAINER THIS WAS WRITTEN IN.**
+Its egress policy refused `*.pages.dev`, so curling the deployed site returned a
+403 from the proxy gateway rather than a page — a network policy, not an outage,
+and reading it as one is precisely §162.
+
+**That is a fact about one container and not about sessions.** On 2026-09-09 a
+session read `quietkeep.pages.dev` and its sync edition back by content without
+trouble. Reachability is session configuration: TRY IT, and treat a refusal as a
+skip with the reason printed rather than as a property of the world.
 
 **Topics** — **set** 2026-08-27
 
