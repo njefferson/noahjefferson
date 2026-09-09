@@ -348,3 +348,4 @@ and the filename carries it.
 - **§254** — [A spelling rule is a LIST, and its population is what a reader reads — not what the tree contains](lessons/254-a-spelling-rule-is-a-list-and-the-population-is-what-a-reader-reads.md)
 - **§255** — [A tool that reads a called workflow by hand carries the copy it exists to prevent — and the regex that reads it can be silently rewritten by its own quoting](lessons/255-a-regex-that-survives-escaping-as-a-different-valid-regex.md)
 - **§256** — [A poll count is not a duration, and a field that does not change is not evidence of a thing that is not changing](lessons/256-a-poll-count-is-not-a-duration.md)
+- **§257** — [A coverage registry that cannot hold a sometimes-absent element makes the honest choice unregisterable](lessons/257-a-conformance-registry-has-to-hold-what-is-not-always-there.md)
