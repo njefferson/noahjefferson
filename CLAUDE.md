@@ -637,6 +637,24 @@ is held to, splitting what CI enforces from the GitHub and Cloudflare settings
 only the owner can switch on. Confirm those the same way as repo metadata (§10):
 list them, never assume them.
 
+## The cold read is a file now, not a remembered step
+[`COLDREAD.md`](COLDREAD.md) carries the method and both prompts verbatim, and
+every run gets a record under `coldreads/`. It is canonical here like the gates
+— a sibling opens it and runs it against its own deployed URL rather than
+reinventing it.
+
+**Why it is a file.** LESSONS §206 designed the claims walk and §233 found the
+half it was missing, and §233's own last paragraph is the diagnosis: a
+CHECKLIST that lives inside a lesson is a step somebody has to remember, and it
+was a year of nothing in every repo but the one it was written in. The
+reasoning was never what was missing.
+
+**Two passes, and run them as two SEPARATE agents in parallel.** §233 states an
+ordering rule — the unprompted pass first — because it was written for one
+agent doing both in sequence, where order is the only protection there is. Two
+independent agents make contamination structurally impossible instead of
+promised, and cost one wall-clock run rather than two.
+
 ## Patch notes are a doctrine rule now (§7d)
 Every app that has shipped more than one release SHOWS THE READER WHAT CHANGED,
 in the app, reachable from somewhere they already go — the current release at
