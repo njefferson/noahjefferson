@@ -134,6 +134,18 @@ Every item below has actually happened.
   against the real violations and flagged 39, 138 and 227 files of honest prose —
   ordinary speech and the product's voice are the same shape
   (LESSONS §108). **Every sibling repo owes the wiring.**
+- **AND A DEFECT YOU KNOW HOW TO FIX IS NOT A DECISION.** The rule below is
+ about the SHAPE of a closing list; this is about its CONTENTS, and a
+ well-formed list can be entirely made of things that are not choices. The test:
+ a decision has two outcomes a reasonable person could pick between and the
+ record cannot rank; a defect with a known remedy has one outcome and a cost.
+ Naming the cost belongs in the report — asking permission does not, and a fix
+ does not become a decision by being expensive. **It happened twice in one
+ session, both times immediately after good work**: two findings that had just
+ been described as defects, with their fixes stated, went out as numbered
+ questions with a recommendation first. Nothing had changed except momentum —
+ the same findings, met an hour earlier, would simply have been fixed.
+ (LESSONS §258, on the owner's instruction.)
 - **A REPORT ENDS IN DECISIONS OR IT ENDS IN NOTHING.** A list of everything
  outstanding is work handed back, not a handover — the owner should never have
  to read a summary and work out which parts are theirs. Close with a SHORT
