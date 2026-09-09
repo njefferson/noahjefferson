@@ -354,3 +354,4 @@ and the filename carries it.
 - **§260** — [A protection that is correct in one format is destruction in another, and the same code runs both](lessons/260-a-protection-right-for-one-format-is-destruction-in-another.md)
 - **§261** — [A file-only gate went red and silenced the test suite and every browser walk, and the run still said "failure"](lessons/261-a-red-receipt-hid-the-test-suite-and-three-walks.md)
 - **§262** — [A cold reader's finding is a fact about the READER's view until somebody checks whose view it was](lessons/262-a-cold-read-finding-is-a-fact-about-the-readers-view.md)
+- **§263** — [The digit that moves by itself hides the digit you have to move, and the version always looks like it changed](lessons/263-an-auto-incrementing-digit-hides-the-one-you-must-move.md)
