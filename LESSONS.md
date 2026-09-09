@@ -344,3 +344,5 @@ and the filename carries it.
 - **§250** — [A search whose error you discarded reports "nothing found", and nothing found is an answer](lessons/250-a-search-that-never-ran-reports-nothing-found.md)
 - **§251** — [A `??` chain reaches past the value it was written for, and reads somebody else's bookkeeping out as a promise](lessons/251-a-fallback-chain-promotes-bookkeeping-to-a-promise.md)
 - **§252** — [A deploy check greps one file and the bundler put the answer in another, so "not deployed yet" was a fact about the file list](lessons/252-a-deploy-check-that-greps-the-wrong-artefact.md)
+- **§253** — [Every accessibility gate PASSES a confirmation that is announced and never shown](lessons/253-a-conformance-gate-passes-a-confirmation-nobody-can-see.md)
+- **§254** — [A spelling rule is a LIST, and its population is what a reader reads — not what the tree contains](lessons/254-a-spelling-rule-is-a-list-and-the-population-is-what-a-reader-reads.md)
