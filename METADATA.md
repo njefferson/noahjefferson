@@ -37,11 +37,12 @@ A markdown-converting fetcher drops the `<head>`, so this needs the raw HTML.
 
 # njefferson/Quietkeep
 
-**Every item below is APPLIED and was READ BACK from GitHub on 2026-09-09**, by
-the method this file's own header describes — the search API for description,
-website, topics and default branch, and the repository's raw HTML for the
-social preview. That is a measurement of live state, not the owner's confirm;
-the owner applied these at some point this file never recorded.
+**Every item below is `set`** — confirmed by the owner on 2026-09-09, which is
+the only thing that flips a row (§10), and READ BACK from GitHub the same day by
+the method this file's own header describes: the search API for description,
+website, topics and default branch, and the repository's raw HTML for the social
+preview. Both halves are recorded because they are different claims — the
+read-back says the values are live, the confirm says they are the right ones.
 
 **THE REASON THIS SECTION DID NOT EXIST IS THE POINT OF IT.** Six repos were
 tracked here and the flagship was not one of them, so the standing instruction
@@ -51,7 +52,7 @@ read it as a STATUS and reported the metadata as outstanding on a repo where
 all five items were live. An absent record does not read as absent; it reads as
 nothing done.
 
-**Description** — applied, read back 2026-09-09
+**Description** — **set** 2026-09-09, on the owner's word; read back the same day
 
 > Out of sight. Never out of mind. A free, local-first planner that brings back
 > everything you put in — no accounts, no telemetry, no server.
@@ -59,7 +60,7 @@ nothing done.
 The tagline, then what it is and what it refuses. No version and no feature
 list, so it does not go stale on a release.
 
-**Website** — applied, read back 2026-09-09
+**Website** — **set** 2026-09-09, on the owner's word; read back the same day
 
 > https://quietkeep.pages.dev/
 
@@ -68,7 +69,7 @@ list, so it does not go stale on a release.
 editions, plus `manual.html`, `paths.html` and `why.html` each served as
 themselves rather than falling back to the app shell.
 
-**Topics** — applied, read back 2026-09-09
+**Topics** — **set** 2026-09-09, on the owner's word; read back the same day
 
 > `accessibility` `cloudflare-pages` `coga` `dexie` `event-sourcing`
 > `indexeddb` `local-first` `neurodiversity` `offline-first` `planner` `pwa`
@@ -78,14 +79,14 @@ Thirteen. `coga` and `wcag` are there because the accessibility claim is the
 product rather than a badge, and `neurodiversity` names the audience the
 refusals are aimed at.
 
-**Social preview** — applied, read back 2026-09-09
+**Social preview** — **set** 2026-09-09, on the owner's word; read back the same day
 
 The `og:image` on the repository's own page is served from
 `repository-images.githubusercontent.com`, which is the header's test for a card
 that was really uploaded — `opengraph.githubassets.com` would have meant GitHub
 was auto-generating one and the upload never landed.
 
-**Default branch** — applied, read back 2026-09-09
+**Default branch** — **set** 2026-09-09, on the owner's word; read back the same day
 
 > `main`
 
