@@ -352,3 +352,4 @@ and the filename carries it.
 - **§258** — [A defect you know how to fix is not a decision, and putting it in the decisions list is work handed back](lessons/258-a-known-fix-offered-as-a-choice-is-work-handed-back.md)
 - **§259** — [A fixer that reads its rules out of its checker can corrupt in the one way the checker cannot see](lessons/259-a-fixer-that-shares-a-file-with-its-checker.md)
 - **§260** — [A protection that is correct in one format is destruction in another, and the same code runs both](lessons/260-a-protection-right-for-one-format-is-destruction-in-another.md)
+- **§261** — [A file-only gate went red and silenced the test suite and every browser walk, and the run still said "failure"](lessons/261-a-red-receipt-hid-the-test-suite-and-three-walks.md)
