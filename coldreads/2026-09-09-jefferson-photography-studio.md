@@ -41,6 +41,13 @@ orientation 6 is in none of them, so that branch went unexercised.
   text finds two or three matches for Undo, Aerochrome, Visualize spots, Find
   spots automatically, Export & Save and Close. Invisible to a mouse; not
   invisible to anything that navigates by name.
+  **MEASURED AFTERWARDS AND IT IS NOT AN ACCESSIBILITY DEFECT.** 406 controls in
+  the document, 26 reaching the accessibility tree on the start screen and 37
+  with a photo open; duplicate accessible names among exposed controls, zero;
+  zero-size exposed controls, zero. A closed `<dialog>` is `display:none` and
+  out of the tree. It was relayed onward as an accessibility defect and as a
+  gate having missed something, and both of those were added by the relay rather
+  than found by the reader. See LESSONS §262.
 - **The Grade shadows wheel is extremely sensitive**: a drag of roughly 30px
   near its centre registered as 92% and painted the whole frame heavy magenta.
 - **Visualize spots shows the identical smudge before and after healing.** The
@@ -94,10 +101,11 @@ reached from inside the app says active.
 
 Two agents, about 300k tokens each, roughly 45 minutes of wall clock in
 parallel, 155 and 220 tool calls. It bought five findings no gate in the family
-can see, two of which — the unwarned clipped-highlight tap and the hidden
-duplicate controls — are about people rather than about code, and one of which
-is a real accessibility defect that every green accessibility run had passed
-over because the duplicates are invisible to a pointer.
+can see. The clipped-highlight tap is the one that mattered: the app's signature
+gesture, wrecking the frame with no explanation, on the exact mistake a newcomer
+makes. It is fixed. The duplicate-controls finding measured to nothing once
+somebody asked whose view it was a fact about — which is its own lesson, and a
+warning about what a cold read's findings are before they are measured.
 
 **The pattern worth carrying:** the unprompted pass found the things that make
 the app hard to USE, and the claims pass found the things that make it hard to
