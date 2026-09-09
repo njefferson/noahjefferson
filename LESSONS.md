@@ -343,3 +343,4 @@ and the filename carries it.
 - **§249** — [Verifying a push by comparing HEAD to the remote passes loudest when the commit never happened](lessons/249-a-push-check-that-passes-when-nothing-was-committed.md)
 - **§250** — [A search whose error you discarded reports "nothing found", and nothing found is an answer](lessons/250-a-search-that-never-ran-reports-nothing-found.md)
 - **§251** — [A `??` chain reaches past the value it was written for, and reads somebody else's bookkeeping out as a promise](lessons/251-a-fallback-chain-promotes-bookkeeping-to-a-promise.md)
+- **§252** — [A deploy check greps one file and the bundler put the answer in another, so "not deployed yet" was a fact about the file list](lessons/252-a-deploy-check-that-greps-the-wrong-artefact.md)
