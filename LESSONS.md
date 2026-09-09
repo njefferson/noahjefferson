@@ -350,3 +350,5 @@ and the filename carries it.
 - **§256** — [A poll count is not a duration, and a field that does not change is not evidence of a thing that is not changing](lessons/256-a-poll-count-is-not-a-duration.md)
 - **§257** — [A coverage registry that cannot hold a sometimes-absent element makes the honest choice unregisterable](lessons/257-a-conformance-registry-has-to-hold-what-is-not-always-there.md)
 - **§258** — [A defect you know how to fix is not a decision, and putting it in the decisions list is work handed back](lessons/258-a-known-fix-offered-as-a-choice-is-work-handed-back.md)
+- **§259** — [A fixer that reads its rules out of its checker can corrupt in the one way the checker cannot see](lessons/259-a-fixer-that-shares-a-file-with-its-checker.md)
+- **§260** — [A protection that is correct in one format is destruction in another, and the same code runs both](lessons/260-a-protection-right-for-one-format-is-destruction-in-another.md)
