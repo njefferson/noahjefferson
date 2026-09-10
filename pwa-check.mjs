@@ -202,7 +202,13 @@ if (!tellsReader) {
     + 'recording it in a diagnostic is not telling anyone (§7h.2) — it needs a standing indicator with its own way out.',
   );
 } else {
-  passed.push('the reader is told, in words, that a new version is ready');
+  // SAY WHAT WAS MEASURED. This label used to read "the reader is told, in
+  // words, that a new version is ready", and an app whose ONLY such string was
+  // a confirmation shown AFTER pressing a Settings button passed it — while a
+  // reader who never opened that panel was told nothing, ever. The check is a
+  // presence test on reader-visible source; it cannot tell an announcement from
+  // a confirmation, and a green that over-claims is worse than a narrow one.
+  passed.push('the words a reader needs exist in reader-visible source (a STRING — this cannot tell whether anything shows it unprompted)');
 }
 
 // ---- 4. the diagnostic reports cache state --------------------------------
@@ -254,4 +260,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('\nPASS — a new version waits, the reader is told, and the diagnostic can say which copy is held.');
+console.log('\nPASS — a new version waits, the words to tell the reader exist, and the diagnostic can say which copy is held.');
