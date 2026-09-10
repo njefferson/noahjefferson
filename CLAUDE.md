@@ -325,6 +325,28 @@ checks before offering to build one of these again):**
  by MEASUREMENT rather than by taste — its first version flagged ninety honest
  lines, so it stopped matching the shape of the sentence and started matching
  the coincidence between the number and a table. (LESSONS §204.)
+- **Jefferson-Photography-Studio** — §7h landed 2026-09-10 and is the one worth
+ copying, because the SHAPE of the fix matters more than the fix. `sw.js` had
+ called `skipWaiting()` inside install, so a new worker took over under the open
+ page and activate deleted the old cache beneath it. Removing that ALONE makes
+ things worse — the update then waits and nothing says so — and the only surface
+ was a Settings button, which is a PULL that helps nobody who does not already
+ suspect there is a new version. The standing strip had to land in the same
+ commit, and did.
+ **Its gate lesson is §264 and it is about the hub's own gate:** `pwa-check` was
+ GREEN on "the reader is told, in words" for the whole life of the feature,
+ matching a string that is shown only AFTER pressing that Settings button. The
+ passing label now says it found a string. Its failing check was always honest.
+ Worth copying: `tools`-free but real — the walk drives a REAL second worker by
+ rewriting the served `sw.js` with a new CACHE name, and asserts the thing that
+ actually distinguishes the builds, which is a takeover with NOBODY PRESSING
+ ANYTHING after a settle. Three earlier versions of that walk passed against a
+ planted defect. The strip's look is one shared `swstrip.css` imported by the
+ module that provides the feature, so three app stylesheets did not grow three
+ copies; placement stays per-app.
+ Still owed here: the ⓘ, first-run move, patch notes and §7f diagnostic are all
+ built, but this row has not been audited against them the way the rows above
+ were — check the repo, not this line.
 - **Every other sibling** — still owed. Ask that repo's NOTES before assuming,
  and **check the repo rather than this line** — this list has now been wrong in
  both directions, claiming a surface that did not exist and denying five that
