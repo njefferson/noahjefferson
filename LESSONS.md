@@ -356,3 +356,4 @@ and the filename carries it.
 - **§262** — [A cold reader's finding is a fact about the READER's view until somebody checks whose view it was](lessons/262-a-cold-read-finding-is-a-fact-about-the-readers-view.md)
 - **§263** — [The digit that moves by itself hides the digit you have to move, and the version always looks like it changed](lessons/263-an-auto-incrementing-digit-hides-the-one-you-must-move.md)
 - **§264** — [A gate that greps for the words cannot tell an announcement from a confirmation, and its green says it can](lessons/264-a-gate-that-greps-for-words-cannot-tell-an-announcement-from-a-confirmation.md)
+- **§265** — [A check that reads rendered state can pass on residue, and a failure naming only the symptom buys two wrong fixes](lessons/265-a-check-that-reads-rendered-state-can-pass-on-residue.md)
