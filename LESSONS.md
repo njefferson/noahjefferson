@@ -358,3 +358,4 @@ and the filename carries it.
 - **§264** — [A gate that greps for the words cannot tell an announcement from a confirmation, and its green says it can](lessons/264-a-gate-that-greps-for-words-cannot-tell-an-announcement-from-a-confirmation.md)
 - **§265** — [A check that reads rendered state can pass on residue, and a failure naming only the symptom buys two wrong fixes](lessons/265-a-check-that-reads-rendered-state-can-pass-on-residue.md)
 - **§266** — [A negative control that passes has told you about your threshold, not about your fix](lessons/266-a-negative-control-that-passes-is-about-your-threshold.md)
+- **§267** — [A defect invisible in some cases is reported as being about the cases where it shows, and the report names the wrong thing](lessons/267-a-defect-hidden-in-some-cases-is-reported-as-being-about-the-others.md)
