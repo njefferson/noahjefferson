@@ -203,6 +203,27 @@ Every item below has actually happened.
  recommendation to leave boat-ramp data out of Thalweg, put as a decision with
  the evidence missing, on hosts the owner could unblock in seconds.
  (LESSONS §188, on the owner's instruction.)
+- **NEVER START A PROCESS YOU ARE NOT GOING TO MANAGE — every repo, forever.**
+ If you start it, you own it until you have CONFIRMED it is dead: a background
+ command, a watcher, a poll loop, a browser, a subagent. Not until it
+ finishes — until you have looked. **The cost is not memory, it is that the
+ session becomes unreadable from outside**: the owner cannot tell a working
+ walk from a dead timer, so they have to ask, and being asked IS the signal the
+ rule was already broken. It was broken twice in one session, and the second
+ time the count was three — one real timer, one waiter stuck for four hours,
+ and eleven orphaned browsers.
+ **Three specifics, each of which has actually happened here.** `pgrep -f
+ "foo"` matches its OWN command line, so `until ! pgrep -f "foo"` can never
+ exit — that loop stranded seven processes once and one for four hours the
+ next time; poll a FILE or an exit code, never a process name. A browser that
+ dies between `launch()` and `close()` is reparented to init and sits there
+ forever, so every launch gets a `finally` that closes it. And a subagent is a
+ process too — one here notified a second time an hour after reporting,
+ because a script inside it was missing `process.exit(0)`.
+ **Prefer not starting one at all**: a sleep that polls a remote buys nothing
+ over simply checking it next turn. Sweep and report honestly — any turn that
+ reports on long-running work counts what is alive and kills what is finished.
+ (Doctrine §11d; LESSONS §270.)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
  range line in the output means nothing moved. (LESSONS, 2026-08-02.)

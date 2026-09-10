@@ -361,3 +361,4 @@ and the filename carries it.
 - **§267** — [A defect invisible in some cases is reported as being about the cases where it shows, and the report names the wrong thing](lessons/267-a-defect-hidden-in-some-cases-is-reported-as-being-about-the-others.md)
 - **§268** — [A measurement taken somewhere other than where the report came from does not refute the report, it changes the subject](lessons/268-a-measurement-at-the-wrong-viewport-changes-the-subject.md)
 - **§269** — [A find-and-replace cannot tell a gate's own fixture from the prose it is fixing, so the sweep disarms the gate and nothing goes red](lessons/269-a-sweep-cannot-tell-a-gates-fixture-from-the-prose-it-fixes.md)
+- **§270** — [A process nobody is managing is not free because it is quiet — it makes the session unreadable from outside](lessons/270-a-process-nobody-manages-makes-the-session-unreadable.md)
