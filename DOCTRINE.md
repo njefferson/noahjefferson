@@ -829,6 +829,45 @@ in a file never once refused the commit it forbade. The rule a session has to
 remember at the end of four hours is not the same object as the rule the
 harness runs regardless.
 
+## 11d. Never start a process you are not going to manage. Every repo, forever.
+
+Added 2026-09-10, on the owner's instruction, after it had to be said twice in
+one session — and the second time the count was three: one real timer, one
+waiter stuck for four hours, and eleven orphaned browsers.
+
+**IF YOU START IT, YOU OWN IT UNTIL IT IS DEAD.** A background command, a
+watcher, a poll loop, a browser, a subagent. Not "until it finishes" — until
+you have CONFIRMED it is gone. A process nobody is managing is not free
+because it is quiet; it holds memory, it clutters every listing the owner
+reads, and worst of all **it makes the session unreadable from outside.** The
+owner cannot tell a working walk from a dead timer, so the only way to find out
+is to ask, and being asked is the signal this rule was already broken.
+
+- **Prefer not starting one at all.** Before a background wait, ask what it
+ buys. Polling a remote you can simply query again next turn buys nothing.
+ **The wrong instinct is a sleep; the right one is to check the thing when you
+ next have a reason to.**
+- **A waiter must be able to exit.** `pgrep -f "foo"` MATCHES ITS OWN COMMAND
+ LINE, so `until ! pgrep -f "foo"; do sleep; done` can never terminate. That
+ exact loop has now been written in this family twice and stranded seven
+ processes the first time and one for four hours the second. If you must poll,
+ poll a FILE or an exit code, never a process name.
+- **A browser is the worst offender.** A walk that dies between `launch()` and
+ `close()` leaves Chromium reparented to init, and eleven of them survived
+ eighty-two minutes here with nothing driving them. Every launch gets a
+ `finally { await browser.close() }`, and a subagent told to drive a browser is
+ told that too.
+- **Sweep before you report.** Any turn that reports on long-running work also
+ counts what is still alive and kills what is finished. `ps -eo etimes,args`
+ costs nothing. Reporting "still running" without having looked is a guess.
+- **A subagent is a process.** It can outlive its own answer — one here
+ notified a second time, an hour after reporting, because a script inside it
+ was missing `process.exit(0)`.
+
+**And the honest accounting when asked is the whole point.** Say which are real
+and which are junk, kill the junk in the same turn, and never let "three tasks
+running" stand as if it meant three things were happening.
+
 ## 12. Source-of-truth files (naming convention)
 
 - `NOTES.md` — the repo's source of truth: thesis, roadmap, settled decisions,
