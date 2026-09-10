@@ -660,10 +660,18 @@ only the owner can switch on. Confirm those the same way as repo metadata (§10)
 list them, never assume them.
 
 ## The cold read is a file now, not a remembered step
-[`COLDREAD.md`](COLDREAD.md) carries the method and both prompts verbatim, and
-every run gets a record under `coldreads/`. It is canonical here like the gates
-— a sibling opens it and runs it against its own deployed URL rather than
-reinventing it.
+[`COLDREAD.md`](COLDREAD.md) carries the method and both prompts verbatim. It is
+canonical here like the gates — a sibling opens it and runs it against its own
+deployed URL rather than reinventing it.
+
+**The METHOD is canonical here; the RECORDS are not.** This paragraph said
+"every run gets a record under `coldreads/`" while neither that directory nor
+`COLDREAD.md` itself was tracked — a pointer in the one file every session loads
+automatically, aimed at nothing, for as long as it had been written. Each app
+keeps its own runs in its own `NOTES.md`, beside the releases that answered
+them, which is where a session working on that app actually looks; the hub's
+`coldreads/` is for runs of the hub site. Same split as the gates: shared
+method, per-repo output.
 
 **Why it is a file.** LESSONS §206 designed the claims walk and §233 found the
 half it was missing, and §233's own last paragraph is the diagnosis: a
