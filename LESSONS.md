@@ -362,3 +362,4 @@ and the filename carries it.
 - **§268** — [A measurement taken somewhere other than where the report came from does not refute the report, it changes the subject](lessons/268-a-measurement-at-the-wrong-viewport-changes-the-subject.md)
 - **§269** — [A find-and-replace cannot tell a gate's own fixture from the prose it is fixing, so the sweep disarms the gate and nothing goes red](lessons/269-a-sweep-cannot-tell-a-gates-fixture-from-the-prose-it-fixes.md)
 - **§270** — [A process nobody is managing is not free because it is quiet — it makes the session unreadable from outside](lessons/270-a-process-nobody-manages-makes-the-session-unreadable.md)
+- **§271** — [A control that arrives as text in a context window is not a control, and its absence for one turn reads as permission](lessons/271-a-control-that-arrives-as-text-is-not-a-control.md)

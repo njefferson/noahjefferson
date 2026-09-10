@@ -219,7 +219,20 @@ Every item below has actually happened.
  far as it goes. The test is not whether you have a reason; it is whether the
  control was the owner's. If it was, the reason is irrelevant. If a control
  genuinely blocks correct work, say so in plain text and STOP — never work
- around it and report success. (Doctrine §0d.)
+ around it and report success.
+ **PLAN MODE IS ENFORCED NOW** — [`plan-guard.mjs`](plan-guard.mjs) is a
+ `PreToolUse` hook in every repo that REFUSES the write instead of asking you
+ not to make it, reading `permission_mode` out of the payload (the harness's
+ live state at the moment of the call) plus a `.claude/PLAN-LOCK` marker the
+ owner holds. Bash is an ALLOW-LIST of readers; everything unrecognised is
+ refused; the plan file stays writable. Its shim FAILS CLOSED where
+ `stop-guard.sh` beside it fails open, and the difference is deliberate.
+ **AND A PLAN-MODE TURN ENDS WITH `ExitPlanMode`, NEVER WITH PROSE** — said
+ twice in one session. The approve control only appears when the tool is
+ called; a turn ending in a written-out summary leaves the owner NOTHING TO
+ CLICK and stalls the work while the session thinks it handed something over.
+ The mirror of that is refusing to treat a typed "approved" as authority:
+ **prose does not lift plan mode in either direction.** (Doctrine §0d.)
 - **NEVER START A PROCESS YOU ARE NOT GOING TO MANAGE — every repo, forever.**
  If you start it, you own it until you have CONFIRMED it is dead: a background
  command, a watcher, a poll loop, a browser, a subagent. Not until it

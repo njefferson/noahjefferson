@@ -99,6 +99,30 @@ habit, not several**, and it does not stay in the harmless half.
 If a control genuinely blocks correct work, say so in plain text and stop.
 Never work around it and report success.
 
+**ENFORCED, 2026-09-10, and no longer a paragraph.** `plan-guard.mjs` runs as a
+`PreToolUse` hook in every repo and REFUSES the write rather than asking the
+session not to make it. It reads `permission_mode` out of the payload — the
+harness's live state at the moment of the call, which is why it cannot desync
+the way the paragraph did — and `.claude/PLAN-LOCK` as a second trigger the
+owner holds, so it survives the field being renamed or the harness
+contradicting the GUI again. Bash is an ALLOW-LIST of readers, because plan
+mode permits reading and a guard that refuses `cat` is a guard somebody
+switches off. Everything unrecognised is refused.
+
+**It was planted before it was believed**, and the plant found a real defect —
+the read half of an MCP server was being refused, because the pattern only
+looked for the verb at the start of a tool name and half of them carry it at
+the end. **A gate nobody has watched refuse is a hypothesis.**
+
+**AND A PLAN-MODE TURN ENDS WITH THE TOOL, NEVER WITH PROSE.** Said twice in
+one session, which is why it is written here. The approve control only appears
+when `ExitPlanMode` is called; a turn that ends with a beautifully written
+summary of the plan gives the owner NOTHING TO CLICK, and the work stalls
+while the session believes it has handed something over. Write the plan to the
+file, then call the tool. The reverse — treating a typed "approved" as
+authority — is the same error mirrored: **prose does not lift plan mode in
+either direction.** Only the mode does.
+
 ## 0c. Only NOAH decides what goes on the hub. Never a session.
 
 On being told this rule was nowhere in this file, the owner was right that it
