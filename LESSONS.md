@@ -359,3 +359,5 @@ and the filename carries it.
 - **§265** — [A check that reads rendered state can pass on residue, and a failure naming only the symptom buys two wrong fixes](lessons/265-a-check-that-reads-rendered-state-can-pass-on-residue.md)
 - **§266** — [A negative control that passes has told you about your threshold, not about your fix](lessons/266-a-negative-control-that-passes-is-about-your-threshold.md)
 - **§267** — [A defect invisible in some cases is reported as being about the cases where it shows, and the report names the wrong thing](lessons/267-a-defect-hidden-in-some-cases-is-reported-as-being-about-the-others.md)
+- **§268** — [A measurement taken somewhere other than where the report came from does not refute the report, it changes the subject](lessons/268-a-measurement-at-the-wrong-viewport-changes-the-subject.md)
+- **§269** — [A find-and-replace cannot tell a gate's own fixture from the prose it is fixing, so the sweep disarms the gate and nothing goes red](lessons/269-a-sweep-cannot-tell-a-gates-fixture-from-the-prose-it-fixes.md)
