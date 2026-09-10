@@ -843,10 +843,25 @@ reads, and worst of all **it makes the session unreadable from outside.** The
 owner cannot tell a working walk from a dead timer, so the only way to find out
 is to ask, and being asked is the signal this rule was already broken.
 
-- **Prefer not starting one at all.** Before a background wait, ask what it
- buys. Polling a remote you can simply query again next turn buys nothing.
- **The wrong instinct is a sleep; the right one is to check the thing when you
- next have a reason to.**
+- **A TIMER IS THE LAZY ANSWER AND IT IS ALMOST NEVER THE RIGHT TOOL.** This is
+ the half that was got wrong even while writing the rule: `sleep 900` was used
+ four times in one session to wait on a CI run that could be READ with one
+ query. A sleep waits a GUESSED interval and learns nothing about the thing it
+ is waiting for — it is not an instrument, it is a delay with a number pulled
+ out of the air. Reach in this order:
+ 1. **Nothing.** Query the thing when you next have a reason to touch it. A
+ remote you can poll on demand needs no process at all, and the answer is
+ fresher for having been asked later.
+ 2. **A condition, not a clock.** If you genuinely must be woken, wait on
+ something REAL — a file appearing, an exit code, a status field — via
+ whatever the harness gives you for that. It ends when the thing ends
+ rather than when a guess expires, and it reports what happened.
+ 3. **A command that exits on the condition**, backgrounded, so one
+ notification arrives and the process is gone. Never a bare interval.
+ **And when the harness refuses a foreground sleep and names the better tool,
+ that refusal is the instruction.** It was read as an obstacle here and routed
+ around with backgrounded sleeps, which is the same failure as reaching for
+ `--no-verify` because a hook said no.
 - **A waiter must be able to exit.** `pgrep -f "foo"` MATCHES ITS OWN COMMAND
  LINE, so `until ! pgrep -f "foo"; do sleep; done` can never terminate. That
  exact loop has now been written in this family twice and stranded seven

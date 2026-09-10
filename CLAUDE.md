@@ -220,9 +220,18 @@ Every item below has actually happened.
  forever, so every launch gets a `finally` that closes it. And a subagent is a
  process too — one here notified a second time an hour after reporting,
  because a script inside it was missing `process.exit(0)`.
- **Prefer not starting one at all**: a sleep that polls a remote buys nothing
- over simply checking it next turn. Sweep and report honestly — any turn that
- reports on long-running work counts what is alive and kills what is finished.
+ **AND A TIMER IS THE LAZY ANSWER — almost never the right tool.** `sleep 900`
+ was used four times in one session to wait on a CI run that could be READ
+ with one query. A sleep waits a GUESSED interval and learns nothing about the
+ thing it waits for. Reach in this order: **nothing** (query it next turn you
+ touch it); a **condition** — a file, an exit code, a status field — never a
+ clock; or a command that EXITS on that condition, backgrounded, so one
+ notification arrives and the process is gone. **When the harness refuses a
+ foreground sleep and names the better tool, that refusal is the
+ instruction** — it was read as an obstacle here and routed around with
+ backgrounded sleeps, which is `--no-verify` wearing a different hat.
+ Sweep and report honestly — any turn that reports on long-running work counts
+ what is alive and kills what is finished.
  (Doctrine §11d; LESSONS §270.)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No

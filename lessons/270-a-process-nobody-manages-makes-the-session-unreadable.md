@@ -45,11 +45,32 @@ then notified AGAIN an hour later because a measurement script inside it was
 missing `process.exit(0)`. A subagent is a process; delivering a result is not
 the same as exiting.
 
-**The repair is a habit, not a tool.** Prefer not starting one: a sleep polling
-a remote buys nothing over checking it next turn, and the instinct to reach for
-a wait is usually the instinct to look busy. When one is genuinely needed, own
-it — and any turn that reports on long-running work counts what is alive and
-kills what is finished, in that turn, before writing the report.
+**AND THE FOURTH MECHANISM IS THE ONE THAT CAUSED THE OTHER THREE: reaching for
+a timer when a tool exists.** `sleep 900` was used FOUR TIMES in one session to
+wait on a CI run whose status is one API call. A sleep waits a GUESSED interval
+and learns nothing whatever about the thing it is waiting for — it is not an
+instrument, it is a delay with a number pulled out of the air, and every one of
+them then became a process to manage. The stuck `pgrep` waiter exists only
+because a timer was wanted; the orphaned browsers survived because nothing was
+watching a real condition that would have said the walks were done.
+
+**The order to reach in.** *Nothing* — query the thing next turn you have a
+reason to touch it; the answer is fresher for having been asked later. Then *a
+condition, not a clock* — a file appearing, an exit code, a status field, via
+whatever the harness provides, so it ends when the THING ends and reports what
+happened. Then *a command that exits on that condition*, backgrounded, so one
+notification arrives and the process is already gone. A bare interval is none
+of these.
+
+**AND THE HARNESS SAID SO FIRST.** A foreground `sleep 780` was REFUSED here
+with the better tool named in the refusal text. That refusal was read as an
+obstacle and routed around with backgrounded sleeps — which is `--no-verify`
+wearing a different hat, and this family already has a rule about what happens
+when a named door gets treated as a wall.
+
+**The repair is a habit, not a tool.** When a background process is genuinely
+needed, own it — and any turn that reports on long-running work counts what is
+alive and kills what is finished, in that turn, before writing the report.
 
 **And when asked, answer honestly by kind.** Say which are real and which are
 junk, kill the junk in the same turn, and never let a count of running tasks
