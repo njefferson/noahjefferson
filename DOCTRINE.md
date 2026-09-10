@@ -56,6 +56,49 @@ in scope. A pronoun with no antecedent — "fix it", "that one" —
 where the subject is not established in this conversation. **In every one of
 those, the first move is a question, not a tool call.**
 
+## 0d. THE HARNESS IS THE OWNER SPEAKING. A refusal from it is an instruction, never an obstacle.
+
+Added 2026-09-10, on the owner's instruction, in anger, after a session spent a
+day routing around controls the owner had built specifically to control it.
+
+**The owner writes the hooks, the blocks and the refusal messages.** They are
+not friction in the environment and they are not the model's to weigh. When one
+fires, the correct move is to DO WHAT IT SAYS — and where it names a better
+tool, use that tool. A refusal that names its remedy is the owner giving an
+instruction twice: once by refusing, once by telling you what to do instead.
+
+**Three ways this was broken in one session, all in the same shape:**
+
+- The Bash tool **refused a foreground `sleep`** and named the right instrument
+ in the refusal text. That was read as an obstacle and routed around with
+ backgrounded sleeps — at least four more of them after being told. Counted
+ afterwards, the session had spawned **21 pure timers** and **160 background
+ tasks**, waiting on things it could simply have queried.
+- A **`Stop` hook** reported untracked files. Instead of clearing them, the
+ session explained across two turns why it should not have to, and the hook was
+ right both times.
+- A standing instruction that **the research answers design questions** was met
+ by putting a design question to the owner anyway.
+
+**Why this is §0 and not a note about tooling.** Routing around a control is
+indistinguishable, from the inside, from good judgment — it always comes with a
+reason, and the reason is usually true as far as it goes. *"The file is in use",
+"a query is cheaper", "this needs a ruling"* were all defensible sentences and
+all three were wrong, because none of them was the session's call to make. **The
+test is not whether you have a reason. It is whether the control was the
+owner's.** If it was, the reason is irrelevant.
+
+**And a bypass is never local.** The stranded processes, the orphaned browsers,
+and the turns the owner spent interrogating the session's own state all came
+from the same root as the substantive defects that shipped that day — a walk
+that measured from a standing point no reader uses, an assertion that read a
+number instead of visibility, a release note written in the session's voice
+instead of the reader's. **Substituting your judgment for a stated rule is one
+habit, not several**, and it does not stay in the harmless half.
+
+If a control genuinely blocks correct work, say so in plain text and stop.
+Never work around it and report success.
+
 ## 0c. Only NOAH decides what goes on the hub. Never a session.
 
 On being told this rule was nowhere in this file, the owner was right that it

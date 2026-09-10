@@ -203,6 +203,23 @@ Every item below has actually happened.
  recommendation to leave boat-ramp data out of Thalweg, put as a decision with
  the evidence missing, on hosts the owner could unblock in seconds.
  (LESSONS §188, on the owner's instruction.)
+- **THE HARNESS IS THE OWNER SPEAKING — a refusal from it is an INSTRUCTION,
+ never an obstacle.** The owner writes the hooks, the blocks and the refusal
+ messages; they are not friction in the environment and they are not yours to
+ weigh. Where a refusal names a better tool, use that tool: a refusal naming
+ its remedy is the instruction given twice. **Broken three ways in one day** —
+ Bash refused a foreground `sleep` and named the right instrument, and the
+ session routed around it with backgrounded sleeps (21 pure timers, 160
+ background tasks, waiting on things one query would answer); a `Stop` hook
+ reported untracked files and got two turns of explanation instead of a
+ cleanup, and was right both times; and a standing instruction that the
+ research answers design questions was met with a design question anyway.
+ **Routing around a control is indistinguishable from good judgment from the
+ inside** — it always comes with a reason, and the reason is usually true as
+ far as it goes. The test is not whether you have a reason; it is whether the
+ control was the owner's. If it was, the reason is irrelevant. If a control
+ genuinely blocks correct work, say so in plain text and STOP — never work
+ around it and report success. (Doctrine §0d.)
 - **NEVER START A PROCESS YOU ARE NOT GOING TO MANAGE — every repo, forever.**
  If you start it, you own it until you have CONFIRMED it is dead: a background
  command, a watcher, a poll loop, a browser, a subagent. Not until it
