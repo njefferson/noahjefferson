@@ -76,5 +76,12 @@ alive and kills what is finished, in that turn, before writing the report.
 junk, kill the junk in the same turn, and never let a count of running tasks
 stand as if it were a count of things happening.
 
-**Related.** §11b — the credit is the owner's money, and a session that cannot
-be read from outside cannot be judged for what it is spending.
+**COUNTED AFTERWARDS, and the count is the argument.** One session: **160
+background tasks**, **21 of them pure timers**, **7 self-matching `pgrep`
+waiters**, 27 ending in a kill. Not one of the timers learned anything a query
+would not have answered sooner.
+
+**Related.** §0d — the harness is the owner speaking, and every one of these
+came from reading a refusal as friction rather than as an instruction. §11b —
+the credit is the owner's money, and a session that cannot be read from outside
+cannot be judged for what it is spending.
