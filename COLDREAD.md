@@ -149,10 +149,27 @@ a screen you did not see. If a step failed, report the failure rather than the
 intent.
 ```
 
-### Pass 2 — the claims walk (verification)
+### Pass 2 — the directed pass (verification)
 
-Give it the release claims, each written as **a place to stand and a thing that
-must be visible there**, and nothing else. Diff its report against intent.
+**IT WAS "THE CLAIMS WALK" AND THE CLAIMS WERE AN ANSWER KEY.** The format this
+file taught was *"Standing at <screen>, you should see <the thing>"*, written
+from the release notes — and a claim in that shape hands the agent BOTH the
+route and the expected wording. It can then only fail if a string is literally
+absent. It cannot tell you whether the screen could be FOUND, or whether the
+words meant anything to somebody who arrived there, and those are most of what
+a cold read exists to find. **A user does not read release notes and does not
+know a screen's name.**
+
+That is §266's family turned on the instrument: a check handed its own answer
+reports your standing point, not the app.
+
+So each line is **an OUTCOME SOMEBODY WANTS**, and it names no screen and quotes
+no expected wording. Derive them from the release notes by all means — that is
+what makes the pass DIRECTED rather than a second wander — but translate each
+one into the thing a person was trying to do. The agent reports where it ended
+up, what it had to press, what the app actually said, and whether it gave up.
+
+Then diff its report against intent.
 
 ```
 You are checking a web app against a list of claims. Do not read any source
@@ -167,16 +184,24 @@ names is visible there. Quote what you actually see. If you cannot reach the
 place, say so and say what stopped you — do not substitute a different route
 and report success.
 
-  <one line per claim: "Standing at X, you should see Y">
+  <one line per task: the outcome somebody wants, naming no screen and
+   quoting no expected wording>
 
-Report per claim: FOUND (quote it), NOT FOUND (say what was there instead), or
-COULD NOT REACH (say what stopped you). Never infer a claim is satisfied
-because something similar was nearby.
+For each: report where you ended up, how many taps it took, exactly what the
+app said, word for word, and whether you gave up. If you could not reach
+something, say so and say what stopped you — do not substitute a different
+route and report success. Never infer something is satisfied because something
+similar was nearby, and never describe a screen you did not see.
 ```
 
-**§206's rule stands: the claims are written BEFORE the run**, from the release
-notes, by somebody who is not the agent. A claim invented after the fact to
-match what was found is not a check.
+**§206's rule stands: the tasks are written BEFORE the run**, by somebody who is
+not the agent. One invented after the fact to match what was found is not a
+check.
+
+**AND THE RELEASE NOTES ARE THE SOURCE, NEVER THE WORDING.** Writing a shortfall
+into release notes does not discharge it either — nobody reads them, and the
+reader simply meets the thing. "Said in the release notes" is not a mitigation
+and must not be recorded as one.
 
 ---
 
