@@ -363,3 +363,6 @@ and the filename carries it.
 - **§269** — [A find-and-replace cannot tell a gate's own fixture from the prose it is fixing, so the sweep disarms the gate and nothing goes red](lessons/269-a-sweep-cannot-tell-a-gates-fixture-from-the-prose-it-fixes.md)
 - **§270** — [A process nobody is managing is not free because it is quiet — it makes the session unreadable from outside](lessons/270-a-process-nobody-manages-makes-the-session-unreadable.md)
 - **§271** — [A control that arrives as text in a context window is not a control, and its absence for one turn reads as permission](lessons/271-a-control-that-arrives-as-text-is-not-a-control.md)
+- **§272** — [Two plants in one run: the first failure aborts the walk and the second reports as passing](lessons/272-two-plants-in-one-run-and-the-first-hid-the-second.md)
+- **§273** — [An assertion whose precondition is absent reports the app correct, in the same words as a pass](lessons/273-an-assertion-whose-precondition-is-absent-reports-the-app-correct.md)
+- **§274** — [Two records of one name, and the gate named for guarding it guarded one](lessons/274-two-records-of-one-name-and-the-gate-read-one.md)
