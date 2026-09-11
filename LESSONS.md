@@ -366,3 +366,4 @@ and the filename carries it.
 - **§272** — [Two plants in one run: the first failure aborts the walk and the second reports as passing](lessons/272-two-plants-in-one-run-and-the-first-hid-the-second.md)
 - **§273** — [An assertion whose precondition is absent reports the app correct, in the same words as a pass](lessons/273-an-assertion-whose-precondition-is-absent-reports-the-app-correct.md)
 - **§274** — [Two records of one name, and the gate named for guarding it guarded one](lessons/274-two-records-of-one-name-and-the-gate-read-one.md)
+- **§275** — [A verification claim that names the screen and quotes the words can only fail if a string is missing](lessons/275-a-verification-claim-handed-its-own-answer.md)
