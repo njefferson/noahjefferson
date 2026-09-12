@@ -367,3 +367,8 @@ and the filename carries it.
 - **§273** — [An assertion whose precondition is absent reports the app correct, in the same words as a pass](lessons/273-an-assertion-whose-precondition-is-absent-reports-the-app-correct.md)
 - **§274** — [Two records of one name, and the gate named for guarding it guarded one](lessons/274-two-records-of-one-name-and-the-gate-read-one.md)
 - **§275** — [A verification claim that names the screen and quotes the words can only fail if a string is missing](lessons/275-a-verification-claim-handed-its-own-answer.md)
+- **§276** — [A threshold's own justification names the scale it was measured on, and a second scale needs a second number rather than the same one](lessons/276-a-thresholds-justification-names-the-scale-it-was-measured-on.md)
+- **§277** — [Two mechanisms each correct on its own can compose into a silent no-op, and neither one's tests can see it](lessons/277-two-correct-mechanisms-can-compose-into-a-silent-no-op.md)
+- **§278** — [A cache keyed on the input identity replays the old code's answer after you fix the code, and reports it as progress](lessons/278-a-cache-keyed-on-the-input-replays-the-old-codes-answer.md)
+- **§279** — [A shader is a string to the type checker, and a shader that will not compile reports itself as an unsupported browser](lessons/279-a-shader-is-a-string-to-the-type-checker.md)
+- **§280** — [A guard on the divisor is not a bound on the quotient, and it turns a large error into a discontinuity](lessons/280-a-guard-on-the-divisor-is-not-a-bound-on-the-quotient.md)

@@ -42,3 +42,35 @@ apparatus is right, the bound is right, and the SUBJECT is missing. All three
 produce the same line of output, and that line is the reason none of them gets
 questioned. The fixture is part of the assertion, and an assertion that does not
 say what must be present has left its most important half to chance.
+
+**AND THE SAME DAY, IN ANOTHER APP, TWICE — Infrared Photography Studio,
+2026-09-12.** Recorded here rather than as its own lesson: two independent
+sessions reached this from opposite ends within hours, which is the strongest
+evidence the rule has. Both cases add a mechanism this entry did not name — the
+missing subject was not an empty population but an inert one.
+
+**A comparison of two implementations agrees perfectly when neither is doing
+anything.** A parity check opens a photograph, expects a measured lens profile to
+match it, and compares the on-screen render against the exported file to within
+1.5 of 255. A store change began refusing every profile that carried a brightness
+curve, so nothing matched, so both sides were uncorrected — and they agreed to
+0.32 of 255, the tightest agreement that check had ever printed. Its output was
+one failing claim, "the profile matched", followed by "GPU and CPU agree"
+passing. **That reads as one flaky assertion in a passing suite.** It was a
+correction that had silently vanished for every photograph. The fix is two lines:
+stop the run when no profile matched, and separately assert that the curve is
+changing the picture at all.
+
+**A regex that must not match passes on an empty string.** Another check asserted
+that one frame's row carries a sentence and another frame's row does not. It read
+the rows with `innerText` from a collapsed panel — which returns nothing for
+content the browser considers hidden — and then took the shortest element
+mentioning a filename, which is the filename cell. Both strings came back empty,
+and two of its four claims passed on nothing at all, including the one asserting
+a sentence was absent.
+
+**So the family has a fourth member: the subject is present but inert.** A
+population of zero is the version this entry already describes. A comparison
+where both sides are switched off, and a string that arrived empty from a DOM
+read, are the same failure with a full fixture — and `!/pattern/.test(s)` is
+where it hides, because absence is what it is looking for.
