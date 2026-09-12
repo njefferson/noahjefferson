@@ -52,6 +52,16 @@
 //
 // A repo with one branch declares `work=main` and nothing else, and then every
 // other branch is refused — which is the same protection pointed the other way.
+//
+// `work=` MAY NAME A FAMILY rather than one branch: `work=claude/*` is a shell
+// glob, and everything outside it is still refused. A repo whose work branch is
+// named per session cannot state one name — the photography studio's flow is a
+// session branch, pushed to a staging branch, merged to production by pull
+// request — and before this it could state nothing at all, so its CI ran this
+// gate as step one, failed on the missing declaration, and every gate after it
+// never ran. An exact name generates exactly the line it always did: a sibling's
+// tracked hook is compared byte for byte against this generator, so a new
+// spelling for the common case would turn every one of them red at once.
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, chmodSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -222,9 +232,15 @@ const hook = () => {
   }
   L.push("branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo '')");
   L.push('');
-  L.push(`if [ "$branch" = "${decl.work}" ]; then exit 0; fi`);
+  // Exact names keep the exact line they have always generated — see the note
+  // on families above. `case` is the only portable shell glob match.
+  L.push(decl.work.includes('*')
+    ? `case "$branch" in ${decl.work}) exit 0 ;; esac`
+    : `if [ "$branch" = "${decl.work}" ]; then exit 0; fi`);
   if (decl.promote) {
-    L.push(`if [ "$branch" = "${decl.promote}" ] && [ -n "$${decl.escape}" ]; then exit 0; fi`);
+    L.push(decl.promote.includes('*')
+      ? `case "$branch" in ${decl.promote}) [ -n "$${decl.escape}" ] && exit 0 ;; esac`
+      : `if [ "$branch" = "${decl.promote}" ] && [ -n "$${decl.escape}" ]; then exit 0; fi`);
   }
   L.push('');
   L.push('echo "" >&2');
@@ -238,7 +254,9 @@ const hook = () => {
   }
   L.push('echo "  To move what you have written and keep it:" >&2');
   L.push('echo "" >&2');
-  L.push(`echo "      git stash -u && git checkout ${decl.work} && git stash pop" >&2`);
+  L.push(decl.work.includes('*')
+    ? `echo "      git stash -u && git checkout -b ${decl.work.replace('*', '<name>')} && git stash pop" >&2`
+    : `echo "      git stash -u && git checkout ${decl.work} && git stash pop" >&2`);
   L.push('echo "" >&2');
   L.push('exit 1');
   L.push('');
