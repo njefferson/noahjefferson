@@ -372,3 +372,7 @@ and the filename carries it.
 - **§278** — [A cache keyed on the input identity replays the old code's answer after you fix the code, and reports it as progress](lessons/278-a-cache-keyed-on-the-input-replays-the-old-codes-answer.md)
 - **§279** — [A shader is a string to the type checker, and a shader that will not compile reports itself as an unsupported browser](lessons/279-a-shader-is-a-string-to-the-type-checker.md)
 - **§280** — [A guard on the divisor is not a bound on the quotient, and it turns a large error into a discontinuity](lessons/280-a-guard-on-the-divisor-is-not-a-bound-on-the-quotient.md)
+- **§281** — [A "keep the better one" rank scored on one axis will refuse an answer of a different KIND, and report it as keeping the better one](lessons/281-a-rank-on-one-axis-refuses-a-different-kind-of-answer.md)
+- **§282** — [Two controls with the same shape and different scopes: the narrow one is the one in reach, and the reader's files prove it](lessons/282-two-controls-one-shape-two-scopes.md)
+- **§283** — [A shorthand property later in the same rule silently kills the longhand above it, and a browser's own default can hide that for years](lessons/283-a-later-shorthand-in-the-same-rule-kills-the-declaration.md)
+- **§284** — [A message written into an element something else rewrites does not exist, and polling for it proves nothing either way](lessons/284-a-message-in-a-volatile-element-does-not-exist.md)
