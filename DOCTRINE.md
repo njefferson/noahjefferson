@@ -1539,6 +1539,63 @@ reading the first real report the owner ever sent (2026-08-03):**
  at the top of the report is whatever the cache served, so on its own it cannot
  tell "this is current" from "this is what the cache still holds".
 
+## 7j. Every app carries a TEST PAGE, and a session BUILDS one rather than guessing
+
+**A container is not the device, and for whole classes of question its answer is
+not merely imprecise — it is about something else entirely.** A headless browser
+draws through a software rasteriser, so every graphics timing it gives is a
+measurement of software pretending to be a graphics chip. Its disk is a server
+disk, so storage timings say nothing about what a tablet's browser does when
+asked to confirm a write. Its core count is the container's, not the reader's.
+Its memory ceiling is not the one that kills a tab.
+
+**So a session that needs such a number BUILDS THE MEASUREMENT INTO THE APP, on
+a page of its own, and asks the owner to press one button.** This is not a
+last resort and it is not a favour to ask for: it is the cheapest, most honest
+instrument available, because it runs on the real device, through the real
+browser, against the real storage. It is faster than three rounds of guessing
+and it leaves something behind that the next session can press again.
+
+This is the escalation of §7f's diagnostic, which reports STATE. The test page
+RUNS THINGS and reports what they cost — and the two live together, since a
+number is only worth reading beside the build and device that produced it.
+
+**What such a page is:**
+
+- **Read-only with respect to the reader's work.** It opens nothing of theirs,
+ changes no setting, and anything it writes goes to a throwaway store of its own
+ that it deletes afterwards. Nothing leaves the device.
+- **Reachable but not in the way** — behind the version stamp, listed in the (i)
+ (§7e). A reader who never presses it never notices it.
+- **One button, then text that copies.** The report a session reads back must
+ include the app version and the device facts (§7f), because a timing without a
+ build attached is an anecdote.
+- **Honest about spread.** Three runs and a median, with the individual numbers
+ printed beside it — a lone figure invites a conclusion it cannot support, and
+ the run-to-run spread on a real device can be four to one.
+- **Measured the way the app actually works, not the way a benchmark would.**
+ A test that writes eight megabytes in one transaction measures bandwidth; the
+ app commits one photo at a time and waits, which is a different number by two
+ orders of magnitude. A test whose shape does not match the app's shape will be
+ confidently wrong, and it was: twice, in the same file, one level apart.
+- **Suspicious of its own instrument.** If two modes that must differ come back
+ identical, the engine is not distinguishing them and the number means something
+ else — print both and say so rather than reporting the one that flatters.
+
+**When to build one, without asking:** any time an answer would otherwise be
+"that needs measuring on the device", any time a decision waits on a device
+capability (how large a texture, how many cores, whether a background thread can
+draw, whether a write is really confirmed), and any time the owner would
+otherwise be asked to describe something they can measure instead. Asking the
+owner to look at a screen and report an impression is asking them to do worse
+work on a session's behalf.
+
+*(Standing rule everywhere, at the owner's instruction, 2026-09-13. The practice
+existed in one app — Jefferson-Photography-Studio's `debug.html`, which measures
+graphics draw and readback, raw decode on the main thread against a worker, and
+storage commits both ways — and it is written here because "build one when you
+need one" was being treated as that app's idiosyncrasy rather than as the method.)*
+
 ## 7h. An app that caches itself CANNOT NOTICE it has gone stale
 
 **So it must be told, and then it must tell the reader.**ery app here is offline-first, so every
