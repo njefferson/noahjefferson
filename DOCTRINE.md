@@ -992,6 +992,23 @@ running" stand as if it meant three things were happening.
  what it cost. A repo may keep its own `LESSONS.md` for stack-contract detail
  (build/deploy/vendor conventions specific to that codebase) — that is a
  different, repo-local document.
+- **SAYING A LESSON OUT LOUD IS NOT RECORDING IT, AND THE ONES ABOUT YOUR OWN
+ CONDUCT ARE THE ONES THAT GET SAID.** Lessons about the CODE get written
+ without being asked — a defect is found, the file gets a section, the number
+ goes in. Lessons about how the SESSION worked get narrated in a reply and then
+ lost, because the reply feels like the delivery. It is not: a reply ends with
+ the session, and the next session starts from these files.
+ **Observed twice within two messages.** A session noticed it had been spawning
+ a wait-shell per status check, described the better approach in chat, and wrote
+ no rule — it had to be pointed out. It then wrote that rule, and in the same
+ reply observed that it narrates conduct lessons instead of writing them, and
+ left THAT in chat too. It had to be pointed out again.
+ **So: a lesson about to go into a reply goes into the file FIRST, and the reply
+ says where it went.** If it is worth telling, it is worth the next session
+ having; if it is not worth writing down, it was not worth the paragraph. This
+ binds hardest on a session's own behaviour, where the pull to narrate rather
+ than record is strongest — those read as an apology, and an apology feels
+ discharged by being spoken.
 
 ## 13. Starting a new app (bootstrap checklist)
 
