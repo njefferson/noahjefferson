@@ -379,3 +379,4 @@ and the filename carries it.
 - **§285** — [A comment that names the fix answers the question for everybody after, and a defect under one is invisible twice over](lessons/285-a-comment-claiming-the-fix-answers-for-everybody-after.md)
 - **§286** — [A harness that hands in two objects where the product may hand in one cannot see the aliasing defect](lessons/286-a-harness-that-does-not-reproduce-the-aliasing-cannot-see-it.md)
 - **§287** — [A process listing that comes back empty is not proof the process is gone — confirm the resource, not the process table](lessons/287-ps-in-a-fresh-shell-cannot-see-what-an-earlier-one-started.md)
+- **§288** — [A reading taken before a known transient settles measures the transient, and comes out stable enough to publish](lessons/288-a-reading-taken-before-a-transient-settles-measures-the-transient.md)
