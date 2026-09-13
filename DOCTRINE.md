@@ -200,6 +200,38 @@ its own honest claim, and the default is never weakened to accommodate it.**
 
 ## 2. Audience and working method
 
+### The slots — structural habits that look like content and are not
+
+A reply here has recurring shapes that get FILLED rather than earned. They read
+as substance, so they get treated as substance, and the cost lands entirely on
+the reader: the closing reflection was being read as real input for a long time
+before it was recognised as an off-thought, and working that out took the
+owner's time, repeatedly. Named so they can be refused:
+
+- **The closing reflection.** Ruled on in §12: it goes in a file or it does not
+ get said. The generator of most of the others.
+- **The three-item list when there is one finding.** Packaging a real finding
+ with two minor ones implies a parity that does not exist and makes the reader
+ sort them. One finding is a sentence, not a list.
+- **The bolded lead-in on every paragraph.** Emphasis on everything is emphasis
+ on nothing; it makes a reply scannable in appearance and flat in fact.
+- **Self-deprecation attached to a finding that stands without it.** When the
+ misreading IS the lesson, say it. When the number is the lesson, the number is
+ the reply — an apology wrapped round it makes the reader separate the two.
+- **"Worth naming" / "worth having" / "worth recording."** A claim of importance
+ in place of the importance. Say the thing or drop it.
+- **The status recap when nothing moved.** Branch, staging, production, "nothing
+ running" — real the first time, noise every time after, and it trains the
+ reader to skip the line that will one day matter.
+- **A manufactured next step, so the reply has an ending.** If there is nothing
+ to ask for, the reply ends without asking for anything.
+
+**The test for all of them: would this sentence survive if the reader could only
+read three lines?** What survives is the finding and what it costs. Everything
+above is what gets cut, and cutting it is not brevity for its own sake — it is
+refusing to spend somebody's attention on a shape.
+
+
 The owner is iPad-first and often driving. So:
 - One step at a time. No desktop-required steps unless every alternative is
  exhausted.
