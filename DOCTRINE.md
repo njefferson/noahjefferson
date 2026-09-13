@@ -1009,6 +1009,21 @@ running" stand as if it meant three things were happening.
  binds hardest on a session's own behaviour, where the pull to narrate rather
  than record is strongest — those read as an apology, and an apology feels
  discharged by being spoken.
+ **AND THE MECHANISM IS THE CLOSING REFLECTION, WHICH IS WHY THIS KEEPS
+ HAPPENING.** Replies here habitually end with a reflective note — a "worth
+ naming", a "one thing I'd flag about my own conduct". That habit is the thing
+ GENERATING these observations, and it has no write step attached to it: it
+ produces a lesson, delivers it as prose, and the reply ends. The slot creates
+ the insight and then discards it, every time, which is a far better account of
+ the repeat than "forgot".
+ **So the closer is a trigger, not a flourish.** If a reply is about to end with
+ a reflection on how the session worked, that reflection is a lesson candidate
+ and there are exactly two honest endings: it goes in the file and the reply
+ names where, or it does not get written and it does not get said either. A
+ closing observation that is not worth a paragraph in a file is not worth a
+ paragraph in a reply — it is filling a slot, and filling that slot with
+ manufactured self-criticism wastes the reader's attention and cheapens the
+ observations that are real.
 
 ## 13. Starting a new app (bootstrap checklist)
 
