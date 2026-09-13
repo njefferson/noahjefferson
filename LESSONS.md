@@ -378,3 +378,4 @@ and the filename carries it.
 - **§284** — [A message written into an element something else rewrites does not exist, and polling for it proves nothing either way](lessons/284-a-message-in-a-volatile-element-does-not-exist.md)
 - **§285** — [A comment that names the fix answers the question for everybody after, and a defect under one is invisible twice over](lessons/285-a-comment-claiming-the-fix-answers-for-everybody-after.md)
 - **§286** — [A harness that hands in two objects where the product may hand in one cannot see the aliasing defect](lessons/286-a-harness-that-does-not-reproduce-the-aliasing-cannot-see-it.md)
+- **§287** — [`ps` in a fresh shell call cannot see what an earlier call started, so "no process" is a fact about the namespace](lessons/287-ps-in-a-fresh-shell-cannot-see-what-an-earlier-one-started.md)

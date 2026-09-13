@@ -262,7 +262,16 @@ Every item below has actually happened.
  backgrounded sleeps, which is `--no-verify` wearing a different hat.
  Sweep and report honestly — any turn that reports on long-running work counts
  what is alive and kills what is finished.
- (Doctrine §11d; LESSONS §270.)
+ **AND `ps` CANNOT DO THAT COUNTING.** Each Bash call runs in its own PID
+ namespace while sharing the network one, so a process started in an earlier
+ call is INVISIBLE to `ps` in a later one and its socket is not: three process
+ listings said a static server was gone while `curl` got a 200 off its port.
+ A listing is evidence only inside the call that took it; across calls it
+ cannot tell *dead* from *invisible* and reports both as absent. Confirm the
+ RESOURCE instead — the port does not answer, the output file stopped
+ changing, the exit code arrived — and reach for `fuser -k <port>/tcp`, which
+ goes at the socket and works across the boundary `ps` cannot see across.
+ (Doctrine §11d; LESSONS §270, §287.)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
  range line in the output means nothing moved. (LESSONS, 2026-08-02.)
