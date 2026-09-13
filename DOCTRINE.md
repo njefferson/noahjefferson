@@ -979,6 +979,21 @@ is to ask, and being asked is the signal this rule was already broken.
  is the shape to stop reaching for.
  **The test: if the thing you are waiting on will still be true when you next
  look, do not wait — look later.**
+- **NEVER REGISTER A LONG-LIVED PROCESS AS A TRACKED BACKGROUND TASK.** A file
+ server, a watcher, a tail — anything whose normal state is "still running" —
+ has no completion to report, so a harness that tracks background work shows it
+ as IN FLIGHT for as long as it lives. That is not a cosmetic problem: the owner
+ reads a pending task as work being done and WAITS ON IT. Two static servers
+ were left registered this way and sat there for an hour, with nothing
+ happening, while the owner held off continuing because the session appeared
+ busy. The cost was entirely theirs and none of it was visible from inside.
+ **A server is started, used, and killed inside the same piece of work** — by
+ PID, not by pattern — or it is not started. If a background task genuinely must
+ outlive one step, it exits on a condition so it completes and says why.
+ **And "nothing is running" is a claim that has to be CHECKED, not remembered.**
+ It was asserted here from a `ps` pattern that did not match the servers, thirty
+ seconds before finding them. Check by PID listing, not by the grep you happen
+ to have written.
 - **A waiter must be able to exit.** `pgrep -f "foo"` MATCHES ITS OWN COMMAND
  LINE, so `until ! pgrep -f "foo"; do sleep; done` can never terminate. That
  exact loop has now been written in this family twice and stranded seven
