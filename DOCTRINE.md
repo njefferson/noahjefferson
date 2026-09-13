@@ -929,6 +929,24 @@ is to ask, and being asked is the signal this rule was already broken.
  that refusal is the instruction.** It was read as an obstacle here and routed
  around with backgrounded sleeps, which is the same failure as reaching for
  `--no-verify` because a hook said no.
+- **AND THE WAITER IS ITSELF A PROCESS THAT REPORTS.** `sleep N; check` was used
+ roughly fifteen times in one session, always backgrounded, always to look at a
+ result that would still be there later — and each one is a task that COMPLETES
+ and announces itself. They arrive minutes after the answer is already known,
+ out of order, interleaved with real events, so the session fills with
+ notifications about waits that are no longer interesting and the real ones
+ become hard to pick out. That is precisely the cost the rule above names —
+ the session becoming unreadable from outside — arriving by a route that felt
+ like patience rather than like starting something.
+ **Two of the three routes above cost nothing here and were available every
+ time.** Checking on the next turn that touches the work (route 1) needs no
+ process at all. A command that EXITS on the condition (route 3) was used
+ exactly once in that session, to wait on a deploy — `for … if served == expected;
+ then exit 0` — and it produced ONE notification, at the moment the deploy
+ landed, saying what happened. That is the shape. A bare `sleep` before a `cat`
+ is the shape to stop reaching for.
+ **The test: if the thing you are waiting on will still be true when you next
+ look, do not wait — look later.**
 - **A waiter must be able to exit.** `pgrep -f "foo"` MATCHES ITS OWN COMMAND
  LINE, so `until ! pgrep -f "foo"; do sleep; done` can never terminate. That
  exact loop has now been written in this family twice and stranded seven
