@@ -262,15 +262,17 @@ Every item below has actually happened.
  backgrounded sleeps, which is `--no-verify` wearing a different hat.
  Sweep and report honestly — any turn that reports on long-running work counts
  what is alive and kills what is finished.
- **AND `ps` CANNOT DO THAT COUNTING.** Each Bash call runs in its own PID
- namespace while sharing the network one, so a process started in an earlier
- call is INVISIBLE to `ps` in a later one and its socket is not: three process
- listings said a static server was gone while `curl` got a 200 off its port.
- A listing is evidence only inside the call that took it; across calls it
- cannot tell *dead* from *invisible* and reports both as absent. Confirm the
- RESOURCE instead — the port does not answer, the output file stopped
- changing, the exit code arrived — and reach for `fuser -k <port>/tcp`, which
- goes at the socket and works across the boundary `ps` cannot see across.
+ **AND AN EMPTY `ps` IS NOT PROOF.** Three listings in a row said a static
+ server was gone while `curl` got a 200 off its port, and `fuser -k
+ 8131/tcp` then found it and killed it. One of the three was the instrument
+ lying in a way worth knowing: `ps --sort=etimes | tail` shows the OLDEST
+ processes, so it prints kernel threads on any machine and looks identical
+ over a real leak — a sweep for something started minutes ago reads the HEAD
+ of that sort. The other two were never explained, and guessing at the cause
+ is what the first version of this paragraph did. So confirm the RESOURCE,
+ not the process table: the port does not answer, the output file stopped
+ changing, the exit code arrived. When a listing and a resource disagree,
+ the resource is right.
  (Doctrine §11d; LESSONS §270, §287.)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
