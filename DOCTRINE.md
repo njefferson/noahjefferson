@@ -1029,6 +1029,22 @@ Earned across one brutal day: four failed repairs of the same defect, three of
 them caught on the device itself, after shipping. These rules exist so that never happens
 again. They bind every session, every repo.
 
+- **NEVER SOLVE TOWARD THE TEST SET.** The code is shaped by the problem, and
+ the test is shaped by the defect — never the reverse. Three moves are the same
+ move and all three are banned: changing the CODE until the harness passes,
+ changing the HARNESS until the code passes, and declaring a change verified
+ on the one frame, the one file or the one pair of settings that happened to be
+ in the fixture. A harness may only be changed to make it STRICTER — to give a
+ negative control teeth it did not have, to measure at a scale where the defect
+ actually lives — and the change is recorded with the reason, because "the test
+ was wrong" is what every overfit says on its way past.
+ **The test for whether you are doing it: would this change make the harness
+ fail on a defect it currently misses, or only make it stop complaining?**
+ A number that moves because the instrument was pointed somewhere better is
+ evidence; a number that moves because the instrument was pointed somewhere
+ kinder is not. And a single fixture is a test set by definition: a pixel
+ change sweeps several frames, a decode change sweeps the whole practice set,
+ and whichever one frame was verified would have been the one to solve toward.
 - **Two strikes on the frame.** If a second fix to the same problem fails in
  the same CLASS of way, STOP tuning parameters. The approach is wrong, not
  the numbers. Re-derive the design from first principles before writing
