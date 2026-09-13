@@ -303,6 +303,16 @@ app exists.
 - **A text diagnostic report** (§7f). Ask the owner for that, never for a screenshot,
  and make it carry what the browser string HIDES — iPadOS Safari reports itself
  as macOS, so `maxTouchPoints` is what tells an iPad from a Mac.
+- **A TEST PAGE beside it** (§7j, standing everywhere from 2026-09-13). The
+ diagnostic reports STATE; the test page RUNS things and reports what they cost,
+ on the device, because a container answers a different question: it draws
+ through a software rasteriser, its disk is a server's, its cores are not the
+ reader's. **A session that needs such a number BUILDS the measurement into the
+ app rather than guessing or asking the owner to describe a screen** — one
+ button, three runs and a median with the spread printed, read-only with respect
+ to the reader's work, and the app version in the copied block. Not a last
+ resort: it is faster than three rounds of guessing and it leaves an instrument
+ behind. The worked example is Jefferson-Photography-Studio's `debug.html`.
 - **A way to say the app has gone stale** (§7h). Every app here is offline-first,
  so every app here has this defect until it is fixed on purpose: the new version
  waits, the reader is TOLD in a standing indicator, and a newcomer never is.

@@ -376,3 +376,5 @@ and the filename carries it.
 - **§282** — [Two controls with the same shape and different scopes: the narrow one is the one in reach, and the reader's files prove it](lessons/282-two-controls-one-shape-two-scopes.md)
 - **§283** — [A shorthand property later in the same rule silently kills the longhand above it, and a browser's own default can hide that for years](lessons/283-a-later-shorthand-in-the-same-rule-kills-the-declaration.md)
 - **§284** — [A message written into an element something else rewrites does not exist, and polling for it proves nothing either way](lessons/284-a-message-in-a-volatile-element-does-not-exist.md)
+- **§285** — [A comment that names the fix answers the question for everybody after, and a defect under one is invisible twice over](lessons/285-a-comment-claiming-the-fix-answers-for-everybody-after.md)
+- **§286** — [A harness that hands in two objects where the product may hand in one cannot see the aliasing defect](lessons/286-a-harness-that-does-not-reproduce-the-aliasing-cannot-see-it.md)
