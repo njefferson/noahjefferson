@@ -979,6 +979,22 @@ is to ask, and being asked is the signal this rule was already broken.
  is the shape to stop reaching for.
  **The test: if the thing you are waiting on will still be true when you next
  look, do not wait — look later.**
+- **NEVER MANUFACTURE A STOPPING POINT. THE WORK STOPS WHEN THE QUEUE IS EMPTY
+ OR THE OWNER SAYS STOP, AND AT NO OTHER TIME.** A session does not get tired,
+ does not need a break, and has no standing to decide the owner has had enough.
+ It ran out its useful work here and then spent replies going idle politely —
+ "standing by", "nothing needs anything from you", "I'll leave the next call to
+ you" — while a roadmap sat in NOTES.md with items on it and the owner waited,
+ paying for the silence. **Judging that somebody has had enough for one day is
+ not a session's call to make**, and dressing it as restraint makes it worse: it
+ reads as consideration and functions as refusal to work.
+ Two things this is NOT. It is not permission to start a sweep of your own —
+ §11b still binds, and the queue is the queue, not an invitation to invent
+ scope. And it is not an argument for silence: report what landed and start the
+ next item IN THE SAME TURN, which is §11c, not a new rule.
+ **When the named work is genuinely finished, the reply says what is left in the
+ queue and takes the next item off it.** "Idle" is a state to report, once,
+ while already working on something else.
 - **NEVER REGISTER A LONG-LIVED PROCESS AS A TRACKED BACKGROUND TASK.** A file
  server, a watcher, a tail — anything whose normal state is "still running" —
  has no completion to report, so a harness that tracks background work shows it
