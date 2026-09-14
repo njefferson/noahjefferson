@@ -398,3 +398,4 @@ and the filename carries it.
 - **§304** — [An accent-tinted fill with accent-coloured text on it fights itself — the more visible the state, the worse the contrast](lessons/304-an-accent-tinted-fill-with-accent-text-fights-itself.md)
 - **§305** — [CSS has no errors, only plausible results — an undefined token inherits and an over-specific selector silently wins](lessons/305-css-has-no-errors-only-plausible-results.md)
 - **§306** — [A check is only as wide as the inputs it is ever given, and a correct check that never meets the hard case reads exactly like coverage](lessons/306-a-check-is-only-as-wide-as-the-inputs-it-is-given.md)
+- **§307** — [A session does not get to settle a matter of taste, and a policy calibrated on one file is a taste call wearing a measurement](lessons/307-a-session-does-not-get-to-settle-a-matter-of-taste.md)
