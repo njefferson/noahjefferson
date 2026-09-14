@@ -388,3 +388,4 @@ and the filename carries it.
 - **§294** — [A list that states its own completeness is the list nobody checks against the code, and the item missing from it is the one nobody looks for](lessons/294-a-comment-that-lists-what-is-in-the-key-is-not-the-key.md)
 - **§295** — [A check can be vacuous at the TRIGGER rather than at the assertion, and it reads as a clean 0.00 against the defect](lessons/295-a-trigger-that-changes-nothing-tests-nothing.md)
 - **§296** — [A snapshot seeded on arrival and rewritten on departure is stale for the whole interval it is most read in](lessons/296-a-snapshot-written-at-both-boundaries-is-stale-in-between.md)
+- **§297** — [A fallback reached by a false condition instead of by an exception is silent by construction, and the `catch` beside it documents a path nothing took](lessons/297-a-fallback-reached-by-a-false-condition-is-silent.md)
