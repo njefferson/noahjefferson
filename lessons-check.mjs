@@ -226,7 +226,15 @@ for (let k = 0; k < heads.length - 1; k++) {
   lessonCount += 1;
   const where = `LESSONS.md "${title.slice(0, 52)}"`;
 
-  const decl = /\*\*Enforced by:\*\*\s*(.+)/.exec(body);
+  // THE WHOLE BLOCK, not the first line. `.` does not match a newline, so this
+  // read exactly one line for as long as it had existed — and a declaration
+  // block is wrapped prose, so every `· GATE …` or `· CHECKLIST …` that landed
+  // past the first wrap was invisible. Not a skip that announced itself: the
+  // lesson still passed on the strength of its first token, and the gate it
+  // named second was never resolved, never verified to exist, and never printed
+  // in --checklist. Counted when this was fixed: 24 lessons declare more than
+  // one form, and 30 declarations were being read out of 103.
+  const decl = /\*\*Enforced by:\*\*\s*([\s\S]+?)(?:\n\s*\n|$)/.exec(body);
   if (!decl) {
     failures.push(
       `${where}: no "**Enforced by:**" line. Every lesson must say how it is `
@@ -236,7 +244,7 @@ for (let k = 0; k < heads.length - 1; k++) {
     continue;
   }
 
-  const text = decl[1].trim();
+  const text = decl[1].replace(/\s+/g, ' ').trim();
   // `·` is the separator between declarations; a semicolon is PUNCTUATION.
   // Splitting on `;` too meant any declaration whose description contained one
   // was cut in half — the surplus fragment was silently dropped as an
