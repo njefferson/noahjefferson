@@ -389,3 +389,4 @@ and the filename carries it.
 - **§295** — [A check can be vacuous at the TRIGGER rather than at the assertion, and it reads as a clean 0.00 against the defect](lessons/295-a-trigger-that-changes-nothing-tests-nothing.md)
 - **§296** — [A snapshot seeded on arrival and rewritten on departure is stale for the whole interval it is most read in](lessons/296-a-snapshot-written-at-both-boundaries-is-stale-in-between.md)
 - **§297** — [A fallback reached by a false condition instead of by an exception is silent by construction, and the `catch` beside it documents a path nothing took](lessons/297-a-fallback-reached-by-a-false-condition-is-silent.md)
+- **§298** — [A comment that excuses a narrow fix by calling the rest "already measured" is a claim about a measurement nobody made](lessons/298-a-comment-excusing-coverage-is-not-coverage.md)

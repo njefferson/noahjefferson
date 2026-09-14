@@ -428,6 +428,18 @@ checks before offering to build one of these again):**
  Still owed here: the ⓘ, first-run move, patch notes and §7f diagnostic are all
  built, but this row has not been audited against them the way the rows above
  were — check the repo, not this line.
+ **Its accessibility walk is committed now (2026-09-14) and the part worth
+ copying is not the walk but `tools/surfaces.mjs` beside it**: the list of
+ screens the walk visits is checked BOTH WAYS against the BUILD rather than the
+ source tree, because one page is generated at build time and a
+ repository-derived list would miss a page that ships. It was written without
+ knowing Quietkeep already had a file of the same name doing the same job for a
+ different shape of input (§119) — two now, deliberately not merged, because a
+ shared version has to take the enumeration as an input and that is its own
+ piece of work. What it found on its first full run is §298: a stylesheet
+ comment had excused a narrow fix on the grounds that every other dialog was
+ "a measured, shipped surface", and the sweep had been opening three of
+ fifteen.
 - **Every other sibling** — still owed. Ask that repo's NOTES before assuming,
  and **check the repo rather than this line** — this list has now been wrong in
  both directions, claiming a surface that did not exist and denying five that
