@@ -383,3 +383,5 @@ and the filename carries it.
 - **§289** — [A dialog's `open` attribute is gone one task before its `close` event fires, so a harness that polls the attribute measures the moment before every handler has run](lessons/289-a-dialogs-open-attribute-goes-one-task-before-its-close-event.md)
 - **§290** — [A plant that depends on shared mutable state proves nothing on a path that copies its input, and reports the code as safe](lessons/290-a-plant-on-shared-mutable-state-cannot-show-on-a-worker-path.md)
 - **§291** — [A page that counts its own repository is wrong on the commit that writes the count, and correcting it makes it wrong again](lessons/291-a-page-that-counts-itself-is-wrong-on-the-commit-that-writes-it.md)
+- **§292** — [A comment saying two code paths do the same thing is not a measurement, and the path nobody compared is the wrong one](lessons/292-a-comment-that-two-paths-agree-is-not-a-measurement.md)
+- **§293** — [A computed style is not the declaration you wrote, and a check that reads one while meaning the other passes against the defect](lessons/293-a-computed-style-is-not-the-declaration-you-wrote.md)
