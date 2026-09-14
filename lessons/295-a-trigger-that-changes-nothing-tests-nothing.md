@@ -38,6 +38,20 @@ there is no trigger — the difference between the runs IS the condition under
 test. It measured 23.53 of 255 against the defect and 2.08 with it fixed, which
 is the encoder and the resample.
 
+**A SECOND INSTANCE, 2026-09-14, and it is the same failure wearing a plausible
+disguise.** A walk for "a verdict pressed as the page goes away" issued the press
+and `location.reload()` from inside the page in one task. That sounds like the
+tightest possible race and is not: reload only QUEUES a navigation, the document
+keeps running, and the durable write commits before unload. Against a build with
+the fix REMOVED it reported four of four green.
+
+The tell was the same and so was the remedy: run the negative control, watch it
+come back clean, and believe the control rather than the reasoning that produced
+the trigger. Closing the page destroys the renderer with the write in flight —
+what a discarded tab actually does — and is the only version that fails against
+the defect. **A trigger you argued your way to is exactly the one to distrust**,
+because the argument is what stops you checking.
+
 **And the threshold came from those two numbers, not from taste.** A tolerance
 picked before the measurement is a guess that the check then enforces; picked
 after, with an order of magnitude between the two readings, it is a fact with the

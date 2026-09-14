@@ -390,3 +390,5 @@ and the filename carries it.
 - **§296** — [A snapshot seeded on arrival and rewritten on departure is stale for the whole interval it is most read in](lessons/296-a-snapshot-written-at-both-boundaries-is-stale-in-between.md)
 - **§297** — [A fallback reached by a false condition instead of by an exception is silent by construction, and the `catch` beside it documents a path nothing took](lessons/297-a-fallback-reached-by-a-false-condition-is-silent.md)
 - **§298** — [A comment that excuses a narrow fix by calling the rest "already measured" is a claim about a measurement nobody made](lessons/298-a-comment-excusing-coverage-is-not-coverage.md)
+- **§299** — [A shared look that lives in one app's stylesheet reaches one app, and the feature ships looking like it works](lessons/299-the-pattern-was-written-down-next-door.md)
+- **§300** — [An index of the rules is not the rules, and the rule that gets skipped is the one no sibling had broken yet](lessons/300-an-index-of-the-rules-is-not-the-rules.md)
