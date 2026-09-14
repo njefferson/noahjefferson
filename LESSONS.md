@@ -392,3 +392,5 @@ and the filename carries it.
 - **§298** — [A comment that excuses a narrow fix by calling the rest "already measured" is a claim about a measurement nobody made](lessons/298-a-comment-excusing-coverage-is-not-coverage.md)
 - **§299** — [A shared look that lives in one app's stylesheet reaches one app, and the feature ships looking like it works](lessons/299-the-pattern-was-written-down-next-door.md)
 - **§300** — [An index of the rules is not the rules, and the rule that gets skipped is the one no sibling had broken yet](lessons/300-an-index-of-the-rules-is-not-the-rules.md)
+- **§301** — [When a report names the cause, test THAT first — and when it names a remedy that works, the defect is downstream of the remedy](lessons/301-the-reporter-named-the-cause-and-the-remedy.md)
+- **§302** — [An instrument under time pressure produces confident wrong numbers, and only a control it cannot pass tells you which ones](lessons/302-four-instruments-four-confident-wrong-numbers.md)
