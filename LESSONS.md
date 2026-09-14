@@ -380,3 +380,6 @@ and the filename carries it.
 - **§286** — [A harness that hands in two objects where the product may hand in one cannot see the aliasing defect](lessons/286-a-harness-that-does-not-reproduce-the-aliasing-cannot-see-it.md)
 - **§287** — [A process listing that comes back empty is not proof the process is gone — confirm the resource, not the process table](lessons/287-ps-in-a-fresh-shell-cannot-see-what-an-earlier-one-started.md)
 - **§288** — [A reading taken before a known transient settles measures the transient, and comes out stable enough to publish](lessons/288-a-reading-taken-before-a-transient-settles-measures-the-transient.md)
+- **§289** — [A dialog's `open` attribute is gone one task before its `close` event fires, so a harness that polls the attribute measures the moment before every handler has run](lessons/289-a-dialogs-open-attribute-goes-one-task-before-its-close-event.md)
+- **§290** — [A plant that depends on shared mutable state proves nothing on a path that copies its input, and reports the code as safe](lessons/290-a-plant-on-shared-mutable-state-cannot-show-on-a-worker-path.md)
+- **§291** — [A page that counts its own repository is wrong on the commit that writes the count, and correcting it makes it wrong again](lessons/291-a-page-that-counts-itself-is-wrong-on-the-commit-that-writes-it.md)
