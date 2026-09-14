@@ -82,3 +82,29 @@ deliberately loaded: 0 ms, 1 ms, 1 ms.
 **And read the smell forward:** re-running a failed check until it passes is not
 evidence of flake, it is evidence that nothing has been measured yet. The
 question a re-run cannot answer is which variable moved.
+
+**And a sixth, which is the same error made a second time and caught by the same
+control.** A check read a tile's text straight after an action and went red only
+under load. Diagnosed as "reading state written by a promise nothing waits for"
+and fixed by making the check WAIT fifteen seconds for the text to change. It
+passed. The next full sweep failed it again, having burned the whole timeout
+first — a fast failure turned into a slow one, with the same verdict.
+
+**The text was not late; it was never going to arrive.** The state changed in a
+promise, and the element's text is built at render time — nothing redrew it
+afterwards. On an idle machine an unrelated repaint usually came along within a
+frame or two, which is why it had looked correct for the life of the feature.
+
+**Waiting cannot produce a repaint that nothing schedules**, and the general
+form is worth carrying: *a check that has to wait for a repaint is usually
+telling you the repaint is missing.* A tolerance and a timeout fail the same
+way — both widen until the symptom stops, and neither names a variable.
+
+There is a second half, and it is the one that nearly got away. With the wait
+removed the check STILL passed against the unfixed build, because the step
+before it opened and closed a dialog — a repaint plus the better part of a
+second, long enough to correct the stale element before the check meant to catch
+it looked. **A check can be contaminated by the step in front of it**, and the
+tell is a negative control that refuses to go red. Reordered so the reading
+happens first — which is also what the user sees — it fails on the unfixed build
+and passes on the fixed one, on an idle machine, with no load required.
