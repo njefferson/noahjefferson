@@ -95,3 +95,27 @@ It is the same failure as the short `_renders` list and it deserves the same
 sentence: **a check that reads less than it appears to reports a pass about the
 part it read.** Neither gate was wrong about anything it said. Both were quiet
 about the part they never reached.
+
+**AND A THIRD, the same day, in the accessibility walk beside it.** That walk's
+hit-area sweep measures every page and the inside of every dialog. The crop bar
+in Jefferson-Photography-Studio is neither: it is a MODE, and it only exists
+once you enter crop or straighten. So a whole panel of controls, on the surface
+that app is most used by finger, had never been in the sweep at all. Pointed at
+it for the first time, Reset and Done measured **28px tall** and the ratio chips
+**43 reachable** against a 44 floor.
+
+**What made it invisible is that everything around them was correct.** The chips
+buy their target with a `::before` extension and the straighten nudges declare
+`min-height` outright, so nothing about the bar looked unconsidered — there was
+no loose thread to pull. A sweep's blind spot does not look like a blind spot
+from inside the sweep; it looks like a clean result.
+
+The chips' 43 is its own small lesson: the design is 32px plus a ±6 extension,
+which is exactly 44, and the walk measures REACHABLE area by hit testing outward
+from the edges, where the two probes either side do not both reach the
+extension's outermost pixel. **A design that hits the floor exactly has no
+margin and loses one pixel to rounding.** Aim past the floor, not at it.
+
+So the rule generalises past generated lists: **enumerate the states, not just
+the surfaces.** A page, a dialog and a mode are three different things, and only
+the first two are on screen when nobody has pressed anything.
