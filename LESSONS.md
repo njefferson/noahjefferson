@@ -385,3 +385,6 @@ and the filename carries it.
 - **§291** — [A page that counts its own repository is wrong on the commit that writes the count, and correcting it makes it wrong again](lessons/291-a-page-that-counts-itself-is-wrong-on-the-commit-that-writes-it.md)
 - **§292** — [A comment saying two code paths do the same thing is not a measurement, and the path nobody compared is the wrong one](lessons/292-a-comment-that-two-paths-agree-is-not-a-measurement.md)
 - **§293** — [A computed style is not the declaration you wrote, and a check that reads one while meaning the other passes against the defect](lessons/293-a-computed-style-is-not-the-declaration-you-wrote.md)
+- **§294** — [A list that states its own completeness is the list nobody checks against the code, and the item missing from it is the one nobody looks for](lessons/294-a-comment-that-lists-what-is-in-the-key-is-not-the-key.md)
+- **§295** — [A check can be vacuous at the TRIGGER rather than at the assertion, and it reads as a clean 0.00 against the defect](lessons/295-a-trigger-that-changes-nothing-tests-nothing.md)
+- **§296** — [A snapshot seeded on arrival and rewritten on departure is stale for the whole interval it is most read in](lessons/296-a-snapshot-written-at-both-boundaries-is-stale-in-between.md)
