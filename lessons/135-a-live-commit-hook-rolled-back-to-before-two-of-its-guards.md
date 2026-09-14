@@ -5,6 +5,11 @@
 was left; the tracked artefact is not evidence the live hook matches it. ·
 JUDGEMENT a-guard-that-fired-is-not-a-suite-that-ran.
 
+**Smell:** a clone whose HEAD is not where the session left it — a bisect, a
+checkout of an older branch, a reset. A commit that passed with one guard's
+output visible and nothing from the others. Reading the TRACKED hook to decide
+what the live one does.
+
 `.branch-guard` declares extra commit checks with `also=`, and
 `branch-guard.mjs --install` GENERATES `.git/hooks/pre-commit` from it. A
 session's clone reverted to a commit from before two of those checks were

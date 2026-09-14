@@ -6,6 +6,11 @@ only safe on a file whose current state is committed, which during gate
 development it never is. · JUDGEMENT read-the-failure-not-the-count — a suite
 that fails AFTER a restore is reporting lost work, not a bad plant.
 
+**Smell:** `git checkout <file>` or `git restore` reached for during gate
+development. Any restore step whose source is the index rather than a copy
+taken before the plant. A plant made in a file that is itself uncommitted —
+which, while a gate is being written, is every file it touches.
+
 The plant discipline is the strongest thing in this repo family: an assertion
 that has never failed has not been tested, so a new gate is planted red before
 it is trusted. The loop is plant, run, restore, and the restore is reflexively

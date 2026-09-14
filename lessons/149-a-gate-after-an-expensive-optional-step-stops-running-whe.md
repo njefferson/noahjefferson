@@ -5,6 +5,10 @@ must never be skipped go BEFORE anything that downloads, builds or drives a
 browser. · JUDGEMENT reading a red run means reading which steps were SKIPPED,
 not only which one failed.
 
+**Smell:** a workflow whose cheap text gates sit after a build, a browser
+install, or an icon render. A red run read by its one failing step. Any job
+where the steps that must never be skipped are not the first ones.
+
 MoleBridge's first full workflow ran, in order: type check, tests, build,
 palette, install a browser, walk the app, the accessibility gate, and then the
 doctrine gates — privacy, quotations, grids, npm hygiene, zizmor.

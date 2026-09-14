@@ -394,3 +394,6 @@ and the filename carries it.
 - **§300** — [An index of the rules is not the rules, and the rule that gets skipped is the one no sibling had broken yet](lessons/300-an-index-of-the-rules-is-not-the-rules.md)
 - **§301** — [When a report names the cause, test THAT first — and when it names a remedy that works, the defect is downstream of the remedy](lessons/301-the-reporter-named-the-cause-and-the-remedy.md)
 - **§302** — [An instrument under time pressure produces confident wrong numbers, and only a control it cannot pass tells you which ones](lessons/302-four-instruments-four-confident-wrong-numbers.md)
+- **§303** — [A list that narrows a gate must refuse to be short, because a skip and an absence look identical from inside it](lessons/303-a-list-that-narrows-a-gate-must-refuse-to-be-short.md)
+- **§304** — [An accent-tinted fill with accent-coloured text on it fights itself — the more visible the state, the worse the contrast](lessons/304-an-accent-tinted-fill-with-accent-text-fights-itself.md)
+- **§305** — [CSS has no errors, only plausible results — an undefined token inherits and an over-specific selector silently wins](lessons/305-css-has-no-errors-only-plausible-results.md)
