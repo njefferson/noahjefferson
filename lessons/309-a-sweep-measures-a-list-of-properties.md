@@ -1,20 +1,23 @@
 ## 309 · A sweep measures a list of properties, and a defect that is not on the list is invisible however many surfaces it visits
 
-**Enforced by:** GATE `Jefferson-Photography-Studio:tools/a11y-walk.mjs` — the
-hit-target sweep now enters EVERY panel tab and measures inside it, not only the
-tab the app boots into. · CHECKLIST decorative-too — anything deliberately not a
-control (`pointer-events: none`, `aria-hidden`, a cue, a rule, a badge, a
-divider) is measured by NO gate in this family, so it gets looked at, rendered,
-once, before it ships. · CHECKLIST both-states-in-words — a two-state control
-names BOTH of its states in text; an on state that is a bare noun is a label,
-and a state carried by two shades of the same colour is carried by nothing.
+**Enforced by:** GATE `Jefferson-Photography-Studio:tools/a11y-walk.mjs` — two
+additions, both from this. Its hit-target sweep now enters EVERY panel tab and
+measures inside it, not only the tab the app boots into; and its section 5
+asserts that anything which PAINTS a background or a border and holds its own
+text has room for it, whether or not anybody can press it. · CHECKLIST
+states-differ-by-more-than-colour — a two-state control is rendered in both
+states and the two are compared: if taking the colour away leaves them
+identical, the state is carried by nothing. This is a CHECKLIST and not a gate
+because the REMEDY is copy, and copy is the owner's; the check says the two must
+differ, never what they should say.
 
 **Smell:** a sweep that reports on the state the app boots into and never says
-which states those were. An element given `pointer-events: none` on purpose. A
-toggle whose two labels are a word and that same word plus a qualifier. Two
+which states those were. An element given `pointer-events: none` on purpose. Two
 design tokens one step apart (`--txt-2` / `--txt-3`) doing the work of a state.
 Any sentence of the form "every control passes", where "control" was the whole
-population the instrument could see.
+population the instrument could see. And, for the third one below: a diff in
+which a measurement and a rewording of reader-facing text arrive in the same
+commit.
 
 **Measured 2026-09-15, Jefferson-Photography-Studio.**
 
@@ -48,15 +51,31 @@ measures CONTROLS — hit area, accessible name, role, contrast of text — and 
 cue is `pointer-events: none` with no role and no name. **Marking something
 decorative removes it from the population every instrument samples.**
 
-**Three: a state can be present, announced, and still unreadable.** The
-explanations toggle wrote `"Explanations"` when on and `"Explanations off"` when
-off. `aria-pressed` was correct, so axe was right to pass it. But the ON state
-was a bare noun, left-aligned in a full-width bordered box at the top of a
-panel — which is the shape of a section LABEL, not of a control — and the only
-thing then separating the two states was `--txt-2` against `--txt-3`. Two greys.
-The standing rule that colour must never be the only carrier of meaning had been
-written years before and applied conscientiously to badges, rings and chips;
-nothing checked a control whose second carrier was supposed to be its own text.
+**Three: nothing checks whether a toggle's two states differ in anything but
+colour — and the finding is not the same thing as the fix.** The explanations
+toggle wrote `"Explanations"` when on and `"Explanations off"` when off.
+`aria-pressed` was correct, so axe was right to pass it. Take the word "off"
+away and all that separates the two renderings is `--txt-2` against `--txt-3`:
+two greys. The standing rule that colour must never be the only carrier of
+meaning had been written years before and applied conscientiously to badges,
+rings and chips, and no gate anywhere in the family holds a two-state control to
+it. That absence is the finding, and it is real.
+
+**The session then rewrote the labels, and that part was not its to do.** It made
+them `"Explanations on"` / `"Explanations off"`, reasoning that a bare noun reads
+as a label rather than a control. Defensible, and beside the point: the strings a
+reader sees are product copy, the original pair was the owner's, and it was
+restored the same day — §307's lesson, arriving again within two days of being
+written, on the same repository, from the opposite direction. The first time a
+session substituted its taste for a *reader's* and called it a measurement; this
+time it substituted its taste for the *owner's* and called it accessibility.
+
+**The tell is that the remedy did not follow from the finding.** "These two
+states are separated only by colour" is answered by making them differ in
+something that is not colour — and they already did, by one word. Everything
+past that point was preference. A measurement that ends in a judgement about
+wording has stopped being a measurement, and the giveaway is that the finding
+would have been just as true if the fix had been refused.
 
 **What generalises.** Adding surfaces to a sweep widens it along one axis only.
 None of these three would have been found by visiting more pages, and two of them
