@@ -399,3 +399,4 @@ and the filename carries it.
 - **§305** — [CSS has no errors, only plausible results — an undefined token inherits and an over-specific selector silently wins](lessons/305-css-has-no-errors-only-plausible-results.md)
 - **§306** — [A check is only as wide as the inputs it is ever given, and a correct check that never meets the hard case reads exactly like coverage](lessons/306-a-check-is-only-as-wide-as-the-inputs-it-is-given.md)
 - **§307** — [A session does not get to settle a matter of taste, and a policy calibrated on one file is a taste call wearing a measurement](lessons/307-a-session-does-not-get-to-settle-a-matter-of-taste.md)
+- **§308** — [A fix that contradicts a note the same session wrote six hours earlier, and nothing in the process can see it](lessons/308-a-fix-that-contradicts-its-own-evidence.md)
