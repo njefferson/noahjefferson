@@ -401,3 +401,4 @@ and the filename carries it.
 - **§307** — [A session does not get to settle a matter of taste, and a policy calibrated on one file is a taste call wearing a measurement](lessons/307-a-session-does-not-get-to-settle-a-matter-of-taste.md)
 - **§308** — [A fix that contradicts a note the same session wrote six hours earlier, and nothing in the process can see it](lessons/308-a-fix-that-contradicts-its-own-evidence.md)
 - **§309** — [A sweep measures a list of properties, and a defect that is not on the list is invisible however many surfaces it visits](lessons/309-a-sweep-measures-a-list-of-properties.md)
+- **§310** — [A gate that refuses at step one means every gate behind it never ran, and the workflow that deploys is green either way](lessons/310-a-gate-at-step-one-zeroes-every-gate-behind-it.md)
