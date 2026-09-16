@@ -358,6 +358,15 @@ checks before offering to build one of these again):**
  a11y state (1.20.2 — it shipped unmeasured for a day), and the offline
  privacy-pattern mirror is held to the hub by `privacy-mirror-check.mjs` in
  its Spine.
+ **EXCEPT §7j, and this row said "all of them" for three days after that rule
+ became standing.** There is no test page. The §7f diagnostic reports state and
+ nothing in the app runs anything and reports what it cost — so the numbers this
+ app would actually want on a real tablet (a fold over some thousands of events,
+ a Dexie commit confirmed rather than queued, a long held list rendering) are
+ all container numbers today, which §7j says are measurements of something else.
+ Recorded in that repo's NOTES on 2026-09-16 rather than built, because it is a
+ surface and a surface here owes the a11y walk, the live-region gate, the manual
+ coverage check and the precache list in the commit that creates it.
 - **print-tracker (3d-printing-pal)** — all of them, and the first-run move is the
  §7e shape rather than a copy: one `#info-orientation` block, shown as the welcome
  and MOVED into the (i) panel afterwards. Worth copying from here is
