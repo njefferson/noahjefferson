@@ -160,6 +160,25 @@ say();
 // reports what was last generated rather than what is there. The gate holds the
 // two together; this reads the source of truth anyway, because a brief that
 // undercounts is a brief that lies.
+/** The bullet titles of a doctrine section, so a rule that binds CHAT can be
+ *  PRINTED into the session rather than linked at it. Nothing can gate a chat
+ *  reply — Doctrine 2 says so itself — so arriving is the only enforcement
+ *  available. Returns [] when the hub is not checked out, and the caller says
+ *  so rather than printing a confident blank. */
+function doctrineSection(n) {
+  const f = join(hub, 'DOCTRINE.md');
+  if (!existsSync(f)) return [];
+  const lines = readFileSync(f, 'utf8').split('\n');
+  const at = lines.findIndex((l) => l.startsWith(`## ${n}.`));
+  if (at < 0) return [];
+  const out = [];
+  for (let i = at + 1; i < lines.length && !lines[i].startsWith(`## ${n + 1}.`); i++) {
+    const m = lines[i].match(/^- \*\*(.+?)\*\*/);
+    if (m) out.push(m[1].replace(/\*/g, ''));
+  }
+  return out;
+}
+
 const lessonDir = join(hub, 'lessons');
 if (existsSync(lessonDir)) {
   // Both heading shapes, and the lettered ones. The first version matched only
@@ -174,6 +193,22 @@ if (existsSync(lessonDir)) {
 } else {
   say('LESSONS: the hub is not checked out, so the cross-app record is UNAVAILABLE this session.');
 }
+say();
+
+// HOW TO WRITE BACK, printed rather than linked. Doctrine 2 has named these
+// shapes for months and a session broke every one of them in every message of
+// a long evening — which is the same failure as the lessons above: written
+// down, never opened. It is short enough to arrive in full.
+const slots = doctrineSection(2);
+if (slots.length) {
+  say('HOW TO WRITE BACK (Doctrine 2) — shapes that look like content and are not:');
+  for (const l of slots) say(`  ${l}`);
+} else {
+  say('HOW TO WRITE BACK: Doctrine 2 is not reachable this session.');
+}
+say('  And the traverse (Doctrine 11f): strategic, then the real call chain, then');
+say('  BACK UP — given the whole app, was this the right thing to add? Before the');
+say('  commit, not after. Research first, never derive the domain (Doctrine 11e).');
 say();
 
 say('This brief is printed by a SessionStart hook. It exists because every one of');

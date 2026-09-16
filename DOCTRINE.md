@@ -1071,6 +1071,42 @@ what is found into the repo's research file with the source named, so the next
 session does not pay for it again. A blocked host is a QUESTION asked in the
 moment, never a reason to fall back on what the model remembers (§0d).
 
+## 11f. THREE ALTITUDES, AND THE RETURN TRIP IS THE ONE THAT GETS SKIPPED
+
+Strategic — the whole app, and why it is shaped the way it is. Implementation —
+the actual call chain, the actual lines, traced. Then back up: **given the whole
+app, was this the right thing to have added?**
+
+**The failure is living at a MIDDLE altitude**, which feels like both and is
+neither: too high to know what the code does, too low to see what the system is.
+Reading two functions and calling the result a diagnosis is middle altitude. So
+is fitting a parameter until the output matches. Both produce real work and
+confident prose, and neither is grounded in anything.
+
+**The return trip is a step with a question attached, not a summary.** A report
+of what was built is not a return to altitude — it is the implementation
+altitude, written up. The question is whether the thing that was just built
+belongs in this app at all, and it has to be asked BEFORE the commit, because
+afterwards it is a defence rather than a check.
+
+**Measured, 2026-09-16.** A session solved eight fitted band constants to move a
+film emulation onto measured colour targets. The solve was sound, the
+verification was real, the numbers were right. Returning to altitude would have
+asked: this app's looks are already a scatter of fitted constants across seven
+overlapping colour knobs, and nothing states what a look IS — so is another
+fitted array the right thing to add? It was committed, pushed and promoted
+before that question was asked, and it was the owner who asked it.
+
+The same session changed a batch path's channel swap on a diagnosis assembled
+from two functions it had just read, wrote a confident comment on it, built it,
+and the measurement came back byte-identical. Middle altitude in one direction,
+middle altitude in the other, in one evening.
+
+**Neither altitude is home.** A session that only ever zooms out produces
+architecture essays it cannot cash; one that only ever zooms in ships patches
+that each make the system worse. The obligation is the traverse, both ways,
+every time.
+
 ## 12. Source-of-truth files (naming convention)
 
 - `NOTES.md` — the repo's source of truth: thesis, roadmap, settled decisions,
