@@ -405,3 +405,4 @@ and the filename carries it.
 - **§311** — [A red run goes invisible the moment another push lands on top of it, and "tools-only" is exactly the change that couples two gates](lessons/311-a-red-run-goes-invisible-under-the-next-push.md)
 - **§312** — [A receipt generator owns the tree while it runs, and the thing that invalidates a receipt is usually the fix for what the same run found](lessons/312-a-receipt-generator-owns-the-tree.md)
 - **§313** — [Look it up BEFORE you start, not after four rounds fail — a measurement of your own output cannot tell you what the output should be](lessons/313-look-it-up-before-you-start-not-after-you-fail.md)
+- **§314** — [Effort flows to what is measured, so the ungated list is the one that decides what to build](lessons/314-the-ungated-list-is-the-one-that-decides-what-to-build.md)
