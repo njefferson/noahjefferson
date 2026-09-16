@@ -48,8 +48,9 @@
  * class as this repo's spelling plant, which was an identity replace for three
  * releases and could not fail.
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 
 // ONCE. See the header — two reads is how this gate would silently never fire.
 const raw = readFileSync(0, 'utf8');
@@ -186,10 +187,64 @@ if (tool === 'Bash') {
   process.exit(0);
 }
 
+/**
+ * A PLAN IS REFUSED UNTIL IT HAS DONE THE THINKING (Doctrine §11e, §11f).
+ *
+ * Plan mode forced a written plan before code, and the plan still went wrong
+ * in the same three ways on the same evening: it named one approach and never
+ * the branches not taken; it traced no call chain and worked from two functions
+ * read in isolation; it looked nothing up and derived what a field had settled.
+ * Each of those is a SECTION a plan can be made to carry, and the shape is not
+ * invented here — it is the RFC template (Prior art, Rationale and alternatives,
+ * Unresolved questions) and the ADR's "alternatives considered", which exist
+ * because every engineering culture that wrote plans hit this exact failure.
+ *
+ * So `ExitPlanMode` is refused unless the plan's top block carries all five,
+ * each with at least a line of body under it — a heading alone is a slot:
+ *
+ *   ## Looked up     what was researched outside this repo and what it said,
+ *                    or why nothing outside bears on this (§11e)
+ *   ## Branches      the ways this could go and why this one; a single branch
+ *                    needs a stated reason there is only one
+ *   ## Call chain    the actual functions on the path, traced — implementation
+ *                    altitude, not "~line 1244"
+ *   ## Whole app     the return trip: why this belongs in the app, what it
+ *                    costs the system, what would make it the wrong thing (§11f)
+ *   ## Leaves open   every branch not taken to completion, each with WHERE it
+ *                    now lives (a NOTES roadmap line, an issue) — or "nothing"
+ *
+ * The plan file is the newest in ~/.claude/plans/; the payload does not name
+ * it. The TOP block only — plan files accumulate superseded plans under
+ * horizontal rules, and those were checked when they were current.
+ */
+if (tool === 'ExitPlanMode') {
+  const dir = join(homedir(), '.claude', 'plans');
+  let plan = '';
+  try {
+    const newest = readdirSync(dir).filter((f) => f.endsWith('.md'))
+      .map((f) => ({ f, t: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.t - a.t)[0];
+    if (newest) plan = readFileSync(join(dir, newest.f), 'utf8');
+  } catch { /* no plans dir: fall through with an empty plan, which is refused */ }
+  const top = plan.split(/^(?:---\s*|# .*)$/m).find((b) => b.trim()) ?? plan;
+  const REQUIRED = ['Looked up', 'Branches', 'Call chain', 'Whole app', 'Leaves open'];
+  const missing = REQUIRED.filter((h) => {
+    const m = top.match(new RegExp(`^## ${h}\\b[^\\n]*\\n([\\s\\S]*?)(?=^## |^# |$(?![\\s\\S]))`, 'mi'));
+    return !m || !m[1].split('\n').some((l) => l.trim().length > 20);
+  });
+  if (missing.length === 0) process.exit(0);
+  deny(`the plan is missing ${missing.map((m) => `"## ${m}"`).join(', ')} with a real body under each. `
+    + 'Looked up: what was researched and what it said, or why nothing outside this repo bears on it. '
+    + 'Branches: the ways this could go and why this one. '
+    + 'Call chain: the actual functions on the path, traced. '
+    + 'Whole app: why this belongs in the app and what would make it the wrong thing. '
+    + 'Leaves open: every branch not taken to completion and where it now lives. '
+    + 'Doctrine §11e/§11f; the RFC template is the shape.');
+}
+
 // The readers the harness provides, which never needed the gate but are listed
 // so the default below can be a refusal rather than a shrug.
 if (['Read', 'Glob', 'Grep', 'NotebookRead', 'WebFetch', 'WebSearch',
-  'TodoWrite', 'ExitPlanMode', 'AskUserQuestion', 'ToolSearch',
+  'TodoWrite', 'AskUserQuestion', 'ToolSearch',
   'ListAgents', 'ReadNotifications', 'Skill'].includes(tool)) process.exit(0);
 
 // DENY BY DEFAULT. A tool this file has never heard of is refused, so adding a

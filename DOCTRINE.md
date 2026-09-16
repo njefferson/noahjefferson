@@ -226,6 +226,13 @@ owner's time, repeatedly. Named so they can be refused:
 - **A manufactured next step, so the reply has an ending.** If there is nothing
  to ask for, the reply ends without asking for anything.
 
+**Two of these are refused mechanically now** — the bolded lead-in on four
+consecutive paragraphs, and a reply sectioned under three or more bold
+headers — by [`stop-guard.mjs`](stop-guard.mjs), the same hook that refuses a
+parked turn. The rest cannot be told from their honest twins by a pattern and
+stay on the session. Added the evening a session used every one of them in
+every message with this section loaded in its context.
+
 **The test for all of them: would this sentence survive if the reader could only
 read three lines?** What survives is the finding and what it costs. Everything
 above is what gets cut, and cutting it is not brevity for its own sake — it is
@@ -1106,6 +1113,14 @@ middle altitude in the other, in one evening.
 architecture essays it cannot cash; one that only ever zooms in ships patches
 that each make the system worse. The obligation is the traverse, both ways,
 every time.
+
+**Enforced at the plan.** [`plan-guard.mjs`](plan-guard.mjs) refuses
+`ExitPlanMode` unless the plan's top block carries five sections with real
+bodies: *Looked up* (§11e), *Branches*, *Call chain*, *Whole app* (the return
+trip, this section), and *Leaves open* — each abandoned branch with WHERE it now
+lives, not a chat sentence. The shape is the RFC template's, not invented here.
+Made to fail once against the plan that shipped the fitted array: it was missing
+all five.
 
 ## 12. Source-of-truth files (naming convention)
 

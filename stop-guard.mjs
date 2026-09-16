@@ -127,7 +127,47 @@ const CONTINUING = /\b(?:meanwhile|in the meantime|meantime|carrying on|moving o
 
 const waitHit = WAITING.find((re) => re.test(reply));
 const parkHit = CONTINUING.test(tail) ? undefined : PARKING.find((re) => re.test(tail));
-if (!waitHit && !parkHit) process.exit(0);
+
+/** 3. THE TEMPLATE. Doctrine §2 names the shapes that look like content and are
+ *  not, and one of them is purely structural: the bolded lead-in on every
+ *  paragraph. A session used it in nearly every reply of a long evening while
+ *  §2 sat loaded in its context. Four in a row is the tell; three can be a
+ *  deliberate emphasis and refusing it is the false positive that gets a guard
+ *  switched off. The rest of §2 — the manufactured next step, the closing
+ *  reflection, a decision list made of things that are not decisions — cannot
+ *  be told from their honest twins by a pattern, and stay CHECKLIST. */
+const paras = reply.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+// TWO SHAPES, because the specimen for the first version was built from memory
+// of the rule and not from the replies that broke it, and it caught neither.
+//   (a) the LEAD-IN: "**Denoise works.** On NIR_1480 …" — bold opening a
+//       paragraph that goes on. Four in a row.
+//   (b) the FAKE HEADER: a paragraph that is nothing but a bold phrase, the
+//       report sectioned into "**What shipped**" / "**Verification**" / "**What
+//       I need from you**". Three of them anywhere in one reply.
+let run = 0, longestRun = 0, headers = 0;
+for (const p of paras) {
+  const leadIn = /^\*\*[^*\n]{2,}\*\*\s*\S/.test(p);
+  const header = /^\*\*[^*\n]{2,}\*\*:?$/.test(p);
+  if (header) headers++;
+  if (leadIn) { run++; if (run > longestRun) longestRun = run; } else run = 0;
+}
+const templateHit = longestRun >= 4 || headers >= 3;
+const templateWhy = longestRun >= 4
+  ? `opens ${longestRun} consecutive paragraphs with a bolded lead-in`
+  : `is sectioned under ${headers} bold headers`;
+
+if (!waitHit && !parkHit && !templateHit) process.exit(0);
+
+if (!waitHit && !parkHit) {
+  process.stderr.write(`STOP REFUSED — this reply ${templateWhy}.
+
+Doctrine §2: "the bolded lead-in on every paragraph" is a shape that looks like
+content and is not — emphasis on everything is emphasis on nothing, and it makes
+a reply scannable in appearance and flat in fact. Rewrite it as prose. Keep the
+finding and what it costs; cut the shape.
+`);
+  process.exit(2);
+}
 
 const hit = waitHit ?? parkHit;
 const quote = ((waitHit ? reply : tail).match(hit) ?? [''])[0].trim().slice(0, 80);
