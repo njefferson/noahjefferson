@@ -404,3 +404,4 @@ and the filename carries it.
 - **§310** — [A gate that refuses at step one means every gate behind it never ran, and the workflow that deploys is green either way](lessons/310-a-gate-at-step-one-zeroes-every-gate-behind-it.md)
 - **§311** — [A red run goes invisible the moment another push lands on top of it, and "tools-only" is exactly the change that couples two gates](lessons/311-a-red-run-goes-invisible-under-the-next-push.md)
 - **§312** — [A receipt generator owns the tree while it runs, and the thing that invalidates a receipt is usually the fix for what the same run found](lessons/312-a-receipt-generator-owns-the-tree.md)
+- **§313** — [Look it up BEFORE you start, not after four rounds fail — a measurement of your own output cannot tell you what the output should be](lessons/313-look-it-up-before-you-start-not-after-you-fail.md)

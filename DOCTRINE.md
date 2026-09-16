@@ -1031,6 +1031,46 @@ is to ask, and being asked is the signal this rule was already broken.
 and which are junk, kill the junk in the same turn, and never let "three tasks
 running" stand as if it meant three things were happening.
 
+## 11e. STOP BEFORE EACH NEW THING AND GO AND LOOK IT UP
+
+**Not when stuck. Not after a round of tuning fails. BEFORE.** One search costs
+seconds; deriving by hand what a field settled decades ago costs a session, and
+it does not feel like waste at the time because the derivation looks like
+progress.
+
+**This is a CADENCE, not a principle.** The difference matters: as a principle it
+gets agreed with and then skipped, because at the moment of starting, the next
+step always looks obvious enough not to need checking. As a cadence it has a
+trigger — a new piece of work is about to begin — and the trigger fires whether
+or not the step looks obvious.
+
+**It was said three times in one repository before it was written here**, which
+is the standing signal that a rule belongs in the doctrine: "known things first,
+mine the references" (2026-07-25), "go and learn the domain, do not converge
+inside the app" (2026-09-16), and then the instruction that produced this
+section. **The session that hears a repeat writes it down** — that is not a
+decision to put to the owner.
+
+**What it costs, measured, twice in one day in one app.** Four rounds went into
+why a film emulation would not go deep red: hue and saturation measured on
+rendered frames, bands tuned, a comparison sheet built. Every one of them was a
+measurement of the app's own output. The answer was in the film, and one article
+settled in minutes what the tuning had not. The SAME DAY, the next problem —
+bright foliage washing out to white — was about to be attacked by hand; one
+search named it as a known, standard consequence of applying a tone curve
+independently per channel, with the alternatives already named and
+parameterised elsewhere. Nothing needed deriving.
+
+**A measurement of your own output cannot tell you what the output should be.**
+That is the whole shape of the failure: the instrument is pointed inward, every
+reading is real, and none of them can reach the question.
+
+**What counts as looking.** A search, a spec, a reference implementation, the
+file format's own documentation, the manual of the thing being emulated. Write
+what is found into the repo's research file with the source named, so the next
+session does not pay for it again. A blocked host is a QUESTION asked in the
+moment, never a reason to fall back on what the model remembers (§0d).
+
 ## 12. Source-of-truth files (naming convention)
 
 - `NOTES.md` — the repo's source of truth: thesis, roadmap, settled decisions,
