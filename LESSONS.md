@@ -402,3 +402,4 @@ and the filename carries it.
 - **§308** — [A fix that contradicts a note the same session wrote six hours earlier, and nothing in the process can see it](lessons/308-a-fix-that-contradicts-its-own-evidence.md)
 - **§309** — [A sweep measures a list of properties, and a defect that is not on the list is invisible however many surfaces it visits](lessons/309-a-sweep-measures-a-list-of-properties.md)
 - **§310** — [A gate that refuses at step one means every gate behind it never ran, and the workflow that deploys is green either way](lessons/310-a-gate-at-step-one-zeroes-every-gate-behind-it.md)
+- **§311** — [A red run goes invisible the moment another push lands on top of it, and "tools-only" is exactly the change that couples two gates](lessons/311-a-red-run-goes-invisible-under-the-next-push.md)
