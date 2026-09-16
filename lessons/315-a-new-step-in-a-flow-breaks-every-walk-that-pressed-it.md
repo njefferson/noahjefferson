@@ -38,7 +38,24 @@ than words, and this one's is to teach the walk the new step — and keying on
 `data-route` would not have saved either walk here, because both were already
 finding the control they meant.
 
+**AND THE SWEEP THAT FOUND THEM WAS WRONG, WHICH COST A SECOND WALK.** The first
+grep reported ONE press in the smoke walk. There were three. That file is large
+enough and carries enough non-ASCII that `grep` calls it binary, prints `binary
+file matches`, and then shows SOME of its matches — and a partial answer from
+grep does not look partial, it looks like the answer. `grep -a` printed all
+three. The missed one was a SECOND route helper four thousand lines from the
+first, and it was the one that put the item on the Menu for a later section, so
+the failure surfaced hundreds of lines later as a Menu item that was not
+there — naming the symptom and not the cause.
+
+This is the same shape as *an empty process table is not proof*: the instrument
+was lying in a way worth knowing, and the remedy is not to try harder but to
+confirm with a reading that cannot be partial. Sweep with `grep -arn`, and when
+a sweep returns exactly one hit for something you expect to be used in several
+places, treat the count as the suspicious part.
+
 **The general form:** the walks are the only readers of a flow that cannot
 re-read the source when the flow changes. Any change to how many acts a thing
-takes is a change to them, and the cheapest moment to find out is before the
-first browser starts.
+takes is a change to them; the cheapest moment to find out is before the first
+browser starts, and the sweep that tells you where they are has to be one that
+cannot answer partially.
