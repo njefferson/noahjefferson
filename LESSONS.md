@@ -408,3 +408,4 @@ and the filename carries it.
 - **§314** — [Effort flows to what is measured, so the ungated list is the one that decides what to build](lessons/314-the-ungated-list-is-the-one-that-decides-what-to-build.md)
 - **§315** — [Turning a one-press act into a two-press act breaks every walk that pressed it, and the failure is a timeout rather than a wrong answer](lessons/315-a-new-step-in-a-flow-breaks-every-walk-that-pressed-it.md)
 - **§316** — [A harness that drives a UI out of order runs a DIFFERENT code path, and the fallback it lands in makes the result look right](lessons/316-a-harness-that-drives-a-ui-out-of-order-tests-another-path.md)
+- **§317** — [A fitted screenshot is a downscale, and an absolute threshold cannot see a relative defect — two instruments agreeing on the wrong answer](lessons/317-a-fitted-screenshot-is-a-downscale-and-hides-what-it-shows.md)
