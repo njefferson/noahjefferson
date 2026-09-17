@@ -411,3 +411,4 @@ and the filename carries it.
 - **§317** — [A fitted screenshot is a downscale, and an absolute threshold cannot see a relative defect — two instruments agreeing on the wrong answer](lessons/317-a-fitted-screenshot-is-a-downscale-and-hides-what-it-shows.md)
 - **§318** — [A gate that removes an artefact's COST by switching the operation off reads as a fix in every number except the one it was built for](lessons/318-a-gate-that-removes-the-cost-by-removing-the-operation.md)
 - **§319** — [Every instrument built after a diagnosis measures the diagnosis, so no measurement can contradict it](lessons/319-the-instruments-were-downstream-of-the-hypothesis.md)
+- **§320** — [An RMS at one lag over a whole population cannot see a clustered defect, and it reports the defect as absent](lessons/320-an-rms-at-one-lag-cannot-see-a-clustered-defect.md)
