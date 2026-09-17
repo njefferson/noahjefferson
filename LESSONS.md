@@ -409,3 +409,4 @@ and the filename carries it.
 - **§315** — [Turning a one-press act into a two-press act breaks every walk that pressed it, and the failure is a timeout rather than a wrong answer](lessons/315-a-new-step-in-a-flow-breaks-every-walk-that-pressed-it.md)
 - **§316** — [A harness that drives a UI out of order runs a DIFFERENT code path, and the fallback it lands in makes the result look right](lessons/316-a-harness-that-drives-a-ui-out-of-order-tests-another-path.md)
 - **§317** — [A fitted screenshot is a downscale, and an absolute threshold cannot see a relative defect — two instruments agreeing on the wrong answer](lessons/317-a-fitted-screenshot-is-a-downscale-and-hides-what-it-shows.md)
+- **§318** — [A gate that removes an artefact's COST by switching the operation off reads as a fix in every number except the one it was built for](lessons/318-a-gate-that-removes-the-cost-by-removing-the-operation.md)
