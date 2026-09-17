@@ -407,3 +407,4 @@ and the filename carries it.
 - **§313** — [Look it up BEFORE you start, not after four rounds fail — a measurement of your own output cannot tell you what the output should be](lessons/313-look-it-up-before-you-start-not-after-you-fail.md)
 - **§314** — [Effort flows to what is measured, so the ungated list is the one that decides what to build](lessons/314-the-ungated-list-is-the-one-that-decides-what-to-build.md)
 - **§315** — [Turning a one-press act into a two-press act breaks every walk that pressed it, and the failure is a timeout rather than a wrong answer](lessons/315-a-new-step-in-a-flow-breaks-every-walk-that-pressed-it.md)
+- **§316** — [A harness that drives a UI out of order runs a DIFFERENT code path, and the fallback it lands in makes the result look right](lessons/316-a-harness-that-drives-a-ui-out-of-order-tests-another-path.md)
