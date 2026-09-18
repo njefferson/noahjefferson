@@ -413,3 +413,4 @@ and the filename carries it.
 - **§319** — [Every instrument built after a diagnosis measures the diagnosis, so no measurement can contradict it](lessons/319-the-instruments-were-downstream-of-the-hypothesis.md)
 - **§320** — [An RMS at one lag over a whole population cannot see a clustered defect, and it reports the defect as absent](lessons/320-an-rms-at-one-lag-cannot-see-a-clustered-defect.md)
 - **§321** — [A detector that acts before the thing it detects becomes the cause, and a planted fault has to fail the way the real one does](lessons/321-a-detector-that-acts-before-the-thing-it-detects-becomes-the-cause.md)
+- **§322** — [A preview at screen scale hides an export-scale defect, and a statistic on the population you were fixing cannot see what you broke outside it](lessons/322-a-preview-at-screen-scale-hides-an-export-scale-defect.md)
