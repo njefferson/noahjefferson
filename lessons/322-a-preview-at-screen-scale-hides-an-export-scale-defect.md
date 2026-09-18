@@ -1,4 +1,4 @@
-## 322 · A preview at screen scale hides an export-scale defect, and a statistic on the population you were fixing cannot see what you broke outside it
+## 322 · A preview at screen scale hides an export-scale defect, and a statistic on the population you were fixing cannot see what you broke outside it — and a fix that leaves the instrument's reading unchanged has not touched the cause
 
 **Enforced by:** GATE `sky-stage-walk` (Jefferson-Photography-Studio,
 `tools/sky-stage-walk.mjs`) — a smoothing stage is exported twice through the
@@ -31,19 +31,33 @@ the same state looked clean at screen scale and the walks were green.
 Read from the export: 32.8% of one frame's sky pixels had their chroma moved to
 +141 on a scale where the sky sits at −58; the per-pixel chroma displacement
 between the stage on and off reached **1.011** with a 99.9th percentile of
-0.931, where the defect being smoothed is 0.06–0.09. Two mechanisms, both in the
-stage's design: the blend acted on every pixel with any mask weight, and a
-texel whose target was garbage was blended in regardless.
+0.931, where the defect being smoothed is 0.06–0.09.
+
+**THE FIRST DIAGNOSIS WAS WRONG, AND THE INSTRUMENT SAID SO.** It read as the
+stage's design — the blend acting on every pixel the soft mask leaked into — and
+a gate on the pixel's chroma distance was written, verified in node, and built.
+The walk then read the identical 1.011 on the gated build. A blend bounded at
+0.12 cannot move a pixel by 1.0, so the displacement was not the blend at all.
+Exported again at amount 0.01 the same pixels still moved, and their colour
+said what it was: blue 0.98 to blue 0.03 with red and green untouched. The
+stage had nudged a bright pixel's blue a hundredth past 1.0 and the TIFF
+writer stored it into a Uint16Array with no clamp, so 1.01 became 0.01; a
+branch whose solved green went slightly negative wrapped to 1.0. The preview's
+framebuffer clamps, the JPEG path clamps through Uint8ClampedArray, and the
+node reproduction had used the JPEG path — every one of them was clean for the
+same reason the TIFF was not.
 
 **Why three green controls missed it.** "0 bytes outside the mask" is exactly
-true — the branches were INSIDE the soft mask. "Mean held" was measured over
-pixels with weight above 0.85, which excludes every leaked edge. The residual
-was measured on the dark third of the sky, which is where the mottle lives and
-where nothing was wrong. Every instrument looked at the population being fixed.
-The population being broken had no instrument.
+true — every wrapped pixel was INSIDE the soft mask. "Mean held" was measured
+over pixels with weight above 0.85 in floating point, where nothing wraps. The
+residual was measured on the dark third of the sky, where nothing is bright
+enough to pass 1.0. Every instrument looked at the population being fixed, in
+an arithmetic that cannot wrap. The population being broken, in the file the
+reader keeps, had no instrument.
 
-Fix: gate the blend on the pixel's own chroma distance to the target (a
-mottled sky pixel is hundredths away, a branch is half a range), weight each
-map texel by the mask, drop non-finite samples; the same gate in the shader.
-The walk above is the instrument that was missing, and it read 1.011 on the
-shipped build before the fix was written.
+Fix: the stage clamps its own output in both renderers, the 16-bit write
+clamps as the floor under every stage, and the gate stays because it is right
+about leaf gaps even though it was not the cause. The walk above is the
+instrument that was missing: it read 1.011 on the shipped build, 1.011 on the
+gated build — which is what turned the diagnosis — and is the check that the
+clamp has to turn green.
