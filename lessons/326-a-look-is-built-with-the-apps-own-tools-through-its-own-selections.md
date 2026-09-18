@@ -1,46 +1,52 @@
-## 326 · A look is built with the app's own tools through its own selections, and the hand-made result is the specification — a new stage is the last resort, not the first
+## 326 · A look is a profile on a built app: operate the app as a photographer, look at the photograph, and change the app only when it cannot do what the photograph needs
 
-**Enforced by:** CHECKLIST tools-before-stages — before a look gains a new
-pipeline stage, the candidate is made BY HAND with the controls the reader
-already has (a mask through the app's own selection, its warmth, hue,
-saturation, brightness, contrast), and the sheets sent are of those; the look
-then reproduces that arithmetic through its selection, never a new one. ·
-JUDGEMENT — a chroma multiplier and a luminance drop are what a session
-reaches for because they are one line each; a cold shift before the tone
-curve is what a photographer reaches for because it is what the sky wants,
-and only the second was in the app as a tool.
+**Enforced by:** CHECKLIST operate-before-building — a look, a preset or a
+profile is found by driving the app's own controls on real frames and
+LOOKING at the result, with the field's known practice for that medium
+looked up first (§11e); a new stage, field or slider is proposed only after
+naming the specific thing the existing controls cannot do, with the frame
+that shows it. · JUDGEMENT — a session that owns the pipeline reaches for a
+stage because a stage is one line; a photographer reaches for the sliders
+because the sliders are what the picture responds to. The second is the job.
 
-**Smell:** a look's colour work expressed as "scale chroma by k" and "multiply
-value by f" while the app's mask editor carries warmth, hue, brightness and
-contrast per selection; candidate sheets that vary two numbers of the
-session's own stage and none of the reader's sliders.
+**Smell:** a look's colour work expressed as "scale chroma by k" and
+"multiply value by f" while the app's own panels carry hue, saturation and
+luminance per band, warmth and saturation per mask, curves per channel and
+split toning; candidate sheets that vary two numbers of a stage the session
+just wrote and none of the reader's sliders; a week of instruments on the
+app's own output and no hour spent moving its controls.
 
-**What happened.** A film look's sky was built in a day as two new stages: a
-chroma boost through the sky selection, gated on the pixel's own colour, and
-a luminance drop keyed per photograph. The sheets varied the boost and the
-drop. The drop read as night; the boost read as more of the same pale blue.
-The same afternoon a real frame came back with the sky made deep blue by
-hand in under a minute: a Sky mask (the app's own selection), Saturation to
-its ceiling, Warmth to its cold end. Warmth is a shift of the red and blue
-channels in linear light before contrast and gamma, and that is what turns
-a pale blue into a deep one; the stages the session had built could not
-express it, because neither touched the channels before the curve.
+**What happened.** A film look's sky was built in a day as two new pipeline
+stages: a chroma boost through the sky selection and a luminance drop keyed
+per photograph, each with its own gate, window and instrument. The sheets
+varied the boost and the drop; the drop read as night, the boost as more of
+the same pale blue. The same afternoon a real frame came back with its sky
+made deep blue by hand in under a minute: the app's own Sky mask, Saturation
+to its ceiling, Warmth to its cold end. Warmth is a shift of the red and
+blue channels in linear light before contrast and gamma; the stages the
+session had built could not say it, and the app already could. The
+session's first response was to build a third stage to reproduce the mask.
+That was stopped too: a look is a set of values for the controls the app
+already has, and the controls it already has include eight hue bands with
+luminance, per-channel curves, split toning, tint and masks, none of which
+had been tried on the sky.
 
-**Why it is easy.** A session that owns the pipeline sees the pipeline; the
-reader sees the sliders. From inside the pipeline, "deeper sky" decomposes
-into chroma and luminance because those are the two numbers a per-pixel
-stage handles. From the sliders, "deeper sky" is a mask and two drags. The
-first view produced a week of measurement of its own output; the second
-produced the picture. This is 11e's shape turned inward: the reference to
-look up first was the app itself.
+**Why it is easy.** From inside the pipeline, "deeper sky" decomposes into
+chroma and luminance, because those are the two numbers a per-pixel stage
+handles, and each new stage arrives with its own gate and its own window to
+fit. From the sliders, "deeper sky" is the blue band's luminance down and
+its saturation up, or a mask and two drags — which is how every published
+emulation of this film does it. The first view produced instruments; the
+second produces the picture. This is §11e turned inward: the reference to
+look up first was the app itself, and the practice to look up was the
+photographer's, which is written down everywhere.
 
-**The fix.** The look's sky now runs at the mask stage in the mask's own
-arithmetic — the selection's warmth and saturation, gated so grey stays
-grey — so a hand-made sky and the look's are one calculation, and a Sky
-warmth slider sits beside Sky saturation. The candidate sheets are rendered
-through the app's Sky mask at the reader's own settings, and the instrument
-that drives them adds the mask and drags its sliders the way a finger does.
+**The rule.** Operate the app. Open the frames, apply the look, work the
+existing controls the way the medium's practice says to, and look at the
+photograph after each move; send the pictures. When a control the picture
+needs is missing, name it with the frame that shows it, and only then
+change the app.
 
-**The cost.** Two stages, two instruments, two window re-fits and three
-sheets before the tool that already did it was tried; one screenshot from a
-tablet to say so.
+**The cost.** Two stages, two instruments, two window re-fits, three sheets
+and the start of a third stage before an hour was spent on the sliders; one
+screenshot from a tablet, twice, to say so.
