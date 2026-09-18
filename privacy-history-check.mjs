@@ -33,7 +33,7 @@
 // EXITS NON-ZERO on any hit.
 
 import { execFileSync } from 'node:child_process';
-import { ATTRIBUTION, DISCLOSURE, REGION_FORBIDDEN, BEGIN, END, isPatternSource } from './privacy-patterns.mjs';
+import { ATTRIBUTION, DISCLOSURE, REGION_FORBIDDEN, SESSION_LINKS, BEGIN, END, isPatternSource } from './privacy-patterns.mjs';
 import { repoFromArgv } from './gate-args.mjs';
 
 const argv = process.argv.slice(2);
@@ -66,7 +66,7 @@ function hit(s) {
     // history gate imported only DISCLOSURE, so for one commit this file could
     // not see the class of violation the whole scrub was about — the same
     // "fixed the case in front of me" shape as the rest of the day.
-    if (!isPatternSource(l) && (DISCLOSURE.some(p => p.test(l)) || ATTRIBUTION.some(p => p.test(l)))) return true;
+    if (!isPatternSource(l) && (DISCLOSURE.some(p => p.test(l)) || ATTRIBUTION.some(p => p.test(l)) || SESSION_LINKS.some(p => p.test(l)))) return true;
   }
   return false;
 }

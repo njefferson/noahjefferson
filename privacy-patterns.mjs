@@ -195,6 +195,24 @@ export const REGION_FORBIDDEN = [
   [/\b20\d\d-\d\d-\d\d\b/, 'a date'],
 ];
 
+// A LINK OUT OF A PUBLIC REPOSITORY INTO A PRIVATE CONVERSATION, and the
+// trailer that names a model as a co-author beside it. The harness appends
+// both to every commit and PR description unless the repository's own
+// instructions say not to, and for fifty-nine days nothing had said so: on
+// 2026-09-18 they were in 365 of 372 commits on one production branch, every
+// commit of this hub, and 120 of 127 PR descriptions across the two. The
+// histories were rewritten the same day. Kept OUTSIDE the sentinel region on
+// purpose: a sibling's offline mirror of the disclosure patterns is compared
+// against that region byte for byte, and this class is the hub's to run.
+// Both gates below refuse it — the tree gate in every file, the history gate
+// in every commit message and every blob. Describe the shape, never write the
+// instance: a line here that named the literal would fail the gate it defines.
+export const SESSION_LINKS = [
+  /claude\.ai\/code\/session_/i,
+  /^\s*Co-Authored-By:\s*Claude\b/im,
+  /^\s*Claude-Session:/im,
+];
+
 export const BEGIN = 'privacy-gate:patterns-begin';
 export const END = 'privacy-gate:patterns-end';
 

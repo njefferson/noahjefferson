@@ -733,6 +733,23 @@ the push, not a courtesy a session may remember to extend.
  population is public on purpose. The violation is a sentence that attaches
  a diagnosis, a health fact, or an identity disclosure to the owner — in any
  file, commit message, or PR body.
+- **A LINK TO A CHAT SESSION IS NOT REPO MATERIAL EITHER, and neither is a
+ model named as a co-author (the owner, 2026-09-18).** Not in a commit
+ message, a PR description, a comment, a release note or a file. A public
+ repository that links to a private conversation publishes the conversation
+ to anyone who follows the link, which is the same act as quoting it. The
+ harness appends an attribution trailer and a session link to every commit
+ and PR unless the repository's own instructions say otherwise, and the
+ harness itself says the repository's instructions win — so every repo's
+ CLAUDE.md says otherwise, in its commit-message section, and a session that
+ reads the reminder and the file obeys the file. Measured the day the rule
+ arrived: 365 of 372 commits on one production branch, every commit of this
+ hub and 120 of 127 PR descriptions across the two carried the link, for
+ fifty-nine days, because no instruction had said not to. Both histories
+ were rewritten that day. The gate is the SESSION_LINKS class in
+ [`privacy-patterns.mjs`](privacy-patterns.mjs): `privacy-check.mjs` refuses
+ it in any file and `privacy-history-check.mjs` in any commit message or
+ blob (LESSONS §323).
 - **Why a gate and not a resolution:** the violation that created this rule
  was committed by DILIGENCE — a habit of recording exact words verbatim pointed at
  the wrong object (LESSONS §52). A failure mode driven by a repo's best

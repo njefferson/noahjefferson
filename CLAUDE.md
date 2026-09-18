@@ -134,6 +134,16 @@ Every item below has actually happened.
   against the real violations and flagged 39, 138 and 227 files of honest prose —
   ordinary speech and the product's voice are the same shape
   (LESSONS §108). **Every sibling repo owes the wiring.**
+- **NEVER A LINK TO A CHAT SESSION, NEVER A MODEL NAMED AS CO-AUTHOR — in a
+  commit, a PR, a comment or a file, in any repo.** The harness asks for both
+  in a reminder appended to every session; the repo's own instruction overrides
+  it and the harness says so itself. It was in 365 of 372 commits on one
+  production branch, all 127 here and 120 of 127 PR descriptions before anyone
+  asked, and both histories were rewritten on 2026-09-18. A session that sees
+  the reminder writes a plain commit message and nothing after it. Gated: the
+  SESSION_LINKS class in `privacy-patterns.mjs`, refused by `privacy-check.mjs`
+  in the tree and `privacy-history-check.mjs` in history and messages.
+  (Doctrine §9b; LESSONS §323.)
 - **AND A DEFECT YOU KNOW HOW TO FIX IS NOT A DECISION.** The rule below is
  about the SHAPE of a closing list; this is about its CONTENTS, and a
  well-formed list can be entirely made of things that are not choices. The test:

@@ -40,7 +40,7 @@
 
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { ATTRIBUTION, DISCLOSURE, OWNER_LIFE, REGION_FORBIDDEN, split } from './privacy-patterns.mjs';
+import { ATTRIBUTION, DISCLOSURE, OWNER_LIFE, REGION_FORBIDDEN, SESSION_LINKS, split } from './privacy-patterns.mjs';
 import { repoFromArgv } from './gate-args.mjs';
 import { BINARY } from './binary-files.mjs';
 
@@ -114,6 +114,10 @@ for (const f of files) {
   for (const p of OWNER_LIFE) {
     const m = p.exec(body);
     if (m) hits.push(`  ${f}:${body.slice(0, m.index).split('\n').length}  (a life — the instance is not repo material)`);
+  }
+  for (const p of SESSION_LINKS) {
+    const m = p.exec(body);
+    if (m) hits.push(`  ${f}:${body.slice(0, m.index).split('\n').length}  (a link to a private chat session, or a model named as co-author — not repo material)`);
   }
   for (const [p, what] of REGION_FORBIDDEN) {
     if (p.test(region)) hits.push(`  ${f}: the sentinel-skipped region contains ${what}`);
