@@ -735,6 +735,30 @@ none of the eight**, while three files say otherwise. Bumping the two callers'
 pins is what switches it on; the other six need the swap before the pin means
 anything.
 
+**AND EVERY SHA IN THAT CENSUS IS OFF THE LINE NOW, measured 2026-09-19.** The
+hub's history was rewritten on 2026-09-18 to take the chat-session trailers out
+of every commit message, which gave every commit a new SHA. Of the five hub
+commits named above, four are unreachable from `main` — `3f2a373` (2 Sep),
+`a75d92d` (26 Aug), `61a3f9a` (22 Aug) and `042400b` (3 Sep), all dated before
+the rewrite. **And they still work**, which is why nothing noticed: GitHub keeps
+serving a commit no ref reaches, so `actions/checkout` fetches it and the gates
+run green out of a tree frozen before the rewrite — one that still carries the
+trailers the rewrite existed to remove and can never contain a gate added since.
+Fetching `3f2a373` through the API on 2026-09-19 returned it in full, trailers
+and all.
+
+So the `042400b` / `3f2a373` comparison above understates it: the question is
+not which pin contains `example-check`, it is that **a pre-rewrite pin cannot
+contain anything**, and `doctrine-sync --adopt` cannot fix it because the
+marker already agrees with the pin. Re-pinning is the whole remedy and it is
+per repo. Jefferson-Photography-Studio is re-pinned (`1f86b51`, 19 Sep) and its
+`tools/hub-pin-check.mjs` now REFUSES a pin that is on no branch of the hub,
+skipping with a printed line where the hub is not checked out beside it — every
+sibling carrying that file owes the same version. **A session that rewrites a
+published history owes the sweep of everything pinning it in the same piece of
+work**, because afterwards there is no failing signal to find them by.
+(LESSONS §334.)
+
 **AND MEASURE IT BY THE CALL.** The first attempt here probed the five workflow
 filenames listed above and got "no caller" from six repositories — a fact about
 five guesses, in repos carrying between one and eighteen workflows under other
