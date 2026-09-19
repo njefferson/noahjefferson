@@ -423,3 +423,4 @@ and the filename carries it.
 - **§329** — [Read the record before you touch the thing it is about — the answer is usually already written down, by you, in the file you have open](lessons/329-read-the-record-before-you-touch-the-thing-it-is-about.md)
 - **§330** — [A capability built as a dependency of a LATER one is invisible when that later one arrives, so it gets built twice](lessons/330-a-dependency-built-for-later-is-invisible-when-later-arrives.md)
 - **§331** — [The run that proves a test can fail is also a test of the build, and it is where a defect nothing else could see turns up](lessons/331-the-run-that-proves-a-test-can-fail-is-also-a-test-of-the-build.md)
+- **§332** — [A failing test needs its CONTROL read before its finding is believed, and a test that cannot isolate its claim is deleted rather than kept red](lessons/332-a-failing-test-needs-its-control-read-before-its-finding-is-believed.md)
