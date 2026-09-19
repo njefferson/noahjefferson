@@ -1095,6 +1095,29 @@ what is found into the repo's research file with the source named, so the next
 session does not pay for it again. A blocked host is a QUESTION asked in the
 moment, never a reason to fall back on what the model remembers (§0d).
 
+**AND IT HAPPENED AGAIN, 2026-09-19, INCLUDING TO THIS SECTION.** A session
+spent two days in one app and did not open this file once. It re-derived §11e
+by hand and wrote it up as a new lesson (§329); it failed §11f's return trip
+repeatedly and wrote that up too; and when the owner finally said *check that
+you actually have my doctrine in this session*, the count was 2041 lines
+unread. The three lessons it had written were additions to a document it had
+never consumed.
+
+**So the cadence has a second trigger, and it is the start of the session, not
+the start of a task.** Before the first piece of work: run
+[`doctrine-sync.mjs`](doctrine-sync.mjs) (which the hub's CLAUDE.md already
+says to run FIRST, and which that session ran hours late), and read THIS FILE's
+section list — thirty headings, one screen — so that adding to it is
+distinguishable from re-deriving it. **A session that writes a new rule without
+having read the existing ones is not learning, it is duplicating**, and the
+duplicate is worse than nothing because it makes the document longer and the
+next session less likely to read it.
+
+**The tell, stated so it can be caught early:** the urge to write a NEW rule
+is itself the signal to go and check whether it is already written. That urge
+arrives precisely when a failure feels freshly discovered, which is exactly
+when it is most likely to be a rediscovery.
+
 ## 11f. THREE ALTITUDES, AND THE RETURN TRIP IS THE ONE THAT GETS SKIPPED
 
 Strategic — the whole app, and why it is shaped the way it is. Implementation —

@@ -10,6 +10,20 @@ sentence in front of you unasked, twice:
 item's chosen and rejected options at session start, and
 `tools/decisions-check.mjs` prints them again on every commit.
 
+**THIS IS DOCTRINE §11e'S COST, RECORDED AGAIN — NOT A NEW RULE.** §11e already
+says it, as a CADENCE rather than a principle: *stop before each new thing and
+go and look it up; not when stuck, not after a round of tuning fails, BEFORE*,
+and *write what is found into the repo's research file so the next session does
+not pay for it again.* This lesson adds the cost and the two exposures, nothing
+more.
+
+**And the way that was discovered is the lesson eating itself.** This file was
+written as though it were a new rule, by a session that had not opened
+DOCTRINE.md once — 2041 lines, §11e among them — and it took the owner saying
+so. A session adding to the doctrine before reading it is the same failure at
+one level up, and it is the reason the first line of this lesson is now a
+pointer rather than a claim.
+
 **The owner's instruction, 2026-09-19: do not start new work without looking at
 the research already gathered, or at least reading the problem as it has
 already been written up.**

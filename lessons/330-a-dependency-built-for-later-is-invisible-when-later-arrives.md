@@ -12,6 +12,14 @@ record carrying the section has its paths checked, top of the queue or not.
 later capability, then forgotten — so when the capability was reached, the
 session thought it had to start over.*
 
+## Its parent is Doctrine §11e, and the gap it leaves
+
+§11e covers RESEARCH: *write what is found into the repo's research file with
+the source named, so the next session does not pay for it again.* This is the
+same instruction for BUILT THINGS — modules, instruments, walks — and the gap
+is real, because a research file is a place you go to read while a module is
+just a file somewhere that nothing points at from the question you now have.
+
 ## Why the neighbouring lesson does not cover it
 
 §329 says read the record before touching the thing it is about. That catches a
