@@ -421,3 +421,4 @@ and the filename carries it.
 - **§327** — [A reader's failure is a search term before it is a measurement, and an instrument on the reader's side of the screen comes before the fix](lessons/327-a-readers-failure-is-a-search-term-before-it-is-a-measurement.md)
 - **§328** — [A visual app is judged by LOOKING; a number says where to look and never what was seen](lessons/328-a-visual-app-is-judged-by-looking.md)
 - **§329** — [Read the record before you touch the thing it is about — the answer is usually already written down, by you, in the file you have open](lessons/329-read-the-record-before-you-touch-the-thing-it-is-about.md)
+- **§330** — [A capability built as a dependency of a LATER one is invisible when that later one arrives, so it gets built twice](lessons/330-a-dependency-built-for-later-is-invisible-when-later-arrives.md)
