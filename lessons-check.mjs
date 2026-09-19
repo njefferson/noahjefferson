@@ -73,6 +73,13 @@ if (!lessonFiles.length) {
 const indexPath = join(HUB, 'LESSONS.md');
 const indexSrc = readFileSync(indexPath, 'utf8');
 
+// DECLARED BEFORE THE HEADING SCAN BELOW USES IT. It was declared eighty lines
+// further down, after that scan — so a lesson with a malformed heading, which is
+// the one thing that scan exists to catch, crashed the gate with a
+// ReferenceError instead of naming the file. A gate that dies on its own subject
+// reports nothing and reads as broken tooling rather than as a finding.
+const failures = [];
+
 // The rows the index claims, and what the files actually say.
 const rows = new Map();
 for (const m of indexSrc.matchAll(/^- \*\*§(\d+[a-z]?)\*\* — \[(.+?)\]\((lessons\/[^)]+)\)$/gm)) {
@@ -107,7 +114,6 @@ const src = [indexSrc.split('\n## The lessons')[0], ...lessonFiles.map(
 const lines = src.split('\n');
 
 let lessonCount = 0;
-const failures = [];
 const unverified = [];
 const checklist = [];
 const gates = [];
@@ -128,7 +134,18 @@ for (const [n, e] of onDisk) {
   const row = rows.get(n);
   if (!row) failures.push(`lessons/${e.file.split('/')[1]} is in no index row. Run \`node lessons-check.mjs --index\`.`);
   else if (row.file !== e.file) failures.push(`§${n} is indexed as ${row.file} and lives at ${e.file}.`);
-  else if (row.title !== e.title) failures.push(`§${n}'s index row says "${row.title.slice(0, 40)}" and the file says "${e.title.slice(0, 40)}".`);
+  else if (row.title !== e.title) {
+    // PRINT WHERE THEY DIVERGE, NOT THE FIRST FORTY CHARACTERS OF EACH. A
+    // mismatch is usually one title being a longer version of the other, so a
+    // truncated pair printed the SAME forty characters twice and the message
+    // read as a contradiction of itself.
+    let i = 0;
+    while (i < row.title.length && i < e.title.length && row.title[i] === e.title[i]) i++;
+    failures.push(`§${n}'s index row and its file disagree from character ${i}:\n`
+      + `      index: ${row.title}\n`
+      + `      file:  ${e.title}\n`
+      + `             ${' '.repeat(Math.min(i, 60))}^`);
+  }
 }
 for (const [n, row] of rows) {
   if (!onDisk.has(n)) failures.push(`the index lists §${n} (${row.file}) and no such lesson exists. A citation to it resolves to nothing.`);

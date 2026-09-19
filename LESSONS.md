@@ -419,3 +419,4 @@ and the filename carries it.
 - **§325** — [A window fitted to a rendering measures that rendering's scale, so a change to the stage in front of it re-cuts the window silently — and the check that would have seen it had been written and not run](lessons/325-a-window-fitted-to-a-rendering-measures-that-renderings-scale.md)
 - **§326** — [A look is a profile on a built app: operate the app as a photographer, look at the photograph, and change the app only when it cannot do what the photograph needs](lessons/326-a-look-is-built-with-the-apps-own-tools-through-its-own-selections.md)
 - **§327** — [A reader's failure is a search term before it is a measurement, and an instrument on the reader's side of the screen comes before the fix](lessons/327-a-readers-failure-is-a-search-term-before-it-is-a-measurement.md)
+- **§328** — [A visual app is judged by LOOKING; a number says where to look and never what was seen](lessons/328-a-visual-app-is-judged-by-looking.md)
