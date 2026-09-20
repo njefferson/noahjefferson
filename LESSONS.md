@@ -428,3 +428,4 @@ and the filename carries it.
 - **§334** — [A rewritten history froze every pin to it, and the pins still work](lessons/334-a-rewritten-history-froze-every-pin-and-the-pins-still-work.md)
 - **§335** — [A deleted test takes its evidence with it and leaves its claim behind](lessons/335-a-deleted-test-takes-its-evidence-and-leaves-its-claim.md)
 - **§336** — [A number that will not move under the control that should move it is measuring two things](lessons/336-a-number-that-will-not-move-is-measuring-two-things.md)
+- **§337** — [A skewed distribution's mean is not a place to measure a distance from](lessons/337-a-skewed-distributions-mean-is-not-a-place-to-measure-from.md)
