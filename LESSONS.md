@@ -431,3 +431,7 @@ and the filename carries it.
 - **§337** — [A skewed distribution's mean is not a place to measure a distance from](lessons/337-a-skewed-distributions-mean-is-not-a-place-to-measure-from.md)
 - **§338** — [A fixed-window measure on a small region measures its surroundings](lessons/338-a-fixed-window-measure-on-a-small-region-measures-its-surroundings.md)
 - **§339** — [A correction to a test's truth is a region, not a box, and it fails four ways](lessons/339-a-correction-to-a-tests-truth-is-a-region-not-a-box.md)
+- **§340** — [A published method's constants encode the data it was written for, and transplanting them is where it breaks](lessons/340-a-published-methods-constants-encode-its-data.md)
+- **§341** — [An optimum at the edge of the search space is not an optimum, and an acceptance bar applied only to the winner leaves a floor inside the search](lessons/341-an-optimum-at-the-edge-of-the-search-is-not-an-optimum.md)
+- **§342** — [The instrument that judges a feature can be built on that feature's own rendering, so changing the rendering makes it lie instead of fail](lessons/342-the-instrument-is-built-on-the-rendering-it-judges.md)
+- **§343** — [A test that learns its truth from the output under test agrees with itself, and its numbers move the wrong way when the output improves](lessons/343-a-test-that-learns-its-truth-from-the-output-agrees-with-itself.md)
