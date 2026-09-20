@@ -435,3 +435,4 @@ and the filename carries it.
 - **§341** — [An optimum at the edge of the search space is not an optimum, and an acceptance bar applied only to the winner leaves a floor inside the search](lessons/341-an-optimum-at-the-edge-of-the-search-is-not-an-optimum.md)
 - **§342** — [The instrument that judges a feature can be built on that feature's own rendering, so changing the rendering makes it lie instead of fail](lessons/342-the-instrument-is-built-on-the-rendering-it-judges.md)
 - **§343** — [A test that learns its truth from the output under test agrees with itself, and its numbers move the wrong way when the output improves](lessons/343-a-test-that-learns-its-truth-from-the-output-agrees-with-itself.md)
+- **§344** — [A correction to something the app generates has to be stored as the GESTURE, not as the result](lessons/344-a-correction-to-a-generated-thing-is-the-gesture-not-the-result.md)
