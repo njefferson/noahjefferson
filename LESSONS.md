@@ -430,3 +430,4 @@ and the filename carries it.
 - **§336** — [A number that will not move under the control that should move it is measuring two things](lessons/336-a-number-that-will-not-move-is-measuring-two-things.md)
 - **§337** — [A skewed distribution's mean is not a place to measure a distance from](lessons/337-a-skewed-distributions-mean-is-not-a-place-to-measure-from.md)
 - **§338** — [A fixed-window measure on a small region measures its surroundings](lessons/338-a-fixed-window-measure-on-a-small-region-measures-its-surroundings.md)
+- **§339** — [A correction to a test's truth is a region, not a box, and it fails four ways](lessons/339-a-correction-to-a-tests-truth-is-a-region-not-a-box.md)
