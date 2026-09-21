@@ -56,28 +56,56 @@ number, not after the first absurd one.** It is usually one algebraic property
 of whatever the app draws — a fixed ratio, a known palette, a colour that only
 the overlay uses. Without it a harness cannot fail; it can only mislead.
 
-## And the converse, measured four days later: a gesture is not always available
+## The converse that was claimed here four days later, and was FALSE
 
-**The rule above sent the next session down three rounds in the other
-direction.** Reading it as *drive controls with a real pointer*, a harness drove
-six plain value sliders — Saturation, Contrast, Hue, Exposure, Clarity,
-Dehaze — with a pointer drag, a click on the track and a focused ArrowRight.
-Focus landed on each. **All six were unmoved by all three.** Dehaze was on the
-point of being reported broken.
+**This section first said the opposite of the sentence below, and stated it as
+a measurement.** It read: a harness drove six plain value sliders — Saturation,
+Contrast, Hue, Exposure, Clarity, Dehaze — with a pointer drag, a click on the
+track and a focused ArrowRight; all six were unmoved by all three; therefore
+"the synthetic pointer in that container does not move a range input".
 
-**Six for six is the interaction, not six broken controls.** The synthetic
-pointer in that container does not move a range input, and the route that does
-work was already in that repository: every walk in its `tools/` directory sets
-`.value` and dispatches `input` + `change`, and those walks assert real values
-coming back.
+**A controlled run the same day found all three routes working.** A bare
+`<input type=range>` on a blank page went 50 to 81 on a pointer drag. The app's
+own Dehaze slider went 0 to 0.64 on the same gesture, with `elementFromPoint`
+at the drop coordinate returning the slider itself — nothing over it. Focused,
+ArrowRight moved it 0 to 0.01. **Six for six did not reproduce at all**, and
+what was actually wrong that first time is still not known.
 
-**So the sentence this lesson was missing:** the mode question is decided PER
-CONTROL, not per session. A control with a state machine behind it takes a real
-gesture *where a real gesture works*; a control whose only effect is its value
-takes the dispatched pair. Neither route is trusted on its own — **the helper
-reads the value back and throws when it did not land**, which is the difference
-between a harness that measures the changed photograph and one that measures
-the unchanged photograph and calls it changed. `tools/walk-input.mjs` in
-Jefferson-Photography-Studio is that helper: `setValue`, `getValue`,
-`dragSlider`, with the choice between the first and the third written into its
-header rather than left to whoever reads this file next.
+## Why a wrong diagnosis survived being written down
+
+**Because the workaround worked.** Switching those sliders to a dispatched
+`input` + `change` pair fixed the harness, the arms rendered, the pictures came
+out, and every number after it was correct. A fix that works reads as a
+diagnosis confirmed. It is not one: it only shows that the new route works, and
+says nothing whatever about why the old one did not.
+
+**And the inference was good.** "Six controls failing three ways is the
+interaction, not six broken controls" is sound reasoning — it just has more than
+one conclusion, and the one that got written was the one that had already been
+acted on. Three causes fit that evidence equally: the container, something over
+the control eating the pointer, or coordinates that never landed on it. The
+keyboard arm has a fourth of its own, since that app binds arrow keys for its
+own navigation. Naming one of four and calling it measured is the whole failure.
+
+**The control that settles it is small and was never built**: the same gesture
+on a bare range input, on a blank page, in the same browser. Two minutes. It
+would have refused the sentence before it reached a permanent cross-app file,
+where the next session would have read it as established and reached for the
+workaround without ever asking what was broken.
+
+## What to do instead
+
+**A workaround that works is not a diagnosis.** When something starts working
+after a change, that is evidence about the new path only. If the old path's
+failure is going to be written down as a cause, it needs its own control — the
+simplest possible case of the same operation, in the same environment, with a
+known answer.
+
+**And the practice that survives from all of this**, which does not depend on
+why the drag failed: the mode question is decided PER CONTROL. A control with a
+state machine behind it takes a real gesture; a control whose only effect is its
+value can be dispatched at. **Neither route is trusted on its own — the helper
+reads the value back and throws when it did not land.**
+`tools/walk-input.mjs` in Jefferson-Photography-Studio is that helper:
+`setValue`, `getValue`, `dragSlider`. The reading-back is the part that would
+have made the original six-for-six finding legible in the first place.
