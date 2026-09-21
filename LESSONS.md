@@ -438,3 +438,4 @@ and the filename carries it.
 - **§344** — [A correction to something the app generates has to be stored as the GESTURE, not as the result](lessons/344-a-correction-to-a-generated-thing-is-the-gesture-not-the-result.md)
 - **§345** — [A walk measures whatever `dist` happened to contain, so the run that proves a test can fail can be satisfied by a stale build](lessons/345-a-walk-measures-whatever-dist-happened-to-contain.md)
 - **§346** — [Marking something decorative removes it from every instrument, so it can be drawn across a control forever](lessons/346-a-decorative-element-is-absent-from-every-instrument.md)
+- **§347** — [Every walk ran at desktop width, so the app's own reader was the only instrument at phone width](lessons/347-every-walk-ran-at-desktop-width.md)
