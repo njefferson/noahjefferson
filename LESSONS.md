@@ -439,3 +439,4 @@ and the filename carries it.
 - **§345** — [A walk measures whatever `dist` happened to contain, so the run that proves a test can fail can be satisfied by a stale build](lessons/345-a-walk-measures-whatever-dist-happened-to-contain.md)
 - **§346** — [Marking something decorative removes it from every instrument, so it can be drawn across a control forever](lessons/346-a-decorative-element-is-absent-from-every-instrument.md)
 - **§347** — [A width visited by ONE instrument reads as covered, so a layout defect lived at phone width with nothing looking for it](lessons/347-every-walk-ran-at-desktop-width.md)
+- **§348** — [A dispatched event is not a gesture, and a harness that cannot tell its own instrument's output from the app's will report the app](lessons/348-a-dispatched-event-is-not-a-gesture.md)
