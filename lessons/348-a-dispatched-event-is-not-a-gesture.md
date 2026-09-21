@@ -55,3 +55,29 @@ that a bare `input` event walks into halfway.
 number, not after the first absurd one.** It is usually one algebraic property
 of whatever the app draws — a fixed ratio, a known palette, a colour that only
 the overlay uses. Without it a harness cannot fail; it can only mislead.
+
+## And the converse, measured four days later: a gesture is not always available
+
+**The rule above sent the next session down three rounds in the other
+direction.** Reading it as *drive controls with a real pointer*, a harness drove
+six plain value sliders — Saturation, Contrast, Hue, Exposure, Clarity,
+Dehaze — with a pointer drag, a click on the track and a focused ArrowRight.
+Focus landed on each. **All six were unmoved by all three.** Dehaze was on the
+point of being reported broken.
+
+**Six for six is the interaction, not six broken controls.** The synthetic
+pointer in that container does not move a range input, and the route that does
+work was already in that repository: every walk in its `tools/` directory sets
+`.value` and dispatches `input` + `change`, and those walks assert real values
+coming back.
+
+**So the sentence this lesson was missing:** the mode question is decided PER
+CONTROL, not per session. A control with a state machine behind it takes a real
+gesture *where a real gesture works*; a control whose only effect is its value
+takes the dispatched pair. Neither route is trusted on its own — **the helper
+reads the value back and throws when it did not land**, which is the difference
+between a harness that measures the changed photograph and one that measures
+the unchanged photograph and calls it changed. `tools/walk-input.mjs` in
+Jefferson-Photography-Studio is that helper: `setValue`, `getValue`,
+`dragSlider`, with the choice between the first and the third written into its
+header rather than left to whoever reads this file next.
