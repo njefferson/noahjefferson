@@ -1,4 +1,4 @@
-## 347 · Every walk ran at desktop width, so the app's own reader was the only instrument at phone width
+## 347 · A width visited by ONE instrument reads as covered, so a layout defect lived at phone width with nothing looking for it
 
 **Enforced by:** GATE Jefferson-Photography-Studio:tools/start-screen-walk.mjs —
 runs at the reported 402x812 and fails when the editor drawer is on screen
@@ -19,10 +19,28 @@ browser walks had never seen it.
 
 ## Why it was invisible
 
-Counted in that repository on the day it was found: **42 walks, 41 of which
-declare a viewport. Thirty-three run at 1280px wide, four at 1100, three at
-1000, one at 1400 and one at 900. The narrowest was 900. The app's reader is on
-a 402px phone and a tablet.**
+**THE FIRST VERSION OF THIS LESSON GOT THIS WRONG, AND THE WRONG VERSION WAS
+PUSHED.** It said the narrowest viewport any walk used was 900px, from a grep
+for `viewport: { width: <literal> }`. Two walks set width from a LOOP and the
+grep could not see them: the accessibility walk re-opens every page and every
+dialog at **430 and 900**, and the scroll-cue walk loops **1180 and 420**. A
+third sets no viewport at all and inherits the driver's 1280x720 default.
+
+**Counted properly: 42 walks, and about twelve of them are ones where the
+viewport is LOAD-BEARING** — the walks about layout, or about the position and
+reachability of controls, as opposed to pixel correctness, export bytes or
+timing. **Of those twelve, exactly one runs at phone size.** Two others sample
+a narrow width, and each measures exactly one property there: hit-area size,
+and whether a scroll cue lands on a control. The remaining nine assert control
+layout and reachability on a 1280x950 desktop window with no touch, no mobile
+flag and device pixel ratio 1 — while every report they exist to answer arrives
+from a 402px phone or a tablet.
+
+**So the real shape is worse than "nobody went there", and the correction is
+the lesson.** Ask "do the walks test phone width?" and the honest answer is
+yes. Two of them do. That answer is what kept anybody from looking again — one
+instrument standing at a width makes the width read as measured, and the nine
+walks that would have seen this defect were all somewhere else.
 
 The layout is responsive, and that is the whole mechanism. Above the breakpoint
 the drawer is a side COLUMN: leaving it on screen costs the stage nothing, the
@@ -51,7 +69,13 @@ report — a picture says something is wrong, and a text report says where.
 **Pick the width from who holds the device, not from the machine writing the
 walk.** A walk inherits its viewport from whatever the last one used, and the
 last one inherited it from a desktop browser window. Name the reader's widths
-once and make the layout walks run there.
+once and make the layout walks run there. A walk that sets no viewport at all
+is the same defect one level down: it is running at a number nobody chose.
+
+**AND COUNT COVERAGE BY PROPERTY, NOT BY PRESENCE.** "Is this width tested" is
+the question that returns a misleading yes. The question that does not is
+"which properties are asserted at this width" — here it was two, out of every
+property those twelve walks check between them.
 
 **And when a defect is reported at a width nothing measures, fix the blind spot
 in the same commit as the defect** — otherwise the next one arrives the same
