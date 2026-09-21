@@ -444,9 +444,32 @@ checks before offering to build one of these again):**
  planted defect. The strip's look is one shared `swstrip.css` imported by the
  module that provides the feature, so three app stylesheets did not grow three
  copies; placement stays per-app.
- Still owed here: the ⓘ, first-run move, patch notes and §7f diagnostic are all
- built, but this row has not been audited against them the way the rows above
- were — check the repo, not this line.
+ **AUDITED 2026-09-21, and the row was wrong in both directions.** All six are
+ discharged now. The ⓘ is `#infoBtn` in the app's own chrome; patch notes come
+ from one source — `vite.config.ts` defines `__CHANGELOG__` and `__ROADMAP__`
+ from a filtered git log and NOTES.md, feeding both the ⓘ and the generated
+ `notes.html`, with `tools/patch-note-check.mjs` reading vite's own patterns
+ rather than copying them; the §7f diagnostic is `src/diagnostic.ts`, whose
+ `deviceLine` prints the app's conclusion beside the browser's claim and the
+ touch-point count, which is the iPadOS-as-macOS trap §7f names.
+ **§7j is DISCHARGED and this list has never said so** — `debug.html` and
+ `src/debug.ts` RUN measurements rather than reporting state: graphics, RAW
+ decode on the main thread against a worker with an assertion that both produce
+ the same picture, IndexedDB commits one photograph at a time, tile build, GPU
+ export, threads, with medians and the individual runs printed. That assertion
+ is §7j's suspicious-of-its-own-instrument clause implemented, and this is the
+ app the doctrine cites as the origin of the rule.
+ **§7e's first-run half was the one thing genuinely owed, and landed
+ 2026-09-21.** The launcher had the textbook shape in `src/chooser.ts` —
+ `#welcomeDlg` opens once under `studio-welcome-seen` and `#infoBtn` reopens the
+ SAME dialog — and the editor had none: it was deliberately silent on a first
+ visit, and "what it is", "what it is NOT" and the per-platform install list
+ lived in `#helpDlg` with nothing linking to them from the ⓘ. Both the start
+ screen and the ⓘ now open the same Help section through one function, so the
+ words are moved rather than copied.
+ **What is still owed is the GATE**: nothing asserts the ⓘ exists, that its
+ accessible name says what it opens, or that first-run content survives
+ dismissal.
  **Its accessibility walk is committed now (2026-09-14) and the part worth
  copying is not the walk but `tools/surfaces.mjs` beside it**: the list of
  screens the walk visits is checked BOTH WAYS against the BUILD rather than the
