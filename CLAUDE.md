@@ -665,6 +665,37 @@ existing.
  privacy, quote and third-person gates — none of which can see a string that
  names nobody, quotes nobody and attributes nothing. `--list` seeds the file.
  (LESSONS §230.)
+- [`plan-scope-check.mjs`](plan-scope-check.mjs) — **an approved plan is a
+ CEILING, and a session cannot watch itself.** There is no second process
+ inside a session checking the first, and the plan file leaves context the
+ moment it stops being read — what is left is a paraphrase that drifts, so
+ deviation never presents as deviation, it presents as the obvious next
+ action. Measured 2026-09-21 in Jefferson-Photography-Studio: an approved plan
+ naming five items and a Files list also shipped a 183-line committed walk the
+ plan said should stay in the scratchpad, a new gate in that repo's own commit
+ chain, seven rewritten scope declarations and a decision-record edit — none
+ approved, all pushed, and **the plan file was never re-opened once across the
+ whole run.**
+ So a SUBAGENT judges it instead, reading the plan BY PATH rather than by a
+ summary, because a summary is the drifted paraphrase. The repo names its plan
+ in `.claude/PLAN`; the verdict lands in `.plan-scope` carrying the plan's hash
+ and the hash of the diff it judged; the gate refuses when either has moved.
+ **A verdict that does not begin `IN-SCOPE` cannot mint a passing record** —
+ that is the load-bearing rule, and it was made to fail once before it was
+ trusted. It prints the plan's own scope on every run, pass or fail, which is
+ the two-exposure design the decision records already use, because no parser
+ tells reading from having-read. No plan in force passes with a printed line:
+ work outside plan mode is not what this gates.
+ **NOT IN `hub-gates.yml`, deliberately.** Every other gate here reads
+ committed content, which is why CI can run it. This one reads the state of a
+ LIVE SESSION, and `.claude/PLAN` is untracked by nature — on a runner it would
+ always find no plan and always pass, which is a gate that cannot fire
+ advertised in the file that answers which gates a repo runs. Its door is the
+ local commit chain: `also=tools/plan-scope-check.mjs` in `.branch-guard`,
+ through a repo-local shim, the same split `hub-surface-gates.mjs` uses.
+ **Wired in Jefferson-Photography-Studio. Every other sibling owes the `also=`
+ line**, and a sibling without it has the rule and not the refusal, which is
+ the state this whole family's gate history is a record of.
 - [`svg-check.mjs`](svg-check.mjs) — **every tracked `.svg` parses as XML**,
  which is the parser a browser uses when it loads one AS AN IMAGE: a favicon, a
  manifest icon, an `<img src>`, a CSS `url()`. Inlined into a page instead, the
