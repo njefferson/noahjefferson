@@ -444,3 +444,4 @@ and the filename carries it.
 - **§350** — [If you can write the recommendation yourself, it was never a decision — and the closing list is where settled work gets laundered back](lessons/350-if-you-can-write-the-recommendation-it-was-never-a-decision.md)
 - **§351** — [A population statistic loses the pixels the control broke, so it falls smoothly across the frames it helps and the frames it destroys](lessons/351-a-population-statistic-loses-the-pixels-the-control-broke.md)
 - **§352** — [A checklist gate refuses the tidy mistake and cannot see the hurried one — the item marked done and left in place, never the item left unmarked and already finished](lessons/352-a-gate-that-refuses-the-tidy-mistake-cannot-see-the-hurried-one.md)
+- **§353** — [A capability is judged on doing what it says, correctly — not on delivering an outcome by itself, because outcomes come from stacks](lessons/353-a-capability-is-judged-on-doing-what-it-says-not-on-delivering-an-outcome.md)
