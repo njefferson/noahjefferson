@@ -443,3 +443,4 @@ and the filename carries it.
 - **§349** — [A count derived from traffic measures how much, not how many — and the week it read exactly right is the dangerous one](lessons/349-a-traffic-derived-count-measures-how-much-not-how-many.md)
 - **§350** — [If you can write the recommendation yourself, it was never a decision — and the closing list is where settled work gets laundered back](lessons/350-if-you-can-write-the-recommendation-it-was-never-a-decision.md)
 - **§351** — [A population statistic loses the pixels the control broke, so it falls smoothly across the frames it helps and the frames it destroys](lessons/351-a-population-statistic-loses-the-pixels-the-control-broke.md)
+- **§352** — [A checklist gate refuses the tidy mistake and cannot see the hurried one — the item marked done and left in place, never the item left unmarked and already finished](lessons/352-a-gate-that-refuses-the-tidy-mistake-cannot-see-the-hurried-one.md)
