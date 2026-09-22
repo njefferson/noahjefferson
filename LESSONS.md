@@ -441,3 +441,4 @@ and the filename carries it.
 - **§347** — [A width visited by ONE instrument reads as covered, so a layout defect lived at phone width with nothing looking for it](lessons/347-every-walk-ran-at-desktop-width.md)
 - **§348** — [A dispatched event is not a gesture, and a harness that cannot tell its own instrument's output from the app's will report the app](lessons/348-a-dispatched-event-is-not-a-gesture.md)
 - **§349** — [A count derived from traffic measures how much, not how many — and the week it read exactly right is the dangerous one](lessons/349-a-traffic-derived-count-measures-how-much-not-how-many.md)
+- **§350** — [If you can write the recommendation yourself, it was never a decision — and the closing list is where settled work gets laundered back](lessons/350-if-you-can-write-the-recommendation-it-was-never-a-decision.md)
