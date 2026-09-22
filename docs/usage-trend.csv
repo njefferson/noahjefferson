@@ -2,4 +2,4 @@ date_end,days,total_requests,device_upper_bound,device_upper_bound_loose,top_app
 2026-08-02,7,18564,104,458,quietkeep.pages.dev,US,,
 2026-08-11,7,16059,60,306,staging.fauxplane.pages.dev,US,,
 2026-09-03,7,22922,150,526,jefferson-line.pages.dev,US,29,3
-2026-09-21,7,66396,122,704,staging.jefferson-photo-studio.pages.dev,US,6,
+2026-09-21,7,66396,122,704,staging.jefferson-photo-studio.pages.dev,US,6,6
