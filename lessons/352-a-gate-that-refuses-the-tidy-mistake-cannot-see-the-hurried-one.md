@@ -58,3 +58,14 @@ changed did not appear in a diff between the branches at all, so they were
 byte-identical, and everything else that differed was the trunk being ahead.
 **A containment rule written around an identity test needs a content check
 behind it**, or the first real merge conflict turns a safety rule into a stop.
+
+**Measured again 2026-09-24 in Jefferson-Photography-Studio, twice in one day.**
+First, a session branch's fix was reported by `git cherry` as missing from the
+trunk. The trunk carried it as a different commit, because merging a pull request
+by REBASE rewrites every commit, so the identity test cannot match it at all.
+Second, before a staging push, `git log main..staging` listed seven staging
+commits "not in main". A content diff over every shipped path showed staging
+and main identical except for one status page on which main was newer. **In a
+repository that merges by rebase, every identity test between branches is wrong
+after every merge, not only after a conflict.** Only a content check answers
+"is this already there".
