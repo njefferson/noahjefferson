@@ -449,3 +449,4 @@ and the filename carries it.
 - **§355** — [A character used as an icon is a bet on the reader's fonts, and the bet is lost silently, beside an SVG of the same icon that works](lessons/355-a-character-used-as-an-icon-is-a-bet-on-the-readers-fonts.md)
 - **§356** — [A comment in a shipped file is published copy: HTML comments are served in the page, and source maps carry every other comment to the production URL](lessons/356-a-comment-in-a-shipped-file-is-published.md)
 - **§357** — [A gate that copies a pipeline's last step and not its filter counts what could render, not what does](lessons/357-a-gate-that-copies-the-slice-and-not-the-filter-counts-what-could-render.md)
+- **§358** — [Deleting the cache line does not delete the cache](lessons/358-deleting-the-cache-line-does-not-delete-the-cache.md)
