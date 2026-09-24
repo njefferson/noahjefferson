@@ -467,9 +467,13 @@ checks before offering to build one of these again):**
  lived in `#helpDlg` with nothing linking to them from the ⓘ. Both the start
  screen and the ⓘ now open the same Help section through one function, so the
  words are moved rather than copied.
- **What is still owed is the GATE**: nothing asserts the ⓘ exists, that its
- accessible name says what it opens, or that first-run content survives
- dismissal.
+ **The GATE exists now, with gaps, and this line said it was owed for three
+ days after it landed.** `tools/a11y-walk.mjs` section 6 (2026-09-21) asserts
+ that `#infoBtn` sits in the editor's own chrome with a name of at least twelve
+ characters, and that the start card's "What this is" and the ⓘ's route both
+ open Help on the same text. Its gaps, read 2026-09-24: it loads only
+ `ir.html`, so the launcher's and Macro Studio's ⓘ are unasserted; and it never
+ opens a photograph before trying the routes.
  **Its accessibility walk is committed now (2026-09-14) and the part worth
  copying is not the walk but `tools/surfaces.mjs` beside it**: the list of
  screens the walk visits is checked BOTH WAYS against the BUILD rather than the
@@ -611,8 +615,10 @@ existing.
  no proper name and no date. The whole-file exemption it shipped with is where
  the material collected, and green there meant *not looked at*.
  LESSONS §52 is why it exists, the same day the rule was stated.
- **A HARD CI gate in every repo per Doctrine §9b** . Wired: the hub (`doctrine.yml`) and Quietkeep (its Spine checks
- the hub out and runs the canonical copy). **Every other sibling still owes
+ **A HARD CI gate in every repo per Doctrine §9b** . Wired: the hub (`doctrine.yml`), Quietkeep (its Spine checks
+ the hub out and runs the canonical copy), and Jefferson-Photography-Studio
+ through the shared `hub-gates.yml` (its step "The owner's person is not repo
+ material", read green on 2026-09-24). **Every other sibling still owes
  the CI step** — wired means the exact CI command was seen red on a LOCAL
  plant, never a pushed one (a pushed plant IS the violation).
 - [`privacy-history-check.mjs`](privacy-history-check.mjs) — the same patterns
@@ -763,8 +769,10 @@ and beneath it "DONE, 2026-09-02: all eight pin `3f2a373`, all eight markers rea
 the same, and all eight carry the gate that keeps them together." Every workflow
 file in all eight was read on 2026-09-04. The counts are:
 
-- **Three call the shared workflow** — Quietkeep from `spine.yml`, Cv-Thalweg
- from `gates.yml`, and 3d-printing-pal from its own `gates.yml`.
+- **Four call the shared workflow** — Quietkeep from `spine.yml`, Cv-Thalweg
+ from `gates.yml`, 3d-printing-pal from its own `gates.yml`, and
+ Jefferson-Photography-Studio from its `gates.yml` (read 2026-09-24; this list
+ had left it out).
  **That last one is a correction, measured 2026-09-08 by reading the file:** the
  census below had it copying the job at `61a3f9a`, and it has not done that for
  some time. Everything else here is as counted on 2026-09-04 and has not been
@@ -777,9 +785,10 @@ file in all eight was read on 2026-09-04. The counts are:
 - **Two reference the hub in no workflow** — Intersecting-parallels (its
  `a11y.yml` says it ships the hub's gate rather than calling it) and
  photo-pointer.
-- **`tools/hub-pin-check.mjs` is carried by four**, not eight: Quietkeep,
- Cv-Thalweg, solve-ent and 3d-printing-pal — the last one measured 2026-09-08,
- by the same read that corrected its row above.
+- **`tools/hub-pin-check.mjs` is carried by five**, not eight: Quietkeep,
+ Cv-Thalweg, solve-ent, 3d-printing-pal (measured 2026-09-08, by the same read
+ that corrected its row above) and Jefferson-Photography-Studio (read
+ 2026-09-24).
 
 **WHAT THAT COSTS RIGHT NOW.** `example-check` was added to `hub-gates.yml` on
 2026-09-03 as `042400b`, defaulted on, under a commit saying it runs in every
@@ -805,7 +814,8 @@ So the `042400b` / `3f2a373` comparison above understates it: the question is
 not which pin contains `example-check`, it is that **a pre-rewrite pin cannot
 contain anything**, and `doctrine-sync --adopt` cannot fix it because the
 marker already agrees with the pin. Re-pinning is the whole remedy and it is
-per repo. Jefferson-Photography-Studio is re-pinned (`1f86b51`, 19 Sep) and its
+per repo. Jefferson-Photography-Studio is re-pinned (`52546b9` since 22 Sep, read
+2026-09-24; it was `1f86b51` on 19 Sep) and its
 `tools/hub-pin-check.mjs` now REFUSES a pin that is on no branch of the hub,
 skipping with a printed line where the hub is not checked out beside it — every
 sibling carrying that file owes the same version. **A session that rewrites a
