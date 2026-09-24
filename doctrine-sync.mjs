@@ -107,8 +107,15 @@ if (since === head) {
 
 const range = `${since}..${head}`;
 const changed = git('diff', '--name-only', range).split('\n').filter(Boolean);
-const relevant = changed.filter(f => WATCHED.includes(f));
-const other = changed.filter(f => !WATCHED.includes(f));
+// A DIRECTORY ENTRY MATCHES WHAT IS INSIDE IT. `lessons/` sat in WATCHED from
+// the day the lessons became one file each, and an exact-match `includes`
+// could never equal `lessons/355-….md` — so every per-lesson change was
+// reported as "untouched by the contract", and only the regenerated index in
+// LESSONS.md said anything moved, naming no lesson. Found 2026-09-24 against a
+// range that landed nine lessons.
+const watched = (f) => WATCHED.some(w => (w.endsWith('/') ? f.startsWith(w) : f === w));
+const relevant = changed.filter(watched);
+const other = changed.filter(f => !watched(f));
 
 if (!relevant.length) {
   say(`\nThe hub moved ${git('rev-list', '--count', range)} commit(s), but nothing this repo is held to changed.`);
