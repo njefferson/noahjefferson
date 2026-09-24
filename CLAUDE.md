@@ -165,7 +165,10 @@ Every item below has actually happened.
  standing manual steps are a status line at most, never re-served as a to-do
  list. **The failure this names: a report that is a long list of things to do,
  with no choices in it to make, and nothing marking what is being answered.**
- (Doctrine §2.)
+ **And a choice between pictures carries its pictures in the same message,
+ beside the question, every time it is asked** — never "sent earlier", and never
+ with a screen of report between the pictures and the question, because on an
+ iPad anything a screen away is out of reach. (Doctrine §2; LESSONS §359.)
 - **Multi-stage work carries a LIVE STATUS PAGE, and its link goes in EVERY
  progress reply** — not once at creation. Chat scrolls; on an iPad a plan agreed
  on Monday is unreachable by Wednesday. Published once, updated in place at the

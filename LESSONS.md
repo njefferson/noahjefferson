@@ -450,3 +450,4 @@ and the filename carries it.
 - **§356** — [A comment in a shipped file is published copy: HTML comments are served in the page, and source maps carry every other comment to the production URL](lessons/356-a-comment-in-a-shipped-file-is-published.md)
 - **§357** — [A gate that copies a pipeline's last step and not its filter counts what could render, not what does](lessons/357-a-gate-that-copies-the-slice-and-not-the-filter-counts-what-could-render.md)
 - **§358** — [Deleting the cache line does not delete the cache](lessons/358-deleting-the-cache-line-does-not-delete-the-cache.md)
+- **§359** — [A decision's pictures travel with the question, every time it is asked](lessons/359-a-decisions-pictures-travel-with-the-question.md)
