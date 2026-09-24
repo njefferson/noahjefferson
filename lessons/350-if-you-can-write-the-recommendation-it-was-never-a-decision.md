@@ -13,6 +13,8 @@ failure the rule was written to prevent, wearing the rule's own clothes.
 one, because both arrive as a sentence with options in it. The only instrument
 is the recommendation, and it is an instrument the session has to aim at itself.
 
+**Smell:** a closing list of numbered questions where each recommendation cites a rule, a record or a measurement already in the repository, and none is hedged. Also: a reply that quotes the governing rule and then asks whether it applies.
+
 **Three times in one session, settled matters were handed back as numbered
 decisions with recommendations attached.** Each one was already answered, in
 writing, in a file the session had open — and in two of the three the session

@@ -13,6 +13,8 @@ scenario-shaped one, because both arrive as a condition with a good reason on
 it. The instrument is the question above, and it has to be aimed by whoever is
 about to type the branch.
 
+**Smell:** a condition inside a control whose reason names one frame, one report or one scenario rather than the control's own job. Also: a special case that achieves what another shipped control in the same panel already does.
+
 **Measured 2026-09-22 in Jefferson-Photography-Studio.** A defect came in: an
 automatic sky selection stopped at an aircraft's wing, leaving the sky under the
 wing unselected and unreachable. A control was designed to fix the cause — show

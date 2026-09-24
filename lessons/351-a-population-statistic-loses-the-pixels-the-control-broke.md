@@ -16,6 +16,8 @@ population from one that loses it, and §328's gate only forces the renders to b
 OPENED. Opening them is what worked here. The number was computed correctly the
 whole time and pointed the wrong way the whole time.
 
+**Smell:** a statistic averaged over a class of pixels that the control being priced can move pixels OUT of, such as the saturation of "foliage" pixels under a control that desaturates them. Also: a curve that falls smoothly and monotonically across every frame with no break, for a control that is visibly destroying some of them.
+
 **Measured 2026-09-22 in Jefferson-Photography-Studio.** A shadow-desaturation
 control was being priced for a false-colour look: nine raw frames, four amounts
 each, thirty-six renders, with a foliage-population saturation printed beside

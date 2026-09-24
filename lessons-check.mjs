@@ -261,7 +261,13 @@ for (let k = 0; k < heads.length - 1; k++) {
     continue;
   }
 
-  const text = decl[1].replace(/\s+/g, ' ').trim();
+  // A REPEATED `**Enforced by:**` LINE IS A SEPARATOR TOO. Lessons written one
+  // declaration per line, each opening with the marker, carry no `·` between
+  // them, so the block above read as ONE token: the first form was recognised
+  // and every later one was glued into its description, never resolved, never
+  // checked to exist, and never printed as a checklist item of its own.
+  // Counted when this was fixed: 18 lessons, 23 declarations lost that way.
+  const text = decl[1].replace(/\*\*Enforced by:\*\*/g, ' · ').replace(/\s+/g, ' ').trim();
   // `·` is the separator between declarations; a semicolon is PUNCTUATION.
   // Splitting on `;` too meant any declaration whose description contained one
   // was cut in half — the surplus fragment was silently dropped as an

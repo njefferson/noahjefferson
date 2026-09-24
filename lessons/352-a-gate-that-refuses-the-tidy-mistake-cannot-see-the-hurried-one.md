@@ -14,6 +14,8 @@ whose conflict was resolved on the way in reads as NOT contained in the branch
 that now carries it. A rule written around that test gives the wrong answer
 after every resolution; check by CONTENT before acting on it.
 
+**Smell:** a gate written after one failure whose header names only the shape that failure took. Also: a single commit that both adds a roadmap bullet and fixes what the bullet describes.
+
 **Measured 2026-09-22 in Jefferson-Photography-Studio.** One commit fixed a
 defect in the public release-notes page AND added the roadmap bullet describing
 that defect, as an open item. It went to staging and passed an on-device review
