@@ -457,3 +457,38 @@ being true the same day.** The repo took a `staging` branch on 2026-08-29 —
 was describing the shape the repo had left. The default branch is unchanged
 and still correct; only the reason given for it was stale. Corrected
 2026-09-01.
+
+---
+
+# njefferson/Jefferson-Photography-Studio
+
+**Every item below is LIVE, read back from GitHub on 2026-09-24**, by the method
+this file's header describes: the search API for description, website, topics
+and default branch, and the repository's raw HTML for the social preview. None
+is marked `set`, because only the owner's confirm flips a row (§10), and that
+has not been asked for. This section did not exist before that date. The
+repository was tracked nowhere in this file while all five items were already
+applied.
+
+**Description** — live, read back 2026-09-24; awaiting the owner's confirm
+
+> Free in-browser photo studio — infrared false-color editing and macro focus
+> stacking. On-device, offline, no account.
+
+**Website** — live, read back 2026-09-24; awaiting the owner's confirm
+
+> https://jefferson-photo-studio.pages.dev
+
+**Topics** — live, read back 2026-09-24; awaiting the owner's confirm
+
+> `focus-stacking` `infrared-photography` `ipad` `macro-photography`
+> `offline-first` `photo-editor` `pwa`
+
+**Social preview** — live, read back 2026-09-24; awaiting the owner's confirm
+
+A card was uploaded: the repository's `og:image` is served from
+`repository-images.githubusercontent.com`, not the auto-generated host.
+
+**Default branch** — live, read back 2026-09-24; awaiting the owner's confirm
+
+`main`, which is production.

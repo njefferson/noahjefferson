@@ -278,6 +278,35 @@ and MoleBridge cites none.
 
 ---
 
+## njefferson/Jefferson-Photography-Studio
+
+- **Deploys to:** https://jefferson-photo-studio.pages.dev from `main`, and
+  `staging` to https://staging.jefferson-photo-studio.pages.dev
+- **Branches:** each session works on its own `claude/*` branch, pushes the same
+  history to `staging` for the on-device pass, and reaches `main` by a pull
+  request merged with REBASE (the in-app patch notes are the last commits, so a
+  merge commit would show up in them). Docs-only changes may merge without the
+  device pass. The session's `claude/*` branch IS where work belongs here,
+  unlike the hub.
+- **Branch guard:** `.branch-guard` says `work=claude/*`, `promote=main`,
+  `escape=JPS_PROMOTE`, plus a long `also=` chain that runs on every commit:
+  plan-scope-check, typecheck, decisions-check, patch-note-check, the hub's fast
+  surface gates and about twenty repo-local checks. `.claude/hooks/session-start.sh`
+  installs the hooks, including a `commit-msg` hook for the patch-note rule.
+- **Gates wired in CI:** `gates.yml` CALLS the shared `hub-gates.yml` (pinned by
+  SHA, `pwa: true`). **`deploy.yml` does not wait on it**, and `main` is not
+  protected, so a green deploy says nothing about the gates. On 2026-09-24 a
+  release deployed while Gates was red at step ten (LESSONS §310). The two slow
+  privacy gates (privacy, third person) run in CI only.
+- **Known:** the §7e baseline is complete (audited 2026-09-21), including the
+  §7j test page (`debug.html`), which is the origin of that rule. It is also the
+  repo where plan-scope-check was measured and first wired (2026-09-21). Its
+  decision records are gated by `tools/decisions-check.mjs`: six sections,
+  `## Depends`, `## Looked at`.
+- **Owes:** branch protection on `main` requiring the Gates check (a GitHub
+  setting only the owner can switch on); the local privacy gates, pending the
+  owner's call on their thirty seconds per commit; and METADATA.md rows.
+
 ## The gate wiring is called from the hub now, not copied
 
 `.github/workflows/hub-gates.yml` in the hub is a `workflow_call` workflow. A
