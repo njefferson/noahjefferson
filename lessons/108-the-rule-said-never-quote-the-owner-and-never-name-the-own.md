@@ -115,3 +115,19 @@ and the file's own header described it as covering both. **A gate that covers
 half a rule reports green about the other half**, and the description of it will
 say otherwise, because the description was written from the rule and not from the
 patterns.
+
+**Measured again 2026-09-24, and the gap is wider than a missing name.** Two
+decision records in Jefferson-Photography-Studio opened with verbatim chat
+messages, written as `Reported in chat <date>: "..."` in ordinary prose. That
+is not a blockquote, so quote-check never saw them. A third record credited its
+two decisions to "the reader's follow-up", with "the reader" standing in for
+the owner. No pattern anchored on a name or a role can see that substitution.
+Every gate was green. A sweep of that repository's docs then found more than
+330 sites of the same class: role-attributions ("owner report", "owner ask",
+"owner-caught"), chat provenance ("asked in chat"), and quoted speech in plain
+prose. A further 67 sat in comments in shipped files, served in the production
+page source.
+**Three shapes the gates cannot see, stated so the green is not read as covering
+them:** a quotation in plain prose after a cue word; "the reader" used for the
+one reader who asked; and a report credited by role with no "the" in front of
+it ("owner report").

@@ -44,3 +44,12 @@ explaining that the staging build must run on every commit, why running it by
 hand is not enough, and what it cost the last time nobody did. No `also=` line
 followed them. It had never run on a commit. A comment describing a wiring is
 indistinguishable, at reading speed, from the wiring.
+
+**Measured again 2026-09-24 in Jefferson-Photography-Studio, and it shipped.**
+A possessive pronoun for a third party (the author of a LUT pack) went into a
+notes archive entry. Every check in the local commit chain passed, because the
+third-person gate is not in that chain. CI's Gates run failed on it at step
+ten. The release had already merged and deployed, because the deploy workflow
+does not wait for Gates, and the merge did not wait for the PR's own Gates run
+to finish. The fix was one word. The finding is that the gate existed, was
+shared, and ran in exactly one place, the one that reports after the push.

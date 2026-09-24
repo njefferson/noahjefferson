@@ -41,3 +41,17 @@ thing.
 This is the proxy error (§262 and its family) applied to a string: the version
 number stands in for "did the release get classified", and it answers a
 different question.
+
+**Measured again 2026-09-24, and this time the digit WAS moved and still did
+not show.** Jefferson-Photography-Studio bumped `VERSION` to 2.62 in a commit
+of its own, after the release's two reader-facing commits. Since 2026-09-22
+that repository's patch notes filter out a commit that changes only `VERSION`,
+as housekeeping. So the bump commit is invisible, and the two commits that
+carry the release read as 2.61 increments, because each displays the base in
+force at that commit. The repository's own versioning paragraph still said to
+bump in "the release's own final commit" and promised the changelog would read
+the new base. Both halves were true when written; the filter made them
+disagree.
+**The wording that survives the filter is "the release's last READER-FACING
+commit".** A rule about which commit carries the bump has to name the property
+the display actually keys on.

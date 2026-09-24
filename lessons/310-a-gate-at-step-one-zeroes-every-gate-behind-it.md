@@ -78,3 +78,15 @@ generated text changes for every sibling at once, so every repo's tracked hook
 becomes drifted until somebody re-installs it — which is six repositories going
 red for a reason that is not theirs, and the doctrine's own objection to a
 sibling's CI going red because the hub moved.
+
+**Measured again 2026-09-24 in Jefferson-Photography-Studio.** Gates failed at
+step ten of seventeen on every push of a release. Steps eleven to seventeen
+(example, docs, pin, svg, pwa, palette and text size) therefore never ran in CI
+on that release's tree. The session verified each push by reading the DEPLOY
+run, which was green every time because it does not depend on Gates, and
+reported the release shipped. The seven skipped gates passed when run locally
+afterwards. Nobody knew that until someone ran them.
+**The question "is there a run for this SHA and what did its log say" had been
+asked, of the wrong workflow.** In a repository where the deploy does not wait
+on the gates, a green deploy says nothing about the gates. Both runs are read,
+step by step, and neither stands in for the other.

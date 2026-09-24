@@ -44,3 +44,13 @@ a session committed.
 content you published. Read one commit message, one PR description and one
 comment as the public will read them before the first push in a repo, and
 whenever a harness announces a new default.
+
+**Measured again 2026-09-24, from the other end of the pipe.** The GitHub MCP
+server appends its own footer, a link to the chat session, to the body of every
+pull request it creates, even when the request's body is clean. This was
+measured on four consecutive PRs in Jefferson-Photography-Studio, #141 to #144.
+Editing the body removes the link from what is shown. **GitHub keeps the edit
+history, and the first revision still carries it.** Deleting a revision is a
+manual step in the web interface, which a session cannot take.
+So the rule is read back and edit every PR body after creating it, and leaving
+the footer in is not an option. The edit history is the owner's to clear.
