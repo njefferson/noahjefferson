@@ -169,6 +169,10 @@ Every item below has actually happened.
  beside the question, every time it is asked** — never "sent earlier", and never
  with a screen of report between the pictures and the question, because on an
  iPad anything a screen away is out of reach. (Doctrine §2; LESSONS §359.)
+ **And the pictures show where the candidates DIFFER.** Two layouts that share
+ a toolbar and diverge one press later rendered as the same file byte for byte,
+ and a sheet of toolbars could not be chosen from; compare the renders before
+ sending, and redraw around the difference when any two match (§361).
 - **Multi-stage work carries a LIVE STATUS PAGE, and its link goes in EVERY
  progress reply** — not once at creation. Chat scrolls; on an iPad a plan agreed
  on Monday is unreachable by Wednesday. Published once, updated in place at the

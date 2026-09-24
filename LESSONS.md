@@ -452,3 +452,4 @@ and the filename carries it.
 - **§358** — [Deleting the cache line does not delete the cache](lessons/358-deleting-the-cache-line-does-not-delete-the-cache.md)
 - **§359** — [A decision's pictures travel with the question, every time it is asked](lessons/359-a-decisions-pictures-travel-with-the-question.md)
 - **§360** — [`a && server &` backgrounds the whole list, and `$!` is the subshell, not the server](lessons/360-backgrounding-a-list-hands-you-the-subshell.md)
+- **§361** — [A comparison shows where the candidates differ, not where they are the same](lessons/361-a-comparison-shows-where-the-candidates-differ.md)
