@@ -255,14 +255,17 @@ Every item below has actually happened.
  rule was already broken. It was broken twice in one session, and the second
  time the count was three — one real timer, one waiter stuck for four hours,
  and eleven orphaned browsers.
- **Three specifics, each of which has actually happened here.** `pgrep -f
+ **Four specifics, each of which has actually happened here.** `pgrep -f
  "foo"` matches its OWN command line, so `until ! pgrep -f "foo"` can never
  exit — that loop stranded seven processes once and one for four hours the
  next time; poll a FILE or an exit code, never a process name. A browser that
  dies between `launch()` and `close()` is reparented to init and sits there
  forever, so every launch gets a `finally` that closes it. And a subagent is a
  process too — one here notified a second time an hour after reporting,
- because a script inside it was missing `process.exit(0)`.
+ because a script inside it was missing `process.exit(0)`. And
+ `cd dir && server &` backgrounds the whole list, so `$!` is the subshell and
+ `kill $!` leaves the server holding its port; start a server as a command of
+ its own and confirm the stop by the port (§360, twice in one session).
  **AND A TIMER IS THE LAZY ANSWER — almost never the right tool.** `sleep 900`
  was used four times in one session to wait on a CI run that could be READ
  with one query. A sleep waits a GUESSED interval and learns nothing about the
