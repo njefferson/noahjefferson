@@ -86,7 +86,14 @@ if (!deployWf) {
     const val = new RegExp(`^\\s*${expr[1]}:\\s*([\\w-]+)\\s*$`, 'm').exec(deployWf.text);
     return val ? val[1] : undefined;
   })();
-  const hasStaging = /branches:\s*\[[^\]]*staging/.test(deployWf.text);
+  // A YAML LIST HAS TWO SPELLINGS, and this matched only one. The flow form,
+  // `branches: [main, staging]`, is what the hub's own workflows use; the block
+  // form, one `- staging` per line, is what Jefferson-Photography-Studio uses,
+  // and against it this said "production-only repo, no candidate to record" for
+  // a repo that stages every product change, so the staged-candidate record was
+  // never checked there. Both are read now (LESSONS §363).
+  const hasStaging = /branches:\s*\[[^\]]*\bstaging\b/.test(deployWf.text)
+    || /branches:[ \t]*\n(?:[ \t]*-[^\n]*\n)*?[ \t]*-[ \t]*['"]?staging['"]?[ \t]*(?:#[^\n]*)?(?:\n|$)/.test(deployWf.text);
 
   if (!project) {
     failures.push(`${deployWf.f} deploys but names no --project-name; cannot tell where it lands.`);
@@ -169,6 +176,11 @@ if (!deployWf) {
             // A scaffold number is not a claim about a release.
             return m && !PLACEHOLDER.includes(m[1]) ? m : null;
           })();
+        if (!vm) {
+          // Said aloud rather than skipped: a version this script cannot find
+          // is a check that did not run, and a silent skip reads as a pass.
+          notes.push('no version source this script reads (sw.js cache triplet, a VERSION constant, package.json) — the recorded candidate\'s version is NOT checked; name it beside the URL by hand');
+        }
         if (vm) {
           const version = vm[1];
           const beside = matches.find((m) => notes_md

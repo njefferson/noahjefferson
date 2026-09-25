@@ -454,3 +454,4 @@ and the filename carries it.
 - **§360** — [`a && server &` backgrounds the whole list, and `$!` is the subshell, not the server](lessons/360-backgrounding-a-list-hands-you-the-subshell.md)
 - **§361** — [A comparison shows where the candidates differ, not where they are the same](lessons/361-a-comparison-shows-where-the-candidates-differ.md)
 - **§362** — [A key or a guard built from part of what its consumer reads fails silently in exactly the part it left out](lessons/362-a-key-built-from-part-of-what-its-consumer-reads.md)
+- **§363** — [A YAML list has two spellings, and a gate that reads one passes the other by not looking](lessons/363-a-yaml-list-has-two-spellings.md)

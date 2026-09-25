@@ -22,5 +22,5 @@ again. Nobody can pick between pictures they cannot see.
 **Why it keeps happening.** Sending the pictures once feels like having shown
 them, and the rule that already exists, that a look choice is shown rather than
 described, is satisfied by the first send. The rule is about the moment of
-answering, not the moment of rendering. Chat scrolls, and on the owner's device
-anything more than a screen away is not in front of the reader.
+answering, not the moment of rendering. Chat scrolls, and on an iPad anything
+more than a screen away is not in front of the reader.
