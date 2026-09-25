@@ -456,3 +456,4 @@ and the filename carries it.
 - **§362** — [A key or a guard built from part of what its consumer reads fails silently in exactly the part it left out](lessons/362-a-key-built-from-part-of-what-its-consumer-reads.md)
 - **§363** — [A YAML list has two spellings, and a gate that reads one passes the other by not looking](lessons/363-a-yaml-list-has-two-spellings.md)
 - **§364** — [A worktree has a `.git` file, not a directory, and every worktree runs one shared hooks directory](lessons/364-a-worktree-has-a-git-file-and-one-shared-hooks-directory.md)
+- **§365** — [A recommendation made from a picture too small to show the difference is a guess, and the next picture reverses it](lessons/365-a-recommendation-from-a-picture-too-small-to-show-the-difference.md)
