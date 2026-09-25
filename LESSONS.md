@@ -457,3 +457,4 @@ and the filename carries it.
 - **§363** — [A YAML list has two spellings, and a gate that reads one passes the other by not looking](lessons/363-a-yaml-list-has-two-spellings.md)
 - **§364** — [A worktree has a `.git` file, not a directory, and every worktree runs one shared hooks directory](lessons/364-a-worktree-has-a-git-file-and-one-shared-hooks-directory.md)
 - **§365** — [A recommendation made from a picture too small to show the difference is a guess, and the next picture reverses it](lessons/365-a-recommendation-from-a-picture-too-small-to-show-the-difference.md)
+- **§366** — [A whole-frame read of a full-size export is a thumbnail, because the image reader fits everything to 2000 pixels](lessons/366-a-whole-frame-read-of-a-full-size-export-is-a-thumbnail.md)
