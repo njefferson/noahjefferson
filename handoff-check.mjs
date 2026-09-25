@@ -40,6 +40,9 @@ const ack = new Set(
 const failures = [];
 const passed = [];
 const notes = [];
+// Set when a staged candidate's version could not be looked for, so the
+// closing line does not claim a version it never saw (LESSONS §363).
+let versionUnchecked = false;
 
 const read = (p) => (existsSync(join(REPO, p)) ? readFileSync(join(REPO, p), 'utf8') : null);
 
@@ -180,6 +183,7 @@ if (!deployWf) {
           // Said aloud rather than skipped: a version this script cannot find
           // is a check that did not run, and a silent skip reads as a pass.
           notes.push('no version source this script reads (sw.js cache triplet, a VERSION constant, package.json) — the recorded candidate\'s version is NOT checked; name it beside the URL by hand');
+          versionUnchecked = true;
         }
         if (vm) {
           const version = vm[1];
@@ -332,4 +336,6 @@ if (failures.length) {
   console.log('Exiting non-zero.');
   process.exit(1);
 }
-console.log('\nPASS — the handoff carries its URL, its version, and its evidence.');
+console.log(versionUnchecked
+  ? '\nPASS — the handoff carries its URL and its evidence. Its VERSION was not checked (see above).'
+  : '\nPASS — the handoff carries its URL, its version, and its evidence.');
