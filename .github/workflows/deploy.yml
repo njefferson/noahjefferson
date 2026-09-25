@@ -20,6 +20,15 @@ concurrency:
 permissions:
   contents: read
 
+# Wrangler is pinned too (Doctrine §16.2, the same rule deploy-myfax.yml follows).
+# Without a version the action installs `wrangler@4`, a range, in the job holding
+# the token, and this deploy failed once on 2026-09-24 on a release npm was not
+# yet serving. 4.139.0 is what the last green deploy ran (read from its log on
+# 2026-09-25), so pinning it changes nothing that deploys. Dependabot does not
+# move this; changing it is a deliberate edit, read against a deploy log after.
+env:
+  WRANGLER_VERSION: "4.139.0"
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -72,6 +81,7 @@ jobs:
         with:
           apiToken: ${{ env.CF_TOKEN }}
           accountId: ${{ env.CF_ACCOUNT }}
+          wranglerVersion: ${{ env.WRANGLER_VERSION }}
           command: pages project create noahjefferson --production-branch=main
 
       - name: Deploy to Cloudflare Pages
@@ -80,6 +90,7 @@ jobs:
         with:
           apiToken: ${{ env.CF_TOKEN }}
           accountId: ${{ env.CF_ACCOUNT }}
+          wranglerVersion: ${{ env.WRANGLER_VERSION }}
           command: pages deploy public --project-name=noahjefferson --branch=${{ github.ref_name }} --commit-dirty=true
 
       - name: How to roll this back
