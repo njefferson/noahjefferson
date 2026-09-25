@@ -56,3 +56,30 @@ cadence fires on a trigger**, and the trigger is that new work is beginning.
 output should be. Every reading is real, the instrument is sound, and it is
 pointed inward — so the loop can run indefinitely, producing genuine numbers and
 converging on nothing, and from inside it is indistinguishable from progress.
+
+**Measured again 2026-09-25, same repository, twice, with this lesson and the
+cadence rule both in force.** A light halo beside every building and pylon
+under the Aerochrome look was traced to its cause — the look's hidden sky
+selection fading in over about 200 px beside an edge — and six variants of
+that selection were then built and rendered, one after another, before a
+single search on how established editors keep an adjustment through a soft
+sky mask from haloing at an edge. The same day the look was tuned toward the
+film's numbers by a coordinate search and by hand-set bands, and only
+afterwards did a search find published Aerochrome LUTs, one of them free
+under CC BY-SA, and the practitioners' recipes around them.
+
+**WHY THE TRIGGER DID NOT FIRE, which is the part worth keeping.** The cadence
+says the trigger is new work beginning, and none of it registered as new. Each
+variant was a small change to the one before, so it felt like continuing, not
+starting — and the checklist only fires at a start. The tuning felt like
+finishing a measurement already begun. **So the trigger is wider than a new
+item: it is also the first variant of any fix, and any candidate built to be
+compared against another.** Building a second candidate is the moment to ask
+whether the field already has the answer, because two candidates means the
+answer is not known.
+
+**What stopped it both times was being told to look, not the lesson.** A
+paragraph in a file has now failed four times on this rule in one repository.
+The order that held on 2026-09-25 was structural: research dispatched first,
+written into the repository's research file with sources, and nothing built
+until it was read.
