@@ -455,3 +455,4 @@ and the filename carries it.
 - **§361** — [A comparison shows where the candidates differ, not where they are the same](lessons/361-a-comparison-shows-where-the-candidates-differ.md)
 - **§362** — [A key or a guard built from part of what its consumer reads fails silently in exactly the part it left out](lessons/362-a-key-built-from-part-of-what-its-consumer-reads.md)
 - **§363** — [A YAML list has two spellings, and a gate that reads one passes the other by not looking](lessons/363-a-yaml-list-has-two-spellings.md)
+- **§364** — [A worktree has a `.git` file, not a directory, and every worktree runs one shared hooks directory](lessons/364-a-worktree-has-a-git-file-and-one-shared-hooks-directory.md)

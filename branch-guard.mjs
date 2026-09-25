@@ -65,6 +65,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, chmodSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const args = process.argv.slice(2);
 const repoAt = args.indexOf('--repo');
@@ -265,7 +266,23 @@ const hook = () => {
 
 const want = hook();
 const hookPath = join(repo, '.githooks', 'pre-commit');
-const livePath = join(repo, '.git', 'hooks', 'pre-commit');
+// WHERE GIT ACTUALLY LOOKS FOR HOOKS, asked of git rather than assumed. In a
+// linked worktree `.git` is a FILE naming the real git directory, so
+// `repo/.git/hooks` does not exist and cannot be made: --install died on
+// ENOTDIR in the first worktree it met, on 2026-09-25. Every worktree of a
+// repository runs the ONE hooks directory git names here, so the hook in force
+// is whichever tree installed last; the drift checks below are what catch a
+// tree committing under another tree's rules. The join is the fallback only
+// where git cannot answer.
+const liveDir = (() => {
+  try {
+    const p = execFileSync('git', ['-C', repo, 'rev-parse', '--path-format=absolute', '--git-path', 'hooks'],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    if (p) return p;
+  } catch { /* not a git checkout, or git too old for --path-format: fall back */ }
+  return join(repo, '.git', 'hooks');
+})();
+const livePath = join(liveDir, 'pre-commit');
 const have = existsSync(hookPath) ? readFileSync(hookPath, 'utf8') : null;
 const live = existsSync(livePath) ? readFileSync(livePath, 'utf8') : null;
 
@@ -274,10 +291,10 @@ if (install) {
   writeFileSync(hookPath, want);
   chmodSync(hookPath, 0o755);
   // And into .git/hooks, which no branch owns and no checkout can remove.
-  mkdirSync(join(repo, '.git', 'hooks'), { recursive: true });
+  mkdirSync(liveDir, { recursive: true });
   writeFileSync(livePath, want);
   chmodSync(livePath, 0o755);
-  console.log(`  wrote .githooks/pre-commit (tracked) and .git/hooks/pre-commit (live)`);
+  console.log(`  wrote .githooks/pre-commit (tracked) and ${livePath} (live)`);
   console.log(`  commits allowed on '${decl.work}'${decl.promote ? `, and on '${decl.promote}' with ${decl.escape}=1` : ' and nowhere else'}`);
   console.log(`
   A fresh clone has no .git/hooks and no memory of this, so the install has to
