@@ -453,3 +453,4 @@ and the filename carries it.
 - **§359** — [A decision's pictures travel with the question, every time it is asked](lessons/359-a-decisions-pictures-travel-with-the-question.md)
 - **§360** — [`a && server &` backgrounds the whole list, and `$!` is the subshell, not the server](lessons/360-backgrounding-a-list-hands-you-the-subshell.md)
 - **§361** — [A comparison shows where the candidates differ, not where they are the same](lessons/361-a-comparison-shows-where-the-candidates-differ.md)
+- **§362** — [A key or a guard built from part of what its consumer reads fails silently in exactly the part it left out](lessons/362-a-key-built-from-part-of-what-its-consumer-reads.md)
