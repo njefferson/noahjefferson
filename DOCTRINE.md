@@ -1880,6 +1880,14 @@ for twenty-two releases.
  the reader accepts, they keep a *consistent old app* rather than an
  inconsistent new one — an old app that works is a smaller problem than a mixed
  one that does not.
+ **The one exception is the offline copy catching up to the page itself.** When
+ the waiting worker's BUILD is the one already on screen, its taking over
+ changes nothing the reader sees, and the page may send the message with no
+ press. Identify the build by one id stamped into both the worker and the page,
+ never by a version string: two builds can share a version, and then the
+ exception serves a mixed app. (Added 2026-09-26: a PC ran v2.63.7's page from a
+ v2.55 worker with the 2.63.7 worker waiting behind it, and asking the reader
+ to accept the version they were already using was noise.)
 2. **The app SAYS a new version is ready**, in a standing indicator with its own
  two ways out (§3) — never a modal, never a timed toast, and never over
  something the reader is using. Say what happens to their work; "your drawing

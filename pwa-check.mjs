@@ -113,7 +113,7 @@ if (!/skipWaiting/.test(sw)) {
     + 'The reader\'s decision is what releases the update (§7h.1).',
   );
 } else {
-  passed.push('the reader\'s decision is what releases the waiting worker');
+  passed.push('only a message from the page releases the waiting worker (the reader\'s press, or the page confirming the waiting build is its own, §7h.1)');
 }
 
 // ---- 2. the app must NOTICE ------------------------------------------------
