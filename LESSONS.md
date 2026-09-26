@@ -458,3 +458,4 @@ and the filename carries it.
 - **§364** — [A worktree has a `.git` file, not a directory, and every worktree runs one shared hooks directory](lessons/364-a-worktree-has-a-git-file-and-one-shared-hooks-directory.md)
 - **§365** — [A recommendation made from a picture too small to show the difference is a guess, and the next picture reverses it](lessons/365-a-recommendation-from-a-picture-too-small-to-show-the-difference.md)
 - **§366** — [A whole-frame read of a full-size export is a thumbnail, because the image reader fits everything to 2000 pixels](lessons/366-a-whole-frame-read-of-a-full-size-export-is-a-thumbnail.md)
+- **§367** — [A change judged only at the defects already on the list fixes those and breaks the rest, unseen — whole frames beside what ships come first](lessons/367-judged-at-the-defects-already-known.md)
