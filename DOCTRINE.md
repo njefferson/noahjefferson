@@ -1858,7 +1858,7 @@ need one" was being treated as that app's idiosyncrasy rather than as the method
 
 ## 7h. An app that caches itself CANNOT NOTICE it has gone stale
 
-**So it must be told, and then it must tell the reader.**ery app here is offline-first, so every
+**So it must be told, and then it must tell the reader.** Every app here is offline-first, so every
 app here has this defect until it is fixed deliberately.
 
 **The failure is invisible by construction.** Caching is precisely the business
