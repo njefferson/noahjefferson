@@ -99,15 +99,27 @@ export function lastOwnerMessage(entries) {
  * @returns {string} the concatenated tool-result text; a value found in it
  *   was seen, not invented (the same rule as `ident-guard.mjs`).
  */
-export function seenInResults(entries) {
+export function seenInResults(entries, tools) {
+  // A gate's REFUSAL is not something the session read: it quotes the refused
+  // value back, so counting it let the identical retry through (a Drive file
+  // id, an invented plan name). Failed results and refusals are skipped, and a
+  // caller may count only results of the tools it names.
+  const names = new Map();
+  if (tools) for (const e of entries) {
+    const c = e?.message?.content;
+    if (e?.type === 'assistant' && Array.isArray(c)) for (const b of c) if (b?.type === 'tool_use') names.set(b.id, b.name ?? '');
+  }
   const parts = [];
   for (const e of entries) {
     const c = e?.message?.content;
-    if (e?.type !== 'user' || !Array.isArray(c)) continue;
+    if (e?.type !== 'user' || !Array.isArray(c) || e.toolDenialKind) continue;
     for (const b of c) {
-      if (b?.type !== 'tool_result') continue;
-      if (typeof b.content === 'string') parts.push(b.content);
-      else if (Array.isArray(b.content)) for (const x of b.content) if (x?.type === 'text') parts.push(x.text ?? '');
+      if (b?.type !== 'tool_result' || b.is_error) continue;
+      if (tools && !tools.test(names.get(b.tool_use_id) ?? '')) continue;
+      const text = typeof b.content === 'string' ? b.content
+        : Array.isArray(b.content) ? b.content.filter((x) => x?.type === 'text').map((x) => x.text ?? '').join('\n') : '';
+      if (/^PreToolUse:\S+ hook error/.test(text)) continue;
+      parts.push(text);
     }
   }
   return parts.join('\n');
