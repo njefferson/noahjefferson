@@ -29,7 +29,7 @@
  * a broken edit in the working copy cannot refuse its own fix.
  */
 import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, createReadStream } from 'node:fs';
-import { join, dirname, resolve, sep, basename } from 'node:path';
+import { join, dirname, resolve, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -47,7 +47,10 @@ const SHARED_SHIMS = new Set(['plan-guard.sh', 'stop-guard.sh']);
 // version matched a file of that name in any directory, so a session could
 // write its own and run anything past every guard.
 const REPORT = new RegExp('^\\s*node\\s+"?' + join(HUB, 'report.mjs').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  + '"?\\s+(["\'])[^"\'`$\\\\]*\\1\\s*$');
+  + '"?\\s+(?:"[^"`$\\\\]*"|\'[^\']*\')\\s*$');
+// Either quoting is literal to the shell: double quotes with no " ` $ or \
+// inside, or single quotes with no ' inside. The first version refused a
+// status holding an apostrophe, by the very gate the status was meant to clear.
 
 /**
  * Write the user-level wiring.
@@ -82,12 +85,17 @@ export function install() {
  */
 export function reposUnder(root) {
   const out = [];
-  let names = [];
-  try { names = readdirSync(root); } catch { /* unreadable */ }
-  for (const d of [root, ...names.map((n) => join(root, n))]) {
+  const scan = (dir) => { try { return readdirSync(dir).map((n) => join(dir, n)); } catch { return []; } };
+  const at = resolve(root);
+  // Launched INSIDE a repo, its siblings are session repos too: the first
+  // version looked only below the launch directory, so a session started in
+  // the hub never ran JPS's hooks on a write into JPS.
+  const cands = [at, ...scan(at)];
+  if (existsSync(join(at, '.git'))) cands.push(...scan(dirname(at)));
+  for (const d of new Set(cands.map((x) => resolve(x)))) {
     if (!existsSync(join(d, '.git'))) continue;
-    if (d === root && existsSync(join(d, '.claude', 'settings.json'))) continue;
-    out.push(resolve(d));
+    if (d === at && existsSync(join(d, '.claude', 'settings.json'))) continue;
+    out.push(d);
   }
   return out;
 }
@@ -97,19 +105,14 @@ export function reposUnder(root) {
  * @param {string} event  the hook event.
  * @param {object} p      the payload.
  * @param {string[]} all  from `reposUnder`.
- * @returns {string[]} the repos whose hooks run; every repo when the call
- *   names none, so an unplaced call is checked by everything, never nothing.
+ * @returns {string[]} every repo, for every event: what a session launched in
+ *   each repo would have run. The first version narrowed PreToolUse to the
+ *   repos a call NAMED, and a call naming one repo while writing another (a
+ *   redirect, a cwd, a `cd`) skipped the written repo's own guards entirely.
+ *   Callers rely on this never being empty while a repo exists.
  */
 export function touched(event, p, all) {
-  if (event !== 'PreToolUse') return all;          // PostToolUse: every repo's ledger records every result
-  const ti = p.tool_input ?? {};
-  const paths = [ti.file_path, ti.path, ti.notebook_path].filter((x) => typeof x === 'string' && x);
-  if (p.tool_name === 'Bash') {
-    if (p.cwd) paths.push(p.cwd);
-    for (const m of String(ti.command ?? '').matchAll(/(?:^|[\s'"=(])(\/[^\s'";|&)]+)/g)) paths.push(m[1]);
-  }
-  const hit = all.filter((r) => paths.some((x) => { const a = resolve(x); return a === r || a.startsWith(r + sep); }));
-  return hit.length ? hit : all;
+  return all;
 }
 
 /**
@@ -190,7 +193,12 @@ async function main(event, raw, p) {
 
   // ---- family guards ----
   if (event === 'PreToolUse') {
-    if (p.tool_name === 'Bash' && REPORT.test(String(p.tool_input?.command ?? ''))) return 0;
+    if (p.tool_name === 'Bash' && REPORT.test(String(p.tool_input?.command ?? ''))) {
+      // A subagent cannot tell the owner anything, so its stamp would unlock
+      // the main thread with no status given.
+      if (p.agent_id) { process.stderr.write('a subagent cannot give the owner a status; the main thread stamps the report clock.\n'); return 2; }
+      return 0;
+    }
     for (const g of [`node "${join(HUB, 'report.mjs')}" --gate`, `node "${join(HUB, 'drive-guard.mjs')}" "${root}"`,
       `node "${join(HUB, 'approved-plan-guard.mjs')}"`]) {
       const o = run(g, raw, root);
@@ -220,7 +228,12 @@ async function main(event, raw, p) {
 
   // ---- each touched repo's own hooks ----
   const ran = new Set();
-  for (const repo of touched(event, p, reposUnder(root))) {
+  const repos = touched(event, p, reposUnder(root));
+  // The owner's PLAN-LOCK in ANY session repo holds plan mode: plan-guard reads
+  // it from the payload's cwd, which under a parent launch is the parent, so a
+  // lock inside a repo was never seen. The one shared plan-guard run is told.
+  const locked = event === 'PreToolUse' && repos.some((r) => existsSync(join(r, '.claude', 'PLAN-LOCK')));
+  for (const repo of repos) {
     let s = {};
     try { s = JSON.parse(readFileSync(join(repo, '.claude', 'settings.json'), 'utf8')); } catch { continue; }
     for (const g of s.hooks?.[event] ?? []) {
@@ -237,7 +250,8 @@ async function main(event, raw, p) {
           ran.add(shim);
           command = `node "${join(HUB, shim.replace(/\.sh$/, '.mjs'))}"`;
         }
-        const o = run(command, raw, repo, h.timeout ?? 60);
+        const input = locked && shim === 'plan-guard.sh' ? JSON.stringify({ ...p, permission_mode: 'plan' }) : raw;
+        const o = run(command, input, repo, h.timeout ?? 60);
         if (o.deny) { process.stderr.write(o.reason + '\n'); return 2; }
         if (o.out.trim() && (event === 'SessionStart' || event === 'UserPromptSubmit')) printed.push(o.out.trim());
       }
