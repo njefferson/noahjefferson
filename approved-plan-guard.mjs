@@ -14,18 +14,23 @@
  *
  *   PreToolUse (default): outside plan mode, anything `plan-guard.mjs` would
  *   call a write is refused unless ~/.claude/APPROVED-PLAN.json exists AND the
- *   hash it records still matches the plan file it names. Reads always pass,
- *   so a plan can be made. The classification of "write" is plan-guard's own,
- *   run as a child with the mode forced to plan: one list, never a fork.
+ *   hash it records still matches the plan file it names, and the session that
+ *   approved it is this one. Reads always pass, so a plan can be made. The
+ *   classification of "write" is plan-guard's own, run as a child with the mode
+ *   forced to plan: one list, never a fork. Only a clean exit 0 from it is a
+ *   read — a crash is a write, and the refusal quotes the reason it gave. A
+ *   file tool is judged by its TARGET: the marker and the approved plan file
+ *   are refused, and content that merely names the marker is not a write to it.
  *
  *   PostToolUse (--mark): on ExitPlanMode approved by the owner, write the
  *   marker with the plan's path and hash. The path is the result OBJECT's
  *   `filePath`: the hook is handed the tool's result, never the sentence the
  *   session is shown, and that sentence is matched only when a result arrives
  *   as text. A subagent's exit and a teammate's request to its lead write
- *   nothing. On EnterPlanMode, remove it. A session cannot write the marker:
- *   any tool input that names it is refused, except `--done`, which only
- *   REMOVES it (always the safe way).
+ *   nothing. A main-session exit that mints nothing says so on stderr and
+ *   exits 2, because a silent miss is how the first version went unnoticed.
+ *   On EnterPlanMode, remove it. A session cannot write the marker: a command
+ *   that names it is refused with no exception, since `--done` never names it.
  *
  *   `node approved-plan-guard.mjs --done` ends the approved work: the last
  *   step of every plan runs it.
@@ -34,7 +39,7 @@
  * is the rule, and the refusal prints it.
  */
 import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync, lstatSync } from 'node:fs';
-import { join, dirname, isAbsolute } from 'node:path';
+import { join, dirname, isAbsolute, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -107,8 +112,18 @@ if (process.argv.includes('--mark')) {
   if (tool === 'EnterPlanMode') { rmSync(MARKER, { force: true }); process.exit(0); }
   if (tool !== 'ExitPlanMode') process.exit(0);
   const plan = approvedPlanPath(p);
-  if (!plan) process.exit(0);                                 // not this session's plan approved: no marker
   const r = p.tool_response;
+  if (!plan) {
+    // Not this session's plan approved: no marker. A subagent's exit is meant
+    // to mint nothing; anything else is said out loud, on the one channel a
+    // PostToolUse hook has to the session.
+    if (p.agent_id) process.exit(0);
+    const shape = r && typeof r === 'object' && !Array.isArray(r)
+      ? `an object with ${Object.keys(r).join(', ') || 'no fields'}` : typeof r;
+    process.stderr.write(`approved-plan-guard --mark: ExitPlanMode returned and no approval marker was written; the result was ${shape}. `
+      + 'Every write stays refused until a plan is approved in a shape this guard recognises.\n');
+    process.exit(2);
+  }
   const fromObject = r !== null && typeof r === 'object' && !Array.isArray(r);
   // Whether the approved text is the file that gets hashed. Recorded, never
   // refused on: an edit made in the approval dialog should reach the file
@@ -120,7 +135,7 @@ if (process.argv.includes('--mark')) {
   } catch { process.exit(0); }                                // the file went between the check and the read: no marker
   mkdirSync(dirname(MARKER), { recursive: true });
   writeFileSync(MARKER, JSON.stringify({
-    plan, hash, at: new Date().toISOString(),
+    plan, hash, at: new Date().toISOString(), session: p.session_id ?? null,
     via: `ExitPlanMode approval: result ${fromObject ? 'filePath' : 'text'}`, planMatchesFile,
   }, null, 1));
   process.exit(0);
@@ -135,30 +150,54 @@ const deny = (why) => {
 if (p.permission_mode === 'plan') process.exit(0);           // plan-guard.mjs owns plan mode
 if (tool === 'EnterPlanMode' || tool === 'ExitPlanMode') process.exit(0);
 
-// THE MARKER IS THE OWNER'S. Naming it anywhere in a tool's input is refused,
-// except the command that removes it.
-const input = JSON.stringify(p.tool_input ?? {});
-if (input.includes('APPROVED-PLAN')) {
-  const cmd = String(p.tool_input?.command ?? '');
-  if (!(tool === 'Bash' && /approved-plan-guard\.mjs\s+--done\b/.test(cmd) && !/[;&|`$]/.test(cmd.replace(/approved-plan-guard\.mjs\s+--done/, '')))) {
-    deny('The approval marker is written only by the owner\'s approval of a plan.');
+// A FILE TOOL IS JUDGED BY ITS TARGET. Aimed at the marker, refused. Aimed at
+// the approved plan, refused: an edit there voids the approval, and every write
+// after it would be refused with nobody told why. A file whose content merely
+// NAMES the marker is not a write to it, so file tools skip the name check.
+const FILE_TOOLS = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit'];
+if (FILE_TOOLS.includes(tool)) {
+  const target = resolve(String(p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? ''));
+  if (target === resolve(MARKER)) deny('The approval marker is written only by the owner\'s approval of a plan.');
+  let current = {};
+  try { current = JSON.parse(readFileSync(MARKER, 'utf8')); } catch { /* no marker: judged below */ }
+  if (current.plan && target === resolve(current.plan)) {
+    deny(`Editing ${current.plan} voids its approval, and every write after it would be refused. A changed plan goes back through plan mode.`);
   }
-  process.exit(0);
+}
+
+// THE MARKER IS THE OWNER'S. A command that names it is refused, with no
+// exception: the real `--done` never names it.
+const input = FILE_TOOLS.includes(tool) ? '' : JSON.stringify(p.tool_input ?? {});
+if (input.includes('APPROVED-PLAN')) {
+  // The old exception here passed any command carrying both strings, and a
+  // redirect into the marker carries both. Measured 2026-09-28: it wrote one.
+  deny('The approval marker is written only by the owner\'s approval of a plan.');
 }
 
 // Is it a write? Ask plan-guard.mjs, with the mode forced to plan. A Workflow
 // launches writing agents and plan-guard does not name it, so it is a write.
 let write = tool === 'Workflow';
+let why = write ? 'a Workflow launches agents that can write.' : '';
 if (!write) {
   const pg = join(HERE, 'plan-guard.mjs');
   const r = spawnSync('node', [pg], { input: JSON.stringify({ ...p, permission_mode: 'plan' }), encoding: 'utf8', cwd: p.cwd || process.cwd() });
-  write = r.status === 2 || r.error !== undefined;
+  // Only a clean 0 is a read. A crash, a signal or a spawn failure is a write:
+  // the first version passed a classifier that exited 1 as a read.
+  write = r.status !== 0;
+  if (write) {
+    try { why = JSON.parse(r.stdout).hookSpecificOutput.permissionDecisionReason; } catch { why = `the classifier exited ${r.status ?? r.signal ?? r.error?.code}.`; }
+    why = String(why).replace(/^PLAN MODE\.\s*/, '').replace(/\s*Say so in plain text and stop[\s\S]*$/, '');
+  }
 }
 if (!write) process.exit(0);
 
-if (!existsSync(MARKER)) deny('No approved plan is in force, and this action changes something.');
+if (!existsSync(MARKER)) deny(`No approved plan is in force, and this is not a recognised read: ${why}`);
 let mk = {};
 try { mk = JSON.parse(readFileSync(MARKER, 'utf8')); } catch { deny('The approval marker is unreadable.'); }
 if (!mk.plan || !existsSync(mk.plan)) deny('The approved plan file is gone.');
-if (hashOf(mk.plan) !== mk.hash) deny(`The plan file ${mk.plan} has changed since it was approved; a changed plan needs approving again.`);
+// A marker from before sessions were recorded carries none, and is honoured.
+if (mk.session && p.session_id && mk.session !== p.session_id) deny('The plan in force was approved in another session.');
+let now = '';
+try { now = hashOf(mk.plan); } catch (e) { deny(`The approved plan file ${mk.plan} cannot be read (${e.code ?? e.message}).`); }
+if (now !== mk.hash) deny(`The plan file ${mk.plan} has changed since it was approved; a changed plan needs approving again.`);
 process.exit(0);
