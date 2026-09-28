@@ -49,7 +49,9 @@
  * releases and could not fail.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { tailEntries, isOwnerMessage, seenInResults } from './transcript-tail.mjs';
 import { homedir } from 'node:os';
 
 // ONCE. See the header — two reads is how this gate would silently never fire.
@@ -217,6 +219,85 @@ if (tool === 'Bash') {
  * it. The TOP block only — plan files accumulate superseded plans under
  * horizontal rules, and those were checked when they were current.
  */
+/**
+ * TALK THE PLAN THROUGH BEFORE PROPOSING IT (LESSONS §370).
+ * A plan proposed with no discussion is not approved, and a session kept
+ * re-proposing after each rejection instead of answering. So since the last
+ * plan-mode call (EnterPlanMode, or any ExitPlanMode that was answered), there
+ * must be a turn of the session's in plain text AND a message from the owner
+ * after it. Measured shapes: a rejection is an ExitPlanMode tool_result with
+ * is_error; "not in plan mode" errors and cancelled approvals are not answers.
+ * @param {string|undefined} path  the transcript.
+ * @returns {string|null} the refusal reason, or null to allow; null when the
+ *   tail holds no plan-mode call at all, since nothing then says what to count from.
+ */
+function talkedThrough(path) {
+  const entries = tailEntries(path ?? '', 16 * 1024 * 1024);
+  const planIds = new Map();
+  for (const e of entries) {
+    const c = e?.message?.content;
+    if (e?.type === 'assistant' && Array.isArray(c)) for (const b of c) {
+      if (b?.type === 'tool_use' && /^(Enter|Exit)PlanMode$/.test(b.name ?? '')) planIds.set(b.id, b.name);
+    }
+  }
+  let anchor = -1;
+  entries.forEach((e, i) => {
+    const c = e?.message?.content;
+    if (e?.type === 'assistant' && Array.isArray(c) && c.some((b) => b?.type === 'tool_use' && b.name === 'EnterPlanMode')) anchor = i;
+    if (e?.type === 'user' && Array.isArray(c)) for (const b of c) {
+      if (b?.type !== 'tool_result' || planIds.get(b.tool_use_id) !== 'ExitPlanMode') continue;
+      const text = typeof b.content === 'string' ? b.content : JSON.stringify(b.content ?? '');
+      if (/not in plan mode/i.test(text) || e.toolDenialKind === 'cancelled' || /Tool call not completed/.test(text)) continue;
+      anchor = i;
+    }
+  });
+  if (anchor < 0) return null;
+  let spoke = false;
+  for (let i = anchor + 1; i < entries.length; i++) {
+    const e = entries[i];
+    const c = e?.message?.content;
+    if (e?.type === 'assistant' && Array.isArray(c) && c.some((b) => b?.type === 'text' && (b.text ?? '').trim().length > 40)) spoke = true;
+    if (spoke && isOwnerMessage(e)) return null;
+  }
+  return 'this plan has not been talked through. Since the last plan-mode call, write the plan out in chat as a turn of its own, '
+    + 'let the owner answer it, and only then propose it (LESSONS §370). Re-proposing after a rejection without answering it is the failure this refuses.';
+}
+
+/**
+ * A PLAN NAMES ONLY THINGS THAT EXIST (LESSONS §370).
+ * A function that exists nowhere in the code reached a plan after a context
+ * compaction. Every code-formatted name in the plan must be found in a repo
+ * beside this session, or in a tool RESULT this session read, or be marked
+ * "(new)" on its line. Paths outside the repos, and spans with spaces, are
+ * skipped: they are commands and environment, not names.
+ * @param {string} plan  the whole plan file.
+ * @param {string} top   its top block (unused; the whole plan is checked).
+ * @returns {string|null} the refusal naming each missing name, or null.
+ */
+function inventedNames(plan, top) {
+  const dir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  let repos = [dir];
+  try { repos = [dir, ...readdirSync(dirname(dir)).map((d) => join(dirname(dir), d))].filter((d) => existsSync(join(d, '.git'))); } catch { /* one repo */ }
+  const seen = seenInResults(tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024));
+  const missing = new Set();
+  for (const line of plan.split('\n')) {
+    for (const m of line.matchAll(/`([^`\n]+)`/g)) {
+      const t = m[1].trim();
+      if (t.length < 3 || /\s|^[\/~$<"]|^[\d.,:%x-]+$/.test(t)) continue;
+      if (new RegExp(`\`${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\`[^\`]*\\(new\\)`).test(line)) continue;
+      if (seen.includes(t)) continue;
+      // Code only: a name the docs merely MENTION is not a name that exists —
+      // a first version passed a name only because a lesson quoted it.
+      const found = repos.some((r) => spawnSync('git', ['-C', r, 'grep', '-qF', '--', t, '--', ':!*.md'], { encoding: 'utf8' }).status === 0
+        || (spawnSync('git', ['-C', r, 'ls-files'], { encoding: 'utf8' }).stdout ?? '').split('\n').some((f) => f === t || f.endsWith('/' + t)));
+      if (!found) missing.add(t);
+    }
+  }
+  if (!missing.size) return null;
+  return `the plan names ${[...missing].map((x) => `\`${x}\``).join(', ')}, which exist in no repo and in no tool result this session read. `
+    + 'Correct the name, or mark it "(new)" on its line if the plan creates it (LESSONS §370).';
+}
+
 if (tool === 'ExitPlanMode') {
   const dir = join(homedir(), '.claude', 'plans');
   let plan = '';
@@ -231,7 +312,13 @@ if (tool === 'ExitPlanMode') {
     const m = top.match(new RegExp(`^## ${h}\\b[^\\n]*\\n([\\s\\S]*?)(?=^## |^# |$(?![\\s\\S]))`, 'mi'));
     return !m || !m[1].split('\n').some((l) => l.trim().length > 20);
   });
-  if (missing.length === 0) process.exit(0);
+  if (missing.length === 0) {
+    const talk = talkedThrough(p.transcript_path);
+    if (talk) deny(talk);
+    const names = inventedNames(plan, top);
+    if (names) deny(names);
+    process.exit(0);
+  }
   deny(`the plan is missing ${missing.map((m) => `"## ${m}"`).join(', ')} with a real body under each. `
     + 'Looked up: what was researched and what it said, or why nothing outside this repo bears on it. '
     + 'Branches: the ways this could go and why this one. '

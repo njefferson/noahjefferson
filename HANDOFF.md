@@ -58,8 +58,10 @@ session rooted in a PARENT directory never fires"). It was true of every hook.
     the lens profile's colour, gray-world's THREE gains, the look's 3x3 mixer
     (the swap and the infrared subtraction), its tint, its per-channel curves
     and its grade wheels — see IR-SCIENCE.md sections 3, 4c and 6.
-13. **Never invent a name.** A function name that exists nowhere in the code
-    (`wbBias`) reached a plan after a context compaction.
+13. **Search the whole codebase before saying a name is real or invented.**
+    The session told the owner a look field (`wbBias`, `src/main.ts`) did not
+    exist, from a search that covered five files and left `main.ts` out. A
+    partial search reported as a fact is the defect, in either direction.
 
 ## The gates — the approved plan, with build status
 
