@@ -184,9 +184,54 @@ Each gate is made to fail once on a planted payload before it is trusted.
   BUILT on JPS branch `claude/relaxed-bardeen-vlwm3g` (d120f4d). The direct link works only for link-shared folders; otherwise the
   connector's `download_file_content`, whose oversized result the harness
   saves to a file: `jq -r .content FILE | base64 -d > OUT`.
-- **10. Adversarial review workflow** — NOT RUN. The research workflow's two
-  critics stalled and were lost when the session moved container. Run it
-  before, or immediately after, the owner's setup step.
+- **10. Adversarial review** — RUN 2026-09-28, second session.
+  - **Shape:** one reviewer per gate file, ten files across both repos. Then one
+    skeptic per finding, told to refute it by running it. That is the owner's
+    original shape; three skeptics each would have taken hours at this
+    container's limit of two workflow agents at a time.
+  - **Result:** 24 findings. 20 confirmed and fixed in one round, each planted
+    against old and new code (hub 4798cc9, b24149e, 4859df0, eae5380, a062c3d,
+    90089df, 9eae69d; JPS f5f0e29, 74497ca).
+  - **4 refuted:**
+    - an install over an unparsable settings file: the route never arises;
+    - the report clock's 4 MB tail: unreachable once any status exists;
+    - plans-directory writes: by design;
+    - a mid-turn owner message in an attachment shape that never occurs.
+  - **Found and NOT fixed** (reviewed, no skeptic yet, or larger than one
+    round):
+    - **harness-guard:**
+      - a scratch script run after a `cd` in an earlier call, through a
+        shell variable, with a flag value, or inside `bash -c` is never
+        checked;
+      - a harness printing its control through a call with parentheses, a
+        constant, stderr or `process.stdout.write` is refused, while a
+        commented-out one passes;
+      - any node script under the scratchpad counts as a measurement, and so
+        does a node command merely quoted in text.
+    - **plan-guard, only its false-refusal half.** The write-bypass half was
+      NOT reviewed: its reviewer was stopped by a safety classifier twice.
+      Four false refusals:
+      - the name check finds no repos when the project directory sits above
+        them;
+      - a `#` comment inside a code fence, or a `---` inside a plan, cuts off
+        the checked block;
+      - `path:line` spans and names in superseded plans are refused;
+      - common reads are refused (`sed -nE`, `git branch --show-current`,
+        `git tag -l` with a pattern, `git remote get-url`, and others).
+    - **ledger:**
+      - output of a command that failed is never recorded, since PostToolUse
+        does not fire on failure, so a SHA read that way is refused and
+        re-reading loops;
+      - trimming races with concurrent appends and drops entries.
+    - **drive-guard:** the 8 MB transcript tail forgets a listing. The fix is
+      a per-session record, which is larger than one round.
+    - **approved-plan-guard:** a marker name assembled from pieces inside the
+      shell rewrote the marker under an approved plan. No string check can
+      see that; it rests on Doctrine §0e.
+    - **transcript-tail:** an owner message typed mid-turn is recorded only as
+      a queue-operation entry, which the owner-message reader does not see.
+      A skeptic found this while refuting another finding; it is not yet
+      reviewed.
 
 ## Found while building, and fixed or recorded
 
@@ -217,7 +262,10 @@ Each gate is made to fail once on a planted payload before it is trusted.
   - It pasted a whole plan into chat instead of saying what it was doing
     (rule 4).
   - Five statuses in a row carried estimated times, forty minutes off the
-    clock (rule 2).
+    clock (rule 2). It happened again an hour later in the same session, up
+    to ten minutes ahead, and was caught only because a plant printed the
+    clock. `report.mjs` now writes the clock's time into every status
+    (b24149e).
 - **Found and NOT fixed:** LESSONS §369 cites JPS `tools/owner-images.mjs`,
   which exists only on the unmerged JPS branch `claude/relaxed-bardeen-vlwm3g`.
   So `lessons-check.mjs` fails wherever JPS is checked out beside the hub. CI

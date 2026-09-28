@@ -147,7 +147,7 @@ every rule below while none of the hooks that enforce them was running
    statuses in a row carried times forty minutes off. No app notifications,
    ever: statuses go in chat and on the status page.
    *Enforced by:* `report.mjs`, which refuses every call five minutes after the
-   last stamp.
+   last stamp and writes the clock's time into every status it stamps.
 3. **Reply to every point in a message from the owner.** A message saying
    something was done wrong is a full stop: answer it, and run nothing else in
    that turn.
