@@ -67,7 +67,7 @@ session rooted in a PARENT directory never fires"). It was true of every hook.
 
 Each gate is made to fail once on a planted payload before it is trusted.
 
-- **1. `hook-dispatch.mjs`** (hub, new) — NOT BUILT. Wired once at user level
+- **1. `hook-dispatch.mjs`** — BUILT (d578392), planted: install, write refusal outside a plan, reads pass, Stop runs once, the post-compaction tool list prints. Wired once at user level
   by the environment's setup script, so it fires however a session is rooted.
   Per event it runs the hub's family guards, then each touched repo's own
   `.claude/settings.json` hooks with `CLAUDE_PROJECT_DIR` set to that repo.
@@ -76,43 +76,59 @@ Each gate is made to fail once on a planted payload before it is trusted.
   First deny wins. A crash in PreToolUse refuses everything but reads. Runs
   from a stable clone at `/root/.claude/hub`, never the working copy.
   `--install` writes `~/.claude/settings.json`.
-- **1a. report-clock** — NOT BUILT. `report.mjs "<status>"` stamps the time.
+- **1a. report-clock** — BUILT (`report.mjs`, d578392), planted 4 of 4. `report.mjs "<status>"` stamps the time.
   PreToolUse refuses every call (reads too) once five minutes pass since the
   last stamp, measured from the owner's last message; `report.mjs` itself is
   exempt, and so are subagent calls (payload `agent_id`).
-- **2. approved-plan-guard** (exists in the hub) — run by the dispatcher on
-  PreToolUse and on PostToolUse `--mark`. The staged, unwired JPS shim
-  `.claude/hooks/approved-plan-guard.sh` is to be deleted.
-- **3. plan-guard, talk-first** — NOT BUILT. ExitPlanMode refused unless, since
+- **2. approved-plan-guard** — BUILT: run by the dispatcher on PreToolUse and
+  PostToolUse `--mark`; planted (a write with no approved plan is refused). The
+  unwired JPS shim was deleted before it was ever committed.
+- **3. plan-guard, talk-first** — BUILT (efb9a93), planted both ways. ExitPlanMode refused unless, since
   the last rejected ExitPlanMode or the last EnterPlanMode, a turn ended in
   assistant text and a genuine owner message followed it.
-- **4. plan-guard, plan-names** — NOT BUILT. Every code-formatted name in a
+- **4. plan-guard, plan-names** — BUILT (efb9a93), planted: an invented name is refused, a real one and a "(new)" one pass. It searches code only, since a name the docs merely mention is not one that exists. Every code-formatted name in a
   plan must exist in a session repo, or in a tool RESULT this session read, or
   be marked "(new)". Absolute paths and tokens with spaces are skipped.
-- **5. drive-guard** — NOT BUILT. Refuses `list_recent_files`, any `fullText`
+- **5. drive-guard** — BUILT (d578392), planted 9 of 9, including the owner's own title search passing. Refuses `list_recent_files`, any `fullText`
   search, and any search not scoped by a `parentId` that is in
   `tools/owner-images.json` or appeared in an earlier tool result, or by an
   exact `title =` found in the owner's latest message. Refuses Drive writes
   (create, update, share, trash, copy). Downloads pass only for ids in the
   index or seen in an earlier tool result.
-- **6. stop-guard** — NOT BUILT. Adds a third shape: refuses "waiting on you",
+- **6. stop-guard** — BUILT (d578392, wording ac7c0e2), planted 4 of 4. Adds a third shape: refuses "waiting on you",
   "waiting for you" and "you owe", declaration or not. Its instructed escape
   wording changes from "Stopping here, waiting on you for X" to "Stopping here:
   open for you is X".
-- **7. compact-brief** — NOT BUILT. SessionStart with `source: compact` prints
+- **7. compact-brief** — BUILT inside `hook-dispatch.mjs`, planted on this session's transcript. SessionStart with `source: compact` prints
   every tool name used earlier in the session, with counts, so a capability
   cannot drop out of the compaction summary (the Drive connector's download
   did).
-- **8. UserPromptSubmit reminder** — NOT BUILT. Injects rules 1, 2 and 4 on each
+- **8. UserPromptSubmit reminder** — BUILT inside `hook-dispatch.mjs`. Injects rules 1, 2 and 4 on each
   owner message.
-- **9. Drive fetch methods in `tools/owner-images.mjs`'s header** (JPS) — NOT
-  BUILT. The direct link works only for link-shared folders; otherwise the
+- **9. Drive fetch methods in `tools/owner-images.mjs`'s header** (JPS) —
+  BUILT on JPS branch `claude/relaxed-bardeen-vlwm3g` (d120f4d). The direct link works only for link-shared folders; otherwise the
   connector's `download_file_content`, whose oversized result the harness
   saves to a file: `jq -r .content FILE | base64 -d > OUT`.
-- **10. Adversarial review workflow** over the dispatcher and gates before the
-  commit that switches them on.
+- **10. Adversarial review workflow** — NOT RUN. The research workflow's two
+  critics stalled and were lost when the session moved container. Run it
+  before, or immediately after, the owner's setup step.
 
-## The owner's one manual step — setup script (after gate 1 is BUILT)
+## Found while building, and fixed or recorded
+
+- **Both repos' `plan-guard.sh` shims refused every plan-mode call, reads
+  included** — `printf … | exec node` replaces only a pipe's subshell, so the
+  script ran on into its no-gate branch. Invisible while no hook ran. Fixed in
+  the hub (efb9a93) and on the JPS work branch (d120f4d); JPS `main` still has
+  the old shim until that branch merges.
+- **`wbBias` is real** (`src/main.ts`, a look's white-point gain). The session
+  told the owner it was invented, from a search of five files; rule 13 above.
+- **Two lines of attribution were pushed** before the privacy
+  gate caught them — `HANDOFF.md` at 6fbf41c and `stop-guard.mjs` at d578392.
+  The tree was fixed in ac7c0e2; those two commits still carry the lines in
+  history. The hub's own commit hook does not run `privacy-check.mjs`, which
+  is how they got through: it should be added to `.branch-guard`'s `also=`.
+
+## The owner's one manual step — setup script (all gates above are BUILT)
 
 Cloud environment menu in the session title bar, then Edit, then Setup script.
 Add these lines. The first new session proves it: its Stop records list more
