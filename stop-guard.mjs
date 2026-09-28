@@ -33,8 +33,8 @@
 //   1. WAIT AND CONTINUE. The thing being waited on is a background task or a
 //      CI run — poll it, read it, act on the result, and keep going. This is
 //      what an approved plan means (§11c) and it is the expected route.
-//   2. DECLARE THE STOP. Open the reply with "Stopping here, waiting on you for
-//      X". §11c requires the FIRST line, because "I'll hold" at the end of a
+//   2. DECLARE THE STOP. Open the reply with "Stopping here: open for you is
+//      X" (the owner ruled out "waiting on you", LESSONS §370). §11c requires the FIRST line, because "I'll hold" at the end of a
 //      long report reads as "I am continuing" — which is exactly how the
 //      silences got discovered, by being asked what happened.
 //
@@ -87,7 +87,17 @@ const PARKING = [
 ];
 
 /** The declaration §11c requires, and it has to be the FIRST line. */
-const DECLARED = /^\s*(?:[#*_>\s-]*)stopping here[,:]?\s*waiting on you\b/i;
+const DECLARED = /^\s*(?:[#*_>\s-]*)stopping here[,:]?\s*open for you\b/i;
+
+/** 4. OWING. The owner ruled out telling them they are waited on or owe
+ *  anything (2026-09-28, LESSONS §370): say what is open for them instead. This
+ *  is refused even under a declared stop, because the declaration used to BE
+ *  "waiting on you" and the rule changed under it. */
+const OWING = [
+  /\bwaiting (?:on|for) you\b/i,
+  /\byou owe\b/i,
+  /\b(?:I'?m|I am|we'?re) waiting\b/i,
+];
 
 let payload = '';
 try { payload = readFileSync(0, 'utf8'); } catch { /* no stdin */ }
@@ -104,6 +114,18 @@ if (!path) process.exit(0);
 let reply = '';
 try { reply = lastAssistantText(path); } catch { process.exit(0); }
 if (!reply) process.exit(0);
+
+const owed = OWING.find((re) => re.test(reply));
+if (owed) {
+  process.stderr.write(`STOP REFUSED — this reply tells the owner they are waited on or owe something ("${(reply.match(owed) ?? [''])[0]}").
+
+LESSONS §370. Never "waiting on you", never "you owe". Name what is open for
+the owner instead: "Open for you: <the specific decision>". If the work is
+unfinished, carry on with it; if it genuinely stops, the first line is
+"Stopping here: open for you is <the specific thing>".
+`);
+  process.exit(2);
+}
 
 // A declared stop is allowed, and is the whole point of having a way through.
 if (DECLARED.test(reply)) process.exit(0);
@@ -191,7 +213,7 @@ Two ways forward, and only these two:
      was wanted in the first place.
 
   2. DECLARE IT — make the FIRST line of your reply, verbatim:
-       Stopping here, waiting on you for <the specific thing>
+       Stopping here: open for you is <the specific thing>
      Not at the end. Not "I'll hold". The first line, or it reads as
      "I am continuing" and the silence gets discovered by being asked.
 
