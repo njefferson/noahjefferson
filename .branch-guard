@@ -1,3 +1,4 @@
 # The hub has one branch. Push to main redeploys the site.
 work=main
 also=example-check.mjs
+also=privacy-check.mjs

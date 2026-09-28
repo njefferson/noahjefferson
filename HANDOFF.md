@@ -125,8 +125,9 @@ Each gate is made to fail once on a planted payload before it is trusted.
 - **Two lines of attribution were pushed** before the privacy
   gate caught them — `HANDOFF.md` at 6fbf41c and `stop-guard.mjs` at d578392.
   The tree was fixed in ac7c0e2; those two commits still carry the lines in
-  history. The hub's own commit hook does not run `privacy-check.mjs`, which
-  is how they got through: it should be added to `.branch-guard`'s `also=`.
+  history. The hub's own commit hook did not run `privacy-check.mjs`, which
+  is how they got through; it does now (`also=privacy-check.mjs`), and a
+  planted attribution was refused at commit.
 
 ## The owner's one manual step — setup script (all gates above are BUILT)
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // privacy-check.mjs — nothing personal about the owner lands in any repo.
 //
 // CANONICAL IN THE HUB. Never fork it.
