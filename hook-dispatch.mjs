@@ -43,8 +43,11 @@ const READS = new Set(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'ToolSea
 const SHARED_SHIMS = new Set(['plan-guard.sh', 'stop-guard.sh']);
 // The status command itself is always allowed, or the report clock could lock
 // a session out of the one thing that unlocks it. A single quoted argument, no
-// shell expansion, nothing chained.
-const REPORT = /^\s*node\s+"?[^\s"]*report\.mjs"?\s+(["'])[^"'`$\\]*\1\s*$/;
+// shell expansion, nothing chained — and THIS hub's report.mjs only: the first
+// version matched a file of that name in any directory, so a session could
+// write its own and run anything past every guard.
+const REPORT = new RegExp('^\\s*node\\s+"?' + join(HUB, 'report.mjs').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  + '"?\\s+(["\'])[^"\'`$\\\\]*\\1\\s*$');
 
 /**
  * Write the user-level wiring.
@@ -62,6 +65,10 @@ export function install() {
     kept.push({ matcher: '', hooks: [{ type: 'command', command: `node "${join(HUB, 'hook-dispatch.mjs')}" ${ev}`, timeout: 120 }] });
     s.hooks[ev] = kept;
   }
+  // An approval taken with "clear context" is a DENY of ExitPlanMode, so no
+  // PostToolUse runs and no marker is written: every write after it would be
+  // refused. It is off by default; this keeps it off.
+  s.showClearContextOnPlanAccept = false;
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, JSON.stringify(s, null, 2) + '\n');
   return file;
@@ -122,8 +129,10 @@ function matches(event, m, p) {
 /**
  * Read one hook run's outcome.
  * @param {object} r  a spawnSync result.
- * @returns {{deny: boolean, reason: string, out: string}} a refusal is exit 2
- *   or a JSON decision of deny/block, the two shapes the family's hooks use.
+ * @returns {{deny: boolean, reason: string, out: string, status: number|null, err: string}}
+ *   a refusal is exit 2 or a JSON decision of deny/block, the two shapes the
+ *   family's hooks use. `status` is the raw exit code, so a caller can tell a
+ *   pass (0) from a crash (anything else that is not a refusal).
  */
 function outcome(r) {
   const out = r.stdout ?? '', err = r.stderr ?? '';
@@ -132,9 +141,9 @@ function outcome(r) {
   const jsonDeny = j?.hookSpecificOutput?.permissionDecision === 'deny' || j?.decision === 'block';
   if (r.status === 2 || jsonDeny) {
     const reason = j?.hookSpecificOutput?.permissionDecisionReason || j?.reason || err.trim() || out.trim() || 'refused';
-    return { deny: true, reason, out };
+    return { deny: true, reason, out, status: r.status, err };
   }
-  return { deny: false, reason: '', out };
+  return { deny: false, reason: '', out, status: r.status, err };
 }
 
 /**
@@ -146,7 +155,7 @@ function run(command, raw, projectDir, timeoutS = 60) {
     input: raw, cwd: projectDir, encoding: 'utf8', timeout: timeoutS * 1000,
     env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
   });
-  if (r.error) return { deny: false, reason: '', out: '', error: r.error.message };
+  if (r.error) return { deny: false, reason: '', out: '', status: null, err: '', error: r.error.message };
   return outcome(r);
 }
 
@@ -186,9 +195,23 @@ async function main(event, raw, p) {
       `node "${join(HUB, 'approved-plan-guard.mjs')}"`]) {
       const o = run(g, raw, root);
       if (o.deny) { process.stderr.write(o.reason + '\n'); return 2; }
+      // A family guard that crashed or timed out has not said yes. The header's
+      // promise — a crash refuses everything but reads — held only for a crash
+      // of THIS file; a guard exiting 1 was read as a pass.
+      if (o.status !== 0 && !READS.has(p.tool_name ?? '')) {
+        process.stderr.write(`${g.split('"')[1] ?? g} did not run cleanly (${o.error ?? `exit ${o.status}`}${o.err ? `: ${o.err.trim().split('\n')[0]}` : ''}); only reads run until it is fixed.\n`);
+        return 2;
+      }
     }
   }
-  if (event === 'PostToolUse' && /PlanMode$/.test(p.tool_name ?? '')) run(`node "${join(HUB, 'approved-plan-guard.mjs')}" --mark`, raw, root);
+  // --mark's outcome is carried, never discarded: a missed mark went unnoticed
+  // for two approvals because this line threw it away. Reported after the
+  // repos' own hooks, so the ledger still records the result.
+  let markFail = '';
+  if (event === 'PostToolUse' && /PlanMode$/.test(p.tool_name ?? '')) {
+    const o = run(`node "${join(HUB, 'approved-plan-guard.mjs')}" --mark`, raw, root);
+    if (o.deny || o.status !== 0) markFail = o.reason || o.err.trim() || o.error || `--mark exited ${o.status}`;
+  }
   if (event === 'UserPromptSubmit') printed.push(REMINDER);
   if (event === 'SessionStart' && p.source === 'compact' && p.transcript_path) {
     printed.push('AFTER COMPACTION: every tool used earlier in this session still exists. Try each route before reporting a limit (LESSONS §370).\n'
@@ -221,6 +244,7 @@ async function main(event, raw, p) {
     }
   }
   if (printed.length) process.stdout.write(printed.join('\n\n') + '\n');
+  if (markFail) { process.stderr.write(markFail + '\n'); return 2; }
   return 0;
 }
 
