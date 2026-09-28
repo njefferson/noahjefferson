@@ -18,10 +18,14 @@
  *   so a plan can be made. The classification of "write" is plan-guard's own,
  *   run as a child with the mode forced to plan: one list, never a fork.
  *
- *   PostToolUse (--mark): on ExitPlanMode whose result says the owner approved,
- *   write the marker with the plan's path and hash. On EnterPlanMode, remove
- *   it. A session cannot write the marker: any tool input that names it is
- *   refused, except `--done`, which only REMOVES it (always the safe way).
+ *   PostToolUse (--mark): on ExitPlanMode approved by the owner, write the
+ *   marker with the plan's path and hash. The path is the result OBJECT's
+ *   `filePath`: the hook is handed the tool's result, never the sentence the
+ *   session is shown, and that sentence is matched only when a result arrives
+ *   as text. A subagent's exit and a teammate's request to its lead write
+ *   nothing. On EnterPlanMode, remove it. A session cannot write the marker:
+ *   any tool input that names it is refused, except `--done`, which only
+ *   REMOVES it (always the safe way).
  *
  *   `node approved-plan-guard.mjs --done` ends the approved work: the last
  *   step of every plan runs it.
@@ -29,8 +33,8 @@
  * What this cannot see is whether each step was announced in chat. That half
  * is the rule, and the refusal prints it.
  */
-import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync, lstatSync } from 'node:fs';
+import { join, dirname, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -54,16 +58,71 @@ let p = {};
 try { p = JSON.parse(raw); } catch { /* unparsable: treated as a write below */ }
 const tool = p.tool_name ?? '';
 
+/**
+ * Which plan file an ExitPlanMode result approves.
+ *
+ * The hook is handed the TOOL'S RESULT, not the text the session reads.
+ * Measured in Claude Code 2.1.284 on 2026-09-28: the result is an object,
+ * `{plan, isAgent, filePath, hasTaskTool?, planWasEdited?}`, and "approved your
+ * plan" and "saved to:" exist only in the sentence mapped from it for the
+ * session. The first version matched those two phrases in the stringified
+ * object, so it never wrote a marker — two approvals, no marker, every write
+ * after them refused — and it matched them inside the plan's OWN words, so a
+ * plan quoting that sentence and a path approved whatever file the path named.
+ *
+ * @param {object} p  the PostToolUse payload of an ExitPlanMode call.
+ * @returns {string} the approved plan file, or '' when this result is not the
+ *   owner approving this session's plan. A non-empty return is always an
+ *   absolute path to a regular `.md` file, never a link to one: `--mark` hashes
+ *   it, and PreToolUse refuses every write once that file's hash no longer
+ *   matches the marker. Anything unrecognised returns '', which fails closed.
+ */
+function approvedPlanPath(p) {
+  const isPlanFile = (f) => {
+    try { return typeof f === 'string' && isAbsolute(f) && f.endsWith('.md') && lstatSync(f).isFile(); } catch { return false; }
+  };
+  if (p.agent_id || p.is_error) return '';                    // a subagent's exit, or an error, is not the owner's approval
+  const r = p.tool_response;
+  if (r && typeof r === 'object' && !Array.isArray(r)) {
+    // A subagent's exit, or a teammate's request to its lead, approves nothing;
+    // nor does an empty plan ("approved exiting plan mode"). `isAgent` is always
+    // a boolean in the measured result, so anything but `false` is refused. An
+    // object is never text-matched: it carries the plan's own words.
+    if (r.isAgent !== false || r.awaitingLeaderApproval) return '';
+    if (typeof r.plan !== 'string' || !r.plan.trim()) return '';
+    return isPlanFile(r.filePath) ? r.filePath : '';
+  }
+  // Fallback, for a result that arrives as text. The measured sentence opens
+  // it, and the path is a line of its own BEFORE "## Approved Plan", which is
+  // where the plan's own words begin — so only that head is searched.
+  const text = typeof r === 'string' ? r
+    : Array.isArray(r) ? r.map((b) => (typeof b === 'string' ? b : b?.text ?? '')).join('\n') : '';
+  const head = text.split(/\r?\n## Approved Plan/)[0];
+  if (!/^User has approved your plan\./.test(head)) return '';
+  const m = /^Your plan has been saved to: (.+\.md)\r?$/m.exec(head);
+  return m && isPlanFile(m[1]) ? m[1] : '';
+}
+
 if (process.argv.includes('--mark')) {
   if (tool === 'EnterPlanMode') { rmSync(MARKER, { force: true }); process.exit(0); }
   if (tool !== 'ExitPlanMode') process.exit(0);
-  const text = typeof p.tool_response === 'string' ? p.tool_response : JSON.stringify(p.tool_response ?? '');
-  if (!/approved your plan/i.test(text)) process.exit(0);
-  const m = /saved to:\s*(\S+?\.md)/.exec(text);
-  const plan = m ? m[1].replace(/\\n.*$/, '') : '';
-  if (!plan || !existsSync(plan)) process.exit(0);          // no plan file named: no marker
+  const plan = approvedPlanPath(p);
+  if (!plan) process.exit(0);                                 // not this session's plan approved: no marker
+  const r = p.tool_response;
+  const fromObject = r !== null && typeof r === 'object' && !Array.isArray(r);
+  // Whether the approved text is the file that gets hashed. Recorded, never
+  // refused on: an edit made in the approval dialog should reach the file
+  // before this runs, and this is how a real approval shows whether it did.
+  let hash, planMatchesFile;
+  try {
+    hash = hashOf(plan);
+    planMatchesFile = fromObject ? r.plan.trim() === readFileSync(plan, 'utf8').trim() : null;
+  } catch { process.exit(0); }                                // the file went between the check and the read: no marker
   mkdirSync(dirname(MARKER), { recursive: true });
-  writeFileSync(MARKER, JSON.stringify({ plan, hash: hashOf(plan), at: new Date().toISOString(), via: 'ExitPlanMode approval' }, null, 1));
+  writeFileSync(MARKER, JSON.stringify({
+    plan, hash, at: new Date().toISOString(),
+    via: `ExitPlanMode approval: result ${fromObject ? 'filePath' : 'text'}`, planMatchesFile,
+  }, null, 1));
   process.exit(0);
 }
 
