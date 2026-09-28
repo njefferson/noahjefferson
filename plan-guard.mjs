@@ -415,9 +415,14 @@ if (tool === 'ExitPlanMode') {
 
 // The readers the harness provides, which never needed the gate but are listed
 // so the default below can be a refusal rather than a shrug.
+// The harness's discovery tools read and list and nothing else. Missing from
+// this list, they were refused whenever no plan was in force, through
+// approved-plan-guard, which asks this file what a read is.
 if (['Read', 'Glob', 'Grep', 'NotebookRead', 'WebFetch', 'WebSearch',
   'TodoWrite', 'AskUserQuestion', 'ToolSearch',
-  'ListAgents', 'ReadNotifications', 'Skill'].includes(tool)) process.exit(0);
+  'ListAgents', 'ReadNotifications', 'Skill',
+  'TaskList', 'TaskGet', 'TaskOutput', 'ListMcpResourcesTool', 'ReadMcpResourceTool', 'ReadMcpResourceDirTool',
+  'ListConnectors', 'ListSkills', 'SearchSkills', 'ListPlugins', 'SearchPlugins', 'SearchMcpRegistry'].includes(tool)) process.exit(0);
 
 // DENY BY DEFAULT. A tool this file has never heard of is refused, so adding a
 // tool cannot silently widen what plan mode allows.
