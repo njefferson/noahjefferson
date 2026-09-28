@@ -165,17 +165,9 @@ if (FILE_TOOLS.includes(tool)) {
   }
 }
 
-// THE MARKER IS THE OWNER'S. A command that names it is refused, with no
-// exception: the real `--done` never names it.
-const input = FILE_TOOLS.includes(tool) ? '' : JSON.stringify(p.tool_input ?? {});
-if (input.includes('APPROVED-PLAN')) {
-  // The old exception here passed any command carrying both strings, and a
-  // redirect into the marker carries both. Measured 2026-09-28: it wrote one.
-  deny('The approval marker is written only by the owner\'s approval of a plan.');
-}
-
 // Is it a write? Ask plan-guard.mjs, with the mode forced to plan. A Workflow
 // launches writing agents and plan-guard does not name it, so it is a write.
+// Asked FIRST: a read that merely names the marker (a grep, a cat) is a read.
 let write = tool === 'Workflow';
 let why = write ? 'a Workflow launches agents that can write.' : '';
 if (!write) {
@@ -190,6 +182,18 @@ if (!write) {
   }
 }
 if (!write) process.exit(0);
+
+// THE MARKER IS THE OWNER'S. A command that names it and writes is refused,
+// with no exception: the real `--done` never names it. A string check cannot
+// stop a name assembled from pieces inside the shell (measured: a variable
+// holding half the name, joined in a redirect, rewrote it under an approved
+// plan); that half rests on the rule, Doctrine §0e.
+const input = FILE_TOOLS.includes(tool) ? '' : JSON.stringify(p.tool_input ?? {});
+if (input.includes('APPROVED-PLAN')) {
+  // The old exception here passed any command carrying both strings, and a
+  // redirect into the marker carries both. Measured 2026-09-28: it wrote one.
+  deny('The approval marker is written only by the owner\'s approval of a plan.');
+}
 
 if (!existsSync(MARKER)) deny(`No approved plan is in force, and this is not a recognised read: ${why}`);
 let mk = {};
