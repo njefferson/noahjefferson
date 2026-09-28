@@ -205,8 +205,16 @@ async function main(event, raw, p) {
       for (const h of g.hooks ?? []) {
         if (h.type !== 'command' || !h.command) continue;
         const shim = basename(String(h.command).split(/\s+/)[0]);
-        if (SHARED_SHIMS.has(shim)) { if (ran.has(shim)) continue; ran.add(shim); }
-        const o = run(h.command, raw, repo, h.timeout ?? 60);
+        let command = h.command;
+        if (SHARED_SHIMS.has(shim)) {
+          // Run the hub's canonical script, never a repo's copy of the shim: a
+          // repo branch can carry a stale shim (JPS main's piped into `exec`
+          // and refused every plan-mode call), and the hub clone is current.
+          if (ran.has(shim)) continue;
+          ran.add(shim);
+          command = `node "${join(HUB, shim.replace(/\.sh$/, '.mjs'))}"`;
+        }
+        const o = run(command, raw, repo, h.timeout ?? 60);
         if (o.deny) { process.stderr.write(o.reason + '\n'); return 2; }
         if (o.out.trim() && (event === 'SessionStart' || event === 'UserPromptSubmit')) printed.push(o.out.trim());
       }
