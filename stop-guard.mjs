@@ -157,6 +157,32 @@ unfinished, carry on with it; if it genuinely stops, the first line is
   process.exit(2);
 }
 
+/** 6. ASKING FOR APPROVAL IN CHAT (2026-09-28, LESSONS §370). Approval is the
+ *  plan-mode button and nothing else. A reply that asks for it in words got
+ *  through because PARKING is skipped under a declared stop, so this is checked
+ *  BEFORE the declaration, the way OWING is. A report that says a plan was
+ *  approved, or names the approval marker, is not asking and passes. */
+const ASKING = [
+  /\bapprov(?:e|al)\b[^.!?\n]*\?/i,
+  /\b(?:please|kindly|can you|could you|would you)\b[^.!?\n]*\bapprove\b/i,
+  /\bopen for you\b[^.!?\n]*\bapprov(?:e|al|ing)\b/i,
+  /\b(?:awaiting|await|needs?|wants?|requires?|waiting for)\s+(?:your\s+)?(?:approval|sign-off|go-ahead)\b/i,
+  /\b(?:once|if|when|after)\s+you\s+approve\b/i,
+  /\bapprove\s+(?:it|this|the (?:first |second )?plan|plan \d)\b/i,
+  /\b(?:press|tap|click|hit)\s+(?:the\s+)?approve\b/i,
+];
+const asked = ASKING.find((re) => re.test(reply));
+if (asked) {
+  process.stderr.write(`STOP REFUSED — this reply asks for a plan's approval in chat ("${(reply.match(asked) ?? [''])[0]}").
+
+LESSONS §370, rule 5 in HANDOFF.md. Approval is only the plan-mode button,
+which ExitPlanMode puts in front of the owner. A chat turn before a plan says
+what is being done and why, and asks nothing. Remove the request; if the plan
+is ready, call ExitPlanMode.
+`);
+  process.exit(2);
+}
+
 // A declared stop is allowed, and is the whole point of having a way through.
 if (DECLARED.test(reply)) process.exit(0);
 
