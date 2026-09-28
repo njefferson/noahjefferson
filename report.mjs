@@ -17,7 +17,7 @@
  *       owner's last message. Subagent calls pass (they cannot tell the owner
  *       anything), and so does this command itself (hook-dispatch exempts it).
  *
- * No app notifications, ever: the owner ruled them out (2026-09-28).
+ * No app notifications, ever (2026-09-28).
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';

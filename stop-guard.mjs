@@ -34,7 +34,7 @@
 //      CI run — poll it, read it, act on the result, and keep going. This is
 //      what an approved plan means (§11c) and it is the expected route.
 //   2. DECLARE THE STOP. Open the reply with "Stopping here: open for you is
-//      X" (the owner ruled out "waiting on you", LESSONS §370). §11c requires the FIRST line, because "I'll hold" at the end of a
+//      X" ("waiting on you" is ruled out, LESSONS §370). §11c requires the FIRST line, because "I'll hold" at the end of a
 //      long report reads as "I am continuing" — which is exactly how the
 //      silences got discovered, by being asked what happened.
 //
@@ -89,8 +89,8 @@ const PARKING = [
 /** The declaration §11c requires, and it has to be the FIRST line. */
 const DECLARED = /^\s*(?:[#*_>\s-]*)stopping here[,:]?\s*open for you\b/i;
 
-/** 4. OWING. The owner ruled out telling them they are waited on or owe
- *  anything (2026-09-28, LESSONS §370): say what is open for them instead. This
+/** 4. OWING. A reply saying the reader is waited on, or owes anything, is
+ *  refused (2026-09-28, LESSONS §370): say what is open for them instead. This
  *  is refused even under a declared stop, because the declaration used to BE
  *  "waiting on you" and the rule changed under it. */
 const OWING = [
@@ -119,8 +119,8 @@ const owed = OWING.find((re) => re.test(reply));
 if (owed) {
   process.stderr.write(`STOP REFUSED — this reply tells the owner they are waited on or owe something ("${(reply.match(owed) ?? [''])[0]}").
 
-LESSONS §370. Never "waiting on you", never "you owe". Name what is open for
-the owner instead: "Open for you: <the specific decision>". If the work is
+LESSONS §370. Never "waiting on you", never "you owe". Name what is open
+instead: "Open for you: <the specific decision>". If the work is
 unfinished, carry on with it; if it genuinely stops, the first line is
 "Stopping here: open for you is <the specific thing>".
 `);

@@ -20,7 +20,7 @@ Every failure below had either a gate that could not fire or no gate at all.
 The hub's CLAUDE.md already recorded this exact failure for `branch-guard` ("a
 session rooted in a PARENT directory never fires"). It was true of every hook.
 
-## The rules (owner, 2026-09-28) — each one broken in that session
+## The rules (2026-09-28) — each one broken in that session
 
 1. **Tell the owner in the first line, all during the work, and at the end.**
    The first line says what is being done now and what comes next. During the
@@ -34,12 +34,12 @@ session rooted in a PARENT directory never fires"). It was true of every hook.
    of work with no idea when the next report arrives is the silence the owner
    means; "Working…" with nothing under it is the same thing.
 3. **No app notifications, ever.** Statuses go in chat and on the status page.
-4. **Reply to every point in the owner's message.** Skipping part of it is
-   ignoring the owner. When the owner says something was done wrong, that is a
+4. **Reply to every point in a message from the owner.** Skipping part of it
+   is ignoring it. A message saying something was done wrong is a
    full stop: answer it, and nothing else runs in that turn.
 5. **Plan mode only.** Nothing runs outside a plan the owner approved. Talk the
    plan through in chat before proposing it; a plan proposed without discussion
-   is refused by the owner.
+   is not approved.
 6. **A line before each tool call and a line after each result.**
 7. **Never "waiting on you", never "you owe".** Say "open for you:".
 8. **A limit is reported only after every route available was tried**, with the
@@ -53,7 +53,7 @@ session rooted in a PARENT directory never fires"). It was true of every hook.
 11. **Questions to the owner are real decisions only** — never something the
     record already ranks, never research handed back.
 12. **Infrared first.** A white-balance test that moved only the red and blue
-    sliders with green fixed is a visible-light model; the owner rejected it.
+    sliders with green fixed is a visible-light model, and was rejected.
     In this app a neutral's colour is set by the per-photosite black level,
     the lens profile's colour, gray-world's THREE gains, the look's 3x3 mixer
     (the swap and the infrared subtraction), its tint, its per-channel curves
