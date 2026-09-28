@@ -115,6 +115,36 @@ let reply = '';
 try { reply = lastAssistantText(path); } catch { process.exit(0); }
 if (!reply) process.exit(0);
 
+/** 5. HANDING THE OWNER WORK. A session handed the owner the install of its own
+ *  gates, twice, as a setup-script edit behind a menu the tablet app does not
+ *  show, and tried the install itself only when challenged; the same day it
+ *  asked for a Drive sharing change without trying the connector it had
+ *  (LESSONS §370). Anything asked of the owner is only what only they can do,
+ *  doable in the app with a tap or a reply. "Paste this as the first message"
+ *  is deliberately NOT caught: it is how a new session starts. */
+const HANDING = [
+  /\bsetup script\b/i,
+  /\bsettings (?:page|screen|menu)\b/i,
+  /\benvironment (?:settings|menu)\b/i,
+  /\btitle bar\b/i,
+  /\bpermission rule\b/i,
+  /\b(?:go to|open|tap|click)\s+(?:the\s+|your\s+)?(?:settings|menu|environment)\b/i,
+  /\byou(?:'ll| will)?\s+(?:need|have)\s+to\s+(?:install|configure|enable|set up|add)\b/i,
+];
+
+const handed = HANDING.find((re) => re.test(reply));
+if (handed) {
+  process.stderr.write(`STOP REFUSED — this reply hands the owner a step ("${(reply.match(handed) ?? [''])[0]}").
+
+LESSONS §370, rule 14 in HANDOFF.md. Look at it from the owner's side: never
+hand the owner a step a session can do, and never send them to settings, a
+menu, a setup script or an install. Try every route first and do it. If only
+the owner can do it, ask for exactly that, doable in the app with a tap or a
+reply — an approve button, a one-word answer.
+`);
+  process.exit(2);
+}
+
 const owed = OWING.find((re) => re.test(reply));
 if (owed) {
   process.stderr.write(`STOP REFUSED — this reply tells the owner they are waited on or owe something ("${(reply.match(owed) ?? [''])[0]}").

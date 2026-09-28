@@ -82,6 +82,13 @@ session rooted in a PARENT directory never fires"). It was true of every hook.
     exist, from a search that covered five files and left `main.ts` out. A
     partial search reported as a fact is the defect, in either direction.
 
+14. **Look at everything from the owner's side.** Never hand the owner a step
+    a session can do. Anything asked of the owner is only what only they can
+    do, doable in the tablet app with a tap or a reply — an approve button, a
+    one-word answer. Never directions to settings, a menu, a setup script, a
+    permission rule or an install. Try every route first. Refused by
+    `stop-guard.mjs` (shape 5); the judgement no pattern sees stays here.
+
 ## The gates — the approved plan, with build status
 
 Each gate is made to fail once on a planted payload before it is trusted.
