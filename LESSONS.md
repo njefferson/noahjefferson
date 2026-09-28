@@ -461,3 +461,4 @@ and the filename carries it.
 - **§367** — [A change judged only at the defects already on the list fixes those and breaks the rest, unseen — whole frames beside what ships come first](lessons/367-judged-at-the-defects-already-known.md)
 - **§368** — [Reviewing until a round finds nothing does not converge on a change that each round's fixes make bigger](lessons/368-review-until-dry-does-not-converge-on-a-change-its-fixes-grow.md)
 - **§369** — [Calibrate on the owner's own files, never the practice copies, and never go looking for more](lessons/369-calibrate-on-the-owners-files-never-the-practice-copies-and-never-search-for-more.md)
+- **§370** — [A session launched above the repos runs none of their hooks, and every rule then rests on memory](lessons/370-a-session-launched-above-the-repos-runs-none-of-their-hooks.md)
