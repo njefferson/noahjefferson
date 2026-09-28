@@ -294,6 +294,15 @@ Every item below has actually happened.
  changing, the exit code arrived. When a listing and a resource disagree,
  the resource is right.
  (Doctrine §11d; LESSONS §270, §287.)
+- **PLAN MODE ONLY, AND TALK DURING THE WORK — Doctrine §0e, twelve rules from
+ 2026-09-28.** Nothing runs outside an approved plan (`approved-plan-guard.mjs`
+ refuses it). Before a plan goes up, one chat turn says what is being done and
+ why — never the plan's text, which the owner reads in the plan — and asks
+ nothing; approval is only the button. A status at least every five minutes,
+ its time read from the clock (`report.mjs` refuses every call after five).
+ **The gates run from a clone at `/root/.claude/hub`, installed by each
+ session's first plan** — `hook-dispatch.mjs --install` run FROM THE CLONE,
+ never the working copy, because `install()` wires whichever copy runs it.
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
  range line in the output means nothing moved. (LESSONS, 2026-08-02.)

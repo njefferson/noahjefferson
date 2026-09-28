@@ -123,6 +123,70 @@ file, then call the tool. The reverse — treating a typed "approved" as
 authority — is the same error mirrored: **prose does not lift plan mode in
 either direction.** Only the mode does.
 
+## 0e. PLAN MODE ONLY, AND TALK DURING THE WORK.
+
+Nothing runs that is not inside a plan the owner approved in plan mode. A
+request in chat gets a plan, not an action. `approved-plan-guard.mjs` refuses
+every write outside an approved plan, and has cited this section in its refusal
+since before the section existed. Written 2026-09-28, from a session that broke
+every rule below while none of the hooks that enforce them was running
+(LESSONS §370). Each rule is followed by what enforces it, where anything does.
+
+**Rules:**
+
+1. **Tell the owner in the first line, during the work, and at the end.** The
+   first line says what is being done now and what comes next. During the work,
+   each step says what it is and what it found, in plain terms. The end says
+   what was done, what was not, what was found and not fixed, and what is open
+   for the owner. Process noise with no finding in it is not telling.
+   *Enforced by:* the dispatcher's UserPromptSubmit reminder; the rest is
+   judgement.
+2. **A status at least every five minutes during any work:** what is done, what
+   is running, what is next, and when the next status comes. The time in a
+   status is READ FROM THE CLOCK, never estimated. Measured the same day, five
+   statuses in a row carried times forty minutes off. No app notifications,
+   ever: statuses go in chat and on the status page.
+   *Enforced by:* `report.mjs`, which refuses every call five minutes after the
+   last stamp.
+3. **Reply to every point in a message from the owner.** A message saying
+   something was done wrong is a full stop: answer it, and run nothing else in
+   that turn.
+4. **Plan mode only, and the talk comes first.** Before a plan goes up, one chat
+   turn says what is being done and why, and asks nothing. It never pastes the
+   plan: the owner reads the plan in the plan, and a copy in chat is a second
+   copy of a file with nothing in it about the work. After the owner answers,
+   the NEXT turn ends with `ExitPlanMode`, as §0d says. Approval is only the
+   plan-mode button, never words in chat.
+   *Enforced by:* `plan-guard.mjs` (talk-first) and `stop-guard.mjs` (a reply
+   asking for approval in chat is refused).
+5. **A line before each tool call and a line after each result.**
+6. **Never "waiting on you", never "you owe".** Say "open for you:". A stop is
+   declared in the first line as "Stopping here: open for you is X".
+   *Enforced by:* `stop-guard.mjs`.
+7. **A limit is reported only after every route available was tried**, with the
+   failed attempt named. A blocked host is a question, not a finding.
+8. **A defect of the session is a bug**, never framed as the owner's preference
+   or "your rule".
+9. **When the harness says ultracode is off, the first line of the next reply
+   says so.** On 2026-09-28 it said so twice while ultracode was on: that notice
+   is a harness bug. Say so, and carry on with ultracode on.
+10. **Questions to the owner are real decisions only.** Never something the
+    record already ranks, never research handed back.
+11. **Search the whole codebase before saying a name is real or invented.** A
+    partial search reported as a fact is the defect, in either direction.
+    *Enforced by:* `plan-guard.mjs` (a plan naming code that exists nowhere is
+    refused).
+12. **Look at everything from the owner's side.** The owner works from a tablet
+    app. Anything asked of the owner is only what only the owner can do, doable
+    with a tap or a reply. Never directions to settings, a menu, a start-up
+    script, a permission rule or an install.
+    *Enforced by:* `stop-guard.mjs`.
+
+**The gates live in the hub and run however a session is launched.** A session's
+first plan clones the hub to `/root/.claude/hub` and installs
+`hook-dispatch.mjs` from that clone. Measured 2026-09-28: installed inside an
+approved plan, they went live mid-session with no restart.
+
 ## 0c. Only NOAH decides what goes on the hub. Never a session.
 
 On being told this rule was nowhere in this file, the owner was right that it
