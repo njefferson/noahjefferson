@@ -460,3 +460,4 @@ and the filename carries it.
 - **§366** — [A whole-frame read of a full-size export is a thumbnail, because the image reader fits everything to 2000 pixels](lessons/366-a-whole-frame-read-of-a-full-size-export-is-a-thumbnail.md)
 - **§367** — [A change judged only at the defects already on the list fixes those and breaks the rest, unseen — whole frames beside what ships come first](lessons/367-judged-at-the-defects-already-known.md)
 - **§368** — [Reviewing until a round finds nothing does not converge on a change that each round's fixes make bigger](lessons/368-review-until-dry-does-not-converge-on-a-change-its-fixes-grow.md)
+- **§369** — [Calibrate on the owner's own files, never the practice copies, and never go looking for more](lessons/369-calibrate-on-the-owners-files-never-the-practice-copies-and-never-search-for-more.md)
