@@ -49,7 +49,7 @@
  * releases and could not fail.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { tailEntries, isOwnerMessage, seenInResults } from './transcript-tail.mjs';
 import { homedir } from 'node:os';
@@ -87,11 +87,12 @@ const deny = (why) => {
   process.exit(2);
 };
 
-// Editing the plan is the one thing plan mode is FOR.
-const PLANS = '/.claude/plans/';
+// Editing the plan is the one thing plan mode is FOR. The plans directory is
+// compared RESOLVED: a substring test passed any path that merely contained it.
+const PLANS = resolve(homedir(), '.claude', 'plans');
 if (tool === 'Write' || tool === 'Edit' || tool === 'NotebookEdit') {
   const f = String(input.file_path ?? '');
-  if (f.includes(PLANS)) process.exit(0);
+  if (f && dirname(resolve(f)) === PLANS) process.exit(0);
   deny(`${tool} to ${f || '(no path given)'} is a write.`);
 }
 
@@ -125,15 +126,62 @@ if (tool.startsWith('mcp__')) {
   deny(`${tool} is not a read.`);
 }
 
+/**
+ * The commands a Bash line runs, split where bash would start a new one.
+ * @param {string} cmd  the command line.
+ * @returns {{text: string, bare: string}[]} one entry per command: its text, and
+ *   the same with every quoted span emptied, which is what the redirect test
+ *   reads. An operator inside single quotes is text; inside double quotes only
+ *   `$(` and a backtick still start a command, as they do in bash. Splitting on
+ *   every pipe character regardless of quotes refused three reads in one
+ *   session (a jq filter, a grep pattern, both with a pipe inside quotes), and
+ *   every read-only check below is made on what this returns.
+ */
+function commands(cmd) {
+  const out = [];
+  let text = '', bare = '', q = '';
+  const cut = () => { out.push({ text, bare }); text = ''; bare = ''; };
+  for (let i = 0; i < cmd.length; i++) {
+    const c = cmd[i], two = cmd.slice(i, i + 2);
+    if (q === "'") { if (c === "'") q = ''; text += c; continue; }
+    if (c === '\\') { text += two; if (!q) bare += two; i++; continue; }
+    if (two === '$(') { cut(); i++; continue; }
+    if (c === '`') { cut(); continue; }
+    if (q === '"') { if (c === '"') q = ''; text += c; continue; }
+    if (c === "'" || c === '"') { q = c; text += c; continue; }
+    if (two === '&&' || two === '||') { cut(); i++; continue; }
+    if (c === ';' || c === '|' || c === '\n' || c === ')') { cut(); continue; }
+    text += c; bare += c;
+  }
+  cut();
+  return out;
+}
+
+/** Strip one layer of shell quotes from a word. @param {string} w the word.
+ *  @returns {string} the word as the program receives it, near enough for the
+ *  sed script test, which is its only caller. */
+const unquote = (w) => w.replace(/^(['"])([\s\S]*)\1$/, '$2');
+
+// A sed script that only prints, substitutes without a w or e flag, or moves
+// text between its own buffers. Anything else — above all a w command, which
+// writes a file — is refused. A LIST of what reads, never a list of what writes.
+const SED_ADDR = String.raw`(?:\d+|\$|/(?:\\.|[^/\\])*/)`;
+const SED_READ = new RegExp(String.raw`^(?:${SED_ADDR}(?:,${SED_ADDR})?!?)?\s*(?:[p=lqQdnNPDhHgGx]`
+  + String.raw`|s(.)(?:\\.|(?!\1).)*\1(?:\\.|(?!\1).)*\1[gpiIm0-9]*`
+  + String.raw`|y(.)(?:\\.|(?!\2).)*\2(?:\\.|(?!\2).)*\2)?$`);
+
 if (tool === 'Bash') {
   const cmd = String(input.command ?? '');
+  const parts = commands(cmd);
 
   // A REDIRECT WRITES A FILE. `2>&1`, `>&2` and anything aimed at /dev/null do
   // not, and read commands use them constantly, so they are removed before the
-  // test rather than the whole check being abandoned.
-  const withoutFdRedirects = cmd
-    .replace(/2>&1|>&2|&>\s*\/dev\/null|2?>\s*\/dev\/null/g, '');
-  if (withoutFdRedirects.includes('>')) deny('the command redirects to a file.');
+  // test rather than the whole check being abandoned. Only a `>` OUTSIDE quotes
+  // is a redirect: `grep '->'` is a read.
+  for (const { bare } of parts) {
+    const withoutFdRedirects = bare.replace(/2>&1|>&2|&>\s*\/dev\/null|2?>\s*\/dev\/null/g, '');
+    if (withoutFdRedirects.includes('>')) deny('the command redirects to a file.');
+  }
 
   // AN ALLOW-LIST OF READERS, NEVER A DENY-LIST OF WRITERS. A deny-list has to
   // be extended every time a tool appears, by somebody who remembers this gate
@@ -147,14 +195,16 @@ if (tool === 'Bash') {
     'cat', 'ls', 'head', 'tail', 'wc', 'sort', 'uniq', 'cut', 'tr', 'grep',
     'rg', 'egrep', 'fgrep', 'find', 'jq', 'echo', 'printf', 'pwd', 'basename',
     'dirname', 'realpath', 'stat', 'file', 'diff', 'column', 'date', 'true',
-    'test', '[', 'which', 'type', 'ps', 'df', 'du', 'env', 'git', 'sed',
+    'test', '[', 'which', 'type', 'ps', 'df', 'du', 'git', 'sed',
     'awk', 'node', 'xargs', 'tee',
   ]);
+  // `env` is not here: it runs whatever follows it, and `env` with a command
+  // wrote the approval marker when it was measured.
 
   // Split on every operator that starts a NEW command, INCLUDING command
   // substitution — `cat $(rm -rf x)` is not a read, and a check that only
-  // looked at the first word would call it one.
-  for (const seg of cmd.split(/;|&&|\|\||\||\$\(|`|\)|\n/)) {
+  // looked at the first word would call it one. Quotes are respected.
+  for (const { text: seg } of parts) {
     const words = seg.trim().split(/\s+/).filter(Boolean);
     if (words.length === 0) continue;
     const w = words[0].replace(/^\(+/, '');
@@ -164,6 +214,17 @@ if (tool === 'Bash') {
     // is genuinely needed for reading and blanket-refusing them would make
     // planning impossible.
     if (w === 'sed' && !words.includes('-n')) deny('sed without -n can write in place.');
+    if (w === 'sed' && words.some((x) => /^-[a-zA-Z]*i|^--in-place/.test(x))) deny('sed -i writes in place.');
+    if (w === 'sed') {
+      const scripts = words.includes('-e')
+        ? words.flatMap((x, k) => (words[k - 1] === '-e' ? [x] : []))
+        : [words.slice(1).find((x) => !x.startsWith('-')) ?? ''];
+      for (const s of scripts) for (const part of unquote(s).split(/[;\n]/)) {
+        if (!SED_READ.test(part.trim())) deny(`the sed command "${part.trim()}" is not a print-only one (a w command writes a file).`);
+      }
+    }
+    if (w === 'find' && words.some((x) => /^-(exec|execdir|ok|okdir|delete|fprint|fprint0|fprintf|fls)$/.test(x))) deny('find with an action that runs or writes.');
+    if (w === 'sort' && words.some((x) => /^-[a-zA-Z]*o|^--output/.test(x))) deny('sort -o writes a file.');
     if (w === 'node' && !words.includes('--check')) deny('node runs arbitrary code.');
     if (w === 'awk' && />/.test(seg)) deny('awk can redirect.');
     if (w === 'tee') deny('tee writes.');
@@ -174,9 +235,17 @@ if (tool === 'Bash') {
         'ls-tree', 'cat-file', 'merge-base', 'describe', 'blame', 'shortlog',
         'grep', 'count-objects', 'var', 'help', 'branch', 'tag', 'remote',
       ]);
-      // The first non-flag word after `git` — `git -C dir log` is a log.
-      const sub = words.slice(1).find(x => !x.startsWith('-') && x !== String(input.cwd));
-      const name = String(sub ?? '');
+      // The first non-flag word after `git`, skipping the argument of a flag
+      // that takes one — `git -C dir log` is a log. The first version compared
+      // against a cwd field the payload never carries, so it read the
+      // directory as the subcommand and refused the log.
+      let sub = '';
+      for (let k = 1; k < words.length; k++) {
+        if (['-C', '-c', '--git-dir', '--work-tree', '--namespace'].includes(words[k])) { k++; continue; }
+        if (words[k].startsWith('-')) continue;
+        sub = words[k]; break;
+      }
+      const name = String(sub);
       if (!READ_GIT.has(name)) deny(`"git ${name}" is not read-only.`);
       // `branch`, `tag` and `remote` READ bare and WRITE with an argument.
       if (['branch', 'tag', 'remote'].includes(name)) {
@@ -248,6 +317,11 @@ function talkedThrough(path) {
       if (b?.type !== 'tool_result' || planIds.get(b.tool_use_id) !== 'ExitPlanMode') continue;
       const text = typeof b.content === 'string' ? b.content : JSON.stringify(b.content ?? '');
       if (/not in plan mode/i.test(text) || e.toolDenialKind === 'cancelled' || /Tool call not completed/.test(text)) continue;
+      // A GATE'S refusal is not the owner's answer. Measured 2026-09-28: it is
+      // recorded with the same toolDenialKind as the owner's own rejection
+      // ("permission-rule"), so only its content tells them apart. Counting it
+      // made every gate refusal cost the owner a message.
+      if (/PreToolUse:ExitPlanMode hook error: \[/.test(text)) continue;
       anchor = i;
     }
   });
@@ -282,9 +356,12 @@ function inventedNames(plan, top) {
   const missing = new Set();
   for (const line of plan.split('\n')) {
     for (const m of line.matchAll(/`([^`\n]+)`/g)) {
-      const t = m[1].trim();
+      const span = m[1].trim();
+      // A call is looked up by its name: `touched()` was refused while
+      // `touched` existed. The span itself is what "(new)" is matched against.
+      const t = span.replace(/\([^()]*\)$/, '');
       if (t.length < 3 || /\s|^[\/~$<"]|^[\d.,:%x-]+$/.test(t)) continue;
-      if (new RegExp(`\`${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\`[^\`]*\\(new\\)`).test(line)) continue;
+      if (new RegExp(`\`${span.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\`[^\`]*\\(new\\)`).test(line)) continue;
       if (seen.includes(t)) continue;
       // Code only: a name the docs merely MENTION is not a name that exists —
       // a first version passed a name only because a lesson quoted it.
@@ -301,10 +378,18 @@ function inventedNames(plan, top) {
 if (tool === 'ExitPlanMode') {
   const dir = join(homedir(), '.claude', 'plans');
   let plan = '';
+  // The plan checked is the plan the harness is about to show: the file it
+  // names, or the text it passes. Only without either is the newest file in the
+  // directory used, and never one of the harness's side files (a workshop
+  // copy, a subagent's plan, an ultraplan), which can be newer than the plan.
   try {
-    const newest = readdirSync(dir).filter((f) => f.endsWith('.md'))
-      .map((f) => ({ f, t: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.t - a.t)[0];
-    if (newest) plan = readFileSync(join(dir, newest.f), 'utf8');
+    if (typeof input.planFilePath === 'string' && existsSync(input.planFilePath)) plan = readFileSync(input.planFilePath, 'utf8');
+    else if (typeof input.plan === 'string' && input.plan.trim()) plan = input.plan;
+    else {
+      const newest = readdirSync(dir).filter((f) => f.endsWith('.md') && !/\.workshop\.md$|-agent-[^/]*\.md$|ultraplan\.md$/.test(f))
+        .map((f) => ({ f, t: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.t - a.t)[0];
+      if (newest) plan = readFileSync(join(dir, newest.f), 'utf8');
+    }
   } catch { /* no plans dir: fall through with an empty plan, which is refused */ }
   const top = plan.split(/^(?:---\s*|# .*)$/m).find((b) => b.trim()) ?? plan;
   const REQUIRED = ['Looked up', 'Branches', 'Call chain', 'Whole app', 'Leaves open'];
