@@ -3,7 +3,8 @@
 **Read this first in any new session.** It carries an approved plan whose build
 was cut short when the session ended, every finding it rests on, and what is
 still owed. Update the status lines in place as work lands; delete this file
-only when every gate below reads BUILT and the owner has run the setup block.
+only when every gate below reads BUILT, gate 10 has run, and nothing under
+"Other work still owed" is left.
 
 ## FIRST STEP OF EVERY NEW SESSION — the owner only presses approve
 
@@ -13,9 +14,18 @@ session cannot install them unasked — Claude Code refuses it as
 self-modification — and the environment setup script that would do it for
 every session is not reachable from the tablet app. So:
 
-1. The session's FIRST plan contains exactly this step:
-   `node noahjefferson/hook-dispatch.mjs --install`, then the probe below.
-   It is approved with the plan button. Nothing else is asked for.
+1. The session's FIRST plan contains exactly this step: clone main, then
+   install FROM THE CLONE, then the probe below.
+
+       git clone --depth 1 https://github.com/njefferson/noahjefferson /root/.claude/hub
+       node /root/.claude/hub/hook-dispatch.mjs --install
+
+   Never install from the working copy: `install()` wires whichever copy runs
+   it, and a broken edit in a working copy would then refuse its own fix. The
+   plan is approved with the plan button. Nothing else is asked for.
+   **Measured 2026-09-28, second session:** the install was allowed inside the
+   approved plan, and the gates went live mid-session with no restart. The
+   first ordinary call after it was refused, and so was the probe.
 2. **Probe, harmless whether the gates are live or not:** write a file in the
    session scratchpad. With the gates live, it is refused until the next plan
    is approved (approved-plan-guard); a refusal is the proof. Never probe with
@@ -56,9 +66,13 @@ session rooted in a PARENT directory never fires"). It was true of every hook.
 4. **Reply to every point in a message from the owner.** Skipping part of it
    is ignoring it. A message saying something was done wrong is a
    full stop: answer it, and nothing else runs in that turn.
-5. **Plan mode only.** Nothing runs outside a plan the owner approved. Talk the
-   plan through in chat before proposing it; a plan proposed without discussion
-   is not approved.
+5. **Plan mode only.** Nothing runs outside a plan the owner approved. Before a
+   plan goes up, one chat turn says what is being done and why, and asks
+   nothing. It never pastes the plan's text: the owner reads the plan in the
+   plan, and a copy in chat has nothing in it about the work. After the owner's
+   reply, the next turn ends with ExitPlanMode. Approval is only the plan-mode
+   button. (Doctrine §0e rule 4; `plan-guard.mjs` talk-first; `stop-guard.mjs`
+   refuses a reply asking for approval in chat.)
 6. **A line before each tool call and a line after each result.**
 7. **Never "waiting on you", never "you owe".** Say "open for you:".
 8. **A limit is reported only after every route available was tried**, with the
@@ -68,7 +82,10 @@ session rooted in a PARENT directory never fires"). It was true of every hook.
 9. **A defect of the session is a bug**, never framed as the owner's preference
    or "your rule".
 10. **When the harness reports ultracode off, the first line of the next reply
-    says so.** The session silently dropped work when it went off.
+    says so.** The session silently dropped work when it went off. **And on
+    2026-09-28 the harness twice reported ultracode off while it was on.**
+    That notice is a harness bug. When it appears, the first line says so and
+    the work continues with ultracode on.
 11. **Questions to the owner are real decisions only** — never something the
     record already ranks, never research handed back.
 12. **Infrared first.** A white-balance test that moved only the red and blue
@@ -101,20 +118,51 @@ Each gate is made to fail once on a planted payload before it is trusted.
   every repo for pathless tools. Skips the repo that is the launch directory.
   First deny wins. A crash in PreToolUse refuses everything but reads. Runs
   from a stable clone at `/root/.claude/hub`, never the working copy.
-  `--install` writes `~/.claude/settings.json`.
+  `--install` writes `~/.claude/settings.json`. **Fixed 6592f28:**
+  - a family guard that crashed was read as a pass, and now refuses every
+    non-read;
+  - `--mark`'s outcome was discarded, and is now passed to the session;
+  - the report exemption matched a `report.mjs` anywhere, and now matches only
+    the hub's own;
+  - `--install` keeps the clear-context-on-accept option off, since that
+    approval route mints no marker.
 - **1a. report-clock** — BUILT (`report.mjs`, d578392), planted 4 of 4. `report.mjs "<status>"` stamps the time.
   PreToolUse refuses every call (reads too) once five minutes pass since the
   last stamp, measured from the owner's last message; `report.mjs` itself is
   exempt, and so are subagent calls (payload `agent_id`).
-- **2. approved-plan-guard** — BUILT: run by the dispatcher on PreToolUse and
-  PostToolUse `--mark`; planted (a write with no approved plan is refused). The
-  unwired JPS shim was deleted before it was ever committed.
+- **2. approved-plan-guard** — BUILT, and its approval half WORKS since 5c3b094.
+  It was planted only on its refusal side and never recognised an approval.
+  `--mark` matched two phrases that exist only in the sentence shown to the
+  session, never in the result object the hook is handed, so no approval ever
+  wrote a marker and every write after every approval was refused.
+
+  It now reads the result's `filePath`, planted 21 ways, and a real approval
+  wrote the marker on 2026-09-28. **Fixed 2566674, found by the review of that
+  fix:**
+  - a forgeable `--done` exception;
+  - a crashing classifier read as a pass;
+  - an unreadable plan file that crashed the check;
+  - edits to the approved plan, which voided it in silence;
+  - approvals that were not tied to a session.
+
+  A refusal now says the action is not a recognised read, and quotes why.
 - **3. plan-guard, talk-first** — BUILT (efb9a93), planted both ways. ExitPlanMode refused unless, since
   the last rejected ExitPlanMode or the last EnterPlanMode, a turn ended in
-  assistant text and a genuine owner message followed it.
+  assistant text and a genuine owner message followed it. **Fixed 4ae8731:** a
+  gate's own refusal of ExitPlanMode is recorded with the same denial kind as
+  the owner's rejection, so it was counted as the owner's answer, and every
+  gate refusal cost the owner a message. It is now told apart by its content.
 - **4. plan-guard, plan-names** — BUILT (efb9a93), planted: an invented name is refused, a real one and a "(new)" one pass. It searches code only, since a name the docs merely mention is not one that exists. Every code-formatted name in a
   plan must exist in a session repo, or in a tool RESULT this session read, or
   be marked "(new)". Absolute paths and tokens with spaces are skipped.
+  **Fixed 4ae8731:** a name written as a call is looked up by its name. Also
+  fixed in 4ae8731:
+  - reads with a pipe inside their quotes, and `git -C`, were refused in plan
+    mode;
+  - `env`, `find -exec` or `-delete`, `sed -i` or `w`, and `sort -o` were
+    passed as reads;
+  - ExitPlanMode checked the newest file in the plans directory rather than the
+    plan the harness passes.
 - **5. drive-guard** — BUILT (d578392), planted 9 of 9, including the owner's own title search passing. Refuses `list_recent_files`, any `fullText`
   search, and any search not scoped by a `parentId` that is in
   `tools/owner-images.json` or appeared in an earlier tool result, or by an
@@ -124,7 +172,8 @@ Each gate is made to fail once on a planted payload before it is trusted.
 - **6. stop-guard** — BUILT (d578392, wording ac7c0e2), planted 4 of 4. Adds a third shape: refuses "waiting on you",
   "waiting for you" and "you owe", declaration or not. Its instructed escape
   wording changes from "Stopping here, waiting on you for X" to "Stopping here:
-  open for you is X".
+  open for you is X". **Added 0eb20b4:** a reply that asks for a plan's
+  approval in chat is refused, declared stop or not.
 - **7. compact-brief** — BUILT inside `hook-dispatch.mjs`, planted on this session's transcript. SessionStart with `source: compact` prints
   every tool name used earlier in the session, with counts, so a capability
   cannot drop out of the compaction summary (the Drive connector's download
@@ -154,6 +203,26 @@ Each gate is made to fail once on a planted payload before it is trusted.
   history. The hub's own commit hook did not run `privacy-check.mjs`, which
   is how they got through; it does now (`also=privacy-check.mjs`), and a
   planted attribution was refused at commit.
+- **Found and fixed 2026-09-28 (second session):**
+  - **The ident guard read seven hex letters inside an ordinary word as an
+    identifier** and refused the call. It now counts a hex run only as a whole
+    word, while every SHA shape is still caught. JPS 1f28aa8, on the JPS
+    session branch `claude/approved-plan-guard-marker-fix-37tcwa`, not yet on
+    JPS main.
+  - **Measured: a hook's refusal of a tool is recorded with the same
+    `toolDenialKind` as the owner's own rejection** ("permission-rule"). Only
+    the content, which opens "PreToolUse:<Tool> hook error: [", tells them
+    apart. That is why talk-first counted gate refusals as answers.
+- **Session defects of 2026-09-28, second session, now in Doctrine §0e:**
+  - It pasted a whole plan into chat instead of saying what it was doing
+    (rule 4).
+  - Five statuses in a row carried estimated times, forty minutes off the
+    clock (rule 2).
+- **Found and NOT fixed:** LESSONS §369 cites JPS `tools/owner-images.mjs`,
+  which exists only on the unmerged JPS branch `claude/relaxed-bardeen-vlwm3g`.
+  So `lessons-check.mjs` fails wherever JPS is checked out beside the hub. CI
+  does not see it (there the citation reads as unverified). Merging that
+  branch is the remedy.
 
 ## The setup script — not reachable from the tablet app
 
