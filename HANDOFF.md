@@ -5,6 +5,25 @@ was cut short when the session ended, every finding it rests on, and what is
 still owed. Update the status lines in place as work lands; delete this file
 only when every gate below reads BUILT and the owner has run the setup block.
 
+## FIRST STEP OF EVERY NEW SESSION — the owner only presses approve
+
+The gates below exist and are tested, but they switch on only when installed
+into the session's own settings, and a container is rebuilt every session. A
+session cannot install them unasked — Claude Code refuses it as
+self-modification — and the environment setup script that would do it for
+every session is not reachable from the owner's iPad. So:
+
+1. The session's FIRST plan contains exactly this step:
+   `node noahjefferson/hook-dispatch.mjs --install`, then the probe below.
+   The owner approves it with the plan button. Nothing else is asked of them.
+2. **Probe, harmless whether the gates are live or not:** write a file in the
+   session scratchpad. With the gates live, it is refused until the next plan
+   is approved (approved-plan-guard); a refusal is the proof. Never probe with
+   a Drive search: if the gates were dead, it would search the owner's Drive.
+3. If the install is refused even after approval, say so to the owner in one
+   line, record the result here and in LESSONS §370, and carry on — never send
+   the owner to a settings page.
+
 ## The root cause, measured
 
 **None of the owner's hooks ran for the whole session.** The session was
@@ -129,10 +148,10 @@ Each gate is made to fail once on a planted payload before it is trusted.
   is how they got through; it does now (`also=privacy-check.mjs`), and a
   planted attribution was refused at commit.
 
-## The owner's one manual step — setup script (all gates above are BUILT)
+## The setup script — NOT the owner's step (unreachable from the iPad)
 
-Cloud environment menu in the session title bar, then Edit, then Setup script.
-Add these lines. The first new session proves it: its Stop records list more
+Kept for a session that can reach an environment's settings some other way.
+These lines in the setup script would install the gates in every session. The first new session proves it: its Stop records list more
 than one hook, and a planted Drive search is refused.
 
     mkdir -p "$HOME/.claude"
