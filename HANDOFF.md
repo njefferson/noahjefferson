@@ -11,11 +11,11 @@ The gates below exist and are tested, but they switch on only when installed
 into the session's own settings, and a container is rebuilt every session. A
 session cannot install them unasked — Claude Code refuses it as
 self-modification — and the environment setup script that would do it for
-every session is not reachable from the owner's iPad. So:
+every session is not reachable from the tablet app. So:
 
 1. The session's FIRST plan contains exactly this step:
    `node noahjefferson/hook-dispatch.mjs --install`, then the probe below.
-   The owner approves it with the plan button. Nothing else is asked of them.
+   It is approved with the plan button. Nothing else is asked for.
 2. **Probe, harmless whether the gates are live or not:** write a file in the
    session scratchpad. With the gates live, it is refused until the next plan
    is approved (approved-plan-guard); a refusal is the proof. Never probe with
@@ -148,7 +148,7 @@ Each gate is made to fail once on a planted payload before it is trusted.
   is how they got through; it does now (`also=privacy-check.mjs`), and a
   planted attribution was refused at commit.
 
-## The setup script — NOT the owner's step (unreachable from the iPad)
+## The setup script — not reachable from the tablet app
 
 Kept for a session that can reach an environment's settings some other way.
 These lines in the setup script would install the gates in every session. The first new session proves it: its Stop records list more
