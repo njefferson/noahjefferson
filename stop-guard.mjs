@@ -78,7 +78,7 @@ const WAITING = [
  *  END of the reply, because "let me know if that reads wrong" mid-report is a
  *  courtesy and the same words as the last sentence are a hand-off. */
 const PARKING = [
-  /\b(?:let me know|tell me|say the word|just say)\b[^.?!]*(?:\bif\b|\bwhen\b|\band I(?:'| w)ll\b|\bto (?:continue|go on|proceed|carry on)\b)/i,
+  /\b(?:let me know|tell me|say the word|just say)\b[^.?!]*(?:\bif\b|\bwhen\b|\band I(?:'|\s+wi)ll\b|\bto (?:continue|go on|proceed|carry on)\b)/i,
   /\b(?:want|would you like) me to (?:continue|go on|carry on|proceed|start|keep going|move on)\b/i,
   /\bshall I (?:continue|go on|carry on|proceed|start|keep going|move on)\b/i,
   /\bready (?:when you are|for (?:your|the) (?:go|word|nod))\b/i,
@@ -132,9 +132,15 @@ const HANDING = [
   /\byou(?:'ll| will)?\s+(?:need|have)\s+to\s+(?:install|configure|enable|set up|add)\b/i,
 ];
 
-const handed = HANDING.find((re) => re.test(reply));
+// A reply HANDS the owner a step when the sentence naming the setting speaks to
+// the reader. A report that merely mentions a settings screen or a setup script
+// — this guard's own history is full of them — is not handing anything over.
+const ADDRESSED = /\b(?:you|your|please|go to|open|tap|click|edit|add|paste|set up|configure|enable|install)\b/i;
+const sentencesAll = reply.split(/(?<=[.!?])\s+|\n+/).map((x) => x.trim()).filter(Boolean);
+const handedIn = sentencesAll.find((s) => ADDRESSED.test(s) && HANDING.some((re) => re.test(s)));
+const handed = handedIn ? HANDING.find((re) => re.test(handedIn)) : undefined;
 if (handed) {
-  process.stderr.write(`STOP REFUSED — this reply hands the owner a step ("${(reply.match(handed) ?? [''])[0]}").
+  process.stderr.write(`STOP REFUSED — this reply hands the owner a step ("${(handedIn.match(handed) ?? [''])[0]}").
 
 LESSONS §370, rule 14 in HANDOFF.md. Look at it from the owner's side: never
 hand the owner a step a session can do, and never send them to settings, a
@@ -183,6 +189,34 @@ is ready, call ExitPlanMode.
   process.exit(2);
 }
 
+/** 3. THE TEMPLATE, judged BEFORE the declaration: a declared stop excuses
+ *  stopping, never the shape of the reply. Doctrine §2 names the shapes that
+ *  look like content and are not, and one is purely structural: the bolded
+ *  lead-in on every paragraph. Four in a row is the tell; three can be a
+ *  deliberate emphasis. TWO SHAPES:
+ *    (a) the LEAD-IN: "**Denoise works.** On NIR_1480 …" — four in a row.
+ *    (b) the FAKE HEADER: a paragraph whose FIRST LINE is only a bold phrase —
+ *        three anywhere. Judged on the first line, because the usual shape puts
+ *        the section's content on the very next line with no blank between. */
+const paras = reply.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+let run = 0, longestRun = 0, headers = 0;
+for (const p of paras) {
+  const header = /^\*\*[^*\n]{2,}\*\*:?[ \t]*$/.test(p.split('\n')[0]);
+  const leadIn = !header && /^\*\*[^*\n]{2,}\*\*\s*\S/.test(p);
+  if (header) headers++;
+  if (leadIn) { run++; if (run > longestRun) longestRun = run; } else run = 0;
+}
+if (longestRun >= 4 || headers >= 3) {
+  process.stderr.write(`STOP REFUSED — this reply ${longestRun >= 4 ? `opens ${longestRun} consecutive paragraphs with a bolded lead-in` : `is sectioned under ${headers} bold headers`}.
+
+Doctrine §2: "the bolded lead-in on every paragraph" is a shape that looks like
+content and is not — emphasis on everything is emphasis on nothing, and it makes
+a reply scannable in appearance and flat in fact. Rewrite it as prose. Keep the
+finding and what it costs; cut the shape.
+`);
+  process.exit(2);
+}
+
 // A declared stop is allowed, and is the whole point of having a way through.
 if (DECLARED.test(reply)) process.exit(0);
 
@@ -193,7 +227,9 @@ if (DECLARED.test(reply)) process.exit(0);
 // paragraphs and refused that sentence, which is the false positive that
 // teaches people to switch a guard off.
 const sentences = reply.split(/(?<=[.!?])\s+|\n+/).map((x) => x.trim()).filter(Boolean);
-const tail = sentences[sentences.length - 1] ?? '';
+// The last sentence that SAYS something: a trailing link, status line or
+// parenthesis after the question used to hide it.
+const tail = [...sentences].reverse().find((s) => !/^(?:<?https?:\/\/\S+>?|\(.*\)|Status\b.*|[-*_]{3,})$/.test(s)) ?? '';
 
 /** …and even in the last sentence it is not a hand-off if the same breath says
  *  work is proceeding. Splitting by sentence was not enough: "Let me know if
@@ -201,51 +237,19 @@ const tail = sentences[sentences.length - 1] ?? '';
  *  sentence carrying both halves, and refusing it is the false positive that
  *  gets a guard switched off. Parking means asking for permission with nothing
  *  in flight; if something is in flight, it is a courtesy. */
-const CONTINUING = /\b(?:meanwhile|in the meantime|meantime|carrying on|moving on|next up I|I(?:'| ha)?ve (?:started|kicked off|begun)|I(?:'| wi)?ll (?:fold|carry on|keep going|continue|start|move on)|starting (?:on |the )?(?:the )?next|going on with)\b/i;
+// Only work that is ALREADY moving counts. "I'll continue" is removed: in "say
+// the word and I'll continue" it is the parking offer itself, and it exempted
+// the very sentence this guard exists to refuse.
+const CONTINUING = /\b(?:meanwhile|in the meantime|meantime|carrying on|moving on|next up I|I(?:'| ha)?ve (?:started|kicked off|begun)|starting (?:on |the )?(?:the )?next|going on with)\b/i;
 
 const waitHit = WAITING.find((re) => re.test(reply));
 const parkHit = CONTINUING.test(tail) ? undefined : PARKING.find((re) => re.test(tail));
 
-/** 3. THE TEMPLATE. Doctrine §2 names the shapes that look like content and are
- *  not, and one of them is purely structural: the bolded lead-in on every
- *  paragraph. A session used it in nearly every reply of a long evening while
- *  §2 sat loaded in its context. Four in a row is the tell; three can be a
- *  deliberate emphasis and refusing it is the false positive that gets a guard
- *  switched off. The rest of §2 — the manufactured next step, the closing
- *  reflection, a decision list made of things that are not decisions — cannot
- *  be told from their honest twins by a pattern, and stay CHECKLIST. */
-const paras = reply.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-// TWO SHAPES, because the specimen for the first version was built from memory
-// of the rule and not from the replies that broke it, and it caught neither.
-//   (a) the LEAD-IN: "**Denoise works.** On NIR_1480 …" — bold opening a
-//       paragraph that goes on. Four in a row.
-//   (b) the FAKE HEADER: a paragraph that is nothing but a bold phrase, the
-//       report sectioned into "**What shipped**" / "**Verification**" / "**What
-//       I need from you**". Three of them anywhere in one reply.
-let run = 0, longestRun = 0, headers = 0;
-for (const p of paras) {
-  const leadIn = /^\*\*[^*\n]{2,}\*\*\s*\S/.test(p);
-  const header = /^\*\*[^*\n]{2,}\*\*:?$/.test(p);
-  if (header) headers++;
-  if (leadIn) { run++; if (run > longestRun) longestRun = run; } else run = 0;
-}
-const templateHit = longestRun >= 4 || headers >= 3;
-const templateWhy = longestRun >= 4
-  ? `opens ${longestRun} consecutive paragraphs with a bolded lead-in`
-  : `is sectioned under ${headers} bold headers`;
-
-if (!waitHit && !parkHit && !templateHit) process.exit(0);
-
-if (!waitHit && !parkHit) {
-  process.stderr.write(`STOP REFUSED — this reply ${templateWhy}.
-
-Doctrine §2: "the bolded lead-in on every paragraph" is a shape that looks like
-content and is not — emphasis on everything is emphasis on nothing, and it makes
-a reply scannable in appearance and flat in fact. Rewrite it as prose. Keep the
-finding and what it costs; cut the shape.
-`);
-  process.exit(2);
-}
+// The template (shape 3) is judged above, before the declaration. The rest of
+// §2 — the manufactured next step, the closing reflection, a decision list made
+// of things that are not decisions — cannot be told from their honest twins by
+// a pattern, and stays CHECKLIST.
+if (!waitHit && !parkHit) process.exit(0);
 
 const hit = waitHit ?? parkHit;
 const quote = ((waitHit ? reply : tail).match(hit) ?? [''])[0].trim().slice(0, 80);
