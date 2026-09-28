@@ -33,9 +33,16 @@ const CLOCK = join(homedir(), '.claude', 'report-clock.json');
  * @returns {{at: number, status: string}} the last status; `at` is 0 when the
  *   file is missing or unreadable, which the gate reads as "no stamp".
  */
-function readClock() {
-  try { const c = JSON.parse(readFileSync(CLOCK, 'utf8')); return { at: Number(c.at) || 0, status: String(c.status ?? '') }; }
-  catch { return { at: 0, status: '' }; }
+function readClock(now = Date.now()) {
+  try {
+    const c = JSON.parse(readFileSync(CLOCK, 'utf8'));
+    const at = Number(c.at);
+    // A stamp from the future is no stamp: one dated a year ahead switched the
+    // gate off for a year, and one that parsed to Infinity switched it off
+    // for good.
+    if (!Number.isFinite(at) || at > now + 60 * 1000) return { at: 0, status: '' };
+    return { at: at || 0, status: String(c.status ?? '') };
+  } catch { return { at: 0, status: '' }; }
 }
 
 /**
@@ -47,7 +54,7 @@ function readClock() {
  */
 export function gate(p, now = Date.now()) {
   if (p.agent_id) return null;
-  const stamp = readClock().at;
+  const stamp = readClock(now).at;
   const owner = lastOwnerMessage(tailEntries(p.transcript_path ?? '', 4 * 1024 * 1024))?.at ?? 0;
   const last = Math.max(stamp, owner);
   if (!last) return null;                       // nothing known yet: a fresh session
@@ -67,9 +74,15 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
     if (why) { process.stderr.write(why + '\n'); process.exit(2); }
     process.exit(0);
   }
-  const status = process.argv.slice(2).join(' ').trim();
-  if (!status) { console.error('usage: node report.mjs "Status HH:MM — done: …; running: …; next: …; next status by HH:MM"'); process.exit(1); }
+  const given = process.argv.slice(2).join(' ').trim();
+  if (!given) { console.error('usage: node report.mjs "Status HH:MM — done: …; running: …; next: …; next status by HH:MM"'); process.exit(1); }
+  // The time in a status is the CLOCK's, written here, never the session's
+  // estimate: five statuses in a row once carried times forty minutes off.
+  const hhmm = new Date().toTimeString().slice(0, 5);
+  const m = /^Status\s+(\d{1,2}:\d{2})\b/.exec(given);
+  const status = m ? given.replace(m[0], `Status ${hhmm}`) : `Status ${hhmm} — ${given}`;
   mkdirSync(dirname(CLOCK), { recursive: true });
   writeFileSync(CLOCK, JSON.stringify({ at: Date.now(), status }, null, 1));
   console.log(status);
+  if (m && m[1].padStart(5, '0') !== hhmm) console.log(`(the status said ${m[1]}; the clock says ${hhmm}, and that is what was stamped)`);
 }
