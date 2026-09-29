@@ -462,3 +462,4 @@ and the filename carries it.
 - **§368** — [Reviewing until a round finds nothing does not converge on a change that each round's fixes make bigger](lessons/368-review-until-dry-does-not-converge-on-a-change-its-fixes-grow.md)
 - **§369** — [Calibrate on the owner's own files, never the practice copies, and never go looking for more](lessons/369-calibrate-on-the-owners-files-never-the-practice-copies-and-never-search-for-more.md)
 - **§370** — [A session launched above the repos runs none of their hooks, and every rule then rests on memory](lessons/370-a-session-launched-above-the-repos-runs-none-of-their-hooks.md)
+- **§371** — [Work on a gate is written as the outcome it must produce, never as what could get past it](lessons/371-gate-work-is-written-as-the-outcome-each-gate-must-produce.md)

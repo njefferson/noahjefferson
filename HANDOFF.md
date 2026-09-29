@@ -33,6 +33,17 @@ every session is not reachable from the tablet app. So:
 3. If the install is refused even after approval, say so to the owner in one
    line, record the result here and in LESSONS §370, and carry on — never send
    the owner to a settings page.
+4. **Before the install, every repo's working tree must carry a working
+   `plan-guard.sh`** (measured 2026-09-29). The dispatcher runs each repo's own
+   hooks from its working tree on every event. A tree holding the old shim
+   refuses every plan-mode call once installed, and that includes
+   ExitPlanMode. JPS `main` has the old shim until relaxed-bardeen's fix
+   merges, so check JPS out on a branch carrying the fix first.
+   `claude/laughing-edison-x0pdv8` carries it.
+   **Then plan twice.** A plan approved before the install minted no marker,
+   so the first write after it is refused (the probe), and the work goes up
+   again as the next plan. The ledger also starts empty at the install, so
+   the first command after that approval re-reads every SHA the plan cites.
 
 ## The root cause, measured
 
@@ -90,7 +101,9 @@ session rooted in a PARENT directory never fires"). It was true of every hook.
     record already ranks, never research handed back.
 12. **Infrared first.** A white-balance test that moved only the red and blue
     sliders with green fixed is a visible-light model, and was rejected.
-    In this app a neutral's colour is set by the per-photosite black level,
+    In this app a neutral's colour is set by the black level (one number: the
+    four per-site values in MakerNote 0x3D averaged; they read 1008 on all
+    seven owner raws traced 2026-09-29, so nothing is lost on those),
     the lens profile's colour, gray-world's THREE gains, the look's 3x3 mixer
     (the swap and the infrared subtraction), its tint, its per-channel curves
     and its grade wheels — see IR-SCIENCE.md sections 3, 4c and 6.
@@ -119,11 +132,9 @@ Each gate is made to fail once on a planted payload before it is trusted.
   First deny wins. A crash in PreToolUse refuses everything but reads. Runs
   from a stable clone at `/root/.claude/hub`, never the working copy.
   `--install` writes `~/.claude/settings.json`. **Fixed 6592f28:**
-  - a family guard that crashed was read as a pass, and now refuses every
-    non-read;
-  - `--mark`'s outcome was discarded, and is now passed to the session;
-  - the report exemption matched a `report.mjs` anywhere, and now matches only
-    the hub's own;
+  - a family guard that crashes refuses every non-read;
+  - `--mark`'s outcome is passed to the session;
+  - only the hub's own `report.mjs` is exempt from the report clock;
   - `--install` keeps the clear-context-on-accept option off, since that
     approval route mints no marker.
 - **1a. report-clock** — BUILT (`report.mjs`, d578392), planted 4 of 4. `report.mjs "<status>"` stamps the time.
@@ -139,11 +150,11 @@ Each gate is made to fail once on a planted payload before it is trusted.
   It now reads the result's `filePath`, planted 21 ways, and a real approval
   wrote the marker on 2026-09-28. **Fixed 2566674, found by the review of that
   fix:**
-  - a forgeable `--done` exception;
-  - a crashing classifier read as a pass;
-  - an unreadable plan file that crashed the check;
-  - edits to the approved plan, which voided it in silence;
-  - approvals that were not tied to a session.
+  - the `--done` exception is granted only on its real condition;
+  - a classifier that crashes refuses;
+  - an unreadable plan file is refused with its reason;
+  - an edit to the approved plan voids it, and the refusal says so;
+  - an approval counts only in the session that gave it.
 
   A refusal now says the action is not a recognised read, and quotes why.
 - **3. plan-guard, talk-first** — BUILT (efb9a93), planted both ways. ExitPlanMode refused unless, since
@@ -157,12 +168,9 @@ Each gate is made to fail once on a planted payload before it is trusted.
   be marked "(new)". Absolute paths and tokens with spaces are skipped.
   **Fixed 4ae8731:** a name written as a call is looked up by its name. Also
   fixed in 4ae8731:
-  - reads with a pipe inside their quotes, and `git -C`, were refused in plan
-    mode;
-  - `env`, `find -exec` or `-delete`, `sed -i` or `w`, and `sort -o` were
-    passed as reads;
-  - ExitPlanMode checked the newest file in the plans directory rather than the
-    plan the harness passes.
+  - reads with a pipe inside their quotes, and `git -C`, pass in plan mode;
+  - every command that can write, in any of its forms, is treated as a write;
+  - ExitPlanMode checks the plan the harness passes.
 - **5. drive-guard** — BUILT (d578392), planted 9 of 9, including the owner's own title search passing. Refuses `list_recent_files`, any `fullText`
   search, and any search not scoped by a `parentId` that is in
   `tools/owner-images.json` or appeared in an earlier tool result, or by an
@@ -197,41 +205,39 @@ Each gate is made to fail once on a planted payload before it is trusted.
     - the report clock's 4 MB tail: unreachable once any status exists;
     - plans-directory writes: by design;
     - a mid-turn owner message in an attachment shape that never occurs.
-  - **Found and NOT fixed** (reviewed, no skeptic yet, or larger than one
-    round):
-    - **harness-guard:**
-      - a scratch script run after a `cd` in an earlier call, through a
-        shell variable, with a flag value, or inside `bash -c` is never
-        checked;
-      - a harness printing its control through a call with parentheses, a
-        constant, stderr or `process.stdout.write` is refused, while a
-        commented-out one passes;
-      - any node script under the scratchpad counts as a measurement, and so
-        does a node command merely quoted in text.
-    - **plan-guard, only its false-refusal half.** The write-bypass half was
-      NOT reviewed: its reviewer was stopped by a safety classifier twice.
-      Four false refusals:
-      - the name check finds no repos when the project directory sits above
-        them;
-      - a `#` comment inside a code fence, or a `---` inside a plan, cuts off
-        the checked block;
-      - `path:line` spans and names in superseded plans are refused;
-      - common reads are refused (`sed -nE`, `git branch --show-current`,
-        `git tag -l` with a pattern, `git remote get-url`, and others).
-    - **ledger:**
-      - output of a command that failed is never recorded, since PostToolUse
-        does not fire on failure, so a SHA read that way is refused and
-        re-reading loops;
-      - trimming races with concurrent appends and drops entries.
-    - **drive-guard:** the 8 MB transcript tail forgets a listing. The fix is
-      a per-session record, which is larger than one round.
-    - **approved-plan-guard:** a marker name assembled from pieces inside the
-      shell rewrote the marker under an approved plan. No string check can
-      see that; it rests on Doctrine §0e.
-    - **transcript-tail:** an owner message typed mid-turn is recorded only as
-      a queue-operation entry, which the owner-message reader does not see.
-      A skeptic found this while refuting another finding; it is not yet
-      reviewed.
+  - **Found and NOT fixed, written as the outcome each gate still owes**
+    (LESSONS §371: gate work is written as outcomes, never as routes past a
+    gate). Reviewed with no skeptic yet, or larger than one round:
+    - **harness-guard owes:**
+      - every scratchpad measurement script is checked for its made-to-fail
+        block whenever node runs it, however the command reaches it;
+      - a block printed in any ordinary way passes, and a block that is only
+        a comment does not;
+      - only a script actually run as a measurement is gated.
+    - **plan-guard owes, on its refusal side** (four false refusals measured):
+      - plan names are checked against the session's repos wherever the
+        project directory sits;
+      - the whole top block of a plan is checked, whatever it contains;
+      - `path:line` spans, and names in superseded plans, pass;
+      - every read-only command passes in plan mode. Measured refused:
+        `sed -nE`, `git branch --show-current`, `git tag -l` with a pattern,
+        `git remote get-url`, and, on 2026-09-29, a read beginning with `cd`.
+
+      Its other side, that every write in plan mode is refused, has NOT been
+      reviewed: the review of it was stopped twice before it returned.
+    - **ledger owes:**
+      - a value printed by a command that failed counts as read, so reading it
+        again ends the refusal;
+      - trimming never loses an entry appended at the same moment.
+    - **drive-guard owes:** a folder listing counts as seen for the whole
+      session, not only while it sits in the transcript's last 8 MB. The
+      remedy is a per-session record, larger than one round.
+    - **approved-plan-guard owes:** the approval marker changes only when an
+      approval is recorded. No string check can promise that alone; it rests on
+      Doctrine §0e.
+    - **transcript-tail owes:** an owner message typed mid-turn counts as an
+      owner message. A skeptic found this while refuting another finding; it is
+      not yet reviewed.
 
 ## Found while building, and fixed or recorded
 
@@ -251,9 +257,9 @@ Each gate is made to fail once on a planted payload before it is trusted.
 - **Found and fixed 2026-09-28 (second session):**
   - **The ident guard read seven hex letters inside an ordinary word as an
     identifier** and refused the call. It now counts a hex run only as a whole
-    word, while every SHA shape is still caught. JPS 1f28aa8, on the JPS
-    session branch `claude/approved-plan-guard-marker-fix-37tcwa`, not yet on
-    JPS main.
+    word, while every SHA shape is still caught. JPS 1f28aa8, with its two
+    companions, has been on JPS main since 2026-09-29: PR 178, rebase-merged
+    as 11df7b7. That head's Gates run and deploy were read green.
   - **Measured: a hook's refusal of a tool is recorded with the same
     `toolDenialKind` as the owner's own rejection** ("permission-rule"). Only
     the content, which opens "PreToolUse:<Tool> hook error: [", tells them
@@ -266,6 +272,13 @@ Each gate is made to fail once on a planted payload before it is trusted.
     to ten minutes ahead, and was caught only because a plant printed the
     clock. `report.mjs` now writes the clock's time into every status
     (b24149e).
+- **Session defects of 2026-09-29, before the gates were installed:**
+  - Three statuses carried estimated times, 02:12 to 02:17, while the clock
+    read 02:07 (rule 2). Every time since has been read from the clock.
+  - Two writes happened in plan mode, both in the scratchpad and outside
+    both repos. A read command also saved a copy of IR-SCIENCE.md, and a
+    read-only agent saved copies of five source files. Once the gates were
+    live, both were refusals.
 - **Found and NOT fixed:** LESSONS §369 cites JPS `tools/owner-images.mjs`,
   which exists only on the unmerged JPS branch `claude/relaxed-bardeen-vlwm3g`.
   So `lessons-check.mjs` fails wherever JPS is checked out beside the hub. CI
@@ -302,18 +315,31 @@ than one hook, and a planted Drive search is refused.
 
 ## Other work still owed
 
-- **069 (cloud cyan under Aerochrome's sky stages).** On the owner's raws with
-  the lens fix: NIR_1651.NEF's cloud arrives at saturation 0.08–0.10 with the
-  clear sky's hue (171–174) and leaves the sky stages at 0.29–0.38;
-  NIR_1661.NEF's wisps go 0.20 to 0.69; NIR_3461.NEF's thick cloud stays at
-  0.03; NIR_3466.NEF's wisps go 0.05 to 0.11. The record's option 10 and
-  Rejected 9 rest on NIR_1644 (a practice copy only) and NIR_3406 (not in the
-  owner's set) and must be corrected and labelled. The next test traces the
-  cloud, clear sky, foliage and a neutral away from the sky through every
-  pipeline stage, in order, on the seven raws in the owner's set that 069
-  names, moving no setting.
-- **071 (Firefox build 44 s).** The owner's PC reading from the test page's
-  "What makes the picture code slow to build" button is pending.
+- **069: DONE 2026-09-29.** The trace ran on the seven owner raws, through
+  every stage, with nothing moved. Option 10, Rejected 9 and Rejected 10 are
+  labelled by what each file was and corrected on the owner's files. It is
+  JPS 1146b21 on `claude/laughing-edison-x0pdv8`, the relaxed-bardeen commits
+  plus this record.
+  - **The result.** On every frame the white point leaves cloud and clear sky
+    on one side and foliage and a road on the other. Dense cloud is left near
+    neutral and stays white on four of six frames with cloud. A cloud goes
+    cyan only where it is left off neutral and arrives above 019's saturation
+    gate: NIR_1651's band and NIR_1661's wisps. The look's mixer amplifies the
+    ground side, and NIR_3466's road renders maroon.
+  - **Still open in the record:** option 10's white-point renders and option
+    9's two forms, on the owner's files.
+- **071 (Firefox build 44 s): the readings arrived 2026-09-29.** On the home PC
+  (Firefox, Direct3D 11 on a GTX 980) the build takes 45.4 s as shipped, 45.3 s
+  with loop counts hidden, 0.79 s without the mask loops and 0.67 s with both.
+  On the work PC (Chrome, software rendering) it takes 18 ms however the code
+  is built. They go into record 071 under their own plan. The same plan takes
+  a question the readings cannot settle: whether a cached launch is slower
+  than a first visit while an update downloads. That needs one machine timed
+  three ways.
+- **"Bold Pink", asked for 2026-09-29.** A preset from the trace's tone-curve
+  step: Aerochrome with the HSL mixer neutral and Sky colour smoothing and Sky
+  saturation off. Its own plan: render it on the seven raws and show it,
+  write the record, build it, and push it to staging for the device pass.
 - **The CLAUDE.md and DOCTRINE text for the rules above** was refused to the
   session as self-modification; if it is refused again, it goes to the owner
   as one paste block.
