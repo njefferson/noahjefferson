@@ -463,3 +463,5 @@ and the filename carries it.
 - **§369** — [Calibrate on the owner's own files, never the practice copies, and never go looking for more](lessons/369-calibrate-on-the-owners-files-never-the-practice-copies-and-never-search-for-more.md)
 - **§370** — [A session launched above the repos runs none of their hooks, and every rule then rests on memory](lessons/370-a-session-launched-above-the-repos-runs-none-of-their-hooks.md)
 - **§371** — [Work on a gate is written as the outcome it must produce, never as what could get past it](lessons/371-gate-work-is-written-as-the-outcome-each-gate-must-produce.md)
+- **§372** — [A stop is not a decision, and reporting it as one puts the session's own failure on the owner](lessons/372-a-stop-is-not-a-decision.md)
+- **§373** — [Opening a pull request through the session's GitHub tool added a link to the chat, and an edit does not take it out of the history](lessons/373-the-pr-tool-appends-a-session-link.md)
