@@ -386,8 +386,8 @@ const CASES = [
     },
   },
   {
-    name: 'a later route waits for Retry-After or ten minutes, and only where the reply said temporarily',
-    guards: ['later_wait'],
+    name: 'a later route waits for Retry-After or ten minutes, and only where the reply said temporarily or to try again later',
+    guards: ['later_wait', 'later_words'],
     run(g, self) {
       fresh();
       g.record(ran(`curl -sS -i '${RG}'`, RG_403), 'PostToolUse');
@@ -398,7 +398,10 @@ const CASES = [
       fresh();
       g.record(ran(`curl -sS -i '${PIX}'`, PIX_406), 'PostToolUse');
       const wrong = g.decide(bash(`node ${self} --read pixinsight.com --said "could not be found on this server" --route "later: retry once after the wait it asks for"`));
-      return ok === null && /more minute/.test(soon ?? '') && later === null && /temporarily/.test(wrong ?? '');
+      fresh();
+      g.record(ran("curl -sS -i 'https://journals.example-f.org/view/x.xml'", 'HTTP/2 403\nserver: CloudFront\n\n<H2>The request could not be satisfied.</H2>\nRequest blocked.\nWe can\'t connect to the server for this app or website at this time. There might be too much traffic or a configuration error. Try again later, or contact the app or website owner.'), 'PostToolUse');
+      const tryLater = g.decide(bash(`node ${self} --read journals.example-f.org --said "There might be too much traffic or a configuration error. Try again later" --route "later: the reply says to try again later"`));
+      return ok === null && /more minute/.test(soon ?? '') && later === null && /temporarily/.test(wrong ?? '') && tryLater === null;
     },
   },
   {
@@ -709,6 +712,7 @@ const PLANTS = {
   exact_host: ["return String(h).toLowerCase().replace(/\\.$/, '').replace(/^www\\./, '');", "return String(h).toLowerCase().split('.').slice(-2).join('.');"],
   ledger_segments: ['const segsL = commandsIn(heredocs(c).shell).filter((s) => s.words.some(names));', 'const segsL = commandsIn(heredocs(c).shell); if (!segsL.some((s) => s.words.some(names))) segsL.length = 0;'],
   short_reply: ['if (!(whole.length < 40 && said === whole) && (said.length', 'if (true && (said.length'],
+  later_words: ['const LATER_WORDS = /temporar|try (it )?again later|retry later|come back later|try again in a (few|little)/i;', 'const LATER_WORDS = /temporar/i;'],
   runtime_opts: ['return `builds an option at run time (${x.slice(0, 24)}), which this guard cannot read`;', ';'],
 };
 

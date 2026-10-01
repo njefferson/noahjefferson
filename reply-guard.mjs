@@ -56,6 +56,7 @@ const SELF = fileURLToPath(import.meta.url);
 const ROUTES = ['api', 'negotiate', 'tdm', 'author-copy', 'open-index', 'later', 'owner'];
 const LOCAL = /^(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|\[?::1\]?)$/;
 const LATER_DEFAULT_S = 600;
+const LATER_WORDS = /temporar|try (it )?again later|retry later|come back later|try again in a (few|little)/i;
 const CLIENTS = new Set(['curl', 'wget', 'wget2', 'lynx', 'w3m', 'links', 'elinks', 'aria2c', 'httpie', 'xh', 'xhs']);
 const CLIENT_WORD = /(^|[^A-Za-z0-9_-])(curl|wget2?|lynx|w3m|aria2c|httpie)([^A-Za-z0-9_-]|$)/;
 // Programs that run a string they are given (`-c`, `-e`), and the words that
@@ -957,7 +958,10 @@ export function checkReading(r, ev) {
   if (d.cause === 'proxy' && kind !== 'owner') return `reply-guard: this container's network refused ${d.host}; the host was never asked, so the only route is the owner: ask them to allow ${d.host}, naming it (LESSONS §188).`;
   const all = `${d.text}\n${JSON.stringify(d.headers ?? {})}`;
   if (kind === 'negotiate' && ![406, 415].includes(d.status)) return `reply-guard: negotiate answers a 406 or 415; ${d.host} answered ${d.status || 'no status'}.`;
-  if (kind === 'later' && !(/temporar/i.test(all) || d.headers?.['retry-after'] || [429, 503].includes(d.status))) return `reply-guard: later is a route only where the reply said temporarily, gave Retry-After, or answered 429 or 503; ${d.host}'s did none of those.`;
+  // "Try again later" is the reply naming this route; CloudFront's refusal
+  // page says it, and the first version refused it for not saying
+  // "temporarily".
+  if (kind === 'later' && !(LATER_WORDS.test(all) || d.headers?.['retry-after'] || [429, 503].includes(d.status))) return `reply-guard: later is a route only where the reply said temporarily or to try again later, gave Retry-After, or answered 429 or 503; ${d.host}'s did none of those.`;
   if (kind === 'tdm' && !/tdm|text and data mining/i.test(all)) return `reply-guard: tdm is a route only where the reply names a text-and-data-mining policy; ${d.host}'s does not.`;
   return null;
 }
