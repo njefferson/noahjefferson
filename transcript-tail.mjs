@@ -113,27 +113,27 @@ export function lastOwnerMessage(entries) {
 }
 
 /**
- * The owner's most recent message, if it came after a given time.
+ * Every owner message later than a given time.
  * @param {string} path    the transcript.
  * @param {number} since   a time in ms, such as when a host declined.
  * @param {number} [cap]   the most of the end to read; 64 MB by default.
- * @returns {{text: string, at: number} | null} the owner's latest message
- *   when it is later than `since`, else null. The tail it reads widens (2, 8,
- *   32, then `cap` MB) until it holds an owner message, or reaches back past
- *   `since`, or reaches the cap. reply-guard's owner route depends on it: a
- *   fixed 2 MB tail lost an answer the owner had given 2.2 MB earlier, because
- *   the session had kept working after it.
+ * @returns {{text: string, at: number}[]} the owner's messages after `since`,
+ *   oldest first, read from a tail that widens (2, 8, 32, then `cap` MB) until
+ *   it reaches back past `since` or the cap, because a fixed 2 MB tail lost an
+ *   answer given 2.2 MB earlier while the session kept working. reply-guard's owner route
+ *   needs all of them, because the message that answers about one host is
+ *   often followed by another about something else.
  */
-export function ownerMessageSince(path, since, cap = 64 * 1024 * 1024) {
+export function ownerMessagesSince(path, since, cap = 64 * 1024 * 1024) {
+  let entries = [];
   for (const mb of [2, 8, 32, cap / (1024 * 1024)]) {
-    const entries = tailEntries(path, Math.min(mb * 1024 * 1024, cap));
-    const owner = lastOwnerMessage(entries);
-    if (owner) return owner.at > since ? owner : null;
+    entries = tailEntries(path, Math.min(mb * 1024 * 1024, cap));
     const first = entries.find((e) => Number.isFinite(Date.parse(e?.timestamp ?? '')));
-    if (first && Date.parse(first.timestamp) <= since) return null;
-    if (mb * 1024 * 1024 >= cap) break;
+    if ((first && Date.parse(first.timestamp) <= since) || mb * 1024 * 1024 >= cap) break;
   }
-  return null;
+  return entries.filter((e) => isOwnerMessage(e))
+    .map((e) => ({ text: textOf(e), at: Date.parse(e.timestamp ?? '') }))
+    .filter((m) => Number.isFinite(m.at) && m.at > since);
 }
 
 /**

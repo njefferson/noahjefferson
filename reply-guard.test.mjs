@@ -363,7 +363,7 @@ const CASES = [
     // kept every one of them waiting: the message was a queued_command
     // attachment, which the transcript reader did not count as the owner.
     name: 'an owner message typed mid-turn answers a container refusal; a subagent hand-back or a task notification does not',
-    guards: ['queued_owner', 'owner_window'],
+    guards: ['queued_owner', 'owner_window', 'owner_names'],
     run(g, self) {
       fresh();
       const url = 'https://murrayfoote.com/2022/10/19/x/';
@@ -374,14 +374,19 @@ const CASES = [
       writeFileSync(tx, [q('peer', '<agent-message from="a1"> hand-back', 60000, { isMeta: true }), q('task-notification', '<task-notification> done', 70000)].join('\n') + '\n');
       at(T0 + 120000);
       const notYet = g.decide(bash(`curl -sS '${url}'`, { transcript_path: tx }));
+      // A message about another host, even one ending in the same domain, is
+      // not an answer about this one.
+      writeFileSync(tx, [q('human', 'science.nasa.gov and blog.murrayfoote.com.au added', 90000)].join('\n') + '\n');
+      const otherHost = g.decide(bash(`curl -sS '${url}'`, { transcript_path: tx }));
       writeFileSync(tx, [q('peer', '<agent-message from="a1"> hand-back', 60000, { isMeta: true }), q('human', 'These hosts were added to the session: murrayfoote.com', 90000)].join('\n') + '\n');
       const answered = g.decide(bash(`curl -sS '${url}'`, { transcript_path: tx }));
       // The answer stays an answer after the session has worked on: here 3 MB
       // of tool output follows it, past the 2 MB tail the guard once read.
       const filler = JSON.stringify({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'f', content: 'x'.repeat(100000) }] }, timestamp: new Date(T0 + 100000).toISOString() });
-      writeFileSync(tx, [q('human', 'These hosts were added to the session: murrayfoote.com', 90000), ...Array(30).fill(filler)].join('\n') + '\n');
+      // And a later message about another host does not undo it.
+      writeFileSync(tx, [q('human', 'These hosts were added to the session: murrayfoote.com', 90000), ...Array(30).fill(filler), q('human', 'science.nasa.gov Added', 110000)].join('\n') + '\n');
       const stillAnswered = g.decide(bash(`curl -sS '${url}'`, { transcript_path: tx }));
-      return /no message from the owner/.test(notYet ?? '') && answered === null && stillAnswered === null;
+      return /no message from the owner/.test(notYet ?? '') && /no message from the owner/.test(otherHost ?? '') && answered === null && stillAnswered === null;
     },
   },
   {
@@ -396,7 +401,7 @@ const CASES = [
       const owner = g.decide(bash(`node ${self} --read bugzilla.mozilla.org --said "CONNECT tunnel failed, response 403" --route "owner: asked to allow bugzilla.mozilla.org"`));
       const waiting = g.decide(bash(`curl -sS '${url}'`));
       const tx = join(process.env.REPLY_LEDGER_DIR, 'transcript.jsonl');
-      writeFileSync(tx, JSON.stringify({ type: 'user', message: { role: 'user', content: 'allowed it' }, timestamp: new Date(T0 + 60000).toISOString() }) + '\n');
+      writeFileSync(tx, JSON.stringify({ type: 'user', message: { role: 'user', content: 'allowed bugzilla.mozilla.org' }, timestamp: new Date(T0 + 60000).toISOString() }) + '\n');
       at(T0 + 120000);
       const answered = g.decide(bash(`curl -sS '${url}'`, { transcript_path: tx }));
       return /never asked|before the request left/.test(fullRead ?? '') && /only route is the owner/.test(api ?? '') && owner === null
@@ -799,9 +804,10 @@ const PLANTS = {
   said: ['if (!norm(source).includes(said)) {', 'if (false) {'],
   route: ['if (!ROUTES.includes(kind) || ', 'if (false && '],
   proxy: ["if (d.cause === 'proxy' && kind !== 'owner')", 'if (false)'],
-  owner_wait: ['if (!owner || owner.at <= d.t) return', 'if (false) return'],
+  owner_wait: ['if (!said.some((m) => named.test(m.text))) return', 'if (false) return'],
   queued_owner: ["if (e?.type === 'attachment') {", "if (false) {", 'transcript-tail.mjs'],
   owner_window: ['for (const mb of [2, 8, 32, cap / (1024 * 1024)])', 'for (const mb of [2])', 'transcript-tail.mjs'],
+  owner_names: ['if (!said.some((m) => named.test(m.text)))', 'if (!said.length)'],
   later_wait: ['if (now() < d.t + wait) return', 'if (false) return'],
   negotiate_accept: ['if (!/(?:-[A-Za-z]*H|--header)', 'if (false && !/(?:-[A-Za-z]*H|--header)'],
   repeat: ['if (!read) {', 'if (false) {'],

@@ -50,7 +50,7 @@ import { join, dirname, resolve, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { tailEntries, ownerMessageSince } from './transcript-tail.mjs';
+import { tailEntries, ownerMessagesSince } from './transcript-tail.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
 const ROUTES = ['api', 'negotiate', 'tdm', 'author-copy', 'open-index', 'later', 'owner'];
@@ -1183,8 +1183,13 @@ export function decide(p) {
     }
     const kind = (reading.route.match(/^\s*([a-z-]+)/i)?.[1] ?? '').toLowerCase();
     if (kind === 'owner') {
-      const owner = p.transcript_path ? ownerMessageSince(p.transcript_path, d.t) : null;
-      if (!owner || owner.at <= d.t) return `reply-guard (LESSONS §374): the recorded route for ${host} is the owner (${reading.route}), and no message from the owner has arrived since it declined. Ask them, naming ${host}; this request waits for their answer.`;
+      // The answer has to be about this host. Any owner message after the
+      // refusal used to count, so a message adding one host answered for every
+      // host refused before it — found on 2026-10-01, when a message opening
+      // science.nasa.gov would have let helpx.adobe.com through unasked.
+      const named = new RegExp(`(?<![a-z0-9.-])(?:www\\.)?${site(host).replace(/\./g, '\\.')}(?!\\.?[a-z0-9-])`, 'i');
+      const said = p.transcript_path ? ownerMessagesSince(p.transcript_path, d.t) : [];
+      if (!said.some((m) => named.test(m.text))) return `reply-guard (LESSONS §374): the recorded route for ${host} is the owner (${reading.route}), and no message from the owner has arrived since it declined that names ${site(host)}. Ask them, naming ${host}; this request waits for their answer.`;
       continue;
     }
     if (kind === 'later') {
