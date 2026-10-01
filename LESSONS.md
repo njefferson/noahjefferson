@@ -468,3 +468,4 @@ and the filename carries it.
 - **§374** — [A reply that declines says why and how to ask; a session that files it as an obstacle goes around it and never reads it](lessons/374-a-reply-that-declines-says-why-and-how-to-ask.md)
 - **§375** — [A subagent the safety classifier stops returns less, and the workflow counts it as done](lessons/375-a-stopped-agent-returns-less-and-says-nothing.md)
 - **§376** — [What was read stays written, and a message already sent is answered before the next tool call](lessons/376-what-was-read-stays-written-and-a-sent-message-is-answered-first.md)
+- **§377** — [A value is explained by whoever wrote it before it is explained by a theory, and a paper's constant comes from the paper](lessons/377-a-value-is-explained-by-its-maker-before-a-theory.md)
