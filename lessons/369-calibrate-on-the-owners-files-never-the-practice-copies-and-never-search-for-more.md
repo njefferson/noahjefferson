@@ -1,6 +1,6 @@
 ## 369 · Calibrate on the owner's own files, never the practice copies, and never go looking for more
 
-**Enforced by:** GATE Jefferson-Photography-Studio:tools/owner-images.mjs — the only way a render tool gets a file. It refuses a practice DNG and any file outside the folders the owner shared. `tools/look-sheet.mjs` takes its file through it. `tools/decisions-check.mjs` requires every "Looked at" entry about a photograph to name one of those files with its extension, with the older entries declared in `.owner-images-allow` and only shrinking. The session brief prints what the set holds.
+**Enforced by:** GATE Jefferson-Photography-Studio:tools/owner-images.mjs — the only way a render tool gets a file. It refuses a practice DNG and any file outside the folders the owner shared. `tools/look-sheet.mjs` takes its file through it. `tools/decisions-check.mjs` requires every "Looked at" entry about a photograph to name one of those files with its extension, with the older entries declared in `.owner-images-allow` and only shrinking. The session brief prints what the set holds. · CHECKLIST research-brief-owner-files — every research, audit or re-check brief that may touch a camera file names `tools/owner-images.mjs` as the source of photographs. A public sample file may be read once to see whether it agrees, never as the data a finding rests on, and never a camera the owner does not own.
 
 **Smell:** a conclusion about colour, a lens or the look drawn from a file the app opens differently from a reader's own raw. Or a search for a photograph beyond the ones the owner handed over.
 
@@ -15,3 +15,5 @@
 - **What is gated.** The door and the records gate cover the repo's own render tool and every record.
 - **What cannot be gated.** A scratch harness written in a session cannot be. It must fetch through the same door, and it is a CHECKLIST line in the repo's CLAUDE.md.
 - **Adding to the set is the owner's act.** They share a folder, and its listing is added to the index. Never search for more.
+
+**And again on 2026-10-01, through research agents.** A re-check of an audit against reference sources gave its agents newly allowed hosts and named none of the owner's files. The agents downloaded public Z 50 NEFs from raw.pixls.us to measure clip levels, black levels and autofocus rows, range-read 235 NEFs and 261 DNGs from other cameras to size how common a file layout is, and the last checker was downloading a D1X, a Z50 II and a Zf file when it was stopped. One white-balance agent did use one of the owner's NEFs from the shared set, and its finding was the one that bore directly on the owner's camera. The brief is where this is decided: an agent told only "here are the hosts" uses the hosts.
