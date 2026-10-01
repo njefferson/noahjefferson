@@ -83,6 +83,10 @@ const PROGRAM_REQUEST = /\bfetch\s*\(|\bhttps?\.(?:get|request)\s*\(|\brequire\(
 // An interrupt and the harness's read-before-edit preconditions are the same:
 // the call never ran as asked.
 const NOT_A_FAILURE = /hook error|^\s*\[node .*hook-dispatch|The user doesn't want to proceed|Permission to use .* has been denied|was blocked by a hook|Request interrupted by user|File has not been read yet|File has been modified since read|modified since it was (last )?read/i;
+// Plan mode's own tools answer the owner's decision, not a request: a rejected
+// plan is an answer, and recording it as a failed call refused the next
+// proposal until a reading that plan mode itself refused (LESSONS §376).
+const PLAN_TOOL = /^(?:Enter|Exit)PlanMode$/;
 const SHARED_SUFFIX = new Set(['github.io', 'pages.dev', 'netlify.app', 'vercel.app', 'readthedocs.io', 'wordpress.com',
   'blogspot.com', 'googleusercontent.com', 'amazonaws.com', 'cloudfront.net', 'appspot.com', 'herokuapp.com', 'workers.dev']);
 const FILE_EXT = new Set(['js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'json', 'html', 'htm', 'md', 'txt', 'css', 'png', 'jpg', 'jpeg',
@@ -1083,7 +1087,7 @@ function catchUp(p, ev) {
       if (!u) continue;
       const text = typeof b.content === 'string' ? b.content : Array.isArray(b.content) ? b.content.filter((x) => x?.type === 'text').map((x) => x.text).join('\n') : '';
       done.add(b.tool_use_id);
-      if (b.is_error && !NOT_A_FAILURE.test(text) && !(u.name === 'Bash' && parseRead(String(u.input?.command ?? '')))) {
+      if (b.is_error && !PLAN_TOOL.test(u.name ?? '') && !NOT_A_FAILURE.test(text) && !(u.name === 'Bash' && parseRead(String(u.input?.command ?? '')))) {
         const h = callHash(u.name, u.input);
         append(p, { kind: 'fail', use: b.tool_use_id, agent, tool: u.name, h, id: h.slice(0, 8), text: cap(text, 8000), t });
       }
@@ -1151,7 +1155,7 @@ export function decide(p) {
   // (the owner opened the host), the identical request is the right one.
   const h = callHash(tool, p.tool_input);
   let fi = -1;
-  for (let i = ev.length - 1; i >= 0; i--) if (ev[i].kind === 'fail' && ev[i].agent === agent && ev[i].h === h) { fi = i; break; }
+  if (!PLAN_TOOL.test(tool)) for (let i = ev.length - 1; i >= 0; i--) if (ev[i].kind === 'fail' && ev[i].agent === agent && ev[i].h === h) { fi = i; break; }
   if (fi >= 0 && ev[fi].use && ev.some((e) => e.kind === 'decline' && e.use === ev[fi].use)) fi = -1;
   if (fi >= 0) {
     const f = ev[fi];
@@ -1224,7 +1228,7 @@ export function record(p, event) {
   if (event === 'PostToolUseFailure') {
     if (p.is_interrupt) return '';
     out = String(p.error ?? '');
-    if (!NOT_A_FAILURE.test(out) && !(tool === 'Bash' && parseRead(String(p.tool_input?.command ?? '')))) {
+    if (!PLAN_TOOL.test(tool) && !NOT_A_FAILURE.test(out) && !(tool === 'Bash' && parseRead(String(p.tool_input?.command ?? '')))) {
       const h = callHash(tool, p.tool_input);
       append(p, { kind: 'fail', use, agent, tool, h, id: h.slice(0, 8), text: cap(out, 8000) });
     }

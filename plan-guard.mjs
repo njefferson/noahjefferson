@@ -52,6 +52,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { tailEntries, isOwnerMessage, seenInResults } from './transcript-tail.mjs';
+import { parseRead } from './reply-guard.mjs';
 import { homedir } from 'node:os';
 
 // ONCE. See the header — two reads is how this gate would silently never fire.
@@ -172,6 +173,13 @@ const SED_READ = new RegExp(String.raw`^(?:${SED_ADDR}(?:,${SED_ADDR})?!?)?\s*(?
 
 if (tool === 'Bash') {
   const cmd = String(input.command ?? '');
+  // A reading for reply-guard, and nothing else: exactly `node <this hub's
+  // reply-guard.mjs> --read … --said … --route …`, one plain command, as
+  // reply-guard's own parser accepts it. Refused here, it deadlocked plan
+  // approval: a rejected ExitPlanMode was recorded as a failed call, its
+  // repeat waited for a reading, and plan mode refused the reading (LESSONS §376).
+  const reading = parseRead(cmd);
+  if (reading && !reading.bad) process.exit(0);
   const parts = commands(cmd);
 
   // A REDIRECT WRITES A FILE. `2>&1`, `>&2` and anything aimed at /dev/null do

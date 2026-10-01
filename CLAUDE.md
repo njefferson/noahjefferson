@@ -304,6 +304,15 @@ Every item below has actually happened.
  **The gates run from a clone at `/root/.claude/hub`, installed by each
  session's first plan** — `hook-dispatch.mjs --install` run FROM THE CLONE,
  never the working copy, because `install()` wires whichever copy runs it.
+- **WHAT WAS READ STAYS WRITTEN; A SENT MESSAGE IS ANSWERED FIRST.** A page an
+ ordinary person can read in a normal browser is information however it was
+ fetched: fix the method and record how it was fetched, never take the reading
+ back. `keep-info-guard.mjs` refuses a commit that does (only a message from
+ the owner naming the source and asking for its removal lifts it);
+ `pending-guard.mjs` refuses every tool call while a message from the owner
+ sits in the queue undelivered, and prints it; after a compaction the
+ messages since the previous one are printed verbatim before anything else.
+ (LESSONS §376.)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
  range line in the output means nothing moved. (LESSONS, 2026-08-02.)

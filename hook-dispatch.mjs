@@ -34,6 +34,7 @@ import { homedir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
+import { messagesSinceCompaction, recallBlock } from './compact-recall.mjs';
 
 const HUB = dirname(fileURLToPath(import.meta.url));
 const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'Stop'];
@@ -193,6 +194,15 @@ async function main(event, raw, p) {
 
   // ---- family guards ----
   if (event === 'PreToolUse') {
+    // An owner message waiting in the queue comes before everything, the
+    // status command included: the session answers it and ends its turn,
+    // which is what delivers it (LESSONS §376).
+    const pg = run(`node "${join(HUB, 'pending-guard.mjs')}"`, raw, root);
+    if (pg.deny) { process.stderr.write(pg.reason + '\n'); return 2; }
+    if (pg.status !== 0 && !READS.has(p.tool_name ?? '')) {
+      process.stderr.write(`pending-guard.mjs did not run cleanly (${pg.error ?? `exit ${pg.status}`}${pg.err ? `: ${pg.err.trim().split('\n')[0]}` : ''}); only reads run until it is fixed.\n`);
+      return 2;
+    }
     if (p.tool_name === 'Bash' && REPORT.test(String(p.tool_input?.command ?? ''))) {
       // A subagent cannot tell the owner anything, so its stamp would unlock
       // the main thread with no status given.
@@ -200,7 +210,7 @@ async function main(event, raw, p) {
       return 0;
     }
     for (const g of [`node "${join(HUB, 'report.mjs')}" --gate`, `node "${join(HUB, 'drive-guard.mjs')}" "${root}"`,
-      `node "${join(HUB, 'approved-plan-guard.mjs')}"`, `node "${join(HUB, 'reply-guard.mjs')}"`]) {
+      `node "${join(HUB, 'approved-plan-guard.mjs')}"`, `node "${join(HUB, 'reply-guard.mjs')}"`, `node "${join(HUB, 'keep-info-guard.mjs')}"`]) {
       const o = run(g, raw, root);
       if (o.deny) { process.stderr.write(o.reason + '\n'); return 2; }
       // A family guard that crashed or timed out has not said yes. The header's
@@ -230,7 +240,15 @@ async function main(event, raw, p) {
     if (o.deny) replyNote = o.reason;
   }
   if (event === 'UserPromptSubmit') printed.push(REMINDER);
+  // A new process starts with an empty queue; pending-guard waits only on what
+  // this one was given.
+  if (event === 'SessionStart' && p.source !== 'compact') run(`node "${join(HUB, 'pending-guard.mjs')}" --start`, raw, root);
   if (event === 'SessionStart' && p.source === 'compact' && p.transcript_path) {
+    // Every message typed since the previous compaction, verbatim, before
+    // anything else is printed: a summary is a paraphrase, and these are what
+    // it paraphrased (LESSONS §376).
+    const recall = recallBlock(await messagesSinceCompaction(p.transcript_path));
+    if (recall) printed.push(recall);
     printed.push('AFTER COMPACTION: every tool used earlier in this session still exists. Try each route before reporting a limit (LESSONS §370).\n'
       + await toolCensus(p.transcript_path));
   }

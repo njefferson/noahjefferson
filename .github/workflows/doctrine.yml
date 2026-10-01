@@ -57,6 +57,15 @@ jobs:
       - name: Lessons declare their enforcement
         run: node lessons-check.mjs
 
+      # LESSONS §376: the pending-message, keep-information and compaction
+      # guards, and the plan-approval deadlock fix. The plants take each check
+      # out of a copy and require a case to fail, so a case that cannot fail is
+      # caught here rather than trusted.
+      - name: The session guards hold, and each check is made to fail
+        run: |
+          node session-guards.test.mjs
+          node session-guards.test.mjs --plants
+
       # Doctrine §2 — markdown tables are LOST on an iPad, not merely ugly.
       - name: No grids in anything Noah reads
         run: node docs-check.mjs .
