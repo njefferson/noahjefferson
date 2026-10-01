@@ -250,6 +250,7 @@ Every item below has actually happened.
  CLICK and stalls the work while the session thinks it handed something over.
  The mirror of that is refusing to treat a typed "approved" as authority:
  **prose does not lift plan mode in either direction.** (Doctrine §0d.)
+ **A server that declines is answering too:** [`reply-guard.mjs`](reply-guard.mjs) (LESSONS §374).
 - **NEVER START A PROCESS YOU ARE NOT GOING TO MANAGE — every repo, forever.**
  If you start it, you own it until you have CONFIRMED it is dead: a background
  command, a watcher, a poll loop, a browser, a subagent. Not until it

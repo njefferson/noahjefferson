@@ -36,7 +36,7 @@ import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
 
 const HUB = dirname(fileURLToPath(import.meta.url));
-const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Stop'];
+const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'Stop'];
 const READS = new Set(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'ToolSearch', 'TaskList', 'TaskGet',
   'ListAgents', 'ReadNotifications', 'EnterPlanMode', 'ExitPlanMode', 'Skill']);
 // Repo shims that only call a hub script: run once per event, not once per repo.
@@ -125,7 +125,7 @@ export function touched(event, p, all) {
 function matches(event, m, p) {
   if (!m || m === '*') return true;
   const subject = event === 'SessionStart' ? (p.source ?? '') : (p.tool_name ?? '');
-  if (event !== 'PreToolUse' && event !== 'PostToolUse' && event !== 'SessionStart') return true;
+  if (event !== 'PreToolUse' && event !== 'PostToolUse' && event !== 'PostToolUseFailure' && event !== 'SessionStart') return true;
   try { return new RegExp(`^(?:${m})$`).test(subject); } catch { return m === subject; }
 }
 
@@ -200,7 +200,7 @@ async function main(event, raw, p) {
       return 0;
     }
     for (const g of [`node "${join(HUB, 'report.mjs')}" --gate`, `node "${join(HUB, 'drive-guard.mjs')}" "${root}"`,
-      `node "${join(HUB, 'approved-plan-guard.mjs')}"`]) {
+      `node "${join(HUB, 'approved-plan-guard.mjs')}"`, `node "${join(HUB, 'reply-guard.mjs')}"`]) {
       const o = run(g, raw, root);
       if (o.deny) { process.stderr.write(o.reason + '\n'); return 2; }
       // A family guard that crashed or timed out has not said yes. The header's
@@ -219,6 +219,15 @@ async function main(event, raw, p) {
   if (event === 'PostToolUse' && /PlanMode$/.test(p.tool_name ?? '')) {
     const o = run(`node "${join(HUB, 'approved-plan-guard.mjs')}" --mark`, raw, root);
     if (o.deny || o.status !== 0) markFail = o.reason || o.err.trim() || o.error || `--mark exited ${o.status}`;
+  }
+  // What a call returned goes to reply-guard's ledger: a declining reply or a
+  // failed call (LESSONS §374). A declining reply comes back as exit 2 so its
+  // words are put in front of the session now, after the repos' own hooks,
+  // like --mark's outcome.
+  let replyNote = '';
+  if ((event === 'PostToolUse' && /^(Bash|WebFetch)$/.test(p.tool_name ?? '')) || event === 'PostToolUseFailure') {
+    const o = run(`node "${join(HUB, 'reply-guard.mjs')}" --record ${event}`, raw, root);
+    if (o.deny) replyNote = o.reason;
   }
   if (event === 'UserPromptSubmit') printed.push(REMINDER);
   if (event === 'SessionStart' && p.source === 'compact' && p.transcript_path) {
@@ -258,7 +267,8 @@ async function main(event, raw, p) {
     }
   }
   if (printed.length) process.stdout.write(printed.join('\n\n') + '\n');
-  if (markFail) { process.stderr.write(markFail + '\n'); return 2; }
+  const post = [markFail, replyNote].filter(Boolean).join('\n');
+  if (post) { process.stderr.write(post + '\n'); return 2; }
   return 0;
 }
 
