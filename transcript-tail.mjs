@@ -113,6 +113,30 @@ export function lastOwnerMessage(entries) {
 }
 
 /**
+ * The owner's most recent message, if it came after a given time.
+ * @param {string} path    the transcript.
+ * @param {number} since   a time in ms, such as when a host declined.
+ * @param {number} [cap]   the most of the end to read; 64 MB by default.
+ * @returns {{text: string, at: number} | null} the owner's latest message
+ *   when it is later than `since`, else null. The tail it reads widens (2, 8,
+ *   32, then `cap` MB) until it holds an owner message, or reaches back past
+ *   `since`, or reaches the cap. reply-guard's owner route depends on it: a
+ *   fixed 2 MB tail lost an answer the owner had given 2.2 MB earlier, because
+ *   the session had kept working after it.
+ */
+export function ownerMessageSince(path, since, cap = 64 * 1024 * 1024) {
+  for (const mb of [2, 8, 32, cap / (1024 * 1024)]) {
+    const entries = tailEntries(path, Math.min(mb * 1024 * 1024, cap));
+    const owner = lastOwnerMessage(entries);
+    if (owner) return owner.at > since ? owner : null;
+    const first = entries.find((e) => Number.isFinite(Date.parse(e?.timestamp ?? '')));
+    if (first && Date.parse(first.timestamp) <= since) return null;
+    if (mb * 1024 * 1024 >= cap) break;
+  }
+  return null;
+}
+
+/**
  * Everything this session has READ back from tools in the tail — never what
  * it wrote into a tool's input, which is the thing under suspicion.
  * @param {object[]} entries  from `tailEntries`.

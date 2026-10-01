@@ -50,7 +50,7 @@ import { join, dirname, resolve, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { tailEntries, lastOwnerMessage } from './transcript-tail.mjs';
+import { tailEntries, ownerMessageSince } from './transcript-tail.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
 const ROUTES = ['api', 'negotiate', 'tdm', 'author-copy', 'open-index', 'later', 'owner'];
@@ -1183,7 +1183,7 @@ export function decide(p) {
     }
     const kind = (reading.route.match(/^\s*([a-z-]+)/i)?.[1] ?? '').toLowerCase();
     if (kind === 'owner') {
-      const owner = p.transcript_path ? lastOwnerMessage(tailEntries(p.transcript_path, 2 * 1024 * 1024)) : null;
+      const owner = p.transcript_path ? ownerMessageSince(p.transcript_path, d.t) : null;
       if (!owner || owner.at <= d.t) return `reply-guard (LESSONS §374): the recorded route for ${host} is the owner (${reading.route}), and no message from the owner has arrived since it declined. Ask them, naming ${host}; this request waits for their answer.`;
       continue;
     }
