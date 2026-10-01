@@ -359,6 +359,27 @@ const CASES = [
     },
   },
   {
+    // The owner opened thirteen hosts mid-turn on 2026-10-01, and the guard
+    // kept every one of them waiting: the message was a queued_command
+    // attachment, which the transcript reader did not count as the owner.
+    name: 'an owner message typed mid-turn answers a container refusal; a subagent hand-back or a task notification does not',
+    guards: ['queued_owner'],
+    run(g, self) {
+      fresh();
+      const url = 'https://murrayfoote.com/2022/10/19/x/';
+      g.record(ran(`curl -sS '${url}'`, '', 'curl: (56) CONNECT tunnel failed, response 403'), 'PostToolUse');
+      g.decide(bash(`node ${self} --read murrayfoote.com --said "CONNECT tunnel failed, response 403" --route "owner: asked to allow murrayfoote.com"`));
+      const tx = join(process.env.REPLY_LEDGER_DIR, 'transcript.jsonl');
+      const q = (origin, prompt, dt, extra = {}) => JSON.stringify({ type: 'attachment', attachment: { type: 'queued_command', commandMode: origin === 'task-notification' ? 'task-notification' : 'prompt', origin: { kind: origin }, prompt, ...extra }, timestamp: new Date(T0 + dt).toISOString() });
+      writeFileSync(tx, [q('peer', '<agent-message from="a1"> hand-back', 60000, { isMeta: true }), q('task-notification', '<task-notification> done', 70000)].join('\n') + '\n');
+      at(T0 + 120000);
+      const notYet = g.decide(bash(`curl -sS '${url}'`, { transcript_path: tx }));
+      writeFileSync(tx, [q('peer', '<agent-message from="a1"> hand-back', 60000, { isMeta: true }), q('human', 'These hosts were added to the session: murrayfoote.com', 90000)].join('\n') + '\n');
+      const answered = g.decide(bash(`curl -sS '${url}'`, { transcript_path: tx }));
+      return /no message from the owner/.test(notYet ?? '') && answered === null;
+    },
+  },
+  {
     name: 'a container-network refusal routes only to the owner, and waits for the owner',
     guards: ['proxy', 'owner_wait'],
     run(g, self) {
@@ -774,6 +795,7 @@ const PLANTS = {
   route: ['if (!ROUTES.includes(kind) || ', 'if (false && '],
   proxy: ["if (d.cause === 'proxy' && kind !== 'owner')", 'if (false)'],
   owner_wait: ['if (!owner || owner.at <= d.t) return', 'if (false) return'],
+  queued_owner: ["if (e?.type === 'attachment') {", "if (false) {", 'transcript-tail.mjs'],
   later_wait: ['if (now() < d.t + wait) return', 'if (false) return'],
   negotiate_accept: ['if (!/(?:-[A-Za-z]*H|--header)', 'if (false && !/(?:-[A-Za-z]*H|--header)'],
   repeat: ['if (!read) {', 'if (false) {'],
@@ -841,12 +863,12 @@ async function runAll(guardPath, only) {
 
 if (process.argv.includes('--plants')) {
   let bad = 0;
-  for (const [key, [from, to]] of Object.entries(PLANTS)) {
-    const src = readFileSync(join(HERE, 'reply-guard.mjs'), 'utf8');
-    if (!src.includes(from)) { console.log(`PLANT ${key}: the line to take out is not in the guard — the plant is stale`); bad++; continue; }
+  for (const [key, [from, to, file = 'reply-guard.mjs']] of Object.entries(PLANTS)) {
+    const src = readFileSync(join(HERE, file), 'utf8');
+    if (!src.includes(from)) { console.log(`PLANT ${key}: the line to take out is not in ${file} — the plant is stale`); bad++; continue; }
     const dir = mkdtempSync(join(tmpdir(), 'reply-plant-'));
-    writeFileSync(join(dir, 'reply-guard.mjs'), src.replace(from, to));
-    copyFileSync(join(HERE, 'transcript-tail.mjs'), join(dir, 'transcript-tail.mjs'));
+    for (const f of ['reply-guard.mjs', 'transcript-tail.mjs']) copyFileSync(join(HERE, f), join(dir, f));
+    writeFileSync(join(dir, file), src.replace(from, to));
     const r = await runAll(join(dir, 'reply-guard.mjs'), key);
     const caught = r.length > 0 && r.some((x) => !x.ok);
     if (!r.length) console.log(`PLANT ${key}: no case names it in its guards`);

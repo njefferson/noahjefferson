@@ -11,6 +11,14 @@
  * `user` entry that is not `isMeta` (the 160 "Stop hook feedback" entries all
  * are), carries no `tool_result`, is not a compaction summary and is not an
  * interruption marker. Where an `origin` is recorded it must be `human`.
+ *
+ * A message the owner types while the session is working is not a `user`
+ * entry at all: it is an `attachment` of type `queued_command`, with
+ * `commandMode: 'prompt'` and origin `human`. Subagent hand-backs arrive the
+ * same way with origin `peer`, and task notifications with their own origin
+ * and mode. Measured 2026-10-01 on one transcript: 19 owner messages arrived
+ * mid-turn and every guard reading this file missed them; one opened thirteen
+ * hosts, and the reply guard kept waiting for an answer already given.
  */
 import { openSync, readSync, closeSync, fstatSync } from 'node:fs';
 
@@ -48,9 +56,15 @@ export function tailEntries(path, bytes = 8 * 1024 * 1024) {
 /**
  * The text of a user entry, whatever shape its content has.
  * @param {object} e  a transcript entry.
- * @returns {string} its plain text; tool results contribute nothing.
+ * @returns {string} its plain text, or a queued message's prompt; tool results
+ *   contribute nothing. `isOwnerMessage` and the guards' word checks read it.
  */
 export function textOf(e) {
+  if (e?.type === 'attachment' && e.attachment?.type === 'queued_command') {
+    const q = e.attachment.prompt;
+    if (typeof q === 'string') return q;
+    return Array.isArray(q) ? q.filter((b) => b?.type === 'text').map((b) => b.text ?? '').join('\n') : '';
+  }
   const c = e?.message?.content;
   if (typeof c === 'string') return c;
   if (!Array.isArray(c)) return '';
@@ -65,6 +79,12 @@ export function textOf(e) {
  *   it never counting hook feedback or a compaction summary as the owner.
  */
 export function isOwnerMessage(e) {
+  if (e?.type === 'attachment') {
+    const a = e.attachment;
+    if (a?.type !== 'queued_command' || a.commandMode !== 'prompt' || a.isMeta || e.isMeta) return false;
+    if ((a.origin?.kind ?? e.origin?.kind) !== 'human') return false;
+    return textOf(e).trim().length > 0;
+  }
   if (e?.type !== 'user' || e.isMeta || e.isCompactSummary) return false;
   if (e.origin && e.origin.kind && e.origin.kind !== 'human') return false;
   const c = e.message?.content;
