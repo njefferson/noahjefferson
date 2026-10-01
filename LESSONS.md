@@ -466,3 +466,4 @@ and the filename carries it.
 - **§372** — [A stop is not a decision, and reporting it as one puts the session's own failure on the owner](lessons/372-a-stop-is-not-a-decision.md)
 - **§373** — [Opening a pull request through the session's GitHub tool added a link to the chat, and an edit does not take it out of the history](lessons/373-the-pr-tool-appends-a-session-link.md)
 - **§374** — [A reply that declines says why and how to ask; a session that files it as an obstacle goes around it and never reads it](lessons/374-a-reply-that-declines-says-why-and-how-to-ask.md)
+- **§375** — [A subagent the safety classifier stops returns less, and the workflow counts it as done](lessons/375-a-stopped-agent-returns-less-and-says-nothing.md)
