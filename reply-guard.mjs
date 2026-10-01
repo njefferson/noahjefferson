@@ -200,12 +200,14 @@ const clientName = (w) => {
 };
 
 // Words a command may stand behind, with the options of theirs that take a value.
-const WRAPPERS = { timeout: /^(-s|--signal|-k|--kill-after)$/, sudo: /^(-u|-g|-C|-h|-p|-U)$/, env: /^(-u|--unset|-C|--chdir)$/,
+const WRAPPERS = { timeout: /^(-s|--signal|-k|--kill-after)$/, sudo: /^(-u|-g|-C|-h|-p|-U)$/, env: /^(-u|--unset|-C|--chdir|-S|--split-string)$/, busybox: /^$/,
   nice: /^(-n|--adjustment)$/, ionice: /^(-c|-n|-p)$/, xargs: /^(-I|-n|-P|-L|-d|-a|-s|-E|--max-args|--max-procs|--delimiter|--arg-file)$/,
   stdbuf: /^$/, nohup: /^$/, exec: /^$/, setsid: /^$/, command: /^$/, builtin: /^$/, time: /^$/ };
 const SHELL = /^((ba|z|da|k)?sh)$/;
 const INTERPRETER = /^(python[0-9.]*|node|perl|ruby|php|deno|bun|pwsh)$/;
 const CODE_FLAG = /^(-[A-Za-z]*[ceEpr]|--eval|--print|--exec|--command)$/;
+// A call in program code that runs the string or argument list it is given.
+const EXEC_CALL = /\b(?:system|exec|execSync|execFile|execFileSync|spawn|spawnSync|popen|Popen|run|call|check_output|check_call|getoutput|getstatusoutput|shell_exec|passthru)\s*\(/;
 const BROWSER_BIN = /^(chromium(-browser)?|google-chrome(-stable)?|chrome|firefox|headless_shell|wkhtmltopdf|wkhtmltoimage|curl_chrome\d*|curl_ff\d*|curl-impersonate\S*)$/;
 
 /**
@@ -237,16 +239,18 @@ export function commandWordIndex(words) {
 /**
  * Separate a command line's heredoc bodies by what reads them.
  * @param {string} cmd  a Bash command line.
- * @returns {{shell: string, programs: string[], data: string[]}} the line with
+ * @returns {{shell: string, programs: string[], data: string[], files: object}} the line with
  *   each body taken out unless a shell reads it (a shell runs it, so it stays);
  *   the bodies an interpreter or awk reads (program text); and every other body
- *   (data: a commit message, notes written to a file, a list fed to a loop).
+ *   (data: a commit message, notes written to a file, a list fed to a loop),
+ *   with each body written to a file kept by that file's name, so a script
+ *   written and run in one line is read before it exists.
  *   The version before this split every line of a heredoc into commands, and
  *   refused a commit message and a page of notes that named a declined host.
  */
 export function heredocs(cmd) {
   const lines = String(cmd ?? '').split('\n');
-  const keep = []; const programs = []; const data = [];
+  const keep = []; const programs = []; const data = []; const files = {};
   for (let i = 0; i < lines.length; i++) {
     const L = lines[i];
     keep.push(L);
@@ -259,36 +263,53 @@ export function heredocs(cmd) {
     const body = [];
     let j = i + 1;
     for (; j < lines.length; j++) { if ((m[1] ? lines[j].replace(/^\t+/, '') : lines[j]) === m[3]) break; body.push(lines[j]); }
-    if (SHELL.test(b)) keep.push(...body);
-    else if (INTERPRETER.test(b) || /^[gm]?awk$/.test(b)) programs.push(body.join('\n'));
-    else data.push(body.join('\n'));
+    // `cat <<'EOF' | bash` hands the body to the shell at the end of the pipe;
+    // a scope check got a disguised curl through that way.
+    const pipe = L.slice(m.index + m[0].length).match(/\|\s*(?:sudo\s+(?:-\S+\s+)*)?(\S+)/);
+    const reader = pipe ? clientName(pipe[1]) : b;
+    if (SHELL.test(reader)) keep.push(...body);
+    else if (INTERPRETER.test(reader) || /^[gm]?awk$/.test(reader)) programs.push(body.join('\n'));
+    else {
+      data.push(body.join('\n'));
+      // A body written to a file may be run later in the same line.
+      const tgt = L.slice(0, m.index).match(/>>?\s*(\S+)\s*$/) || L.slice(m.index + m[0].length).match(/^\s*>>?\s*(\S+)/);
+      if (tgt) files[tgt[1]] = body.join('\n');
+    }
     i = j;
   }
-  return { shell: keep.join('\n'), programs, data };
+  return { shell: keep.join('\n'), programs, data, files };
 }
 
 /**
  * Every simple command a command line runs, wrappers opened.
  * @param {string} cmd      a Bash command line (heredoc bodies already sorted).
  * @param {number} [depth]  how many strings deep this call is.
- * @param {boolean} [any]   inside program code, where a client may stand
- *   anywhere in a word (`os.system('curl …')`).
+ * @param {boolean | 'code'} [any]  false for a shell command line; 'code' for
+ *   a program's text, where no word is a client and only what a call runs is
+ *   opened; true for what a call runs (`os.system('curl …')`), where a client
+ *   may stand anywhere in a word.
  * @param {{code: string[]}} [sink]  collects the program code strings opened.
  * @returns {{words: string[], op: string, depth: number, any: boolean}[]} as
  *   `splitShell`, plus the commands inside `$( … )` and backticks, and every
  *   string another program RUNS, opened as a command line of its own, four
  *   levels deep: what a shell is given with `-c`, `<<<` or a pipe; what `eval`
  *   runs; a command waiting in a variable (`CURL="curl -A bot"`); an
- *   interpreter's `-c`/`-e`/`--eval`/`-p` code and awk's program, as code; and
- *   inside code, every quoted string naming a client. A string that is only
- *   written — a commit message, a sed expression — is not opened.
+ *   interpreter's `-c`/`-e`/`--eval`/`-p` code and awk's program, as code;
+ *   `env -S` and `script -c`; and inside code, what a call runs (`system(`,
+ *   `execSync(`, `subprocess.run([…])`). A string that is only written or
+ *   printed — a commit message, a sed expression, a log line — is not opened.
  */
 export function commandsIn(cmd, depth = 0, any = false, sink = { code: [] }) {
   const segs = splitShell(cmd).map((s) => ({ ...s, depth, any }));
   const out = [...segs];
   if (depth >= 4) return out;
   const openShell = (str) => out.push(...commandsIn(str, depth + 1, any, sink));
-  const openCode = (str) => { sink.code.push(str); out.push(...commandsIn(str, depth + 1, true, sink)); };
+  // A program's text is opened as code, where only its calls are followed; what
+  // a call runs is opened as a command line in which a client may stand
+  // anywhere. Opening a whole program that way refused the guard's own tests,
+  // which only hand `curl …` to decide() as a string.
+  const openCode = (str) => { sink.code.push(str); out.push(...commandsIn(str, depth + 1, 'code', sink)); };
+  const openArg = (str) => { sink.code.push(str); out.push(...commandsIn(str, depth + 1, true, sink)); };
   for (const m of String(cmd).matchAll(/\$\(((?:[^()]|\([^()]*\))*)\)|`([^`]*)`/g)) openShell(m[1] ?? m[2] ?? '');
   segs.forEach((s, k) => {
     const w = s.words;
@@ -300,13 +321,31 @@ export function commandsIn(cmd, depth = 0, any = false, sink = { code: [] }) {
       if (w[i] === '<<<' && w[i + 1] != null) (INTERPRETER.test(b) ? openCode : openShell)(w[i + 1]);
     }
     if (b === 'eval') openShell(w.slice(at + 1).join(' '));
+    if (b === 'script') for (let i = at + 1; i < w.length; i++) if (/^-[A-Za-z]*c[A-Za-z]*$/.test(w[i]) && w[i + 1] != null) openShell(w[i + 1]);
+    for (let i = 0; i < Math.max(at, 0); i++) {
+      // env -S splits its string and appends the rest of the line to it.
+      if (/^(-S|--split-string)$/.test(w[i]) && w[i + 1] != null) openShell([w[i + 1], ...w.slice(i + 2)].join(' '));
+      else if (/^-S./.test(w[i])) openShell([w[i].slice(2), ...w.slice(i + 1)].join(' '));
+    }
     if (/^[gm]?awk$/.test(b)) {
       for (let i = at + 1; i < w.length; i++) { if (/^-[Fvf]$/.test(w[i])) { i++; continue; } if (/^-/.test(w[i])) continue; openCode(w[i]); break; }
     }
     for (const x of w) {
-      if (!/\s/.test(x) || !CLIENT_WORD.test(x)) continue;
-      if (any) openCode(x);
-      else if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(x)) openShell(x.replace(/^[A-Za-z_][A-Za-z0-9_]*=/, ''));
+      if (any) {
+        // In code, only what a call RUNS is opened — `os.system('curl …')`,
+        // `execSync('curl …')`, `subprocess.run(['curl', …])`. A string that is
+        // printed or stored is not: a scope check had `console.log('next: curl
+        // …')` refused as a request.
+        const m = String(x).match(EXEC_CALL);
+        if (!m) continue;
+        const arg = x.slice(m.index + m[0].length);
+        // A call's arguments never open with a comma: `['exec(', 'curl ', …]`
+        // is a list of words to search for, and the replay found it refused.
+        if (/^\s*[,)]/.test(arg)) continue;
+        if (CLIENT_WORD.test(arg) || /^\[/.test(arg)) openArg(arg.replace(/[[\],]/g, ' ').replace(/[)}\s]+$/, ''));
+        continue;
+      }
+      if (/\s/.test(x) && CLIENT_WORD.test(x) && /^[A-Za-z_][A-Za-z0-9_]*=/.test(x)) openShell(x.replace(/^[A-Za-z_][A-Za-z0-9_]*=/, ''));
     }
     // `echo "…" | sh`: what is piped into a shell is run by it.
     const next = segs[k + 1];
@@ -319,7 +358,8 @@ export function commandsIn(cmd, depth = 0, any = false, sink = { code: [] }) {
 /**
  * The web client a simple command runs, if any.
  * @param {string[]} words  one simple command's words.
- * @param {boolean} [any]   inside program code: a client anywhere counts.
+ * @param {boolean | 'code'} [any]  as `commandsIn`: in what a call runs, a
+ *   client anywhere counts; in a program's own text, none does.
  * @returns {{exe: string, at: number, browser?: boolean} | null} the client
  *   in the command's PROGRAM position (or after `find … -exec`), and its index.
  *   The version before this took a client from any word, and refused `grep -e
@@ -327,6 +367,7 @@ export function commandsIn(cmd, depth = 0, any = false, sink = { code: [] }) {
  *   a client too, flagged as one.
  */
 function clientOf(words, any = false) {
+  if (any === 'code') return null;
   if (any) {
     for (let i = 0; i < words.length; i++) { const b = clientName(words[i]); if (CLIENTS.has(b)) return { exe: b, at: i }; }
     return null;
@@ -395,7 +436,7 @@ export function hostsIn(text, context = text) {
  * @returns {string} the host itself, lower-cased, with a leading `www.` and a
  *   trailing dot taken off, so `www.x.org`, `x.org` and `x.org.` are one source.
  *   The version before this bound the whole registrable domain, and a replay of
- *   this session's 11 007 calls showed what that costs: a 503 from
+ *   this session's 11 087 calls showed what that costs: a 503 from
  *   patents.google.com refused the owner's own photographs from
  *   drive.usercontent.google.com. Different services under one domain answer
  *   for themselves.
@@ -424,25 +465,32 @@ const CALL_URL = /\b(?:fetch|get|post|put|patch|head|request|urlopen|urlretrieve
  * The text of every script a Bash command runs.
  * @param {{words: string[], depth: number, any: boolean}[]} segs  from `commandsIn`.
  * @param {string} cwd  where relative paths resolve.
- * @returns {string[]} each script's text — run through an interpreter (`node
- *   x.mjs`, `python3 x`, `bash x.sh`), by path (`./fetchit`) or sourced (`. ./x`)
- *   — that makes a request, names a client or drives a browser; never this
- *   guard's own file or test in any hub checkout.
+ * @returns {{body: string, shell: boolean}[]} each script's text — run through
+ *   an interpreter (`node x.mjs`, `python3 x`, `bash x.sh`), by path
+ *   (`./fetchit`) or sourced (`. ./x`) — that makes a request, names a client or
+ *   drives a browser, and whether a shell runs it (a shell, `.`, `source`, or a
+ *   path whose first line or name says shell), so `analyze` opens it as a
+ *   command line or as program code. The guard's own test is read like any
+ *   other program: it was exempt by name while a program's whole text was
+ *   opened as commands, and the exemption let any file of that name through.
  */
-function scriptsRun(segs, cwd) {
+function scriptsRun(segs, cwd, written = {}) {
   const out = []; const seen = new Set();
-  const take = (w, needScript) => {
+  // Run by path, a file without a `#!` line is run by the shell.
+  const isShell = (f, body, how) => how === 'shell' || (how === 'path' && (!/^#!/.test(body) || /^#!\S*(\/|\s)((ba|z|da|k)?sh)\b/.test(body)));
+  const take = (w, needScript, how) => {
     if (!w || /^-/.test(w) || seen.has(w)) return;
     seen.add(w);
+    const pending = Object.entries(written).find(([k]) => k === w || resolve(cwd || process.cwd(), k) === resolve(cwd || process.cwd(), w));
+    if (pending) { const body = pending[1]; if (PROGRAM_REQUEST.test(body) || CLIENT_WORD.test(body) || BROWSER.test(body)) out.push({ body, shell: isShell(w, body, how) }); return; }
     try {
       const f = resolve(cwd || process.cwd(), w);
-      if (/^reply-guard(\.test)?\.mjs$/.test(basename(f)) && existsSync(join(dirname(f), 'hook-dispatch.mjs'))) return;
       const st = statSync(f);
       if (!st.isFile() || st.size > 262144) return;
       const body = readFileSync(f, 'utf8');
       if (body.slice(0, 1024).includes('\u0000')) return;
       if (needScript && !/\.(m?js|cjs|ts|py|sh|bash|pl|rb|php)$/.test(f) && !body.startsWith('#!')) return;
-      if (PROGRAM_REQUEST.test(body) || CLIENT_WORD.test(body) || BROWSER.test(body)) out.push(body);
+      if (PROGRAM_REQUEST.test(body) || CLIENT_WORD.test(body) || BROWSER.test(body)) out.push({ body, shell: isShell(f, body, how) });
     } catch { /* not a file */ }
   };
   for (const s of segs) {
@@ -450,9 +498,9 @@ function scriptsRun(segs, cwd) {
     const at = commandWordIndex(s.words);
     if (at < 0) continue;
     const w0 = s.words[at]; const b = basename(w0); const rest = s.words.slice(at + 1);
-    if (SHELL.test(b) || INTERPRETER.test(b)) { if (!rest.some((x) => CODE_FLAG.test(x) || /^-[A-Za-z]*c[A-Za-z]*$/.test(x))) take(rest.find((x) => !/^-/.test(x)), true); }
-    else if (b === '.' || b === 'source') take(rest[0], false);
-    else if (String(w0).includes('/')) take(w0, true);
+    if (SHELL.test(b) || INTERPRETER.test(b)) { if (!rest.some((x) => CODE_FLAG.test(x) || /^-[A-Za-z]*c[A-Za-z]*$/.test(x))) take(rest.find((x) => !/^-/.test(x)), true, SHELL.test(b) ? 'shell' : 'interp'); }
+    else if (b === '.' || b === 'source') take(rest[0], false, 'shell');
+    else if (String(w0).includes('/')) take(w0, true, 'path');
   }
   return out;
 }
@@ -478,7 +526,8 @@ function flagIdentity(words, at, exe) {
     if (setsUA) return `sets its own User-Agent (${x.slice(0, 24)})`;
     if (new RegExp(`^-[${CURL_NOARG}]*K`).test(x) || /^--config(=|$)/.test(x)) return 'reads its options from a file this guard cannot see (-K / --config)';
     if ((/^-/.test(x) && /[$`{\\]/.test(x)) || /^\$['-]/.test(x)) return `builds an option at run time (${x.slice(0, 24)}), which this guard cannot read`;
-    const ev = /^(-e|--execute)$/.test(x) ? w[i + 1] : /^--execute=/.test(x) ? x.slice(10) : /^-e./.test(x) && /^wget/.test(exe) ? x.slice(2) : null;
+    if (/^-/.test(x) && /useragent/i.test(x.replace(/[-_.]/g, ''))) return `sets its own User-Agent (${x.slice(0, 24)})`;
+    const ev = /^(-e|--execute)$/.test(x) || (/^wget/.test(exe) && /^-[A-Za-z]*e$/.test(x)) ? w[i + 1] : /^--execute=/.test(x) ? x.slice(10) : /^-e./.test(x) && /^wget/.test(exe) ? x.slice(2) : null;
     const evn = ev == null ? '' : String(ev).replace(/[-_\s]/g, '').toLowerCase();
     if (evn.startsWith('useragent') || (evn.startsWith('header') && evn.includes('agent'))) return 'sets a User-Agent through wget -e';
     let hv = null;
@@ -504,7 +553,7 @@ function flagIdentity(words, at, exe) {
  *   browser's headers or name, or a browser it drives or impersonates.
  */
 function programIdentity(t) {
-  const bare = String(t).replace(/\bhttps?:\/\/\S+/g, ' ');
+  const bare = String(t).replace(/\bhttps?:\/\/[^\s'"`)]+/g, ' ');
   if (/user[-_ ]?agent\s*["']?\s*[:=,]|useragent\s*[:=]/i.test(bare)) return 'sets a User-Agent';
   if (/fake[_-]?useragent/i.test(bare)) return "borrows another program's identity";
   if (/\bsec-fetch-|\bsec-ch-ua|upgrade-insecure-requests/i.test(bare)) return "sends a browser's request headers";
@@ -542,9 +591,12 @@ export function analyze(p) {
     const h = heredocs(cmd);
     const sink = { code: [] };
     const segs = commandsIn(h.shell, 0, false, sink);
-    const scripts = scriptsRun(segs, p.cwd);
-    for (const body of scripts) segs.push(...commandsIn(stripComments(body), 1, true, sink));
-    const programs = [...h.programs, ...sink.code, ...scripts].map(stripComments);
+    const scripts = scriptsRun(segs, p.cwd, h.files);
+    // A script a shell runs is a command line; a program's text is code, and
+    // so is a heredoc an interpreter reads, whose calls were never opened before.
+    for (const { body, shell } of scripts) segs.push(...commandsIn(stripComments(body), 1, shell ? false : 'code', sink));
+    for (const t of h.programs) segs.push(...commandsIn(stripComments(t), 1, 'code', sink));
+    const programs = [...h.programs, ...sink.code, ...scripts.map((x) => x.body)].map(stripComments);
     const clientSegs = []; const varSegs = [];
     for (const s of segs) {
       const c = clientOf(s.words, s.any);
@@ -553,7 +605,7 @@ export function analyze(p) {
       if (!s.any && i >= 0 && /^\$/.test(s.words[i])) varSegs.push({ s, c: { exe: '', at: i } });
     }
     const request = clientSegs.length > 0 || (varSegs.length > 0 && CLIENT_WORD.test(h.shell))
-      || programs.some((t) => PROGRAM_REQUEST.test(t) || BROWSER.test(t.replace(/\bhttps?:\/\/\S+/g, ' ')));
+      || programs.some((t) => PROGRAM_REQUEST.test(t) || BROWSER.test(t.replace(/\bhttps?:\/\/[^\s'"`)]+/g, ' ')));
     const hosts = new Set();
     let fromVariable = false;
     let identity = null;
@@ -676,7 +728,7 @@ export function readsInFull(cmd, host) {
   for (let i = 0; i < w.length; i++) {
     const x = w[i];
     if (/^-[A-Za-z]+$/.test(x)) {
-      if (/[IfoOAebDHumXw]/.test(x.slice(1, -1)) || /[If]/.test(x)) return false;
+      if (/[IfoOAebDHumXwdFTK]/.test(x.slice(1, -1)) || /[If]/.test(x)) return false;
       if (/[iv]/.test(x)) headers = true;
       const last = x.at(-1);
       if (last === 'o') { if (w[i + 1] !== '-') return false; i++; continue; }
@@ -684,12 +736,14 @@ export function readsInFull(cmd, host) {
       if (last === 'D') { if (w[i + 1] === '-') headers = true; i++; continue; }
       if (last === 'H') { if (!/^accept(-[a-z]+)?\s*:/i.test(w[i + 1] ?? '')) return false; i++; continue; }
       if ('Aebu'.includes(last)) return false;
-      if (last === 'w') return false;
-      if ('mX'.includes(last)) { i++; continue; }
+      if ('wdFTK'.includes(last)) return false;
+      if (last === 'X') { if (!/^GET$/i.test(w[i + 1] ?? '')) return false; i++; continue; }
+      if (last === 'm') { i++; continue; }
       continue;
     }
     if (x === '--include' || x === '--verbose') { headers = true; continue; }
-    if (['--head', '--fail', '--remote-name', '--user-agent', '--referer', '--cookie', '--user'].includes(x) || /^--write-out/.test(x)) return false;
+    if (['--head', '--fail', '--remote-name', '--user-agent', '--referer', '--cookie', '--user'].includes(x) || /^--(write-out|trace|data|form|upload-file|json|config)/.test(x) || /^file:/i.test(x)) return false;
+    if (x === '--request' || x.startsWith('--request=')) { if (!/^GET$/i.test(x.includes('=') ? x.split('=')[1] : w[i + 1] ?? '')) return false; if (!x.includes('=')) i++; continue; }
     if (x === '--output' || x.startsWith('--output=')) { if ((x.includes('=') ? x.split('=')[1] : w[i + 1]) !== '-') return false; if (!x.includes('=')) i++; continue; }
     if (x === '--dump-header') { if (w[i + 1] === '-') headers = true; i++; continue; }
     if (x === '--header' || x.startsWith('--header=')) { const v = x.includes('=') ? x.slice(9) : w[++i]; if (!/^accept(-[a-z]+)?\s*:/i.test(v ?? '')) return false; continue; }
@@ -720,6 +774,8 @@ const INSTRUCTION_HEADERS = ['tdm-reservation', 'tdm-policy', 'link', 'retry-aft
  * @param {number} [code]   a WebFetch response code, when the tool gave one.
  * @param {Set<string>} [known]  the hosts the call asked (`requestHosts`);
  *   every host in the request text when not given.
+ * @param {boolean} [fetch]  the reply came through a fetch tool, not a shell
+ *   client, so the tool's own wording for a status is read.
  * @returns {object[]} one entry per host that declined: `{host, cause, status,
  *   server, headers, evidence, excerpt}`. Cause is `proxy` (this container
  *   refused; the host was never asked), `challenge`, `tool` or `reply`. A line
@@ -727,7 +783,7 @@ const INSTRUCTION_HEADERS = ['tdm-reservation', 'tdm-policy', 'link', 'retry-aft
  *   request names: over-recording costs one reading, under-recording is the
  *   failure this file exists for.
  */
-export function declinesIn(reqText, out, code, known) {
+export function declinesIn(reqText, out, code, known, fetch = false) {
   const hosts = known ?? hostsIn(reqText);
   const lines = String(out ?? '').split(/\r?\n/);
   const found = new Map();
@@ -801,8 +857,12 @@ export function declinesIn(reqText, out, code, known) {
     // A client's own words for a status, the fetch tool's among them ("The
     // server returned HTTP 403 Forbidden"), which an audit of this session
     // found eight times with nothing recorded.
-    const cf = L.match(/^curl: \(22\) The requested URL returned error: (\d{3})/) || L.match(/\bERROR (\d{3}):/) || L.match(/\b(?:failed|error)\b.*\bstatus code (\d{3})\b/i)
-      || L.match(/\breturned HTTP (\d{3})\b/i);
+    // A client's own report, at the start of its own line — never the same
+    // words quoted inside a page that answered: a scope check had a 200 page
+    // quoting wget's `ERROR 403: Forbidden.` recorded as a refusal. The fetch
+    // tool's own sentences are read only from the fetch tool.
+    const cf = (/\bcurl\b/.test(reqText) && L.match(/^curl: \(22\) The requested URL returned error: (\d{3})/)) || (/\bwget2?\b/.test(reqText) && L.match(/^(?:\d{4}-\d\d-\d\d \d\d:\d\d:\d\d )?ERROR (\d{3}):/))
+      || (fetch ? (L.match(/\b(?:failed|error)\b.*\bstatus code (\d{3})\b/i) || L.match(/\breturned HTTP (\d{3})\b/i)) : null);
     if (cf && Number(cf[1]) >= 400) { add(attribute(i), { cause: 'reply', status: Number(cf[1]), evidence: [L.trim()], excerpt: around(i) }); continue; }
     const tool = L.match(/unable to fetch from ([a-z0-9.-]+\.[a-z]{2,})/i);
     if (tool) { add([tool[1].toLowerCase()], { cause: 'tool', evidence: [L.trim()], excerpt: around(i) }); continue; }
@@ -847,7 +907,12 @@ export function mixedCapture(p) {
   if (!c) return true;
   // curl's -w prints what the session wrote, beside what the server sent: a
   // scope check forged a reading with `-w '\nwords of its own\n'`.
-  if (segs[0].words.slice(c.at + 1).some((x) => (/^-[A-Za-z]*w/.test(x) && !x.startsWith('--')) || /^--write-out/.test(x))) return true;
+  const cw = segs[0].words.slice(c.at + 1);
+  if (cw.some((x) => (/^-[A-Za-z]*w/.test(x) && !x.startsWith('--')) || /^--write-out/.test(x))) return true;
+  // A second URL, a file: URL, a trace of what was sent, or options from a file
+  // each put words the session chose beside the reply — three forgeries a
+  // scope check made.
+  if (cw.filter((x) => /^[a-z]+:\/\//i.test(x)).length > 1 || cw.some((x) => /^file:/i.test(x) || /^--trace/.test(x) || /^(-K|--config)$/.test(x) || /^-[A-Za-z]*K/.test(x))) return true;
   return segs.some((s) => !['|', ''].includes(s.op)) || /\$\(|`|<</.test(cmd);
 }
 
@@ -1027,7 +1092,9 @@ function catchUp(p, ev) {
       if (!a.request || NOT_A_FAILURE.test(text)) continue;
       const mixed = mixedCapture(q);
       const said = u.name !== 'Bash' && !b.is_error ? (text.match(/^.*\breturned HTTP \d{3}\b.*$/m)?.[0] ?? '') : text;
-      for (const d of declinesIn(a.text, said, undefined, a.hosts)) append(p, { kind: 'decline', use: b.tool_use_id, agent, ...d, mixed, text: cap(text, 40000), t });
+      const ds = declinesIn(a.text, said, undefined, a.hosts, u.name !== 'Bash');
+      for (const d of ds) append(p, { kind: 'decline', use: b.tool_use_id, agent, ...d, mixed, text: cap(text, 40000), t });
+      if (!mixed && !b.is_error) for (const h of a.hosts) if (!ds.some((d) => site(d.host) === site(h))) append(p, { kind: 'answered', use: b.tool_use_id, host: site(h), t });
       append(p, { kind: 'seen', use: b.tool_use_id });
     }
   }
@@ -1061,7 +1128,7 @@ export function decide(p) {
     const segsL = commandsIn(heredocs(c).shell).filter((s) => s.words.some(names));
     if (segsL.length && !parseRead(c)) {
       const reader = (w) => { const at = commandWordIndex(w); const b = at >= 0 ? basename(w[at]) : ''; return /^(cat|grep|rg|ag|head|tail|wc|ls|jq|stat|cut|nl|less|more|file|du)$/.test(b) || (b === 'git' && /^(grep|log|show|diff|status|blame)$/.test(w[at + 1] ?? '')) || (b === 'find' && !w.some((x) => /^-(delete|exec|execdir|ok|okdir|fprint\w*|fls)$/.test(x))); };
-      const intoLedger = (w) => w.some((x, i) => (/^\d*>>?$/.test(x) && names(w[i + 1] ?? '')) || (/^\d*>>?./.test(x) && !/^\d*>&/.test(x) && names(x.replace(/^\d*>>?/, ''))));
+      const intoLedger = (w) => w.some((x, i) => (/^\d*(<>|>>?)$/.test(x) && names(w[i + 1] ?? '')) || (/^\d*(<>|>>?)./.test(x) && !/^\d*>&/.test(x) && names(x.replace(/^\d*(<>|>>?)/, ''))));
       const readOnly = segsL.every((s) => reader(s.words) && !intoLedger(s.words) && !s.words.some((x) => /^(tee|-i|--in-place)$/.test(x)));
       if (!readOnly) return 'reply-guard (LESSONS §374): the reply ledger is written by the guard alone, and this command does more than read it. A reading is recorded with --read; an edited, emptied or deleted ledger is a reading invented.';
     }
@@ -1103,6 +1170,7 @@ export function decide(p) {
   for (const host of a.hosts) {
     const di = latestDecline(ev, host);
     if (di < 0) continue;
+    if (ev.slice(di + 1).some((e) => e.kind === 'answered' && e.host === site(host))) continue;
     const d = ev[di];
     const declinedScript = ev.some((e) => e.kind === 'decline' && site(e.host) === site(host) && e.cause !== 'proxy');
     if (disguise && declinedScript) {
@@ -1169,9 +1237,12 @@ export function record(p, event) {
   } else return '';
   const a = analyze(p);
   if (!a.request || NOT_A_FAILURE.test(out)) return '';
-  const ds = declinesIn(a.text, out, code, a.hosts);
+  const ds = declinesIn(a.text, out, code, a.hosts, tool !== 'Bash');
   const mixed = mixedCapture(p);
   for (const d of ds) append(p, { kind: 'decline', use, agent, ...d, mixed, text: cap(out, 40000) });
+  // A lone request the host answered below 400 ends its refusal: a scope check
+  // found a seeded refusal that a later honest 200 could never clear.
+  if (!mixed && event === 'PostToolUse' && (tool !== 'Bash' || out)) for (const h of a.hosts) if (!ds.some((d) => site(d.host) === site(h))) append(p, { kind: 'answered', use, host: site(h) });
   append(p, { kind: 'seen', use });
   return ds.map((d) => d.cause === 'proxy'
     ? `reply-guard (LESSONS §374): this container refused ${d.host} — the host was never asked. Ask the owner to allow it, naming ${d.host}, then record that:\n  ${readCommand(d.host, d)}`

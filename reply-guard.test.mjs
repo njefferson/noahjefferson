@@ -159,7 +159,7 @@ const CASES = [
   },
   {
     name: 'the ledger is written by the guard alone',
-    guards: ['ledger_write', 'ledger_bash'],
+    guards: ['ledger_write', 'ledger_bash', 'ledger_rw'],
     run(g) {
       fresh();
       return /written by the guard alone/.test(g.decide({ session_id: 't', tool_name: 'Write', tool_input: { file_path: '/root/.claude/reply-ledger/t.jsonl', content: '{}' } }) ?? '')
@@ -168,6 +168,7 @@ const CASES = [
         && /written by the guard alone/.test(g.decide(bash('sort -o ~/.claude/reply-ledger/t.jsonl /dev/null')) ?? '')
         && /written by the guard alone/.test(g.decide(bash('uniq /dev/null ~/.claude/reply-ledger/t.jsonl')) ?? '')
         && /written by the guard alone/.test(g.decide(bash('cd ~/.claude && rm -rf reply-ledger')) ?? '')
+        && /written by the guard alone/.test(g.decide(bash('cat forged.jsonl 1<> ~/.claude/reply-ledger/t.jsonl')) ?? '')
         && g.decide(bash('tail -5 ~/.claude/reply-ledger/t.jsonl')) === null;
     },
   },
@@ -599,12 +600,16 @@ const CASES = [
     },
   },
   {
-    name: "this guard's own test runs, whichever hub checkout the gate runs from",
-    guards: ['own_test'],
+    name: "this guard's own test runs, and a file named like it is read like any other program",
+    guards: ['code_mode'],
     run(g) {
       fresh();
       g.record(ran(`curl -sS -i '${PIX}'`, PIX_406), 'PostToolUse');
-      return g.decide(bash(`node ${join(HERE, 'reply-guard.test.mjs')}`)) === null;
+      const d = mkdtempSync(join(tmpdir(), 'reply-own-')); MADE.push(d);
+      writeFileSync(join(d, 'reply-guard.test.mjs'), `await fetch('${PIX}');\n`);
+      writeFileSync(join(d, 'hook-dispatch.mjs'), '');
+      return g.decide(bash(`node ${join(HERE, 'reply-guard.test.mjs')}`)) === null
+        && /nothing on record/.test(g.decide(bash(`node ${join(d, 'reply-guard.test.mjs')}`)) ?? '');
     },
   },
   {
@@ -634,6 +639,97 @@ const CASES = [
       fresh();
       g.record(ran('curl -sS -i https://raw.githubusercontent.com/x/y/main/z.md', 'HTTP/2 404\ncontent-type: text/plain\n\n404: Not Found'), 'PostToolUse');
       return g.decide(bash(`node ${self} --read raw.githubusercontent.com --said "404: Not Found" --route "api: list the repository's tree for the right path"`)) === null;
+    },
+  },
+  {
+    name: 'a heredoc piped into a shell, a script written and run in one line, argv lists and env -S are requests; printing a command is not',
+    guards: ['cat_pipe', 'exec_call', 'written_script', 'wrappers6'],
+    run(g) {
+      fresh();
+      g.record(ran(`curl -sS -i '${PIX}'`, PIX_406), 'PostToolUse');
+      const d = mkdtempSync(join(tmpdir(), 'reply-w-')); MADE.push(d);
+      const refused = [
+        `cat <<'EOF' | bash\ncurl -sS '${PIX}'\nEOF`,
+        `cat > w.sh <<'EOF'\ncurl -sS '${PIX}'\nEOF\nbash w.sh`,
+        `python3 -c "import subprocess; subprocess.run(['curl','-sS','${PIX}'])"`,
+        `node -e "require('child_process').execFileSync('curl',['-sS','${PIX}'])"`,
+        `script -qc "curl -sS ${PIX}" /dev/null`,
+        `env -S 'curl -sS' '${PIX}'`,
+        `busybox wget -q -O - '${PIX}'`,
+      ].every((c) => /nothing on record/.test(g.decide({ ...bash(c), cwd: d }) ?? ''));
+      const printed = g.decide(bash(`node -e "console.log('next: curl -sS ${PIX}')"`)) === null;
+      return refused && printed;
+    },
+  },
+  {
+    // The replay of 2026-10-01 refused 26 of the guard's own test scripts,
+    // which only hand `curl …` to decide() as a string: a program's whole text
+    // had been opened as if every word in it might be run.
+    name: "a program that only names curl in a string is not a request; a heredoc an interpreter reads and a script a shell runs are opened as what they are",
+    guards: ['code_mode', 'heredoc_program', 'shell_script', 'call_args'],
+    run(g) {
+      fresh();
+      g.record(ran(`curl -sS -i '${PIX}'`, PIX_406), 'PostToolUse');
+      const d = mkdtempSync(join(tmpdir(), 'reply-c-')); MADE.push(d);
+      const tick = '`';
+      const allowed = [
+        "cat > t.mjs <<'EOF'\nconst g = await import('./reply-guard.mjs');\nconst PIX = '" + PIX + "';\nconsole.log(g.decide({ tool_name: 'Bash', tool_input: { command: " + tick + "curl -sS -A bot '${PIX}'" + tick + " } }));\nEOF\nnode t.mjs",
+        "node <<'EOF'\nconsole.log(" + tick + 'curl -sS ' + PIX + tick + ");\nEOF",
+        "python3 - <<'EOF'\nfor kw in ['execSync','exec(','curl ','pixinsight.com']:\n    print(kw)\nEOF",
+      ].every((c) => g.decide({ ...bash(c), cwd: d }) === null);
+      const refused = [
+        "python3 <<'EOF'\nimport os\nos.system('curl -sS " + PIX + "')\nEOF",
+        "cat > f <<'EOF'\ncurl -sS '" + PIX + "'\nEOF\n./f",
+      ].every((c) => /nothing on record/.test(g.decide({ ...bash(c), cwd: d }) ?? ''));
+      return allowed && refused;
+    },
+  },
+  {
+    name: 'a POST, data or upload is never a full read, and a second URL, a file: URL or a trace makes a capture mixed',
+    guards: ['readfull_data', 'mixed_more'],
+    run(g, self) {
+      fresh();
+      g.record(ran(`curl -sS -i '${PIX}'`, PIX_406), 'PostToolUse');
+      const post = /nothing on record/.test(g.decide(bash(`curl -sS -i -d q=1 '${PIX}'`)) ?? '');
+      fresh();
+      g.record(ran(`curl -sS -i '${PIX}' file:///tmp/forge.txt`, `${PIX_406}\nthe server permits any browser identity here`), 'PostToolUse');
+      const forged = g.decide(bash(`node ${self} --read pixinsight.com --said "the server permits any browser identity here" --route "negotiate: ask again with an honest Accept: text/html"`));
+      return post && /among other output/.test(forged ?? '');
+    },
+  },
+  {
+    name: 'a lone honest request the host answers below 400 ends its refusal, seeded or not',
+    guards: ['answered'],
+    run(g, self) {
+      fresh();
+      const f = join(process.env.REPLY_LEDGER_DIR, 'seed.jsonl');
+      writeFileSync(f, JSON.stringify({ use: 's1', host: 'example-g.org', cause: 'reply', status: 403, result: 'HTTP/2 403\n\nno', ts: new Date(T0 - 3600000).toISOString() }) + '\n');
+      spawnSync(process.execPath, [self, '--seed', f, '--session', 't'], { env: process.env, encoding: 'utf8' });
+      const before = /nothing on record/.test(g.decide(bash('curl -sS https://example-g.org/y')) ?? '');
+      g.record(ran('curl -sS -i https://example-g.org/x', 'HTTP/2 200\ncontent-type: text/html\n\n<p>hello</p>'), 'PostToolUse');
+      return before && g.decide(bash('curl -sS https://example-g.org/y')) === null;
+    },
+  },
+  {
+    name: "a client's error words quoted inside a page are not a refusal",
+    guards: ['client_words'],
+    run(g) {
+      fresh();
+      g.record(ran('curl -sS -i https://unix.example-h.org/q/1', 'HTTP/2 200\ncontent-type: text/html\n\n<pre>2024-01-01 12:00:00 ERROR 403: Forbidden.</pre>\nThe server returned HTTP 403 to wget, as above.'), 'PostToolUse');
+      g.record(ran('curl -sS https://unix.example-h.org/q/2', 'notes\n2024-01-01 12:00:00 ERROR 403: Forbidden. was the line\n'), 'PostToolUse');
+      return !g.load({ session_id: 't' }).some((e) => e.kind === 'decline');
+    },
+  },
+  {
+    name: 'a user-agent set inside program code without spaces, or by any option spelling it, is a disguise',
+    guards: ['program_ua', 'ua_any'],
+    run(g, self) {
+      fresh();
+      g.record(ran(`curl -sS -i '${PIX}'`, PIX_406), 'PostToolUse');
+      g.decide(bash(`node ${self} --read pixinsight.com --said "could not be found on this server" --route "negotiate: ask again with an honest Accept: text/html"`));
+      return [`node --eval "fetch('${PIX}',{headers:{'User-Agent':'bot','Accept':'text/html'}})"`,
+        `links -http.fake-user-agent bot -dump '${PIX}'`, `wget -qe u_s_e_r_a_g_e_n_t=bot --header='Accept: text/html' -O - '${PIX}'`]
+        .every((c) => /disguise/.test(g.decide(bash(c)) ?? ''));
     },
   },
   {
@@ -693,26 +789,40 @@ const PLANTS = {
   port: ['for (const t of [toks[0], toks[1]]) {', "for (const t of toks.map((x) => x.replace(/^.*:/, '').replace(/,$/, ''))) {"],
   tlds: ['if (TLDS.has(tld)) keep(m[0]);', 'keep(m[0]);'],
   from_variable: ['if (fromVariable) {', 'if (false) {'],
-  returned_http: ['|| L.match(/\\breturned HTTP (\\d{3})\\b/i);', ';'],
+  returned_http: ['|| L.match(/\\breturned HTTP (\\d{3})\\b/i)) : null);', ') : null);'],
   seed: ["if (!d?.host || !d.use || have.has(`${d.use} ${d.host}`)) continue;", "if (!d?.host || !d.use || have.has(`${d.use} ${d.host}`) || true) continue;"],
-  heredoc_data: ["else data.push(body.join('\\n'));", 'else keep.push(...body);'],
-  command_position: ['function clientOf(words, any = false) {\n  if (any) {', 'function clientOf(words, any = false) {\n  if (true) {'],
+  heredoc_data: ["    else {\n      data.push(body.join('\\n'));", '    else {\n      keep.push(...body);'],
+  command_position: ["if (any === 'code') return null;\n  if (any) {", "if (any === 'code') return null;\n  if (true) {"],
   program_hosts: ['for (const t of programs) for (const m of t.matchAll(CALL_URL)) for (const x of hostsIn(m[1])) hosts.add(x);', 'for (const t of programs) for (const x of hostsIn(t)) hosts.add(x);'],
   comments: ["function stripComments(t) {\n  return String(t ?? '')", "function stripComments(t) {\n  return String(t ?? ''); String(t ?? '')"],
   fence: ['if (/^\\s*(```|~~~)/.test(L)) { fence = !fence; continue; }', ''],
   webfetch_200: ["out = code && code < 400 ? '' :", 'out = code && code < 400 ? res :'],
-  wforge: ["if (segs[0].words.slice(c.at + 1).some((x) => (/^-[A-Za-z]*w/.test(x) && !x.startsWith('--')) || /^--write-out/.test(x))) return true;", ''],
+  wforge: ["if (cw.some((x) => (/^-[A-Za-z]*w/.test(x) && !x.startsWith('--')) || /^--write-out/.test(x))) return true;", ''],
   seeded: ["if (d.seeded && d.cause !== 'proxy') return", 'if (false) return'],
   ansi: ['if (c === \'$\' && s[i + 1] === "\'") {', 'if (false) {'],
   xargs_fn: ["if (s.words.slice(0, c.at).some((x) => basename(x) === 'xargs')) fromVariable = true;", ''],
   code_flags: ['const CODE_FLAG = /^(-[A-Za-z]*[ceEpr]|--eval|--print|--exec|--command)$/;', 'const CODE_FLAG = /^(-[A-Za-z]*[ce])$/;'],
   httpie: ['if (CLIENTS.has(b) || (i === first && /^https?$/.test(b))) return { exe: b, at: i };', 'if (CLIENTS.has(b)) return { exe: b, at: i };'],
   wget_e: ["if (evn.startsWith('useragent') ||", 'if (false &&'],
-  own_test: ["if (/^reply-guard(\\.test)?\\.mjs$/.test(basename(f)) && existsSync(join(dirname(f), 'hook-dispatch.mjs'))) return;", ''],
   exact_host: ["return String(h).toLowerCase().replace(/\\.$/, '').replace(/^www\\./, '');", "return String(h).toLowerCase().split('.').slice(-2).join('.');"],
   ledger_segments: ['const segsL = commandsIn(heredocs(c).shell).filter((s) => s.words.some(names));', 'const segsL = commandsIn(heredocs(c).shell); if (!segsL.some((s) => s.words.some(names))) segsL.length = 0;'],
   short_reply: ['if (!(whole.length < 40 && said === whole) && (said.length', 'if (true && (said.length'],
   later_words: ['const LATER_WORDS = /temporar|try (it )?again later|retry later|come back later|try again in a (few|little)/i;', 'const LATER_WORDS = /temporar/i;'],
+  cat_pipe: ['const reader = pipe ? clientName(pipe[1]) : b;', 'const reader = b;'],
+  exec_call: ['const EXEC_CALL = /\\b(?:system|', 'const EXEC_CALL = /\\bNEVER_A_CALL(?:system|'],
+  written_script: ["if (tgt) files[tgt[1]] = body.join('\\n');", ''],
+  code_mode: ["if (any === 'code') return null;", ''],
+  heredoc_program: ["for (const t of h.programs) segs.push(...commandsIn(stripComments(t), 1, 'code', sink));", ''],
+  call_args: ["if (/^\\s*[,)]/.test(arg)) continue;", ''],
+  shell_script: ["const isShell = (f, body, how) => how === 'shell' ||", "const isShell = (f, body, how) => false &&"],
+  readfull_data: ["if ('wdFTK'.includes(last)) return false;", "if ('w'.includes(last)) return false; if ('dFTK'.includes(last)) { i++; continue; }"],
+  mixed_more: ["if (cw.filter((x) => /^[a-z]+:\\/\\//i.test(x)).length > 1 || cw.some((x) => /^file:/i.test(x) || /^--trace/.test(x) || /^(-K|--config)$/.test(x) || /^-[A-Za-z]*K/.test(x))) return true;", ''],
+  answered: ["if (ev.slice(di + 1).some((e) => e.kind === 'answered' && e.host === site(host))) continue;", ''],
+  client_words: ["(/\\bwget2?\\b/.test(reqText) && L.match(/^(?:\\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d )?ERROR (\\d{3}):/))", "L.match(/\\bERROR (\\d{3}):/)"],
+  wrappers6: ["if (b === 'script') for", "if (false) for"],
+  ledger_rw: ['/^\\d*(<>|>>?)$/.test(x)', '/^\\d*(>>?)$/.test(x)'],
+  program_ua: ["const bare = String(t).replace(/\\bhttps?:\\/\\/[^\\s'\"`)]+/g, ' ');", "const bare = String(t).replace(/\\bhttps?:\\/\\/\\S+/g, ' ');"],
+  ua_any: ["if (/^-/.test(x) && /useragent/i.test(x.replace(/[-_.]/g, ''))) return", 'if (false) return'],
   runtime_opts: ['return `builds an option at run time (${x.slice(0, 24)}), which this guard cannot read`;', ';'],
 };
 
