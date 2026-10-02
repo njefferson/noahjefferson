@@ -44,6 +44,8 @@
 //   node stop-guard.mjs        (reads the hook payload on stdin)
 
 import { readFileSync } from 'node:fs';
+import { pendingMessages, startedAt } from './pending-guard.mjs';
+import { tailEntries } from './transcript-tail.mjs';
 
 /** The transcript is JSONL; the last assistant text is the reply just written. */
 const lastAssistantText = (path) => {
@@ -156,7 +158,12 @@ function runningTasks(raw) {
 }
 let running = [];
 try { running = runningTasks(readFileSync(path, 'utf8')); } catch { running = []; }
-if (running.length) {
+// A MESSAGE FROM THE OWNER WAITING IN THE QUEUE wins: pending-guard refuses every
+// tool call until the turn ends and delivers it, so refusing the stop as well
+// left no move at all. Measured three times in one afternoon, 2026-10-02.
+let queuedOwner = [];
+try { queuedOwner = pendingMessages(tailEntries(path, 16 * 1024 * 1024), startedAt(hook)); } catch { queuedOwner = []; }
+if (running.length && !queuedOwner.length) {
   process.stderr.write(`STOP REFUSED — ${running.length} task(s) this session started are still running (${running.join(', ')}).
 
 Doctrine §0e rule 2, LESSONS §381. A status at least every five minutes is owed

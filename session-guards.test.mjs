@@ -379,7 +379,7 @@ const CASES = [
   },
   {
     name: 'a stop is refused while a task this session started is still running, declared or not, and allowed once it ends',
-    guards: ['running_work'],
+    guards: ['running_work', 'running_owed'],
     run(m, dir) {
       const say = (entries) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ transcript_path: transcript(entries) }), encoding: 'utf8' }).status;
       const reply = { type: 'assistant', timestamp: ts(9), message: { role: 'assistant', content: [{ type: 'text', text: 'Stopping here: open for you is nothing new.' }] } };
@@ -394,7 +394,10 @@ const CASES = [
       const oneLeft = say([...launch, ...bash, done('wabc123', 4), reply]);
       const allEnded = say([...launch, ...bash, done('wabc123', 4), ...stopped, reply]);
       const onlyWords = say([...notLaunches, reply]);
-      return runningBoth === 2 && oneLeft === 2 && allEnded === 0 && onlyWords === 0;
+      // A message from the owner still in the queue: the stop is what delivers
+      // it, so it is allowed even with work running.
+      const queued = say([...launch, enq(8, 'Where is the release?'), reply]);
+      return runningBoth === 2 && oneLeft === 2 && allEnded === 0 && onlyWords === 0 && queued === 0;
     },
   },
 ];
@@ -430,6 +433,7 @@ const PLANTS = {
   copies_owner: ['  if (!runs.size) return false;', '  return false;', 'transcript-tail.mjs'],
   next_work: ['const nextHit = NEXT_WORK.find((re) => re.test(reply));', 'const nextHit = undefined;', 'stop-guard.mjs'],
   drop_checks: ['const dropHit = DROP_CHECKS.find((re) => re.test(reply));', 'const dropHit = undefined;', 'stop-guard.mjs'],
+  running_owed: ['if (running.length && !queuedOwner.length) {', 'if (running.length) {', 'stop-guard.mjs'],
   running_work: ["try { running = runningTasks(readFileSync(path, 'utf8')); } catch { running = []; }", 'running = [];', 'stop-guard.mjs'],
 };
 
