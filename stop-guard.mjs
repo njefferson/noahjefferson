@@ -189,6 +189,44 @@ is ready, call ExitPlanMode.
   process.exit(2);
 }
 
+/** 7. ASKING FOR THE NEXT WORK, OR OFFERING TO DROP THE CHECKS (Doctrine §0g,
+ *  LESSONS §380). Each repo's ranked roadmap names the next work, so a reply
+ *  asking the owner what to build next hands back a question the record already
+ *  answers. Verification runs once, over the integrated release: never per step
+ *  and never not at all, so a reply offering to drop it to save time is offering
+ *  to ship unchecked work. Both are checked before the declaration, because a
+ *  declared stop excuses neither. */
+const NEXT_WORK = [
+  /\b(?:send|tell|give|name)\s+(?:me\s+)?(?:the\s+)?next\s+(?:thing|item|task|piece of work)\b/i,
+  /\bwhat\s+(?:do you want|would you like|should I)\b[^.!?\n]{0,30}\b(?:build|work on|do|tackle|pick up)\s+next\b/i,
+];
+const CHECK = String.raw`(?:the\s+)?(?:adversarial[\s-]+)?(?:check|checks|verification|verify stage|review|tests?|testing)\b`;
+const DROP = String.raw`\b(?:drop|skip|cut|bypass|forgo)(?:s|ped|ping|ting)?\s+`;
+const HASTE = String.raw`\b(?:time|faster|speed|quicker|sooner|hurry|halves|halve)\b`;
+const DROP_CHECKS = [
+  new RegExp(`${DROP}${CHECK}[^\n]{0,120}${HASTE}`, 'i'),
+  new RegExp(`${HASTE}[^\n]{0,120}${DROP}${CHECK}`, 'i'),
+];
+const nextHit = NEXT_WORK.find((re) => re.test(reply));
+const dropHit = DROP_CHECKS.find((re) => re.test(reply));
+if (nextHit || dropHit) {
+  const said = (reply.match(nextHit ?? dropHit) ?? [''])[0].trim().slice(0, 80);
+  process.stderr.write(nextHit
+    ? `STOP REFUSED — this reply asks the owner for the next work ("${said}").
+
+Doctrine §0g, LESSONS §380. The ranked roadmap in the repo's NOTES.md names the
+next work. Take it from there, the top items in parallel, and never hand the
+owner a question the record already answers.
+`
+    : `STOP REFUSED — this reply offers to drop verification to save time ("${said}").
+
+Doctrine §0g, LESSONS §380. Speed comes from cutting what is unnecessary, and
+verification is not that: it runs ONCE, over the integrated release, before
+anything reaches staging. Cut the per-step checks; never the release check.
+`);
+  process.exit(2);
+}
+
 /** 3. THE TEMPLATE, judged BEFORE the declaration: a declared stop excuses
  *  stopping, never the shape of the reply. Doctrine §2 names the shapes that
  *  look like content and are not, and one is purely structural: the bolded

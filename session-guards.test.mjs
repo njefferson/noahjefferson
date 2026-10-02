@@ -24,7 +24,7 @@ import { spawnSync } from 'node:child_process';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FILES = ['pending-guard.mjs', 'keep-info-guard.mjs', 'compact-recall.mjs', 'reply-guard.mjs', 'transcript-tail.mjs',
-  'plan-guard.mjs', 'hook-dispatch.mjs', 'report.mjs', 'drive-guard.mjs', 'approved-plan-guard.mjs', 'plan-scope-check.mjs'];
+  'plan-guard.mjs', 'hook-dispatch.mjs', 'report.mjs', 'drive-guard.mjs', 'approved-plan-guard.mjs', 'plan-scope-check.mjs', 'stop-guard.mjs'];
 const MADE = [];
 const tmp = (p) => { const d = mkdtempSync(join(tmpdir(), p)); MADE.push(d); return d; };
 
@@ -365,6 +365,18 @@ const CASES = [
         && ownWords.status === 0 && written() && !readFileSync(join(r.dir, '.plan-scope'), 'utf8').includes('export button');
     },
   },
+  {
+    name: 'a reply asking the owner for the next work, or offering to drop checks to save time, is refused; honest reports pass',
+    guards: ['next_work', 'drop_checks'],
+    run(m, dir) {
+      const say = (text) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ transcript_path: transcript([{ type: 'assistant', timestamp: ts(0), message: { role: 'assistant', content: [{ type: 'text', text }] } }]) }), encoding: 'utf8' }).status;
+      const asksNext = say('Send the next thing you want built and I will plan it.');
+      const drops = say('I stop the workflow and drop the adversarial-check stage for every group. That roughly halves the remaining time.');
+      const top = say('The roadmap\'s top item is 085, and it is being built now.');
+      const found = say('The check stage found two defects in the denoise group, and both are fixed.');
+      return asksNext === 2 && drops === 2 && top === 0 && found === 0;
+    },
+  },
 ];
 
 const PLANTS = {
@@ -396,6 +408,8 @@ const PLANTS = {
   asked_copy: ['  if (copiesOwner(m[1], owner)) {', '  if (false) {', 'plan-guard.mjs'],
   scope_record_copy: ['  if (copiesOwner(verdict, owner) || copiesOwner(finding, owner)) {', '  if (false) {', 'plan-scope-check.mjs'],
   copies_owner: ['  if (!runs.size) return false;', '  return false;', 'transcript-tail.mjs'],
+  next_work: ['const nextHit = NEXT_WORK.find((re) => re.test(reply));', 'const nextHit = undefined;', 'stop-guard.mjs'],
+  drop_checks: ['const dropHit = DROP_CHECKS.find((re) => re.test(reply));', 'const dropHit = undefined;', 'stop-guard.mjs'],
 };
 
 async function runAll(dir, only) {

@@ -199,6 +199,18 @@ message; `plan-scope-check.mjs` has the watcher judge each diff against
 the owner's messages read from the transcript, and refuses a recorded verdict
 that copies them. (LESSONS §379.)
 
+## 0g. Act from the owner's goal and the record, and verify once.
+
+Every action is checked against what the owner is trying to achieve and against
+what the record already settles, before it is taken. The owner's work is
+developing the apps: each repo's ranked roadmap names the next work, and a
+session works it in parallel across the horizon, never one item polished for
+hours while the rest wait. Speed comes from cutting what is unnecessary.
+Verification is not that: it runs once, over the integrated release at the
+staging boundary, never per step, and nothing reaches staging without it.
+`stop-guard.mjs` refuses a reply that asks the owner for the next work, and one
+that offers to drop verification to save time. (LESSONS §380.)
+
 ## 0c. Only NOAH decides what goes on the hub. Never a session.
 
 On being told this rule was nowhere in this file, the owner was right that it

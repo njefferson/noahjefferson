@@ -317,6 +317,9 @@ Every item below has actually happened.
  LESSONS §378.)
 - **DO WHAT THE OWNER ASKED, AND NOTHING MORE.** No additions on the theory of
  what was meant; a correction narrows the work. (Doctrine §0f; LESSONS §379.)
+- **ACT FROM THE OWNER'S GOAL AND THE RECORD, AND VERIFY ONCE.** The roadmap
+ names the next work, worked in parallel; verification runs once over the
+ integrated release, never per step. (Doctrine §0g; LESSONS §380.)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
  range line in the output means nothing moved. (LESSONS, 2026-08-02.)
