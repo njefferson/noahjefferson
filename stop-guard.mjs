@@ -115,6 +115,60 @@ let reply = '';
 try { reply = lastAssistantText(path); } catch { process.exit(0); }
 if (!reply) process.exit(0);
 
+/** 0. GOING QUIET WHILE ITS OWN WORK RUNS (Doctrine §0e rule 2, LESSONS §381).
+ *  A status every five minutes is owed for as long as anything this session
+ *  started is still running: a background command, a workflow, a background
+ *  agent. report.mjs can only refuse a TOOL CALL, and a session that ends its
+ *  turn makes none, so it was never refused. Turns ended under a declared stop
+ *  went silent for ninety minutes while two workflows ran. So a stop is refused
+ *  while any of them runs, declared or not. Stay in the turn, give the status
+ *  every five minutes, and act on each result as it lands.
+ *  @param {string} raw  the whole transcript, as JSONL text.
+ *  @returns {string[]} the ids a tool result OPENS by launching ("Workflow
+ *    launched in background. Task ID: x", "Command running in background with
+ *    ID: x") with no notification ending them (completed, failed, killed,
+ *    stopped) and no "Successfully stopped task: x". */
+function runningTasks(raw) {
+  // A launch is the line the harness writes at the very START of a tool result.
+  // Matched anywhere, the same words in a command's input or in a file a tool
+  // printed registered a task that never existed and would have refused every
+  // stop for the rest of the session.
+  const LAUNCH = /^(?:Workflow launched in background\. Task ID: |Command running in background with ID: )([a-z0-9]{6,})\b/;
+  const launched = new Set();
+  const ended = new Set();
+  for (const line of raw.split('\n')) {
+    if (!line) continue;
+    for (const m of line.matchAll(/<task-id>([a-z0-9]{6,})<\/task-id>[\s\S]{0,800}?<status>(?:completed|failed|killed|stopped|cancelled)<\/status>/g)) ended.add(m[1]);
+    for (const m of line.matchAll(/Successfully stopped task: ([a-z0-9]{6,})\b/g)) ended.add(m[1]);
+    if (!line.includes('tool_result') || !line.includes('background')) continue;
+    let e; try { e = JSON.parse(line); } catch { continue; }
+    const c = e?.message?.content;
+    if (e?.type !== 'user' || !Array.isArray(c)) continue;
+    for (const blk of c) {
+      if (blk?.type !== 'tool_result') continue;
+      const t = typeof blk.content === 'string' ? blk.content
+        : Array.isArray(blk.content) ? blk.content.map((x) => (typeof x === 'string' ? x : x?.text ?? '')).join('\n') : '';
+      const m = LAUNCH.exec(t.trimStart());
+      if (m) launched.add(m[1]);
+    }
+  }
+  return [...launched].filter((id) => !ended.has(id));
+}
+let running = [];
+try { running = runningTasks(readFileSync(path, 'utf8')); } catch { running = []; }
+if (running.length) {
+  process.stderr.write(`STOP REFUSED — ${running.length} task(s) this session started are still running (${running.join(', ')}).
+
+Doctrine §0e rule 2, LESSONS §381. A status at least every five minutes is owed
+for as long as the work runs, and work running in the background IS the work.
+Ending the turn makes no tool call, so nothing else can hold you to it. Do not
+end the turn. Stay in it: give the status every five minutes, read from the
+clock (report.mjs), and act on each result as it lands. If a task is no longer
+wanted, stop it with TaskStop first.
+`);
+  process.exit(2);
+}
+
 /** 5. HANDING THE OWNER WORK. A session handed the owner the install of its own
  *  gates, twice, as a setup-script edit behind a menu the tablet app does not
  *  show, and tried the install itself only when challenged; the same day it

@@ -301,6 +301,9 @@ Every item below has actually happened.
  why — never the plan's text, which the owner reads in the plan — and asks
  nothing; approval is only the button. A status at least every five minutes,
  its time read from the clock (`report.mjs` refuses every call after five).
+ **Background work is the work:** while anything the session started is still
+ running, it does not end its turn (`stop-guard.mjs` refuses the stop; LESSONS
+ §381).
  **The gates run from a clone at `/root/.claude/hub`, installed by each
  session's first plan** — `hook-dispatch.mjs --install` run FROM THE CLONE,
  never the working copy, because `install()` wires whichever copy runs it.

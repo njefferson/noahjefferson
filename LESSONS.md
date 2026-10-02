@@ -472,3 +472,4 @@ and the filename carries it.
 - **§378** — [Every time given to the owner is California local time](lessons/378-every-time-is-california-time.md)
 - **§379** — [Do what the owner asked, and nothing more](lessons/379-do-what-was-asked-and-nothing-more.md)
 - **§380** — [Act from the owner's goal and the record, and verify once](lessons/380-act-from-the-goal-and-verify-once.md)
+- **§381** — [Work running in the background is the work, and the session stays with it](lessons/381-background-work-is-the-work.md)

@@ -148,6 +148,12 @@ every rule below while none of the hooks that enforce them was running
    ever: statuses go in chat and on the status page.
    *Enforced by:* `report.mjs`, which refuses every call five minutes after the
    last stamp and writes the clock's time into every status it stamps.
+   **Work running in the background is the work.** While anything the session
+   started is still running (a background command, a workflow, a background
+   agent), the session does not end its turn: it stays, gives the status every
+   five minutes, and acts on each result as it lands. A declared stop does not
+   excuse it. *Enforced by:* `stop-guard.mjs`, which refuses every stop while a
+   task the session launched has not ended (LESSONS §381).
 3. **Reply to every point in a message from the owner.** A message saying
    something was done wrong is a full stop: answer it, and run nothing else in
    that turn.

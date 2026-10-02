@@ -377,6 +377,26 @@ const CASES = [
       return asksNext === 2 && drops === 2 && top === 0 && found === 0;
     },
   },
+  {
+    name: 'a stop is refused while a task this session started is still running, declared or not, and allowed once it ends',
+    guards: ['running_work'],
+    run(m, dir) {
+      const say = (entries) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ transcript_path: transcript(entries) }), encoding: 'utf8' }).status;
+      const reply = { type: 'assistant', timestamp: ts(9), message: { role: 'assistant', content: [{ type: 'text', text: 'Stopping here: open for you is nothing new.' }] } };
+      const launch = [tool(0, 'w0', 'Workflow', {}), result(1, 'w0', 'Workflow launched in background. Task ID: wabc123')];
+      const bash = [tool(2, 'b0', 'Bash', {}), result(3, 'b0', 'Command running in background with ID: bxyz789. Output is being written to: /tmp/x')];
+      const done = (id, s) => turn(s, `<task-notification><task-id>${id}</task-id><tool-use-id>t</tool-use-id><output-file>/tmp/o</output-file><status>completed</status></task-notification>`);
+      const stopped = [tool(6, 's0', 'TaskStop', {}), result(7, 's0', 'Successfully stopped task: bxyz789')];
+      // Launch words that are NOT a launch: in a command's input, and mid-way
+      // through a printed file. Neither may hold a stop.
+      const notLaunches = [tool(5, 'c0', 'Bash', { command: "echo 'Workflow launched in background. Task ID: wfake01'" }), result(5, 'c0', 'log line 1\nWorkflow launched in background. Task ID: wfake02\n')];
+      const runningBoth = say([...launch, ...bash, reply]);
+      const oneLeft = say([...launch, ...bash, done('wabc123', 4), reply]);
+      const allEnded = say([...launch, ...bash, done('wabc123', 4), ...stopped, reply]);
+      const onlyWords = say([...notLaunches, reply]);
+      return runningBoth === 2 && oneLeft === 2 && allEnded === 0 && onlyWords === 0;
+    },
+  },
 ];
 
 const PLANTS = {
@@ -410,6 +430,7 @@ const PLANTS = {
   copies_owner: ['  if (!runs.size) return false;', '  return false;', 'transcript-tail.mjs'],
   next_work: ['const nextHit = NEXT_WORK.find((re) => re.test(reply));', 'const nextHit = undefined;', 'stop-guard.mjs'],
   drop_checks: ['const dropHit = DROP_CHECKS.find((re) => re.test(reply));', 'const dropHit = undefined;', 'stop-guard.mjs'],
+  running_work: ["try { running = runningTasks(readFileSync(path, 'utf8')); } catch { running = []; }", 'running = [];', 'stop-guard.mjs'],
 };
 
 async function runAll(dir, only) {
