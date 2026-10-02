@@ -2,3 +2,4 @@
 work=main
 also=example-check.mjs
 also=privacy-check.mjs
+also=plan-scope-check.mjs

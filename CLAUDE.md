@@ -313,6 +313,10 @@ Every item below has actually happened.
  sits in the queue undelivered, and prints it; after a compaction the
  messages since the previous one are printed verbatim before anything else.
  (LESSONS §376.)
+- **EVERY TIME GIVEN TO THE OWNER IS CALIFORNIA LOCAL TIME.** (Doctrine §2;
+ LESSONS §378.)
+- **DO WHAT THE OWNER ASKED, AND NOTHING MORE.** No additions on the theory of
+ what was meant; a correction narrows the work. (Doctrine §0f; LESSONS §379.)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
  range line in the output means nothing moved. (LESSONS, 2026-08-02.)

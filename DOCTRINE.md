@@ -187,6 +187,18 @@ first plan clones the hub to `/root/.claude/hub` and installs
 `hook-dispatch.mjs` from that clone. Measured 2026-09-28: installed inside an
 approved plan, they went live mid-session with no restart.
 
+## 0f. Do what the owner asked, and nothing more.
+
+No additions on the theory of what the owner must have meant: no extra change,
+no new format, no wider scope, no second mechanism beside the one asked for. A
+correction from the owner narrows the work and never re-expands it. The owner is
+never quoted while doing it, and no owner message is copied into any file.
+Gated twice: `plan-guard.mjs` refuses a plan without an `## Asked` section in
+the session's own words, or one that shares a run of eight words with an owner
+message; `plan-scope-check.mjs` has the watcher judge each diff against
+the owner's messages read from the transcript, and refuses a recorded verdict
+that copies them. (LESSONS §379.)
+
 ## 0c. Only NOAH decides what goes on the hub. Never a session.
 
 On being told this rule was nowhere in this file, the owner was right that it
@@ -263,6 +275,11 @@ its own honest claim, and the default is never weakened to accommodate it.**
  a build they are not running.**
 
 ## 2. Audience and working method
+
+### Every time is California time
+
+Every time given to the owner is converted to California local time
+(America/Los_Angeles). `report.mjs` converts the status stamp. (LESSONS §378.)
 
 ### The slots — structural habits that look like content and are not
 

@@ -28,6 +28,17 @@ export const INTERVAL_MS = 5 * 60 * 1000;
 const CLOCK = join(homedir(), '.claude', 'report-clock.json');
 
 /**
+ * The owner's clock: the time in California, as every time a session writes
+ * must be (Doctrine §2), in the same HH:MM 24-hour form statuses always had.
+ * @param {Date} [d]  the instant; now when omitted.
+ * @returns {string} "HH:MM" in America/Los_Angeles whatever the container's
+ *   zone, so a UTC machine never stamps a UTC status.
+ */
+export function californiaTime(d = new Date()) {
+  return d.toLocaleTimeString('en-GB', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+}
+
+/**
  * Read the stamp. One container runs one session, so there is one clock; a
  * per-session key was tried and the command line cannot know the session id.
  * @returns {{at: number, status: string}} the last status; `at` is 0 when the
@@ -78,7 +89,9 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   if (!given) { console.error('usage: node report.mjs "Status HH:MM — done: …; running: …; next: …; next status by HH:MM"'); process.exit(1); }
   // The time in a status is the CLOCK's, written here, never the session's
   // estimate: five statuses in a row once carried times forty minutes off.
-  const hhmm = new Date().toTimeString().slice(0, 5);
+  // And it is CALIFORNIA time, the owner's (Doctrine §2): the container's clock
+  // is UTC, and a status stamped in it was a time the owner had to convert.
+  const hhmm = californiaTime();
   const m = /^Status\s+(\d{1,2}:\d{2})\b/.exec(given);
   const status = m ? given.replace(m[0], `Status ${hhmm}`) : `Status ${hhmm} — ${given}`;
   mkdirSync(dirname(CLOCK), { recursive: true });

@@ -49,13 +49,24 @@
 // reading a plan from having read it, so the plan is put in front of whoever
 // is at the boundary, unasked, every single time.
 //
+// AND THE OWNER'S OWN MESSAGES PRINT BESIDE IT (Doctrine §0f, LESSONS §379).
+// A plan wider than the request passes a check against the plan. So every run
+// names the session's transcript and prints the owner's messages from it, to
+// the terminal only, and the watcher judges the diff against THOSE: is every
+// change something the owner asked for, and nothing more. The record is
+// committed, so `--record` refuses a verdict or finding that repeats a run of
+// eight words from any owner message — no owner message is ever copied into a file.
+//
 // Wired into `.branch-guard`'s `also=` list like the rest of this family, so
 // it runs on every commit while a repo names a plan in force.
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { messagesSinceCompaction } from './compact-recall.mjs';
+import { tailEntries, ownerMessagesSince, copiesOwner } from './transcript-tail.mjs';
 
 const argv = process.argv.slice(2);
 
@@ -196,6 +207,44 @@ export function diffForScope(repo) {
 }
 
 /**
+ * The transcript of the session running this check, and when its plan was
+ * approved.
+ *
+ * @returns {{path: string, approvedAt: number} | null} the file
+ *   `~/.claude/projects/<dir>/<id>.jsonl` for the id in `CLAUDE_CODE_SESSION_ID`
+ *   (set by the harness, and inherited by a git hook a session's commit runs),
+ *   with the time in ms of the last ExitPlanMode call in its tail that was not
+ *   refused, or 0 when there is none. Null when the variable is unset or
+ *   malformed or no such transcript exists — a commit made outside a session.
+ *   `--record` refuses on null: without the transcript nothing can show the
+ *   record is free of text from an owner message. `HOME` decides where `~` is, which is
+ *   how the tests plant one.
+ */
+function ownerTranscript() {
+  const session = String(process.env.CLAUDE_CODE_SESSION_ID ?? '');
+  if (!/^[\w-]+$/.test(session)) return null;
+  const projects = join(homedir(), '.claude', 'projects');
+  let dirs = [];
+  try { dirs = readdirSync(projects); } catch { return null; }
+  const dir = dirs.find((d) => existsSync(join(projects, d, `${session}.jsonl`)));
+  if (!dir) return null;
+  const path = join(projects, dir, `${session}.jsonl`);
+  const exits = new Set();
+  let approvedAt = 0;
+  for (const e of tailEntries(path, 64 * 1024 * 1024)) {
+    const c = e?.message?.content;
+    if (!Array.isArray(c)) continue;
+    for (const b of c) {
+      if (e.type === 'assistant' && b?.type === 'tool_use' && b.name === 'ExitPlanMode') exits.add(b.id);
+      if (e.type === 'user' && b?.type === 'tool_result' && exits.has(b.tool_use_id) && !b.is_error) {
+        approvedAt = Date.parse(e.timestamp ?? '') || approvedAt;
+      }
+    }
+  }
+  return { path, approvedAt };
+}
+
+/**
  * The plan's own scope, verbatim where the plan states it — never a
  * paraphrase, because a paraphrase is exactly the drift this gate exists to
  * catch one layer up.
@@ -258,6 +307,19 @@ console.log(`plan: ${planPathRaw}\n`);
 console.log(planScope(planText));
 console.log('');
 
+const tx = ownerTranscript();
+if (!tx) {
+  console.log('owner: no session transcript found — the owner\'s messages cannot be printed\n');
+} else {
+  console.log(`transcript: ${tx.path}`);
+  console.log('THE OWNER\'S MESSAGES, printed here only and never copied into the record. The watcher judges the diff');
+  console.log('against these, not against the plan: every change is something the owner asked for, and nothing more (Doctrine §0f).\n');
+  for (const m of await messagesSinceCompaction(tx.path)) {
+    console.log(`---${tx.approvedAt && Date.parse(m.at) > tx.approvedAt ? ' after the plan was approved' : ''} ---\n${m.text}`);
+  }
+  console.log('--- end of the owner\'s messages ---\n');
+}
+
 const { hash: diffhash, promote, promoteFound } = diffForScope(REPO);
 if (!promoteFound) {
   console.log(`  · promote branch "${promote}" not found locally — hashing the working tree`);
@@ -295,6 +357,19 @@ if (argv.includes('--record')) {
     process.exit(1);
   }
 
+  if (!tx) {
+    console.error('REFUSED  no session transcript, so nothing can show this verdict is free of the');
+    console.error('  owner\'s words. Nothing was written.');
+    process.exit(1);
+  }
+  const owner = ownerMessagesSince(tx.path, 0).map((m) => m.text);
+  if (copiesOwner(verdict, owner) || copiesOwner(finding, owner)) {
+    console.error('REFUSED  the verdict or finding repeats a run of eight or more words from an owner message.');
+    console.error('  The record is committed, and the owner\'s words never go in a file (Doctrine §0f).');
+    console.error('  Say what the diff does in the watcher\'s own words. Nothing was written.');
+    process.exit(1);
+  }
+
   const findingLines = finding.split('\n');
   while (findingLines.length && findingLines[findingLines.length - 1].trim() === '') {
     findingLines.pop();
@@ -319,7 +394,7 @@ if (argv.includes('--record')) {
 
 if (!existsSync(RECORD)) {
   console.error('FAIL  no .plan-scope recorded — this diff has never been judged against the plan.');
-  console.error('      Fix: have a watcher read the plan and this diff, then record its verdict —');
+  console.error('      Fix: have a watcher read the owner\'s messages printed above and this diff, then record its verdict —');
   console.error(fixCommand('IN-SCOPE: <why>'));
   process.exit(1);
 }
@@ -334,7 +409,7 @@ for (const line of recordText.split('\n')) {
 if (rec.planhash !== planhash) {
   console.error(`FAIL  the plan file has changed since the recorded verdict (${rec.planhash || '(none)'} -> ${planhash}).`);
   console.error('      The verdict was rendered against a plan that no longer exists as written.');
-  console.error('      Fix: have a watcher re-read the changed plan and this diff, then —');
+  console.error('      Fix: have a watcher re-read the owner\'s messages printed above and this diff, then —');
   console.error(fixCommand('IN-SCOPE: <why>'));
   process.exit(1);
 }
@@ -342,7 +417,7 @@ if (rec.planhash !== planhash) {
 if (rec.diffhash !== diffhash) {
   console.error(`FAIL  the work has changed since the recorded verdict (${rec.diffhash || '(none)'} -> ${diffhash}).`);
   console.error('      The verdict covers a diff this commit no longer matches.');
-  console.error('      Fix: have a watcher re-read the plan and the current diff, then —');
+  console.error('      Fix: have a watcher re-read the owner\'s messages printed above and the current diff, then —');
   console.error(fixCommand('IN-SCOPE: <why>'));
   process.exit(1);
 }

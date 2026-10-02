@@ -168,3 +168,27 @@ export function seenInResults(entries, tools) {
   }
   return parts.join('\n');
 }
+
+/**
+ * Whether a text copies the owner: a run of `n` consecutive words it shares
+ * with any owner message (Doctrine §0f). Words are compared lowercased with
+ * punctuation dropped, so a quotation's typography does not hide it.
+ * @param {string} text    what a session wrote (a plan section, a verdict).
+ * @param {string[]} owner  the owner's messages.
+ * @param {number} [n]     the run length; 8 by default.
+ * @returns {boolean} true when any run of n words appears in both. The caller
+ *   reports only THAT it matched, never the words, so a refusal never repeats
+ *   what the owner said.
+ */
+export function copiesOwner(text, owner, n = 8) {
+  const words = (s) => String(s ?? '').toLowerCase().replace(/[’']/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').filter(Boolean);
+  const runs = new Set();
+  for (const m of owner) {
+    const w = words(m);
+    for (let i = 0; i + n <= w.length; i++) runs.add(w.slice(i, i + n).join(' '));
+  }
+  if (!runs.size) return false;
+  const t = words(text);
+  for (let i = 0; i + n <= t.length; i++) if (runs.has(t.slice(i, i + n).join(' '))) return true;
+  return false;
+}

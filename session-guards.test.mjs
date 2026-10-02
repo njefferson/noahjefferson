@@ -16,7 +16,7 @@
  * The queue records are shaped like the real ones: an `enqueue` carries the
  * message as `content`, a `dequeue` carries nothing, a `remove` carries it.
  */
-import { mkdtempSync, writeFileSync, copyFileSync, readFileSync, rmSync, appendFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, copyFileSync, readFileSync, rmSync, appendFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -24,7 +24,7 @@ import { spawnSync } from 'node:child_process';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FILES = ['pending-guard.mjs', 'keep-info-guard.mjs', 'compact-recall.mjs', 'reply-guard.mjs', 'transcript-tail.mjs',
-  'plan-guard.mjs', 'hook-dispatch.mjs', 'report.mjs', 'drive-guard.mjs', 'approved-plan-guard.mjs'];
+  'plan-guard.mjs', 'hook-dispatch.mjs', 'report.mjs', 'drive-guard.mjs', 'approved-plan-guard.mjs', 'plan-scope-check.mjs'];
 const MADE = [];
 const tmp = (p) => { const d = mkdtempSync(join(tmpdir(), p)); MADE.push(d); return d; };
 
@@ -52,6 +52,17 @@ function repo(files) {
   g('add', '-A'); g('commit', '-q', '-m', 'base');
   return { dir: d, g, write: (f, c) => writeFileSync(join(d, f), c), stage: () => g('add', '-A') };
 }
+// An invented owner request, and a plan around it (Doctrine §0f).
+const OWNER = 'Please move the export button to the left side of the toolbar and nothing else at all.';
+const QUOTED = 'Move it: please move the export button to the left side of the toolbar.';
+const OWN_WORDS = 'Relocate the export control to the toolbar\'s left edge, with no other change.';
+const PLAN = (asked) => ['# Test plan', '',
+  ...(asked === null ? [] : ['## Asked', asked, '']),
+  '## Looked up', 'Nothing outside the repository bears on this change at all.', '',
+  '## Branches', 'One branch only, because the request names a single control to move.', '',
+  '## Call chain', 'The toolbar builder places the button; nothing else reads its position.', '',
+  '## Whole app', 'It belongs because it was asked for, and nothing else would change.', '',
+  '## Leaves open', 'Nothing is left open by this change, as far as can be seen here.', ''].join('\n');
 const SOURCE_MD = [
   '# Lens', '',
   'Per-channel division is how RawTherapee, darktable, Lightroom and CornerFix',
@@ -317,6 +328,43 @@ const CASES = [
       return ok === 0 && chained === 2 && elsewhere === 2;
     },
   },
+  {
+    name: 'a plan with no "## Asked", or one copying the owner\'s words, is refused; one in its own words passes',
+    guards: ['plan_guard_asked', 'asked_copy', 'copies_owner'],
+    run(m, dir) {
+      const f = transcript([turn(0, OWNER)]);
+      const exit = (asked) => spawnSync('node', [join(dir, 'plan-guard.mjs')], { input: JSON.stringify({ session_id: 't', permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { plan: PLAN(asked) }, transcript_path: f, cwd: '/' }), encoding: 'utf8' });
+      const none = exit(null), quoted = exit(QUOTED), own = exit(OWN_WORDS);
+      return none.status === 2 && none.stdout.includes('no \\"## Asked\\" section')
+        && quoted.status === 2 && quoted.stdout.includes('copies the owner') && !quoted.stdout.includes('export button')
+        && own.status === 0;
+    },
+  },
+  {
+    name: 'plan-scope --record refuses a verdict or finding copying the owner\'s words, and records one in the watcher\'s own',
+    guards: ['scope_record_copy', 'copies_owner'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      mkdirSync(join(home, '.claude', 'projects', 'p'), { recursive: true });
+      writeFileSync(join(home, '.claude', 'projects', 'p', 't.jsonl'), JSON.stringify(turn(0, OWNER)) + '\n');
+      const plan = join(tmp('sg-plan-'), 'plan.md');
+      writeFileSync(plan, PLAN(OWN_WORDS));
+      const r = repo({ 'a.txt': 'x\n' });
+      mkdirSync(join(r.dir, '.claude'));
+      writeFileSync(join(r.dir, '.claude', 'PLAN'), plan + '\n');
+      const rec = (verdict, finding) => spawnSync('node', [join(dir, 'plan-scope-check.mjs'), `--repo=${r.dir}`, '--record', `--verdict=${verdict}`],
+        { input: finding, encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: 't' } });
+      const written = () => existsSync(join(r.dir, '.plan-scope'));
+      const inVerdict = rec(`IN-SCOPE: ${QUOTED}`, 'The diff moves one control.');
+      const v1 = written();
+      const inFinding = rec('IN-SCOPE: one control moved', QUOTED);
+      const v2 = written();
+      const ownWords = rec('IN-SCOPE: one control moved', 'The diff relocates the export control and changes nothing else.');
+      return inVerdict.status === 1 && !v1 && !inVerdict.stderr.includes('export button')
+        && inFinding.status === 1 && !v2
+        && ownWords.status === 0 && written() && !readFileSync(join(r.dir, '.plan-scope'), 'utf8').includes('export button');
+    },
+  },
 ];
 
 const PLANTS = {
@@ -344,6 +392,10 @@ const PLANTS = {
   plan_tool_catchup: ["if (b.is_error && !PLAN_TOOL.test(u.name ?? '') && ", 'if (b.is_error && ', 'reply-guard.mjs'],
   plan_tool_repeat: ['  if (!PLAN_TOOL.test(tool)) for (let i = ev.length - 1;', '  for (let i = ev.length - 1;', 'reply-guard.mjs'],
   plan_guard_read: ['  if (reading && !reading.bad) process.exit(0);', '', 'plan-guard.mjs'],
+  plan_guard_asked: ['    if (asked) deny(asked);\n', '\n', 'plan-guard.mjs'],
+  asked_copy: ['  if (copiesOwner(m[1], owner)) {', '  if (false) {', 'plan-guard.mjs'],
+  scope_record_copy: ['  if (copiesOwner(verdict, owner) || copiesOwner(finding, owner)) {', '  if (false) {', 'plan-scope-check.mjs'],
+  copies_owner: ['  if (!runs.size) return false;', '  return false;', 'transcript-tail.mjs'],
 };
 
 async function runAll(dir, only) {

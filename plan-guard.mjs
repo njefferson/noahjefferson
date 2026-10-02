@@ -51,7 +51,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { tailEntries, isOwnerMessage, seenInResults } from './transcript-tail.mjs';
+import { tailEntries, isOwnerMessage, seenInResults, textOf, copiesOwner } from './transcript-tail.mjs';
 import { parseRead } from './reply-guard.mjs';
 import { homedir } from 'node:os';
 
@@ -297,6 +297,30 @@ if (tool === 'Bash') {
  * horizontal rules, and those were checked when they were current.
  */
 /**
+ * DO WHAT THE OWNER ASKED, AND NOTHING MORE (Doctrine §0f, LESSONS §379).
+ * A plan states what was asked in an `## Asked` section, in the session's own
+ * words: the owner is never quoted, so that section may not share a run of
+ * eight words with any owner message in the transcript.
+ * @param {string} top   the plan's first block, where its sections live.
+ * @param {string|undefined} path  the transcript.
+ * @returns {string|null} the refusal reason, or null to allow. The reason never
+ *   carries text from an owner message.
+ */
+function askedProblem(top, path) {
+  const m = top.match(/^## Asked\b[^\n]*\n([\s\S]*?)(?=^## |^# |$(?![\s\S]))/mi);
+  if (!m || !m[1].split('\n').some((l) => l.trim().length > 20)) {
+    return 'the plan has no "## Asked" section saying, in the session\'s own words, what the owner asked for. '
+      + 'Every step must serve it and nothing beyond it (Doctrine §0f).';
+  }
+  const owner = tailEntries(path ?? '', 16 * 1024 * 1024).filter((e) => isOwnerMessage(e)).map((e) => textOf(e));
+  if (copiesOwner(m[1], owner)) {
+    return 'the plan\'s "## Asked" copies the owner\'s words (a run of eight or more). Say what was asked in the session\'s own words; '
+      + 'the owner is never quoted (Doctrine §0f, §9b).';
+  }
+  return null;
+}
+
+/**
  * TALK THE PLAN THROUGH BEFORE PROPOSING IT (LESSONS §370).
  * A plan proposed with no discussion is not approved, and a session kept
  * re-proposing after each rejection instead of answering. So since the last
@@ -406,6 +430,8 @@ if (tool === 'ExitPlanMode') {
     return !m || !m[1].split('\n').some((l) => l.trim().length > 20);
   });
   if (missing.length === 0) {
+    const asked = askedProblem(top, p.transcript_path);
+    if (asked) deny(asked);
     const talk = talkedThrough(p.transcript_path);
     if (talk) deny(talk);
     const names = inventedNames(plan, top);

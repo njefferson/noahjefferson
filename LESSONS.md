@@ -469,3 +469,5 @@ and the filename carries it.
 - **§375** — [A subagent the safety classifier stops returns less, and the workflow counts it as done](lessons/375-a-stopped-agent-returns-less-and-says-nothing.md)
 - **§376** — [What was read stays written, and a message already sent is answered before the next tool call](lessons/376-what-was-read-stays-written-and-a-sent-message-is-answered-first.md)
 - **§377** — [A value is explained by whoever wrote it before it is explained by a theory, and a paper's constant comes from the paper](lessons/377-a-value-is-explained-by-its-maker-before-a-theory.md)
+- **§378** — [Every time given to the owner is California local time](lessons/378-every-time-is-california-time.md)
+- **§379** — [Do what the owner asked, and nothing more](lessons/379-do-what-was-asked-and-nothing-more.md)

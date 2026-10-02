@@ -1,0 +1,13 @@
+# Written by plan-scope-check.mjs --record. Not hand-edited.
+plan=/root/.claude/plans/zesty-splashing-swan.md
+planhash=c5c7bae64e71bccd
+diffhash=d9ebe3e8af9db62a
+verdict=IN-SCOPE: every hunk maps to plan steps 1 to 5 or to the wiring they need; the lesson 379 rewording changes nothing about scope.
+# - DOCTRINE.md, CLAUDE.md, LESSONS.md and lessons 378 and 379: Doctrine §0f states the rule against doing more than was asked, with the narrowing-correction and no-quoting clauses and the two gates; a short §2 subsection states the California-time rule; one CLAUDE.md index line per rule; two LESSONS index entries.
+# - report.mjs: californiaTime() replaces the container-zone stamp with the same HH:MM 24-hour shape in America/Los_Angeles; no format change and no Stop-hook time check.
+# - plan-guard.mjs: askedProblem refuses a plan with no real ## Asked section, or one sharing an eight-word run with an owner message; the refusal never repeats the owner's text.
+# - plan-scope-check.mjs: finds the session transcript, prints the owner's messages to the terminal only, and --record refuses a verdict or finding copying eight or more words; fails closed with no transcript; executable bit needed by the generated hook.
+# - transcript-tail.mjs copiesOwner: one helper shared by both gates.
+# - .branch-guard, regenerated .githooks/pre-commit and .gitignore's .claude/PLAN: the wiring of the gate into the hub's commits.
+# - session-guards.test.mjs: two cases covering the four tests, with invented owner text, plus four plants each seen failing.
+# - Re-confirmed after one line of lesson 379 was reworded to clear the privacy gate: the staged set is the same fourteen files, and the rewording names the same smell with no new rule or claim.
