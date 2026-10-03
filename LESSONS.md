@@ -473,3 +473,6 @@ and the filename carries it.
 - **§379** — [Do what the owner asked, and nothing more](lessons/379-do-what-was-asked-and-nothing-more.md)
 - **§380** — [Act from the owner's goal and the record, and verify once](lessons/380-act-from-the-goal-and-verify-once.md)
 - **§381** — [Work running in the background is the work, and the session stays with it](lessons/381-background-work-is-the-work.md)
+- **§382** — [Two failed routes were recorded as an impossible end, so a third was never tried and every branch removal fell to the owner by hand](lessons/382-two-failed-routes-were-recorded-as-an-impossible-end.md)
+- **§383** — [After each compaction the doctrine was worked from a summary, and three sections were written into it on six lines read](lessons/383-after-a-compaction-the-doctrine-was-worked-from-a-summary.md)
+- **§384** — [Replies were written against the guards instead of the rules, a choice was lost under a report, and statuses went out as heartbeats while walks were failing](lessons/384-replies-were-written-against-the-guards-instead-of-the-rules.md)

@@ -99,6 +99,16 @@ habit, not several**, and it does not stay in the harmless half.
 If a control genuinely blocks correct work, say so in plain text and stop.
 Never work around it and report success.
 
+**A different command, tool or wording aimed at the same end as a refused call
+is a second route to that end, and it is refused the same way.** The refusal
+latch (§0e rule 14) refuses it: after a refusal, every call but the main
+thread's status command and `TaskStop` and an agent's own return is refused
+until the owner's next message.
+A plan's wording is held the same way. `plan-guard.mjs` records each name it
+refuses in a plan, with the time, and `ExitPlanMode` stays refused until that
+name appears in a tool result read after the refusal or its plan line marks it
+"(new)"; rewording the plan or dropping the name clears nothing.
+
 **ENFORCED, 2026-09-10, and no longer a paragraph.** `plan-guard.mjs` runs as a
 `PreToolUse` hook in every repo and REFUSES the write rather than asking the
 session not to make it. It reads `permission_mode` out of the payload — the
@@ -146,14 +156,53 @@ every rule below while none of the hooks that enforce them was running
    status is READ FROM THE CLOCK, never estimated. Measured the same day, five
    statuses in a row carried times forty minutes off. No app notifications,
    ever: statuses go in chat and on the status page.
-   *Enforced by:* `report.mjs`, which refuses every call five minutes after the
-   last stamp and writes the clock's time into every status it stamps.
+   **A status is the manager's report, never a heartbeat.** Each one carries
+   what changed since the last one and what it means for the work, what the
+   session did about it, and the time remaining, read from the run rather than
+   guessed. A status with nothing new says so in one line. Findings are acted
+   on when they arrive, not left for an agent to find at the end of its run.
+   Measured 2026-10-02: statuses went out as heartbeats while three of the
+   first four verification walks to finish had failed (LESSONS §384). **A status
+   falling due never stops the work:** the session gives it and carries on.
+   **And no status while nothing is running.** A status reports work in
+   progress. With no agent and no background command the session started still
+   running, none is due however long it has been, and demanding one makes a
+   heartbeat.
+   *Enforced by:* `report.mjs`, which, while an agent or a background command
+   the session started is running, refuses every call five minutes after the
+   last stamp, and writes the clock's time into every status it stamps. With
+   nothing running it refuses nothing; when it cannot read what is running, it
+   refuses as before. Its refusal does not latch (rule 14): giving the status
+   stamps the clock, and the refused call may then run. Every status it stamps
+   then prints each agent the session launched that has ended since the last
+   status, with how it ended and its last entry, read from the agent's own
+   transcript. An agent ends by a report, a refusal, an interruption (a restart
+   that cut it off counts as one) or a failure, and an agent that stops without
+   a notification is found at the next status at the latest. Then it prints
+   each running agent's latest line from its progress note,
+   `progress/step-N.txt` in the session scratchpad, flagged when the note is
+   missing, empty or older than five minutes, or when the agent's prompt names
+   no plan step, so there is no note to read. What a status says about them is
+   judgement.
    **Work running in the background is the work.** While anything the session
    started is still running (a background command, a workflow, a background
    agent), the session does not end its turn: it stays, gives the status every
    five minutes, and acts on each result as it lands. A declared stop does not
    excuse it. *Enforced by:* `stop-guard.mjs`, which refuses every stop while a
    task the session launched has not ended (LESSONS §381).
+   **Between statuses the main thread waits with `report.mjs --wait`.** It
+   stays in its turn while an agent runs, none of its other allowed calls can
+   wait, and a timer is not a wait. `node ~/.claude/hub/report.mjs --wait`
+   returns when a running agent's progress note changes, when an agent the
+   session launched ends, or after four and a half minutes, whichever comes
+   first, and prints what it saw; with no agent running it returns at once. It
+   records nothing, so the next status still prints every agent that ended.
+   The main thread runs it in the FOREGROUND, with a Bash timeout of at least
+   280 seconds. Under the default of 120 the call is moved to the background
+   and becomes one more task of its own: measured 2026-10-03 at 07:05, when a
+   foreground watch on a progress note ran past the limit and did exactly
+   that. The manager fence passes the wait (rule 13); the latch does not
+   (rule 14).
 3. **Reply to every point in a message from the owner.** A message saying
    something was done wrong is a full stop: answer it, and run nothing else in
    that turn.
@@ -187,6 +236,113 @@ every rule below while none of the hooks that enforce them was running
     with a tap or a reply. Never directions to settings, a menu, a start-up
     script, a permission rule or an install.
     *Enforced by:* `stop-guard.mjs`.
+13. **The main session is a manager.** It plans, sends agents, checks each
+    result against the approved plan and the owner's messages, and reports. It
+    does no work itself: implementation, tests, commits, pushes and workflow
+    dispatches are done by agents, and a result that does not match the plan
+    goes back. An agent's prompt is only the approved plan's path and a step
+    number, so everything an agent is told is in the plan the owner read.
+    Added 2026-10-02.
+    *Enforced by:* the manager fence in `hook-dispatch.mjs`. On the main thread
+    (a call carrying no `agent_id`) it refuses every tool except: reads as
+    `plan-guard.mjs` classifies them, where sending an agent, a workflow,
+    `TaskStop`, a plan-mode call and a file write never count as one; sending
+    an agent, through the dispatch gate; `TaskStop`; `Artifact` publishing the
+    status page and nothing else (`status/fix-run.html` in the session
+    scratchpad, as a plain page), or reading, listing or opening a page, and
+    never its quickstart action; the
+    status command; a write to a plan file directly under `~/.claude/plans/`
+    or to the status page's source; `EnterPlanMode` and `ExitPlanMode`, so
+    a plan can be amended after it lands; and the wait between statuses
+    (rule 2), `node ~/.claude/hub/report.mjs --wait` exactly, the live clone's
+    `report.mjs` with that one flag and nothing chained to it. The dispatch gate refuses an agent,
+    or a message to one, whose prompt is anything but the approved plan's path
+    and the number of a step in its `## Steps`; it refuses an agent of a custom
+    type, because a custom type carries instructions of its own; and it refuses
+    every workflow, so no script of the session's carries instructions the
+    owner has not read. The plan counts only while its hash matches the one
+    recorded at approval: a plan edited after approval grants nothing.
+    Agents are held by `plan-fence.mjs`, over every tool they call. A call
+    passes only as the agent's own return, its own `TaskStop`, a read, or a
+    write or Bash line inside the plan. A write lands only under a path the
+    plan's Files list names for that repo (a line's label, such as Hub or JPS,
+    ties its entries to one repository), under an absolute path it names, or
+    in the session scratchpad, and never in the live gate copy at
+    `~/.claude/hub`. A Bash line is split wherever a new command starts,
+    inside `$( )`, backticks, `sh -c` and `eval` too. A `cd`, `pushd` or
+    `popd` at any depth is refused, because every path is written in full; a
+    leading `git -C <dir>` is set aside; and each segment must then be a
+    reader or begin with an entry of the plan's Commands. A redirect is held
+    to the same rule as a write, and process substitution is refused. A write
+    or a redirect to `/dev/null`, `/dev/stdout` or `/dev/stderr` always
+    passes.
+    **No `cd` holds on the main thread too.** The manager fence passes a Bash
+    line there only when `plan-guard.mjs` classifies it as a read, and `cd`,
+    `pushd` and `popd` are not among its readers, so the fence refuses them;
+    in plan mode `plan-guard.mjs` refuses them itself.
+14. **A refusal latches until the owner's next message.** A refusal by any
+    guard, family or repo, ends that route for the session. Another command,
+    tool or wording for the same end is the second route §0d names, not a fresh
+    start. While the latch stands, the session says in plain text what was
+    refused and stops; an agent returns what it has, with the refusal's text.
+    Three refusals are not ends of a route: a status falling due is cleared by
+    giving it (rule 2); a call held while a message from the owner waits is
+    sent again once that message is delivered (LESSONS §376); and once the
+    owner has approved a plan by leaving plan mode in the app, entering plan
+    mode again for it is refused, because that approval is carried on with,
+    never asked for twice. That third refusal lifts once an agent is sent
+    under the plan or the owner writes again, so a later amendment stays
+    possible. Measured 2026-10-03: the owner's exit in the app ended plan mode
+    before the session's `ExitPlanMode` call was answered, the call came back
+    "not in plan mode", no approval was recorded, the session entered plan mode
+    again, and the owner approved the same plan twice.
+    Added 2026-10-02.
+    *Enforced by:* the refusal latch in `hook-dispatch.mjs`. Every PreToolUse
+    refusal, by the manager fence, a family guard, a repo's hooks or the
+    dispatcher's own failure, writes a latch for the session, except three:
+    the status gate's (`report.mjs --gate`), after which the status stamps the
+    clock and the refused call may run; `pending-guard.mjs`'s, which holds
+    the call and prints it at the top of the turn that delivers the message;
+    and the in-app approval check's (`approved-plan-guard.mjs --app-exit`, run
+    on the main thread's `EnterPlanMode`). That check refuses while the
+    approval recorded from the owner's exit stands and nothing but reads has
+    happened since. `approved-plan-guard.mjs` records that approval from the
+    harness's own plan-mode exit entry when no `ExitPlanMode` call of the
+    session's was approved since plan mode began, hashing the plan file at
+    that moment, and records none when the file was written after the exit;
+    each exit entry is judged once. A Stop refusal never latches. While the
+    latch stands, every PreToolUse call on the main thread and in agents is
+    refused except three: the status command and `TaskStop`, both on the main
+    thread only, and an agent's own return, which passes every guard whatever
+    its text names. The main thread's `TaskStop` passes because stopping a
+    task changes none of the owner's work and the session owns what it started
+    (§11d): measured 2026-10-03, a latched main thread could not stop two
+    watchers it had started, and they ran to their time limits. An agent's
+    `TaskStop` and the wait between statuses stay refused. The refusal names
+    the original one.
+    An agent cannot stamp a status at all, latched or not: the dispatcher
+    refuses the status command from an agent, because an agent cannot tell the
+    owner anything, and its stamp would clear the main thread's status gate
+    with no status given. `stop-guard.mjs` lets a latched session stop.
+    Only a message the owner typed after the latch clears it, by
+    the time it was typed rather than when it was delivered (the harness
+    queues a message the moment it is sent and delivers it later), as
+    `isOwnerMessage` in `transcript-tail.mjs` tells an owner's message. A task
+    notification, a scheduled message, an agent's return and a message typed
+    before the refusal clear nothing.
+15. **A statement of state is read, never remembered.** What state a task, an
+    agent, a branch, a push, a deploy, a file, a workflow, a run, a commit, a
+    build, a release, CI, a pipeline, a worktree, the working copy or a remote
+    is in is read in the same turn and said from the read. Otherwise the
+    sentence says "I think" and the reply offers the check, or, when checking
+    would be a big job, the question goes to the owner first. Added 2026-10-02.
+    *Enforced by:* `stop-guard.mjs`. A reply saying what state one of those is
+    in is refused when no tool result came back in that turn, and the refusal
+    names the sentence. It passes when that sentence says "I think" and the
+    reply asks whether to run the check. It cannot tell which read backs which
+    sentence, so one read in the turn lets every claim in the reply through;
+    and it reads words, so a claim worded in a way its patterns do not know
+    passes it.
 
 **The gates live in the hub and run however a session is launched.** A session's
 first plan clones the hub to `/root/.claude/hub` and installs
@@ -942,8 +1098,40 @@ Two consequences, both non-optional:
 - Session repo access is FIXED at session creation (the source picker). It cannot
  be added mid-session; add_repo/list_repos bounce on an approval that never
  surfaces on iPad.
-- The web-task harness keeps designating a `claude/*` branch. For repos whose
- policy is staging/main only, IGNORE it and land on `staging` (noted to the owner).
+- The web-task harness keeps designating a `claude/*` branch. IGNORE it: **in
+ every repo, only `staging` and `main` reach a remote.** *Enforced by:*
+ `push-guard.mjs`, for the main thread and every agent. A `git push`, wherever
+ it sits in a Bash line, must land on `staging` or `main`; a push with no
+ refspec, or with `HEAD`, is the current branch of the repo it runs in. It
+ refuses `--all`, `--branches`, `--mirror`, `--tags`, `--follow-tags`,
+ `--delete`, `-d`, `--prune` and a `:ref` deletion, a force-push to `main`,
+ and `--no-verify` on a push or a commit. A push it cannot resolve for certain
+ is refused rather than guessed: a destination in a variable or a glob, a
+ detached HEAD, a configured push refspec or `push.default=matching`, a git
+ alias, `--git-dir`, `--work-tree`, `-c`, a `GIT_DIR`-style variable, a push
+ run through `xargs` or `find -exec`, and a `cd` it cannot follow. It refuses
+ the GitHub connector's branch-creating tool, the connector's file writes to
+ any branch but `staging` or `main`, and its pull-request merge, auto-merge and
+ branch-update tools; the gate's source lists those tools by name.
+ **A session's `claude/*` branches are removed by
+ `.github/workflows/branch-sweep.yml`, never by the owner.** The session's git
+ relay and the connector cannot delete a ref (LESSONS §8); the connector only
+ dispatches the sweep, and the workflow's own token deletes. It looks only at
+ branches under `claude/*` and prints every other branch as out of scope,
+ untouched. A branch is removable only when `git merge-tree --write-tree`
+ against `main` exits 0 and its whole output is exactly main's tree id, so
+ merging it into main changes nothing; any other result keeps it, printed with
+ the count of commits main lacks. Main is the only base; staging never counts.
+ A dispatch is a dry run unless its `delete` input is set. Then each delete is
+ a push of the deletion with a lease at the SHA that was judged, so a branch
+ that moved since is refused rather than deleted (LESSONS §382), and a name
+ outside `[A-Za-z0-9._/-]` is kept and counted as a failure. The checkout step
+ also receives the write-scoped token, because checkout fetches with the job's
+ token by default, and `persist-credentials: false` removes it when that step
+ ends; after it, only the deletion step is given the token, as an auth header
+ scoped to each delete's one command. A sibling
+ runs it through a caller workflow on its own `main`; REPOS.md lists which
+ repos still owe one.
 - Verify deployed builds by serving the app locally (no build step in several
  apps); some sandboxes block pages.dev and most third-party APIs — probe first.
 
@@ -1168,10 +1356,10 @@ trigger — a new piece of work is about to begin — and the trigger fires whet
 or not the step looks obvious.
 
 **It was said three times in one repository before it was written here**, which
-is the standing signal that a rule belongs in the doctrine: "known things first,
-mine the references" (2026-07-25), "go and learn the domain, do not converge
-inside the app" (2026-09-16), and then the instruction that produced this
-section. **The session that hears a repeat writes it down** — that is not a
+is the standing signal that a rule belongs in the doctrine: to mine the
+references for known things before implementing (2026-07-25), to go and learn
+the domain rather than converge inside the app (2026-09-16), and then the
+instruction that produced this section. **The session that hears a repeat writes it down** — that is not a
 decision to put to the owner.
 
 **What it costs, measured, twice in one day in one app.** Four rounds went into
@@ -1197,20 +1385,32 @@ moment, never a reason to fall back on what the model remembers (§0d).
 **AND IT HAPPENED AGAIN, 2026-09-19, INCLUDING TO THIS SECTION.** A session
 spent two days in one app and did not open this file once. It re-derived §11e
 by hand and wrote it up as a new lesson (§329); it failed §11f's return trip
-repeatedly and wrote that up too; and when the owner finally said *check that
-you actually have my doctrine in this session*, the count was 2041 lines
-unread. The three lessons it had written were additions to a document it had
-never consumed.
+repeatedly and wrote that up too; and when its reading of this file was
+finally counted, 2041 lines were unread. The three lessons it had written were
+additions to a document it had never consumed.
 
-**So the cadence has a second trigger, and it is the start of the session, not
-the start of a task.** Before the first piece of work: run
-[`doctrine-sync.mjs`](doctrine-sync.mjs) (which the hub's CLAUDE.md already
-says to run FIRST, and which that session ran hours late), and read THIS FILE's
-section list — thirty headings, one screen — so that adding to it is
-distinguishable from re-deriving it. **A session that writes a new rule without
-having read the existing ones is not learning, it is duplicating**, and the
-duplicate is worse than nothing because it makes the document longer and the
-next session less likely to read it.
+**So the cadence has a second trigger: every session start and every
+compaction, not the start of a task.** Before the first piece of work, and again
+after every compaction: run [`doctrine-sync.mjs`](doctrine-sync.mjs) (which the
+hub's CLAUDE.md already says to run FIRST, and which that session ran hours
+late), and read THIS WHOLE FILE — every line, not its section list and not a
+summary of it — so that adding to it is distinguishable from re-deriving it. A
+compaction replaces the conversation with a summary, and the doctrine carried
+past one is a paraphrase that drifts (LESSONS §383). **A session that writes a
+new rule without having read the existing ones is not learning, it is
+duplicating**, and the duplicate is worse than nothing because it makes the
+document longer and the next session less likely to read it.
+
+*Enforced by:* `doctrine-read-guard.mjs`, on the main thread. Every
+SessionStart, the one the harness fires after a compaction included, writes a
+due marker for the session and prints one line saying so. While it stands, the
+main thread may only read and give the status. It clears when the Read results
+on `DOCTRINE.md` returned after the marker cover every line of the file,
+counted across as many reads as it takes from the lines each result actually
+returned, never an errored one. Only the hub's own `DOCTRINE.md` counts, the
+one beside the gate in the clone every gate runs from; a copy anywhere else is
+not the doctrine. Agents are not held by it: `plan-fence.mjs` holds them to
+the approved plan instead (§11b).
 
 **The tell, stated so it can be caught early:** the urge to write a NEW rule
 is itself the signal to go and check whether it is already written. That urge

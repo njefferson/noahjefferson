@@ -39,11 +39,27 @@
  * Failure direction: a transcript that cannot be read finds nothing pending,
  * and the call goes on. This guard holds work for a message; it must never
  * hold it for a message that does not exist.
+ *
+ * HELD WORK IS PICKED UP AGAIN, NEVER DROPPED. Every call this refuses is
+ * written to a held-work file for the session. When the message from the owner
+ * is delivered as a turn's prompt, hook-dispatch.mjs runs
+ *
+ *   node pending-guard.mjs --held    (UserPromptSubmit) prints the held calls
+ *                at the top of that turn, and clears the file
+ *
+ * so the session sends them again in that turn unless the message says to stop.
+ * hook-dispatch does not latch on this guard's refusal, or the held call would
+ * be refused again when it is sent: the message that caused the refusal was
+ * typed before the latch, so its delivery would clear nothing.
+ * Measured 18:34 (California) on 2026-10-02: eleven plan edits were refused when an owner
+ * message arrived, and the next turn did not send them again. Held work is
+ * printed, not run: sending it again is still the session's act.
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, appendFileSync, rmSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 import { tailEntries, textOf } from './transcript-tail.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
@@ -150,7 +166,72 @@ export function decide(p, entries) {
   if (p.agent_id) {
     return `pending-guard (LESSONS §376): the owner has sent STOP and it has not reached the session yet. This subagent stops: run nothing more, and return what you have now, saying it was stopped.\n${quoted}\n--- end ---`;
   }
-  return `pending-guard (LESSONS §376): the owner has sent a message this session has not been given yet. Nothing runs until it is answered. Answer it now, in plain text, point by point, and end this turn; ending the turn is what delivers it.\n${quoted}\n--- end ---`;
+  return `pending-guard (LESSONS §376): the owner has sent a message this session has not been given yet. Nothing runs until it is answered. Answer it now, in plain text, point by point, and end this turn; ending the turn is what delivers it. This call is held, not dropped: it is printed at the top of the turn that delivers the message, to be sent again then.\n${quoted}\n--- end ---`;
+}
+
+// ---- held work ----
+const HELD_CHARS = 4000;
+
+/**
+ * Where the calls this guard refused are held.
+ * @param {object} p  a hook payload; its `session_id` names the file.
+ * @returns {string} an absolute path under ~/.claude/held-work/ (HELD_WORK_DIR
+ *   overrides it, for the test). `holdCall` appends to it and `releaseHeld`
+ *   reads and removes it; nothing else touches it.
+ */
+function heldFile(p) {
+  const dir = process.env.HELD_WORK_DIR || join(homedir(), '.claude', 'held-work');
+  return join(dir, `${String(p.session_id || 'no-session').replace(/[^A-Za-z0-9_-]/g, '_')}.jsonl`);
+}
+
+/**
+ * Hold a call this guard refused.
+ * @param {object} p  the refused PreToolUse payload.
+ * @returns {boolean} true when the call was written; false when the same call
+ *   (the same agent, tool and input) is already held, so a call refused on
+ *   every retry is still printed once. Each line holds the time, the agent
+ *   (null for the main thread), the tool and its whole input, which
+ *   `releaseHeld` prints back.
+ */
+export function holdCall(p) {
+  const f = heldFile(p);
+  const call = { agent: p.agent_id ?? null, tool: String(p.tool_name ?? ''), input: p.tool_input ?? {} };
+  const key = createHash('sha256').update(JSON.stringify(call)).digest('hex');
+  let held = '';
+  try { held = readFileSync(f, 'utf8'); } catch { held = ''; }
+  if (held.split('\n').some((line) => { try { return JSON.parse(line).key === key; } catch { return false; } })) return false;
+  mkdirSync(dirname(f), { recursive: true });
+  appendFileSync(f, JSON.stringify({ at: now(), key, ...call }) + '\n');
+  return true;
+}
+
+/**
+ * The held calls, printed once, when the message from the owner is delivered.
+ * @param {object} p  the UserPromptSubmit payload: `prompt` is what arrived.
+ * @returns {string} the block hook-dispatch.mjs prints FIRST in that turn —
+ *   every held call in the order it was refused, with its tool and its input
+ *   (cut at HELD_CHARS characters, saying so) — and the file is removed, so
+ *   each call is printed in one turn only. '' when nothing is held, or when the
+ *   prompt is not an owner message (empty, or opening with one of the
+ *   harness's own tags, as a task notification does): the work waits for the
+ *   message it was held for.
+ */
+export function releaseHeld(p) {
+  const prompt = typeof p.prompt === 'string' ? p.prompt : '';
+  if (!prompt.trim() || HARNESS_TAG.test(prompt)) return '';
+  const f = heldFile(p);
+  let rows = [];
+  try { rows = readFileSync(f, 'utf8').split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return ''; }
+  rmSync(f, { force: true });
+  if (!rows.length) return '';
+  const when = (t) => new Date(Number(t) || 0).toLocaleTimeString('en-GB', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  return [`HELD WORK (pending-guard, LESSONS §376): ${rows.length} call${rows.length === 1 ? ' was' : 's were'} refused while a message from the owner waited. `
+    + 'It is held here, not dropped. Send each again in this turn, in this order, unless the message says to stop.',
+  ...rows.map((r, i) => {
+    let input = JSON.stringify(r.input ?? {});
+    if (input.length > HELD_CHARS) input = `${input.slice(0, HELD_CHARS)} … (${input.length} characters; cut here)`;
+    return `--- held ${i + 1} of ${rows.length}, refused at ${when(r.at)} (California), ${r.agent ? `subagent ${r.agent}` : 'main thread'} ---\n${r.tool} ${input}`;
+  }), '--- end of held work ---'].join('\n');
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === SELF) {
@@ -162,8 +243,18 @@ if (process.argv[1] && resolve(process.argv[1]) === SELF) {
     if (p.source !== 'compact') markStart(p);
     process.exit(0);
   }
+  if (process.argv.includes('--held')) {
+    let out = '';
+    try { out = releaseHeld(p); } catch (e) { out = `HELD WORK: the held-work file could not be read (${e?.message ?? e}).`; }
+    if (out) process.stdout.write(out + '\n');
+    process.exit(0);
+  }
   let why = null;
   try { why = decide(p); } catch (e) { process.stderr.write(`pending-guard: ${e?.message ?? e}\n`); process.exit(1); }
-  if (why) { process.stderr.write(why + '\n'); process.exit(2); }
+  if (why) {
+    try { holdCall(p); } catch { /* the refusal stands either way */ }
+    process.stderr.write(why + '\n');
+    process.exit(2);
+  }
   process.exit(0);
 }

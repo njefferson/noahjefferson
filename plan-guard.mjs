@@ -48,7 +48,7 @@
  * class as this repo's spelling plant, which was an identity replace for three
  * releases and could not fail.
  */
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { tailEntries, isOwnerMessage, seenInResults, textOf, copiesOwner } from './transcript-tail.mjs';
@@ -87,6 +87,13 @@ const deny = (why) => {
   }));
   process.exit(2);
 };
+
+// AN AGENT MAY STOP WHAT IT STARTED, IN PLAN MODE TOO (Doctrine §11d).
+// Stopping a process changes none of the owner's work. Measured: plan mode, put
+// on to amend the plan while an agent ran, refused that agent's TaskStop on its
+// own monitor (LESSONS §384). The main thread's TaskStop is not this one: in
+// plan mode it falls to the default refusal at the end of this file.
+if (tool === 'TaskStop' && p.agent_id) process.exit(0);
 
 // Editing the plan is the one thing plan mode is FOR. The plans directory is
 // compared RESOLVED: a substring test passed any path that merely contained it.
@@ -403,8 +410,59 @@ function inventedNames(plan, top) {
     }
   }
   if (!missing.size) return null;
+  recordRefused([...missing]);
   return `the plan names ${[...missing].map((x) => `\`${x}\``).join(', ')}, which exist in no repo and in no tool result this session read. `
     + 'Correct the name, or mark it "(new)" on its line if the plan creates it (LESSONS §370).';
+}
+
+/**
+ * A REFUSED NAME STAYS REFUSED UNTIL IT IS FOUND (Doctrine §0d).
+ * A name the check above refuses is recorded with the time, per session, and
+ * rewording the plan or dropping the name does not clear it: a different
+ * wording of the same plan is a second route to the same approval. It clears
+ * when the name appears in a tool result read after that time, or when the
+ * plan line carrying it marks it "(new)".
+ */
+const namesFile = () => join(process.env.PLAN_GUARD_NAMES_DIR || join(homedir(), '.claude', 'refused-names'),
+  `${String(p.session_id || 'no-session').replace(/[^A-Za-z0-9_-]/g, '_')}.json`);
+
+/** The names refused this session. @returns {{name: string, at: number}[]} oldest first; [] when none or unreadable. */
+function loadRefused() {
+  try { const j = JSON.parse(readFileSync(namesFile(), 'utf8')); return Array.isArray(j) ? j.filter((x) => x?.name) : []; } catch { return []; }
+}
+
+/**
+ * Record names just refused.
+ * @param {string[]} names  the names `inventedNames` refused.
+ * @returns {void} a name already recorded keeps its first time, so a repeat
+ *   cannot move the point a tool result has to come after.
+ */
+function recordRefused(names) {
+  const list = loadRefused();
+  for (const n of names) if (!list.some((x) => x.name === n)) list.push({ name: n, at: Date.now() });
+  mkdirSync(dirname(namesFile()), { recursive: true });
+  writeFileSync(namesFile(), JSON.stringify(list, null, 1));
+}
+
+/**
+ * The recorded names that still hold ExitPlanMode.
+ * @param {string} plan  the whole plan file.
+ * @returns {string|null} the refusal naming each name still held, or null.
+ *   A name is released, and removed from the record, only when a tool result
+ *   timed after its refusal carries it (refusals and errors are not results;
+ *   `seenInResults` skips them) or a plan line marks it "(new)".
+ */
+function heldNames(plan) {
+  const list = loadRefused();
+  if (!list.length) return null;
+  const entries = tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024);
+  const marked = (n) => plan.split('\n').some((line) => new RegExp(`\`${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\([^()]*\\))?\`[^\`]*\\(new\\)`).test(line));
+  const still = list.filter((x) => !seenInResults(entries.filter((e) => Date.parse(e?.timestamp ?? '') > Number(x.at))).includes(x.name) && !marked(x.name));
+  if (still.length !== list.length) writeFileSync(namesFile(), JSON.stringify(still, null, 1));
+  if (!still.length) return null;
+  return `this session's plan was refused for naming ${still.map((x) => `\`${x.name}\``).join(', ')}, which existed nowhere it could be found. `
+    + 'ExitPlanMode stays refused until each appears in a tool result read after that refusal, or the plan line carrying it marks it "(new)". '
+    + 'Rewording the plan or dropping the name does not clear it (Doctrine §0d).';
 }
 
 if (tool === 'ExitPlanMode') {
@@ -436,6 +494,8 @@ if (tool === 'ExitPlanMode') {
     if (talk) deny(talk);
     const names = inventedNames(plan, top);
     if (names) deny(names);
+    const held = heldNames(plan);
+    if (held) deny(held);
     process.exit(0);
   }
   deny(`the plan is missing ${missing.map((m) => `"## ${m}"`).join(', ')} with a real body under each. `

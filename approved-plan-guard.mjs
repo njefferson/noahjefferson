@@ -32,21 +32,44 @@
  *   On EnterPlanMode, remove it. A session cannot write the marker: a command
  *   that names it is refused with no exception, since `--done` never names it.
  *
+ *   AN APPROVAL PRESSED IN THE APP COUNTS. Measured 2026-10-03: the owner
+ *   approved a plan in the app, which ended plan mode before the session's
+ *   ExitPlanMode call was answered; the call came back "You are not in plan
+ *   mode", an error the harness raises before any hook runs, so `--mark` never
+ *   saw it and no marker was written. The session re-entered plan mode and the
+ *   owner approved the same plan twice. What the harness does write is a
+ *   `plan_mode_exit` entry ("Exited Plan Mode") naming the plan file. When that
+ *   entry has no approved ExitPlanMode result of the session's behind it since
+ *   plan mode began, it is the owner's own exit, and the first PreToolUse that
+ *   sees it records the marker from it, hashing the plan file at that moment —
+ *   unless the file changed after the exit, when it is not the plan the owner
+ *   left plan mode on. Each exit entry is judged once
+ *   (~/.claude/APPROVED-PLAN-app-exits.json), so `--done` is never undone by
+ *   an old exit. A "not in plan mode" error beside such an entry is that
+ *   approval, and plan mode is not entered again for it: `--app-exit`, run by
+ *   hook-dispatch.mjs on the main thread's EnterPlanMode, refuses it while the
+ *   marker recorded from that exit stands and nothing has happened since but
+ *   reads, until an agent is sent under the plan or the owner writes again.
+ *
  *   `node approved-plan-guard.mjs --done` ends the approved work: the last
  *   step of every plan runs it.
  *
  * What this cannot see is whether each step was announced in chat. That half
  * is the rule, and the refusal prints it.
  */
-import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync, lstatSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync, lstatSync, statSync, openSync, readSync, closeSync, fstatSync } from 'node:fs';
 import { join, dirname, isAbsolute, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { tailEntries, isOwnerMessage } from './transcript-tail.mjs';
+import { californiaTime } from './report.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MARKER = join(homedir(), '.claude', 'APPROVED-PLAN.json');
+// Every plan-mode exit entry already judged, so each is judged once.
+const APP_EXITS = join(homedir(), '.claude', 'APPROVED-PLAN-app-exits.json');
 const RULE = 'PLAN MODE ONLY, AND TALK DURING THE WORK (Doctrine §0e): nothing runs that is not inside a plan the owner approved in plan mode; '
   + 'a request in chat gets a plan, not an action; while executing, say what each step does before it runs and what it showed after.';
 const hashOf = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
@@ -62,6 +85,16 @@ const raw = readFileSync(0, 'utf8');
 let p = {};
 try { p = JSON.parse(raw); } catch { /* unparsable: treated as a write below */ }
 const tool = p.tool_name ?? '';
+
+/**
+ * Is this a plan file a marker may name?
+ * @param {*} f  a path.
+ * @returns {boolean} true only for an absolute path to a regular `.md` file,
+ *   never a link to one; every marker this guard writes names one.
+ */
+const isPlanFile = (f) => {
+  try { return typeof f === 'string' && isAbsolute(f) && f.endsWith('.md') && lstatSync(f).isFile(); } catch { return false; }
+};
 
 /**
  * Which plan file an ExitPlanMode result approves.
@@ -83,9 +116,6 @@ const tool = p.tool_name ?? '';
  *   matches the marker. Anything unrecognised returns '', which fails closed.
  */
 function approvedPlanPath(p) {
-  const isPlanFile = (f) => {
-    try { return typeof f === 'string' && isAbsolute(f) && f.endsWith('.md') && lstatSync(f).isFile(); } catch { return false; }
-  };
   if (p.agent_id || p.is_error) return '';                    // a subagent's exit, or an error, is not the owner's approval
   const r = p.tool_response;
   if (r && typeof r === 'object' && !Array.isArray(r)) {
@@ -106,6 +136,155 @@ function approvedPlanPath(p) {
   if (!/^User has approved your plan\./.test(head)) return '';
   const m = /^Your plan has been saved to: (.+\.md)\r?$/m.exec(head);
   return m && isPlanFile(m[1]) ? m[1] : '';
+}
+
+// ---- an approval pressed in the app ----
+
+// The harness's own exit entry, as a raw JSONL line: unescaped quotes, so a
+// tool result or a file that merely quotes the words (escaped in its JSON
+// string) is never taken for one.
+const EXIT_LINE = /(?<!\\)"type":"plan_mode_exit"/;
+
+/**
+ * The newest plan-mode exit entry in the transcript's last 2 MB.
+ * @param {string} path  the transcript.
+ * @returns {object|null} the parsed `plan_mode_exit` attachment entry, or null
+ *   when the tail holds none or cannot be read. Cheap on purpose: it runs on
+ *   every PreToolUse, and only an entry not yet judged costs a full read.
+ */
+function lastExitEntry(path) {
+  let fd;
+  try {
+    fd = openSync(path, 'r');
+    const size = fstatSync(fd).size;
+    const start = Math.max(0, size - 2 * 1024 * 1024);
+    const buf = Buffer.alloc(size - start);
+    readSync(fd, buf, 0, buf.length, start);
+    const lines = buf.toString('utf8').split('\n');
+    for (let i = lines.length - 1; i >= (start > 0 ? 1 : 0); i--) {
+      if (!EXIT_LINE.test(lines[i])) continue;
+      try {
+        const e = JSON.parse(lines[i]);
+        if (e?.type === 'attachment' && e.attachment?.type === 'plan_mode_exit') return e;
+      } catch { /* a partial line */ }
+    }
+    return null;
+  } catch { return null; } finally { if (fd !== undefined) closeSync(fd); }
+}
+
+/**
+ * The owner's own exit from plan mode in the app, when the transcript shows it.
+ * @param {object[]} entries  the transcript's tail, in file order.
+ * @returns {{plan: string, at: number, uuid: string, index: number} | null}
+ *   the newest main-thread `plan_mode_exit` entry, its plan file, time and
+ *   index, when plan mode began after the exit before it (an EnterPlanMode
+ *   result, or a `plan_mode` entry where the owner entered it in the app) and
+ *   no ExitPlanMode call of the session's was approved since — which is what
+ *   makes it the owner's exit rather than the tool's — and nothing entered plan
+ *   mode after it. null otherwise: a tail that does not reach back to the start
+ *   of plan mode mints nothing, and neither does the entry that follows the
+ *   tool's own approval, which `--mark` already recorded.
+ */
+function appExit(entries) {
+  const names = new Map();
+  let inPlan = false, approved = false, found = null;
+  entries.forEach((e, i) => {
+    if (e?.isSidechain || e?.agentId) return;
+    const c = e?.message?.content;
+    if (e?.type === 'assistant' && Array.isArray(c)) for (const b of c) if (b?.type === 'tool_use') names.set(b.id, b.name);
+    if (e?.type === 'user' && Array.isArray(c)) for (const b of c) {
+      if (b?.type !== 'tool_result' || b.is_error) continue;
+      const n = names.get(b.tool_use_id);
+      if (n === 'EnterPlanMode') { inPlan = true; approved = false; found = null; }
+      else if (n === 'ExitPlanMode') approved = true;
+    }
+    const a = e?.type === 'attachment' ? e.attachment : null;
+    if (a?.type === 'plan_mode') { if (!inPlan) { inPlan = true; approved = false; } found = null; }
+    if (a?.type === 'plan_mode_exit') {
+      const at = Date.parse(e.timestamp ?? '');
+      found = inPlan && !approved && a.planExists !== false && typeof a.planFilePath === 'string' && e.uuid && Number.isFinite(at)
+        ? { plan: a.planFilePath, at, uuid: String(e.uuid), index: i } : null;
+      inPlan = false; approved = false;
+    }
+  });
+  return found;
+}
+
+/**
+ * The exit entries already judged, and what was decided for each.
+ * @returns {Record<string, string>} uuid to outcome; empty when the file is
+ *   missing or unreadable, which only means each exit is judged again.
+ */
+function judgedExits() {
+  try { const j = JSON.parse(readFileSync(APP_EXITS, 'utf8')); return j && typeof j === 'object' ? j.judged ?? {} : {}; } catch { return {}; }
+}
+
+/**
+ * Record the approval from the owner's own exit from plan mode in the app.
+ * @param {object} p  a PreToolUse payload: its transcript, session and mode.
+ * @returns {{uuid: string, outcome: string, plan?: string, at?: number, index?: number} | null}
+ *   null in plan mode or when the transcript holds no exit entry; otherwise the
+ *   newest exit entry and its outcome, judged once and kept in APP_EXITS:
+ *   "recorded" (the marker was written from it, hashing the plan file now),
+ *   "changed after" (the plan file was written after the exit, so no marker),
+ *   "no plan file", or "not the owner's exit". A "recorded" exit has written a
+ *   marker the PreToolUse check below then honours like any other, and `--done`
+ *   is not undone by it, because it is never judged twice.
+ */
+function recordAppExit(p) {
+  if (p.permission_mode === 'plan' || !p.transcript_path) return null;
+  const last = lastExitEntry(p.transcript_path);
+  if (!last?.uuid) return null;
+  const judged = judgedExits();
+  if (judged[last.uuid]) return { uuid: String(last.uuid), outcome: judged[last.uuid] };
+  const x = appExit(tailEntries(p.transcript_path, 8 * 1024 * 1024));
+  let outcome;
+  if (!x || x.uuid !== last.uuid) outcome = "not the owner's exit";
+  else if (!isPlanFile(x.plan)) outcome = 'no plan file';
+  else if (statSync(x.plan).mtimeMs > x.at) outcome = 'changed after';
+  else {
+    mkdirSync(dirname(MARKER), { recursive: true });
+    writeFileSync(MARKER, JSON.stringify({
+      plan: x.plan, hash: hashOf(x.plan), at: new Date().toISOString(), session: p.session_id ?? null,
+      via: `the owner's exit from plan mode in the app: entry ${x.uuid} at ${new Date(x.at).toISOString()}`, planMatchesFile: null, appExit: x.uuid,
+    }, null, 1));
+    outcome = 'recorded';
+  }
+  const keep = Object.entries(judged).slice(-99);
+  mkdirSync(dirname(APP_EXITS), { recursive: true });
+  writeFileSync(APP_EXITS, JSON.stringify({ judged: Object.fromEntries([...keep, [String(last.uuid), outcome]]) }, null, 1));
+  return { uuid: String(last.uuid), outcome, ...(x && x.uuid === last.uuid ? x : {}) };
+}
+
+if (process.argv.includes('--app-exit')) {
+  // hook-dispatch.mjs runs this on the main thread's EnterPlanMode only, and
+  // does not latch on its refusal.
+  if (p.agent_id || tool !== 'EnterPlanMode') process.exit(0);
+  let r = null;
+  try { r = recordAppExit(p); } catch { r = null; }
+  if (r?.outcome !== 'recorded') process.exit(0);
+  let mk = {};
+  try { mk = JSON.parse(readFileSync(MARKER, 'utf8')); } catch { process.exit(0); }
+  let same = false;
+  try { same = mk.appExit === r.uuid && hashOf(mk.plan) === mk.hash; } catch { same = false; }
+  if (!same) process.exit(0);
+  // Released once anything but reading has happened under the approval: an
+  // agent sent, or a message the owner wrote after the exit. Amending a plan
+  // after work under it began is what EnterPlanMode is for.
+  const entries = tailEntries(p.transcript_path, 8 * 1024 * 1024);
+  const i = entries.findIndex((e) => String(e?.uuid ?? '') === r.uuid);
+  if (i < 0) process.exit(0);
+  const since = entries.slice(i + 1);
+  const sent = since.some((e) => e?.type === 'assistant' && !e.isSidechain && Array.isArray(e.message?.content)
+    && e.message.content.some((b) => b?.type === 'tool_use' && /^(Agent|Task|SendMessage)$/.test(b.name ?? '')));
+  const wrote = since.some((e) => isOwnerMessage(e));
+  if (sent || wrote) process.exit(0);
+  const when = Number.isFinite(Date.parse(entries[i].timestamp ?? '')) ? californiaTime(new Date(entries[i].timestamp)) : 'an earlier time';
+  process.stderr.write(`APPROVED IN THE APP: the owner left plan mode in the app at ${when} (California), and that is the approval of ${mk.plan}. `
+    + 'The approval marker is recorded from it, hashed from the plan file as it stood then. A "You are not in plan mode" error from ExitPlanMode beside it is that '
+    + 'approval, not a refusal. Plan mode is not entered again for the same plan: carry on with it. Once an agent has been sent under it, or the owner '
+    + 'writes again, plan mode can be entered to amend it.\n');
+  process.exit(2);
 }
 
 if (process.argv.includes('--mark')) {
@@ -148,6 +327,12 @@ const deny = (why) => {
 };
 
 if (p.permission_mode === 'plan') process.exit(0);           // plan-guard.mjs owns plan mode
+// The owner's exit from plan mode in the app, recorded by the first call to see
+// it — a read included, so the marker is written before anything can change
+// the plan file. Never fatal: a failure here records nothing, and the checks
+// below then judge the call as before.
+let app = null;
+try { app = recordAppExit(p); } catch { app = null; }
 if (tool === 'EnterPlanMode' || tool === 'ExitPlanMode') process.exit(0);
 
 // A FILE TOOL IS JUDGED BY ITS TARGET. Aimed at the marker, refused. Aimed at
@@ -157,7 +342,7 @@ if (tool === 'EnterPlanMode' || tool === 'ExitPlanMode') process.exit(0);
 const FILE_TOOLS = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit'];
 if (FILE_TOOLS.includes(tool)) {
   const target = resolve(String(p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? ''));
-  if (target === resolve(MARKER)) deny('The approval marker is written only by the owner\'s approval of a plan.');
+  if (target === resolve(MARKER) || target === resolve(APP_EXITS)) deny('The approval marker is written only by the owner\'s approval of a plan.');
   let current = {};
   try { current = JSON.parse(readFileSync(MARKER, 'utf8')); } catch { /* no marker: judged below */ }
   if (current.plan && target === resolve(current.plan)) {
@@ -195,7 +380,10 @@ if (input.includes('APPROVED-PLAN')) {
   deny('The approval marker is written only by the owner\'s approval of a plan.');
 }
 
-if (!existsSync(MARKER)) deny(`No approved plan is in force, and this is not a recognised read: ${why}`);
+// Said when the newest exit from plan mode was the owner's and recorded nothing.
+const appNote = app?.outcome === 'changed after' ? ` The owner left plan mode in the app${app.at ? ` at ${californiaTime(new Date(app.at))} (California)` : ''}, but ${app.plan ?? 'the plan file'} was written after that, so it is not the plan approved.`
+  : app?.outcome === 'no plan file' ? ' The owner left plan mode in the app, and the plan file that exit names is gone.' : '';
+if (!existsSync(MARKER)) deny(`No approved plan is in force, and this is not a recognised read: ${why}${appNote}`);
 let mk = {};
 try { mk = JSON.parse(readFileSync(MARKER, 'utf8')); } catch { deny('The approval marker is unreadable.'); }
 if (!mk.plan || !existsSync(mk.plan)) deny('The approved plan file is gone.');

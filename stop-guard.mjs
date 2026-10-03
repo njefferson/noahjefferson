@@ -46,6 +46,8 @@
 import { readFileSync } from 'node:fs';
 import { pendingMessages, startedAt } from './pending-guard.mjs';
 import { tailEntries } from './transcript-tail.mjs';
+import { latchStanding } from './hook-dispatch.mjs';
+import { runningTasks } from './report.mjs';
 
 /** The transcript is JSONL; the last assistant text is the reply just written. */
 const lastAssistantText = (path) => {
@@ -113,6 +115,12 @@ if (hook.stop_hook_active) process.exit(0);
 const path = hook.transcript_path;
 if (!path) process.exit(0);
 
+// A LATCHED SESSION MAY STOP (Doctrine §0d, §0e). While the refusal latch
+// stands every tool call is refused, TaskStop included, so refusing the stop as
+// well — for running work, or for a reply's shape — would leave no move at all.
+// The latch tells the session to say what was refused and stop; this lets it.
+try { if (latchStanding(hook)) process.exit(0); } catch { /* no latch readable: judged below */ }
+
 let reply = '';
 try { reply = lastAssistantText(path); } catch { process.exit(0); }
 if (!reply) process.exit(0);
@@ -124,38 +132,9 @@ if (!reply) process.exit(0);
  *  turn makes none, so it was never refused. Turns ended under a declared stop
  *  went silent for ninety minutes while two workflows ran. So a stop is refused
  *  while any of them runs, declared or not. Stay in the turn, give the status
- *  every five minutes, and act on each result as it lands.
- *  @param {string} raw  the whole transcript, as JSONL text.
- *  @returns {string[]} the ids a tool result OPENS by launching ("Workflow
- *    launched in background. Task ID: x", "Command running in background with
- *    ID: x") with no notification ending them (completed, failed, killed,
- *    stopped) and no "Successfully stopped task: x". */
-function runningTasks(raw) {
-  // A launch is the line the harness writes at the very START of a tool result.
-  // Matched anywhere, the same words in a command's input or in a file a tool
-  // printed registered a task that never existed and would have refused every
-  // stop for the rest of the session.
-  const LAUNCH = /^(?:Workflow launched in background\. Task ID: |Command running in background with ID: )([a-z0-9]{6,})\b/;
-  const launched = new Set();
-  const ended = new Set();
-  for (const line of raw.split('\n')) {
-    if (!line) continue;
-    for (const m of line.matchAll(/<task-id>([a-z0-9]{6,})<\/task-id>[\s\S]{0,800}?<status>(?:completed|failed|killed|stopped|cancelled)<\/status>/g)) ended.add(m[1]);
-    for (const m of line.matchAll(/Successfully stopped task: ([a-z0-9]{6,})\b/g)) ended.add(m[1]);
-    if (!line.includes('tool_result') || !line.includes('background')) continue;
-    let e; try { e = JSON.parse(line); } catch { continue; }
-    const c = e?.message?.content;
-    if (e?.type !== 'user' || !Array.isArray(c)) continue;
-    for (const blk of c) {
-      if (blk?.type !== 'tool_result') continue;
-      const t = typeof blk.content === 'string' ? blk.content
-        : Array.isArray(blk.content) ? blk.content.map((x) => (typeof x === 'string' ? x : x?.text ?? '')).join('\n') : '';
-      const m = LAUNCH.exec(t.trimStart());
-      if (m) launched.add(m[1]);
-    }
-  }
-  return [...launched].filter((id) => !ended.has(id));
-}
+ *  every five minutes, and act on each result as it lands. What counts as
+ *  running is `runningTasks` in report.mjs, the one definition this and the
+ *  status gate share. */
 let running = [];
 try { running = runningTasks(readFileSync(path, 'utf8')); } catch { running = []; }
 // A MESSAGE FROM THE OWNER WAITING IN THE QUEUE wins: pending-guard refuses every
@@ -174,6 +153,80 @@ clock (report.mjs), and act on each result as it lands. If a task is no longer
 wanted, stop it with TaskStop first.
 `);
   process.exit(2);
+}
+
+/** 8. A STATEMENT OF STATE MADE FROM MEMORY (Doctrine §0e rule 15). A reply
+ *  saying what state a task, an agent, a branch, a push, a deploy or a file is
+ *  in is refused when no tool result came back in this turn: what it says was
+ *  remembered, not read. It passes when the sentence says "I think" and the
+ *  reply asks whether to run the check. Narrow on purpose: the subject must be
+ *  a definite one ("the agent", "step 1's agent", "main") and the sentence a
+ *  statement, so a design sentence about "an agent that has finished" or a
+ *  conditional "once the push lands" is not a claim. It cannot tell which read
+ *  backs which sentence, and a claim worded in a way it does not know passes.
+ *  Judged before the declaration: a declared stop does not excuse a claim. */
+const CLAIM_SUBJECT = String.raw`(?:sub)?agents?|tasks?|branch(?:es)?|push(?:es)?|deploy(?:s|ments?)?|files?|workflows?|runs?|commits?|builds?|releases?|CI|pipelines?|worktrees?|working copy|remotes?`;
+const CLAIM_STATE = String.raw`(?:(?:is|are|was|were|has been|have been|'s)\s+(?:still\s+|now\s+|not\s+|already\s+|all\s+)*`
+  + String.raw`(?:running|finished|done|complete|completed|green|red|failing|failed|passing|passed|merged|pushed|deployed|live|landed|stopped|idle|ended|returned|`
+  + String.raw`interrupted|refused|rejected|clean|dirty|committed|uncommitted|ahead|behind|up[ -]to[ -]date|stale|gone|deleted|removed|missing|empty|`
+  + String.raw`in progress|queued|waiting|blocked|stuck|dead|alive|built|unchanged|modified|on (?:main|staging)|at [0-9a-f]{7,40})`
+  + String.raw`|(?:has|have|had)\s+(?:not\s+|already\s+|just\s+|now\s+)*(?:finished|completed|ended|stopped|returned|landed|failed|passed|deployed|merged|started|moved|run|been (?:pushed|merged|deployed))`
+  + String.raw`|(?:finished|completed|ended|stopped|returned|landed|failed|passed|succeeded|deployed|merged|crashed|died|hung)\b)`;
+const CLAIM = new RegExp(String.raw`(?<!\b(?:when|if|once|until|unless|after|before|while|whether|so)\s+)`
+  + String.raw`(?:\b(?:the|this|that|these|those|its|their|our|my)\s+|\b[\w.-]+'s\s+)(?:[\w./-]+\s+){0,3}?(?:${CLAIM_SUBJECT})\b`
+  + String.raw`(?!\s+(?:that|which|who|whose|if|when)\b)[^.;!?]{0,40}?\b${CLAIM_STATE}`
+  + String.raw`|\b(?:main|staging)\s+(?:is|was)\s+(?:now\s+)?(?:at [0-9a-f]{7,40}|green|red|deployed|live|ahead|behind|up[ -]to[ -]date)`, 'i');
+const NOT_A_STATEMENT = /^\s*(?:[-*>#\d.)\s]*)(?:if|when|whenever|once|until|unless|while|after|before|so that|in case)\b|\?\s*$/i;
+const THINK = /\bI think\b/i;
+const ASKS_CHECK = /\b(?:shall|should|may|can) I (?:run|check|read|look|verify|confirm)\b[^?\n]*\?|\b(?:want|like) me to (?:run|check|read|look|verify|confirm)\b[^?\n]*\?/i;
+
+/**
+ * Did a tool result come back in this turn?
+ * @param {object[]} entries  the transcript's tail, in file order.
+ * @returns {boolean} true when, after the last prompt that opened a turn (a
+ *   user entry that is not hook feedback, a compaction summary or a tool
+ *   result), a tool result came back that is not an error and not a hook's
+ *   refusal. A refused call read nothing.
+ */
+function resultInTurn(entries) {
+  let start = -1;
+  entries.forEach((e, i) => {
+    const c = e?.message?.content;
+    const isResult = Array.isArray(c) && c.some((b) => b?.type === 'tool_result');
+    if (e?.type === 'user' && !e.isMeta && !e.isCompactSummary && !isResult) start = i;
+  });
+  for (let i = start + 1; i < entries.length; i++) {
+    const e = entries[i];
+    const c = e?.message?.content;
+    if (e?.type !== 'user' || !Array.isArray(c) || e.toolDenialKind) continue;
+    for (const b of c) {
+      if (b?.type !== 'tool_result' || b.is_error) continue;
+      const text = typeof b.content === 'string' ? b.content
+        : Array.isArray(b.content) ? b.content.map((x) => x?.text ?? '').join('\n') : '';
+      if (/^PreToolUse:\S+ hook error/.test(text)) continue;
+      return true;
+    }
+  }
+  return false;
+}
+
+let readThisTurn = true;
+try { readThisTurn = resultInTurn(tailEntries(path, 16 * 1024 * 1024)); } catch { readThisTurn = true; }
+if (!readThisTurn) {
+  const asksCheck = ASKS_CHECK.test(reply);
+  const claimed = reply.split(/(?<=[.!?])\s+|\n+/).map((x) => x.trim()).filter(Boolean)
+    .find((s) => !NOT_A_STATEMENT.test(s) && CLAIM.test(s) && !(THINK.test(s) && asksCheck));
+  if (claimed) {
+    process.stderr.write(`STOP REFUSED — this reply says what state something is in, and no tool result came back this turn:
+  "${claimed.slice(0, 240)}"
+
+Doctrine §0e rule 15. A statement of what state a task, an agent, a branch, a
+push, a deploy or a file is in is never made from memory. Read it now and say
+what the read showed; or, if checking would be a big job, say "I think" in that
+sentence and ask whether to run the check.
+`);
+    process.exit(2);
+  }
 }
 
 /** 5. HANDING THE OWNER WORK. A session handed the owner the install of its own
@@ -312,6 +365,52 @@ Doctrine §2: "the bolded lead-in on every paragraph" is a shape that looks like
 content and is not — emphasis on everything is emphasis on nothing, and it makes
 a reply scannable in appearance and flat in fact. Rewrite it as prose. Keep the
 finding and what it costs; cut the shape.
+`);
+  process.exit(2);
+}
+
+/** 9. AN OPEN CHOICE IS THE FIRST THING IN A REPLY. A reply whose numbered
+ *  options carry the recommended marker — "(recommended)", in any case — is
+ *  refused unless that list opens the reply: at most OPEN_LINES lines (a stop
+ *  declaration and a lead-in) may stand before its first item, and no marked
+ *  option may sit in a numbered list further down. A choice placed under a
+ *  long report was missed (2026-10-02). Judged before the declaration: a
+ *  declared stop excuses the stop, never where the choice sits. A numbered
+ *  list with no marker is not read as a choice, and a choice written as prose
+ *  passes; this finds a choice only by its marker.
+ *  @param {string} text  the reply.
+ *  @returns {{line: string, before: number} | null} the first marked option
+ *    out of place and how many non-blank lines stand above its list, or null. */
+const MARKED = /\(\s*recommended\b[^)\n]*\)/i;
+const NUMBERED = /^\s{0,3}\d{1,2}[.)]\s+\S/;
+const OPEN_LINES = 2;
+function misplacedChoice(text) {
+  const lines = String(text).split('\n');
+  // A numbered list runs from an item through further items, indented lines
+  // and blank lines, and ends at the first other line.
+  const lists = [];
+  let cur = null;
+  lines.forEach((line, i) => {
+    if (NUMBERED.test(line)) { if (!cur) { cur = { start: i, marked: [] }; lists.push(cur); } }
+    else if (!(cur && (!line.trim() || /^\s+\S/.test(line)))) cur = null;
+    if (cur && MARKED.test(line)) cur.marked.push(line.trim());
+  });
+  const marked = lists.filter((l) => l.marked.length);
+  if (!marked.length) return null;
+  const before = lines.slice(0, marked[0].start).filter((l) => l.trim()).length;
+  if (before <= OPEN_LINES && marked.length === 1) return null;
+  const out = before <= OPEN_LINES ? marked[1] : marked[0];
+  return { line: out.marked[0], before: lines.slice(0, out.start).filter((l) => l.trim()).length };
+}
+const choiceHit = misplacedChoice(reply);
+if (choiceHit) {
+  process.stderr.write(`STOP REFUSED — this reply's choice is not the first thing in it. A numbered option carrying the recommended marker sits under ${choiceHit.before} lines of other text:
+  "${choiceHit.line.slice(0, 200)}"
+
+An open choice is the first thing in a reply until it is answered: a choice
+placed under a long report was missed. Put the numbered options, recommendation
+first, at the top — after a stop declaration and one lead-in line at most — and
+the report beneath them. Write the choice once.
 `);
   process.exit(2);
 }

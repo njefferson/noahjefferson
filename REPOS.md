@@ -122,7 +122,9 @@ is not.
 - **Branches:** `staging` and `main` only, and NO pull requests — they are not
   used there. Every build lands on `staging`, waits for the on-device pass, and
   reaches `main` only on an explicit promote. Docs-only may go straight to
-  `main`. There is also a long-lived `accessibility` branch.
+  `main`. There is also a long-lived `accessibility` branch, which can no
+  longer be pushed: only `staging` and `main` reach a remote (Doctrine §11),
+  and `push-guard.mjs` refuses any other destination.
 - **Branch guard:** installed 2026-08-20. `work=staging`, `promote=main` via
   `POINTER_PROMOTE=1`. `package.json` reinstalls it on `npm ci`.
 - **Gates wired in CI:** `ci.yml` runs `node --test`, `check-contrast.mjs`,
@@ -282,13 +284,15 @@ and MoleBridge cites none.
 
 - **Deploys to:** https://jefferson-photo-studio.pages.dev from `main`, and
   `staging` to https://staging.jefferson-photo-studio.pages.dev
-- **Branches:** each session works on its own `claude/*` branch, pushes the same
-  history to `staging` for the on-device pass, and reaches `main` by a pull
-  request merged with REBASE (the in-app patch notes are the last commits, so a
-  merge commit would show up in them). Docs-only changes may merge without the
-  device pass. The session's `claude/*` branch IS where work belongs here,
-  unlike the hub.
-- **Branch guard:** `.branch-guard` says `work=claude/*`, `promote=main`,
+- **Branches:** every commit is made on `staging`, which is pushed for the
+  on-device pass; after the owner's go, `main` is moved to the same commit by a
+  fast-forward push (`git push origin staging:main`), with no pull request. Only
+  `staging` and `main` reach the remote (Doctrine §11), and docs-only changes may
+  reach `main` without the device pass when `staging` holds nothing else `main`
+  lacks. Until 2026-10-02 each session worked on its own `claude/*` branch,
+  pushed it to `staging` and merged it to `main` by pull request; the branch
+  sweep removes those branches once `main` carries their work.
+- **Branch guard:** `.branch-guard` says `work=staging`, `promote=main`,
   `escape=JPS_PROMOTE`, plus a long `also=` chain that runs on every commit:
   plan-scope-check, typecheck, decisions-check, patch-note-check, the hub's fast
   surface gates and about twenty repo-local checks. `.claude/hooks/session-start.sh`
@@ -438,6 +442,14 @@ One line each, so it is not a memory test:
   runs it nor passes it.
 - **`doctrine-sync.mjs --repo .`** run FIRST in any sibling session, and
   `--adopt` only after the drift is actually read.
+- **The branch sweep caller** — owed by every repo but the hub and
+  Jefferson-Photography-Studio. The hub dispatches
+  `.github/workflows/branch-sweep.yml` itself, and Jefferson-Photography-Studio
+  calls it from its own `.github/workflows/branch-sweep.yml` on `main`, because
+  a dispatched workflow must be on the default branch. Quietkeep, fauxplane,
+  3d-printing-pal, Intersecting-parallels, photo-pointer, MoleBridge, Cv-Thalweg
+  and solve-ent each owe that caller, and until one lands that repo's `claude/*`
+  branches cannot be swept. (Doctrine §11; LESSONS §382.)
 - **The third-person sweep — owed by THIS REPO and by Quietkeep, and by nothing
   else.** LESSONS 113's scrub covered four siblings and found the sweep for
   references carrying no name at all — a pronoun, or a possessive naming a

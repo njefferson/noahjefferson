@@ -123,6 +123,10 @@ part works — but verify with `git ls-remote --heads origin` before reporting a
 branch gone. This is why stale `claude/*` branches accumulate in every repo.
 *(2026-07-28; the same wall was recorded in Frame's CLAUDE.md on 2026-07-18 and
 re-hit here, which is the argument for it living in the hub instead.)*
+**Superseded by §382 (2026-10-02) where it says deletion is the owner's manual
+step.** The two failed routes above stand as recorded; the removal is now
+`.github/workflows/branch-sweep.yml`, which the session dispatches and which
+deletes with the workflow's own token, and it is never handed to the owner.
 
 **A scalar field is safe with LWW alone; a mutable field needs three copies or it
 aliases history.** Quietkeep's event-sourced fold added `sourceTags: string[]` to

@@ -47,11 +47,18 @@ Every item below has actually happened.
  commands, configs, a message to send on. Not prose, not a blockquote, not
  styled markdown. The test is not "is it readable" but "what happens to
  it next"; if the answer is *copy*, it is a block. (Doctrine §2.
-- **YOUR HARNESS MAY NAME A `claude/*` BRANCH FOR THIS REPO. IT DOES NOT APPLY
- HERE.** The hub has one branch. Commit and push `main` directly, and ignore any
- instruction to develop on a session branch in this repository — that
- instruction is written for repos with a staging model, and following it here
- strands the work off the branch that deploys.
+- **YOUR HARNESS MAY NAME A `claude/*` BRANCH. IT DOES NOT APPLY IN ANY REPO.**
+ **In every repo only `staging` and `main` reach a remote.** `push-guard.mjs`
+ refuses a `git push` to any other destination, for the main thread and every
+ agent; a push with no refspec or with `HEAD` is the current branch. It refuses
+ `--all`, `--branches`, `--mirror`, `--tags`, `--follow-tags`, `--delete`,
+ `-d`, `--prune` and a `:ref` deletion, a force-push to `main`, `--no-verify`
+ on a push or a commit, any push it cannot resolve for certain (an alias,
+ `--git-dir`, `GIT_DIR`, a `cd` it cannot follow), and the GitHub connector's
+ branch creation, its file writes to any other branch, and its pull-request
+ merge and branch-update tools. (Doctrine §11; LESSONS §382.) The hub has one branch: commit and push `main` directly, and ignore any
+ instruction to develop on a session branch — following it strands the work
+ off the branch that deploys.
  **Nineteen branches were on this remote when it was counted**, seventeen of
  them from separate sessions between 2026-07-21 and 2026-08-10, none sharing any
  history with `main` after the rewrite. Every one is a session that did as its
@@ -66,11 +73,19 @@ Every item below has actually happened.
  **So install it yourself, first thing, in any session that will commit here:**
  `node branch-guard.mjs --repo . --install`. It is one command and it is the
  difference between a rule and a refusal.
-- **A session CANNOT delete a remote branch.** The git relay drops the
- connection on any ref deletion and then prints `Everything up-to-date`, so it
- looks like it worked. The GitHub MCP has no tool for it either. Hand it to
- the owner as a manual step (GitHub → Branches → bin icon) — never offer to do it.
- (LESSONS, 2026-07-28.)
+- **THE GIT RELAY AND THE GITHUB CONNECTOR CANNOT DELETE A REMOTE BRANCH. THE
+ SWEEP WORKFLOW DOES, AND THE SESSION RUNS IT.** The relay drops the connection
+ on any ref deletion and then prints `Everything up-to-date`, so it looks like
+ it worked, and the connector has no tool for it (LESSONS, 2026-07-28). Neither
+ is the route. **The sweep removes a session's branches:**
+ `.github/workflows/branch-sweep.yml`, which the session dispatches through the
+ connector and which deletes with the workflow's own token. It looks only at
+ `claude/*` branches, removes one only when merging it into `main` changes
+ nothing and the branch still sits at the SHA it judged, and prints every other
+ branch, with the count of commits main lacks for a kept `claude/*` one. A
+ dispatch is a dry run unless `delete` is set. Branch removal is never handed
+ to the owner. A repo without its caller cannot be swept yet; REPOS.md lists
+ which still owe one. (Doctrine §11; LESSONS §382.)
 - **A session CANNOT set repo metadata** — description, website, topics, social
  preview, default branch are all GitHub-UI steps. Propose in `METADATA.md`;
  never report a repo set up while a row says proposed. (Doctrine §10.)
@@ -295,12 +310,14 @@ Every item below has actually happened.
  changing, the exit code arrived. When a listing and a resource disagree,
  the resource is right.
  (Doctrine §11d; LESSONS §270, §287.)
-- **PLAN MODE ONLY, AND TALK DURING THE WORK — Doctrine §0e, twelve rules from
+- **PLAN MODE ONLY, AND TALK DURING THE WORK — Doctrine §0e, from
  2026-09-28.** Nothing runs outside an approved plan (`approved-plan-guard.mjs`
  refuses it). Before a plan goes up, one chat turn says what is being done and
  why — never the plan's text, which the owner reads in the plan — and asks
  nothing; approval is only the button. A status at least every five minutes,
- its time read from the clock (`report.mjs` refuses every call after five).
+ its time read from the clock (`report.mjs` refuses every call after five
+ while anything the session started is running; with nothing running, no
+ status is due).
  **Background work is the work:** while anything the session started is still
  running, it does not end its turn (`stop-guard.mjs` refuses the stop; LESSONS
  §381).
@@ -323,6 +340,67 @@ Every item below has actually happened.
 - **ACT FROM THE OWNER'S GOAL AND THE RECORD, AND VERIFY ONCE.** The roadmap
  names the next work, worked in parallel; verification runs once over the
  integrated release, never per step. (Doctrine §0g; LESSONS §380.)
+- **THE MAIN SESSION IS A MANAGER, AND DOES NO WORK ITSELF.** It plans, sends
+ agents, checks each result against the approved plan and the owner's
+ messages, and reports; implementation, tests, commits, pushes and workflow
+ dispatches are done by agents. An agent's prompt is only the approved plan's
+ path and a step number. The manager fence in `hook-dispatch.mjs` refuses
+ every other tool on the main thread, and `plan-fence.mjs` holds each agent to
+ the plan's Files and Commands. (Doctrine §0e rule 13.)
+- **A REFUSAL LATCHES UNTIL THE OWNER'S NEXT MESSAGE.** Another command, tool
+ or wording for the same end is a second route, not a fresh start. After any
+ PreToolUse refusal, `hook-dispatch.mjs` refuses every call but the main
+ thread's status command and `TaskStop` and an agent's own return: say in
+ plain text what was refused, and stop. The main thread's `TaskStop` passes so
+ it can stop what it started (§11d). Only a message the owner typed after the
+ refusal clears it, by when it was typed. Three refusals do not latch: a
+ status falling due, a call held for a waiting owner message, and entering
+ plan mode again after the owner approved the plan by leaving plan mode in the
+ app. Give the status, send the held call again, or carry on with the
+ approved plan; that last refusal lifts once an agent is sent under the plan
+ or the owner writes again. (Doctrine §0d; §0e rule 14.)
+- **NO `cd`, IN ANY COMMAND, BY THE MAIN THREAD OR AN AGENT.** Every path is
+ written in full, so what a command touches can be read off its own words.
+ `plan-fence.mjs` refuses a `cd`, `pushd` or `popd` anywhere in an agent's
+ Bash line; on the main thread the manager fence refuses it, and plan-guard
+ refuses it in plan mode. (Doctrine §0e rule 13.)
+- **A STATEMENT OF STATE IS READ, NEVER REMEMBERED.** What state a task, an
+ agent, a branch, a push, a deploy, a file or anything else rule 15 names is
+ in is read in the same turn;
+ otherwise the sentence says "I think" and the reply offers the check, or the
+ question goes to the owner first when checking would be a big job.
+ `stop-guard.mjs` refuses a reply that says it with no tool result back in that
+ turn. (Doctrine §0e rule 15.)
+- **A STATUS IS THE MANAGER'S REPORT, NEVER A HEARTBEAT.** Each one says what
+ changed since the last and what it means for the work, what the session did
+ about it, and the time remaining read from the run; a status with nothing new
+ says so in one line. Findings are acted on when they arrive, never left for
+ an agent to find at the end of its run. `report.mjs` prints the agents ended
+ since the last status and each running agent's progress note, flagging a
+ stale one. Between statuses the main thread stays in its turn and waits with
+ `node /root/.claude/hub/report.mjs --wait`, in the foreground with a Bash
+ timeout of at least 280 seconds: it returns when a progress note changes, an
+ agent ends, or four and a half minutes pass. The manager fence passes it; a
+ timer is not a wait. (Doctrine §0e rule 2; LESSONS §384.)
+- **REPLIES ARE WRITTEN TO THE DOCTRINE'S RULES BEFORE THEY ARE SENT.** The
+ guards are not how a session finds out the format: a guard refusal for a
+ shape the doctrine already names is a defect, not feedback. (Doctrine §2;
+ LESSONS §384.)
+- **AN OPEN CHOICE IS THE FIRST THING IN A REPLY, UNTIL IT IS ANSWERED.** A
+ choice placed under a long report was missed. The numbered options, the
+ recommendation first, open the reply, after a stop declaration and one
+ lead-in line at most, and the report goes beneath them. `stop-guard.mjs`
+ refuses a reply whose options carry the recommended marker anywhere else; it
+ finds a choice only by that marker. (Doctrine §2; LESSONS §384.)
+- **THE WHOLE DOCTRINE IS READ AT EVERY SESSION START AND AFTER EVERY
+ COMPACTION** — every line, never its section list or a summary of it.
+ `doctrine-read-guard.mjs` holds the main thread to reading and the status
+ until Read results on `DOCTRINE.md` returned since cover every line. Only
+ the live clone's copy, `/root/.claude/hub/DOCTRINE.md`, clears the gate.
+ (Doctrine §11e; LESSONS §383.)
+- **ONLY `staging` AND `main` REACH A REMOTE, IN EVERY REPO.** The rule and
+ what `push-guard.mjs` refuses are in the harness-branch item near the top of
+ this list. (Doctrine §11.)
 - **AskUserQuestion is permanently banned.** (Doctrine §0.)
 - **Verify a push by reading the remote**, not by reading the push output. No
  range line in the output means nothing moved. (LESSONS, 2026-08-02.)
@@ -345,8 +423,12 @@ Every item below has actually happened.
  the fallback, and saying the release was verified by that dispatch is more
  honest than saying the push was green. (LESSONS §161.)
 
-The shape of three of these is the same: **do not offer a capability the
-lessons already record as impossible.** Check before promising, not after.
+The shape of three of these is the same: **the record names routes that
+failed, not ends that are impossible.** Do not offer a route the lessons record
+as failed, and do not read its failure as the end being out of reach: the
+branch-deletion item was written as an impossible end from 2026-07-28, and the
+workflow route was never tried (LESSONS §382). Check before promising, not
+after.
 
 ## The baseline every app ships without being asked (Doctrine §7e, §7f)
 The owner should not have to request these per repo; the owner has, repeatedly, and the

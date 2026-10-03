@@ -1,0 +1,192 @@
+name: Branch sweep
+
+# REMOVES THE BRANCHES SESSIONS LEFT BEHIND, AND ONLY THOSE WHOSE WORK IS IN MAIN.
+#
+# Two routes to deleting a remote branch were tried and both failed: the
+# session's git relay drops the connection on a ref deletion and then prints
+# "Everything up-to-date", and the GitHub connector has no tool that removes
+# one. Neither failure touched this route. A workflow runs on GitHub's own
+# runner, not through the relay, and its token is scoped by the `permissions:`
+# blocks below. The session only dispatches it; the workflow's own token
+# deletes. (LESSONS 382.)
+#
+# What it touches, and nothing else:
+#
+#   scope      only branches under refs/remotes/origin/claude/*. Every other
+#              branch is printed as out of scope and never touched — main,
+#              staging, Dependabot's, and anything a person made.
+#   removable  `git merge-tree --write-tree` of main and the branch exits 0 AND
+#              its whole output is exactly main's tree id, so merging the
+#              branch into main changes nothing. Any other exit keeps it: 1 is
+#              a conflict, which still prints a tree, so the exit code alone is
+#              not enough; 128 is a history unrelated to main. Kept branches are
+#              printed with the count of commits main lacks. Main is the only
+#              base. Staging never counts, because its history is disposable.
+#   delete     only when the `delete` input is true. Otherwise this is a dry run
+#              that prints what a deletion would remove.
+#
+# Called from a sibling repo with three lines and a pin, the same shape as
+# hub-gates.yml. The caller's job must grant `contents: write`, because a
+# called workflow can never hold more than its caller gave it:
+#
+#     jobs:
+#       sweep:
+#         permissions:
+#           contents: write
+#         uses: njefferson/noahjefferson/.github/workflows/branch-sweep.yml@<sha>
+#         with:
+#           delete: ${{ inputs.delete }}
+#
+# A dispatched workflow must be on the repo's default branch, so the caller
+# lives on main.
+
+on:
+  workflow_dispatch:
+    inputs:
+      delete:
+        description: >-
+          Delete the removable claude/* branches. Off, the run only prints what
+          it would remove.
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      delete:
+        description: >-
+          Delete the removable claude/* branches. Off, the run only prints what
+          it would remove.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    # The one scope that writes refs. Absent scopes are none (GitHub's
+    # GITHUB_TOKEN reference), so this token can delete a branch and do nothing
+    # else in the repository.
+    permissions:
+      contents: write
+    steps:
+      # Every branch, with its whole history: merge-tree needs the merge base,
+      # and the count of commits main lacks needs the branch's history.
+      # In a called workflow a bare checkout takes the CALLER's repository.
+      # THIS STEP ALSO RECEIVES THE WRITE-SCOPED TOKEN: checkout's `token` input
+      # defaults to the job's github.token, which here carries `contents: write`,
+      # and it fetches with it. `persist-credentials: false` removes it from
+      # .git/config when the step finishes, so the judge step that follows holds
+      # none. After this step, the deletion step is the only one given it.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Judges every claude/* branch against main and writes the removable ones,
+      # each with the SHA it was judged at, to a list the deletion step reads.
+      # It holds no token and changes nothing on the remote.
+      - name: Judge each claude/* branch against main
+        id: judge
+        run: |
+          set -euo pipefail
+          git --version
+
+          MAIN=refs/remotes/origin/main
+          if ! MAIN_SHA=$(git rev-parse --verify --quiet "$MAIN^{commit}"); then
+            echo "::error::$MAIN does not exist, so nothing can be judged against it."
+            exit 1
+          fi
+          MAIN_TREE=$(git rev-parse "$MAIN^{tree}")
+          echo "Base: main at $MAIN_SHA, tree $MAIN_TREE"
+          echo
+
+          NAME_OK='^[A-Za-z0-9._/-]+$'
+          LIST="$RUNNER_TEMP/removable.txt"
+          OUT="$RUNNER_TEMP/merge-tree.out"
+          : > "$LIST"
+          removable=0
+          kept=0
+          outside=0
+
+          while read -r SHA REF; do
+            NAME="${REF#refs/remotes/origin/}"
+            case "$REF" in
+              refs/remotes/origin/HEAD) continue ;;
+              refs/remotes/origin/claude/*) ;;
+              *)
+                echo "out of scope, untouched: $NAME"
+                outside=$((outside + 1))
+                continue
+                ;;
+            esac
+
+            LACKS=$(git rev-list --count "$MAIN_SHA..$SHA")
+            # Stdout and stderr together: the WHOLE output has to be main's tree
+            # id and nothing else, compared byte for byte.
+            set +e
+            git merge-tree --write-tree "$MAIN_SHA" "$SHA" > "$OUT" 2>&1
+            CODE=$?
+            set -e
+
+            if [ "$CODE" -eq 0 ] && printf '%s\n' "$MAIN_TREE" | cmp -s - "$OUT"; then
+              if [[ "$NAME" =~ $NAME_OK ]]; then
+                echo "removable: $NAME at $SHA (merging it into main changes nothing)"
+              else
+                echo "removable, but its name is outside [A-Za-z0-9._/-], so a deletion will keep it and fail: $NAME at $SHA"
+              fi
+              printf '%s %s\n' "$SHA" "$NAME" >> "$LIST"
+              removable=$((removable + 1))
+            else
+              echo "kept: $NAME at $SHA (merge-tree exit $CODE; $LACKS commits main lacks)"
+              kept=$((kept + 1))
+            fi
+          done < <(git for-each-ref --format='%(objectname) %(refname)' refs/remotes/origin/)
+
+          echo
+          echo "claude/* removable: $removable. claude/* kept: $kept. Out of scope: $outside."
+
+      # Apart from the checkout above, which fetched with the token and had it
+      # removed by `persist-credentials: false`, the only step that holds the
+      # token, and it runs only when asked to.
+      # Each delete is a push of :refs/heads/NAME with a lease at the SHA the
+      # judge step read, so a branch that moved since it was judged is refused
+      # by the remote rather than deleted. The token travels as an auth header
+      # set in the environment of that one git command: never in its argv, never
+      # in .git/config, never in a later step.
+      - name: Delete the removable branches
+        if: inputs.delete
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          NAME_OK='^[A-Za-z0-9._/-]+$'
+          LIST="$RUNNER_TEMP/removable.txt"
+          AUTH=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
+          echo "::add-mask::$AUTH"
+          deleted=0
+          failed=0
+
+          while read -r SHA NAME; do
+            if ! [[ "$NAME" =~ $NAME_OK ]]; then
+              echo "::error::kept: $NAME at $SHA — its name is outside [A-Za-z0-9._/-]"
+              failed=$((failed + 1))
+              continue
+            fi
+            echo "deleting: $NAME at $SHA"
+            if GIT_TERMINAL_PROMPT=0 \
+               GIT_CONFIG_COUNT=1 \
+               GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
+               GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $AUTH" \
+               git push --force-with-lease="refs/heads/$NAME:$SHA" origin ":refs/heads/$NAME"; then
+              echo "deleted: $NAME at $SHA"
+              deleted=$((deleted + 1))
+            else
+              echo "::error::not deleted: $NAME — the remote refused the delete at $SHA (moved since judged, or protected)"
+              failed=$((failed + 1))
+            fi
+          done < "$LIST"
+
+          echo
+          echo "Deleted: $deleted. Failed: $failed."
+          [ "$failed" -eq 0 ]
