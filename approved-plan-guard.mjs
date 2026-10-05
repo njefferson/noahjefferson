@@ -42,6 +42,10 @@
  *   entry has no approved ExitPlanMode result of the session's behind it since
  *   plan mode began, it is the owner's own exit, and the first PreToolUse that
  *   sees it records the marker from it, hashing the plan file at that moment —
+ *   and hook-dispatch.mjs makes that first call its own, `--judge-exit`, run
+ *   before the latch, the manager fence, the dispatch gate and the plan fence
+ *   read the marker, so an agent sent as the first call after the exit is
+ *   judged against the marker the exit records —
  *   unless the file changed after the exit, when it is not the plan the owner
  *   left plan mode on. Each exit entry is judged once
  *   (~/.claude/APPROVED-PLAN-app-exits.json), so `--done` is never undone by
@@ -254,6 +258,17 @@ function recordAppExit(p) {
   mkdirSync(dirname(APP_EXITS), { recursive: true });
   writeFileSync(APP_EXITS, JSON.stringify({ judged: Object.fromEntries([...keep, [String(last.uuid), outcome]]) }, null, 1));
   return { uuid: String(last.uuid), outcome, ...(x && x.uuid === last.uuid ? x : {}) };
+}
+
+if (process.argv.includes('--judge-exit')) {
+  // hook-dispatch.mjs runs this FIRST on every PreToolUse, before the latch, the
+  // manager fence, the dispatch gate or the plan fence reads the marker. It only
+  // judges the newest plan-mode exit entry and records the marker when that
+  // entry is the owner's; it never refuses. Without it, when the first call
+  // after the owner's exit was sending an agent, the dispatch gate refused on
+  // the old marker and the exit was never judged (measured 2026-10-04 05:12).
+  try { recordAppExit(p); } catch { /* records nothing; the checks that follow judge the call as before */ }
+  process.exit(0);
 }
 
 if (process.argv.includes('--app-exit')) {

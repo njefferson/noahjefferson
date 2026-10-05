@@ -302,6 +302,15 @@ if (tool === 'Bash') {
  * The plan file is the newest in ~/.claude/plans/; the payload does not name
  * it. The TOP block only — plan files accumulate superseded plans under
  * horizontal rules, and those were checked when they were current.
+ *
+ * AND IT CARRIES THE GOALS (Doctrine §0e rule 16). `ExitPlanMode` is also
+ * refused unless the plan's `## Goals` section contains, word for word, the
+ * numbered goals of the hub CLAUDE.md's "Goals every session serves" section
+ * (it may add goals taken from the app's own roadmap), and has a line beginning
+ * `Served by:` that names, for every number in `## Steps`, a goal the section
+ * defines (`goalsProblem` in hook-dispatch.mjs). It is the first check made once
+ * the five sections are there, and it fails closed: a CLAUDE.md with no such
+ * section refuses every plan rather than passing them all.
  */
 /**
  * DO WHAT THE OWNER ASKED, AND NOTHING MORE (Doctrine §0f, LESSONS §379).
@@ -332,14 +341,23 @@ function askedProblem(top, path) {
  * A plan proposed with no discussion is not approved, and a session kept
  * re-proposing after each rejection instead of answering. So since the last
  * plan-mode call (EnterPlanMode, or any ExitPlanMode that was answered), there
- * must be a turn of the session's in plain text AND a message from the owner
- * after it. Measured shapes: a rejection is an ExitPlanMode tool_result with
- * is_error; "not in plan mode" errors and cancelled approvals are not answers.
+ * must be a turn of the session's in plain text that ASKS NOTHING (`asksNothing`:
+ * what is being done and why, never a question, because approval is only the
+ * button), THAT CAME AFTER THE PLAN FILE'S LAST WRITE, AND a message from the
+ * owner after it. The newest such turn is the one judged: any turn that asked
+ * nothing was accepted as the talk, so on 2026-10-04 an answer to a correction
+ * passed as the explanation of a plan edited afterwards, twice. Measured
+ * shapes: a rejection is an ExitPlanMode tool_result with is_error; "not in
+ * plan mode" errors and cancelled approvals are not answers.
  * @param {string|undefined} path  the transcript.
+ * @param {number} [planWrittenAt]  when the plan file was last written, in ms;
+ *   0 when the plan is not a file the guard can stat, which skips the time
+ *   test and keeps the rest.
  * @returns {string|null} the refusal reason, or null to allow; null when the
  *   tail holds no plan-mode call at all, since nothing then says what to count from.
+ *   A turn whose time cannot be read is not judged older than the plan.
  */
-function talkedThrough(path) {
+function talkedThrough(path, planWrittenAt = 0) {
   const entries = tailEntries(path ?? '', 16 * 1024 * 1024);
   const planIds = new Map();
   for (const e of entries) {
@@ -365,15 +383,38 @@ function talkedThrough(path) {
     }
   });
   if (anchor < 0) return null;
-  let spoke = false;
+  // The NEWEST turn in plain text that asks nothing: later ones override earlier.
+  let talk = -1;
   for (let i = anchor + 1; i < entries.length; i++) {
     const e = entries[i];
     const c = e?.message?.content;
-    if (e?.type === 'assistant' && Array.isArray(c) && c.some((b) => b?.type === 'text' && (b.text ?? '').trim().length > 40)) spoke = true;
-    if (spoke && isOwnerMessage(e)) return null;
+    if (e?.type !== 'assistant' || !Array.isArray(c)) continue;
+    const said = c.filter((b) => b?.type === 'text').map((b) => b.text ?? '').join('\n').trim();
+    if (said.length > 40 && asksNothing(said)) talk = i;
   }
-  return 'this plan has not been talked through. Since the last plan-mode call, write the plan out in chat as a turn of its own, '
-    + 'let the owner answer it, and only then propose it (LESSONS §370). Re-proposing after a rejection without answering it is the failure this refuses.';
+  const clock = (ms) => new Date(ms).toLocaleTimeString('en-GB', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  if (talk >= 0) {
+    const at = Date.parse(entries[talk].timestamp ?? '');
+    if (planWrittenAt && Number.isFinite(at) && at < planWrittenAt) {
+      return `this plan was last written at ${clock(planWrittenAt)} (California), after the last chat turn that explained it (${clock(at)}). `
+        + 'The talk before a plan is about THIS plan: say what is being done and why again, asking nothing, let the owner answer it, and only then propose it (LESSONS §370).';
+    }
+    for (let i = talk + 1; i < entries.length; i++) if (isOwnerMessage(entries[i])) return null;
+  }
+  return 'this plan has not been talked through. Since the last plan-mode call, write what is being done and why in chat as a turn of its own that asks nothing, '
+    + 'after the plan\'s last edit, let the owner answer it, and only then propose it (LESSONS §370). Re-proposing after a rejection without answering it is the failure this refuses.';
+}
+
+/**
+ * Does a turn of the session's ask anything?
+ * @param {string} text  what the session wrote in chat.
+ * @returns {boolean} true when, with code blocks, code spans and links set
+ *   aside, no sentence ends in a question mark. The talk before a plan asks
+ *   nothing: approval is only the plan-mode button (Doctrine §0e rule 4).
+ */
+function asksNothing(text) {
+  const prose = String(text).replace(/```[\s\S]*?```/g, ' ').replace(/`[^`\n]*`/g, ' ').replace(/https?:\/\/\S+/g, ' ');
+  return !/\?(?=\s|$)/.test(prose);
 }
 
 /**
@@ -468,17 +509,22 @@ function heldNames(plan) {
 if (tool === 'ExitPlanMode') {
   const dir = join(homedir(), '.claude', 'plans');
   let plan = '';
+  // When the plan FILE was last written, for the talk check; 0 when the plan is
+  // only text the harness passed and no file is known.
+  let planWrittenAt = 0;
   // The plan checked is the plan the harness is about to show: the file it
   // names, or the text it passes. Only without either is the newest file in the
   // directory used, and never one of the harness's side files (a workshop
   // copy, a subagent's plan, an ultraplan), which can be newer than the plan.
   try {
-    if (typeof input.planFilePath === 'string' && existsSync(input.planFilePath)) plan = readFileSync(input.planFilePath, 'utf8');
-    else if (typeof input.plan === 'string' && input.plan.trim()) plan = input.plan;
+    if (typeof input.planFilePath === 'string' && existsSync(input.planFilePath)) {
+      plan = readFileSync(input.planFilePath, 'utf8');
+      planWrittenAt = statSync(input.planFilePath).mtimeMs;
+    } else if (typeof input.plan === 'string' && input.plan.trim()) plan = input.plan;
     else {
       const newest = readdirSync(dir).filter((f) => f.endsWith('.md') && !/\.workshop\.md$|-agent-[^/]*\.md$|ultraplan\.md$/.test(f))
         .map((f) => ({ f, t: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.t - a.t)[0];
-      if (newest) plan = readFileSync(join(dir, newest.f), 'utf8');
+      if (newest) { plan = readFileSync(join(dir, newest.f), 'utf8'); planWrittenAt = newest.t; }
     }
   } catch { /* no plans dir: fall through with an empty plan, which is refused */ }
   const top = plan.split(/^(?:---\s*|# .*)$/m).find((b) => b.trim()) ?? plan;
@@ -488,9 +534,16 @@ if (tool === 'ExitPlanMode') {
     return !m || !m[1].split('\n').some((l) => l.trim().length > 20);
   });
   if (missing.length === 0) {
+    // THE GOALS COME BEFORE ANY OTHER CHECK (Doctrine §0e rule 16): a plan
+    // carries the hub CLAUDE.md's standing goals block word for word and names,
+    // for every step, the goal it serves. Loaded here only, because this file
+    // runs on every tool call and the plan parsing lives in hook-dispatch.mjs.
+    const { goalsProblem } = await import('./hook-dispatch.mjs');
+    const goals = goalsProblem(top);
+    if (goals) deny(goals);
     const asked = askedProblem(top, p.transcript_path);
     if (asked) deny(asked);
-    const talk = talkedThrough(p.transcript_path);
+    const talk = talkedThrough(p.transcript_path, planWrittenAt);
     if (talk) deny(talk);
     const names = inventedNames(plan, top);
     if (names) deny(names);

@@ -8,6 +8,18 @@
 > **repo-metadata confirm rule** (§10). **Where anything below overlaps the
 > Doctrine, the Doctrine wins.** This file keeps only what is specific to this repo.
 
+## Goals every session serves
+These are the standing goals, loaded into every session at every turn. No session
+changes them except by a plan step the owner approves. A plan quotes this block word
+for word under its own `## Goals` and adds only goals from the app's own roadmap, as
+its goal 1.
+
+2. The owner's time and credit go to judgement only: agents on the cheapest model that holds the rules, nothing at the top model but management, and no turn spent watching.
+3. The work is visible every few minutes without being asked for: a status at each agent's return and at each timer return.
+4. Nothing comes back to the owner for a decision but a choice only the owner can make, shown with pictures where it is about how a photograph looks, and the end of the plan.
+5. An approved plan runs to its end through agents with no amendment; a refusal, a failure or a defect found on the way is handled by the main thread and recorded for the next plan, never handed back.
+6. The owner's rules bind as written, and the main thread is held by gates that leave it no choice to make, never by the owner reading its replies; where two rules meet, the conflict and one suggestion go to the owner once.
+
 ## Start here: the brief is printed for you
 `.claude/hooks/session-start.sh` runs at session start and prints
 [`session-brief.mjs`](session-brief.mjs) — which branch this is versus where work
@@ -314,13 +326,16 @@ Every item below has actually happened.
  2026-09-28.** Nothing runs outside an approved plan (`approved-plan-guard.mjs`
  refuses it). Before a plan goes up, one chat turn says what is being done and
  why — never the plan's text, which the owner reads in the plan — and asks
- nothing; approval is only the button. A status at least every five minutes,
- its time read from the clock (`report.mjs` refuses every call after five
- while anything the session started is running; with nothing running, no
- status is due).
- **Background work is the work:** while anything the session started is still
- running, it does not end its turn (`stop-guard.mjs` refuses the stop; LESSONS
- §381).
+ nothing; approval is only the button. `plan-guard.mjs` refuses `ExitPlanMode`
+ unless the newest turn that asked nothing came after the plan file's last
+ write and an owner message followed it, so an answer given before an edit is
+ not the talk of the edited plan. A status is due when an agent has ended
+ since the last one, its time read from the clock (`report.mjs`), and at no
+ other time.
+ **Background work is the work:** while a background command or workflow the
+ session started is still running, it does not end its turn (`stop-guard.mjs`
+ refuses the stop; LESSONS §381). A running agent does not hold the turn: its
+ completion brings the session back.
  **The gates run from a clone at `/root/.claude/hub`, installed by each
  session's first plan** — `hook-dispatch.mjs --install` run FROM THE CLONE,
  never the working copy, because `install()` wires whichever copy runs it.
@@ -330,9 +345,20 @@ Every item below has actually happened.
  back. `keep-info-guard.mjs` refuses a commit that does (only a message from
  the owner naming the source and asking for its removal lifts it);
  `pending-guard.mjs` refuses every tool call while a message from the owner
- sits in the queue undelivered, and prints it; after a compaction the
+ sits in the queue undelivered, and prints it, until a message typed after it
+ has arrived as a prompt: it is then printed once at the top of that prompt's
+ turn instead, so a message the queue loses cannot hold work for the rest of
+ the session; after a compaction the
  messages since the previous one are printed verbatim before anything else.
  (LESSONS §376.)
+- **A CORRECTION FROM THE OWNER ENDS THE TURN, BY REFUSAL.** A message that
+ does not end with a go-word (go, ok, continue, approved, yes; the owner's list
+ to extend, never a session's) is a correction. While it is the owner's newest
+ message, `hook-dispatch.mjs` refuses every main-thread call but the status
+ command and `TaskStop`, without latching: answer every point in it and end
+ the turn. Held work is sent again only after a go-word. Nine corrections in a
+ row were once worked through on the session's own reading of what was meant.
+ (Doctrine §0e rule 3.)
 - **EVERY TIME GIVEN TO THE OWNER IS CALIFORNIA LOCAL TIME.** (Doctrine §2;
  LESSONS §378.)
 - **DO WHAT THE OWNER ASKED, AND NOTHING MORE.** No additions on the theory of
@@ -348,17 +374,23 @@ Every item below has actually happened.
  every other tool on the main thread, and `plan-fence.mjs` holds each agent to
  the plan's Files and Commands. (Doctrine §0e rule 13.)
 - **A REFUSAL LATCHES UNTIL THE OWNER'S NEXT MESSAGE.** Another command, tool
- or wording for the same end is a second route, not a fresh start. After any
- PreToolUse refusal, `hook-dispatch.mjs` refuses every call but the main
- thread's status command and `TaskStop` and an agent's own return: say in
- plain text what was refused, and stop. The main thread's `TaskStop` passes so
- it can stop what it started (§11d). Only a message the owner typed after the
- refusal clears it, by when it was typed. Three refusals do not latch: a
- status falling due, a call held for a waiting owner message, and entering
- plan mode again after the owner approved the plan by leaving plan mode in the
- app. Give the status, send the held call again, or carry on with the
- approved plan; that last refusal lifts once an agent is sent under the plan
- or the owner writes again. (Doctrine §0d; §0e rule 14.)
+ or wording for the same end is a second route, not a fresh start. After a
+ PreToolUse refusal on the main thread, `hook-dispatch.mjs` refuses every call
+ but the status command and `TaskStop` and an agent's own return: say in
+ plain text what was refused, and stop. A refusal INSIDE an agent latches that
+ agent only: every later call of it is refused but its own return, and the
+ main thread and the other agents are not held; the main thread reads the
+ refusal in the status print, which carries every hook refusal each agent
+ received, and reports it. The main thread's `TaskStop` passes so it can stop
+ what it started (§11d). Only a message the owner typed after the refusal
+ clears the main thread's latch, by when it was typed. Four refusals do not
+ latch: a status falling due, a call held for a waiting owner message, a
+ correction from the owner standing, and entering plan mode again after the
+ owner approved the plan by leaving plan mode in the app, which the dispatcher
+ judges before any gate reads the approval. Give the status, send the held
+ call again, answer the correction, or carry on with the approved plan; that
+ last refusal lifts once an agent is sent under the plan or the owner writes
+ again. (Doctrine §0d; §0e rule 14.)
 - **NO `cd`, IN ANY COMMAND, BY THE MAIN THREAD OR AN AGENT.** Every path is
  written in full, so what a command touches can be read off its own words.
  `plan-fence.mjs` refuses a `cd`, `pushd` or `popd` anywhere in an agent's
@@ -375,13 +407,32 @@ Every item below has actually happened.
  changed since the last and what it means for the work, what the session did
  about it, and the time remaining read from the run; a status with nothing new
  says so in one line. Findings are acted on when they arrive, never left for
- an agent to find at the end of its run. `report.mjs` prints the agents ended
- since the last status and each running agent's progress note, flagging a
- stale one. Between statuses the main thread stays in its turn and waits with
- `node /root/.claude/hub/report.mjs --wait`, in the foreground with a Bash
- timeout of at least 280 seconds: it returns when a progress note changes, an
- agent ends, or four and a half minutes pass. The manager fence passes it; a
- timer is not a wait. (Doctrine §0e rule 2; LESSONS §384.)
+ an agent to find at the end of its run. A status is due when an agent has
+ ended since the last one, and at no other time: the main thread ends its turn
+ while an agent runs, the harness's completion notification brings it back,
+ and no wait runs between statuses. `report.mjs` prints in every status the
+ agents ended since the last one, each running agent's progress note (flagging
+ a stale one), every hook refusal each agent received and its last tool
+ result, read from the agent's own transcript, and the approval state read from
+ disk. (Doctrine §0e rule 2; LESSONS §384.)
+- **A TURN THAT ENDS WITH STEPS LEFT IS A RETURN TO THE OWNER, AND IT IS
+ REFUSED.** With an approved plan in force, `stop-guard.mjs` refuses a stop
+ when a step of its `## Steps` has had no agent hand back for it, no agent the
+ session launched is running, and the reply neither opens with a choice for
+ the owner nor declares the stop in its first line with what is open. The main
+ thread then sends the next step, or the same step again, instead of ending. A
+ waiting owner message, a standing correction and a standing latch let the stop
+ through. (Doctrine §0e rule 2; LESSONS §381.)
+- **THE NEXT STEP IS READ OFF A POINTER, NEVER CHOSEN FROM MEMORY.** A plan's
+ `## Order` section has an `Order:` line and an optional `Standing:` line, and
+ every status prints `next: step N` after the goals: the first step in Order
+ with no hand-back whose first line opens DONE (`next: none` when all have
+ one). A REFUSED or FAILED hand-back leaves N where it is. The dispatch gate
+ refuses any step but N and a Standing step and prints N in the refusal, and
+ `stop-guard.mjs` refuses a stop while N is not none, which replaces the count
+ of `## Steps` above for a plan that has an Order. The status also prints each
+ hand-back, its report file's path and every `Found:` line, and writes the
+ status page's source from the same read. (Doctrine §0e rules 2 and 13.)
 - **REPLIES ARE WRITTEN TO THE DOCTRINE'S RULES BEFORE THEY ARE SENT.** The
  guards are not how a session finds out the format: a guard refusal for a
  shape the doctrine already names is a defect, not feedback. (Doctrine §2;
@@ -398,6 +449,18 @@ Every item below has actually happened.
  until Read results on `DOCTRINE.md` returned since cover every line. Only
  the live clone's copy, `/root/.claude/hub/DOCTRINE.md`, clears the gate.
  (Doctrine §11e; LESSONS §383.)
+- **AFTER A COMPACTION OR A RESUME THE THREE PRINTS ARE BOUNDED, AND THIS BOUNDS
+ THE ITEM ABOVE FOR THOSE TWO STARTS ONLY.** A startup is unchanged: every line
+ of the doctrine, every lesson title. After a compaction or a resume the
+ doctrine due is the lines from the heading of §0 up to the heading of §3, and
+ the line printed at SessionStart names them; the owner's messages come back
+ only if typed after the last reply, the newest ten, oldest first, with the
+ count of the rest and the path of a file holding all of them
+ (`compact-recall.mjs`, which bounds the §376 print named further up); and the
+ brief prints the lessons as a count and the folder's path, with the reason on
+ its own line where it cannot read the start's marker. Each of the three was a
+ large share of a fresh context, and each compaction came sooner than the last.
+ (Doctrine §11e; LESSONS §385.)
 - **ONLY `staging` AND `main` REACH A REMOTE, IN EVERY REPO.** The rule and
  what `push-guard.mjs` refuses are in the harness-branch item near the top of
  this list. (Doctrine §11.)

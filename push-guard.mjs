@@ -13,7 +13,10 @@
  *          as reply-guard.mjs's `commandsIn` opens them) must land on `staging`
  *          or `main`. A push with no refspec, or with `HEAD`, is the repo's
  *          current branch, read from the repo the push runs in (a plain `cd`,
- *          `-C`). `--all`, `--branches`, `--mirror`, `--tags`, `--follow-tags`,
+ *          `-C`). A shell redirect on the push (`2>&1`, `> out`) and its target
+ *          are not arguments of the push: they are set aside before the
+ *          destination is read (`dropRedirects`), and whatever follows a pipe is
+ *          judged as a command of its own. `--all`, `--branches`, `--mirror`, `--tags`, `--follow-tags`,
  *          `--delete`, `-d`, `--prune` and a `:ref` deletion are refused, and so
  *          is a force-push to main (`--force`, `-f`, `--force-with-lease`, a
  *          `+` refspec) and `--no-verify` on a push or a commit (`-n` on a
@@ -113,6 +116,32 @@ function isAlias(dir, sub) {
 }
 
 /**
+ * The arguments git receives, with the shell's redirects taken away.
+ * @param {string[]} args  the words after the subcommand, quoting removed.
+ * @returns {string[]} the same words without each redirect (`2>&1`, `>&2`,
+ *   `>out`, `>> out`, `&>out`, `<in`, `<<< text`) and, when the operator stands
+ *   alone, the one word after it, which is its target. Bash never hands a
+ *   redirect to the program, so reading `2>&1` as a branch refused a push to
+ *   staging whose output was redirected and piped (measured 2026-10-04). A pipe
+ *   needs nothing here: `commandsIn` already ends a command at it, so what
+ *   follows a pipe is judged as a command of its own. A lone `|` word is NOT
+ *   treated as a pipe: after `commandsIn` has stripped quotes, a quoted `|` is
+ *   an argument git receives, and dropping the words after it would hide a
+ *   branch from the destination check. Every other word is kept, in order, so
+ *   a push to any branch but staging or main is still refused with its tail.
+ */
+export function dropRedirects(args) {
+  const out = [];
+  for (let i = 0; i < args.length; i++) {
+    const m = /^(?:\d*|&)(?:>>|>\||>&|>|<<<|<<-?|<&|<>|<)(.*)$/.exec(String(args[i]));
+    if (!m) { out.push(args[i]); continue; }
+    // `2>&1` and `>out` carry their target; a lone `>` takes the next word.
+    if (m[1] === '' && i + 1 < args.length) i++;
+  }
+  return out;
+}
+
+/**
  * Does a `git commit` skip its hooks?
  * @param {string[]} args  the words after `commit`.
  * @returns {boolean} true for `--no-verify`, or `-n` alone or in a cluster of
@@ -182,7 +211,7 @@ export function judgeGit(words, cwd, unsure = '') {
   if (dirOpt) return `git push with ${dirOpt} names a repository this cannot resolve for certain; run it in the repo, with -C and a written-out path.`;
   if (config) return `git push with ${config} can change where it pushes, which this cannot resolve for certain.`;
   if (unsure) return `git push after ${unsure} runs in a repository this cannot resolve for certain; write every path in full, with git -C.`;
-  const args = words.slice(k + 1);
+  const args = dropRedirects(words.slice(k + 1));
   const pos = [];
   let force = false;
   for (let i = 0; i < args.length; i++) {

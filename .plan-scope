@@ -1,19 +1,13 @@
 # Written by plan-scope-check.mjs --record. Not hand-edited.
 plan=/root/.claude/plans/zesty-splashing-swan.md
-planhash=37bdabaaeeb57194
-diffhash=1813dc982f12c902
-verdict=IN-SCOPE: every hub change is a step 1, 2 or 3 item of the approved plan or one of its amendments, on its Hub Files list, and nothing goes beyond it.
-# Step 8 watcher, against /root/.claude/plans/zesty-splashing-swan.md read in full by its path. Hub main and origin/main both at b279a08, no commits ahead; 18 files staged, 6 with further unstaged edits, nothing untracked. Every changed path is on the plan's Hub Files list, and every change below maps to a plan step or amendment:
-# - push-guard.mjs (new): step 1 push gate, only staging and main; bulk, delete, force-to-main and no-verify refused; unresolvable pushes (alias, git-dir, GIT_DIR, -c, cd it cannot follow, xargs, find -exec) refused; connector branch creation, off-branch file writes, PR merge and branch update refused.
-# - plan-fence.mjs (new): step 1 plan fence over every agent tool; writes only under the labelled Files entries or the scratchpad, never the live clone; Bash split, every cd refused, git -C set aside, readers or Commands entries only; redirects held to Files; null devices pass; agent TaskStop and return pass.
-# - doctrine-read-guard.mjs (new): step 1 doctrine gate; due marker and one line at every SessionStart; main thread held to reads and the status until Read results on the hub DOCTRINE.md cover every line.
-# - hook-dispatch.mjs: step 1 manager fence (no quickstart, status page only), dispatch gate (plan path and step only, no custom type, no workflow, plan hash checked), refusal latch with typed-time clearing, non-latching report, pending and in-app re-entry refusals, agent return passing every guard, main-thread TaskStop through the latch, the wait passed exactly, held work printed on delivery, doctrine due line, and the recorded EPIPE fix.
-# - report.mjs: status only while something runs; ended agents and running agents' progress notes printed and flagged; report.mjs --wait.
-# - stop-guard.mjs: latched stop passes; state-claim check (rule 15) with its full subject list; choice-first check; running-task reader moved to report.mjs so both gates share one definition.
-# - plan-guard.mjs: refused names held until read or marked (new); an agent's TaskStop passes in plan mode.
-# - pending-guard.mjs: held-work file and its release at the delivering prompt.
-# - approved-plan-guard.mjs: approval recorded from the in-app plan-mode exit, judged once, with re-entry refused until an agent is sent or a new message arrives; its record file is write-protected like the marker.
-# - session-guards.test.mjs: a case and a plant for each of the above, including the latch's ways out and a real hub commit id.
-# - .github/workflows/branch-sweep.yml (new): step 2 exactly; claude/* only, merge-tree exit 0 and exact main tree, lease at the judged SHA, name pattern, token comments.
-# - DOCTRINE.md, CLAUDE.md, LESSONS.md, REPOS.md, lessons/008, lessons 382, 383, 384 (new): step 3's record and the corrections from the record check and later amendments; no owner quotation found, and the two older quoted phrases in section 11e are rewritten. Lesson 382's line awaiting a measurement is left for step 6, as planned.
-# Nothing in the diff goes beyond the plan or outside what was asked; the in-app approval change is the plan's amendment after step 5 returned, item 5, where one plan was approved twice.
+planhash=82c8a2958535dac5
+diffhash=cc629d4c21c38ca9
+verdict=IN-SCOPE: every changed file is on the plan's Files list, and every change is a step 1 to 4 item or gate work the plan says lands.
+# IN-SCOPE: every changed file is on the plan's Files list, and every change is a step 1 to 4 item or gate work the plan says lands.
+# Read in full: the hub diff (sixteen tracked files changed, one new lesson, 385), the plan by its path, and the owner's messages the scope check printed.
+# Files: all sixteen changed files and the new lesson are named in the plan's Files touched. turn-check.mjs stays untracked, is not on the landing list, and no tracked file imports it.
+# Step 1: the turn watcher is gone from stop-guard.mjs and hook-dispatch.mjs. The CLAUDE.md goals block carries goals 2 to 6 as the plan words them, directly after the title block. Every plan fixture in the test file carries a Goals section and a Served by line.
+# Step 2: the pointer is in report.mjs, the dispatch gate and the stop guard, with the status page written from the same read, cases and plants for each, doctrine rules 2 and 13, and one CLAUDE.md index line.
+# Step 3: the three prints after a compaction or a resume are bounded in doctrine-read-guard.mjs, compact-recall.mjs and session-brief.mjs, with cases and plants, doctrine 11e, the lesson 376 clause, lesson 385 with its index row, and one CLAUDE.md index line.
+# Landed gate work the plan names under Asked and in its Files list rather than in a step: a refusal inside an agent latches that agent alone, the approval state is printed in every status and dispatch refusal, a running agent no longer holds the turn, a stop with steps left is refused, the owner's exit from plan mode is judged before any gate reads the marker, a message that does not end in a go-word is a correction, messages the queue loses are printed once, the talk before a plan is judged against the plan's last write, a push with a redirect or a pipe is read past them, and a refusal's follow-up may not repeat the refused reply.
+# Nothing in the diff is outside the plan. Nothing quotes an owner message.

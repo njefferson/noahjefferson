@@ -476,3 +476,4 @@ and the filename carries it.
 - **§382** — [Two failed routes were recorded as an impossible end, so a third was never tried and every branch removal fell to the owner by hand](lessons/382-two-failed-routes-were-recorded-as-an-impossible-end.md)
 - **§383** — [After each compaction the doctrine was worked from a summary, and three sections were written into it on six lines read](lessons/383-after-a-compaction-the-doctrine-was-worked-from-a-summary.md)
 - **§384** — [Replies were written against the guards instead of the rules, a choice was lost under a report, and statuses went out as heartbeats while walks were failing](lessons/384-replies-were-written-against-the-guards-instead-of-the-rules.md)
+- **§385** — [The apparatus built to hold the main thread was loaded into the context it holds, so each addition brought the next compaction nearer](lessons/385-the-apparatus-was-loaded-into-the-context-it-constrains.md)

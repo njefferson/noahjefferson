@@ -151,61 +151,137 @@ every rule below while none of the hooks that enforce them was running
    for the owner. Process noise with no finding in it is not telling.
    *Enforced by:* the dispatcher's UserPromptSubmit reminder; the rest is
    judgement.
-2. **A status at least every five minutes during any work:** what is done, what
-   is running, what is next, and when the next status comes. The time in a
-   status is READ FROM THE CLOCK, never estimated. Measured the same day, five
-   statuses in a row carried times forty minutes off. No app notifications,
-   ever: statuses go in chat and on the status page.
-   **A status is the manager's report, never a heartbeat.** Each one carries
-   what changed since the last one and what it means for the work, what the
-   session did about it, and the time remaining, read from the run rather than
-   guessed. A status with nothing new says so in one line. Findings are acted
-   on when they arrive, not left for an agent to find at the end of its run.
-   Measured 2026-10-02: statuses went out as heartbeats while three of the
-   first four verification walks to finish had failed (LESSONS §384). **A status
-   falling due never stops the work:** the session gives it and carries on.
-   **And no status while nothing is running.** A status reports work in
-   progress. With no agent and no background command the session started still
-   running, none is due however long it has been, and demanding one makes a
-   heartbeat.
-   *Enforced by:* `report.mjs`, which, while an agent or a background command
-   the session started is running, refuses every call five minutes after the
-   last stamp, and writes the clock's time into every status it stamps. With
-   nothing running it refuses nothing; when it cannot read what is running, it
-   refuses as before. Its refusal does not latch (rule 14): giving the status
-   stamps the clock, and the refused call may then run. Every status it stamps
-   then prints each agent the session launched that has ended since the last
-   status, with how it ended and its last entry, read from the agent's own
-   transcript. An agent ends by a report, a refusal, an interruption (a restart
-   that cut it off counts as one) or a failure, and an agent that stops without
-   a notification is found at the next status at the latest. Then it prints
-   each running agent's latest line from its progress note,
-   `progress/step-N.txt` in the session scratchpad, flagged when the note is
-   missing, empty or older than five minutes, or when the agent's prompt names
-   no plan step, so there is no note to read. What a status says about them is
+2. **A status when an agent has ended, and what the work says in it.** A
+   status says what changed since the last one and what it means for the work,
+   what the session did about it, and the time remaining, read from the run
+   rather than guessed. The time in a status is READ FROM THE CLOCK, never
+   estimated. Measured the same day, five statuses in a row carried times forty
+   minutes off. No app notifications, ever: statuses go in chat and on the
+   status page.
+   **A status is the manager's report, never a heartbeat.** A status with
+   nothing new says so in one line. Findings are acted on when they arrive, not
+   left for an agent to find at the end of its run. Measured 2026-10-02:
+   statuses went out as heartbeats while three of the first four verification
+   walks to finish had failed (LESSONS §384). **A status falling due never
+   stops the work:** the session gives it and carries on.
+   **A status is due when an agent the session launched has ended since the
+   last one, and at no other time.** Not every five minutes, which this rule
+   once demanded and which made each status a heartbeat; not while an agent
+   merely runs; not while nothing has ended. The owner says what comes next,
+   so a status does not announce it.
+   *Enforced by:* `report.mjs`. Its gate refuses a main-thread call while an
+   agent the session launched has ended since the last stamp, naming each agent
+   and how it ended; with no such agent it refuses nothing, and a session whose
+   agents it cannot find is not read as due. The refusal does not latch (rule
+   14): giving the status stamps the clock and writes the clock's time into the
+   status, and the refused call may then run. Every status it stamps then
+   prints, each read from the agent's own transcript or from disk and never
+   from what an agent said: each agent the session launched that has ended
+   since the last status, with how it ended (a report, a refusal, an
+   interruption, which a restart that cut it off counts as, or a failure) and
+   its last entry, so an agent that stops without a notification is found at
+   the next status at the latest; each running agent's latest line from its
+   progress note, `progress/step-N.txt` in the session scratchpad, flagged when
+   the note is missing, empty or older than five minutes, or when the agent's
+   prompt names no plan step, so there is no note to read; for each agent
+   running or ended since the last status, every hook refusal it received and
+   its last tool result; and the approval state, which is the marker or none,
+   the plan, hash and time it holds, the plan file's hash and last write, and
+   whether the two hashes match. Before sending the first agent under any
+   approval the main thread gives a status and reads that print, and the
+   dispatch gate's refusals print the same lines: after the owner pressed
+   approval in the app, the gate once refused with only "no approved plan is in
+   force", and the session could not see why. The manager judges an agent's
+   work from these reads, never from its report, because the report says what
+   the agent believes happened. What a status then says about them is
    judgement.
-   **Work running in the background is the work.** While anything the session
-   started is still running (a background command, a workflow, a background
-   agent), the session does not end its turn: it stays, gives the status every
-   five minutes, and acts on each result as it lands. A declared stop does not
-   excuse it. *Enforced by:* `stop-guard.mjs`, which refuses every stop while a
-   task the session launched has not ended (LESSONS §381).
-   **Between statuses the main thread waits with `report.mjs --wait`.** It
-   stays in its turn while an agent runs, none of its other allowed calls can
-   wait, and a timer is not a wait. `node ~/.claude/hub/report.mjs --wait`
-   returns when a running agent's progress note changes, when an agent the
-   session launched ends, or after four and a half minutes, whichever comes
-   first, and prints what it saw; with no agent running it returns at once. It
-   records nothing, so the next status still prints every agent that ended.
-   The main thread runs it in the FOREGROUND, with a Bash timeout of at least
-   280 seconds. Under the default of 120 the call is moved to the background
-   and becomes one more task of its own: measured 2026-10-03 at 07:05, when a
-   foreground watch on a progress note ran past the limit and did exactly
-   that. The manager fence passes the wait (rule 13); the latch does not
-   (rule 14).
+   **Every status prints the pointer, and each hand-back, after the goals.**
+   The main thread keeps no memory of the plan: it reads its next move from
+   this print instead of choosing it. The plan's `## Order` section carries an
+   `Order:` line of step numbers and, optionally, a `Standing:` line of steps
+   that may be sent at any time. The first line of the print is `next: step N`,
+   N being the first number in Order with no hand-back whose first line opens
+   DONE, or `next: none` once every one has one. A hand-back opening REFUSED or
+   FAILED leaves N where it is, as does an agent that ended at a refusal, an
+   interruption or a failure, and a Standing step is never N. Under it the
+   print gives each step's state, the newest hand-back of each step with every
+   line it carries and the path of its report file
+   (`progress/step-N-report.txt` in the session scratchpad), and the `Found:`
+   lines of every report file, and the same read writes the status page's
+   source, `status/fix-run.html` in the session scratchpad: each step in Order
+   with its state, the time of the last status in California time, the `Found:`
+   lines, and what is open for the owner. The print reads N; it does not
+   announce it, so the owner still says what comes next. A plan with no
+   `## Order` defines no pointer and the print says `next: not defined`.
+   *Enforced by:* `report.mjs` (`pointerState`, `pointerBlock`,
+   `statusPage`), read from the agents' own transcripts the way
+   `stepsReturned` reads them.
+   **Work running in the background is the work.** While a background command
+   or a workflow the session started is still running, the session does not
+   end its turn: it stays and acts on each result as it lands. A declared stop
+   does not excuse it. *Enforced by:* `stop-guard.mjs`, which refuses every stop
+   while a task the session launched has not ended (LESSONS §381).
+   **A running agent does not hold the turn.** The harness's completion
+   notification brings the session back when an agent ends, so the main thread
+   ends its turn after sending one: staying in the turn to wait cost a turn of
+   the main thread's model per wait and nothing else, and a foreground wait
+   that ran past the Bash time limit at 07:05 on 2026-10-03 was moved to the
+   background, where it became one more task of its own. The wait is gone from
+   use: `report.mjs --wait` still exists and the manager fence still passes it
+   (rule 13), and nothing asks the session to run it. *Enforced by:*
+   `stop-guard.mjs`, which does not count a running agent among the tasks that
+   hold a stop.
+   **A turn that ends with steps of the approved plan left is a return to the
+   owner, and it is refused.** An approved plan is the instruction for all of
+   it (§11c), and it runs to its end through agents with nothing coming back
+   to the owner but a status at each agent's end and a choice only the owner
+   can settle. Measured 2026-10-04: nothing refused a turn that ended with
+   steps left and no agent running, so the work waited for the owner's next
+   message. *Enforced by:* `stop-guard.mjs`. With an approved plan in
+   force (its file still matching the hash recorded at approval), it reads the
+   pointer N (above) from the plan's `## Order` and the agents the session sent,
+   each prompt naming its step, and refuses the stop when N is not none, no
+   agent the session launched is running, and the reply neither opens with a
+   choice for the owner nor declares the stop in its first line with what is
+   open, "Stopping here: open for you is" and then what. A REFUSED or FAILED
+   hand-back leaves N where it is, so the main thread sends the same step
+   again. A plan with no `## Order` keeps the older count: its `## Steps`
+   numbers, a step returned when an agent ended by a report for it. The main
+   thread then sends the next step, or the same step again, instead of ending.
+   A choice opens a reply when its numbered options carry the recommended
+   marker within the first two lines (§2). A waiting owner message, a
+   correction standing (rule 3 refuses every other call while one stands, so a
+   refused stop would leave no move) and a standing latch let the stop through,
+   and a session whose plan or agents cannot be read is not refused.
 3. **Reply to every point in a message from the owner.** A message saying
    something was done wrong is a full stop: answer it, and run nothing else in
-   that turn.
+   that turn. This rule had nothing behind it. It was broken four times on
+   2026-10-04, and on the same day nine corrections in a row were worked
+   through on the session's own reading of what was meant.
+   *Enforced by:* the correction check in `hook-dispatch.mjs`. At
+   UserPromptSubmit it records whether the prompt ends with a go-word, and at
+   every PreToolUse it reads the owner's newest message from the transcript (a
+   prompt, or one delivered between tool calls, which UserPromptSubmit never
+   sees). The go-words are a declared list: go, ok, continue, approved, yes.
+   The word that counts is the message's LAST word, with case and punctuation
+   set aside, so "all of that, go" ends with one and "go ahead" does not; a
+   first version took a go-word only as the whole message, and the owner's own
+   go messages carry words before it. The list is the owner's to extend, and a
+   session never adds to it. Every other message is a correction. While a
+   correction is the newest owner message, every main-thread call is refused
+   except the status command and `TaskStop`. The refusal names this rule,
+   prints the list, never quotes the message, and does not latch (rule 14): the
+   owner's next message lifts it, and a latch would only add a second wait.
+   Agents are not held by it, and the plan fence holds them (rule 13). Held
+   work (LESSONS §376) is sent again only in a turn that follows a go-word. A
+   task notification, a scheduled message and an agent's hand-back are not
+   messages from the owner. A message the harness never delivered is printed once,
+   word for word, at the top of the turn of the prompt that overtook it
+   (`pending-guard.mjs --skipped`, LESSONS §376), so it is answered there. A
+   message the queue loses is no longer held against every call for the rest of
+   the session once a message typed after it has arrived as a prompt: on
+   2026-10-04 one timed 08:32 (California) held every call through three turns,
+   and the hold cleared only when the same words were sent again.
 4. **Plan mode only, and the talk comes first.** Before a plan goes up, one chat
    turn says what is being done and why, and asks nothing. It never pastes the
    plan: the owner reads the plan in the plan, and a copy in chat is a second
@@ -213,7 +289,12 @@ every rule below while none of the hooks that enforce them was running
    the NEXT turn ends with `ExitPlanMode`, as §0d says. Approval is only the
    plan-mode button, never words in chat.
    *Enforced by:* `plan-guard.mjs` (talk-first) and `stop-guard.mjs` (a reply
-   asking for approval in chat is refused).
+   asking for approval in chat is refused). The talk is checked against the
+   plan's LAST edit: `plan-guard.mjs` refuses `ExitPlanMode` unless the newest
+   assistant turn that asked nothing came after the plan file's last write and
+   a message from the owner followed it. Any turn that asked nothing used to
+   count, so on 2026-10-04 an answer to a correction passed, twice, as the
+   explanation of a plan that was edited afterwards.
 5. **A line before each tool call and a line after each result.**
 6. **Never "waiting on you", never "you owe".** Say "open for you:". A stop is
    declared in the first line as "Stopping here: open for you is X".
@@ -257,7 +338,11 @@ every rule below while none of the hooks that enforce them was running
     (rule 2), `node ~/.claude/hub/report.mjs --wait` exactly, the live clone's
     `report.mjs` with that one flag and nothing chained to it. The dispatch gate refuses an agent,
     or a message to one, whose prompt is anything but the approved plan's path
-    and the number of a step in its `## Steps`; it refuses an agent of a custom
+    and the number of a step in its `## Steps`; where the plan has an
+    `## Order` it also refuses any step but the pointer's N and the plan's
+    Standing steps (rule 2), and the refusal prints N, so the next step is
+    read and never chosen (an unreadable session or a plan with no `## Order`
+    has no pointer to enforce); it refuses an agent of a custom
     type, because a custom type carries instructions of its own; and it refuses
     every workflow, so no script of the session's carries instructions the
     owner has not read. The plan counts only while its hash matches the one
@@ -281,45 +366,69 @@ every rule below while none of the hooks that enforce them was running
     `pushd` and `popd` are not among its readers, so the fence refuses them;
     in plan mode `plan-guard.mjs` refuses them itself.
 14. **A refusal latches until the owner's next message.** A refusal by any
-    guard, family or repo, ends that route for the session. Another command,
-    tool or wording for the same end is the second route §0d names, not a fresh
-    start. While the latch stands, the session says in plain text what was
-    refused and stops; an agent returns what it has, with the refusal's text.
-    Three refusals are not ends of a route: a status falling due is cleared by
+    guard, family or repo, ends that route for the thread that was refused: the
+    session when it was the main thread, and that agent alone when it was
+    inside an agent. Another command, tool or wording for the same end is the
+    second route §0d names, not a fresh start. While the latch stands, the main
+    thread says in plain text what was refused and stops; an agent returns what
+    it has, with the refusal's text.
+    Four refusals are not ends of a route: a status falling due is cleared by
     giving it (rule 2); a call held while a message from the owner waits is
-    sent again once that message is delivered (LESSONS §376); and once the
-    owner has approved a plan by leaving plan mode in the app, entering plan
-    mode again for it is refused, because that approval is carried on with,
-    never asked for twice. That third refusal lifts once an agent is sent
-    under the plan or the owner writes again, so a later amendment stays
-    possible. Measured 2026-10-03: the owner's exit in the app ended plan mode
+    sent again once that message is delivered (LESSONS §376); a correction from
+    the owner standing is lifted by the owner's next message, which a latch
+    would only wait on a second time (rule 3); and once the owner has approved
+    a plan by leaving plan mode in the app, entering plan mode again for it is
+    refused, because that approval is carried on with, never asked for twice.
+    That last refusal lifts once an agent is sent under the plan or the owner
+    writes again, so a later amendment stays possible. Measured 2026-10-03: the owner's exit in the app ended plan mode
     before the session's `ExitPlanMode` call was answered, the call came back
     "not in plan mode", no approval was recorded, the session entered plan mode
     again, and the owner approved the same plan twice.
     Added 2026-10-02.
     *Enforced by:* the refusal latch in `hook-dispatch.mjs`. Every PreToolUse
     refusal, by the manager fence, a family guard, a repo's hooks or the
-    dispatcher's own failure, writes a latch for the session, except three:
-    the status gate's (`report.mjs --gate`), after which the status stamps the
-    clock and the refused call may run; `pending-guard.mjs`'s, which holds
-    the call and prints it at the top of the turn that delivers the message;
-    and the in-app approval check's (`approved-plan-guard.mjs --app-exit`, run
-    on the main thread's `EnterPlanMode`). That check refuses while the
-    approval recorded from the owner's exit stands and nothing but reads has
-    happened since. `approved-plan-guard.mjs` records that approval from the
-    harness's own plan-mode exit entry when no `ExitPlanMode` call of the
-    session's was approved since plan mode began, hashing the plan file at
-    that moment, and records none when the file was written after the exit;
-    each exit entry is judged once. A Stop refusal never latches. While the
-    latch stands, every PreToolUse call on the main thread and in agents is
-    refused except three: the status command and `TaskStop`, both on the main
-    thread only, and an agent's own return, which passes every guard whatever
-    its text names. The main thread's `TaskStop` passes because stopping a
-    task changes none of the owner's work and the session owns what it started
-    (§11d): measured 2026-10-03, a latched main thread could not stop two
-    watchers it had started, and they ran to their time limits. An agent's
-    `TaskStop` and the wait between statuses stay refused. The refusal names
-    the original one.
+    dispatcher's own failure, writes a latch, except four: the status gate's
+    (`report.mjs --gate`), after which the status stamps the clock and the
+    refused call may run; `pending-guard.mjs`'s, which holds the call and
+    prints it at the top of the turn that delivers the message; the correction
+    check's (rule 3), which the owner's next message lifts; and the in-app
+    approval check's (`approved-plan-guard.mjs --app-exit`, run on the main
+    thread's `EnterPlanMode`). The latch's own refusal does not write one
+    either, so it can never move the time an owner message has to come after.
+    The in-app approval check refuses while the approval recorded from the
+    owner's exit stands and nothing but reads has happened since.
+    `approved-plan-guard.mjs` records that approval from the harness's own
+    plan-mode exit entry when no `ExitPlanMode` call of the session's was
+    approved since plan mode began, hashing the plan file at that moment, and
+    records none when the file was written after the exit; each exit entry is
+    judged once. THE DISPATCHER JUDGES THE OWNER'S NEWEST EXIT FIRST: before
+    the latch, the manager fence, the dispatch gate or the plan fence reads the
+    approval marker, `hook-dispatch.mjs` runs `approved-plan-guard.mjs
+    --judge-exit`, which records the marker from that entry when it is the
+    owner's and never refuses. Judged only among the family guards below them,
+    the exit came too late for a first call after it that was the sending of an
+    agent: the dispatch gate refused on the old marker and the exit was never
+    judged (measured 2026-10-04 at 05:12).
+    A Stop refusal never latches. While the main thread's latch stands, every
+    PreToolUse call on the main thread and in agents is refused except three:
+    the status command and `TaskStop`, both on the main thread only, and an
+    agent's own return, which passes every guard whatever its text names.
+    **A refusal INSIDE an agent latches that agent only.** It is written under
+    that agent's id: every later call of that agent is refused but its own
+    return, and the main thread and the other agents are not held. A refusal on
+    the main thread latches the main thread, and with it every agent, as
+    before. Measured three times on 2026-10-04: one agent's refused first
+    command latched the whole session and ended the other agent's run, and each
+    time the owner had to write again to restart the work. Nothing clears an
+    agent's latch, because its one move is its own return. The main thread
+    reads the agent's refusal from the status print (rule 2), which carries
+    every hook refusal each agent received, and reports it; the owner hears of
+    it in the status, never as a latch on the session. The main thread's
+    `TaskStop` passes the main thread's latch because stopping a task changes
+    none of the owner's work and the session owns what it started (§11d):
+    measured 2026-10-03, a latched main thread could not stop two watchers it
+    had started, and they ran to their time limits. An agent's `TaskStop` and
+    the wait between statuses stay refused. The refusal names the original one.
     An agent cannot stamp a status at all, latched or not: the dispatcher
     refuses the status command from an agent, because an agent cannot tell the
     owner anything, and its stamp would clear the main thread's status gate
@@ -1234,6 +1343,20 @@ off — a switched-off guard being strictly worse than none. It honours
 `stop_hook_active`, so it can never loop, and it FAILS OPEN when the hub is not
 checked out beside the repo.
 
+**A refusal cannot take back the reply it refuses.** A `Stop` refusal arrives
+after the reply was written, and the owner has already seen it, so all the
+refusal can do is hand the complaint back: whatever the session writes next
+arrives as a SECOND reply. Measured 2026-10-04: two refusals, each for one
+sentence, and the whole reply was sent again both times. So every refusal now
+ends by saying that what the session writes next is the corrected sentences
+only, and that it must not send the reply again. When the guard runs again in
+the same turn it refuses a follow-up that repeats lines or sentences of the
+refused reply, counting only those of thirty characters or more, because
+"Done." and a list marker recur in any two replies. It does that once per turn,
+so it cannot loop, and only for a refusal newer than the owner's last message.
+Corrected sentences, a follow-up of tool calls with no text, and a repeat from
+an earlier turn pass.
+
 **This is the same escalation `branch-guard.mjs` is built on.** An instruction
 in a file never once refused the commit it forbade. The rule a session has to
 remember at the end of four hours is not the same object as the rule the
@@ -1396,16 +1519,23 @@ hub's CLAUDE.md already says to run FIRST, and which that session ran hours
 late), and read THIS WHOLE FILE — every line, not its section list and not a
 summary of it — so that adding to it is distinguishable from re-deriving it. A
 compaction replaces the conversation with a summary, and the doctrine carried
-past one is a paraphrase that drifts (LESSONS §383). **A session that writes a
+past one is a paraphrase that drifts (LESSONS §383); how much of the file is
+read again after a compaction or a resume is set in the paragraph below. **A session that writes a
 new rule without having read the existing ones is not learning, it is
 duplicating**, and the duplicate is worse than nothing because it makes the
 document longer and the next session less likely to read it.
 
 *Enforced by:* `doctrine-read-guard.mjs`, on the main thread. Every
 SessionStart, the one the harness fires after a compaction included, writes a
-due marker for the session and prints one line saying so. While it stands, the
-main thread may only read and give the status. It clears when the Read results
-on `DOCTRINE.md` returned after the marker cover every line of the file,
+due marker for the session, records the start's source in it, and prints one
+line saying so and naming the lines that are due. While it stands, the main
+thread may only read and give the status. At a startup every line is due. After
+a compaction or a resume the lines due are those from the heading of §0 up to
+the heading of §3, which hold the rules the main thread acts on, and the line
+printed says so: the whole file read again after each one was a large share of
+a fresh context, so each compaction came sooner than the last (LESSONS §385).
+A doctrine whose headings cannot be found is read in full. The marker clears
+when the Read results on `DOCTRINE.md` returned after it cover the lines due,
 counted across as many reads as it takes from the lines each result actually
 returned, never an errored one. Only the hub's own `DOCTRINE.md` counts, the
 one beside the gate in the clone every gate runs from; a copy anywhere else is

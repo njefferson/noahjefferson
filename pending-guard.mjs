@@ -32,9 +32,28 @@
  * When the count says k are still queued, the pending ones are the latest k of
  * those whose text never arrived.
  *
+ * A MESSAGE IS GIVEN ONCE A MESSAGE TYPED AFTER IT HAS ARRIVED AS A PROMPT. A
+ * queue that takes a later message while an earlier one never comes out leaves
+ * the earlier one counted as queued for the rest of the session. Measured
+ * 2026-10-04: a message timed 08:32 (California) held every call through three
+ * turns that ended to deliver it, while messages typed after it had arrived as
+ * prompts; the hold cleared only when the owner sent the same words again. So a
+ * message the counts call pending is no longer held when an owner message typed
+ * AFTER it (its enqueue time, or, for one that was never enqueued, the time it
+ * arrived) has been delivered, as a prompt or between tool calls. The queue
+ * does take by priority, so this can release a message that is merely behind
+ * another; the safety net is the next paragraph, which puts it in front of the
+ * session instead of dropping it.
+ *
+ *   node pending-guard.mjs --skipped   (UserPromptSubmit, from hook-dispatch)
+ *                prints, once each, the owner messages a delivered prompt has
+ *                overtaken, word for word, at the top of that prompt's turn, so
+ *                they are answered there
+ *
  * What is not an owner message: an enqueue whose content is not a string, or
  * that opens with one of the harness's own tags (a task notification, a wake,
- * a webhook payload, a child session's event).
+ * a webhook payload, a child session's event, an agent's hand-back). Only a
+ * message the owner typed holds work: an agent's hand-back never does.
  *
  * Failure direction: a transcript that cannot be read finds nothing pending,
  * and the call goes on. This guard holds work for a message; it must never
@@ -60,10 +79,15 @@ import { join, dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { tailEntries, textOf } from './transcript-tail.mjs';
+import { tailEntries, textOf, isOwnerMessage } from './transcript-tail.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
-const HARNESS_TAG = /^\s*<(?:task-notification|wake\b|webhook-payload|child-session-event|event\b|teammate-message|scheduled|system-reminder|local-command|bash-(?:input|stdout|stderr)|cron|tick\b|command-(?:name|message))/i;
+// An agent's hand-back is enqueued as `<agent-message from="…">` with the
+// words "[Subagent hand-back]" inside it: model output, never a message the
+// owner typed. Measured 2026-10-04 06:15 (California): a status call was held
+// for two of them, printed as the owner's messages. The queue record carries
+// no origin, so what opens a message is all there is to tell them apart by.
+export const HARNESS_TAG = /^\s*<(?:task-notification|agent-message\b|wake\b|webhook-payload|child-session-event|event\b|teammate-message|scheduled|system-reminder|local-command|bash-(?:input|stdout|stderr)|cron|tick\b|command-(?:name|message))|^\s*\[Subagent hand-back\]/i;
 const norm = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 const now = () => Number(process.env.PENDING_GUARD_NOW || Date.now());
 
@@ -102,18 +126,39 @@ export function markStart(p) {
 }
 
 /**
- * The owner messages waiting in the queue.
+ * Read the queue's records and the deliveries that answer them.
  * @param {object[]} entries  transcript entries in file order (`tailEntries`).
  * @param {number} [since]    ignore queue entries written before this time (ms).
- * @returns {{text: string, at: number}[]} each pending owner message, oldest
- *   first, its text exactly as enqueued. Empty when the counts say the queue is
- *   empty, whatever the text matching found; `decide` and the test rely on
- *   that being the only way a message is held to be pending.
+ * @param {string} [prompt]   a prompt being delivered this moment, which the
+ *   transcript may not hold yet: it counts as one more delivery at the end,
+ *   unless an entry already in the transcript carries its words.
+ * @returns {{waiting: {text: string|null, key: string, at: number, owner: boolean}[], given: number[]}}
+ *   `waiting`: the messages the counts say are still queued, oldest first, the
+ *   harness's own enqueues included (an empty list when every enqueue has been
+ *   dequeued or removed, whatever the text matching found). `given`: the typed
+ *   time, in ms, of every owner message that has ARRIVED, whether as a prompt
+ *   or between tool calls: an enqueued one by its enqueue time, one nothing
+ *   enqueued by the time it arrived. A harness message, a hook's feedback and a
+ *   compaction summary are never in it. `pendingMessages` and `skippedMessages`
+ *   both read their answer out of these two lists, so they cannot disagree.
  */
-export function pendingMessages(entries, since = 0) {
+function scan(entries, since = 0, prompt = '') {
   const items = [];
+  const given = [];
   let size = 0;
   const take = (pred) => { const it = items.find((x) => !x.done && pred(x)); if (it) it.done = true; return it; };
+  // A delivery carries the message's words. Several queued messages can arrive
+  // joined in one prompt, so each is matched by containment.
+  const deliver = (t, arrivedAt, byOwner) => {
+    let hit = false;
+    for (const x of items) {
+      if (!x.done && x.key && (t.includes(x.key) || (x.key.includes(t) && t.length > 40))) {
+        x.done = true; x.arrived = true; hit = true;
+        if (x.owner && x.at) given.push(x.at);
+      }
+    }
+    if (!hit && byOwner && Number.isFinite(arrivedAt) && arrivedAt > 0) given.push(arrivedAt);
+  };
   for (const e of entries) {
     const at = Date.parse(e?.timestamp ?? '');
     if (e?.type === 'queue-operation') {
@@ -132,19 +177,52 @@ export function pendingMessages(entries, since = 0) {
       }
       continue;
     }
-    // A delivery carries the message's words: a turn's prompt, or a queued
-    // command attached between tool calls. Several queued messages can arrive
-    // joined in one prompt, so each is matched by containment.
+    // A delivery is a turn's prompt, or a queued command attached between tool calls.
     const delivered = (e?.type === 'user' && !e.isMeta && !e.isCompactSummary)
       || (e?.type === 'attachment' && e.attachment?.type === 'queued_command');
     if (!delivered) continue;
     const t = norm(textOf(e));
     if (!t) continue;
-    for (const x of items) if (!x.done && x.key && (t.includes(x.key) || (x.key.includes(t) && t.length > 40))) x.done = true;
+    deliver(t, at, isOwnerMessage(e) && !HARNESS_TAG.test(textOf(e)));
   }
-  if (size <= 0) return [];
-  const unmatched = items.filter((x) => !x.done && x.key);
-  return unmatched.slice(-size).filter((x) => x.owner).map((x) => ({ text: x.text, at: x.at }));
+  const p = norm(prompt);
+  if (p && !HARNESS_TAG.test(prompt) && !items.some((x) => x.arrived && x.key && p.includes(x.key))) deliver(p, now(), true);
+  if (size <= 0) return { waiting: [], given };
+  return { waiting: items.filter((x) => !x.done && x.key).slice(-size), given };
+}
+
+/**
+ * The owner messages waiting in the queue.
+ * @param {object[]} entries  transcript entries in file order (`tailEntries`).
+ * @param {number} [since]    ignore queue entries written before this time (ms).
+ * @returns {{text: string, at: number}[]} each pending owner message, oldest
+ *   first, its text exactly as enqueued. Empty when the counts say the queue is
+ *   empty, whatever the text matching found, and a message is left out once an
+ *   owner message typed AFTER it has arrived (`scan`'s `given`): the queue can
+ *   lose a message and keep counting it, and a guard holding work for it would
+ *   hold it for the rest of the session. `decide` and the test rely on these
+ *   being the only two ways a message stops being held as pending.
+ */
+export function pendingMessages(entries, since = 0) {
+  const { waiting, given } = scan(entries, since);
+  return waiting.filter((x) => x.owner && !given.some((g) => g > x.at)).map((x) => ({ text: x.text, at: x.at }));
+}
+
+/**
+ * The owner messages a delivered prompt has overtaken.
+ * @param {object[]} entries  transcript entries in file order (`tailEntries`).
+ * @param {number} [since]    ignore queue entries written before this time (ms).
+ * @param {string} [prompt]   the prompt being delivered now (UserPromptSubmit).
+ * @returns {{text: string, at: number}[]} each owner message the counts call
+ *   still queued that an owner message typed after it has now reached the session
+ *   over, oldest first, its text exactly as enqueued: the messages
+ *   `pendingMessages` no longer holds work for, and which nothing else will put
+ *   in front of the session. A prompt that carries a waiting message's own words
+ *   is that message arriving, never one overtaking it.
+ */
+export function skippedMessages(entries, since = 0, prompt = '') {
+  const { waiting, given } = scan(entries, since, prompt);
+  return waiting.filter((x) => x.owner && given.some((g) => g > x.at)).map((x) => ({ text: x.text, at: x.at }));
 }
 
 /**
@@ -234,6 +312,58 @@ export function releaseHeld(p) {
   }), '--- end of held work ---'].join('\n');
 }
 
+// ---- messages the harness never delivered ----
+
+/**
+ * Where the overtaken messages already printed are recorded.
+ * @param {object} p  a hook payload; its `session_id` names the file.
+ * @returns {string} an absolute path under ~/.claude/skipped-printed/
+ *   (SKIPPED_PRINTED_DIR overrides it, for the test). `releaseSkipped` reads and
+ *   rewrites it; nothing else touches it.
+ */
+function skippedFile(p) {
+  const dir = process.env.SKIPPED_PRINTED_DIR || join(homedir(), '.claude', 'skipped-printed');
+  return join(dir, `${String(p.session_id || 'no-session').replace(/[^A-Za-z0-9_-]/g, '_')}.json`);
+}
+
+/**
+ * The messages the harness never delivered, printed once, when a later one arrives.
+ * @param {object} p  the UserPromptSubmit payload: `prompt` is what arrived and
+ *   `transcript_path` is read for the queue (the last 16 MB), unless `entries`
+ *   is given, for the test.
+ * @param {object[]} [entries]  the transcript's entries, for the test.
+ * @returns {string} the block hook-dispatch.mjs prints FIRST in that turn: every
+ *   owner message the prompt has overtaken (`skippedMessages`) that an earlier
+ *   turn has not already printed, word for word, each with the time it was
+ *   sent in California time, and the instruction to answer every point in it
+ *   before anything else. Each message is recorded as printed, so it appears in
+ *   one turn only. '' when nothing was overtaken or everything was printed
+ *   already. Any prompt prints them, a task notification's included: the message
+ *   was overtaken when a later one arrived, and the first prompt after that is
+ *   the first turn that can show it. Only an owner's prompt counts as the
+ *   message doing the overtaking (`scan`), never a harness message.
+ */
+export function releaseSkipped(p, entries) {
+  const prompt = typeof p.prompt === 'string' ? p.prompt : '';
+  const list = entries ?? (p.transcript_path ? tailEntries(p.transcript_path, 16 * 1024 * 1024) : []);
+  const skipped = skippedMessages(list, startedAt(p), prompt);
+  if (!skipped.length) return '';
+  const f = skippedFile(p);
+  let seen = [];
+  try { const r = JSON.parse(readFileSync(f, 'utf8')); seen = Array.isArray(r?.keys) ? r.keys : []; } catch { seen = []; }
+  const keyOf = (m) => createHash('sha256').update(`${m.at}:${norm(m.text)}`).digest('hex');
+  const fresh = skipped.filter((m) => !seen.includes(keyOf(m)));
+  if (!fresh.length) return '';
+  mkdirSync(dirname(f), { recursive: true });
+  writeFileSync(f, JSON.stringify({ keys: [...seen, ...fresh.map(keyOf)] }));
+  const when = (t) => new Date(Number(t) || 0).toLocaleTimeString('en-GB', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const many = fresh.length > 1;
+  return [`MESSAGE${many ? 'S' : ''} THE SESSION WAS NEVER GIVEN (pending-guard, LESSONS §376): ${many ? `${fresh.length} messages` : 'a message'} from the owner never reached this session as a prompt, `
+    + `and a message typed after ${many ? 'them' : 'it'} has, so the harness is not going to deliver ${many ? 'them' : 'it'}. ${many ? 'They are' : 'It is'} printed here, once, word for word, `
+    + 'so that each is answered in this turn: answer every point in each of them before anything else, and if one says something was done wrong, answer it and run nothing else this turn.',
+  ...fresh.map((m, i) => `--- message ${i + 1} of ${fresh.length}, sent ${when(m.at)} (California) ---\n${m.text}`), '--- end of the messages never given ---'].join('\n');
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === SELF) {
   let raw = '';
   try { raw = readFileSync(0, 'utf8'); } catch { /* no payload */ }
@@ -241,6 +371,14 @@ if (process.argv[1] && resolve(process.argv[1]) === SELF) {
   try { p = JSON.parse(raw); } catch { process.exit(0); }
   if (process.argv.includes('--start')) {
     if (p.source !== 'compact') markStart(p);
+    process.exit(0);
+  }
+  if (process.argv.includes('--skipped')) {
+    let out = '';
+    // A queue that cannot be read finds nothing: this must never print a
+    // message that does not exist.
+    try { out = releaseSkipped(p); } catch { out = ''; }
+    if (out) process.stdout.write(out + '\n');
     process.exit(0);
   }
   if (process.argv.includes('--held')) {

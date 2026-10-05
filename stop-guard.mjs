@@ -41,13 +41,35 @@
 // Exit 2 blocks the stop and feeds stderr back as the next instruction.
 // `stop_hook_active` is honoured so it can never loop.
 //
+// ## A REFUSAL CANNOT TAKE BACK THE REPLY (Doctrine §11c)
+//
+// A Stop refusal arrives after the reply was written, and the owner has already
+// seen it. All it can do is hand the complaint back, so whatever the session
+// writes next arrives as a SECOND reply. Measured 2026-10-04: two refusals, each
+// for one sentence, and the whole reply was sent again both times. So every
+// refusal here says the follow-up is the corrected sentences only, and when this
+// runs again in the same turn (`stop_hook_active`) it refuses a follow-up that
+// repeats lines of the refused reply — at most once per turn, so it cannot loop.
+//
+// ## A TURN THAT ENDS WITH STEPS LEFT IS A RETURN TO THE OWNER (Doctrine §0e rule 2)
+//
+// With an approved plan in force, a stop is refused when a step of its
+// `## Steps` has had no agent hand back for it (an agent ended at a refusal
+// returned nothing), no agent the session launched is running, and the reply
+// neither opens with a choice for the owner nor declares the stop in its first
+// line with what is open. The main thread then sends the next step, or the same
+// step again, instead of ending. A waiting owner message, a standing correction
+// and a standing latch let the stop through, because each leaves no other move.
+//
 //   node stop-guard.mjs        (reads the hook payload on stdin)
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join, dirname } from 'node:path';
 import { pendingMessages, startedAt } from './pending-guard.mjs';
-import { tailEntries } from './transcript-tail.mjs';
-import { latchStanding } from './hook-dispatch.mjs';
-import { runningTasks } from './report.mjs';
+import { tailEntries, lastOwnerMessage } from './transcript-tail.mjs';
+import { latchStanding, approvedPlan, planSteps, correctionStanding } from './hook-dispatch.mjs';
+import { runningWork, stepsReturned, planOrder, pointerOf } from './report.mjs';
 
 /** The transcript is JSONL; the last assistant text is the reply just written. */
 const lastAssistantText = (path) => {
@@ -64,6 +86,80 @@ const lastAssistantText = (path) => {
   }
   return text;
 };
+
+/**
+ * The text the session wrote after a point in the transcript.
+ * @param {string} path  the transcript.
+ * @param {number} fromLine  how many non-empty lines it had at that point.
+ * @returns {string} every assistant text block written after those lines, joined
+ *   by newlines; '' when there is none (a follow-up of tool calls only says
+ *   nothing a repeat could be found in).
+ */
+const textAfter = (path, fromLine) => {
+  const parts = [];
+  let n = 0;
+  for (const line of readFileSync(path, 'utf8').split('\n')) {
+    if (!line.trim()) continue;
+    if (n++ < fromLine) continue;
+    let row;
+    try { row = JSON.parse(line); } catch { continue; }
+    if (row?.type !== 'assistant') continue;
+    const c = row.message?.content;
+    if (Array.isArray(c)) for (const b of c) if (b?.type === 'text' && String(b.text ?? '').trim()) parts.push(String(b.text).trim());
+  }
+  return parts.join('\n');
+};
+
+/** The record of the reply just refused, one file per session. */
+const refusedFile = () => join(process.env.STOP_REFUSED_DIR || join(homedir(), '.claude', 'stop-refused'),
+  `${String(payloadSession || 'no-session').replace(/[^A-Za-z0-9_-]/g, '_')}.json`);
+let payloadSession = '';
+
+/** What every refusal ends with: the follow-up is the correction only. */
+const FOLLOW_UP = `
+The owner has already seen the reply above, and a refusal cannot take it back. What you write next is a follow-up: the corrected sentences only. Do not send the reply again.
+`;
+
+/**
+ * The shortest line or sentence that counts as repeated. A shorter one ("Done.",
+ * a list marker, "Nothing else changed.") recurs in any two replies.
+ */
+const REPEAT_MIN = 30;
+
+/**
+ * The lines and sentences of a text, normalised, that are long enough to count.
+ * @param {string} text  a reply.
+ * @returns {Set<string>} each line, and each sentence of each line, lowercased
+ *   with its whitespace collapsed, of at least REPEAT_MIN characters.
+ */
+const units = (text) => {
+  const out = new Set();
+  const add = (s) => { const t = s.toLowerCase().replace(/\s+/g, ' ').trim(); if (t.length >= REPEAT_MIN) out.add(t); };
+  for (const line of String(text).split('\n')) {
+    add(line);
+    for (const s of line.split(/(?<=[.!?])\s+/)) add(s);
+  }
+  return out;
+};
+
+/**
+ * Refuse the stop, record the reply that was refused, and say the follow-up is the correction only.
+ * @param {string} message  the refusal's own words.
+ * @param {string} reply  the reply just refused.
+ * @returns {never} writes the message and FOLLOW_UP to stderr and exits 2. The
+ *   record (the reply, the transcript's line count now, the time, and that no
+ *   repeat has been refused yet) is what a follow-up is judged against; a
+ *   failure to write it never costs the refusal.
+ */
+function refuse(message, reply) {
+  try {
+    mkdirSync(dirname(refusedFile()), { recursive: true });
+    const lines = readFileSync(path, 'utf8').split('\n').filter((l) => l.trim()).length;
+    writeFileSync(refusedFile(), JSON.stringify({ at: Date.now(), lines, reply, repeated: false }));
+  } catch { /* the refusal stands without a record */ }
+  process.stderr.write(message + FOLLOW_UP);
+  process.exit(2);
+}
 
 /** Saying the work is not finished. Present tense only — "I waited for CI and
  *  it passed" is a report, not a hand-off, and must not be caught. */
@@ -109,10 +205,38 @@ try { payload = readFileSync(0, 'utf8'); } catch { /* no stdin */ }
 let hook = {};
 try { hook = JSON.parse(payload || '{}'); } catch { /* not JSON */ }
 
-// Already blocked once this turn. Never loop — the session gets one nudge.
-if (hook.stop_hook_active) process.exit(0);
+payloadSession = String(hook.session_id ?? '');
 
 const path = hook.transcript_path;
+
+// Already blocked once this turn. Never loop — the session gets one nudge, and
+// one more only for a follow-up that sends the refused reply again (above).
+// The follow-up is what was written after the refusal: it repeats the refused
+// reply when it carries any of its lines or sentences of REPEAT_MIN characters
+// or more. The refusal is made ONCE per turn (`repeated` in the record), so a
+// session that keeps repeating is let through on the next stop, never looped.
+// A record older than the owner's newest message belongs to an earlier turn.
+if (hook.stop_hook_active) {
+  try {
+    const rec = JSON.parse(readFileSync(refusedFile(), 'utf8'));
+    const ownerAt = lastOwnerMessage(tailEntries(path ?? '', 16 * 1024 * 1024))?.at ?? 0;
+    if (path && rec && !rec.repeated && Number(rec.at) >= ownerAt) {
+      const refused = units(rec.reply);
+      const again = [...units(textAfter(path, Number(rec.lines) || 0))].filter((u) => refused.has(u));
+      if (again.length) {
+        writeFileSync(refusedFile(), JSON.stringify({ ...rec, repeated: true }));
+        process.stderr.write(`STOP REFUSED — this follow-up sends the refused reply again: ${again.length} line${again.length === 1 ? '' : 's'} of it repeated, the first being
+  "${again[0].slice(0, 200)}"
+
+Doctrine §11c. The owner has already seen that reply; a refusal cannot take it back, and a second copy is a second reply. Write the corrected sentences only: what was wrong, said right, and nothing else.
+`);
+        process.exit(2);
+      }
+    }
+  } catch { /* no record, or one unreadable: the follow-up passes */ }
+  process.exit(0);
+}
+
 if (!path) process.exit(0);
 
 // A LATCHED SESSION MAY STOP (Doctrine §0d, §0e). While the refusal latch
@@ -126,33 +250,36 @@ try { reply = lastAssistantText(path); } catch { process.exit(0); }
 if (!reply) process.exit(0);
 
 /** 0. GOING QUIET WHILE ITS OWN WORK RUNS (Doctrine §0e rule 2, LESSONS §381).
- *  A status every five minutes is owed for as long as anything this session
- *  started is still running: a background command, a workflow, a background
- *  agent. report.mjs can only refuse a TOOL CALL, and a session that ends its
- *  turn makes none, so it was never refused. Turns ended under a declared stop
- *  went silent for ninety minutes while two workflows ran. So a stop is refused
- *  while any of them runs, declared or not. Stay in the turn, give the status
- *  every five minutes, and act on each result as it lands. What counts as
- *  running is `runningTasks` in report.mjs, the one definition this and the
- *  status gate share. */
+ *  A background command or a workflow this session started is work the session
+ *  must stay with: a turn ended under a declared stop went silent for ninety
+ *  minutes while two workflows ran, and nothing but this can hold a session to
+ *  it, because a session that ends its turn makes no tool call. So a stop is
+ *  refused while one runs, declared or not. Stay in the turn and act on each
+ *  result as it lands.
+ *
+ *  A RUNNING AGENT DOES NOT HOLD THE TURN. The harness's completion
+ *  notification brings the session back when an agent ends, and a status is
+ *  due then (report.mjs `endedSince`), so ending the turn is how the session
+ *  waits on an agent: staying in it waited on a clock the owner never asked for
+ *  and cost a turn of the main thread's model per wait. What counts as running
+ *  is `runningWork` in report.mjs, the one definition this and the status gate
+ *  share, less the agents it lists. */
+const HOLDS_STOP = (x) => !/^agent\b/.test(x);
 let running = [];
-try { running = runningTasks(readFileSync(path, 'utf8')); } catch { running = []; }
+try { running = (runningWork({ session_id: hook.session_id, transcript_path: path }) ?? []).filter(HOLDS_STOP); } catch { running = []; }
 // A MESSAGE FROM THE OWNER WAITING IN THE QUEUE wins: pending-guard refuses every
 // tool call until the turn ends and delivers it, so refusing the stop as well
 // left no move at all. Measured three times in one afternoon, 2026-10-02.
 let queuedOwner = [];
 try { queuedOwner = pendingMessages(tailEntries(path, 16 * 1024 * 1024), startedAt(hook)); } catch { queuedOwner = []; }
 if (running.length && !queuedOwner.length) {
-  process.stderr.write(`STOP REFUSED — ${running.length} task(s) this session started are still running (${running.join(', ')}).
+  refuse(`STOP REFUSED — ${running.length} task(s) this session started are still running (${running.join(', ')}).
 
-Doctrine §0e rule 2, LESSONS §381. A status at least every five minutes is owed
-for as long as the work runs, and work running in the background IS the work.
+Doctrine §0e rule 2, LESSONS §381. Work running in the background IS the work.
 Ending the turn makes no tool call, so nothing else can hold you to it. Do not
-end the turn. Stay in it: give the status every five minutes, read from the
-clock (report.mjs), and act on each result as it lands. If a task is no longer
-wanted, stop it with TaskStop first.
-`);
-  process.exit(2);
+end the turn. Stay in it, read each result as it lands, and act on it. If a
+task is no longer wanted, stop it with TaskStop first.
+`, reply);
 }
 
 /** 8. A STATEMENT OF STATE MADE FROM MEMORY (Doctrine §0e rule 15). A reply
@@ -217,15 +344,14 @@ if (!readThisTurn) {
   const claimed = reply.split(/(?<=[.!?])\s+|\n+/).map((x) => x.trim()).filter(Boolean)
     .find((s) => !NOT_A_STATEMENT.test(s) && CLAIM.test(s) && !(THINK.test(s) && asksCheck));
   if (claimed) {
-    process.stderr.write(`STOP REFUSED — this reply says what state something is in, and no tool result came back this turn:
+    refuse(`STOP REFUSED — this reply says what state something is in, and no tool result came back this turn:
   "${claimed.slice(0, 240)}"
 
 Doctrine §0e rule 15. A statement of what state a task, an agent, a branch, a
 push, a deploy or a file is in is never made from memory. Read it now and say
 what the read showed; or, if checking would be a big job, say "I think" in that
 sentence and ask whether to run the check.
-`);
-    process.exit(2);
+`, reply);
   }
 }
 
@@ -254,27 +380,25 @@ const sentencesAll = reply.split(/(?<=[.!?])\s+|\n+/).map((x) => x.trim()).filte
 const handedIn = sentencesAll.find((s) => ADDRESSED.test(s) && HANDING.some((re) => re.test(s)));
 const handed = handedIn ? HANDING.find((re) => re.test(handedIn)) : undefined;
 if (handed) {
-  process.stderr.write(`STOP REFUSED — this reply hands the owner a step ("${(handedIn.match(handed) ?? [''])[0]}").
+  refuse(`STOP REFUSED — this reply hands the owner a step ("${(handedIn.match(handed) ?? [''])[0]}").
 
 LESSONS §370, rule 14 in HANDOFF.md. Look at it from the owner's side: never
 hand the owner a step a session can do, and never send them to settings, a
 menu, a setup script or an install. Try every route first and do it. If only
 the owner can do it, ask for exactly that, doable in the app with a tap or a
 reply — an approve button, a one-word answer.
-`);
-  process.exit(2);
+`, reply);
 }
 
 const owed = OWING.find((re) => re.test(reply));
 if (owed) {
-  process.stderr.write(`STOP REFUSED — this reply tells the owner they are waited on or owe something ("${(reply.match(owed) ?? [''])[0]}").
+  refuse(`STOP REFUSED — this reply tells the owner they are waited on or owe something ("${(reply.match(owed) ?? [''])[0]}").
 
 LESSONS §370. Never "waiting on you", never "you owe". Name what is open
 instead: "Open for you: <the specific decision>". If the work is
 unfinished, carry on with it; if it genuinely stops, the first line is
 "Stopping here: open for you is <the specific thing>".
-`);
-  process.exit(2);
+`, reply);
 }
 
 /** 6. ASKING FOR APPROVAL IN CHAT (2026-09-28, LESSONS §370). Approval is the
@@ -293,14 +417,13 @@ const ASKING = [
 ];
 const asked = ASKING.find((re) => re.test(reply));
 if (asked) {
-  process.stderr.write(`STOP REFUSED — this reply asks for a plan's approval in chat ("${(reply.match(asked) ?? [''])[0]}").
+  refuse(`STOP REFUSED — this reply asks for a plan's approval in chat ("${(reply.match(asked) ?? [''])[0]}").
 
 LESSONS §370, rule 5 in HANDOFF.md. Approval is only the plan-mode button,
 which ExitPlanMode puts in front of the owner. A chat turn before a plan says
 what is being done and why, and asks nothing. Remove the request; if the plan
 is ready, call ExitPlanMode.
-`);
-  process.exit(2);
+`, reply);
 }
 
 /** 7. ASKING FOR THE NEXT WORK, OR OFFERING TO DROP THE CHECKS (Doctrine §0g,
@@ -325,7 +448,7 @@ const nextHit = NEXT_WORK.find((re) => re.test(reply));
 const dropHit = DROP_CHECKS.find((re) => re.test(reply));
 if (nextHit || dropHit) {
   const said = (reply.match(nextHit ?? dropHit) ?? [''])[0].trim().slice(0, 80);
-  process.stderr.write(nextHit
+  refuse(nextHit
     ? `STOP REFUSED — this reply asks the owner for the next work ("${said}").
 
 Doctrine §0g, LESSONS §380. The ranked roadmap in the repo's NOTES.md names the
@@ -337,8 +460,7 @@ owner a question the record already answers.
 Doctrine §0g, LESSONS §380. Speed comes from cutting what is unnecessary, and
 verification is not that: it runs ONCE, over the integrated release, before
 anything reaches staging. Cut the per-step checks; never the release check.
-`);
-  process.exit(2);
+`, reply);
 }
 
 /** 3. THE TEMPLATE, judged BEFORE the declaration: a declared stop excuses
@@ -359,14 +481,13 @@ for (const p of paras) {
   if (leadIn) { run++; if (run > longestRun) longestRun = run; } else run = 0;
 }
 if (longestRun >= 4 || headers >= 3) {
-  process.stderr.write(`STOP REFUSED — this reply ${longestRun >= 4 ? `opens ${longestRun} consecutive paragraphs with a bolded lead-in` : `is sectioned under ${headers} bold headers`}.
+  refuse(`STOP REFUSED — this reply ${longestRun >= 4 ? `opens ${longestRun} consecutive paragraphs with a bolded lead-in` : `is sectioned under ${headers} bold headers`}.
 
 Doctrine §2: "the bolded lead-in on every paragraph" is a shape that looks like
 content and is not — emphasis on everything is emphasis on nothing, and it makes
 a reply scannable in appearance and flat in fact. Rewrite it as prose. Keep the
 finding and what it costs; cut the shape.
-`);
-  process.exit(2);
+`, reply);
 }
 
 /** 9. AN OPEN CHOICE IS THE FIRST THING IN A REPLY. A reply whose numbered
@@ -384,10 +505,18 @@ finding and what it costs; cut the shape.
 const MARKED = /\(\s*recommended\b[^)\n]*\)/i;
 const NUMBERED = /^\s{0,3}\d{1,2}[.)]\s+\S/;
 const OPEN_LINES = 2;
-function misplacedChoice(text) {
-  const lines = String(text).split('\n');
-  // A numbered list runs from an item through further items, indented lines
-  // and blank lines, and ends at the first other line.
+
+/**
+ * The numbered lists in a reply that carry the recommended marker.
+ * @param {string[]} lines  the reply, split on newlines.
+ * @returns {{start: number, marked: string[]}[]} one entry per numbered list with
+ *   at least one marked option: the index of its first line and its marked
+ *   lines, trimmed. A numbered list runs from an item through further items,
+ *   indented lines and blank lines, and ends at the first other line.
+ *   `misplacedChoice` and `opensWithChoice` read the same lists, so they cannot
+ *   disagree about what a choice is.
+ */
+function markedLists(lines) {
   const lists = [];
   let cur = null;
   lines.forEach((line, i) => {
@@ -395,7 +524,27 @@ function misplacedChoice(text) {
     else if (!(cur && (!line.trim() || /^\s+\S/.test(line)))) cur = null;
     if (cur && MARKED.test(line)) cur.marked.push(line.trim());
   });
-  const marked = lists.filter((l) => l.marked.length);
+  return lists.filter((l) => l.marked.length);
+}
+
+/**
+ * Does a reply open with a choice for the owner?
+ * @param {string} text  the reply.
+ * @returns {boolean} true when its first numbered list carrying the recommended
+ *   marker starts within OPEN_LINES non-blank lines of the top (a stop
+ *   declaration and one lead-in), the same position `misplacedChoice` accepts.
+ *   The steps-left check lets such a reply end the turn: a choice only the owner
+ *   can settle is a reason to hand the turn back.
+ */
+function opensWithChoice(text) {
+  const lines = String(text).split('\n');
+  const first = markedLists(lines)[0];
+  return !!first && lines.slice(0, first.start).filter((l) => l.trim()).length <= OPEN_LINES;
+}
+
+function misplacedChoice(text) {
+  const lines = String(text).split('\n');
+  const marked = markedLists(lines);
   if (!marked.length) return null;
   const before = lines.slice(0, marked[0].start).filter((l) => l.trim()).length;
   if (before <= OPEN_LINES && marked.length === 1) return null;
@@ -404,15 +553,99 @@ function misplacedChoice(text) {
 }
 const choiceHit = misplacedChoice(reply);
 if (choiceHit) {
-  process.stderr.write(`STOP REFUSED — this reply's choice is not the first thing in it. A numbered option carrying the recommended marker sits under ${choiceHit.before} lines of other text:
+  refuse(`STOP REFUSED — this reply's choice is not the first thing in it. A numbered option carrying the recommended marker sits under ${choiceHit.before} lines of other text:
   "${choiceHit.line.slice(0, 200)}"
 
 An open choice is the first thing in a reply until it is answered: a choice
 placed under a long report was missed. Put the numbered options, recommendation
 first, at the top — after a stop declaration and one lead-in line at most — and
 the report beneath them. Write the choice once.
-`);
-  process.exit(2);
+`, reply);
+}
+
+// 10. A RETURN TO THE OWNER WITH STEPS LEFT (Doctrine §0e rule 2, §11c). A turn
+// that ends while an approved plan has a step no agent has handed back for, and
+// with no agent of the session running, is the session handing the owner back
+// work the plan already gave it: it was done at a phase seam on 2026-10-04, and
+// every return went to the owner as a message that restarted the work. So the
+// stop is refused, and the main thread sends the next step, or the same step
+// again, instead of ending.
+//
+// What it reads: the approved plan (only a plan whose hash still matches the
+// approval counts, as everywhere) and the agents the session sent, each prompt
+// naming its step (`stepsReturned`). WHERE THE PLAN HAS AN `## Order` the check
+// reads THE POINTER, N: the first number on its `Order:` line with no hand-back
+// whose first line opens DONE (`pointerOf` in report.mjs). A stop with N not
+// none is refused, and a REFUSED or FAILED hand-back leaves N where it is, so
+// the main thread sends the same step again. A plan with no `## Order` keeps the
+// older count: its `## Steps` numbers (`planSteps`), and a step is returned when
+// an agent sent for it ENDED BY A REPORT; an agent that ended at a refusal or an
+// interruption returned nothing, so its step is still left and is sent again.
+//
+// What lets the turn end anyway, each of them a reason a turn must end rather
+// than carry on: an agent of the session is running (its completion notice
+// brings the session back); a message from the owner is waiting in the queue
+// (ending the turn delivers it); a correction from the owner stands, because
+// rule 3 makes answering it the whole turn and refuses every other call, so a
+// refused stop would leave no move at all; the reply opens with a choice only
+// the owner can settle (`opensWithChoice`); or its first line declares the stop
+// with what is open (`declaresStop`). A session whose agents or plan cannot be
+// read is not refused: this never holds a turn for steps it cannot count.
+
+/** The first line's declaration WITH what is open: "Stopping here: open for you
+ *  is X", where X is at least a few words on the same line. */
+const DECLARED_OPEN = /^\s*(?:[#*_>\s-]*)stopping here[,:]?\s*open for you\b[ \t]*(?:is|are|:)?[ \t]*(\S[^\n]{6,})/i;
+
+/**
+ * Does a reply declare its stop, saying what is open?
+ * @param {string} text  the reply.
+ * @returns {boolean} true when its FIRST line is "Stopping here: open for you is
+ *   <something>" with at least seven characters after "open for you". The bare
+ *   declaration `DECLARED` accepts says a stop and not what it waits on; the
+ *   steps-left check needs the second half.
+ */
+const declaresStop = (text) => DECLARED_OPEN.test(text);
+
+/**
+ * The approved plan's steps no agent has returned for.
+ * @param {{returned: Set<number>, running: string[]} | null} state  `stepsReturned`'s answer.
+ * @returns {number[]} the plan's `## Steps` numbers, in plan order, that no
+ *   agent ended by a report for; empty when no approved plan is in force (none
+ *   recorded, or its file no longer matches the hash recorded at approval) or
+ *   when `state` is null. The refusal below names exactly these.
+ */
+function stepsLeft(state) {
+  const plan = approvedPlan();
+  if (!plan || !state) return [];
+  // THE POINTER (Doctrine §0e rule 2): where the plan has an `## Order`, the one
+  // step left is N, the first number in Order with no hand-back opening DONE; a
+  // REFUSED or FAILED hand-back leaves it where it is. A plan with no Order keeps
+  // the older count of steps no agent ended by a report for.
+  if (planOrder(plan.text)) {
+    const next = pointerOf(plan.text, state.ends).next;
+    return next === null ? [] : [next];
+  }
+  return planSteps(plan.text).filter((n) => !state.returned.has(n));
+}
+
+/** Does the approved plan in force define a pointer (an `Order:` line)? */
+function hasPointer() {
+  const plan = approvedPlan();
+  return !!plan && !!planOrder(plan.text);
+}
+
+let left = [];
+try {
+  const state = stepsReturned({ session_id: hook.session_id, transcript_path: path });
+  if (state && !state.running.length && !queuedOwner.length && !opensWithChoice(reply) && !declaresStop(reply)
+    && !correctionStanding({ session_id: hook.session_id, transcript_path: path })) left = stepsLeft(state);
+} catch { left = []; }
+if (left.length) {
+  const pointed = hasPointer();
+  refuse(`STOP REFUSED — this turn ends with ${pointed ? `the plan's pointer at next: step ${left[0]}, ` : `${left.length} step${left.length === 1 ? '' : 's'} of the approved plan still open (${left.join(', ')}), `}no agent of this session running, and no choice for the owner or declared stop with what is open.
+
+Doctrine §0e rule 2, §11c. An approved plan is the instruction for all of it, and a turn that ends here hands the owner back work the plan already gave you: every return to the owner has restarted the work. Do not end the turn. ${pointed ? `Send the step the pointer names, ${left[0]}, with the plan's path and the step's number: it stays next until an agent hands back for it with DONE as the first line, so a REFUSED or FAILED hand-back means sending it again.` : 'Send the next step, or the same step again if its agent ended at a refusal, with the plan\'s path and the step\'s number.'} Give the status at each agent's end. A turn may end only while an agent runs, with a choice only the owner can settle as the first thing in the reply, or declared in the first line: "Stopping here: open for you is <the specific thing>".
+`, reply);
 }
 
 // A declared stop is allowed, and is the whole point of having a way through.
@@ -455,7 +688,7 @@ const why = waitHit
   ? 'says the work is not finished'
   : 'hands the turn back for permission to continue';
 
-process.stderr.write(`STOP REFUSED — this reply ${why} ("${quote}") and does not declare a stop.
+refuse(`STOP REFUSED — this reply ${why} ("${quote}") and does not declare a stop.
 
 Doctrine §11c. Ending a turn while the work is unfinished — still running, or
 parked for a nod — is the failure that has now happened four times, twice after
@@ -477,5 +710,4 @@ Two ways forward, and only these two:
 
 If there is genuinely nothing to wait for and nothing left to do, say what
 landed and what is still owed — without a waiting sentence in it.
-`);
-process.exit(2);
+`, reply);

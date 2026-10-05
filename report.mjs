@@ -9,7 +9,22 @@
  * messages (2,253 of 7,400 measured). So the status carries its own stamp.
  *
  *   node report.mjs "Status HH:MM — done: …; running: …; next: …; next status by HH:MM"
- *       stamps the time for this session and prints the status. The same
+ *       stamps the time for this session and prints the status, PRECEDED BY
+ *       THE GOALS EVERY SESSION SERVES (`goalsSection`, the hub CLAUDE.md's
+ *       section of that name, Doctrine §0e rule 16), so the goals are in front
+ *       of the session at every status. THEN THE POINTER (`pointerState`,
+ *       `pointerBlock`): `next: step N`, the first number on the approved
+ *       plan's `Order:` line (under `## Order`) with no hand-back whose first
+ *       line opens DONE, or `next: none` when every one has; a hand-back
+ *       opening REFUSED or FAILED leaves N where it is, and a `Standing:` step
+ *       is never N. Under it each step's state, the newest hand-back of each
+ *       step with every line it carries and the path of its report file
+ *       (`progress/step-N-report.txt` in the session scratchpad), and the
+ *       `Found:` lines of every report file. The main thread reads its next
+ *       move from this print instead of choosing it from memory, and the dispatch
+ *       gate and the stop guard read the same pointer (`pointerFor`). The status
+ *       page's source, `status/fix-run.html` in the session scratchpad, is
+ *       written from the same read (`statusPage`). The same
  *       status is written in chat; this command is the proof it was given.
  *       It then prints EVERY AGENT THE SESSION LAUNCHED THAT HAS ENDED SINCE
  *       THE LAST STATUS — how it ended (a report, a refusal or an
@@ -22,22 +37,32 @@
  *       prompt names, FLAGGED when it is older than five minutes or missing:
  *       a status is the manager's report, and statuses written as heartbeats
  *       were given while three of four walks had failed.
+ *       Then, for each agent running or ended since the last status, EVERY
+ *       HOOK REFUSAL IT HAS RECEIVED AND ITS LAST TOOL RESULT (`gateReadsBlock`),
+ *       read from the agent's own transcript and never from what it said: the
+ *       manager learned of each refusal inside an agent from the latch or from
+ *       the agent's return, and judged the agent's work from its report.
+ *       And last THE APPROVAL STATE, read from disk now (`approvalBlock`): the
+ *       marker or none, the plan it names with the hash and time it holds, the
+ *       plan file's hash and last write time, and whether they match. Before
+ *       sending the first agent under any approval, the manager gives a status
+ *       and reads it; the dispatch gate's refusals print the same lines.
  *   node report.mjs --gate
- *       PreToolUse, run by hook-dispatch.mjs: refuses the call when more than
- *       five minutes have passed since the later of the last stamp and the
- *       owner's last message AND something the session started is still
- *       running, an agent or a background command. With nothing running no
- *       status is due (Doctrine §0e rule 2). Subagent calls pass (they cannot
- *       tell the owner anything), and so does this command itself
- *       (hook-dispatch exempts it). hook-dispatch does not latch on this
- *       refusal: the stamp clears it.
+ *       PreToolUse, run by hook-dispatch.mjs: refuses the call when an agent
+ *       the session launched has ENDED since the last status (`endedSince`).
+ *       There is no clock: a status is the manager's report of what an end
+ *       says, so none is due every five minutes, and none while nothing has
+ *       ended (Doctrine §0e rule 2). Subagent calls pass (they cannot tell the
+ *       owner anything), and so does this command itself (hook-dispatch exempts
+ *       it). hook-dispatch does not latch on this refusal: the stamp clears it.
  *   node report.mjs --wait
- *       THE WAIT THE MAIN THREAD MAY MAKE, between statuses, while an agent
- *       runs: it returns when a running agent's progress note changes, when an
- *       agent the session launched ends, or after four and a half minutes,
- *       whichever comes first, and prints what it saw. The main thread may not
- *       end its turn while an agent runs, none of its other allowed calls can
- *       wait, and a timer is not one of them: measured 2026-10-03 07:05, a
+ *       A WAIT THE MAIN THREAD MAY STILL MAKE (the turn itself now ends while
+ *       an agent runs, and the harness's completion notification brings the
+ *       session back, so it is no longer the way to wait): it returns when a
+ *       running agent's progress note changes, when an agent the session
+ *       launched ends, THE MOMENT A RUNNING AGENT IS REFUSED BY A HOOK, or after
+ *       four and a half minutes, whichever comes first, and prints what it saw.
+ *       A timer is not a wait: measured 2026-10-03 07:05, a
  *       foreground watch on a progress note ran past the Bash time limit and
  *       was moved to the background, where it became one more task of its own.
  *       So it runs in the FOREGROUND, with a Bash `timeout` of at least 280000
@@ -51,11 +76,55 @@
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, statSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
-import { tailEntries, lastOwnerMessage, textOf } from './transcript-tail.mjs';
+import { createHash } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import { tailEntries, textOf } from './transcript-tail.mjs';
 import { startedAt } from './pending-guard.mjs';
 
 export const INTERVAL_MS = 5 * 60 * 1000;
 const CLOCK = join(homedir(), '.claude', 'report-clock.json');
+const HUB_DIR = dirname(fileURLToPath(import.meta.url));
+
+/** The heading of the section of the hub CLAUDE.md that holds the standing goals. */
+export const GOALS_HEADING = '## Goals every session serves';
+
+/**
+ * The goals section of a CLAUDE.md, heading included.
+ * @param {string} [file]  the CLAUDE.md to read; the one beside this script by default.
+ * @returns {string} the heading and the section's body up to the next `##` or
+ *   `#` heading, trailing whitespace trimmed; '' when the file cannot be read or
+ *   holds no such section. Every status and the dispatcher's reminder print it
+ *   first, and `goalsBlock` is what a plan has to quote; a '' must never be
+ *   read as "no goals", only as "not read".
+ */
+export function goalsSection(file = join(HUB_DIR, 'CLAUDE.md')) {
+  let text = '';
+  try { text = readFileSync(file, 'utf8'); } catch { return ''; }
+  const m = new RegExp(`^${GOALS_HEADING}[^\\n]*\\n([\\s\\S]*?)(?=^## |^# |$(?![\\s\\S]))`, 'm').exec(text);
+  return m ? `${GOALS_HEADING}\n${m[1].replace(/\s+$/, '')}` : '';
+}
+
+/**
+ * The numbered goals in a goals section.
+ * @param {string} section  from `goalsSection`.
+ * @returns {string[]} each line that opens with a number and a period, trailing
+ *   whitespace trimmed, in order. The one definition of "a goal" the plan guard
+ *   and the status share, so they cannot disagree about what a plan must quote.
+ */
+export function goalLines(section) {
+  return String(section ?? '').split('\n').map((l) => l.replace(/\s+$/, '')).filter((l) => /^\d+\.\s/.test(l));
+}
+
+/**
+ * The standing goals block a plan has to quote word for word.
+ * @param {string} [file]  the CLAUDE.md to read; the one beside this script by default.
+ * @returns {string} the numbered goals of the section, one per line; '' when
+ *   the section is missing or holds none. `plan-guard.mjs` refuses a plan whose
+ *   `## Goals` section does not contain it verbatim.
+ */
+export function goalsBlock(file = join(HUB_DIR, 'CLAUDE.md')) {
+  return goalLines(goalsSection(file)).join('\n');
+}
 
 /**
  * The owner's clock: the time in California, as every time a session writes
@@ -66,6 +135,60 @@ const CLOCK = join(homedir(), '.claude', 'report-clock.json');
  */
 export function californiaTime(d = new Date()) {
   return d.toLocaleTimeString('en-GB', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+}
+
+/**
+ * The date and time in California, for the approval state.
+ * @param {number|string|Date} t  an instant (ms, an ISO string or a Date).
+ * @returns {string} "YYYY-MM-DD HH:MM (California)", or "an unreadable time"
+ *   when `t` is not an instant.
+ */
+function californiaStamp(t) {
+  const d = new Date(t);
+  if (!Number.isFinite(d.getTime())) return 'an unreadable time';
+  return `${d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })} ${californiaTime(d)} (California)`;
+}
+
+/**
+ * The approval state as it stands on disk, read now, in lines a session can act on.
+ * @param {string} [marker]  the approval marker's path; `~/.claude/APPROVED-PLAN.json` by default.
+ * @returns {string} a headed list, never a table: the marker or none; the plan
+ *   path, the hash and the time it holds; the plan file's hash now and when it
+ *   was last written; and whether the two hashes match, which is the one
+ *   condition under which `approvedPlan` in hook-dispatch.mjs returns a plan
+ *   (the dispatch gate and the plan fence read nothing else). A marker that is
+ *   missing, unreadable, naming no plan, or naming a file that cannot be read says
+ *   so in its own line. Every status prints it, and so does every dispatch
+ *   gate refusal: after the owner pressed approval in the app, the gate
+ *   refused with only "no approved plan is in force" and the session could not
+ *   see why (measured 2026-10-04).
+ */
+export function approvalBlock(marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) {
+  const head = 'Approval state, read from disk now:';
+  let mk;
+  try { mk = JSON.parse(readFileSync(marker, 'utf8')); } catch (e) {
+    return e?.code === 'ENOENT'
+      ? `${head}\n- Marker: none (${marker} does not exist), so no plan is in force.`
+      : `${head}\n- Marker: ${marker} cannot be read as an approval (${e?.code ?? e?.message ?? e}), so no plan is in force.`;
+  }
+  if (!mk?.plan || !mk.hash) return `${head}\n- Marker: present at ${marker}, but it names no plan and hash, so no plan is in force.`;
+  const lines = [head,
+    `- Marker: present, recorded ${californiaStamp(mk.at)}${mk.via ? `, ${mk.via}` : ''}${mk.session ? `, session ${mk.session}` : ''}.`,
+    `- Plan it names: ${mk.plan}`,
+    `- Hash it holds: ${String(mk.hash).slice(0, 12)}`];
+  let bytes;
+  try { bytes = readFileSync(mk.plan); } catch (e) {
+    lines.push(`- Plan file now: cannot be read (${e?.code ?? e?.message ?? e}).`, '- Match: no. The plan file cannot be read, so no plan is in force.');
+    return lines.join('\n');
+  }
+  const now = createHash('sha256').update(bytes).digest('hex');
+  let written = 'an unreadable time';
+  try { written = californiaStamp(statSync(mk.plan).mtimeMs); } catch { /* the hash was read; the time is not essential */ }
+  const match = now === String(mk.hash);
+  lines.push(`- Plan file now: hash ${now.slice(0, 12)}, last written ${written}.`,
+    match ? '- Match: yes. The file is the plan that was approved, so the plan is in force.'
+      : '- Match: NO. The file changed after it was approved, so no plan is in force; a changed plan goes back through plan mode.');
+  return lines.join('\n');
 }
 
 /**
@@ -87,42 +210,73 @@ function readClock(now = Date.now()) {
 }
 
 /**
+ * The agents this session launched that have ended since a time.
+ * @param {object} p  a PreToolUse payload: `transcript_path` and `session_id`
+ *   say where the session's agents are (`<dir>/<sid>.jsonl` with
+ *   `<dir>/<sid>/subagents/`, the layout the harness writes), as `runningWork`
+ *   finds them.
+ * @param {number} stampAt  the last status's time in ms (0 when there is none).
+ * @returns {{id: string, description: string, how: string, at: number}[] | null}
+ *   every agent `agentEnd` finds ended whose last entry is after `stampAt`,
+ *   oldest first; null when the session's files cannot be found, which `gate`
+ *   reads as "nothing known to be due". It RECORDS NOTHING (`agentEnds` owns
+ *   the record of printed ends), so a status that cannot read the session
+ *   still clears the gate by stamping the clock, which is after every end.
+ *   An agent file written no later than `stampAt` cannot have ended after it,
+ *   and is not read, so the common call costs a stat per agent.
+ */
+export function endedSince(p, stampAt) {
+  const tr = String(p?.transcript_path ?? '');
+  const sid = String(p?.session_id ?? '');
+  const f = tr.endsWith('.jsonl') ? { main: tr, agents: join(tr.slice(0, -'.jsonl'.length), 'subagents') } : sessionFiles(sid);
+  if (!f) return null;
+  let names = [];
+  try { names = readdirSync(f.agents).filter((n) => /^agent-[\w-]+\.jsonl$/.test(n)); } catch { return []; }
+  const start = startedAt({ session_id: sid });
+  let notified = null;
+  const out = [];
+  for (const n of names) {
+    const file = join(f.agents, n);
+    try { if (statSync(file).mtimeMs <= stampAt) continue; } catch { continue; }
+    notified ??= notifiedStatuses(f.main);
+    const id = n.slice('agent-'.length, -'.jsonl'.length);
+    let meta = {};
+    try { meta = JSON.parse(readFileSync(join(f.agents, `agent-${id}.meta.json`), 'utf8')); } catch { meta = {}; }
+    const end = agentEnd(tailEntries(file, 4 * 1024 * 1024), meta, start, notified.get(id) ?? '');
+    if (end && end.at > stampAt) out.push({ id, description: String(meta.description ?? ''), how: end.how, at: end.at });
+  }
+  return out.sort((a, b) => a.at - b.at);
+}
+
+/**
  * Decide whether a PreToolUse call may run.
  * @param {object} p      the hook payload.
  * @param {number} now    the time in ms (a parameter so a plant can move it).
  * @returns {string | null} the refusal reason, or null to allow. Its caller,
  *   hook-dispatch.mjs, turns a reason into exit 2 with the reason on stderr.
- *   A status is due only while something the session started runs (an agent
- *   or a background command, `runningWork`); with nothing running this
- *   returns null however long it has been. When the transcript cannot be
- *   read it cannot tell, and refuses as before.
+ *   A STATUS IS DUE WHEN AN AGENT HAS ENDED SINCE THE LAST ONE (`endedSince`),
+ *   and at no other time: not every five minutes, and not while an agent merely
+ *   runs. A status is the manager's report of what an end says, and one given
+ *   on a clock was a heartbeat (Doctrine §0e rule 2). A subagent's call, and a
+ *   session whose agents cannot be found, pass. The refusal names each agent
+ *   and how it ended; the stamp clears it.
  */
 export function gate(p, now = Date.now()) {
   if (p.agent_id) return null;
-  const stamp = readClock(now).at;
-  const owner = lastOwnerMessage(tailEntries(p.transcript_path ?? '', 4 * 1024 * 1024))?.at ?? 0;
-  const last = Math.max(stamp, owner);
-  if (!last) return null;                       // nothing known yet: a fresh session
-  const gap = now - last;
-  if (gap <= INTERVAL_MS) return null;
-  // NO STATUS WHILE NOTHING IS RUNNING (Doctrine §0e rule 2). A status reports
-  // work in progress; with no agent and no background command of the
-  // session's running there is none to report, and demanding one made a
-  // heartbeat. Read only once a status would otherwise be due, because it reads
-  // every agent's transcript.
-  const busy = runningWork(p);
-  if (busy && !busy.length) return null;
-  const mins = Math.floor(gap / 60000);
-  const what = busy ? `, and ${busy.join(', ')} ${busy.length === 1 ? 'is' : 'are'} still running`
-    : ', and what is running could not be read';
-  return `${mins} minutes since the owner last got a status${what}. Give one now, in chat AND as `
-    + `node ${join(dirname(new URL(import.meta.url).pathname), 'report.mjs')} "Status HH:MM — done: …; running: …; next: …; next status by HH:MM". `
-    + 'The owner is told in the first line, at least every five minutes during the work, and at the end (LESSONS §370). No app notifications.';
+  const ended = endedSince(p, readClock(now).at);
+  if (!ended || !ended.length) return null;
+  const names = ended.map((a) => `${a.id}${a.description ? ` "${a.description}"` : ''} (${a.how}, ${californiaTime(new Date(a.at))} California)`);
+  return `${ended.length === 1 ? 'An agent has' : `${ended.length} agents have`} ended since the owner last got a status: ${names.join('; ')}. `
+    + `Give one now, in chat AND as node ${join(dirname(new URL(import.meta.url).pathname), 'report.mjs')} "Status HH:MM — what changed and what it means; what was done about it; time remaining". `
+    + 'The status prints how each agent ended, its last entry, every refusal it received and its last tool result; read those, and act on what they show. No app notifications.';
 }
 
 // An agent's own way of handing back (hook-dispatch.mjs AGENT_RETURN; not
 // imported, because hook-dispatch.mjs imports this file).
 const AGENT_RETURN = /^(?:SubagentHandback|StructuredOutput)$/;
+// A hook's refusal of a call, as a tool result carries it (is_error true): the
+// call never ran. The one pattern `agentEnd` and `agentReads` share.
+export const HOOK_REFUSAL = /^(?:Error: )?PreToolUse:\S+ hook error/;
 const LAST_CHARS = 1500;
 const resultText = (b) => (typeof b?.content === 'string' ? b.content
   : Array.isArray(b?.content) ? b.content.map((x) => x?.text ?? '').join('\n') : '');
@@ -134,7 +288,7 @@ const resultText = (b) => (typeof b?.content === 'string' ? b.content
  *   `subagents/` directory under ~/.claude/projects/<dir>/, or null when the id
  *   is malformed or no project directory holds it.
  */
-function sessionFiles(sid) {
+export function sessionFiles(sid) {
   if (!/^[\w-]+$/.test(String(sid ?? ''))) return null;
   const projects = join(homedir(), '.claude', 'projects');
   let dirs = [];
@@ -197,7 +351,7 @@ export function agentEnd(entries, meta = {}, processStart = 0, notified = '') {
       if (b?.type !== 'tool_result') continue;
       const text = resultText(b);
       if (handback && b.tool_use_id === handback.id) { handback.refused = !!b.is_error; continue; }
-      lastRefusal = !!b.is_error && /^(?:Error: )?PreToolUse:\S+ hook error/.test(text);
+      lastRefusal = !!b.is_error && HOOK_REFUSAL.test(text);
       last = `${b.is_error ? 'error' : 'result'}: ${text}`;
     }
   });
@@ -259,13 +413,89 @@ export function agentEnds(sid, stampAt = 0) {
  *   when none ended; and a plain line when the session's files cannot be read,
  *   so the status never implies a read it did not make.
  */
-export function agentsBlock(sid, stampAt) {
-  const ended = sid ? agentEnds(sid, stampAt) : null;
+export function agentsBlock(sid, stampAt, ended = undefined) {
+  if (ended === undefined) ended = sid ? agentEnds(sid, stampAt) : null;
   if (!ended) return `Agents ended since the last status: not read (${sid ? `no transcript found for session ${sid}` : 'no CLAUDE_CODE_SESSION_ID in this shell'}).`;
   if (!ended.length) return 'Agents ended since the last status: none.';
   return ['Agents ended since the last status, each read from its own transcript:', ...ended.map((a) =>
     `- ${a.id}${a.description ? ` "${a.description}"` : ''} ended ${a.at ? `at ${californiaTime(new Date(a.at))} (California) ` : ''}by ${a.how}.\n`
     + `  Transcript: ${a.path}\n  Last entry: ${a.last.replace(/\n/g, '\n    ')}`)].join('\n');
+}
+
+// ---- what an agent's own transcript says of its gates ----
+
+const REFUSALS_SHOWN = 8;
+const RESULT_CHARS = 700;
+const clip = (s) => {
+  const t = String(s ?? '').replace(/\s+$/, '');
+  return t.length > RESULT_CHARS ? `${t.slice(0, RESULT_CHARS)} … (${t.length} characters; the rest is in its transcript)` : t;
+};
+
+/**
+ * The hook refusals an agent received, and its last tool result.
+ * @param {object[]} entries  the agent's transcript (its tail), in file order.
+ * @returns {{refusals: {tool: string, at: number, text: string}[], last: {tool: string, at: number, error: boolean, text: string} | null}}
+ *   `refusals`: every tool result that is an error opening with a PreToolUse
+ *   hook error (a call a hook refused, which never ran), oldest first, with the
+ *   tool it answered and its time in ms (NaN when unreadable). `last`: the last
+ *   tool result of any kind, or null when there is none. ONLY tool_result
+ *   blocks are read, never the agent's own words: the manager learned of each
+ *   refusal inside an agent from the latch or from the agent's return, and
+ *   judged its work from a report, which says what the agent believes happened.
+ */
+export function agentReads(entries) {
+  const names = new Map();
+  const refusals = [];
+  let last = null;
+  for (const e of entries) {
+    const c = e?.message?.content;
+    if (e?.type === 'assistant' && Array.isArray(c)) {
+      for (const b of c) if (b?.type === 'tool_use') names.set(b.id, b.name ?? '');
+    }
+    if (e?.type !== 'user' || !Array.isArray(c)) continue;
+    for (const b of c) {
+      if (b?.type !== 'tool_result') continue;
+      const text = resultText(b);
+      const tool = names.get(b.tool_use_id) ?? '';
+      const at = Date.parse(e.timestamp ?? '');
+      if (b.is_error && HOOK_REFUSAL.test(text)) refusals.push({ tool, at, text });
+      last = { tool, at, error: !!b.is_error, text };
+    }
+  }
+  return { refusals, last };
+}
+
+/**
+ * The refusals-and-last-result block a status prints.
+ * @param {string} sid  the session id, or '' when the shell has none.
+ * @param {{id: string, description: string, how: string, path: string}[]} [ended]
+ *   the agents `agentEnds` found ended since the last status.
+ * @returns {string} a headed list, never a table: for each agent running or
+ *   ended since the last status, every hook refusal it received (the newest
+ *   eight in full, the rest counted) and its last tool result, each read from
+ *   the agent's own transcript by `agentReads`; "none" when there is no such
+ *   agent; and a plain line when the session's files cannot be read, so a
+ *   status never implies a read it did not make.
+ */
+export function gateReadsBlock(sid, ended = []) {
+  const running = sid ? runningAgents(sid) : null;
+  if (!running) return `Agents' hook refusals and last tool results: not read (${sid ? `no transcript found for session ${sid}` : 'no CLAUDE_CODE_SESSION_ID in this shell'}).`;
+  const list = [...running.map((a) => ({ id: a.id, description: a.description, path: a.path, state: 'running' })),
+    ...(ended ?? []).map((a) => ({ id: a.id, description: a.description, path: a.path, state: `ended by ${a.how}` }))];
+  if (!list.length) return 'Agents\' hook refusals and last tool results: no agent is running and none has ended since the last status.';
+  const items = list.map((a) => {
+    const who = `- agent ${a.id}${a.description ? ` "${a.description}"` : ''} (${a.state})`;
+    const r = agentReads(tailEntries(a.path, 16 * 1024 * 1024));
+    const when = (t) => (Number.isFinite(t) ? `${californiaTime(new Date(t))} (California)` : 'an unreadable time');
+    const shown = r.refusals.slice(-REFUSALS_SHOWN);
+    const head = r.refusals.length ? `${r.refusals.length} hook refusal${r.refusals.length === 1 ? '' : 's'}${r.refusals.length > shown.length ? `, the newest ${shown.length} below` : ''}.` : 'no hook refusals.';
+    const lines = [`${who}: ${head}`,
+      ...shown.map((f) => `  Refused at ${when(f.at)}, ${f.tool || 'a call'}: ${clip(f.text).replace(/\n/g, '\n    ')}`),
+      r.last ? `  Last tool result, ${r.last.tool || 'a call'}, ${when(r.last.at)}${r.last.error ? ', an error' : ''}: ${clip(r.last.text).replace(/\n/g, '\n    ')}`
+        : '  Last tool result: none yet.'];
+    return lines.join('\n');
+  });
+  return ['Agents\' hook refusals and last tool results, each read from the agent\'s own transcript, never from what it said:', ...items].join('\n');
 }
 
 // ---- running agents' progress notes ----
@@ -415,6 +645,337 @@ export function runningWork(p) {
 }
 
 /**
+ * Every agent the session launched, by the plan step its prompt names.
+ * @param {object} p  a Stop or PreToolUse payload: `transcript_path` and
+ *   `session_id` say where the session's agents are, as `runningWork` finds them.
+ * @returns {{ends: {id: string, step: number|null, how: string, at: number, last: string, path: string}[],
+ *   running: string[], runningSteps: Set<number>} | null} `ends`: each agent
+ *   `agentEnd` finds ended, in file-name order, with the plan step its prompt
+ *   names (`agentStep`; null when the prompt names none), how it ended, when, its
+ *   last entry (the hand-back's text when it handed back) and its transcript.
+ *   `running`: "agent <id>" for each agent with no end, and `runningSteps` the
+ *   steps those prompts name. null when the session's files cannot be found,
+ *   which every caller reads as "cannot tell". An agent file that cannot be
+ *   read is skipped, never counted as anything. The one read the pointer
+ *   (`pointerOf`), the stop guard and the dispatch gate share, so they cannot
+ *   disagree about what an agent handed back.
+ */
+export function stepEnds(p) {
+  const tr = String(p?.transcript_path ?? '');
+  const sid = String(p?.session_id ?? '');
+  const f = tr.endsWith('.jsonl') ? { main: tr, agents: join(tr.slice(0, -'.jsonl'.length), 'subagents') } : sessionFiles(sid);
+  if (!f) return null;
+  let names = [];
+  try { names = readdirSync(f.agents).filter((n) => /^agent-[\w-]+\.jsonl$/.test(n)).sort(); } catch { names = []; }
+  const notified = notifiedStatuses(f.main);
+  const start = startedAt({ session_id: sid });
+  const ends = [];
+  const running = [];
+  const runningSteps = new Set();
+  for (const n of names) {
+    const id = n.slice('agent-'.length, -'.jsonl'.length);
+    const path = join(f.agents, n);
+    let meta = {};
+    try { meta = JSON.parse(readFileSync(join(f.agents, `agent-${id}.meta.json`), 'utf8')); } catch { meta = {}; }
+    let end;
+    try { end = agentEnd(tailEntries(path, 4 * 1024 * 1024), meta, start, notified.get(id) ?? ''); } catch { continue; }
+    const step = agentStep(path);
+    if (!end) { running.push(`agent ${id}`); if (step !== null) runningSteps.add(step); continue; }
+    ends.push({ id, step, how: end.how, at: end.at, last: end.last, path });
+  }
+  return { ends, running, runningSteps };
+}
+
+/**
+ * The plan steps an agent has handed back for, and the agents still running.
+ * @param {object} p  a Stop or PreToolUse payload, as `stepEnds` reads it.
+ * @returns {{returned: Set<number>, running: string[], ends: object[]} | null}
+ *   `returned`: the plan step of every agent that ENDED BY A REPORT
+ *   (`agentEnd`): it handed back and no hook refusal was the last thing it was
+ *   answered. An agent that ended at a refusal, an interruption or a failure
+ *   returned nothing the plan can count, so its step stays open and the main
+ *   thread sends it again. `running`: "agent <id>" for each agent with no end.
+ *   `ends`: `stepEnds`' list, for the pointer. null when the session's files
+ *   cannot be found, which the stop guard reads as "cannot tell". The stop
+ *   guard's steps-left check (Doctrine §0e rule 2) asks this for a plan with no
+ *   `## Order`, and for the agents still running.
+ */
+export function stepsReturned(p) {
+  const s = stepEnds(p);
+  if (!s) return null;
+  const returned = new Set();
+  for (const e of s.ends) if (e.how === 'a report' && e.step !== null) returned.add(e.step);
+  return { returned, running: s.running, ends: s.ends };
+}
+
+// ---- the pointer: which step of the approved plan is next ----
+
+/** A hand-back counts as done when its first line opens with this word. */
+const DONE = /^DONE\b/;
+const firstLineOf = (t) => String(t ?? '').split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+
+/**
+ * The step order a plan declares.
+ * @param {string} text  the plan.
+ * @returns {{order: number[], standing: number[]} | null} the numbers on the
+ *   `Order:` line and on the `Standing:` line (empty when there is none) under
+ *   the plan's `## Order` heading, in the order written and with repeats
+ *   dropped; null when the plan has no such heading or its `Order:` line holds
+ *   no number, which means the plan defines no pointer. Only a line that BEGINS
+ *   `Order:` or `Standing:` is read, so the prose of the section never counts.
+ *   `pointerOf`, the dispatch gate and the stop guard read the order here.
+ */
+export function planOrder(text) {
+  const m = /^## Order\b[^\n]*\n([\s\S]*?)(?=^## |^# |$(?![\s\S]))/mi.exec(String(text ?? ''));
+  if (!m) return null;
+  const numbers = (label) => {
+    const line = m[1].split('\n').find((l) => new RegExp(`^\\s*${label}:`, 'i').test(l));
+    return line ? [...new Set([...line.replace(/^[^:]*:/, '').matchAll(/\d+/g)].map((x) => Number(x[0])))] : [];
+  };
+  const order = numbers('Order');
+  return order.length ? { order, standing: numbers('Standing') } : null;
+}
+
+/**
+ * The step titles of a plan.
+ * @param {string} text  the plan.
+ * @returns {Map<number, string>} step number to the bold lead of its `## Steps`
+ *   line ("**Finish what is built.**" gives "Finish what is built"); a step with
+ *   no bold lead is absent. The status page prints them beside the states.
+ */
+export function stepTitles(text) {
+  const out = new Map();
+  const m = /^## Steps\b[^\n]*\n([\s\S]*?)(?=^## |^# |$(?![\s\S]))/mi.exec(String(text ?? ''));
+  for (const x of (m ? m[1] : '').matchAll(/^(\d+)\.\s+\*\*(.+?)\*\*/gm)) out.set(Number(x[1]), x[2].replace(/\.\s*$/, ''));
+  return out;
+}
+
+/**
+ * Which step is next, as the plan's Order and the agents' hand-backs say.
+ * @param {string} text  the plan.
+ * @param {{step: number|null, how: string, last: string}[]} ends  `stepEnds`' `ends`.
+ * @returns {{order: number[], standing: number[], done: Set<number>, next: number|null} | null}
+ *   null when the plan defines no pointer (`planOrder`). `done`: every step
+ *   some agent ENDED BY A REPORT for, whose hand-back's first line opens DONE;
+ *   a hand-back opening REFUSED or FAILED, or anything else, counts nothing, and
+ *   neither does an agent that ended at a refusal, an interruption or a failure.
+ *   `next`: the first number in Order that is not in `done`, or null when every
+ *   one is. A Standing step is never `next` and never holds it. The invariant:
+ *   `next` advances past a step on a DONE hand-back and on nothing else.
+ */
+export function pointerOf(text, ends) {
+  const o = planOrder(text);
+  if (!o) return null;
+  const done = new Set();
+  for (const e of ends ?? []) if (e.how === 'a report' && e.step !== null && DONE.test(firstLineOf(e.last))) done.add(e.step);
+  return { order: o.order, standing: o.standing, done, next: o.order.find((n) => !done.has(n)) ?? null };
+}
+
+/**
+ * The pointer for a session, read from its own transcripts.
+ * @param {object} p  a PreToolUse or Stop payload, as `stepEnds` reads it.
+ * @param {string} text  the approved plan's text.
+ * @returns {ReturnType<typeof pointerOf>} the pointer; null when the plan defines
+ *   none or the session's agents cannot be read, which the dispatch gate and the
+ *   stop guard read as "no pointer to enforce" and fall back on what they did
+ *   before it: the dispatch gate's other checks, and the steps-left check.
+ */
+export function pointerFor(p, text) {
+  if (!planOrder(text)) return null;
+  const s = stepEnds(p);
+  return s ? pointerOf(text, s.ends) : null;
+}
+
+/**
+ * The plan in force, read the way `approvedPlan` in hook-dispatch.mjs reads it.
+ * @param {string} [marker]  the approval marker's path; `~/.claude/APPROVED-PLAN.json` by default.
+ * @returns {{path: string, text: string} | null} the plan file and its text only
+ *   while its sha256 is the hash recorded at approval; null otherwise. Copied
+ *   rather than imported, because hook-dispatch.mjs imports this file.
+ */
+function planInForce(marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) {
+  try {
+    const mk = JSON.parse(readFileSync(marker, 'utf8'));
+    if (!mk?.plan || !mk.hash) return null;
+    const bytes = readFileSync(mk.plan);
+    if (createHash('sha256').update(bytes).digest('hex') !== String(mk.hash)) return null;
+    return { path: String(mk.plan), text: bytes.toString('utf8') };
+  } catch { return null; }
+}
+
+/**
+ * The `Found:` lines of every step's report file in a scratchpad.
+ * @param {string|null} pad  the session scratchpad (`scratchpadOf`).
+ * @returns {{step: number, file: string, line: string}[]} each line beginning
+ *   `Found:` in `progress/step-N-report.txt`, by step then file order, trimmed;
+ *   [] when there is no scratchpad or no such file.
+ */
+export function foundLines(pad) {
+  if (!pad) return [];
+  const dir = join(pad, 'progress');
+  let names = [];
+  try { names = readdirSync(dir).filter((n) => /^step-\d+-report\.txt$/.test(n)); } catch { return []; }
+  const out = [];
+  for (const n of names.sort((a, b) => parseInt(a.slice(5), 10) - parseInt(b.slice(5), 10))) {
+    let text = '';
+    try { text = readFileSync(join(dir, n), 'utf8'); } catch { continue; }
+    for (const l of text.split('\n')) if (/^Found:/.test(l.trim())) out.push({ step: parseInt(n.slice(5), 10), file: join(dir, n), line: clip(l.trim()) });
+  }
+  return out;
+}
+
+/**
+ * Everything the pointer and the hand-back print says, read once.
+ * @param {string} sid  the session id, or '' when the shell has none.
+ * @param {{path: string, text: string} | null} [plan]  the plan in force; read
+ *   from the marker when omitted.
+ * @returns {{read: boolean, why: string, planPath: string, pointer: object|null,
+ *   steps: {step: number, standing: boolean, state: string, back: object|null, report: string, reportWritten: boolean}[],
+ *   found: object[], title: string, titles: Map<number, string>, leaves: string[]}}
+ *   `read` is false, with `why`, when no plan is in force or its agents cannot be
+ *   read; `pointer` is null when the plan defines none. Each of `steps` is a
+ *   number of the plan's Order, then its Standing ones, with its state: DONE, a
+ *   hand-back's first line (REFUSED, FAILED or anything else), "ended by <how>",
+ *   "running" or "not sent"; `back` is the newest ended agent for it, with the
+ *   hand-back's lines, and `report` the path its report file is written to.
+ *   The console print and the status page both come from this, so they cannot
+ *   disagree.
+ */
+export function pointerState(sid, plan = planInForce()) {
+  const blank = { read: false, why: '', planPath: '', pointer: null, steps: [], found: [], title: '', titles: new Map(), leaves: [] };
+  if (!plan) return { ...blank, why: 'no plan is in force, and the approval state printed below says why' };
+  const title = (/^#\s+(.+)$/m.exec(plan.text) ?? [])[1] ?? '';
+  const leaves = [...(/^## Leaves open\b[^\n]*\n([\s\S]*?)(?=^## |^# |$(?![\s\S]))/mi.exec(plan.text) ?? [, ''])[1].matchAll(/^\s*-\s+(.+?)\s*$/gm)].map((x) => x[1]);
+  const base = { ...blank, planPath: plan.path, title, titles: stepTitles(plan.text), leaves };
+  if (!planOrder(plan.text)) return { ...base, read: true, why: 'the plan in force has no "## Order" section with an "Order:" line' };
+  const s = sid ? stepEnds({ session_id: sid }) : null;
+  if (!s) return { ...base, why: `no transcript was found for the session${sid ? ` ${sid}` : ' (no CLAUDE_CODE_SESSION_ID in this shell)'}` };
+  const pointer = pointerOf(plan.text, s.ends);
+  const pad = scratchpadOf(sid);
+  const steps = [...pointer.order.map((step) => ({ step, standing: false })), ...pointer.standing.filter((n) => !pointer.order.includes(n)).map((step) => ({ step, standing: true }))].map(({ step, standing }) => {
+    const mine = s.ends.filter((e) => e.step === step).sort((a, b) => a.at - b.at);
+    const newest = mine.at(-1) ?? null;
+    const lines = newest ? String(newest.last ?? '').split('\n').map((l) => l.trim()).filter(Boolean) : [];
+    const back = newest ? { id: newest.id, how: newest.how, at: newest.at, lines, path: newest.path } : null;
+    const state = pointer.done.has(step) ? 'DONE'
+      : s.runningSteps.has(step) ? 'running'
+        : !newest ? 'not sent'
+          : newest.how !== 'a report' ? `ended by ${newest.how}, no hand-back to count`
+            : /^(?:REFUSED|FAILED)\b/.test(lines[0] ?? '') ? lines[0].match(/^(?:REFUSED|FAILED)/)[0]
+              : `hand-back opens "${clip(lines[0] ?? '').slice(0, 40)}", not DONE`;
+    const report = pad ? join(pad, 'progress', `step-${step}-report.txt`) : `progress/step-${step}-report.txt (no scratchpad found)`;
+    let reportWritten = false;
+    try { reportWritten = !!pad && statSync(report).isFile(); } catch { reportWritten = false; }
+    return { step, standing, state, back, report, reportWritten };
+  });
+  return { ...base, read: true, pointer, steps, found: foundLines(pad) };
+}
+
+/**
+ * What is open for the owner, in sentences.
+ * @param {ReturnType<typeof pointerState>} st  `pointerState`'s answer.
+ * @returns {string[]} one line per thing: why the pointer is not read, that the
+ *   plan runs on through its next step, or, once every step in Order has a DONE
+ *   hand-back, what the plan's own `## Leaves open` section lists. The page
+ *   prints these under "Open for the owner".
+ */
+export function openForOwner(st) {
+  if (!st.read) return [`The pointer is not read: ${st.why}.`];
+  if (!st.pointer) return [`There is no pointer: ${st.why}.`];
+  if (st.pointer.next !== null) return [`Nothing is waiting on the owner: the plan runs to its end, and step ${st.pointer.next} is next.`];
+  return ['Every step in Order has a DONE hand-back: the plan has run to its end.', ...(st.leaves.length ? ['What the plan itself leaves open:', ...st.leaves.map((l) => `  ${l}`)] : [])];
+}
+
+/**
+ * The pointer and hand-back block a status prints, after the goals.
+ * @param {ReturnType<typeof pointerState>} st  `pointerState`'s answer.
+ * @returns {string} a headed list, never a table. Its FIRST line is `next: step N`,
+ *   `next: none` when every step in Order has a DONE hand-back, `next: not defined`
+ *   when the plan has no Order and `next: not read` when it could not be read;
+ *   then each step in Order with its state, the Standing steps, the newest
+ *   hand-back of each step with every line it carries and the path of its
+ *   report file, and the `Found:` lines of every report file. A hand-back has two
+ *   lines by rule and the print shows however many it finds.
+ */
+export function pointerBlock(st) {
+  if (!st.read) return `next: not read (${st.why}).`;
+  if (!st.pointer) return `next: not defined (${st.why}).`;
+  const p = st.pointer;
+  const out = [p.next === null ? 'next: none' : `next: step ${p.next}`,
+    `Order, each step's state: ${st.steps.filter((x) => !x.standing).map((x) => `${x.step} ${x.state}`).join('; ')}.`,
+    ...(st.steps.some((x) => x.standing) ? [`Standing, sent at any time: ${st.steps.filter((x) => x.standing).map((x) => `${x.step} ${x.state}`).join('; ')}.`] : [])];
+  const backs = st.steps.filter((x) => x.back);
+  out.push(backs.length ? 'Hand-backs, the newest for each step, each read from the agent\'s own transcript:' : 'Hand-backs: no step has one yet.');
+  for (const x of backs) {
+    out.push(`- step ${x.step}, ended ${x.back.at ? `${californiaTime(new Date(x.back.at))} (California) ` : ''}by ${x.back.how}:`,
+      ...(x.back.lines.length ? x.back.lines.map((l) => `    ${l}`) : ['    (the agent ended with no text)']),
+      `  Report file: ${x.report} (${x.reportWritten ? 'written' : 'not written'})`);
+  }
+  out.push(st.found.length ? 'Found, from the report files:' : 'Found, from the report files: none.');
+  for (const f of st.found) out.push(`- step ${f.step}: ${f.line}`);
+  return out.join('\n');
+}
+
+const escapeHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/**
+ * The status page, as plain HTML from the same state the print comes from.
+ * @param {ReturnType<typeof pointerState>} st  `pointerState`'s answer.
+ * @param {string} given  the status the session wrote, as stamped.
+ * @param {Date} [now]  the time of the status; now when omitted.
+ * @returns {string} a complete HTML document with a title, colour tokens for both
+ *   themes and no table: each step in Order with its state, the Standing steps,
+ *   the last status time in California time, the `Found:` lines, and what is open
+ *   for the owner. Every string from a report file or a hand-back is escaped.
+ */
+export function statusPage(st, given, now = new Date()) {
+  const li = (s) => `<li>${s}</li>`;
+  const stepItem = (x) => li(`<strong>Step ${x.step}</strong>${st.titles.get(x.step) ? ` ${escapeHtml(st.titles.get(x.step))}` : ''}: <span class="s">${escapeHtml(x.state)}</span>`
+    + (x.back ? `<br><span class="m">${escapeHtml(x.back.lines.slice(0, 2).join(' | '))}</span>` : ''));
+  const next = !st.read ? `not read (${st.why})` : !st.pointer ? `not defined (${st.why})` : st.pointer.next === null ? 'none' : `step ${st.pointer.next}`;
+  const open = openForOwner(st);
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan run status</title>
+<style>
+:root { --bg: #ffffff; --txt: #1b1f24; --txt-2: #4a5360; --line: #c9ced6; --card: #f4f6f8; --ok: #0b6b3a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #14171b; --txt: #e8ebef; --txt-2: #aab2bd; --line: #3a414b; --card: #1d2228; --ok: #6fd39b; } }
+:root[data-theme="dark"] { --bg: #14171b; --txt: #e8ebef; --txt-2: #aab2bd; --line: #3a414b; --card: #1d2228; --ok: #6fd39b; }
+body { margin: 0; padding: 16px; background: var(--bg); color: var(--txt); font: 16px/1.5 system-ui, sans-serif; overflow-wrap: anywhere; }
+main { max-width: 42rem; margin: 0 auto; }
+h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
+h2 { font-size: 1.05rem; margin: 1.5rem 0 .5rem; }
+p, li { margin: .25rem 0; }
+ul { padding-left: 1.25rem; }
+.m { color: var(--txt-2); font-size: .9rem; }
+.s { font-weight: 600; }
+.next { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: .75rem 1rem; }
+</style>
+</head>
+<body>
+<main>
+<h1>Plan run status</h1>
+<p class="m">${escapeHtml(st.title)}</p>
+<p class="m">Last status ${escapeHtml(californiaStamp(now))}: ${escapeHtml(given)}</p>
+<p class="next"><strong>next: ${escapeHtml(next)}</strong></p>
+<h2>Steps in Order</h2>
+<ul>${st.steps.filter((x) => !x.standing).map(stepItem).join('') || li('none')}</ul>
+<h2>Standing steps</h2>
+<ul>${st.steps.filter((x) => x.standing).map(stepItem).join('') || li('none')}</ul>
+<h2>Found and not fixed</h2>
+<ul>${st.found.map((f) => li(`Step ${f.step}: ${escapeHtml(f.line)}`)).join('') || li('none')}</ul>
+<h2>Open for the owner</h2>
+<ul>${open.map((o) => li(escapeHtml(o))).join('')}</ul>
+</main>
+</body>
+</html>
+`;
+}
+
+/**
  * The running agents' progress block a status prints.
  * @param {string} sid  the session id, or '' when the shell has none.
  * @param {number} [now]  the time in ms (a parameter so a test can move it).
@@ -494,8 +1055,10 @@ const span = (ms) => {
  *   interval between reads, in ms; WAIT_MS and five seconds by default.
  * @returns {Promise<string>} what it saw, as headed lists, never a table: each
  *   agent running when the wait began that has ended since, with how it ended
- *   and its last entry, and each running agent whose progress note changed,
- *   with its latest line; or, once `limit` has passed with neither, a line
+ *   and its last entry, each running agent whose progress note changed, with
+ *   its latest line, and each agent a hook has REFUSED since the wait began,
+ *   with the refusal's text from its own transcript (it returns at once on
+ *   that); or, once `limit` has passed with none of them, a line
  *   saying so and the running agents' progress block. It returns at once, saying
  *   so, when no agent the session launched is running, because nothing could
  *   then change and a wait would only be a timer; and with a plain line when
@@ -512,14 +1075,40 @@ export async function waitForChange(sid, opts = {}) {
   if (!first.length) return 'Wait: no agent the session launched is running, so there is nothing to wait on.';
   const pad = scratchpadOf(sid);
   const before = new Map(first.map((a) => [a.id, noteSig(pad, a.step)]));
+  // How many hook refusals each agent had when the wait began, and how big its
+  // transcript was then: the file is read again only when it has grown.
+  const sizeOf = (path) => { try { return statSync(path).size; } catch { return -1; } };
+  const refusalsOf = (path) => agentReads(tailEntries(path, 16 * 1024 * 1024)).refusals;
+  const seen = new Map(first.map((a) => [a.id, { size: sizeOf(a.path), n: refusalsOf(a.path).length }]));
   for (;;) {
     const waited = Date.now() - began;
     const now = runningAgents(sid, f) ?? [];
     const still = new Set(now.map((a) => a.id));
     const ended = first.filter((a) => !still.has(a.id));
     const moved = now.filter((a) => before.has(a.id) && noteSig(pad, a.step) !== before.get(a.id));
-    if (ended.length || moved.length) {
+    // THE MOMENT AN AGENT IS REFUSED BY A HOOK the wait returns, the agents
+    // that ended in the meantime included: the manager reads the refusal from
+    // the agent's own transcript when it happens, not at the agent's return.
+    const refused = [];
+    for (const a of first) {
+      const s = seen.get(a.id);
+      const size = sizeOf(a.path);
+      if (size === s.size) continue;
+      s.size = size;
+      const r = refusalsOf(a.path);
+      if (r.length > s.n) { refused.push({ a, fresh: r.slice(s.n) }); s.n = r.length; }
+    }
+    if (ended.length || moved.length || refused.length) {
       const out = [`Wait: ${span(waited)} (the limit is ${span(limit)}).`];
+      if (refused.length) {
+        out.push('Refused by a hook since the wait began, each read from the agent\'s own transcript:');
+        for (const { a, fresh } of refused) {
+          for (const x of fresh) {
+            out.push(`- agent ${a.id}${a.description ? ` "${a.description}"` : ''}, step ${a.step ?? 'unknown'}: refused `
+              + `${Number.isFinite(x.at) ? `at ${californiaTime(new Date(x.at))} (California) ` : ''}on ${x.tool || 'a call'}.\n  ${clip(x.text).replace(/\n/g, '\n    ')}`);
+          }
+        }
+      }
       if (ended.length) {
         out.push('Ended since the wait began, each read from its own transcript:');
         for (const a of ended) {
@@ -579,13 +1168,47 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   const previous = readClock().at;
   mkdirSync(dirname(CLOCK), { recursive: true });
   writeFileSync(CLOCK, JSON.stringify({ at: Date.now(), status }, null, 1));
+  // THE GOALS COME FIRST (Doctrine §0e rule 16): the stamp is already written,
+  // so reading them can never cost the status. A section that cannot be read is
+  // said so, never printed as an empty one.
+  let goals = '';
+  try { goals = goalsSection(); } catch { goals = ''; }
+  console.log(goals || `${GOALS_HEADING}: not read (no such section in the CLAUDE.md beside report.mjs).`);
+  console.log('');
+  // THE POINTER COMES NEXT, after the goals: `next: step N`, read from the plan's
+  // Order and the agents' hand-backs, then each hand-back and the Found lines of
+  // every report file. The status page's source is written from the same read.
+  // After the stamp, so a failure reading any of it never costs the status.
+  const sid = String(process.env.CLAUDE_CODE_SESSION_ID ?? '');
+  let state = null;
+  try { state = pointerState(sid); } catch (e) { state = { read: false, why: `the read failed (${e?.message ?? e})`, pointer: null, steps: [], found: [], title: '', titles: new Map(), leaves: [] }; }
+  console.log(pointerBlock(state));
+  console.log('');
   console.log(status);
   if (m && m[1].padStart(5, '0') !== hhmm) console.log(`(the status said ${m[1]}; the clock says ${hhmm}, and that is what was stamped)`);
-  // After the stamp, so a failure reading the agents never costs the status.
+  try {
+    const pad = sid ? scratchpadOf(sid) : null;
+    if (pad) {
+      mkdirSync(join(pad, 'status'), { recursive: true });
+      writeFileSync(join(pad, 'status', 'fix-run.html'), statusPage(state, status));
+    }
+  } catch { /* the page is a convenience; the print above is the status */ }
+  let ended;
+  try { ended = sid ? agentEnds(sid, previous) : null; } catch { ended = null; }
   let block = '';
-  try { block = agentsBlock(String(process.env.CLAUDE_CODE_SESSION_ID ?? ''), previous); } catch (e) { block = `Agents ended since the last status: not read (${e?.message ?? e}).`; }
+  try { block = agentsBlock(sid, previous, ended); } catch (e) { block = `Agents ended since the last status: not read (${e?.message ?? e}).`; }
   console.log(block);
   let progress = '';
-  try { progress = progressBlock(String(process.env.CLAUDE_CODE_SESSION_ID ?? '')); } catch (e) { progress = `Running agents' progress: not read (${e?.message ?? e}).`; }
+  try { progress = progressBlock(sid); } catch (e) { progress = `Running agents' progress: not read (${e?.message ?? e}).`; }
   console.log(progress);
+  // Every refusal each agent received and its last tool result, from its own
+  // transcript: the manager judges an agent's work from these, not its report.
+  let reads = '';
+  try { reads = gateReadsBlock(sid, ended ?? []); } catch (e) { reads = `Agents' hook refusals and last tool results: not read (${e?.message ?? e}).`; }
+  console.log(reads);
+  // The approval state, read from disk: before sending the first agent under
+  // any approval the manager gives a status and reads this.
+  let approval = '';
+  try { approval = approvalBlock(); } catch (e) { approval = `Approval state: not read (${e?.message ?? e}).`; }
+  console.log(approval);
 }

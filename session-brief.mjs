@@ -29,9 +29,23 @@
 // It states what it could not reach rather than staying quiet about it. A brief
 // that silently omits the hub because the hub is not checked out is worse than
 // one that says so.
+//
+// ## What it prints after a compaction or a resume (LESSONS §385)
+//
+// The lessons' titles are printed at a STARTUP only. After a compaction or a
+// resume the brief prints their count and the folder's path, because the titles
+// were one of three prints that each followed every compaction (with the whole
+// doctrine and every owner message) and each was a large share of a fresh
+// context. Which start this is comes from the due marker doctrine-read-guard.mjs
+// writes at SessionStart, found by the session_id on this process's standard
+// input — the SessionStart payload. Where the marker cannot be read, the brief
+// prints the short form and says why on its own line: it cannot tell a startup
+// from a compaction, and the short form is the one that costs nothing to be
+// wrong about.
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
@@ -179,6 +193,54 @@ function doctrineSection(n) {
   return out;
 }
 
+/**
+ * The SessionStart payload this process was started with, if it was given one.
+ * @returns {Promise<object>} the parsed JSON read from standard input, or {} when
+ *   the input is a terminal, empty, not JSON, or still open after half a second:
+ *   the harness and hook-dispatch.mjs close it after writing, and a run by hand
+ *   must never hang waiting for it.
+ */
+async function readPayload() {
+  if (process.stdin.isTTY) return {};
+  return new Promise((done) => {
+    let buf = '';
+    const finish = () => {
+      clearTimeout(timer);
+      process.stdin.destroy();
+      try { done(JSON.parse(buf)); } catch { done({}); }
+    };
+    const timer = setTimeout(finish, 500);
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (d) => { buf += d; });
+    process.stdin.on('end', finish);
+    process.stdin.on('error', finish);
+  });
+}
+
+/**
+ * Which kind of start this session had, from the due marker.
+ * @param {object} payload  the SessionStart payload (`readPayload`).
+ * @returns {{source: string|null, why: string}} the `source` doctrine-read-guard.mjs
+ *   recorded in this session's marker (`startup`, `resume`, `compact`, `clear`, or
+ *   '' when it recorded none); or source null with, in `why`, the reason it could
+ *   not be read. The marker's place is doctrine-read-guard.mjs's `dueFile`, said
+ *   again here because importing that file loads the whole dispatcher; the
+ *   session-guards test writes the marker with the real one and reads it here, so
+ *   the two cannot part without a case failing. Callers print the short form for
+ *   a null source.
+ */
+function startKind(payload) {
+  const id = String(payload?.session_id ?? '').replace(/[^A-Za-z0-9_-]/g, '_');
+  if (!id) return { source: null, why: 'no SessionStart payload carrying a session_id reached this brief on its standard input, so this session\'s due marker cannot be found' };
+  const f = join(process.env.DOCTRINE_DUE_DIR || join(homedir(), '.claude', 'doctrine-due'), `${id}.json`);
+  if (!existsSync(f)) return { source: null, why: `the due marker ${f} is not there: this brief ran before doctrine-read-guard.mjs --due wrote it, or the marker was removed once the doctrine had been read` };
+  try {
+    const s = JSON.parse(readFileSync(f, 'utf8')).source;
+    return { source: typeof s === 'string' ? s : '', why: '' };
+  } catch { return { source: null, why: `the due marker ${f} could not be read` }; }
+}
+const start = startKind(await readPayload().catch(() => ({})));
+
 const lessonDir = join(hub, 'lessons');
 if (existsSync(lessonDir)) {
   // Both heading shapes, and the lettered ones. The first version matched only
@@ -188,8 +250,16 @@ if (existsSync(lessonDir)) {
   const titles = readdirSync(lessonDir).filter((f) => f.endsWith('.md')).sort()
     .flatMap((f) => readFileSync(join(lessonDir, f), 'utf8')
       .split('\n').filter((l) => /^## \d+[a-z]?[ .·]/.test(l)).map((l) => l.slice(3).trim()));
-  say(`LESSONS (${titles.length}) — titles only; each is its own file in noahjefferson/lessons/:`);
-  for (const t of titles) say(`  ${t}`);
+  // A compaction or a resume, or a start this brief cannot identify, gets the
+  // count and the folder and nothing else; the titles are a startup's.
+  const bounded = start.source === null || start.source === 'compact' || start.source === 'resume';
+  if (bounded) {
+    say(`LESSONS (${titles.length}) — each is its own file in ${lessonDir}/:`);
+    say(`  Titles are not printed: ${start.source === null ? start.why : `this session was ${start.source === 'compact' ? 'compacted' : 'resumed'}, and the titles are printed at a startup only`}.`);
+  } else {
+    say(`LESSONS (${titles.length}) — titles only; each is its own file in noahjefferson/lessons/:`);
+    for (const t of titles) say(`  ${t}`);
+  }
 } else {
   say('LESSONS: the hub is not checked out, so the cross-app record is UNAVAILABLE this session.');
 }
