@@ -1,13 +1,12 @@
 # Written by plan-scope-check.mjs --record. Not hand-edited.
 plan=/root/.claude/plans/zesty-splashing-swan.md
-planhash=82c8a2958535dac5
-diffhash=cc629d4c21c38ca9
-verdict=IN-SCOPE: every changed file is on the plan's Files list, and every change is a step 1 to 4 item or gate work the plan says lands.
-# IN-SCOPE: every changed file is on the plan's Files list, and every change is a step 1 to 4 item or gate work the plan says lands.
-# Read in full: the hub diff (sixteen tracked files changed, one new lesson, 385), the plan by its path, and the owner's messages the scope check printed.
-# Files: all sixteen changed files and the new lesson are named in the plan's Files touched. turn-check.mjs stays untracked, is not on the landing list, and no tracked file imports it.
-# Step 1: the turn watcher is gone from stop-guard.mjs and hook-dispatch.mjs. The CLAUDE.md goals block carries goals 2 to 6 as the plan words them, directly after the title block. Every plan fixture in the test file carries a Goals section and a Served by line.
-# Step 2: the pointer is in report.mjs, the dispatch gate and the stop guard, with the status page written from the same read, cases and plants for each, doctrine rules 2 and 13, and one CLAUDE.md index line.
-# Step 3: the three prints after a compaction or a resume are bounded in doctrine-read-guard.mjs, compact-recall.mjs and session-brief.mjs, with cases and plants, doctrine 11e, the lesson 376 clause, lesson 385 with its index row, and one CLAUDE.md index line.
-# Landed gate work the plan names under Asked and in its Files list rather than in a step: a refusal inside an agent latches that agent alone, the approval state is printed in every status and dispatch refusal, a running agent no longer holds the turn, a stop with steps left is refused, the owner's exit from plan mode is judged before any gate reads the marker, a message that does not end in a go-word is a correction, messages the queue loses are printed once, the talk before a plan is judged against the plan's last write, a push with a redirect or a pipe is read past them, and a refusal's follow-up may not repeat the refused reply.
-# Nothing in the diff is outside the plan. Nothing quotes an owner message.
+planhash=eae71dc58fd43bfc
+diffhash=d9d0d7b701bda662
+verdict=IN-SCOPE: the one staged file is the handoff plan step 7 describes, carrying the Carried section word for word, and nothing else is staged
+# IN-SCOPE: the one staged file is the handoff plan step 7 describes, carrying the Carried section word for word, and nothing else is staged.
+# What is staged: git status shows one new file under plans/ staged, named plans/jefferson-photography-studio-open-and-strip.md, and turn-check.mjs untracked and not staged, as step 1 of the plan requires. git diff --cached is that file alone, 195 lines, all additions.
+# Against step 7's description: the file has the agent rules section, the Carried section, a Commands section and a Files section, and fourteen steps with Order 1 to 13 and Standing 14. Its Goals section quotes goals 2 to 6 word for word from the hub CLAUDE.md block (five exact line matches in each file) and goal 1 is the app's own, as the plan allows.
+# Carried section: each of its nine lines, the lead-in and the eight bullets, matched the plan's text exactly by an anchored pattern, one match each.
+# Everything beyond the Carried section is the content step 7 asks for under steps, Commands and Files for that work: steps 1 to 9 carry out the Carried bullets in the app, steps 10 to 13 carry out its last bullet in the hub, step 14 is the timer. The file is a document that states in its own Leaves open that nothing in it is approved; it changes no code, runs nothing and pushes nothing. The owner's messages printed by the scope check ask for the plan to run to its end; nothing in the file goes beyond that plan or adds a request.
+# Judged additions that are conditional proposals and not new scope: step 1's one possible fix to tools/fresh-dist.mjs, made only if a walk refuses a current dist when run by absolute path, and step 7's stated cost of about two hours of walks, which Doctrine says to state before a run.
+# Noted, not a scope breach: the file does not carry the agent rule that a hash in a report must be one a command printed (the identifier-gate bullet of this plan's rules); it is an omission from "the agent rules above", not an addition. The Looked up section also carries one seven-character hub commit id, taken from the previous plan's record and not printed by a command of this step. Both are listed as Found in the report and neither is inside the file's power to widen the work.
