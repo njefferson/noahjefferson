@@ -327,9 +327,10 @@ Every item below has actually happened.
  refuses it). Before a plan goes up, one chat turn says what is being done and
  why — never the plan's text, which the owner reads in the plan — and asks
  nothing; approval is only the button. `plan-guard.mjs` refuses `ExitPlanMode`
- unless the newest turn that asked nothing came after the plan file's last
- write and an owner message followed it, so an answer given before an edit is
- not the talk of the edited plan. A status is due when an agent has ended
+ unless the newest turn that asked nothing and ended before the owner's newest
+ message came after the plan file's last write, so an answer given before an
+ edit is not the talk of the edited plan, and a line written in the turn of the
+ `ExitPlanMode` call itself is not a turn at all. A status is due when an agent has ended
  since the last one, its time read from the clock (`report.mjs`), and at no
  other time.
  **Background work is the work:** while a background command or workflow the
@@ -354,9 +355,11 @@ Every item below has actually happened.
 - **A CORRECTION FROM THE OWNER ENDS THE TURN, BY REFUSAL.** A message that
  does not end with a go-word (go, ok, continue, approved, yes; the owner's list
  to extend, never a session's) is a correction. While it is the owner's newest
- message, `hook-dispatch.mjs` refuses every main-thread call but the status
- command and `TaskStop`, without latching: answer every point in it and end
- the turn. Held work is sent again only after a go-word. Nine corrections in a
+ message, `hook-dispatch.mjs` refuses every main-thread action, without
+ latching, and passes only the status command, `TaskStop` and a read of the
+ record as the manager fence classifies one, so a question one file answers is
+ answered from that file in the turn it is asked: answer every point in it and
+ end the turn. Held work is sent again only after a go-word. Nine corrections in a
  row were once worked through on the session's own reading of what was meant.
  (Doctrine §0e rule 3.)
 - **EVERY TIME GIVEN TO THE OWNER IS CALIFORNIA LOCAL TIME.** (Doctrine §2;
@@ -372,7 +375,12 @@ Every item below has actually happened.
  dispatches are done by agents. An agent's prompt is only the approved plan's
  path and a step number. The manager fence in `hook-dispatch.mjs` refuses
  every other tool on the main thread, and `plan-fence.mjs` holds each agent to
- the plan's Files and Commands. (Doctrine §0e rule 13.)
+ the plan's Files and Commands. It passes a read only of the record (the plans,
+ the session scratchpad, the doctrine and lessons, each repo's notes and plan
+ pointers, the session's transcript) and refuses a read of an app's source with
+ a reason to send an agent; it passes `SendUserFile` of files in the session
+ scratchpad and of no other path, so a choice between pictures carries its
+ pictures. (Doctrine §0e rule 13.)
 - **A REFUSAL LATCHES UNTIL THE OWNER'S NEXT MESSAGE.** Another command, tool
  or wording for the same end is a second route, not a fresh start. After a
  PreToolUse refusal on the main thread, `hook-dispatch.mjs` refuses every call

@@ -346,7 +346,12 @@ function askedProblem(top, path) {
  * button), THAT CAME AFTER THE PLAN FILE'S LAST WRITE, AND a message from the
  * owner after it. The newest such turn is the one judged: any turn that asked
  * nothing was accepted as the talk, so on 2026-10-04 an answer to a correction
- * passed as the explanation of a plan edited afterwards, twice. Measured
+ * passed as the explanation of a plan edited afterwards, twice. THE TURN JUDGED
+ * IS THE NEWEST ONE THAT ENDED BEFORE THE OWNER'S NEWEST MESSAGE, and text in
+ * the turn of the ExitPlanMode call itself is not a turn: it comes after every
+ * owner message, so a line written just before the call in the same turn read as
+ * the newest talk with no owner message after it and refused the call, which cost
+ * two approvals on 2026-10-06. Measured
  * shapes: a rejection is an ExitPlanMode tool_result with is_error; "not in
  * plan mode" errors and cancelled approvals are not answers.
  * @param {string|undefined} path  the transcript.
@@ -383,9 +388,17 @@ function talkedThrough(path, planWrittenAt = 0) {
     }
   });
   if (anchor < 0) return null;
-  // The NEWEST turn in plain text that asks nothing: later ones override earlier.
+  // THE OWNER'S NEWEST MESSAGE SINCE THE ANCHOR bounds the talk. Text written
+  // after it belongs to the turn of this very call, which no owner message has
+  // followed, so it is not a turn that was talked through: a line written just
+  // before ExitPlanMode in the same turn refused two approvals on 2026-10-06.
+  let ownerAt = -1;
+  for (let i = entries.length - 1; i > anchor; i--) if (isOwnerMessage(entries[i])) { ownerAt = i; break; }
+  // The NEWEST turn in plain text that asks nothing and ended before that
+  // message: later ones override earlier. No owner message since the anchor
+  // leaves no turn to judge.
   let talk = -1;
-  for (let i = anchor + 1; i < entries.length; i++) {
+  for (let i = anchor + 1; i < ownerAt; i++) {
     const e = entries[i];
     const c = e?.message?.content;
     if (e?.type !== 'assistant' || !Array.isArray(c)) continue;
@@ -399,7 +412,7 @@ function talkedThrough(path, planWrittenAt = 0) {
       return `this plan was last written at ${clock(planWrittenAt)} (California), after the last chat turn that explained it (${clock(at)}). `
         + 'The talk before a plan is about THIS plan: say what is being done and why again, asking nothing, let the owner answer it, and only then propose it (LESSONS §370).';
     }
-    for (let i = talk + 1; i < entries.length; i++) if (isOwnerMessage(entries[i])) return null;
+    return null;
   }
   return 'this plan has not been talked through. Since the last plan-mode call, write what is being done and why in chat as a turn of its own that asks nothing, '
     + 'after the plan\'s last edit, let the owner answer it, and only then propose it (LESSONS §370). Re-proposing after a rejection without answering it is the failure this refuses.';

@@ -1,12 +1,27 @@
 # Written by plan-scope-check.mjs --record. Not hand-edited.
-plan=/root/.claude/plans/zesty-splashing-swan.md
-planhash=eae71dc58fd43bfc
-diffhash=d9d0d7b701bda662
-verdict=IN-SCOPE: the one staged file is the handoff plan step 7 describes, carrying the Carried section word for word, and nothing else is staged
-# IN-SCOPE: the one staged file is the handoff plan step 7 describes, carrying the Carried section word for word, and nothing else is staged.
-# What is staged: git status shows one new file under plans/ staged, named plans/jefferson-photography-studio-open-and-strip.md, and turn-check.mjs untracked and not staged, as step 1 of the plan requires. git diff --cached is that file alone, 195 lines, all additions.
-# Against step 7's description: the file has the agent rules section, the Carried section, a Commands section and a Files section, and fourteen steps with Order 1 to 13 and Standing 14. Its Goals section quotes goals 2 to 6 word for word from the hub CLAUDE.md block (five exact line matches in each file) and goal 1 is the app's own, as the plan allows.
-# Carried section: each of its nine lines, the lead-in and the eight bullets, matched the plan's text exactly by an anchored pattern, one match each.
-# Everything beyond the Carried section is the content step 7 asks for under steps, Commands and Files for that work: steps 1 to 9 carry out the Carried bullets in the app, steps 10 to 13 carry out its last bullet in the hub, step 14 is the timer. The file is a document that states in its own Leaves open that nothing in it is approved; it changes no code, runs nothing and pushes nothing. The owner's messages printed by the scope check ask for the plan to run to its end; nothing in the file goes beyond that plan or adds a request.
-# Judged additions that are conditional proposals and not new scope: step 1's one possible fix to tools/fresh-dist.mjs, made only if a walk refuses a current dist when run by absolute path, and step 7's stated cost of about two hours of walks, which Doctrine says to state before a run.
-# Noted, not a scope breach: the file does not carry the agent rule that a hash in a report must be one a command printed (the identifier-gate bullet of this plan's rules); it is an omission from "the agent rules above", not an addition. The Looked up section also carries one seven-character hub commit id, taken from the previous plan's record and not printed by a command of this step. Both are listed as Found in the report and neither is inside the file's power to widen the work.
+plan=/root/.claude/plans/rippling-hugging-frog.md
+planhash=1463eca77823018c
+diffhash=d466729bf3317b27
+verdict=IN-SCOPE: every change in the hub working copy belongs to steps 11, 12 or 13 of the plan and sits in its Files list, and nothing else was changed, added or removed.
+# IN-SCOPE: every change in the hub working copy belongs to steps 11, 12 or 13 of the plan and sits in its Files list, and nothing else was changed, added or removed.
+# 
+# Read for this verdict, by this agent, which made none of the hub's diff: the plan by its path (Goals, Order, Steps 11 to 17, Branches, Files), the scope check's printout, git status, git diff --stat, git diff --name-only, the full diff of each tracked file, and each of the eight new lesson files in full. Searched the new lessons, the test diff and .plan-scope for a session link, a trailer, a model's name and the generated-with line: none.
+# 
+# Tracked files changed, seven, each named in the plan's Files list:
+# - hook-dispatch.mjs (steps 11 and 12). Step 11: the manager fence passes a read only of the record (new recordPath, readOutsideRecord and bashOutsideRecord, with repoRootOf, filesNamed and the READ_FENCE text), refuses any other read with the send-an-agent reason, refuses the connector's file-content and code-search reads, and passes SendUserFile only of files inside the session scratchpad. Step 12: the correction check lets a read of the record through (readOfRecord, built on the same classifier so the two cannot disagree) and correctionMessage says what passes and what is held. The header comments and the added relative import belong to those two changes.
+# - plan-guard.mjs (step 12): talkedThrough finds the owner's newest message since the plan-mode anchor and judges only turns that ended before it, so text in the ExitPlanMode call's own turn is not a turn.
+# - session-guards.test.mjs (steps 11 and 12): a case and plants for the read fence, the SendUserFile rule, a read under a correction and the ExitPlanMode talk-through; the existing cases that read /etc/hostname now read the plan, which the narrowed fence requires, and the correction cases now probe with an agent dispatch because a read no longer tells a standing correction from none. These adaptations are what steps 11 and 12 need for the suite to hold, and step 15 may fix a failure only in these files.
+# - DOCTRINE.md (steps 11 and 12): the enforcement paragraphs of rule 3, rule 4 and rule 13 say what the checks do now, as the steps ask.
+# - CLAUDE.md (steps 11 and 12): three index edits, one under the manager item and two under the correction and talk-first items, as the steps ask.
+# - LESSONS.md (step 13): eight index rows, 386 to 393, whose titles are the lesson headings.
+# - .plan-scope: the verdict record, which the Files list names; this step re-records it against the plan's current hash.
+# 
+# .claude/PLAN is in the Files list and already holds this plan's path as its one line; git shows no change to it, which is the expected state.
+# 
+# New files, eight, exactly the names and order of the Files list: lessons/386 through lessons/393, and no other untracked file exists. Each opens with its numbered heading and an Enforced by line naming a GATE on a file that exists in the hub, a CHECKLIST, or a JUDGEMENT with its Smell line; each records what was wrong and what it measured, and the eight match the eight bullets of step 13 in subject and in kind (386 judgement, 387 checklist, 388 gate, 389 checklist, 390 checklist, 391 gate, 392 judgement, 393 checklist). None quotes an owner message, names the owner as the source of a report, or carries a link, a trailer or a model name.
+# 
+# Judged against the owner's messages the scope check printed: the diff does what the approved plan's steps 11 to 13 say and nothing the plan does not; the messages ask for the plan to run, and no change goes beyond it. None is quoted here.
+# 
+# Not changed: nothing outside the Files list is modified or untracked in the hub working copy, and no app repository file appears in this diff.
+# 
+# Not judged here: whether the suite, the plants and the document gates pass, which step 15 owns, and the state of the live clone at /root/.claude/hub, which this step has no command to read.

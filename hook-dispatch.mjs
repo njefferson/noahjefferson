@@ -31,9 +31,13 @@
  * which records the approval marker from it and never refuses), so that no
  * gate below reads a marker that is about to change; the refusal latch; the
  * correction check (main thread only: while the owner's newest message does
- * not end with a go-word, every call is refused but the status command and
- * TaskStop); the manager fence with its dispatch gate (main thread only),
- * which also passes the wait between statuses (`report.mjs --wait`), and
+ * not end with a go-word, every call is refused but the status command, TaskStop
+ * and a read of the record, so a question is answered from a file in the turn it
+ * is asked; an action stays held); the manager fence with its dispatch gate (main thread only),
+ * which passes a read only of the record (the plans, the session scratchpad,
+ * the doctrine and lessons, each repo's notes and plan pointers, the session's
+ * transcript) and a SendUserFile only of files in the session scratchpad, which
+ * also passes the wait between statuses (`report.mjs --wait`), and
  * whose dispatch gate sends a step only when the plan's `Served by:` line names
  * a goal for it (Doctrine §0e rule 16) and, where the plan has an `## Order`,
  * only step N, the pointer, or a Standing step (§0e rule 13); the
@@ -67,7 +71,7 @@
  * a broken edit in the working copy cannot refuse its own fix.
  */
 import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, createReadStream, rmSync } from 'node:fs';
-import { join, dirname, resolve, basename } from 'node:path';
+import { join, dirname, resolve, basename, relative } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -551,13 +555,15 @@ export function correctionStanding(p, entries) {
  * The refusal while a correction stands.
  * @param {{at: number}} c  from `correctionStanding`.
  * @returns {string} names the rule, says to answer in plain text and end the
- *   turn, names what still passes, and prints the go-word list. It never
- *   quotes what the owner wrote.
+ *   turn, names what passes (a read of the record, the status command and
+ *   TaskStop) and what is held, and prints the go-word list. It never quotes
+ *   what the owner wrote.
  */
 export function correctionMessage(c) {
-  return `CORRECTION (Doctrine §0e rule 3): the owner's newest message${c.at ? `, written ${californiaTime(new Date(c.at))} (California),` : ''} does not end with a go-word, so it is a correction, and a correction is a full stop. `
-    + 'Nothing runs on the main thread until the owner writes again: answer every point in it in plain text and end the turn. '
-    + 'Only the status command and TaskStop pass. '
+  return `CORRECTION (Doctrine §0e rule 3): the owner's newest message${c.at ? `, written ${californiaTime(new Date(c.at))} (California),` : ''} does not end with a go-word, so it is a correction, and a correction is a full stop for actions. `
+    + 'No action runs on the main thread until the owner writes again: answer every point in it in plain text and end the turn. '
+    + 'A question is answered from the record in the turn it is asked, so a read of the record (the plans, the session scratchpad, the doctrine and lessons, each repo\'s notes and plan pointers, this session\'s transcript), '
+    + 'the status command and TaskStop pass; every other call is held, an agent dispatch, a write and a read of an app\'s source among them. '
     + `A message whose last word is one of these lifts it: ${GO_WORDS.join(', ')}. `
     + 'Held work is sent again only in a turn that follows one.';
 }
@@ -623,6 +629,200 @@ export function dispatchGate(p, plan = approvedPlan(), pointer = undefined) {
   return null;
 }
 
+// ---- what a read on the main thread may be of (Doctrine §0e rule 13) ----
+
+// A reader that opens no file of its own: with no file operand it reads nothing.
+const READS_NO_FILE = new Set(['date', 'true', 'echo', 'printf', 'pwd', 'test', '[', 'which', 'type']);
+// A repository's files through the GitHub connector: a source file by another door.
+const SOURCE_READS = new Set(['mcp__github__get_file_contents', 'mcp__github__search_code']);
+const GLOB_CHAR = /[*?[\]{}]/;
+const pathLike = (w) => /^(?:\/|~|\.\.?(?:\/|$))/.test(w) || w.includes('/');
+const absOf = (w, cwd) => resolve(cwd || process.cwd(), /^~(?=\/|$)/.test(w) ? w.replace(/^~/, homedir()) : w);
+const READ_FENCE = 'MANAGER FENCE (Doctrine §0e rule 13): the main thread reads only the record: the approved plan and the plans folder, '
+  + 'the session scratchpad, the hub\'s DOCTRINE.md, LESSONS.md, lessons/ and plans/, each repo\'s CLAUDE.md, NOTES.md, .plan-scope, '
+  + '.claude/PLAN and .branch-guard, this session\'s transcript and the live clone\'s doctrine. ';
+
+/**
+ * The git repository a path sits in.
+ * @param {string} abs  an absolute path.
+ * @returns {string|null} the nearest ancestor directory (the path itself is
+ *   not one) holding a `.git`, or null when none does. A repository's own root
+ *   directory has no repository above it here, so it is never "of" the record.
+ */
+function repoRootOf(abs) {
+  for (let d = dirname(abs); ; d = dirname(d)) {
+    if (existsSync(join(d, '.git'))) return d;
+    if (dirname(d) === d) return null;
+  }
+}
+
+/**
+ * Is a path of the record the main thread may read?
+ * @param {string} abs  a path; it is resolved, so a `..` cannot step outside.
+ * @param {object} p  the payload: `session_id` names the scratchpad and the
+ *   transcript, `transcript_path` is this session's own transcript.
+ * @param {() => string|undefined} [planPath]  the approved plan's path, asked
+ *   only when no other rule has decided.
+ * @returns {boolean} true only for: a path in this session's scratchpad (or the
+ *   scratchpad itself); a file directly under `~/.claude/plans/` (or the folder)
+ *   or the approved plan wherever it is; this hub's DOCTRINE.md or the live
+ *   clone's; this session's transcript (`transcript_path`, or
+ *   `~/.claude/projects/<project>/<session>.jsonl`); in any repository its
+ *   CLAUDE.md, NOTES.md, .plan-scope, .claude/PLAN and .branch-guard; and in a
+ *   hub (this one, the live clone, or a root holding DOCTRINE.md and
+ *   hook-dispatch.mjs) its DOCTRINE.md, LESSONS.md and everything under
+ *   lessons/ and plans/. Everything else, an app's source and tools above all, is false.
+ *   The manager fence refuses a read of anything for which this is false.
+ */
+export function recordPath(abs, p, planPath) {
+  const a = resolve(String(abs));
+  const dot = join(homedir(), '.claude');
+  if (inScratchpad(join(a, '_'), p.session_id)) return true;
+  if (a === join(dot, 'plans') || dirname(a) === join(dot, 'plans')) return true;
+  const plan = planPath?.();
+  if (plan && a === resolve(String(plan))) return true;
+  if (a === join(dot, 'hub', 'DOCTRINE.md') || a === join(HUB, 'DOCTRINE.md')) return true;
+  if (p.transcript_path && a === resolve(String(p.transcript_path))) return true;
+  if (p.session_id && dirname(dirname(a)) === join(dot, 'projects') && basename(a) === `${p.session_id}.jsonl`) return true;
+  const root = repoRootOf(a);
+  if (!root) return false;
+  const rel = relative(root, a);
+  if (['CLAUDE.md', 'NOTES.md', '.plan-scope', '.claude/PLAN', '.branch-guard'].includes(rel)) return true;
+  const hub = root === HUB || root === join(dot, 'hub') || (existsSync(join(root, 'DOCTRINE.md')) && existsSync(join(root, 'hook-dispatch.mjs')));
+  if (!hub) return false;
+  return rel === 'DOCTRINE.md' || rel === 'LESSONS.md' || ['lessons', 'plans'].some((d) => rel === d || rel.startsWith(`${d}/`));
+}
+
+/**
+ * The file a Bash read names that is not of the record.
+ * @param {string} command  a Bash line the read classifier already called a read.
+ * @param {string} cwd  the directory its relative words resolve against.
+ * @param {(w: string) => boolean} of  `recordPath` for a word of the line.
+ * @returns {string|null} null when every file the line names is of the record
+ *   and each command in it names one (or reads a pipe, or is a reader that
+ *   opens no file: date, echo, pwd); otherwise a clause saying what is not of
+ *   the record: the first word that is not, or a command that names no file of
+ *   it. A word with
+ *   a `$` or a backtick cannot be resolved to a file and is refused. A word is a
+ *   file when it looks like a path (`/`, `~`, `./`, a slash inside it), the
+ *   value of a `--flag=value`, or a bare word that exists under `cwd`.
+ */
+function bashOutsideRecord(command, cwd, of) {
+  const text = command.replace(/2>&1|>&2|&>\s*\/dev\/null|2?>\s*\/dev\/null/g, ' ');
+  const segs = [];
+  let words = [], cur = '', has = false, q = '', prevPipe = false;
+  const endWord = () => { if (has) words.push(cur); cur = ''; has = false; };
+  const flush = (op) => { endWord(); if (words.length) segs.push({ words, piped: prevPipe }); words = []; prevPipe = op === '|'; };
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q === "'") { if (c === "'") q = ''; else { cur += c; has = true; } continue; }
+    if (c === '\\') { cur += text[i + 1] ?? ''; has = true; i++; continue; }
+    if (c === '$' || c === '`') return 'a command with a $ or a backtick in it cannot be resolved to a file';
+    if (q === '"') { if (c === '"') q = ''; else { cur += c; has = true; } continue; }
+    if (c === "'" || c === '"') { q = c; has = true; continue; }
+    if (c === '\n') { flush(';'); continue; }
+    if (/\s/.test(c) || c === '<') { endWord(); continue; }
+    if (c === '|') { flush(text[i + 1] === '|' ? ';' : '|'); if (text[i + 1] === '|') i++; continue; }
+    if (c === ';' || c === '(' || c === ')' || c === '&') { flush(';'); if (c === '&' && text[i + 1] === '&') i++; continue; }
+    cur += c; has = true;
+  }
+  flush(';');
+  for (const { words: ws, piped } of segs) {
+    let named = 0;
+    for (const raw of ws.slice(1)) {
+      let w = raw;
+      if (w.startsWith('-')) { const eq = w.indexOf('='); if (eq < 0) continue; w = w.slice(eq + 1); if (!w) continue; }
+      if (w === '/dev/null') continue;
+      if (pathLike(w)) { if (!of(w)) return `${w} is not of the record`; named++; continue; }
+      let there = false;
+      try { there = existsSync(absOf(w, cwd)); } catch { there = false; }
+      if (there) { if (!of(w)) return `${w} is not of the record`; named++; }
+    }
+    if (!named && !piped && !READS_NO_FILE.has(ws[0])) return `"${ws[0]}" names no file of the record, so it reads the working directory`;
+  }
+  return null;
+}
+
+/**
+ * The target of a read that is not of the record.
+ * @param {object} p  a main-thread PreToolUse payload the read classifier called a read.
+ * @param {() => string|undefined} [planPath]  the approved plan's path, for `recordPath`.
+ * @returns {string|null} null when the call names no file (ToolSearch, TaskList,
+ *   Skill, a web read) or every file it names is of the record (`recordPath`);
+ *   otherwise a clause saying what is not of it (the path, or that the call
+ *   names no file), which `managerFence` puts in the refusal. A Read is judged by its file, a Grep by its path (the working
+ *   directory when it gives none), a Glob by the fixed part of its pattern
+ *   under its path, a Bash line by each file it names (`bashOutsideRecord`), and
+ *   the connector's file contents and code search are never of the record.
+ *   `managerFence` refuses on the answer and says to send an agent.
+ */
+export function readOutsideRecord(p, planPath) {
+  const tool = String(p.tool_name ?? '');
+  const input = p.tool_input ?? {};
+  const cwd = p.cwd ? String(p.cwd) : process.cwd();
+  const of = (w) => recordPath(absOf(w, cwd), p, planPath);
+  if (SOURCE_READS.has(tool)) return `${tool} reads a repository's file through the connector`;
+  if (tool === 'Read') {
+    const f = String(input.file_path ?? input.path ?? '');
+    return f && of(f) ? null : (f ? `${f} is not of the record` : 'a Read names no file');
+  }
+  if (tool === 'Grep') {
+    const f = String(input.path ?? '');
+    return of(f || cwd) ? null : `${f || `the working directory ${cwd}`} is not of the record`;
+  }
+  if (tool === 'Glob') {
+    const pat = String(input.pattern ?? '');
+    const fixed = [];
+    for (const s of pat.split('/')) { if (GLOB_CHAR.test(s)) break; fixed.push(s); }
+    const at = fixed.join('/');
+    const target = /^[/~]/.test(pat) ? (at || '/') : join(String(input.path ?? cwd), at);
+    return of(target) ? null : `${target} is not of the record`;
+  }
+  if (tool === 'Bash') return bashOutsideRecord(String(input.command ?? ''), cwd, of);
+  return null;
+}
+
+/**
+ * Is this call a read of the record, the one kind of call a correction lets through?
+ * @param {object} p  a main-thread PreToolUse payload.
+ * @param {{classify?: (p: object) => boolean, plan?: {path: string}|null}} [opts]  the
+ *   read classifier and the approved plan, for the test, as `managerFence` takes them.
+ * @returns {boolean} true only when the read classifier calls the call a read
+ *   (`isRead`) and nothing it names is outside the record (`readOutsideRecord`
+ *   is null): exactly the calls the manager fence passes as reads, so a
+ *   correction and the narrowed fence cannot disagree about what a read is. An
+ *   agent dispatch, a write, a SendUserFile, plan mode and a read of an app's
+ *   source are all false. `hook-dispatch.mjs` lifts a standing correction for a
+ *   call this calls true, and for no other.
+ */
+export function readOfRecord(p, opts = {}) {
+  if (!isRead(p, opts.classify ?? planGuardReads)) return false;
+  return readOutsideRecord(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path) === null;
+}
+
+/**
+ * The files a SendUserFile call names.
+ * @param {unknown} v  the tool's input, or a part of it.
+ * @param {string} [key]  the key `v` sits under.
+ * @param {string[]} [out]  the list built so far.
+ * @returns {string[]} every string in the input that sits under a key named
+ *   file, files, file_path, file_paths, path, paths or attachments, or that
+ *   begins with `/`, `~/`, `./` or `../`, at any depth. The tool's own shape was
+ *   not known when this was written, so it reads every shape a path could be in;
+ *   `managerFence` passes the call only when this is not empty and every one is
+ *   in the session scratchpad.
+ */
+function filesNamed(v, key = '', out = []) {
+  if (typeof v === 'string') {
+    if (/^(?:files?|file_?paths?|paths?|attachments?)$/i.test(key) || /^(?:\/|~\/|\.\.?\/)/.test(v)) out.push(v);
+  } else if (Array.isArray(v)) {
+    for (const x of v) filesNamed(x, key, out);
+  } else if (v && typeof v === 'object') {
+    for (const [k, x] of Object.entries(v)) filesNamed(x, k, out);
+  }
+  return out;
+}
+
 /**
  * The manager fence: the main thread plans, sends agents, checks and reports.
  * @param {object} p  a PreToolUse payload.
@@ -630,7 +830,13 @@ export function dispatchGate(p, plan = approvedPlan(), pointer = undefined) {
  *   the read classifier (plan-guard's), the approved plan and the pointer
  *   (`dispatchGate`'s third argument), for the test.
  * @returns {string|null} null for a subagent's call; on the main thread, null
- *   only for a read, an agent sent through the dispatch gate, TaskStop, an
+ *   only for a read OF THE RECORD (`readOutsideRecord`: a read of a file or a
+ *   directory passes only where `recordPath` says it is of the record, and a
+ *   read of anything else is refused with the reason to send an agent; a read
+ *   that names no file, ToolSearch or a web read, passes as before), a
+ *   SendUserFile of files that `inScratchpad` places in this session's
+ *   scratchpad (one file elsewhere refuses the call), an agent sent through the
+ *   dispatch gate, TaskStop, an
  *   Artifact publish of the status page (or a read, list or open; never a
  *   quickstart), a write to
  *   a plan file directly under ~/.claude/plans/ or to the status page's source
@@ -666,7 +872,23 @@ export function managerFence(p, opts = {}) {
     if (f && isStatusPage(f, p.session_id)) return null;
     return `${head} The main thread writes only its plan file and the status page's source (${STATUS_PAGE} in the session scratchpad); ${f || 'this file'} is written by an agent sent with a plan step.`;
   }
-  if (isRead(p, opts.classify ?? planGuardReads)) return null;
+  // A choice between pictures carries its pictures in the same message as the
+  // question (Doctrine §2): the main thread sends the owner files from this
+  // session's scratchpad, and no other file.
+  if (tool === 'SendUserFile') {
+    const cwd = p.cwd ? String(p.cwd) : process.cwd();
+    const named = filesNamed(input);
+    const outside = named.filter((f) => !inScratchpad(absOf(f, cwd), p.session_id));
+    if (named.length && !outside.length) return null;
+    return `MANAGER FENCE (Doctrine §2, §0e): the main thread sends the owner files only from this session's scratchpad, so a choice between pictures carries its pictures. `
+      + `${named.length ? `${outside[0]} is not in it` : 'This call names no file'}; a file elsewhere is copied into the scratchpad by an agent sent with a plan step.`;
+  }
+  if (isRead(p, opts.classify ?? planGuardReads)) {
+    // A READ PASSES ONLY OF THE RECORD (Doctrine §0e rule 13): the manager reads
+    // what it manages by, and diagnosing from an app's source is an agent's work.
+    const outside = readOutsideRecord(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path);
+    return outside === null ? null : `${READ_FENCE}${outside}. Send an agent with the approved plan's path and a step number to read it.`;
+  }
   return `${head} It is not a read; send an agent with the approved plan's path and a step number.`;
 }
 
@@ -874,15 +1096,21 @@ async function main(event, raw, p) {
       return 0;
     }
     // A CORRECTION FROM THE OWNER ENDS THE TURN, BY REFUSAL (Doctrine §0e rule
-    // 3). While the owner's newest message does not end with a go-word, every call
-    // on the main thread is refused except the status command (passed above) and
-    // TaskStop, and the refusal does not latch: the next message from the owner
-    // is what lifts it, and a latch would only add a second wait. Rule 3 had
-    // nothing behind it and was broken four times on 2026-10-04. Agents are not
-    // held by it; they are held by the plan fence. A failure here lets the call on.
+    // 3). While the owner's newest message does not end with a go-word, every
+    // ACTION on the main thread is refused; the status command (passed above),
+    // TaskStop and a READ OF THE RECORD pass, and the refusal does not latch: the
+    // next message from the owner is what lifts it, and a latch would only add a
+    // second wait. Rule 3 had nothing behind it and was broken four times on
+    // 2026-10-04. A read passes because a question one file answers cost a
+    // refusal, a doctrine re-read and a go-word (measured 2026-10-06): a read
+    // changes nothing, and the narrowed manager fence already limits what a read
+    // may be of. A read that cannot be judged stays held. Agents are not held by
+    // it; they are held by the plan fence. A failure in finding the correction
+    // lets the call on.
     if (!p.agent_id && !mainStop) {
       let correction = null;
       try { correction = correctionStanding(p); } catch { correction = null; }
+      try { if (correction && readOfRecord(p)) correction = null; } catch { /* a read that cannot be judged stays held */ }
       if (correction) return refuse(correctionMessage(correction), false);
     }
     const fence = managerFence(p);

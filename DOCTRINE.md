@@ -268,8 +268,16 @@ every rule below while none of the hooks that enforce them was running
    first version took a go-word only as the whole message, and the owner's own
    go messages carry words before it. The list is the owner's to extend, and a
    session never adds to it. Every other message is a correction. While a
-   correction is the newest owner message, every main-thread call is refused
-   except the status command and `TaskStop`. The refusal names this rule,
+   correction is the newest owner message, every main-thread action is
+   refused; what passes is the status command, `TaskStop` and a read of the
+   record, as rule 13's fence classifies one (the approved plan and the plans
+   folder, the session scratchpad, the doctrine and lessons, each repo's notes
+   and plan pointers, the session's transcript), so a question one file
+   answers is answered from that file in the turn it is asked. The check used
+   to hold reads too, and on 2026-10-06 a question one file answered cost a
+   refusal, a doctrine re-read and a go-word. An agent dispatch, a write, a
+   `SendUserFile` and a read of anything outside the record stay held, and the
+   refusal says what passes. The refusal names this rule,
    prints the list, never quotes the message, and does not latch (rule 14): the
    owner's next message lifts it, and a latch would only add a second wait.
    Agents are not held by it, and the plan fence holds them (rule 13). Held
@@ -291,10 +299,14 @@ every rule below while none of the hooks that enforce them was running
    *Enforced by:* `plan-guard.mjs` (talk-first) and `stop-guard.mjs` (a reply
    asking for approval in chat is refused). The talk is checked against the
    plan's LAST edit: `plan-guard.mjs` refuses `ExitPlanMode` unless the newest
-   assistant turn that asked nothing came after the plan file's last write and
-   a message from the owner followed it. Any turn that asked nothing used to
-   count, so on 2026-10-04 an answer to a correction passed, twice, as the
-   explanation of a plan that was edited afterwards.
+   assistant turn that asked nothing and ended before the owner's newest
+   message came after the plan file's last write. Any turn that asked nothing
+   used to count, so on 2026-10-04 an answer to a correction passed, twice, as
+   the explanation of a plan that was edited afterwards. Text written in the
+   turn of the `ExitPlanMode` call itself is not a turn: it sits after every
+   owner message, so a line written just before the call read as the newest
+   talk with no owner message after it, and two approvals were refused for it
+   on 2026-10-06.
 5. **A line before each tool call and a line after each result.**
 6. **Never "waiting on you", never "you owe".** Say "open for you:". A stop is
    declared in the first line as "Stopping here: open for you is X".
@@ -327,7 +339,21 @@ every rule below while none of the hooks that enforce them was running
     *Enforced by:* the manager fence in `hook-dispatch.mjs`. On the main thread
     (a call carrying no `agent_id`) it refuses every tool except: reads as
     `plan-guard.mjs` classifies them, where sending an agent, a workflow,
-    `TaskStop`, a plan-mode call and a file write never count as one; sending
+    `TaskStop`, a plan-mode call and a file write never count as one, and
+    then only reads of the record: a read of a file or a directory (Read,
+    Grep, Glob, and each file a Bash line names) passes only of the approved
+    plan and every file directly under `~/.claude/plans/`, the session
+    scratchpad, the hub's `DOCTRINE.md`, `LESSONS.md`, `lessons/` and
+    `plans/`, the hub's and each sibling's `CLAUDE.md`, `NOTES.md`,
+    `.plan-scope`, `.claude/PLAN` and `.branch-guard`, the session's own
+    transcript under `~/.claude/projects/`, and the live clone's doctrine; a
+    read of anything else, a source file or a tool of an app above all, or of
+    the GitHub connector's file contents or code search, is refused with a
+    reason that says to send an agent, and that refusal latches (rule 14); a
+    read that names no file, a tool search or a web read, passes as before;
+    `SendUserFile` of files that sit in the session scratchpad, so a choice
+    between pictures carries its pictures in the same message as the
+    question (§2), and of no other path; sending
     an agent, through the dispatch gate; `TaskStop`; `Artifact` publishing the
     status page and nothing else (`status/fix-run.html` in the session
     scratchpad, as a plain page), or reading, listing or opening a page, and

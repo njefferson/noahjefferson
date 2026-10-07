@@ -1,0 +1,12 @@
+## 391 · The correction check held reads, so a question that one file answered cost a refusal, a doctrine re-read and a go-word
+
+**Enforced by:** GATE noahjefferson:hook-dispatch.mjs — while a correction stands (`correctionStanding`), every main-thread action is held, and a read of the record as the manager fence classifies one, the status command and `TaskStop` pass without latching; the refusal's text (`correctionMessage`) says what passes and what is held
+**Enforced by:** GATE noahjefferson:session-guards.test.mjs — a read of the record under a correction passes and does not latch, an agent dispatch, a write and a read of anything but the record are refused with the correction's words, and the go-word then lifts it, each with its plants
+
+**Recorded 2026-10-07.** A message from the owner that does not end in a go-word is a correction, and while it is the newest message `hook-dispatch.mjs` refuses every main-thread call but the status command and `TaskStop` (Doctrine §0e rule 3). The rule was written to stop a session working through a run of corrections on its own reading of what was meant, and what it stops is action. It held every call, and a read is not an action: it changes nothing, and it is the one thing that lets a question be answered from the record instead of from memory.
+
+**Measured on 2026-10-06.** The correction check refused the doctrine reads and the transcript read. A question that one file answered therefore cost a refusal, then a doctrine re-read, then a go-word from the owner before the file could be read at all. The rule whose purpose was to keep the session from acting held it from the one read that would have answered.
+
+**The fix holds actions only.** A read of the record, as the manager fence classifies one now that it passes only the record (the plans, the scratchpad, the doctrine and lessons, each repo's notes and plan pointers, the session's transcript), passes under a correction and does not latch, and the status command and `TaskStop` pass as before. An agent dispatch, a write, and a read of anything outside the record, an app's source above all, stay held, and the refusal says in its own words what passes and what is held.
+
+**The general form.** A gate that exists to stop actions should be written against actions. Held at every call, the cost fell on the one kind of call that could not do harm. Say what the control is for before choosing what it covers, and let through what cannot do the thing it is for.

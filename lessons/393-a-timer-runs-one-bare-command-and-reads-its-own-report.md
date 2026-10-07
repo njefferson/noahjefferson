@@ -1,0 +1,13 @@
+## 393 · A timer runs an on-disk script with one bare command, and a script that reads the scratchpad for changes read its own report as one
+
+**Enforced by:** CHECKLIST timer-one-bare-command — a standing timer step runs one script that already exists on disk, with one bare command and nothing in front of it (no folder made, no sleep, no timeout, no loop, no run in the background), and the agent writes no script and no progress note; the one report it writes is named to the script on its command line, so the script ignores that file wherever it lands under the scratchpad
+
+**Recorded 2026-10-07.** A standing step that waits on other agents was written as an agent that writes a timer script and runs it. The plan fence refuses an agent's command that carries a shape the plan has not named, and the agent writing its own script produced those shapes: one send in three was refused, for a folder made first, a sleep, a timeout in front of the command, a loop, and a run in the background.
+
+**The fix for the first half.** The script is written once, on disk, under an earlier plan, and the step's one command is the bare path to it, run in the foreground with the tool's own timeout. Nothing about the command varies from one send to the next, so there is no shape to name and nothing to refuse.
+
+**Measured on 2026-10-06: the second half.** The script watches the newest line of every progress note under the scratchpad and exits when any line has changed. The agent writes the script's output to a report file, and the script read that file as a change. It did so wherever the report landed under the scratchpad, in the progress folder and at the scratchpad's root. The script returned within a minute four times, and each early return reported a change that was only the previous timer's report.
+
+**The fix for the second half.** A report written to a place a script watches is a write the script can see, and moving it does not help while the script decides what to ignore by where a file sits. The script has to be told which file to ignore, and the only reliable way to tell it is the command line: the path of the report goes in as an argument, and the script skips that one file, so no location it lands in is read as a change. The command is still one bare command, with its one argument.
+
+**The general form.** A watcher that shares a folder with its own output must be given the output's name. The next timer step in a plan names the report's path in its command and says that the script takes it, and the plan's Commands line carries that shape, so the fence and the script agree on what the one command is.

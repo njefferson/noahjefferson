@@ -742,17 +742,17 @@ const CASES = [
 
   // ---- the manager fence and the dispatch gate (hook-dispatch.mjs) ----
   {
-    name: 'the manager fence lets the main thread read, send agents, stop a task, publish and write the status page, write its plan and enter and exit plan mode; nothing else, an Artifact quickstart included',
+    name: 'the manager fence lets the main thread read the record, send agents, stop a task, publish and write the status page, write its plan and enter and exit plan mode; nothing else, an Artifact quickstart included',
     guards: ['manager_fence', 'fence_artifact', 'fence_plan_file', 'fence_enter_plan', 'fence_status_write', 'fence_quickstart'],
     run(m) {
       const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
       const s = sid('mf');
-      const reads = (q) => q.tool_name === 'Read' || (q.tool_name === 'Bash' && q.tool_input.command === 'git status');
+      const reads = (q) => q.tool_name === 'Read' || (q.tool_name === 'Bash' && /^cat /.test(q.tool_input.command));
       const f = (tool_name, tool_input = {}, extra = {}) => m.dispatch.managerFence({ session_id: s, tool_name, tool_input, ...extra }, { plan, classify: reads });
       const page = `/tmp/claude-0/-home-user/${s}/scratchpad/status/fix-run.html`;
       const otherPage = `/tmp/claude-0/-home-user/${s}/scratchpad/status.html`;
       const fenced = (x) => /^MANAGER FENCE/.test(x ?? '');
-      return f('Read') === null && f('Bash', { command: 'git status' }) === null
+      return f('Read', { file_path: plan.path }) === null && f('Bash', { command: `cat ${plan.path}` }) === null
         && f('TaskStop', { task_id: 'x' }) === null && f('ExitPlanMode') === null && f('EnterPlanMode') === null
         && f('Agent', { prompt: '/plans/gate-test.md step 1' }) === null
         && f('Artifact', { file_path: page }) === null && f('Artifact', { action: 'read', url: 'u' }) === null
@@ -792,8 +792,8 @@ const CASES = [
     },
   },
   {
-    name: 'hook-dispatch runs the manager fence and the dispatch gate on the main thread, and lets it enter plan mode',
-    guards: ['manager_wired', 'fence_enter_plan'],
+    name: 'hook-dispatch runs the manager fence and the dispatch gate on the main thread, and lets it enter plan mode; a read of the plan passes, and a read of a source file is refused with the reason to send an agent and latches',
+    guards: ['manager_wired', 'fence_enter_plan', 'read_fence'],
     run(m, dir) {
       const w = world(dir);
       const s = sid('fw');
@@ -801,10 +801,95 @@ const CASES = [
       const s2 = sid('fw');
       const agent = w.call('PreToolUse', { session_id: s2, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } });
       const extra = w.call('PreToolUse', { session_id: sid('fw'), tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1, and tidy up after`, subagent_type: 'general-purpose' } });
-      const read = w.call('PreToolUse', { session_id: sid('fw'), tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
+      const read = w.call('PreToolUse', { session_id: sid('fw'), tool_name: 'Read', tool_input: { file_path: w.plan } });
       const enter = w.call('PreToolUse', { session_id: sid('fw'), tool_name: 'EnterPlanMode', tool_input: {} });
+      // A source file is not of the record: refused with the reason, and the refusal latches.
+      const sSrc = sid('fw');
+      const src = repo({ 'app.ts': 'export const x = 1;\n' }, 'appfix');
+      const source = w.call('PreToolUse', { session_id: sSrc, tool_name: 'Read', tool_input: { file_path: join(src.dir, 'app.ts') } });
       return write.status === 2 && /MANAGER FENCE/.test(write.stderr) && agent.status === 0
-        && extra.status === 2 && /DISPATCH GATE/.test(extra.stderr) && read.status === 0 && enter.status === 0;
+        && extra.status === 2 && /DISPATCH GATE/.test(extra.stderr) && read.status === 0 && enter.status === 0
+        && source.status === 2 && /MANAGER FENCE/.test(source.stderr) && /Send an agent/.test(source.stderr) && latched(sSrc);
+    },
+  },
+  {
+    name: 'the manager fence passes a read only of the record (the approved plan and the plans folder, the scratchpad, the hub\'s doctrine and lessons, each repo\'s notes and plan pointers, the session\'s transcript); a read of an app\'s source or tool, by Read, Grep, Glob, Bash or the connector, is refused with the reason to send an agent',
+    guards: ['read_fence', 'read_fence_pad', 'read_fence_plans', 'read_fence_plan_file', 'read_fence_doctrine', 'read_fence_transcript', 'read_fence_transcript_name',
+      'read_fence_repo_files', 'read_fence_hub_files', 'read_fence_read', 'read_fence_grep', 'read_fence_glob', 'read_fence_bash', 'read_fence_bash_dynamic',
+      'read_fence_bash_pipe', 'read_fence_bash_nofile', 'read_fence_bash_bare', 'read_fence_bash_flag', 'read_fence_connector'],
+    run(m) {
+      const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
+      const s = sid('rf');
+      const pad = `/tmp/claude-0/-home-user/${s}/scratchpad`;
+      const dot = join(homedir(), '.claude');
+      // A hub (its DOCTRINE.md and hook-dispatch.mjs beside it) and a sibling repository, each with an app source file.
+      const hub = repo({ 'DOCTRINE.md': 'd', 'hook-dispatch.mjs': 'h', 'app.ts': 'x' }, 'hubfix');
+      const sib = repo({ 'NOTES.md': 'n', 'app.ts': 'x' }, 'sibfix');
+      for (const d of ['lessons', 'plans']) mkdirSync(join(hub.dir, d));
+      // Every call counts as a read for the classifier, so what these judge is the record.
+      const f = (tool_name, tool_input, extra = {}) => m.dispatch.managerFence({ session_id: s, tool_name, tool_input, ...extra }, { plan, classify: () => true });
+      const passes = (tool_name, tool_input, extra) => f(tool_name, tool_input, extra) === null;
+      const refused = (tool_name, tool_input, extra) => { const r = f(tool_name, tool_input, extra) ?? ''; return /^MANAGER FENCE/.test(r) && /Send an agent/.test(r); };
+      const read = (file_path, extra) => passes('Read', { file_path }, extra);
+      const notRead = (file_path, extra) => refused('Read', { file_path }, extra);
+      const bash = (command, extra) => passes('Bash', { command }, extra);
+      const notBash = (command, extra) => refused('Bash', { command }, extra);
+      const mine = { cwd: sib.dir };
+      const thePlan = read(plan.path) && read(join(dot, 'plans', 'next.md')) && passes('Grep', { pattern: 'x', path: join(dot, 'plans') }) && notRead(join(dot, 'plans', 'sub', 'x.md'));
+      const thePad = read(`${pad}/progress/step-11.txt`) && read(`${pad}/progress/step-11-report.txt`) && read(`${pad}/step6/final/sheet-1.jpg`)
+        && passes('Glob', { pattern: `${pad}/progress/*.txt` })
+        && notRead('/tmp/claude-0/-home-user/other/scratchpad/progress/step-11.txt') && notRead(`${pad}/../x.txt`);
+      const theDoctrine = read(join(dot, 'hub', 'DOCTRINE.md')) && read(join(hub.dir, 'DOCTRINE.md')) && notRead(join(sib.dir, 'DOCTRINE.md'));
+      const theTranscript = read('/elsewhere/t.jsonl', { transcript_path: '/elsewhere/t.jsonl' }) && notRead('/elsewhere/other.jsonl', { transcript_path: '/elsewhere/t.jsonl' });
+      const theTranscriptName = read(join(dot, 'projects', '-home-user', `${s}.jsonl`)) && notRead(join(dot, 'projects', '-home-user', 'another-session.jsonl'));
+      const theRepoFiles = ['NOTES.md', 'CLAUDE.md', '.plan-scope', '.claude/PLAN', '.branch-guard'].every((n) => read(join(sib.dir, n)))
+        && notRead(join(sib.dir, 'app.ts')) && notRead(join(hub.dir, 'app.ts')) && notRead(join(hub.dir, 'hook-dispatch.mjs'));
+      const theHubFiles = ['LESSONS.md', 'lessons/385-a-lesson.md', 'plans/a-plan.md'].every((n) => read(join(hub.dir, n))) && passes('Grep', { pattern: 'x', path: join(hub.dir, 'lessons') })
+        && notRead(join(sib.dir, 'LESSONS.md')) && notRead(join(sib.dir, 'lessons', 'a-lesson.md'));
+      const theRead = notRead('/etc/hostname') && refused('Read', {});
+      const theGrep = refused('Grep', { pattern: 'x' }, mine) && refused('Grep', { pattern: 'x', path: sib.dir }) && passes('Grep', { pattern: 'x', path: join(sib.dir, 'NOTES.md') });
+      const theGlob = refused('Glob', { pattern: '**/*.ts', path: sib.dir }) && refused('Glob', { pattern: `${sib.dir}/**/*.ts` })
+        && passes('Glob', { pattern: 'lessons/*.md', path: hub.dir }) && passes('Glob', { pattern: join(sib.dir, 'NOTES.md') });
+      const theBash = notBash(`cat ${sib.dir}/app.ts`) && notBash(`git -C ${sib.dir} diff`) && notBash('ls', mine) && notBash(`cat ${sib.dir}/NOTES.md ${sib.dir}/app.ts`)
+        && notBash(`cat ${sib.dir}/NOTES.md; cat ${sib.dir}/app.ts`)
+        && bash(`cat ${sib.dir}/NOTES.md`) && bash(`ls ${join(dot, 'plans')}`) && bash('cat NOTES.md', mine) && bash(`cat ${pad}/progress/step-1.txt 2>/dev/null`);
+      const theBashDynamic = notBash('echo $(date)') && notBash(`cat ${sib.dir}/NOTES.md --label=$X`);
+      const theBashPipe = bash(`grep -n foo ${pad}/progress/step-1.txt | head -5`) && notBash(`cat ${sib.dir}/NOTES.md | head -5; head -5`);
+      const theBashNoFile = bash('date') && bash('echo done');
+      const theBashBare = notBash('cat app.ts', mine);
+      const theBashFlag = notBash(`grep --file=${sib.dir}/app.ts foo ${sib.dir}/NOTES.md`);
+      const theConnector = refused('mcp__github__get_file_contents', { owner: 'o', repo: 'r', path: 'src/x.ts' }) && refused('mcp__github__search_code', { q: 'x' })
+        && passes('ToolSearch', { query: 'x' }) && passes('WebSearch', { query: 'x' }) && passes('mcp__github__actions_list', { owner: 'o', repo: 'r' });
+      return thePlan && thePad && theDoctrine && theTranscript && theTranscriptName && theRepoFiles && theHubFiles && theRead && theGrep && theGlob
+        && theBash && theBashDynamic && theBashPipe && theBashNoFile && theBashBare && theBashFlag && theConnector
+        // A subagent is not held by it: the plan fence holds an agent's reads.
+        && passes('Read', { file_path: join(sib.dir, 'app.ts') }, { agent_id: 'a1' });
+    },
+  },
+  {
+    name: 'the manager fence passes a SendUserFile of files in the session scratchpad, so a choice between pictures carries its pictures; one naming a file anywhere else, in another session\'s scratchpad, or no file, is refused',
+    guards: ['send_file_branch', 'send_file', 'send_file_pad', 'send_file_named'],
+    run(m, dir) {
+      const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
+      const s = sid('sf');
+      const pad = `/tmp/claude-0/-home-user/${s}/scratchpad`;
+      const sheet = (n) => `${pad}/step6/final/sheet-${n}.jpg`;
+      // Not a read for the classifier, so a call that is not passed by its own rule is refused as not a read.
+      const f = (tool_input, extra = {}) => m.dispatch.managerFence({ session_id: s, tool_name: 'SendUserFile', tool_input, ...extra }, { plan, classify: () => false });
+      const fenced = (x) => /^MANAGER FENCE/.test(x ?? '');
+      const sent = f({ file_paths: [1, 2, 3, 4, 5].map(sheet) }) === null && f({ file_path: sheet(1), caption: 'Which of these reads better?' }) === null
+        && f({ files: [{ path: sheet(2) }, { path: sheet(3) }] }) === null && f({ paths: [sheet(4)] }) === null;
+      const refused = fenced(f({ file_paths: ['/etc/hostname'] })) && fenced(f({ file_paths: [sheet(1), '/home/user/x.jpg'] }))
+        && fenced(f({ file_path: '/tmp/claude-0/-home-user/other/scratchpad/step6/final/sheet-1.jpg' })) && fenced(f({ file_path: `${pad}/../sheet-1.jpg` }))
+        && fenced(f({ file_path: 'sheet-1.jpg' })) && fenced(f({})) && fenced(f({ caption: 'No file here.' }))
+        && /not in it/.test(f({ file_paths: [sheet(1), '/home/user/x.jpg'] }) ?? '') && /names no file/.test(f({}) ?? '');
+      // Through the whole chain: a scratchpad file goes, another file is refused and latches.
+      const w = world(dir);
+      const through = w.call('PreToolUse', { session_id: s, tool_name: 'SendUserFile', tool_input: { file_paths: [sheet(1), sheet(2)] } });
+      const sOut = sid('sf');
+      const outside = w.call('PreToolUse', { session_id: sOut, tool_name: 'SendUserFile', tool_input: { file_paths: ['/etc/hostname'] } });
+      return sent && refused && through.status === 0 && outside.status === 2 && /MANAGER FENCE/.test(outside.stderr) && latched(sOut)
+        && f({ file_paths: ['/etc/hostname'] }, { agent_id: 'a1' }) === null;
     },
   },
   {
@@ -888,7 +973,7 @@ const CASES = [
       writeFileSync(join(subs, 'agent-aend01.meta.json'), JSON.stringify({ agentType: 'general-purpose', description: 'Plan step for the gate test' }));
       writeFileSync(join(w.home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now() - 6 * 60000, status: 'Status' }));
       const s = sid('rg');
-      const call = () => w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
+      const call = () => w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan } });
       const due = call();
       const notLatched = !latched(s);
       const stamp = spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — an agent ended'], { encoding: 'utf8', env: { ...process.env, HOME: w.home, CLAUDE_CODE_SESSION_ID: '' } });
@@ -978,7 +1063,7 @@ const CASES = [
       const w = world(dir);
       const s = sid('la');
       const agentFile = (id) => join(process.env.REFUSAL_LATCH_DIR, `${s}.agent-${id}.json`);
-      const call = (extra) => w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: '/etc/hostname' }, ...extra });
+      const call = (extra) => w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan }, ...extra });
       // Agent a1 writes outside the plan's Files: the plan fence refuses it.
       const refused = call({ agent_id: 'a1', tool_name: 'Write', tool_input: { file_path: join(w.cwd, 'stray.txt'), content: 'x' } });
       const own = existsSync(agentFile('a1')) && !latched(s);
@@ -1033,7 +1118,7 @@ const CASES = [
       } }));
       const pad = 'x'.repeat(256 * 1024);
       const s = sid('lr');
-      const pre = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: '/etc/hostname' }, pad });
+      const pre = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan }, pad });
       const s2 = sid('lr');
       const stop = w.call('Stop', { session_id: s2, pad });
       return pre.status === 2 && /repo gate says no/.test(pre.stderr) && latched(s)
@@ -1186,6 +1271,40 @@ const CASES = [
         && askedAfter.status === 0 && newest.status === 0
         && unanswered.status === 2 && /has not been talked through/.test(unanswered.stdout)
         && noAnchor.status === 0;
+    },
+  },
+  {
+    name: 'ExitPlanMode judges the newest turn that asked nothing and ended before the owner\'s newest message: a line written in the call\'s own turn is not a turn, so one after a talk-through turn and an owner message passes, one with no talk-through turn is refused, and a newer talk before a second owner message is the one judged',
+    guards: ['talk_owner_after', 'talk_owner_newest'],
+    run(m, dir) {
+      const r = repo({ 'a.txt': 'x\n' });
+      const TALK = 'Here is what is being done and why: the export control moves to the toolbar edge, and nothing else changes.';
+      const TALK2 = 'To be exact about it: only the control moves, and the toolbar keeps every other control where it is.';
+      // Written in the turn of the call itself: long enough to count as talk, and it asks nothing.
+      const LINE = 'The plan is ready, so it goes up for approval in this same turn.';
+      const exit = (entries, writtenSecsAgo) => {
+        const home = tmp('sg-home-');
+        mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
+        const file = join(home, '.claude', 'plans', 'talk-test.md');
+        writeFileSync(file, PLAN(OWN_WORDS));
+        const t = (Date.now() - writtenSecsAgo * 1000) / 1000;
+        utimesSync(file, t, t);
+        return spawnSync('node', [join(dir, 'plan-guard.mjs')], {
+          input: JSON.stringify({ session_id: sid('tc'), permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { planFilePath: file }, transcript_path: transcript([turn(0, OWNER), ...entries]), cwd: '/' }),
+          encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: r.dir },
+        });
+      };
+      const said = (secs, text) => at(reply(0, text), later(secs));
+      const call = (secs) => at(tool(0, 'xp-call', 'ExitPlanMode', { planFilePath: 'x' }), later(secs));
+      const entered = enterPlan(-900);
+      // Talked through at -500, answered at -400, then a line in the call's own turn at -300 and the call at -290. The plan was written at -1000.
+      const ownTurn = exit([...entered, said(-500, TALK), owner(later(-400), 'ok'), said(-300, LINE), call(-290)], 1000);
+      // No talk-through turn at all: the line in the call's own turn is the only text after the last owner turn.
+      const noTalk = exit([...entered, owner(later(-400), 'ok'), said(-300, LINE), call(-290)], 1000);
+      // Two talks and two answers: the newer talk (-300) is after the plan's last write (-500) and the older (-800) is not,
+      // so judging the first owner message instead of the newest would refuse it.
+      const newer = exit([...entered, said(-800, TALK), owner(later(-700), 'ok'), said(-300, TALK2), owner(later(-200), 'ok'), said(-100, LINE), call(-90)], 500);
+      return ownTurn.status === 0 && noTalk.status === 2 && /has not been talked through/.test(noTalk.stdout) && newer.status === 0;
     },
   },
 
@@ -1461,7 +1580,7 @@ const CASES = [
       const s = sid('dd');
       const compact = w.call('SessionStart', { session_id: s, source: 'compact' });
       const due = existsSync(join(process.env.DOCTRINE_DUE_DIR, `${s}.json`));
-      const read = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
+      const read = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan } });
       const agent = w.call('PreToolUse', { session_id: s, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } });
       const startup = w.call('SessionStart', { session_id: sid('dd'), source: 'startup' });
       // Exactly one line about the doctrine, and it names the DOCTRINE.md beside
@@ -1971,7 +2090,7 @@ const CASES = [
       const s1 = sid('ax');
       const again = enter(w1, s1);
       const mk1 = (() => { try { return JSON.parse(readFileSync(join(w1.home, '.claude', 'APPROVED-PLAN.json'), 'utf8')); } catch { return null; } })();
-      const readAfter = w1.call('PreToolUse', { session_id: s1, tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
+      const readAfter = w1.call('PreToolUse', { session_id: s1, tool_name: 'Read', tool_input: { file_path: w1.plan } });
       // The owner wrote again after the exit (a go-word: any other message is a
       // correction, and a correction refuses every main-thread call).
       const w2 = setUp(() => [owner(later(-5), 'ok')]);
@@ -2013,23 +2132,29 @@ const CASES = [
 
   // ---- a correction from the owner ends the turn (hook-dispatch.mjs) ----
   {
-    name: 'while the owner\'s newest message does not end with a go-word, every main-thread call is refused except the status command and TaskStop, without latching and without quoting it; a message whose last word is a go-word lifts it, and agents are not held by it',
-    guards: ['correction_refuse', 'correction_go', 'correction_status', 'correction_taskstop', 'correction_no_latch', 'correction_agents', 'correction_midturn', 'go_words', 'go_last_word'],
+    name: 'while the owner\'s newest message does not end with a go-word, every main-thread action is refused except the status command and TaskStop, without latching and without quoting it, and the refusal says what passes; a message whose last word is a go-word lifts it, and agents are not held by it',
+    guards: ['correction_refuse', 'correction_go', 'correction_status', 'correction_taskstop', 'correction_no_latch', 'correction_agents', 'correction_midturn', 'go_words', 'go_last_word', 'correction_says'],
     run(m, dir) {
       const WRONG = 'That was done wrong, so answer me before anything else.';
       const w = world(dir, [turn(0, GO), turn(5, WRONG)]);
       const s = sid('co');
-      const call = (extra) => w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: '/etc/hostname' }, ...extra });
-      const refused = call({});
+      const call = (extra) => w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan }, ...extra });
+      // An agent sent for the plan's own step: an action the dispatch gate would pass, held by the correction alone.
+      // It is the probe for every "is a correction standing" question below, never a read of the plan: a read of
+      // the record passes a correction (the next case), so a read cannot tell a standing correction from none.
+      const send = { tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } };
+      const refused = call(send);
       const write = call({ tool_name: 'Write', tool_input: { file_path: join(w.cwd, 'x.txt'), content: 'x' } });
       const enter = call({ tool_name: 'EnterPlanMode', tool_input: {} });
       const noLatch = !latched(s);
       const status = call({ tool_name: 'Bash', tool_input: { command: `node "${join(dir, 'report.mjs')}" "Status 10:00 — a correction stands"` } });
       const stop = call({ tool_name: 'TaskStop', tool_input: { task_id: 'bxyz789' } });
-      const agent = call({ agent_id: 'a1' });
+      // An agent's read of a file outside the record: held by the correction only if agents were held by it, so it
+      // is the probe for "agents are not held". A read of the plan would pass either way, and the plant would be missed.
+      const agent = call({ agent_id: 'a1', tool_input: { file_path: '/etc/hostname' } });
       const wait = call({ tool_name: 'Bash', tool_input: { command: `node ${join(dir, 'report.mjs')} --wait` } });
       // A go-word as the next prompt lifts it, with punctuation and case set aside.
-      const lift = (text, entry) => { appendFileSync(w.tr, jsonl([entry ?? turn(10, text)])); return call({}).status; };
+      const lift = (text, entry) => { appendFileSync(w.tr, jsonl([entry ?? turn(10, text)])); return call(send).status; };
       const afterGo = lift('Go.');
       // A message delivered between tool calls is the owner's newest message too.
       const midWrong = lift('', mid(12, 'Not that one, the other one.'));
@@ -2048,6 +2173,7 @@ const CASES = [
       const notOwner = lift('', note) === 0 && lift('', sched) === 0 && lift('', peer) === 0;
       const said = refused.stderr ?? '';
       return refused.status === 2 && /CORRECTION \(Doctrine §0e rule 3\)/.test(said) && said.includes('go, ok, continue, approved, yes')
+        && /a read of the record \(/.test(said) && /the status command and TaskStop pass/.test(said)
         && !said.includes('done wrong') && !said.includes('answer me before')
         && write.status === 2 && /CORRECTION/.test(write.stderr) && enter.status === 2 && /CORRECTION/.test(enter.stderr) && noLatch
         && status.status === 0 && stop.status === 0 && agent.status === 0 && wait.status === 2 && /CORRECTION/.test(wait.stderr)
@@ -2056,11 +2182,40 @@ const CASES = [
     },
   },
   {
+    name: 'a read of the record passes a standing correction and does not latch, so a question is answered from a file in the turn it is asked; an agent dispatch, a write and a read of anything but the record are refused with the correction\'s words, and the go-word then lifts it',
+    guards: ['correction_read', 'correction_read_record', 'correction_read_only'],
+    run(m, dir) {
+      const WRONG = 'That was done wrong, so answer me before anything else.';
+      const w = world(dir, [turn(0, GO), turn(5, WRONG)]);
+      const s = sid('cr');
+      const src = repo({ 'NOTES.md': 'n', 'app.ts': 'x' }, 'corrfix');
+      const pad = `/tmp/claude-0/-home-user/${s}/scratchpad`;
+      const call = (extra) => w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan }, ...extra });
+      const held = (r) => r.status === 2 && /CORRECTION/.test(r.stderr);
+      const send = { tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } };
+      // The record: the approved plan, this session's transcript, a scratchpad note, a repository's NOTES.md, a Bash cat of the plan, a Grep of it.
+      const reads = [call({}), call({ tool_input: { file_path: w.tr } }), call({ tool_input: { file_path: join(src.dir, 'NOTES.md') } }),
+        call({ tool_input: { file_path: `${pad}/progress/step-1.txt` } }), call({ tool_name: 'Bash', tool_input: { command: `cat ${w.plan}` } }),
+        call({ tool_name: 'Grep', tool_input: { pattern: 'Build', path: w.plan } })];
+      const passed = reads.every((r) => r.status === 0) && !latched(s);
+      // Not the record, or not a read: held by the correction, with its words, and the refusal does not latch.
+      const refused = [call(send), call({ tool_input: { file_path: join(src.dir, 'app.ts') } }), call({ tool_input: { file_path: '/etc/hostname' } }),
+        call({ tool_name: 'Write', tool_input: { file_path: join(w.cwd, 'x.txt'), content: 'x' } }),
+        call({ tool_name: 'Bash', tool_input: { command: `cat ${join(src.dir, 'app.ts')}` } })];
+      const held5 = refused.every(held) && !latched(s);
+      // The go-word lifts it: the dispatch that was held now passes.
+      appendFileSync(w.tr, jsonl([turn(10, GO)]));
+      const lifted = call(send).status === 0;
+      return passed && held5 && lifted;
+    },
+  },
+  {
     name: 'a correction found in a transcript that cannot be read comes from the record UserPromptSubmit wrote; the record never overrides a readable one, and a harness prompt is not recorded',
     guards: ['correction_fallback', 'correction_record'],
     run(m, dir) {
       const w = world(dir);
-      const lost = (s) => w.call('PreToolUse', { session_id: s, transcript_path: join(w.cwd, 'missing.jsonl'), tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } }).status;
+      // An agent sent for the plan's own step: an action, which only a correction holds.
+      const lost = (s) => w.call('PreToolUse', { session_id: s, transcript_path: join(w.cwd, 'missing.jsonl'), tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } }).status;
       const s1 = sid('cf');
       w.call('UserPromptSubmit', { session_id: s1, prompt: 'That was wrong; explain it.' });
       const wrong = lost(s1);
@@ -2077,7 +2232,7 @@ const CASES = [
       const s5 = sid('cf');
       w.call('UserPromptSubmit', { session_id: s5, prompt: 'That was wrong; explain it.' });
       const w5 = world(dir, [turn(0, GO)]);
-      const readable = w5.call('PreToolUse', { session_id: s5, tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } }).status;
+      const readable = w5.call('PreToolUse', { session_id: s5, tool_name: 'Agent', tool_input: { prompt: `${w5.plan} step 1`, subagent_type: 'general-purpose' } }).status;
       return wrong === 2 && go === 0 && none === 0 && notified === 0 && readable === 0;
     },
   },
@@ -2464,6 +2619,31 @@ const PLANTS = {
   fence_enter_plan: [" || tool === 'EnterPlanMode') return null;", ') return null;', 'hook-dispatch.mjs'],
   fence_status_write: ['    if (f && isStatusPage(f, p.session_id)) return null;\n', '\n', 'hook-dispatch.mjs'],
   manager_wired: ['    const fence = managerFence(p);\n    if (fence) return refuse(fence);\n', '\n', 'hook-dispatch.mjs'],
+  // The manager fence passes a read only of the record.
+  read_fence: ['    return outside === null ? null : ', '    return null; // ', 'hook-dispatch.mjs'],
+  read_fence_pad: ["  if (inScratchpad(join(a, '_'), p.session_id)) return true;\n", '', 'hook-dispatch.mjs'],
+  read_fence_plans: ["  if (a === join(dot, 'plans') || dirname(a) === join(dot, 'plans')) return true;\n", '', 'hook-dispatch.mjs'],
+  read_fence_plan_file: ['  if (plan && a === resolve(String(plan))) return true;\n', '', 'hook-dispatch.mjs'],
+  read_fence_doctrine: ["  if (a === join(dot, 'hub', 'DOCTRINE.md') || a === join(HUB, 'DOCTRINE.md')) return true;\n", '', 'hook-dispatch.mjs'],
+  read_fence_transcript: ['  if (p.transcript_path && a === resolve(String(p.transcript_path))) return true;\n', '', 'hook-dispatch.mjs'],
+  read_fence_transcript_name: ["  if (p.session_id && dirname(dirname(a)) === join(dot, 'projects') && basename(a) === `${p.session_id}.jsonl`) return true;\n", '', 'hook-dispatch.mjs'],
+  read_fence_repo_files: ["  if (['CLAUDE.md', 'NOTES.md', '.plan-scope', '.claude/PLAN', '.branch-guard'].includes(rel)) return true;\n", '', 'hook-dispatch.mjs'],
+  read_fence_hub_files: ["  return rel === 'DOCTRINE.md' || rel === 'LESSONS.md' || ['lessons', 'plans'].some(", "  return false && ['lessons', 'plans'].some(", 'hook-dispatch.mjs'],
+  read_fence_read: ["    return f && of(f) ? null : (f ? `${f} is not of the record` : 'a Read names no file');", '    return null;', 'hook-dispatch.mjs'],
+  read_fence_grep: ['    return of(f || cwd) ? null : `${f || `the working directory ${cwd}`} is not of the record`;', '    return null;', 'hook-dispatch.mjs'],
+  read_fence_glob: ['    return of(target) ? null : `${target} is not of the record`;', '    return null;', 'hook-dispatch.mjs'],
+  read_fence_bash: ["  if (tool === 'Bash') return bashOutsideRecord(String(input.command ?? ''), cwd, of);", "  if (tool === 'Bash') return null;", 'hook-dispatch.mjs'],
+  read_fence_bash_dynamic: ["    if (c === '$' || c === '`') return", '    if (false) return', 'hook-dispatch.mjs'],
+  read_fence_bash_pipe: ['    if (!named && !piped && !READS_NO_FILE.has(ws[0])) return', '    if (!named && !READS_NO_FILE.has(ws[0])) return', 'hook-dispatch.mjs'],
+  read_fence_bash_nofile: ['    if (!named && !piped && !READS_NO_FILE.has(ws[0])) return', '    if (!named && !piped) return', 'hook-dispatch.mjs'],
+  read_fence_bash_bare: ['      if (there) { if (!of(w)) return `${w} is not of the record`; named++; }', '      if (there) { named++; }', 'hook-dispatch.mjs'],
+  read_fence_bash_flag: ["const eq = w.indexOf('='); if (eq < 0) continue; w = w.slice(eq + 1); if (!w) continue; }", 'continue; }', 'hook-dispatch.mjs'],
+  read_fence_connector: ['  if (SOURCE_READS.has(tool)) return', '  if (false) return', 'hook-dispatch.mjs'],
+  // The manager fence passes a SendUserFile of files in the session scratchpad, and no other.
+  send_file_branch: ["  if (tool === 'SendUserFile') {", '  if (false) {', 'hook-dispatch.mjs'],
+  send_file: ['    if (named.length && !outside.length) return null;', '    if (true) return null;', 'hook-dispatch.mjs'],
+  send_file_pad: ['    const outside = named.filter((f) => !inScratchpad(absOf(f, cwd), p.session_id));', '    const outside = [];', 'hook-dispatch.mjs'],
+  send_file_named: ['    if (named.length && !outside.length) return null;', '    if (!outside.length) return null;', 'hook-dispatch.mjs'],
   dispatch_prompt: ['  if (!m) return refusal(`${head} Send exactly:', '  if (!m) return null; // ', 'hook-dispatch.mjs'],
   dispatch_step: ['  if (!planSteps(plan.text).includes(Number(m[1])))', '  if (false)', 'hook-dispatch.mjs'],
   dispatch_workflow: ["  if (tool === 'Workflow') return 'DISPATCH GATE", "  if (false) return 'DISPATCH GATE", 'hook-dispatch.mjs'],
@@ -2655,12 +2835,19 @@ const PLANTS = {
   correction_fallback: ['    return r && r.go === false ? { at: Number(r.at) || 0 } : null;', '    return null;', 'hook-dispatch.mjs'],
   correction_record: ['  if (!prompt.trim() || HARNESS_TAG.test(prompt)) return false;', '  if (!prompt.trim()) return false;', 'hook-dispatch.mjs'],
   correction_widen: ['  else for (const mb of [2, 8, 32]) {', '  else for (const mb of [2]) {', 'hook-dispatch.mjs'],
+  // A read of the record passes a correction; an action and a read of anything else do not.
+  correction_read: ['      try { if (correction && readOfRecord(p)) correction = null; } catch { /* a read that cannot be judged stays held */ }\n', '\n', 'hook-dispatch.mjs'],
+  correction_read_record: ["  return readOutsideRecord(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path) === null;", '  return true;', 'hook-dispatch.mjs'],
+  correction_read_only: ['  if (!isRead(p, opts.classify ?? planGuardReads)) return false;\n  return readOutsideRecord(', '  return readOutsideRecord(', 'hook-dispatch.mjs'],
+  correction_says: ['the status command and TaskStop pass; every other call is held', 'every other call is held', 'hook-dispatch.mjs'],
   reminder_wording: ["  'First line: what you are doing now.',\n", "  'First line: what you are doing now and what comes next. A status at least every five minutes',\n", 'hook-dispatch.mjs'],
   // The talk before a plan is judged against the plan file's last write.
   talk_after_edit: ['    if (planWrittenAt && Number.isFinite(at) && at < planWrittenAt) {', '    if (false) {', 'plan-guard.mjs'],
   talk_asks_nothing: ['    if (said.length > 40 && asksNothing(said)) talk = i;', '    if (said.length > 40) talk = i;', 'plan-guard.mjs'],
   talk_newest: ['    if (said.length > 40 && asksNothing(said)) talk = i;', '    if (talk < 0 && said.length > 40 && asksNothing(said)) talk = i;', 'plan-guard.mjs'],
-  talk_owner_after: ['    for (let i = talk + 1; i < entries.length; i++) if (isOwnerMessage(entries[i])) return null;', '    for (let i = talk + 1; i < entries.length; i++) if (true) return null;', 'plan-guard.mjs'],
+  // The turn judged ended before the owner's newest message: text in the call's own turn is not a turn.
+  talk_owner_after: ['  for (let i = anchor + 1; i < ownerAt; i++) {', '  for (let i = anchor + 1; i < entries.length; i++) {', 'plan-guard.mjs'],
+  talk_owner_newest: ['  for (let i = entries.length - 1; i > anchor; i--) if (isOwnerMessage(entries[i])) { ownerAt = i; break; }', '  for (let i = anchor + 1; i < entries.length; i++) if (isOwnerMessage(entries[i])) { ownerAt = i; break; }', 'plan-guard.mjs'],
   // Every status prints each agent's hook refusals and last tool result, and the wait returns on a refusal.
   reads_block: ['  console.log(reads);\n', '\n', 'report.mjs'],
   reads_refusal: ['      if (b.is_error && HOOK_REFUSAL.test(text)) refusals.push({ tool, at, text });', '      if (false) refusals.push({ tool, at, text });', 'report.mjs'],
