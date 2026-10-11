@@ -485,3 +485,4 @@ and the filename carries it.
 - **§391** — [The correction check held reads, so a question that one file answered cost a refusal, a doctrine re-read and a go-word](lessons/391-the-correction-check-held-reads.md)
 - **§392** — [A refused ExitPlanMode is itself a plan-mode call, so each refusal needs a fresh talk-through turn before the next call](lessons/392-a-refused-exitplanmode-is-a-plan-mode-call.md)
 - **§393** — [A timer runs an on-disk script with one bare command, and a script that reads the scratchpad for changes read its own report as one](lessons/393-a-timer-runs-one-bare-command-and-reads-its-own-report.md)
+- **§394** — [A plan that put the gates' install last so that its own method could run was a bypass of the gates, and approving the plan did not move the responsibility off the session](lessons/394-an-install-placed-last-so-the-method-could-run-is-a-bypass.md)

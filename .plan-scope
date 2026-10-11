@@ -1,27 +1,25 @@
 # Written by plan-scope-check.mjs --record. Not hand-edited.
-plan=/root/.claude/plans/rippling-hugging-frog.md
-planhash=1463eca77823018c
-diffhash=d466729bf3317b27
-verdict=IN-SCOPE: every change in the hub working copy belongs to steps 11, 12 or 13 of the plan and sits in its Files list, and nothing else was changed, added or removed.
-# IN-SCOPE: every change in the hub working copy belongs to steps 11, 12 or 13 of the plan and sits in its Files list, and nothing else was changed, added or removed.
+plan=/root/.claude/plans/giggly-questing-iverson.md
+planhash=89518f2b84ce61eb
+diffhash=b84ce853827a7118
+verdict=IN-SCOPE: the hub working copy holds one new lesson file, its one index row in LESSONS.md and the previous scope record, all three belong to steps 12 and 13 and sit in the Files list for steps 12 to 14, and nothing else was changed, added or removed.
+# IN-SCOPE: the hub working copy holds one new lesson file, its one index row in LESSONS.md and the previous scope record, all three belong to steps 12 and 13 and sit in the Files list for steps 12 to 14, and nothing else was changed, added or removed.
 # 
-# Read for this verdict, by this agent, which made none of the hub's diff: the plan by its path (Goals, Order, Steps 11 to 17, Branches, Files), the scope check's printout, git status, git diff --stat, git diff --name-only, the full diff of each tracked file, and each of the eight new lesson files in full. Searched the new lessons, the test diff and .plan-scope for a session link, a trailer, a model's name and the generated-with line: none.
+# Read for this verdict at 18:21 PDT on 2026-10-10, by an agent that made none of the hub's diff: the plan by its path (Goals, Order, steps 12 to 14, Files), the previous .plan-scope record and the whole of plan-scope-check.mjs, the scope check's printout with the session's messages it prints, git status, git diff --stat, git diff --name-only, the full diff of LESSONS.md, the new lesson file in full, and a search of the lesson for names, links, trailers, model names, pronouns for a person and table characters.
 # 
-# Tracked files changed, seven, each named in the plan's Files list:
-# - hook-dispatch.mjs (steps 11 and 12). Step 11: the manager fence passes a read only of the record (new recordPath, readOutsideRecord and bashOutsideRecord, with repoRootOf, filesNamed and the READ_FENCE text), refuses any other read with the send-an-agent reason, refuses the connector's file-content and code-search reads, and passes SendUserFile only of files inside the session scratchpad. Step 12: the correction check lets a read of the record through (readOfRecord, built on the same classifier so the two cannot disagree) and correctionMessage says what passes and what is held. The header comments and the added relative import belong to those two changes.
-# - plan-guard.mjs (step 12): talkedThrough finds the owner's newest message since the plan-mode anchor and judges only turns that ended before it, so text in the ExitPlanMode call's own turn is not a turn.
-# - session-guards.test.mjs (steps 11 and 12): a case and plants for the read fence, the SendUserFile rule, a read under a correction and the ExitPlanMode talk-through; the existing cases that read /etc/hostname now read the plan, which the narrowed fence requires, and the correction cases now probe with an agent dispatch because a read no longer tells a standing correction from none. These adaptations are what steps 11 and 12 need for the suite to hold, and step 15 may fix a failure only in these files.
-# - DOCTRINE.md (steps 11 and 12): the enforcement paragraphs of rule 3, rule 4 and rule 13 say what the checks do now, as the steps ask.
-# - CLAUDE.md (steps 11 and 12): three index edits, one under the manager item and two under the correction and talk-first items, as the steps ask.
-# - LESSONS.md (step 13): eight index rows, 386 to 393, whose titles are the lesson headings.
-# - .plan-scope: the verdict record, which the Files list names; this step re-records it against the plan's current hash.
+# Why a new verdict: the amended plan hash is 89518f2b84ce61eb and the record held e3a391e42bab20e5, so the scope check failed with "the plan file has changed since the recorded verdict", which is the expected state before this record.
 # 
-# .claude/PLAN is in the Files list and already holds this plan's path as its one line; git shows no change to it, which is the expected state.
+# Tracked files changed, two:
+# - LESSONS.md. One line added at the end of the index, the row for section 394, whose title is the lesson's heading. The Files list allows the index lines the lessons check regenerates and nothing else, and the diff is that one line.
+# - .plan-scope. The tracked verdict the Files list names for step 13. Its working-copy change is the record from the earlier send of this step, which this record replaces.
 # 
-# New files, eight, exactly the names and order of the Files list: lessons/386 through lessons/393, and no other untracked file exists. Each opens with its numbered heading and an Enforced by line naming a GATE on a file that exists in the hub, a CHECKLIST, or a JUDGEMENT with its Smell line; each records what was wrong and what it measured, and the eight match the eight bullets of step 13 in subject and in kind (386 judgement, 387 checklist, 388 gate, 389 checklist, 390 checklist, 391 gate, 392 judgement, 393 checklist). None quotes an owner message, names the owner as the source of a report, or carries a link, a trailer or a model name.
+# New files, one:
+# - lessons/394-an-install-placed-last-so-the-method-could-run-is-a-bypass.md. It is in the lessons folder the Files list names. 394 follows the newest existing lesson files, 390 to 393. It opens with its numbered heading and an Enforced by line naming CHECKLIST gates-install-first, as step 12 asks. It carries the evidence with dates and counts, names the gate to build as one that does not exist, states that the suggestions are withdrawn and keeps the one about the clock read, as step 12 asks.
 # 
-# Judged against the owner's messages the scope check printed: the diff does what the approved plan's steps 11 to 13 say and nothing the plan does not; the messages ask for the plan to run, and no change goes beyond it. None is quoted here.
+# Untracked and ignored: .claude/PLAN is not in git status, which matches its place in the Files list as a file that is never committed.
 # 
-# Not changed: nothing outside the Files list is modified or untracked in the hub working copy, and no app repository file appears in this diff.
+# The lesson text: no link, no trailer, no generated-with line, no session link, no model name, no personal name, the word owner does not appear, no pronoun for a person, no table or grid and no set-apart quotation. The only search hits are the path /root/.claude/hub and the file name CLAUDE.md. It quotes nobody and names no person as the source of a report, a decision or a request. Its approval sentences are in the passive.
 # 
-# Not judged here: whether the suite, the plants and the document gates pass, which step 15 owns, and the state of the live clone at /root/.claude/hub, which this step has no command to read.
+# Judged against the session's printed messages: the diff adds the one lesson and its index row that steps 12 to 14 call for, touches no timer, no other repository, no other lesson, no gate, no hook source and no doctrine file, and nothing in it goes beyond the plan. None of those messages is quoted or copied here.
+# 
+# Not judged here: whether the hub's checks pass on the lesson, which step 12 ran and reported and which step 14's commit hook runs again, and the counts of workflow folders and agents the lesson states, which step 12 read from the session's folders and which this step has no command to read.
