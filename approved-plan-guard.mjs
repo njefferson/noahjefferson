@@ -21,6 +21,13 @@
  *   read — a crash is a write, and the refusal quotes the reason it gave. A
  *   file tool is judged by its TARGET: the marker and the approved plan file
  *   are refused, and content that merely names the marker is not a write to it.
+ *   THE ONE EXCEPTION is the main thread amending the plan: a Write, Edit or
+ *   MultiEdit on the approved plan passes when the text it would leave has the
+ *   Goals, Asked, Files and Commands the marker recorded at approval (`scope`),
+ *   so only the Steps and the Order, or sections outside the four, move. An
+ *   edit to any of the four is refused naming them, and goes back through plan
+ *   mode and the owner's button; an agent's edit, a marker with no `scope`, and
+ *   an edit that cannot be simulated keep the old rule, a refusal.
  *
  *   PostToolUse (--mark): on ExitPlanMode approved by the owner, write the
  *   marker with the plan's path and hash. The path is the result OBJECT's
@@ -31,6 +38,15 @@
  *   exits 2, because a silent miss is how the first version went unnoticed.
  *   On EnterPlanMode, remove it. A session cannot write the marker: a command
  *   that names it is refused with no exception, since `--done` never names it.
+ *
+ *   PostToolUse (--amend): after a main-thread Write, Edit or MultiEdit whose
+ *   target is the approved plan, re-read the real file; if its four approved
+ *   sections are still the recorded ones, move the marker's hash to the file's
+ *   (so the plan stays in force through an amendment of Steps or Order); if not,
+ *   leave the marker alone and say so with exit 2, which leaves no plan in force.
+ *   The pre-write simulation can be wrong (a quote the tool normalises, a
+ *   replace-all); this check on the real file is why that cannot let a changed
+ *   scope through.
  *
  *   AN APPROVAL PRESSED IN THE APP COUNTS. Measured 2026-10-03: the owner
  *   approved a plan in the app, which ended plan mode before the session's
@@ -68,7 +84,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { tailEntries, isOwnerMessage } from './transcript-tail.mjs';
-import { californiaTime } from './report.mjs';
+import { californiaTime, scopeHashes, scopeChanged, SCOPE_SECTIONS } from './report.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MARKER = join(homedir(), '.claude', 'APPROVED-PLAN.json');
@@ -77,6 +93,20 @@ const APP_EXITS = join(homedir(), '.claude', 'APPROVED-PLAN-app-exits.json');
 const RULE = 'PLAN MODE ONLY, AND TALK DURING THE WORK (Doctrine §0e): nothing runs that is not inside a plan the owner approved in plan mode; '
   + 'a request in chat gets a plan, not an action; while executing, say what each step does before it runs and what it showed after.';
 const hashOf = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
+
+/**
+ * The marker's two records of a plan file, from ONE read.
+ * @param {string} p  the plan file.
+ * @returns {{hash: string, scope: Record<string, string>}} the sha256 of the file
+ *   and the hashes of its approved scope (`scopeHashes`: Goals, Asked, Files,
+ *   Commands). The marker holds both at approval: the whole-file hash is what
+ *   every other gate compares, and the scope is what an amendment of the Steps
+ *   or the Order is allowed to keep unchanged.
+ */
+const snapshotOf = (p) => {
+  const bytes = readFileSync(p);
+  return { hash: createHash('sha256').update(bytes).digest('hex'), scope: scopeHashes(bytes.toString('utf8')) };
+};
 
 if (process.argv.includes('--done')) {
   rmSync(MARKER, { force: true });
@@ -248,8 +278,9 @@ function recordAppExit(p) {
   else if (statSync(x.plan).mtimeMs > x.at) outcome = 'changed after';
   else {
     mkdirSync(dirname(MARKER), { recursive: true });
+    const snap = snapshotOf(x.plan);
     writeFileSync(MARKER, JSON.stringify({
-      plan: x.plan, hash: hashOf(x.plan), at: new Date().toISOString(), session: p.session_id ?? null,
+      plan: x.plan, hash: snap.hash, scope: snap.scope, at: new Date().toISOString(), session: p.session_id ?? null,
       via: `the owner's exit from plan mode in the app: entry ${x.uuid} at ${new Date(x.at).toISOString()}`, planMatchesFile: null, appExit: x.uuid,
     }, null, 1));
     outcome = 'recorded';
@@ -322,16 +353,105 @@ if (process.argv.includes('--mark')) {
   // Whether the approved text is the file that gets hashed. Recorded, never
   // refused on: an edit made in the approval dialog should reach the file
   // before this runs, and this is how a real approval shows whether it did.
-  let hash, planMatchesFile;
+  let snap, planMatchesFile;
   try {
-    hash = hashOf(plan);
+    snap = snapshotOf(plan);
     planMatchesFile = fromObject ? r.plan.trim() === readFileSync(plan, 'utf8').trim() : null;
   } catch { process.exit(0); }                                // the file went between the check and the read: no marker
   mkdirSync(dirname(MARKER), { recursive: true });
   writeFileSync(MARKER, JSON.stringify({
-    plan, hash, at: new Date().toISOString(), session: p.session_id ?? null,
+    plan, hash: snap.hash, scope: snap.scope, at: new Date().toISOString(), session: p.session_id ?? null,
     via: `ExitPlanMode approval: result ${fromObject ? 'filePath' : 'text'}`, planMatchesFile,
   }, null, 1));
+  process.exit(0);
+}
+
+// ---- an amendment keeps the approval while the approved scope stands ----
+
+const AMENDING = ['Write', 'Edit', 'MultiEdit'];
+
+/**
+ * The plan file as an edit would leave it.
+ * @param {string} name  the tool: Write, Edit or MultiEdit.
+ * @param {object} input  the tool's input.
+ * @param {string} before  the plan file now.
+ * @returns {string|null} the text after the edit, or null when it cannot be told:
+ *   a tool that is none of the three; an edit with no old text, with old text the
+ *   file does not hold, or holding it more than once without replace_all (the
+ *   tool itself would refuse those, but this guard must not guess). A Write is
+ *   its content.
+ */
+function afterEdit(name, input, before) {
+  const apply = (text, e) => {
+    const from = e?.old_string, to = e?.new_string;
+    if (typeof from !== 'string' || typeof to !== 'string' || !from) return null;
+    const n = text.split(from).length - 1;
+    if (n === 0 || (n > 1 && !e.replace_all)) return null;
+    return e.replace_all ? text.split(from).join(to) : text.replace(from, () => to);
+  };
+  if (name === 'Write') return typeof input?.content === 'string' ? input.content : null;
+  if (name === 'Edit') return apply(before, input);
+  if (name === 'MultiEdit') {
+    let text = before;
+    for (const e of Array.isArray(input?.edits) ? input.edits : []) { text = apply(text, e); if (text === null) return null; }
+    return text;
+  }
+  return null;
+}
+
+/**
+ * Would this write to the approved plan leave the approved scope as approved?
+ * @param {object} mk  the approval marker.
+ * @returns {string|null} null when the write may go: the main thread's Write,
+ *   Edit or MultiEdit, in the session that approved the plan, on a plan file that
+ *   still matches the marker's hash, whose marker records the approval's scope,
+ *   and whose text after the edit has the same Goals, Asked, Files and Commands
+ *   (`scopeChanged`), so only the Steps, the Order or other sections move.
+ *   Otherwise the refusal. An agent never amends the plan; a marker from before
+ *   the scope was recorded keeps the whole-file rule; an edit that cannot be
+ *   simulated is refused. THE INVARIANT the PostToolUse `--amend` relies on: a
+ *   write let through here changes none of the four approved sections as far as
+ *   this simulation can tell, and `--amend` checks the real file again.
+ */
+function amendProblem(mk) {
+  const voids = `Editing ${mk.plan} voids its approval, and every write after it would be refused. A changed plan goes back through plan mode.`;
+  if (p.agent_id || !mk.scope || typeof mk.scope !== 'object' || Array.isArray(mk.scope) || !AMENDING.includes(tool)) return voids;
+  if (mk.session && p.session_id && mk.session !== p.session_id) return 'The plan in force was approved in another session.';
+  let before;
+  try { before = readFileSync(mk.plan, 'utf8'); if (hashOf(mk.plan) !== mk.hash) return `The plan file ${mk.plan} has changed since it was approved; a changed plan needs approving again.`; } catch { return voids; }
+  const after = afterEdit(tool, p.tool_input ?? {}, before);
+  if (after === null) return `${voids} (This edit could not be applied to the plan as it stands, so whether it leaves ${SCOPE_SECTIONS.join(', ')} as approved cannot be told, and nothing is written.)`;
+  const moved = scopeChanged(mk.scope, after);
+  if (moved.length) {
+    return `This edit would change ${moved.join(', ')} in ${mk.plan}. ${moved.length === 1 ? 'That section is' : 'Those sections are'} what the owner approved, and an edit to ${moved.length === 1 ? 'it' : 'them'} voids the approval: `
+      + 'the plan goes back through plan mode and the owner\'s button. An edit to the Steps or the Order keeps the approval.';
+  }
+  return null;
+}
+
+if (process.argv.includes('--amend')) {
+  // hook-dispatch.mjs runs this at PostToolUse of a Write, Edit or MultiEdit on
+  // the main thread. If the file just written is the approved plan, the real
+  // text is read again; when its Goals, Asked, Files and Commands are still the
+  // approved ones, the marker's hash moves to the file's, which keeps the plan in
+  // force through an amendment of the Steps or the Order. When they are not, or
+  // this does not run, the marker keeps its old hash and the plan is out of
+  // force, so every gate refuses: it fails closed.
+  if (p.agent_id || !AMENDING.includes(tool)) process.exit(0);
+  let mk = {};
+  try { mk = JSON.parse(readFileSync(MARKER, 'utf8')); } catch { process.exit(0); }
+  if (!mk.plan || resolve(String(p.tool_input?.file_path ?? '')) !== resolve(mk.plan)) process.exit(0);
+  if (mk.session && p.session_id && mk.session !== p.session_id) process.exit(0);
+  let snap;
+  try { snap = snapshotOf(mk.plan); } catch { process.exit(0); }
+  if (snap.hash === mk.hash) process.exit(0);
+  const moved = mk.scope && typeof mk.scope === 'object' && !Array.isArray(mk.scope) ? scopeChanged(mk.scope, readFileSync(mk.plan, 'utf8')) : [...SCOPE_SECTIONS];
+  if (moved.length) {
+    process.stderr.write(`approved-plan-guard --amend: ${mk.plan} now differs from the approved plan in ${moved.join(', ')}, so the approval was NOT carried to it and no plan is in force. `
+      + 'A changed plan goes back through plan mode.\n');
+    process.exit(2);
+  }
+  writeFileSync(MARKER, JSON.stringify({ ...mk, hash: snap.hash, scope: snap.scope, amendedAt: new Date().toISOString(), amendments: (Number(mk.amendments) || 0) + 1 }, null, 1));
   process.exit(0);
 }
 
@@ -351,9 +471,13 @@ try { app = recordAppExit(p); } catch { app = null; }
 if (tool === 'EnterPlanMode' || tool === 'ExitPlanMode') process.exit(0);
 
 // A FILE TOOL IS JUDGED BY ITS TARGET. Aimed at the marker, refused. Aimed at
-// the approved plan, refused: an edit there voids the approval, and every write
-// after it would be refused with nobody told why. A file whose content merely
-// NAMES the marker is not a write to it, so file tools skip the name check.
+// the approved plan, refused unless it is the main thread amending the plan and
+// the text it would leave has the approved Goals, Asked, Files and Commands
+// (`amendProblem`): an edit to those voids the approval, and every write after
+// it would be refused with nobody told why. An edit to the Steps or the Order
+// keeps the approval, and the PostToolUse `--amend` moves the marker's hash to
+// the file's. A file whose content merely NAMES the marker is not a write to
+// it, so file tools skip the name check.
 const FILE_TOOLS = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit'];
 if (FILE_TOOLS.includes(tool)) {
   const target = resolve(String(p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? ''));
@@ -361,7 +485,9 @@ if (FILE_TOOLS.includes(tool)) {
   let current = {};
   try { current = JSON.parse(readFileSync(MARKER, 'utf8')); } catch { /* no marker: judged below */ }
   if (current.plan && target === resolve(current.plan)) {
-    deny(`Editing ${current.plan} voids its approval, and every write after it would be refused. A changed plan goes back through plan mode.`);
+    const bar = amendProblem(current);
+    if (bar) deny(bar);
+    process.exit(0);
   }
 }
 

@@ -34,6 +34,14 @@
  * a startup (doctrine-read-guard.mjs), the owner's messages typed after the last
  * reply, newest ten, with the count of the rest and a file holding all
  * (compact-recall.mjs), and the lessons as a count and a folder (session-brief.mjs).
+ * And the state of the work on one page (report.mjs `managerNotes`, `sortFound`,
+ * `statusPage`; the manager fence's write of `status/manager.txt`; the state page
+ * gate after a compaction), the finding queue every plan answers line by line
+ * (`foundQueue`, `foundAnsweredProblem`, called from plan-guard.mjs), the shared
+ * rules a plan points at (agent-rules.md, `rulesProblem` at ExitPlanMode,
+ * `rulesGate` at a send), the owner's core asks printed at every start
+ * (session-brief.mjs), and the doctrine's pruning rule, whose one check is the
+ * case that holds every `*Enforced whole by:*` line to a gate the hub has.
  * The whole suite runs under an empty home, so no real approval marker is read.
  *
  * In --plants mode a guard name a case cites with no plant behind it is a
@@ -55,7 +63,11 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 // that does not quote that block, so a guard copy without it refuses them all.
 const FILES = ['pending-guard.mjs', 'keep-info-guard.mjs', 'compact-recall.mjs', 'reply-guard.mjs', 'transcript-tail.mjs',
   'plan-guard.mjs', 'hook-dispatch.mjs', 'report.mjs', 'drive-guard.mjs', 'approved-plan-guard.mjs', 'plan-scope-check.mjs', 'stop-guard.mjs',
-  'push-guard.mjs', 'plan-fence.mjs', 'doctrine-read-guard.mjs', 'session-brief.mjs', 'CLAUDE.md'];
+  'push-guard.mjs', 'plan-fence.mjs', 'doctrine-read-guard.mjs', 'session-brief.mjs', 'CLAUDE.md', 'agent-rules.md'];
+// The shared rules file the guards read beside themselves: its version, and the pointer line a plan writes for the hub
+// copy under test (a pointer may name the hub copy's own file, which is the live clone's in a session).
+const RULES_VERSION = Number(/^Rules version:\s*(\d+)\s*$/m.exec(readFileSync(join(HERE, 'agent-rules.md'), 'utf8'))?.[1]);
+const rulesLine = (dir, v = RULES_VERSION) => `Rules: ${join(dir, 'agent-rules.md')}, version ${v}.`;
 // The standing goals block: the numbered lines of the "Goals every session serves"
 // section of the hub CLAUDE.md beside this file, which a plan quotes word for
 // word under its own Goals. Every plan fixture below carries it, so the goals
@@ -76,6 +88,7 @@ process.env.COMPACT_RECALL_DIR = join(STATE, 'recall');
 process.env.PLAN_GUARD_NAMES_DIR = join(STATE, 'names');
 process.env.HELD_WORK_DIR = join(STATE, 'held');
 process.env.OWNER_TURN_DIR = join(STATE, 'owner-turn');
+process.env.PAGE_DUE_DIR = join(STATE, 'page-due');
 process.env.STOP_REFUSED_DIR = join(STATE, 'stop-refused');
 process.env.SKIPPED_PRINTED_DIR = join(STATE, 'skipped-printed');
 // The stop guard reads the approval marker under the home directory, and a real
@@ -151,12 +164,29 @@ const ORDER_PLAN = STEPS_PLAN
   .replace('2. **Check.** Read the thing.', '2. **Check.** Read the thing.\n3. **Timer.** Wait on the thing.')
   .replace('## Files touched', '## Leaves open\n- The thing may need a second read.\n\n## Files touched');
 const reply = (s, text) => ({ type: 'assistant', timestamp: ts(s), message: { role: 'assistant', content: [{ type: 'text', text }] } });
+// The same plan with a Standing review step: step 3 tells its agent to follow the hub copy's aim-review.md by its
+// full path, which is what makes the plan one the review gate enforces (Doctrine §0e rule 2). `dir` is the hub copy under test.
+const reviewPlan = (dir) => ORDER_PLAN.replace('3. **Timer.** Wait on the thing.', `3. **Review.** Follow ${join(dir, 'aim-review.md')} for the move named on the status page.`);
+// A plan whose four approved sections all exist: the review plan with an Asked section added.
+const scopedPlan = (dir) => reviewPlan(dir).replace('## Order', `## Asked\n${OWN_WORDS}\n\n## Order`);
+// One end of an agent in the shape stepEnds returns it. Times are small numbers: only their order matters.
+const endFor = (step, endAt, startAt, first, how = 'a report') => ({ step, how, at: endAt, startAt, last: `${first}\nThe second line says what happened.` });
+// An agent transcript as the harness writes one: its prompt, a command and its result, and the hand-back. `sent`
+// and `ended` are seconds from now (negative: in the past), so the review gate's times can be set by hand.
+function putAgent(subs, plan, id, n, sent, ended, first, running = false) {
+  const body = [at({ type: 'user', message: { role: 'user', content: `${plan} step ${n}` } }, later(sent)),
+    at(tool(0, `${id}-b`, 'Bash', { command: 'git status' }), later(sent + 1)), at(result(0, `${id}-b`, 'clean'), later(sent + 2))];
+  if (!running) body.push(at(tool(0, `${id}-h`, 'SubagentHandback', { message: `${first}\nThe second line.` }), later(ended)), at(result(0, `${id}-h`, 'Report delivered to your caller.'), later(ended + 1)));
+  writeFileSync(join(subs, `agent-${id}.jsonl`), jsonl(body));
+  writeFileSync(join(subs, `agent-${id}.meta.json`), JSON.stringify({ agentType: 'general-purpose', description: `Plan step ${n}` }));
+}
 
 /**
  * A home with an approved plan, a fresh status stamp and an empty launch
  * directory, and a way to run hook-dispatch.mjs inside it.
  * @param {string} dir  the hub copy under test.
- * @returns {{home: string, plan: string, cwd: string, tr: string, call: (event: string, payload: object) => object}}
+ * @returns {{home: string, plan: string, cwd: string, tr: string, call: (event: string, payload: object, env?: object) => object}}
+ *   `call`'s third argument adds to the environment of the one run (a case that needs a scratchpad of its own sets TMPDIR).
  */
 function world(dir, entries = [], planText = STEPS_PLAN) {
   const home = tmp('sg-home-');
@@ -167,11 +197,35 @@ function world(dir, entries = [], planText = STEPS_PLAN) {
   writeFileSync(join(home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now(), status: 'Status' }));
   const cwd = tmp('sg-cwd-');
   const tr = transcript(entries);
-  const call = (event, payload) => spawnSync('node', [join(dir, 'hook-dispatch.mjs'), event], {
+  const call = (event, payload, env = {}) => spawnSync('node', [join(dir, 'hook-dispatch.mjs'), event], {
     input: JSON.stringify({ cwd, transcript_path: tr, hook_event_name: event, ...payload }), encoding: 'utf8',
-    env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: cwd },
+    env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: cwd, ...env },
   });
   return { home, plan, cwd, tr, call };
+}
+/**
+ * A world whose approved plan has a review step (`reviewPlan`), written an hour
+ * ago, with a place for agent transcripts and a way to send a step.
+ * @param {string} dir  the hub copy under test.
+ * @param {object[]} [entries]  the main transcript's entries.
+ * @returns {object} `world`'s fields, and `subs` (the agents' folder), `agent(id, n,
+ *   sent, ended, first)` and `running(id, n, sent)` to write one (seconds from now),
+ *   `clear()` to remove every agent, and `send(n, s, extra)` to send step n as the
+ *   main thread under session id s.
+ */
+function reviewWorld(dir, entries = [turn(0, GO)]) {
+  const w = world(dir, entries, reviewPlan(dir));
+  const subs = join(w.tr.slice(0, -'.jsonl'.length), 'subagents');
+  mkdirSync(subs, { recursive: true });
+  const old = (Date.now() - 60 * 60 * 1000) / 1000;
+  utimesSync(w.plan, old, old);
+  return {
+    ...w, subs,
+    agent: (id, n, sent, ended, first) => putAgent(subs, w.plan, id, n, sent, ended, first),
+    running: (id, n, sent) => putAgent(subs, w.plan, id, n, sent, 0, '', true),
+    clear: () => { rmSync(subs, { recursive: true, force: true }); mkdirSync(subs, { recursive: true }); },
+    send: (n, s, extra = {}) => w.call('PreToolUse', { session_id: s, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step ${n}`, subagent_type: 'general-purpose' }, ...extra }),
+  };
 }
 const latched = (s) => existsSync(join(process.env.REFUSAL_LATCH_DIR, `${s}.json`));
 const owner = (t, text) => ({ type: 'user', timestamp: t, origin: { kind: 'human' }, message: { role: 'user', content: text } });
@@ -245,6 +299,60 @@ const SOURCE_MD = [
   'The figures below were measured on three frames.', '',
   'Earlier note: the comments feed on blog.kasson.com was read in a browser\'s identity; that reading is withdrawn.', '',
 ].join('\n');
+
+// ---- fixtures for the shared rules, the finding queue and the state page (Doctrine §0e rules 2 and 13) ----
+const PLAN_TALK = 'Here is what is being done and why: the export control moves to the toolbar edge, and nothing else changes.';
+// A repository's NOTES.md with a queue of three findings in three forms, prose in the section, and a key outside it.
+const QUEUE_NOTES = ['# Notes', '', '## Found queue', 'Prose that is not a finding.', '',
+  'Q-QR-1: the first finding, which has some words in it.', '- Q-QR-2: the second finding, in a list.', '- **Q-QR-3** the third finding, in bold.', '',
+  '## Something else', 'Q-QR-9: a key that is not in the queue section.', ''].join('\n');
+/**
+ * Run plan-guard.mjs's ExitPlanMode check on a plan text, as it stands after the talk.
+ * @param {string} dir  the hub copy under test.
+ * @param {string} planText  the plan.
+ * @param {string} projectDir  the launch directory: the repository the plan's Files label names, found from it.
+ * @returns {object} the spawnSync result: status 0 to allow, 2 with the reason in stdout.
+ */
+function exitFor(dir, planText, projectDir) {
+  const home = tmp('sg-home-');
+  mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
+  const file = join(home, '.claude', 'plans', 'queue-test.md');
+  writeFileSync(file, planText);
+  const t = (Date.now() - 1000 * 1000) / 1000;
+  utimesSync(file, t, t);
+  return spawnSync('node', [join(dir, 'plan-guard.mjs')], {
+    input: JSON.stringify({ session_id: sid('pq'), permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { planFilePath: file },
+      transcript_path: transcript([turn(0, OWNER), ...enterPlan(-900), at(reply(0, PLAN_TALK), later(-500)), owner(later(-400), 'ok')]), cwd: '/' }),
+    encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: projectDir },
+  });
+}
+/**
+ * A plan that sends agents and passes every check of the plan guard but the ones a case varies.
+ * @param {string} dir  the hub copy under test.
+ * @param {{rules?: string|null, files?: string|null, answered?: string|null}} [o]  the body of the Rules section (null for
+ *   none), the body of the Files section (null for none), and the body of a Found answered section (null for none).
+ * @returns {string} the plan.
+ */
+function sendingPlan(dir, { rules = rulesLine(dir), files = null, answered = null } = {}) {
+  return ['# Sending plan', '',
+    '## Goals', '1. The toolbar shows the export button on its left side.', GOALS_BLOCK, 'Served by: steps 1 and 2 serve goal 1.', '',
+    '## Asked', OWN_WORDS, '',
+    '## Order', 'Order: 1', 'Standing: 2', '',
+    ...(rules === null ? [] : ['## Rules', rules, '']),
+    '## Steps', '1. **Build.** Make the toolbar change.', `2. **Review.** Follow ${join(dir, 'aim-review.md')} for the move named on the status page.`, '',
+    ...(files === null ? [] : ['## Files', files, '']),
+    ...(answered === null ? [] : ['## Found answered', answered, '']),
+    '## Looked up', 'Nothing outside the repository bears on this change at all.', '',
+    '## Branches', 'One branch only, because the request names a single control to move.', '',
+    '## Call chain', 'The toolbar builder places the button; nothing else reads its position.', '',
+    '## Whole app', 'It belongs because it was asked for, and nothing else would change.', '',
+    '## Leaves open', 'Nothing is left open by this change, as far as can be seen here.', ''].join('\n');
+}
+// Doctrine lines that say a gate enforces a paragraph whole: `*Enforced whole by:*` and then the gate's file name in backticks.
+const wholeGates = (text) => String(text).split('\n').flatMap((l) => {
+  const w = /^\s*(?:\d+\.\s+)?\*Enforced whole by:\*\s+(.+)$/.exec(l);
+  return w ? [...w[1].matchAll(/`([^`\s]+)`/g)].map((x) => x[1]) : [];
+});
 
 /** Each case: (m, dir) → true when the guards behaved. `guards` names the plants it must catch. */
 const CASES = [
@@ -813,9 +921,9 @@ const CASES = [
     },
   },
   {
-    name: 'the manager fence passes a read only of the record (the approved plan and the plans folder, the scratchpad, the hub\'s doctrine and lessons, each repo\'s notes and plan pointers, the session\'s transcript); a read of an app\'s source or tool, by Read, Grep, Glob, Bash or the connector, is refused with the reason to send an agent',
+    name: 'the manager fence passes a read only of the record (the approved plan and the plans folder, the scratchpad, the hub\'s doctrine, lessons and review file, each repo\'s notes and plan pointers, the session\'s transcript); a read of an app\'s source or tool, by Read, Grep, Glob, Bash or the connector, is refused with the reason to send an agent',
     guards: ['read_fence', 'read_fence_pad', 'read_fence_plans', 'read_fence_plan_file', 'read_fence_doctrine', 'read_fence_transcript', 'read_fence_transcript_name',
-      'read_fence_repo_files', 'read_fence_hub_files', 'read_fence_read', 'read_fence_grep', 'read_fence_glob', 'read_fence_bash', 'read_fence_bash_dynamic',
+      'read_fence_repo_files', 'read_fence_hub_files', 'read_fence_aim_review', 'read_fence_read', 'read_fence_grep', 'read_fence_glob', 'read_fence_bash', 'read_fence_bash_dynamic',
       'read_fence_bash_pipe', 'read_fence_bash_nofile', 'read_fence_bash_bare', 'read_fence_bash_flag', 'read_fence_connector'],
     run(m) {
       const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
@@ -844,8 +952,8 @@ const CASES = [
       const theTranscriptName = read(join(dot, 'projects', '-home-user', `${s}.jsonl`)) && notRead(join(dot, 'projects', '-home-user', 'another-session.jsonl'));
       const theRepoFiles = ['NOTES.md', 'CLAUDE.md', '.plan-scope', '.claude/PLAN', '.branch-guard'].every((n) => read(join(sib.dir, n)))
         && notRead(join(sib.dir, 'app.ts')) && notRead(join(hub.dir, 'app.ts')) && notRead(join(hub.dir, 'hook-dispatch.mjs'));
-      const theHubFiles = ['LESSONS.md', 'lessons/385-a-lesson.md', 'plans/a-plan.md'].every((n) => read(join(hub.dir, n))) && passes('Grep', { pattern: 'x', path: join(hub.dir, 'lessons') })
-        && notRead(join(sib.dir, 'LESSONS.md')) && notRead(join(sib.dir, 'lessons', 'a-lesson.md'));
+      const theHubFiles = ['LESSONS.md', 'aim-review.md', 'lessons/385-a-lesson.md', 'plans/a-plan.md'].every((n) => read(join(hub.dir, n))) && passes('Grep', { pattern: 'x', path: join(hub.dir, 'lessons') })
+        && notRead(join(sib.dir, 'LESSONS.md')) && notRead(join(sib.dir, 'aim-review.md')) && notRead(join(sib.dir, 'lessons', 'a-lesson.md'));
       const theRead = notRead('/etc/hostname') && refused('Read', {});
       const theGrep = refused('Grep', { pattern: 'x' }, mine) && refused('Grep', { pattern: 'x', path: sib.dir }) && passes('Grep', { pattern: 'x', path: join(sib.dir, 'NOTES.md') });
       const theGlob = refused('Glob', { pattern: '**/*.ts', path: sib.dir }) && refused('Glob', { pattern: `${sib.dir}/**/*.ts` })
@@ -2542,13 +2650,946 @@ const CASES = [
         && /^next: step 2$/m.test(second) && second.includes("Order, each step's state: 1 DONE; 2 REFUSED.")
         && second.includes('- step 1, ended') && second.includes('    DONE\n    The goals are written.') && second.includes('    REFUSED\n    The fence refused the write.')
         && second.includes(`${join(pad, 'progress', 'step-1-report.txt')} (written)`) && second.includes(`${join(pad, 'progress', 'step-2-report.txt')} (not written)`)
-        && second.includes('- step 1: Found: the doc check was not run') && second.includes('- step 1: Found: a <b>tag</b> in the report') && !second.includes('not a found line')
+        && second.includes('- step 1 #1 [unsorted]: Found: the doc check was not run') && second.includes('- step 1 #2 [unsorted]: Found: a <b>tag</b> in the report') && !second.includes('not a found line')
+        && second.includes('Found, from the report files (2: 0 fixed, 0 stopping the plan, 0 queued, 2 unsorted):')
         && secondPage.includes('next: step 2') && secondPage.includes('Found: a &lt;b&gt;tag&lt;/b&gt; in the report') && !secondPage.includes('<b>tag</b>')
         && secondPage.includes('<strong>Step 1</strong> Build: <span class="s">DONE</span>') && secondPage.includes('<span class="s">REFUSED</span>')
         && /^next: none$/m.test(third) && third.includes("Order, each step's state: 1 DONE; 2 DONE.") && third.includes('Standing, sent at any time: 3 not sent.')
         && third.includes('The check is read.') && !third.includes('The fence refused the write.')
         && thirdPage.includes('next: none') && thirdPage.includes('the plan has run to its end') && thirdPage.includes('The thing may need a second read.')
         && /^next: not defined \(/m.test(noOrder) && /^next: not read \(no plan is in force/m.test(noPlan);
+    },
+  },
+
+  // ---- the review: a fresh agent clears every move before it goes (Doctrine §0e rules 2, 3 and 13) ----
+  {
+    name: 'a verdict is the first line of the reviewer\'s hand-back: ON-AIM or OFF-AIM, then ROUTE-CLEAR or ROUTE-REFUSED, then "step N" and "next M"; the older ON-AIM alone, a lower-case opening and any other line are not a verdict',
+    guards: ['review_verdict_parse', 'review_verdict_case'],
+    run(m) {
+      const v = (t) => m.report.parseVerdict(t);
+      const ok = v('ON-AIM ROUTE-CLEAR step 12 next 13');
+      return ok?.aim === 'ON-AIM' && ok.route === 'ROUTE-CLEAR' && ok.step === 12 && ok.next === 13
+        && v('OFF-AIM ROUTE-REFUSED, step 4, next 5')?.aim === 'OFF-AIM' && v('ON-AIM ROUTE-REFUSED step 4 next 5')?.route === 'ROUTE-REFUSED'
+        && v('ON-AIM ROUTE-CLEAR step none next 41')?.step === 'none' && v('ON-AIM ROUTE-CLEAR step 3')?.next === null
+        && v('ON-AIM step 12') === null && v('ON-AIM') === null && v('Looks fine to me, go ahead.') === null && v('') === null
+        && v('on-aim route-clear step 1 next 2') === null && v('ROUTE-CLEAR ON-AIM step 1 next 2') === null;
+    },
+  },
+  {
+    name: 'reviewState clears a move only for a review that BEGAN after the newest end of an agent for a step in Order (a DONE hand-back or not, an interruption too), after the plan\'s last write and after the owner\'s newest message; a step outside Order and a hand-back that is not a report for the review step do not move it, and the newest review is the one read',
+    guards: ['review_started', 'review_ref_order', 'review_ref_plan', 'review_ref_after', 'review_order_only', 'review_any_end', 'review_reports_only', 'review_newest', 'review_start_unreadable'],
+    run(m, dir) {
+      const plan = { path: '/plans/gate-test.md', text: reviewPlan(dir) };
+      const CLEAR = 'ON-AIM ROUTE-CLEAR step 1 next 2';
+      const st = (ends, o = {}) => m.report.reviewState({ session_id: 'rs' }, plan, { ends, planAt: 10, ...o });
+      const kind = (ends, o) => st(ends, o).kind;
+      const one = endFor(1, 100, 50, 'DONE');
+      const cleared = st([one, endFor(3, 200, 150, CLEAR)]);
+      return cleared.kind === 'cleared' && cleared.cleared === 2 && cleared.step === 1 && cleared.refAt === 100
+        // Began at or before the end it judges: stale. Equal is not after.
+        && kind([one, endFor(3, 200, 90, CLEAR)]) === 'stale' && kind([one, endFor(3, 200, 100, CLEAR)]) === 'stale'
+        && kind([one, endFor(3, 200, 101, CLEAR)]) === 'cleared'
+        // A later end in Order, a REFUSED hand-back and an interruption each move the reference.
+        && kind([one, endFor(3, 200, 150, CLEAR), endFor(2, 300, 250, 'DONE')]) === 'stale'
+        && kind([endFor(1, 100, 50, 'REFUSED'), endFor(3, 200, 90, CLEAR)]) === 'stale'
+        && kind([endFor(1, 100, 50, 'REFUSED'), endFor(3, 200, 150, 'ON-AIM ROUTE-CLEAR step 1 next 1')]) === 'cleared'
+        && kind([endFor(1, 100, 50, 'x', 'an interruption'), endFor(3, 200, 90, CLEAR)]) === 'stale'
+        // A step outside Order does not move it; a hand-back that is not a report for the review step is no review.
+        && kind([one, endFor(9, 500, 400, 'DONE'), endFor(3, 200, 150, CLEAR)]) === 'cleared'
+        && kind([one, endFor(3, 200, 150, CLEAR, 'a refusal')]) === 'missing'
+        // The plan's last write and the owner's newest message move it too.
+        && kind([one, endFor(3, 200, 150, CLEAR)], { planAt: 160 }) === 'stale' && kind([one, endFor(3, 200, 150, CLEAR)], { planAt: 149 }) === 'cleared'
+        && kind([one, endFor(3, 200, 150, CLEAR)], { after: 170 }) === 'stale' && kind([one, endFor(3, 200, 150, CLEAR)], { after: 140 }) === 'cleared'
+        // The newest review is the one read.
+        && kind([one, endFor(3, 200, 150, CLEAR), endFor(3, 400, 350, 'OFF-AIM ROUTE-REFUSED step 1 next 2')]) === 'off-aim'
+        // A start that cannot be read is not after anything.
+        && kind([one, endFor(3, 200, NaN, CLEAR)]) === 'stale' && kind([one, { ...endFor(3, 200, 0, CLEAR), startAt: undefined }]) === 'stale';
+    },
+  },
+  {
+    name: 'reviewState reads the verdict in the reviewer\'s hand-back: ON-AIM ROUTE-CLEAR names the step it clears; OFF-AIM, a refused route, another step judged, a missing "next", an unreadable first line, no review, a review still running and agents that cannot be read each give their own state, and a plan whose Standing step does not follow the hub\'s aim-review.md by its full path is not enforced',
+    guards: ['review_off_aim', 'review_route', 'review_wrong_step', 'review_no_next', 'review_not_read', 'review_running', 'review_full_path', 'review_follow'],
+    run(m, dir) {
+      const text = reviewPlan(dir);
+      const plan = { path: '/plans/gate-test.md', text };
+      const one = endFor(1, 100, 50, 'DONE');
+      const st = (ends, o = {}, p = plan) => m.report.reviewState({ session_id: 'rs' }, p, { ends, planAt: 10, ...o });
+      const rv = (first) => st([one, endFor(3, 200, 150, first)]);
+      const step3 = (words) => ({ path: '/plans/gate-test.md', text: ORDER_PLAN.replace('3. **Timer.** Wait on the thing.', `3. **Review.** ${words}`) });
+      const bare = step3('Follow aim-review.md for the move named on the status page.');
+      const elsewhere = step3('Follow /somewhere/else/aim-review.md for the move named on the status page.');
+      const noFollow = step3(`Read ${join(dir, 'aim-review.md')} for the move named on the status page.`);
+      const first = endFor(3, 200, 150, 'ON-AIM ROUTE-CLEAR step none next 1');
+      return rv('OFF-AIM ROUTE-REFUSED step 1 next 2').kind === 'off-aim' && rv('OFF-AIM ROUTE-CLEAR step 1 next 2').kind === 'off-aim'
+        && rv('ON-AIM ROUTE-REFUSED step 1 next 2').kind === 'route-refused'
+        && rv('ON-AIM ROUTE-CLEAR step 2 next 2').kind === 'wrong-step' && rv('ON-AIM ROUTE-CLEAR step none next 2').kind === 'wrong-step' && rv('ON-AIM ROUTE-CLEAR next 2').kind === 'wrong-step'
+        && rv('ON-AIM ROUTE-CLEAR step 1').kind === 'no-next'
+        && rv('ON-AIM step 1').kind === 'unreadable' && rv('All is well.').kind === 'unreadable'
+        // With no step of Order ended yet there is nothing the verdict's step could be compared with.
+        && st([first]).kind === 'cleared' && st([first]).step === null && st([first]).cleared === 1
+        && st([one]).kind === 'missing' && st([one], { runningSteps: new Set([3]) }).kind === 'running'
+        && st([one, endFor(3, 200, 150, 'ON-AIM ROUTE-CLEAR step 1 next 2')], { runningSteps: new Set([3]) }).kind === 'cleared'
+        && st([one, endFor(3, 200, 50, 'ON-AIM ROUTE-CLEAR step 1 next 2')], { runningSteps: new Set([3]) }).kind === 'running'
+        && st(null).kind === 'not-read'
+        && st([one], {}, { path: '/plans/gate-test.md', text: ORDER_PLAN }).kind === 'not-enforced' && st([one], {}, null).kind === 'not-enforced'
+        && st([one], {}, bare).kind === 'not-enforced' && st([one], {}, elsewhere).kind === 'not-enforced' && st([one], {}, noFollow).kind === 'not-enforced'
+        && JSON.stringify(m.report.aimReviewSteps(text)) === '[3]' && JSON.stringify(m.report.aimReviewSteps(STEPS_PLAN)) === '[]';
+    },
+  },
+  {
+    name: 'the approval\'s scope is the hashes of Goals, Asked, Files and Commands: an edit to Steps, Order or any other section moves none, an edit to one of the four names it, a section added where there was none is a change, and a record that is not an object changes all four',
+    guards: ['scope_sections', 'scope_unknown', 'scope_hashes'],
+    run(m, dir) {
+      const base = scopedPlan(dir);
+      const hashes = m.report.scopeHashes(base);
+      const moved = (edit) => m.report.scopeChanged(hashes, edit(base));
+      const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const all = ['Goals', 'Asked', 'Files', 'Commands'];
+      return eq(Object.keys(hashes), all) && Object.values(hashes).every((h) => /^[0-9a-f]{64}$/.test(h))
+        && eq(moved((t) => t), [])
+        && eq(moved((t) => t.replace('1. **Build.** Make the thing.', '1. **Build.** Make the thing, and say what it did.')), [])
+        && eq(moved((t) => t.replace('Order: 1 2', 'Order: 2 1')), [])
+        && eq(moved((t) => t.replace('- The thing may need a second read.', '- The thing may need a third read.')), [])
+        && eq(moved((t) => t.replace('`keep.mjs`', '`keep.mjs`, `more.mjs`')), ['Files'])
+        && eq(moved((t) => t.replace('- git push', '- git push\n- git reset')), ['Commands'])
+        && eq(moved((t) => t.replace('1. The thing is built and read.', '1. The thing is built.')), ['Goals'])
+        && eq(moved((t) => t.replace(OWN_WORDS, 'Do something else.')), ['Asked'])
+        && eq(moved((t) => t.replace('- git push', '- git push\n- git reset').replace('`keep.mjs`', '`keep.mjs`, `more.mjs`')), ['Files', 'Commands'])
+        && eq(m.report.scopeChanged(hashes, base.replace(`## Asked\n${OWN_WORDS}\n\n`, '')), ['Asked'])
+        && eq(m.report.scopeChanged(null, base), all) && eq(m.report.scopeChanged('x', base), all);
+    },
+  },
+  {
+    name: 'reviewGate refuses a step of a plan with a review step unless the current review cleared that step, naming the review step wherever a send answers, the amendment for a refused route and plan mode for OFF-AIM; a Standing step, a subagent, a tool that sends no agent, a prompt that is no step and a plan with no review step pass; a state that cannot be read refuses',
+    guards: ['review_gate_cleared', 'review_gate_standing', 'review_gate_error', 'review_gate_not_read', 'review_gate_texts'],
+    run(m, dir) {
+      const plan = { path: '/plans/gate-test.md', text: reviewPlan(dir) };
+      const send = (n, extra = {}) => ({ tool_name: 'Agent', tool_input: { prompt: `${plan.path} step ${n}` }, ...extra });
+      const base = { reviewers: [3], step: 1, first: 'ON-AIM ROUTE-CLEAR step 1 next 2', review: { path: '/agents/agent-r1.jsonl' }, cleared: null };
+      const gate = (n, state, extra, p = plan) => m.dispatch.reviewGate(send(n, extra), p, state);
+      const clear = { ...base, kind: 'cleared', cleared: 2 };
+      const says = (r, ...re) => typeof r === 'string' && /^REVIEW GATE/.test(r) && re.every((x) => x.test(r));
+      return gate(2, clear) === null
+        && says(gate(1, clear), /cleared step 2/, /step 3/)
+        && gate(3, { ...base, kind: 'missing' }) === null && gate(3, null) === null
+        && ['missing', 'running', 'stale', 'unreadable', 'wrong-step', 'no-next'].every((k) => says(gate(2, { ...base, kind: k }), new RegExp(`${plan.path} step 3`), /does not latch/))
+        && says(gate(2, { ...base, kind: 'off-aim', first: 'OFF-AIM ROUTE-REFUSED step 1 next 2' }), /Go back to plan mode/, /OFF-AIM/)
+        && says(gate(2, { ...base, kind: 'route-refused', first: 'ON-AIM ROUTE-REFUSED step 1 next 2' }), /Amend/, /Steps or Order/)
+        && says(gate(2, { ...base, kind: 'not-read' }), /cannot be read/) && says(gate(2, null), /could not be read/)
+        && gate(2, { ...base, kind: 'not-enforced' }) === null
+        && gate(2, { ...base, kind: 'missing' }, { agent_id: 'a1' }) === null && gate(2, { ...base, kind: 'missing' }, { tool_name: 'Read' }) === null
+        && gate(2, { ...base, kind: 'missing' }, {}, { path: plan.path, text: ORDER_PLAN }) === null
+        && gate(2, { ...base, kind: 'missing' }, { tool_input: { prompt: 'something else' } }) === null;
+    },
+  },
+  {
+    name: 'a correction lets the Standing review step and a step the review cleared go, and nothing else: another step, a review that did not clear, a plan with no review step, an agent and a tool that sends no agent stay held',
+    guards: ['correction_lifts_review', 'correction_lifts_cleared', 'correction_lifts_plain'],
+    run(m, dir) {
+      const plan = { path: '/plans/gate-test.md', text: reviewPlan(dir) };
+      const send = (n, extra = {}) => ({ tool_name: 'Agent', tool_input: { prompt: `${plan.path} step ${n}` }, ...extra });
+      const lifts = (n, state, extra, p = plan) => m.dispatch.correctionLifts(send(n, extra), { typed: 5 }, p, state);
+      const clear = { kind: 'cleared', cleared: 2 };
+      return lifts(3, { kind: 'missing' }) === true && lifts(2, clear) === true && lifts(1, clear) === false
+        && lifts(2, { kind: 'stale' }) === false && lifts(2, { kind: 'cleared', cleared: null }) === false
+        && lifts(2, clear, { agent_id: 'a1' }) === false && lifts(2, clear, { tool_name: 'Write' }) === false
+        && lifts(2, clear, {}, { path: plan.path, text: ORDER_PLAN }) === false && lifts(3, clear, {}, { path: plan.path, text: ORDER_PLAN }) === false
+        && lifts(2, clear, { tool_input: { prompt: 'something else' } }) === false
+        && lifts(2, clear, {}, null) === false;
+    },
+  },
+  {
+    name: 'the owner\'s holds are read from the transcript: a message carrying the whole word stop ANYWHERE in it, first, second or last, and no go-word stands until a later message ends with a go-word; a message carrying the word and a go-word is no stop and lifts one; a plain message, a harness message and a stop said again do not lift it, "stopped" and "unstoppable" are not the word, and a correction is the newest message when it does not end with a go-word, with the time it was typed',
+    guards: ['stop_anywhere', 'stop_whole_word', 'stop_go_message', 'stop_plain_lift', 'stop_older_go', 'stop_newest', 'hold_typed'],
+    run(m) {
+      const h = (entries) => m.dispatch.holdsIn(entries);
+      const note = { type: 'user', timestamp: ts(40), origin: { kind: 'task-notification' }, message: { role: 'user', content: 'The long run finished; ok, nothing else is open.' } };
+      const stands = (entries) => h(entries).stop !== null;
+      return stands([turn(0, 'Stop. Nothing more until I answer.')]) && stands([turn(0, '  STOP!')]) && stands([turn(0, '"Stop" means stop.')])
+        // The word second, after another word, and later in a message: a first-word rule held none of these.
+        && stands([turn(0, 'Please stop.')]) && stands([turn(0, 'Wait, stop everything right now')]) && stands([turn(0, 'This is wrong and you must stop')])
+        && stands([turn(0, 'Please do not stop now.')]) && stands([turn(0, 'It is a stop-gap, not a fix')])
+        // Not the whole word, no word at all, or a message that carries a go-word.
+        && !stands([turn(0, 'The stopped run is fine')]) && !stands([turn(0, 'It is unstoppable')]) && !stands([turn(0, 'Check the stopwatch')])
+        && !stands([turn(0, 'The stopped run is fine, go')]) && !stands([turn(0, GO)])
+        && !stands([turn(0, 'Stop, then go.')]) && !stands([turn(0, 'Please stop, ok')])
+        // Lifted by a later go-word message; a plain message, a harness message and another stop do not lift it.
+        && !stands([turn(0, 'stop'), turn(5, 'Go.')]) && !stands([turn(0, 'please stop'), mid(5, 'continue')])
+        && stands([turn(0, 'stop'), turn(5, 'That was done wrong; explain it.')]) && stands([turn(0, 'please stop'), note])
+        // A message with the word and a go-word is a go message: it lifts an earlier stop.
+        && !stands([turn(0, 'stop'), turn(5, 'Stop, ok')])
+        // A go-word BEFORE the stop lifts nothing.
+        && stands([turn(0, GO), turn(5, 'Now stop that')])
+        // The newest stop is the one that counts: lifted once, said again.
+        && stands([turn(0, 'stop'), turn(5, 'go'), turn(10, 'please stop again')]) && !stands([turn(0, 'stop'), turn(5, 'go'), turn(10, 'please stop again'), turn(15, 'ok')])
+        // A correction is the newest message when it does not end with a go-word, with its delivery time and its TYPED time.
+        && h([turn(0, GO), turn(5, 'That was wrong.')]).correction !== null && h([turn(0, GO)]).correction === null && h([turn(0, 'Stop, then go.')]).correction === null
+        && (() => { const x = h([turn(0, GO), enq(20, 'Not that one.'), mid(30, 'Not that one.')]).correction; return !!x && x.typed === Date.parse(ts(20)) && x.at === Date.parse(ts(30)); })()
+        && h([]).last === null;
+    },
+  },
+  {
+    name: 'the hold reads the stop word more widely than the queued-message check, and never less: every message the queued check reads as a stop is a stop for the hold, and a halt message with the word second is a stop for the hold and not for the queued check, which still reads the first word only',
+    guards: ['stop_anywhere'],
+    run(m) {
+      const first = ['stop', 'Stop.', '  STOP! now', '"stop"', 'stop-gap', 'Stop, then do nothing'];
+      const second = ['Please stop', 'Wait, stop everything', 'Please do not stop now', 'the stop hook'];
+      const neither = ['stopped', 'unstoppable', 'go', 'Check the stopwatch'];
+      const queued = (t) => m.pending.decide({ session_id: 'sw', agent_id: 'a1' }, [turn(0, 'start'), enq(10, t)]) !== null;
+      const held = (t) => m.dispatch.isStopMessage(t);
+      return first.every((t) => queued(t) && held(t)) && second.every((t) => !queued(t) && held(t)) && neither.every((t) => !queued(t) && !held(t))
+        && m.dispatch.hasStopWord('stop') && m.dispatch.hasStopWord('Please stop') && !m.dispatch.hasStopWord('go')
+        && m.dispatch.isStopMessage('stop') && !m.dispatch.isStopMessage('stop, go') && !m.dispatch.isStopMessage('');
+    },
+  },
+  {
+    name: 'through hook-dispatch, a plan with a review step sends a step only when a review that began after everything it judges has cleared that step, any step the review names and not only the pointer\'s; each refusal names the review step and does not latch, and the review step itself always goes',
+    guards: ['review_gate_wired', 'review_gate_no_latch', 'dispatch_review_no_pointer', 'review_gate_standing', 'review_gate_cleared'],
+    run(m, dir) {
+      const w = reviewWorld(dir);
+      const go = (n) => { const id = sid('rg'); return { r: w.send(n, id), id }; };
+      const refused = ({ r, id }, ...re) => r.status === 2 && /REVIEW GATE/.test(r.stderr) && !latched(id) && re.every((x) => x.test(r.stderr));
+      const passes = ({ r }) => r.status === 0;
+      const names = new RegExp(`${w.plan.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} step 3`);
+      // Nothing has handed back: no step goes but the Standing one, the pointer's step 1 included.
+      const fresh = [go(1), go(2), go(3)];
+      // Step 1 handed back DONE; a review that began after it clears step 2.
+      w.agent('d1', 1, -900, -800, 'DONE');
+      w.agent('r1', 3, -700, -600, 'ON-AIM ROUTE-CLEAR step 1 next 2');
+      const cleared = [go(1), go(2), go(3)];
+      // The same review clearing step 1 instead: step 1 goes although the pointer reads next: step 2.
+      w.agent('r1', 3, -700, -600, 'ON-AIM ROUTE-CLEAR step 1 next 1');
+      const anyStep = [go(1), go(2)];
+      // A review that began before step 1 ended judged nothing it was handed.
+      w.agent('r1', 3, -850, -600, 'ON-AIM ROUTE-CLEAR step 1 next 2');
+      const early = go(2);
+      // Step 2 ends after the review began: the review is stale again.
+      w.agent('r1', 3, -700, -600, 'ON-AIM ROUTE-CLEAR step 1 next 2');
+      w.agent('d2', 2, -500, -400, 'DONE');
+      const lapsed = [go(1), go(3)];
+      // Every other verdict.
+      w.clear(); w.agent('d1', 1, -900, -800, 'DONE');
+      const said = {};
+      for (const [k, first] of Object.entries({ off: 'OFF-AIM ROUTE-REFUSED step 1 next 2', route: 'ON-AIM ROUTE-REFUSED step 1 next 2', other: 'ON-AIM ROUTE-CLEAR step 2 next 2', old: 'ON-AIM step 1', plain: 'Fine.' })) {
+        w.agent('r1', 3, -700, -600, first);
+        said[k] = go(2);
+      }
+      // A review still running clears nothing yet.
+      w.clear(); w.agent('d1', 1, -900, -800, 'DONE'); w.running('r2', 3, -100);
+      const running = go(2);
+      // The plan written after the review began makes it stale; a fresh review clears the amended step.
+      w.clear(); w.agent('d1', 1, -900, -800, 'DONE'); w.agent('r1', 3, -700, -600, 'ON-AIM ROUTE-CLEAR step 1 next 2');
+      const before = go(2);
+      const edited = (Date.now() - 300 * 1000) / 1000;
+      utimesSync(w.plan, edited, edited);
+      const amended = go(2);
+      w.agent('r3', 3, -200, -100, 'ON-AIM ROUTE-CLEAR step 1 next 2');
+      const again = go(2);
+      return refused(fresh[0], names, /does not latch/) && refused(fresh[1], names) && passes(fresh[2])
+        && refused(cleared[0], /cleared step 2/, /another step/) && passes(cleared[1]) && passes(cleared[2])
+        && passes(anyStep[0]) && refused(anyStep[1], /cleared step 1/)
+        && refused(early, names) && refused(lapsed[0], names) && passes(lapsed[1])
+        && refused(said.off, /OFF-AIM/, /plan mode/) && refused(said.route, /ROUTE-REFUSED/, /Amend/) && refused(said.other, names) && refused(said.old, names) && refused(said.plain, names)
+        && refused(running, /running/, names)
+        && passes(before) && refused(amended, names) && passes(again);
+    },
+  },
+  {
+    name: 'while a correction stands in a plan with a review step, the review step goes, and so does a step that a review which began after the message was typed cleared; a step cleared before the message and an OFF-AIM review stay held with the correction\'s words, without latching, and a plan with no review step holds every send',
+    guards: ['correction_lifts_wired', 'correction_lifts_after', 'correction_lifts_review', 'correction_lifts_cleared', 'correction_says_review'],
+    run(m, dir) {
+      const WRONG = 'That was wrong, so explain it before anything else.';
+      const w = reviewWorld(dir, [owner(later(-900), GO), owner(later(-200), WRONG)]);
+      const go = (n) => { const id = sid('cl'); return { r: w.send(n, id), id }; };
+      const held = ({ r, id }) => r.status === 2 && /CORRECTION/.test(r.stderr) && !/REVIEW GATE/.test(r.stderr) && !latched(id) && !r.stderr.includes('explain it');
+      const passes = ({ r }) => r.status === 0;
+      w.agent('d1', 1, -800, -700, 'DONE');
+      // A review that ran BEFORE the message cleared step 2 without having read the message.
+      w.agent('r1', 3, -500, -400, 'ON-AIM ROUTE-CLEAR step 1 next 2');
+      const before = [go(2), go(3)];
+      // A review that began after the message: step 2 goes, step 1 (which it did not clear) is refused by the review gate's own rule, and the review step goes.
+      w.agent('r2', 3, -100, -50, 'ON-AIM ROUTE-CLEAR step 1 next 2');
+      const after = [go(2), go(1), go(3)];
+      // The same review reading OFF-AIM clears nothing.
+      w.agent('r2', 3, -100, -50, 'OFF-AIM ROUTE-CLEAR step 1 next 2');
+      const off = go(2);
+      // With no review step in the plan every send is held, as before.
+      const plain = world(dir, [owner(later(-900), GO), owner(later(-200), WRONG)], ORDER_PLAN);
+      const idp = sid('cl');
+      const plainSend = plain.call('PreToolUse', { session_id: idp, tool_name: 'Agent', tool_input: { prompt: `${plain.plan} step 1`, subagent_type: 'general-purpose' } });
+      return held(before[0]) && /Standing review step and the step that review clears/.test(before[0].r.stderr) && passes(before[1])
+        && passes(after[0]) && held(after[1]) && passes(after[2])
+        && held(off)
+        && plainSend.status === 2 && /CORRECTION/.test(plainSend.stderr) && !/Standing review step/.test(plainSend.stderr) && !latched(idp);
+    },
+  },
+  {
+    name: 'a message carrying the whole word stop and no go-word holds the whole session until a go-word, the word first or second: the main thread\'s sends, the review step and a cleared step included, and every call of an agent, with the stop\'s words and without latching; the status command, TaskStop, a read of the record on the main thread and an agent\'s own return still pass; a plain message does not lift it and a go-word does; a message with the word and a go-word is no stop',
+    guards: ['stop_hold', 'stop_agents', 'stop_taskstop', 'stop_no_latch', 'stop_record_read', 'stop_anywhere', 'stop_go_message'],
+    run(m, dir) {
+      const w = reviewWorld(dir, [owner(later(-900), GO), owner(later(-200), 'Stop. Nothing more until I answer.')]);
+      w.agent('d1', 1, -800, -700, 'DONE');
+      // A review that began after the stop message and cleared step 2: even a cleared step is held.
+      w.agent('r1', 3, -100, -50, 'ON-AIM ROUTE-CLEAR step 1 next 2');
+      const call = (extra) => { const id = sid('sh'); return { r: w.call('PreToolUse', { session_id: id, ...extra }), id }; };
+      const held = ({ r, id }) => r.status === 2 && /STOP \(Doctrine §0e rule 3\)/.test(r.stderr) && !/CORRECTION/.test(r.stderr) && !latched(id) && !r.stderr.includes('Nothing more until');
+      const passes = ({ r }) => r.status === 0;
+      const sendStep = (n) => call({ tool_name: 'Agent', tool_input: { prompt: `${w.plan} step ${n}`, subagent_type: 'general-purpose' } });
+      const status = call({ tool_name: 'Bash', tool_input: { command: `node "${join(dir, 'report.mjs')}" "Status 10:00 — a stop stands"` } });
+      const stands = [sendStep(2), sendStep(3), call({ tool_name: 'Write', tool_input: { file_path: join(w.cwd, 'x.txt'), content: 'x' } }),
+        call({ agent_id: 'a1', tool_name: 'Read', tool_input: { file_path: w.plan } }), call({ agent_id: 'a1', tool_name: 'Bash', tool_input: { command: 'git status' } }),
+        call({ tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } })];
+      const kept = [status, call({ tool_name: 'TaskStop', tool_input: { task_id: 'bxyz789' } }), call({ agent_id: 'a1', tool_name: 'TaskStop', tool_input: { task_id: 'bxyz789' } }),
+        call({ tool_name: 'Read', tool_input: { file_path: w.plan } }), call({ agent_id: 'a1', tool_name: 'SubagentHandback', tool_input: { message: 'Stopped as told.' } })];
+      // A plain message typed after the stop does not lift it.
+      appendFileSync(w.tr, jsonl([owner(later(-20), 'Another plain message, which is no go-word.')]));
+      const plainAfter = [sendStep(2), call({ agent_id: 'a1', tool_name: 'Read', tool_input: { file_path: w.plan } })];
+      // A go-word lifts it: the cleared step and the agent's read go.
+      appendFileSync(w.tr, jsonl([owner(later(-10), 'Go.')]));
+      const lifted = [sendStep(2), call({ agent_id: 'a1', tool_name: 'Read', tool_input: { file_path: w.plan } })];
+      // The word SECOND, after another word, holds the same way: the main thread's send and an agent's read.
+      const second = reviewWorld(dir, [owner(later(-900), GO), owner(later(-200), 'Please stop everything. Nothing more until I answer.')]);
+      second.agent('d1', 1, -800, -700, 'DONE'); second.agent('r1', 3, -100, -50, 'ON-AIM ROUTE-CLEAR step 1 next 2');
+      const ids = sid('sh');
+      const heldSecond = [{ r: second.send(2, ids), id: ids }, { r: second.call('PreToolUse', { session_id: sid('sh'), agent_id: 'a1', tool_name: 'Read', tool_input: { file_path: second.plan } }), id: ids }];
+      // A message carrying the word and a go-word is a go message, not a stop: the cleared step goes.
+      const both = reviewWorld(dir, [owner(later(-900), GO), owner(later(-200), 'Stop, then go.')]);
+      both.agent('d1', 1, -800, -700, 'DONE'); both.agent('r1', 3, -100, -50, 'ON-AIM ROUTE-CLEAR step 1 next 2');
+      const idb = sid('sh');
+      const sentBoth = both.send(2, idb);
+      return stands.every(held) && kept.every(passes) && plainAfter.every(held) && lifted.every(passes)
+        && heldSecond[0].r.status === 2 && /STOP \(Doctrine §0e rule 3\)/.test(heldSecond[0].r.stderr) && !latched(ids)
+        && heldSecond[1].r.status === 2 && /STOP \(Doctrine §0e rule 3\)/.test(heldSecond[1].r.stderr)
+        && !heldSecond[0].r.stderr.includes('Nothing more until')
+        && sentBoth.status === 0 && !/STOP \(Doctrine/.test(sentBoth.stderr);
+    },
+  },
+  {
+    name: 'a stop is found however far back it sits and lifted by a go-word that came after it: a tail that widens finds a stop written before three megabytes of tool output, with a plain message after the output or none, and a go-word after the output lifts it',
+    guards: ['hold_settled'],
+    run(m, dir) {
+      const big = 'x'.repeat(3 * 1024 * 1024);
+      const output = [tool(6, 'b1', 'Bash', { command: 'cat big' }), result(7, 'b1', big)];
+      const send = (w) => w.call('PreToolUse', { session_id: sid('sw'), tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } });
+      const STOP = 'Stop. Nothing more until I answer.';
+      const stopped = send(world(dir, [turn(0, GO), turn(5, STOP), ...output]));
+      // The newest message in the first tail is a plain one: it settles nothing, so the tail has to widen to the stop.
+      const plain = send(world(dir, [turn(0, GO), turn(5, STOP), ...output, turn(8, 'Another plain message, which is no go-word.')]));
+      const lifted = send(world(dir, [turn(0, GO), turn(5, STOP), ...output, turn(8, 'go')]));
+      const held = (r) => r.status === 2 && /STOP \(Doctrine §0e rule 3\)/.test(r.stderr);
+      return held(stopped) && held(plain) && lifted.status === 0;
+    },
+  },
+  {
+    name: 'a stop found in a transcript that cannot be read comes from the record UserPromptSubmit wrote, the word first or second, which only a go-word replaces and a plain message typed after it does not; a harness prompt is not recorded',
+    guards: ['hold_fallback_stop', 'record_stop', 'record_stop_kept', 'stop_anywhere'],
+    run(m, dir) {
+      const w = world(dir);
+      const lost = (s) => w.call('PreToolUse', { session_id: s, transcript_path: join(w.cwd, 'missing.jsonl'), tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } });
+      const s1 = sid('fs');
+      w.call('UserPromptSubmit', { session_id: s1, prompt: 'Stop. Nothing more until I answer.' });
+      const stopped = lost(s1);
+      w.call('UserPromptSubmit', { session_id: s1, prompt: 'go' });
+      const lifted = lost(s1);
+      const s2 = sid('fs');
+      w.call('UserPromptSubmit', { session_id: s2, prompt: 'Stop. Nothing more until I answer.' });
+      w.call('UserPromptSubmit', { session_id: s2, prompt: NOTE });
+      const harness = lost(s2);
+      // The word second, and a plain message typed after the stop: the stop still stands, and a go-word then lifts it.
+      const s3 = sid('fs');
+      w.call('UserPromptSubmit', { session_id: s3, prompt: 'Please stop everything now.' });
+      const second = lost(s3);
+      w.call('UserPromptSubmit', { session_id: s3, prompt: 'That was done wrong; explain it.' });
+      const plain = lost(s3);
+      w.call('UserPromptSubmit', { session_id: s3, prompt: 'Go.' });
+      const liftedLate = lost(s3);
+      const says = (r) => r.status === 2 && /STOP \(Doctrine §0e rule 3\)/.test(r.stderr);
+      return says(stopped) && lifted.status === 0 && harness.status === 2
+        && says(second) && says(plain) && liftedLate.status === 0;
+    },
+  },
+  {
+    name: 'ExitPlanMode refuses a plan with an Order whose Standing line names no step that follows the hub\'s aim-review.md by its full path, and passes one that does; a plan with no Order is not judged',
+    guards: ['aim_standing_wired', 'review_full_path', 'review_follow'],
+    run(m, dir) {
+      const r = repo({ 'a.txt': 'x\n' });
+      const TALK = 'Here is what is being done and why: the export control moves to the toolbar edge, and nothing else changes.';
+      const withStanding = (words) => ['# Order plan', '',
+        '## Goals', '1. The toolbar shows the export button on its left side.', GOALS_BLOCK, 'Served by: steps 1 and 2 serve goal 1.', '',
+        '## Asked', OWN_WORDS, '',
+        '## Order', 'Order: 1', 'Standing: 2', '',
+        '## Rules', rulesLine(dir), '',
+        '## Steps', '1. **Build.** Make the toolbar change.', `2. **Review.** ${words}`, '',
+        '## Looked up', 'Nothing outside the repository bears on this change at all.', '',
+        '## Branches', 'One branch only, because the request names a single control to move.', '',
+        '## Call chain', 'The toolbar builder places the button; nothing else reads its position.', '',
+        '## Whole app', 'It belongs because it was asked for, and nothing else would change.', '',
+        '## Leaves open', 'Nothing is left open by this change, as far as can be seen here.', ''].join('\n');
+      const exit = (planText) => {
+        const home = tmp('sg-home-');
+        mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
+        const file = join(home, '.claude', 'plans', 'aim-test.md');
+        writeFileSync(file, planText);
+        const t = (Date.now() - 1000 * 1000) / 1000;
+        utimesSync(file, t, t);
+        return spawnSync('node', [join(dir, 'plan-guard.mjs')], {
+          input: JSON.stringify({ session_id: sid('as'), permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { planFilePath: file },
+            transcript_path: transcript([turn(0, OWNER), ...enterPlan(-900), at(reply(0, TALK), later(-500)), owner(later(-400), 'ok')]), cwd: '/' }),
+          encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: r.dir },
+        });
+      };
+      const good = exit(withStanding(`Follow ${join(dir, 'aim-review.md')} for the move named on the status page.`));
+      const timer = exit(withStanding('Wait on the thing.'));
+      const bare = exit(withStanding('Follow aim-review.md for the move named on the status page.'));
+      const elsewhere = exit(withStanding('Follow /somewhere/else/aim-review.md for the move named on the status page.'));
+      const noFollow = exit(withStanding(`Read ${join(dir, 'aim-review.md')} for the move named on the status page.`));
+      const noOrder = exit(PLAN(OWN_WORDS));
+      return good.status === 0 && noOrder.status === 0
+        && [timer, bare, elsewhere, noFollow].every((x) => x.status === 2 && /AIM REVIEW/.test(x.stdout) && x.stdout.includes('aim-review.md'));
+    },
+  },
+  {
+    name: 'the main thread may amend the approved plan\'s Steps or Order with no new approval: the write goes only when Goals, Asked, Files and Commands are unchanged in the text it would leave, and the marker\'s hash then follows the file; an edit to any of the four, an agent\'s edit, an edit that cannot be applied, one under a marker with no scope, one from another session and one on a plan that changed after approval are refused, and a change that got past the check leaves no plan in force and is named by the status',
+    guards: ['amend_scope_gate', 'amend_agent', 'amend_no_scope', 'amend_session', 'amend_hash', 'amend_multi', 'amend_ambiguous', 'amend_post', 'amend_rehash', 'amend_post_agent', 'scope_mark', 'scope_app_exit', 'status_scope'],
+    run(m, dir) {
+      const sha = (t) => createHash('sha256').update(t).digest('hex');
+      const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const text = scopedPlan(dir);
+      const scope = m.report.scopeHashes(text);
+      // The owner's approval through the tool: the marker records the plan's hash and its scope.
+      const approve = (A, body = text) => {
+        writeFileSync(A.plan, body);
+        const tr = transcript([turn(0, 'start')]);
+        A.guard(tr, { hook_event_name: 'PostToolUse', tool_name: 'ExitPlanMode', tool_response: { plan: body, isAgent: false, filePath: A.plan } }, '--mark');
+        return tr;
+      };
+      const call = (A, tr, name, input, extra = {}, flag) => A.guard(tr, { tool_name: name, tool_input: { file_path: A.plan, ...input }, ...(flag ? { hook_event_name: 'PostToolUse' } : {}), ...extra }, flag);
+      const A = appHome(dir);
+      const tr = approve(A);
+      const mk0 = A.mk();
+      const STEP = { old_string: '1. **Build.** Make the thing.', new_string: '1. **Build.** Make the thing, and say what it did.' };
+      const STEP2 = { old_string: '2. **Check.** Read the thing.', new_string: '2. **Check.** Read the thing twice.' };
+      const FILES = { old_string: '`keep.mjs`', new_string: '`keep.mjs`, `more.mjs`' };
+      const refused = (r, ...re) => r.status === 2 && re.every((x) => x.test(r.stdout));
+      // Steps and Order may move: the write goes, and once it is made the marker's hash follows the file.
+      const steps = call(A, tr, 'Edit', STEP);
+      writeFileSync(A.plan, text.replace(STEP.old_string, STEP.new_string));
+      const amended = call(A, tr, 'Edit', STEP, {}, '--amend');
+      const mk1 = A.mk();
+      const order = call(A, tr, 'MultiEdit', { edits: [{ old_string: 'Order: 1 2', new_string: 'Order: 2 1' }, { old_string: 'Step 9 is never sent', new_string: 'Step 9 is never sent here' }] });
+      const current = readFileSync(A.plan, 'utf8');
+      const whole = call(A, tr, 'Write', { content: current.replace('Make the thing, and', 'Make the thing well, and') });
+      // Each of the four is refused, by name, and the refusal says the approval is voided.
+      const files = call(A, tr, 'Edit', FILES);
+      const commands = call(A, tr, 'Edit', { old_string: '- git push', new_string: '- git push\n- git reset' });
+      const goals = call(A, tr, 'Edit', { old_string: '1. The thing is built and read.', new_string: '1. The thing is built.' });
+      const asked = call(A, tr, 'Edit', { old_string: OWN_WORDS, new_string: 'Do something else.' });
+      const two = call(A, tr, 'MultiEdit', { edits: [STEP2, FILES, { old_string: '- git push', new_string: '- git push\n- git reset' }] });
+      const writeGoals = call(A, tr, 'Write', { content: current.replace('1. The thing is built and read.', '1. The thing is built.') });
+      // Not the main thread, not this session, no scope recorded, an edit that cannot be applied, a plan changed after approval.
+      const agent = call(A, tr, 'Edit', STEP2, { agent_id: 'a1' });
+      const other = call(A, tr, 'Edit', STEP2, { session_id: 'another-session' });
+      const absent = call(A, tr, 'Edit', { old_string: 'text that is nowhere in the plan', new_string: 'x' });
+      const ambiguous = call(A, tr, 'Edit', { old_string: 'the thing', new_string: 'the thing!' });
+      const B = appHome(dir);
+      const trB = approve(B);
+      writeFileSync(B.plan, `${text}\nChanged behind the approval.\n`);
+      const moved = call(B, trB, 'Edit', STEP);
+      const C = appHome(dir);
+      const trC = approve(C);
+      const withoutScope = { ...C.mk() }; delete withoutScope.scope;
+      writeFileSync(C.marker, JSON.stringify(withoutScope));
+      const noScope = call(C, trC, 'Edit', STEP);
+      // A change that got past the simulation: the real file's Files differ, so the marker keeps its hash and no plan is in force.
+      const D = appHome(dir);
+      const trD = approve(D);
+      writeFileSync(D.plan, text.replace(FILES.old_string, FILES.new_string));
+      const notCarried = call(D, trD, 'Edit', FILES, {}, '--amend');
+      const statusOf = (Z) => spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the scope test'], { encoding: 'utf8', env: { ...process.env, HOME: Z.home, CLAUDE_CODE_SESSION_ID: '' } }).stdout ?? '';
+      const stuck = statusOf(D);
+      // An agent's PostToolUse moves nothing; the main thread's does.
+      const E = appHome(dir);
+      const trE = approve(E);
+      writeFileSync(E.plan, text.replace(STEP.old_string, STEP.new_string));
+      call(E, trE, 'Edit', STEP, { agent_id: 'a1' }, '--amend');
+      const agentLeft = E.mk()?.hash === sha(text);
+      call(E, trE, 'Edit', STEP, {}, '--amend');
+      const mainMoved = E.mk()?.hash === sha(text.replace(STEP.old_string, STEP.new_string));
+      const carried = statusOf(E);
+      // The owner's exit from plan mode in the app records the scope too.
+      const F = appHome(dir);
+      const uf = uid();
+      const trF = transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, F.plan, uf)]);
+      F.guard(trF, { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
+      const scopeF = F.mk()?.scope;
+      return same(Object.keys(mk0?.scope ?? {}), ['Goals', 'Asked', 'Files', 'Commands']) && same(mk0.scope, scope) && mk0.hash === sha(text)
+        && steps.status === 0 && amended.status === 0 && mk1?.hash === sha(text.replace(STEP.old_string, STEP.new_string)) && same(mk1.scope, scope) && mk1.amendments === 1
+        && order.status === 0 && whole.status === 0
+        && refused(files, /Files/, /voids the approval/) && !/Commands/.test(files.stdout) && refused(commands, /Commands/) && refused(goals, /Goals/) && refused(asked, /Asked/)
+        && refused(two, /Files/, /Commands/) && refused(writeGoals, /Goals/)
+        && refused(agent, /voids its approval, and every write after it would be refused/) && refused(other, /another session/)
+        && refused(absent, /could not be applied/) && refused(ambiguous, /could not be applied/)
+        && refused(moved, /has changed since it was approved/) && refused(noScope, /every write after it would be refused/)
+        && notCarried.status === 2 && /Files/.test(notCarried.stderr) && /NOT carried/.test(notCarried.stderr) && D.mk()?.hash === sha(text)
+        && /Scope: CHANGED in Files\./.test(stuck) && /Match: NO/.test(stuck)
+        && agentLeft && mainMoved && /Scope: Goals, Asked, Files, Commands are as approved\./.test(carried) && /Match: yes/.test(carried) && !/Scope: CHANGED/.test(carried)
+        && same(scopeF, m.report.scopeHashes(STEPS_PLAN));
+    },
+  },
+  {
+    name: 'through hook-dispatch, an amendment of the approved plan\'s Steps keeps the plan in force for the gates that read it, and the amended step is cleared by a fresh review before it goes; an edit that changes Files is refused, and one that got past leaves no plan in force',
+    guards: ['amend_wired', 'amend_rehash'],
+    run(m, dir) {
+      const sha = (t) => createHash('sha256').update(t).digest('hex');
+      const text = reviewPlan(dir);
+      const w = reviewWorld(dir);
+      writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha(text), scope: m.report.scopeHashes(text), at: new Date().toISOString() }));
+      const mk = () => JSON.parse(readFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), 'utf8'));
+      const go = (n) => w.send(n, sid('aw'));
+      const STEP = { file_path: w.plan, old_string: '2. **Check.** Read the thing.', new_string: '2. **Check.** Read the thing twice.' };
+      const FILES = { file_path: w.plan, old_string: '`keep.mjs`', new_string: '`keep.mjs`, `more.mjs`' };
+      w.agent('d1', 1, -900, -800, 'DONE');
+      w.agent('r1', 3, -700, -600, 'ON-AIM ROUTE-CLEAR step 1 next 2');
+      const before = go(2);
+      // The main thread edits the Steps: the write goes, and once it is made the plan is still the one in force.
+      const edit = w.call('PreToolUse', { session_id: sid('aw'), tool_name: 'Edit', tool_input: STEP });
+      const amended = text.replace(STEP.old_string, STEP.new_string);
+      writeFileSync(w.plan, amended);
+      const post = w.call('PostToolUse', { session_id: sid('aw'), tool_name: 'Edit', tool_input: STEP });
+      const moved = mk().hash === sha(amended);
+      // The plan was written just now, after the review began: the review is stale, not the approval.
+      const stale = go(2);
+      const written = (Date.now() - 300 * 1000) / 1000;
+      utimesSync(w.plan, written, written);
+      w.agent('r3', 3, -200, -100, 'ON-AIM ROUTE-CLEAR step 1 next 2');
+      const cleared = go(2);
+      // An edit to Files is refused; one that got past it is not carried to the marker and no plan stands.
+      const files = w.call('PreToolUse', { session_id: sid('aw'), tool_name: 'Edit', tool_input: FILES });
+      writeFileSync(w.plan, amended.replace(FILES.old_string, FILES.new_string));
+      const lost = w.call('PostToolUse', { session_id: sid('aw'), tool_name: 'Edit', tool_input: FILES });
+      const none = go(2);
+      return before.status === 0 && edit.status === 0 && post.status === 0 && moved
+        && stale.status === 2 && /REVIEW GATE/.test(stale.stderr) && !/No approved plan/.test(stale.stderr)
+        && cleared.status === 0
+        && files.status === 2 && /Files/.test(files.stdout + files.stderr)
+        && lost.status === 2 && /NOT carried/.test(lost.stderr) && mk().hash === sha(amended)
+        && none.status === 2 && /DISPATCH GATE[\s\S]*No approved plan/.test(none.stderr) && /Scope: CHANGED in Files/.test(none.stderr);
+    },
+  },
+  {
+    name: 'with a review step in the plan, a turn that ends with steps left is refused naming the step the current review cleared, or the review step when none is current; a standing correction does not let it end, a standing stop does, and a choice or a declared stop still does',
+    guards: ['stop_guard_stop', 'stop_guard_review_corr', 'stop_guard_names_cleared', 'stop_guard_names_review'],
+    run(m, dir) {
+      const w = reviewWorld(dir);
+      const s = sid('sr');
+      const REPORT = 'Here is the report of what the gates now do, and what each one refuses.';
+      const say = (text, entries = [turn(0, GO)]) => {
+        writeFileSync(w.tr, jsonl([...entries, reply(5, text)]));
+        return spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: s, transcript_path: w.tr }), encoding: 'utf8', env: { ...process.env, HOME: w.home } });
+      };
+      const err = (r) => r.stderr ?? '';
+      const WRONG = [turn(0, GO), turn(3, 'That was done wrong, so answer me before anything else.')];
+      const STOPPED = [turn(0, GO), turn(3, 'Stop. Nothing more until I answer.')];
+      // Nothing has handed back: the review step is the move.
+      const none = say(REPORT);
+      // Step 1 DONE and a review that began after it clears step 2: that step is the move.
+      w.agent('d1', 1, -900, -800, 'DONE');
+      w.agent('r1', 3, -700, -600, 'ON-AIM ROUTE-CLEAR step 1 next 2');
+      const cleared = say(REPORT);
+      const correction = say(REPORT, WRONG);
+      const stopped = say(REPORT, STOPPED);
+      const choice = say('Open for you, one choice:\n1. (Recommended) Land the gates as they are built.\n2. Hold them for a second review.\n\n' + REPORT);
+      const declared = say('Stopping here: open for you is the order of the two remaining changes.\n\n' + REPORT);
+      // Step 2 REFUSED after the review began: the review is stale, so the review step is the move again.
+      w.agent('d2', 2, -500, -400, 'REFUSED');
+      const stale = say(REPORT);
+      // Both steps DONE: nothing is left.
+      w.agent('d2', 2, -500, -400, 'DONE');
+      const all = say(REPORT);
+      return none.status === 2 && err(none).includes('next: step 1') && err(none).includes(`${w.plan} step 3`) && /No review is current \(missing\)/.test(err(none))
+        && cleared.status === 2 && /cleared step 2 and no other/.test(err(cleared)) && err(cleared).includes(`${w.plan} step 2`)
+        && correction.status === 2 && /cleared step 2 and no other/.test(err(correction))
+        && stopped.status === 0 && choice.status === 0 && declared.status === 0
+        && stale.status === 2 && /No review is current \(stale\)/.test(err(stale)) && err(stale).includes(`${w.plan} step 3`)
+        && all.status === 0;
+    },
+  },
+  {
+    name: 'every status prints a Review line under the pointer, read by the function the review gate refuses on: none handed back, a review that clears a step, and a plan whose Standing step does not follow the hub\'s aim-review.md; each state of the line says what to send',
+    guards: ['review_status_print', 'review_block_text'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      const s = sid('rv');
+      const proj = join(home, '.claude', 'projects', '-home-user');
+      const subs = join(proj, s, 'subagents');
+      mkdirSync(subs, { recursive: true });
+      writeFileSync(join(proj, `${s}.jsonl`), JSON.stringify(turn(0, 'start')) + '\n');
+      mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
+      const plan = join(home, '.claude', 'plans', 'gate-test.md');
+      const marker = join(home, '.claude', 'APPROVED-PLAN.json');
+      const approve = (body) => { writeFileSync(plan, body); writeFileSync(marker, JSON.stringify({ plan, hash: createHash('sha256').update(body).digest('hex'), at: new Date().toISOString() })); const old = (Date.now() - 60 * 60 * 1000) / 1000; utimesSync(plan, old, old); };
+      approve(reviewPlan(dir));
+      writeFileSync(join(home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now() - 10 * 60000, status: 'Status' }));
+      const status = () => spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the review test'], { encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: s } }).stdout ?? '';
+      const first = status();
+      putAgent(subs, plan, 'a1', 1, -900, -800, 'DONE');
+      putAgent(subs, plan, 'a3', 3, -700, -600, 'ON-AIM ROUTE-CLEAR step 1 next 2');
+      const second = status();
+      approve(ORDER_PLAN);
+      const plain = status();
+      const at1 = (out, a, b) => out.indexOf(a) >= 0 && out.indexOf(a) < out.indexOf(b);
+      const block = (kind, extra = {}) => m.report.reviewBlock({ kind, reviewers: [3], step: 1, first: 'ON-AIM ROUTE-CLEAR step 1 next 2', review: { at: 200, startAt: 150 }, cleared: 2, ...extra });
+      return /^Review: none has handed back; no step in Order has ended yet\. Send Standing step 3\.$/m.test(first) && at1(first, 'next: step 1', 'Review: none') && at1(first, 'Review: none', '— the review test')
+        && /^Review: the review that ended .* reads "ON-AIM ROUTE-CLEAR step 1 next 2"; it clears step 2 and no other\.$/m.test(second) && at1(second, 'next: step 2', 'Review: the review')
+        && /^Review: not enforced \(/m.test(plain)
+        && /not read/.test(block('not-read')) && /Send Standing step 3/.test(block('stale')) && /not a verdict/.test(block('unreadable')) && /off aim/.test(block('off-aim'))
+        && /route is refused/.test(block('route-refused')) && /judged another step/.test(block('wrong-step')) && /names no step to send/.test(block('no-next')) && /running/.test(block('running'));
+    },
+  },
+
+  // ---- the shared rules: a plan points at one file instead of copying it (Doctrine §0e rule 13) ----
+  {
+    name: 'a plan that sends agents carries the rules or points at them: a Rules section that is the pointer line at the file\'s current version passes (with a list marker or backticks round the path too), and so does a copy of every rule line with rules added; no Rules section, a pointer at another file or at another version, a copy that drops or alters a rule, and a rules file that cannot be read as one are refused; a plan with no Steps is not judged',
+    guards: ['rules_steps_only', 'rules_missing', 'rules_pointer_parse', 'rules_pointer_path', 'rules_pointer_version', 'rules_copy_whole', 'rules_unreadable'],
+    run(m, dir) {
+      const file = join(dir, 'agent-rules.md');
+      const text = (rules) => ['# T', '', '## Steps', '1. **Build.** Make it.', '', ...(rules === null ? [] : ['## Rules', rules, '']), '## Files', '- Hub: `a.mjs`', ''].join('\n');
+      const problem = (rules, f = file) => m.dispatch.rulesProblem(text(rules), f);
+      const refuses = (rules, re, f = file) => { const x = problem(rules, f); return typeof x === 'string' && re.test(x); };
+      const block = m.report.agentRules(file).block;
+      const broken = join(tmp('sg-rules-'), 'agent-rules.md');
+      writeFileSync(broken, '# Rules\n\nThere is no version line here.\n- one rule\n');
+      const absent = join(tmp('sg-rules-'), 'absent.md');
+      const altered = [block[0].replace('Never', 'Always'), ...block.slice(1)];
+      return RULES_VERSION > 0 && block.length >= 5
+        && m.dispatch.rulesProblem('# T\n\n## Files\n- Hub: `a.mjs`\n', file) === null
+        && problem(rulesLine(dir)) === null && problem(`- ${rulesLine(dir)}`) === null
+        && problem(`Rules: \`${file}\`, version ${RULES_VERSION}.`) === null
+        && problem(block.join('\n')) === null && problem([...block, '- A rule of the plan\'s own.'].join('\n')) === null
+        && refuses(null, /no "## Rules" section/)
+        && refuses('Nothing of the kind.', /lacks \d+ of the file's \d+ rule lines/)
+        && refuses(`Rules: /somewhere/else/agent-rules.md, version ${RULES_VERSION}.`, /not this hub's rules file/)
+        && refuses(rulesLine(dir, RULES_VERSION + 1), new RegExp(`pins version ${RULES_VERSION + 1} and the file now says version ${RULES_VERSION}`))
+        && refuses(block.slice(1).join('\n'), /lacks 1 of the file's/)
+        && refuses(altered.join('\n'), /lacks 1 of the file's/)
+        && refuses(rulesLine(dir), /cannot be read as a rules file/, broken)
+        && refuses(rulesLine(dir), /cannot be read as a rules file/, absent);
+    },
+  },
+  {
+    name: 'the rules gate sends no step while the version a plan\'s Rules line pins is not the rules file\'s, and does not latch: the Standing review step is held too, and the refusal names the amendment of the Rules line; a prompt that is no step of the plan, a tool that sends no agent, a subagent\'s call, a plan that copies the rules and a plan that pins the current version are not held',
+    guards: ['rules_pin_version', 'rules_pin_path', 'rules_pin_none', 'rules_pin_unread', 'rules_gate_step', 'rules_gate_agent', 'rules_gate_wired', 'rules_gate_no_latch'],
+    run(m, dir) {
+      const file = join(dir, 'agent-rules.md');
+      const withRules = (line) => STEPS_PLAN.replace('## Commands', `## Rules\n${line}\n\n## Commands`);
+      const planOf = (line) => ({ path: '/plans/gate-test.md', text: withRules(line) });
+      const send = (n, extra = {}) => ({ tool_name: 'Agent', tool_input: { prompt: `/plans/gate-test.md step ${n}` }, ...extra });
+      const gate = (p, pl) => m.dispatch.rulesGate(p, pl, file);
+      const old = rulesLine(dir, RULES_VERSION + 1);
+      const stale = gate(send(1), planOf(old));
+      const review = gate(send(2), planOf(old));
+      const other = gate(send(1), planOf(`Rules: /somewhere/else/agent-rules.md, version ${RULES_VERSION}.`));
+      const copies = gate(send(1), { path: '/plans/gate-test.md', text: withRules(m.report.agentRules(file).block.join('\n')) });
+      const notStep = gate({ tool_name: 'Agent', tool_input: { prompt: 'do something else entirely' } }, planOf(old));
+      const readTool = gate({ tool_name: 'Read', tool_input: { file_path: '/plans/gate-test.md' } }, planOf(old));
+      const agent = gate(send(1, { agent_id: 'a1' }), planOf(old));
+      const unread = m.dispatch.rulesPinProblem(withRules(rulesLine(dir)), join(tmp('sg-rules-'), 'absent.md'));
+      // Wired into the dispatcher: a stale pin refuses the send and writes no latch; the current pin lets it on.
+      const s1 = sid('rl'), s2 = sid('rl');
+      const sendIn = (w, s) => w.call('PreToolUse', { session_id: s, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } });
+      const held = sendIn(world(dir, [turn(0, GO)], withRules(old)), s1);
+      const free = sendIn(world(dir, [turn(0, GO)], withRules(rulesLine(dir))), s2);
+      return typeof stale === 'string' && /^RULES GATE/.test(stale) && /pins version \d+ and .* now says version \d+/.test(stale) && /amend the Rules line/.test(stale) && /does not latch/.test(stale)
+        && typeof review === 'string' && /^RULES GATE/.test(review)
+        && typeof other === 'string' && /not this hub's rules file/.test(other)
+        && copies === null && notStep === null && readTool === null && agent === null
+        && typeof unread === 'string' && /cannot be read as a rules file/.test(unread)
+        && held.status === 2 && /RULES GATE/.test(held.stderr) && !latched(s1)
+        && free.status === 0 && !latched(s2);
+    },
+  },
+  {
+    name: 'ExitPlanMode refuses a plan that sends agents with no Rules section or a pointer at another version, and a plan whose Files names a repository with unanswered queued findings; the same plan with the pointer and a Found answered section passes, and one that names a repository with no queue is not asked',
+    guards: ['rules_plan_guard_wired', 'queue_plan_guard_wired'],
+    run(m, dir) {
+      const A = repo({ 'a.txt': 'x\n', 'NOTES.md': QUEUE_NOTES }, 'queue-repo');
+      const C = repo({ 'c.txt': 'x\n' }, 'quiet-repo');
+      const all = 'Q-QR-1: fixed in step 1.\nQ-QR-2: carried to step 2.\nQ-QR-3: dropped, the finding no longer applies here.';
+      const files = '- queue-repo: `a.txt`';
+      const said = (r) => `${r.stdout}${r.stderr}`;
+      const good = exitFor(dir, sendingPlan(dir, { files, answered: all }), A.dir);
+      const unanswered = exitFor(dir, sendingPlan(dir, { files }), A.dir);
+      const noRules = exitFor(dir, sendingPlan(dir, { rules: null, files, answered: all }), A.dir);
+      const stale = exitFor(dir, sendingPlan(dir, { rules: rulesLine(dir, RULES_VERSION + 1), files, answered: all }), A.dir);
+      const quiet = exitFor(dir, sendingPlan(dir, { files: '- quiet-repo: `c.txt`' }), C.dir);
+      return good.status === 0 && quiet.status === 0
+        && unanswered.status === 2 && said(unanswered).includes('FOUND QUEUE') && said(unanswered).includes('Q-QR-2')
+        && noRules.status === 2 && said(noRules).includes('SHARED RULES') && said(noRules).includes('Rules')
+        && stale.status === 2 && said(stale).includes('SHARED RULES') && said(stale).includes(`version ${RULES_VERSION + 1}`);
+    },
+  },
+
+  // ---- the finding queue: recorded for the next plan, answered line by line (Doctrine §0e rule 2) ----
+  {
+    name: 'a plan answers every finding queued for the repositories its Files names, line by line, in a Found answered section: a key is read in three forms of line, only from the queue section; an unanswered key, a verdict with no step or no reason, an answer outside the section and another repository\'s key each leave it unanswered; a repository the plan does not name, one with no queue and a plan whose Files names none are not asked',
+    guards: ['queue_section', 'queue_key_forms', 'queue_roots_label', 'queue_verdict_step', 'queue_verdict_reason', 'queue_answered_section', 'queue_listed'],
+    run(m) {
+      const A = repo({ 'a.txt': 'x\n', 'NOTES.md': QUEUE_NOTES }, 'queue-repo');
+      const B = join(dirname(A.dir), 'other-repo');
+      mkdirSync(B);
+      spawnSync('git', ['-C', B, 'init', '-q']);
+      writeFileSync(join(B, 'NOTES.md'), '# Notes\n\n## Found queue\nQ-OT-1: another repository\'s finding, in its own queue.\n');
+      const Q = repo({ 'q.txt': 'x\n', 'NOTES.md': '# Notes\n\nNo queue here.\n' }, 'plain-repo');
+      // The Leaves open section holds an answer outside the Found answered section, which must count for nothing.
+      const plan = (files, answered) => ['# T', '', '## Files', ...files, '', ...(answered === null ? [] : ['## Found answered', ...answered, '']), '## Leaves open', 'Q-QR-1: fixed in step 1. (written outside the answered section)', ''].join('\n');
+      const one = ['- queue-repo: `a.txt`'];
+      const both = ['- queue-repo: `a.txt`', '- other-repo: `n.txt`'];
+      const fine = ['Q-QR-1: fixed in step 4.', '- Q-QR-2: carried to step 7', 'Q-QR-3: still queued, waits on a design choice.'];
+      const judge = (files, answered, dir = A.dir) => m.dispatch.foundAnsweredProblem(plan(files, answered), { dir });
+      const names = (r, ...keys) => typeof r === 'string' && /^FOUND QUEUE/.test(r) && keys.every((k) => r.includes(k));
+      const lacks = (r, ...keys) => keys.every((k) => !r.includes(k));
+      const q = m.dispatch.foundQueue(A.dir);
+      const none = judge(one, null);
+      const withShort = judge(one, [fine[0], fine[1], 'Q-QR-3: dropped, x']);
+      const noReason = judge(one, [fine[0], fine[1], 'Q-QR-3: still queued']);
+      const noStep = judge(one, ['Q-QR-1: fixed', fine[1], fine[2]]);
+      const foreign = judge(one, ['Q-OT-1: fixed in step 1.', fine[1], fine[2]]);
+      const twoRepos = judge(both, fine);
+      return q.map((x) => x.key).join(',') === 'Q-QR-1,Q-QR-2,Q-QR-3' && q[1].text.startsWith('the second finding') && q[2].text.startsWith('the third finding')
+        && names(none, 'Q-QR-1', 'Q-QR-2', 'Q-QR-3', '3 queued findings') && lacks(none, 'Q-QR-9', 'Q-OT-1')
+        && judge(one, fine) === null
+        && names(withShort, 'Q-QR-3') && lacks(withShort, 'Q-QR-1', 'Q-QR-2')
+        && names(noReason, 'Q-QR-3') && lacks(noReason, 'Q-QR-1', 'Q-QR-2')
+        && names(noStep, 'Q-QR-1') && lacks(noStep, 'Q-QR-2', 'Q-QR-3')
+        && names(foreign, 'Q-QR-1') && names(twoRepos, 'Q-OT-1') && lacks(twoRepos, 'Q-QR-')
+        && judge(both, [...fine, 'Q-OT-1: dropped, the plan no longer touches it.']) === null
+        && judge(['- plain-repo: `q.txt`'], null, Q.dir) === null
+        && judge(['- no-such-repo: `a.txt`'], null) === null
+        && m.dispatch.foundAnsweredProblem('# T\n\n## Steps\n1. x\n', { dir: A.dir }) === null
+        && m.dispatch.queueRoots(plan(one, null), A.dir).join() === A.dir && m.dispatch.queueRoots(plan(both, null), A.dir).sort().join() === [A.dir, B].sort().join();
+    },
+  },
+
+  // ---- the state page: the manager's notes, kept where a status cannot rewrite them ----
+  {
+    name: 'the status page carries the manager\'s notes, which a status never rewrites: the outcome (the plan\'s first goal until one is written), each explanation standing and ruled out with its evidence, every decision with its reason, the next move, and every Found line sorted into stopping the plan, fixed, queued and not sorted yet, with the unsorted count near the top; the print says the same, a later line for a Found key replaces an earlier one, and everything from the notes is escaped',
+    guards: ['mgr_found_key', 'mgr_sort_regex', 'mgr_evidence_split', 'mgr_page_notes', 'mgr_outcome_fallback', 'mgr_unsorted_top', 'mgr_escape', 'mgr_print_tag', 'mgr_print_line', 'mgr_sort_group', 'mgr_step_wildcard', 'mgr_specific_first'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      const s = sid('mp');
+      const proj = join(home, '.claude', 'projects', '-home-user');
+      mkdirSync(join(proj, s, 'subagents'), { recursive: true });
+      writeFileSync(join(proj, `${s}.jsonl`), JSON.stringify(turn(0, 'start')) + '\n');
+      const plan = join(home, '.claude', 'plans', 'gate-test.md');
+      mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
+      writeFileSync(plan, ORDER_PLAN);
+      writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: createHash('sha256').update(ORDER_PLAN).digest('hex'), at: new Date().toISOString() }));
+      writeFileSync(join(home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now() - 10 * 60000, status: 'Status' }));
+      const temp = tmp('sg-tmp-');
+      const pad = join(temp, 'claude-0', '-home-user', s, 'scratchpad');
+      mkdirSync(join(pad, 'progress'), { recursive: true });
+      mkdirSync(join(pad, 'status'), { recursive: true });
+      writeFileSync(join(pad, 'progress', 'step-1-report.txt'), 'Work done.\nFound: first thing, not fixed here\nFound: second thing, left for later\nFound: third thing, <i>marked</i>\n');
+      writeFileSync(join(pad, 'progress', 'step-2-report.txt'), 'Found: the fourth thing blocks the plan\n');
+      const status = () => spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the notes test'], { encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: s, TMPDIR: temp } }).stdout ?? '';
+      const page = () => readFileSync(join(pad, 'status', 'fix-run.html'), 'utf8');
+      const before = status(), beforePage = page();
+      const notes = ['# the manager\'s notes', 'Outcome: A reader opens the page and sees what was put right, <b>bold</b> or not.',
+        'Explanation standing: the gate reads the <u>wrong</u> file | the report names that file',
+        'Explanation ruled out: the clock was wrong | the status printed the right time',
+        'Decision: build the page first | the other pieces read it',
+        'Next: send step 2 once the review clears it',
+        'Found 1.1 fixed: put right in step 3', 'Found 1.2 fixed: an earlier line', 'Found 1.2 queued: the later line wins', 'Found 2.1 stopping: it blocks the plan',
+        'a line with no label is ignored', ''].join('\n');
+      writeFileSync(join(pad, 'status', 'manager.txt'), notes);
+      const after = status(), afterPage = page();
+      const at1 = (out, a, b) => out.indexOf(a) >= 0 && out.indexOf(a) < out.indexOf(b);
+      const parsed = m.report.managerNotes(pad);
+      // A whole step sorted at once, with one finding of it kept apart: the line for the finding beats the line for the step.
+      const pad2 = join(temp, 'bulk');
+      mkdirSync(join(pad2, 'status'), { recursive: true });
+      writeFileSync(join(pad2, 'status', 'manager.txt'), 'Found 7.* fixed: all of step 7\nFound 7.2 queued: but this one stays\n');
+      const bulk = m.report.sortFound([{ step: 7, n: 1, key: '7.1' }, { step: 7, n: 2, key: '7.2' }, { step: 8, n: 1, key: '8.1' }], m.report.managerNotes(pad2));
+      return bulk.fixed.map((x) => x.key).join() === '7.1' && bulk.queued.map((x) => x.key).join() === '7.2' && bulk.unsorted.map((x) => x.key).join() === '8.1' && bulk.fixed[0].note === 'all of step 7'
+        && before.includes(`State page: no manager notes at ${join(pad, 'status', 'manager.txt')}`) && before.includes('Found, from the report files (4: 0 fixed, 0 stopping the plan, 0 queued, 4 unsorted):')
+        && beforePage.includes('The thing is built and read.') && beforePage.includes('the manager has written no outcome yet') && beforePage.includes('Found lines not sorted yet: 4 of 4.')
+        && beforePage.includes('<h3>Not sorted yet (4)</h3>')
+        && after.includes('State page: manager notes read from') && after.includes('explanations standing 1, ruled out 1; decisions 1; a next move written; 1 of 4 Found lines unsorted.')
+        && after.includes('- step 1 #1 [fixed]: Found: first thing, not fixed here (put right in step 3)') && after.includes('- step 1 #2 [queued]: Found: second thing, left for later (the later line wins)')
+        && after.includes('- step 2 #1 [stopping]: Found: the fourth thing blocks the plan') && after.includes('- step 1 #3 [unsorted]: Found: third thing, <i>marked</i>')
+        && after.includes('Found, from the report files (4: 1 fixed, 1 stopping the plan, 1 queued, 1 unsorted):')
+        && afterPage.includes('A reader opens the page and sees what was put right, &lt;b&gt;bold&lt;/b&gt; or not.') && !afterPage.includes('<b>bold</b>') && !afterPage.includes('the manager has written no outcome yet')
+        && afterPage.includes('the gate reads the &lt;u&gt;wrong&lt;/u&gt; file') && !afterPage.includes('<u>wrong</u>') && afterPage.includes('Evidence: the report names that file')
+        && afterPage.includes('the clock was wrong') && afterPage.includes('Evidence against: the status printed the right time')
+        && afterPage.includes('build the page first') && afterPage.includes('Reason: the other pieces read it') && afterPage.includes('The next move: send step 2 once the review clears it')
+        && afterPage.includes('&lt;i&gt;marked&lt;/i&gt;') && !afterPage.includes('<i>marked</i>')
+        && at1(afterPage, '<h3>Stopping the plan (1)</h3>', '<h3>Fixed (1)</h3>') && at1(afterPage, '<h3>Fixed (1)</h3>', '<h3>Queued for the next plan (1)</h3>') && at1(afterPage, '<h3>Queued for the next plan (1)</h3>', '<h3>Not sorted yet (1)</h3>')
+        && at1(afterPage, 'Step 2 #1</strong>: Found: the fourth thing', '<h3>Fixed (1)</h3>')
+        && at1(afterPage, 'Found lines not sorted yet: 1 of 4.', '<h2>What the plan is for</h2>')
+        && readFileSync(join(pad, 'status', 'manager.txt'), 'utf8') === notes
+        && parsed.read && parsed.standing[0].evidence === 'the report names that file' && parsed.ruledOut.length === 1 && parsed.decisions[0].reason === 'the other pieces read it'
+        && parsed.sorts.get('1.2').how === 'queued' && !m.report.managerNotes(join(pad, 'nowhere')).read && !m.report.managerNotes(null).read;
+    },
+  },
+  {
+    name: 'the main thread may write status/manager.txt in its own scratchpad, as it writes the status page, and nothing beside it: not another session\'s notes, not a file next to them, not a file that only begins the same way',
+    guards: ['fence_manager_write', 'manager_notes_path'],
+    run(m) {
+      const s = sid('mn');
+      const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
+      const f = (tool_name, file) => m.dispatch.managerFence({ session_id: s, tool_name, tool_input: { file_path: file } }, { plan, classify: () => false });
+      const mine = `/tmp/claude-0/-home-user/${s}/scratchpad/status/manager.txt`;
+      const fenced = (x) => /^MANAGER FENCE/.test(x ?? '');
+      return f('Write', mine) === null && f('Edit', mine) === null && f('MultiEdit', mine) === null
+        && m.dispatch.isManagerNotes(mine, s) && !m.dispatch.isManagerNotes(mine, 'someone-else')
+        && fenced(f('Write', `/tmp/claude-0/-home-user/other/scratchpad/status/manager.txt`)) && fenced(f('Write', `${mine}.bak`))
+        && fenced(f('Write', `/tmp/claude-0/-home-user/${s}/scratchpad/status/other.txt`)) && fenced(f('Write', `/tmp/claude-0/-home-user/${s}/scratchpad/manager.txt`))
+        && fenced(f('Write', '/home/user/noahjefferson/status/manager.txt'));
+    },
+  },
+  {
+    name: 'the main thread may read the hub\'s agent-rules.md as part of the record, in a hub root and in no other repository, and an agent may read the live copy by its full path under a plan that points at it and never write it',
+    guards: ['record_rules'],
+    run(m, dir) {
+      const hub = repo({ 'DOCTRINE.md': '#\n', 'hook-dispatch.mjs': '//\n', 'agent-rules.md': 'x\n', 'src.mjs': 'x\n' });
+      const app = repo({ 'agent-rules.md': 'x\n' });
+      const p = { session_id: 'rr' };
+      const plan = { path: '/plans/x.md', text: STEPS_PLAN.replace('## Commands', `## Rules\n${rulesLine(dir)}\n\n## Commands`) };
+      const live = join(homedir(), '.claude', 'hub', 'agent-rules.md');
+      const agentRead = m.fence.decide({ session_id: 's', agent_id: 'a1', tool_name: 'Read', tool_input: { file_path: live } }, { plan, reads: (q) => q.tool_name === 'Read' });
+      const agentWrite = m.fence.decide({ session_id: 's', agent_id: 'a1', tool_name: 'Write', tool_input: { file_path: live, content: 'x' } }, { plan });
+      return m.dispatch.recordPath(join(hub.dir, 'agent-rules.md'), p) && !m.dispatch.recordPath(join(hub.dir, 'src.mjs'), p) && !m.dispatch.recordPath(join(app.dir, 'agent-rules.md'), p)
+        && agentRead === null && typeof agentWrite === 'string' && /live gate copy/.test(agentWrite);
+    },
+  },
+
+  // ---- the state page is the first read after a compaction (Doctrine §0e rule 2) ----
+  {
+    name: 'the status page gate holds the main thread to reads after a compaction until a Read result on the whole page has returned after the marker: a part of the page, another file, an earlier read and an error each leave it held; no marker, no page yet, a subagent and TaskStop are not held, and the read removes the marker',
+    guards: ['page_gate_marker', 'page_gate_missing', 'page_read_after', 'page_read_partial', 'page_read_parts', 'page_read_same_file', 'page_read_error', 'page_gate_clears', 'page_gate_agent', 'page_gate_taskstop', 'page_gate_read_exempt', 'page_due_line'],
+    run(m) {
+      const s = sid('pu');
+      const where = tmp('sg-page-');
+      const page = join(where, 'fix-run.html');
+      writeFileSync(page, '<p>state</p>\n');
+      const other = join(where, 'other.html');
+      const marker = join(process.env.PAGE_DUE_DIR, `${s}.json`);
+      const call = (extra = {}, entries = [], opts = {}) => m.dispatch.pageGate({ session_id: s, tool_name: 'Agent', tool_input: {}, ...extra }, entries, { page, classify: (q) => q.tool_name === 'Read', ...opts });
+      const rd = (id, secs, file, totals = { numLines: 3, totalLines: 3 }, isError = false) => [at(tool(0, id, 'Read', { file_path: file }), later(secs)),
+        { ...at(result(0, id, 'x', isError), later(secs + 1)), toolUseResult: { type: 'text', file: { filePath: file, content: 'x', startLine: 1, ...totals } } }];
+      const noMarker = call();
+      const line = m.dispatch.markPageDue({ session_id: s, source: 'compact' });
+      const held = call();
+      const pageGone = call({}, [], { page: join(where, 'absent.html') });
+      const noPage = call({}, [], { page: null });
+      const readCall = call({ tool_name: 'Read', tool_input: { file_path: page } });
+      const agent = call({ agent_id: 'a1' });
+      const stop = call({ tool_name: 'TaskStop' });
+      const partial = call({}, rd('r1', 2, page, { numLines: 2, totalLines: 3 }));
+      const elsewhere = call({}, rd('r2', 2, other));
+      const early = call({}, rd('r3', -60, page));
+      const errored = call({}, rd('r4', 2, page, undefined, true));
+      const stillDue = existsSync(marker);
+      const cleared = call({}, rd('r5', 2, page));
+      const removed = !existsSync(marker);
+      // A page too long for one Read is read in parts: parts that together cover every line clear the gate, and the same part twice does not.
+      m.dispatch.markPageDue({ session_id: s, source: 'compact' });
+      const same = call({}, [...rd('p1', 2, page, { numLines: 2, totalLines: 3 }), ...rd('p2', 4, page, { numLines: 2, totalLines: 3 })]);
+      const parts = call({}, [...rd('p3', 2, page, { numLines: 2, totalLines: 3 }), ...rd('p4', 4, page, { startLine: 3, numLines: 1, totalLines: 3 })]);
+      const partsRemoved = !existsSync(marker);
+      const held2 = (r) => typeof r === 'string' && /^STATE PAGE GATE/.test(r) && r.includes(page) && /does not latch/.test(r);
+      return noMarker === null && /^STATE PAGE DUE/.test(line) && line.includes('was compacted') && line.includes('Read result') && !line.includes('\n')
+        && held2(held) && pageGone === null && noPage === null && readCall === null && agent === null && stop === null
+        && held2(partial) && held2(elsewhere) && held2(early) && held2(errored) && stillDue
+        && cleared === null && removed
+        && held2(same) && parts === null && partsRemoved;
+    },
+  },
+  {
+    name: 'a compaction makes the status page due: the SessionStart line names it, a session with no page yet is held for nothing, and once the page exists the main thread is refused anything but a read and the status without a latch until a Read of the page has returned, after which the next call runs',
+    guards: ['page_due_wired', 'page_gate_wired', 'page_gate_no_latch'],
+    run(m, dir) {
+      const temp = tmp('sg-tmp-');
+      const env = { TMPDIR: temp };
+      const s = sid('pg');
+      const page = join(temp, 'claude-0', '-home-user', s, 'scratchpad', 'status', 'fix-run.html');
+      const w = world(dir, [turn(0, GO)]);
+      const send = () => w.call('PreToolUse', { session_id: s, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } }, env);
+      const start = w.call('SessionStart', { session_id: s, source: 'compact' }, env);
+      const marker = join(process.env.PAGE_DUE_DIR, `${s}.json`);
+      const due = existsSync(marker);
+      // The doctrine's own marker is cleared: this case is about the page.
+      rmSync(join(process.env.DOCTRINE_DUE_DIR, `${s}.json`), { force: true });
+      const early = send();
+      mkdirSync(dirname(page), { recursive: true });
+      writeFileSync(page, '<p>state</p>\n');
+      const held = send();
+      const notLatched = !latched(s);
+      const reading = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: page } }, env);
+      const stamp = w.call('PreToolUse', { session_id: s, tool_name: 'Bash', tool_input: { command: `node "${join(dir, 'report.mjs')}" "Status 10:00 — done"` } }, env);
+      appendFileSync(w.tr, jsonl([at(tool(0, 'rp', 'Read', { file_path: page }), later(2)),
+        { ...at(result(0, 'rp', '1\t<p>state</p>'), later(3)), toolUseResult: { type: 'text', file: { filePath: page, content: 'x', startLine: 1, numLines: 1, totalLines: 1 } } }]));
+      const after = send();
+      return start.status === 0 && /STATE PAGE DUE/.test(start.stdout) && start.stdout.includes('fix-run.html') && due
+        && early.status === 0 && held.status === 2 && /STATE PAGE GATE/.test(held.stderr) && held.stderr.includes(page) && notLatched
+        && reading.status === 0 && stamp.status === 0
+        && after.status === 0 && !existsSync(marker);
+    },
+  },
+
+  // ---- the card: the owner's core asks, one page, at every start (Doctrine §0e, §11e) ----
+  {
+    name: 'the brief prints the owner\'s core asks at a startup, a clear, a compaction, a resume and a start with no payload: the lines of the hub CLAUDE.md\'s section of that name before the lessons, at most forty with the count of the rest; one line says why when the section or the file is missing',
+    guards: ['card_printed', 'card_bounded', 'card_heading', 'card_missing_section', 'card_missing_file', 'card_rest_note'],
+    run(m, dir) {
+      const hub = tmp('sg-brief-');
+      copyFileSync(join(dir, 'session-brief.mjs'), join(hub, 'session-brief.mjs'));
+      mkdirSync(join(hub, 'lessons'));
+      writeFileSync(join(hub, 'lessons', '001-fixture.md'), '## 001 · The first fixture lesson\n\n**Enforced by:** JUDGEMENT\n');
+      const brief = (payload) => spawnSync('node', [join(hub, 'session-brief.mjs'), '--repo', hub], { input: payload === null ? '' : JSON.stringify(payload), encoding: 'utf8', timeout: 20000 });
+      const marked = (source) => { const id = `${sid('cd')}.x:y`; m.doctrine.markDue({ session_id: id, source }, join(hub, 'DOCTRINE.md')); return id; };
+      const claude = (n) => writeFileSync(join(hub, 'CLAUDE.md'), ['# Hub', '', '## Goals every session serves', '2. A goal.', '', '## The owner\'s core asks, one page', 'Intro line of the page.', '',
+        ...Array.from({ length: n }, (_, i) => `- Card line ${i + 1}: an ask that is kept.`), '', '## Start here', 'Not part of the card.', ''].join('\n'));
+      const shown = (o) => o.status === 0 && o.stdout.includes('THE OWNER\'S CORE ASKS (one page') && o.stdout.includes('Intro line of the page.') && o.stdout.includes('Card line 3: an ask that is kept.')
+        && !o.stdout.includes('Not part of the card.') && o.stdout.indexOf('THE OWNER\'S CORE ASKS') < o.stdout.indexOf('LESSONS (');
+      claude(3);
+      const starts = ['startup', 'clear', 'compact', 'resume'].map((k) => brief({ session_id: marked(k), source: k }));
+      const noPayload = brief(null);
+      claude(45);
+      const long = brief({ session_id: marked('startup'), source: 'startup' });
+      writeFileSync(join(hub, 'CLAUDE.md'), '# Hub\n\n## Start here\nx\n');
+      const noSection = brief(null);
+      rmSync(join(hub, 'CLAUDE.md'));
+      const noFile = brief(null);
+      return starts.every(shown) && shown(noPayload)
+        && long.status === 0 && long.stdout.includes('Card line 38: an ask that is kept.') && !long.stdout.includes('Card line 39:') && /… 7 more lines in the "The owner's core asks, one page" section/.test(long.stdout)
+        && noSection.status === 0 && noSection.stdout.includes('THE OWNER\'S CORE ASKS: not printed (the hub CLAUDE.md has no non-empty "## The owner\'s core asks, one page" section)')
+        && noFile.status === 0 && noFile.stdout.includes('THE OWNER\'S CORE ASKS: not printed (no CLAUDE.md beside this brief');
+    },
+  },
+
+  // ---- the pruning rule: a replacement line names a gate the hub has (lesson 396) ----
+  {
+    name: 'a line of the doctrine that says a gate enforces a paragraph whole names a gate file the hub has: a fixture naming a missing gate is found first, and the real doctrine passes',
+    run() {
+      const hubHas = (f) => [join(HERE, f), join(HERE, '.github', 'workflows', f), join(HERE, '.claude', 'hooks', f)].some((x) => existsSync(x));
+      const fixture = ['## Fixture', '1. **A rule.** It was pruned.', '   *Enforced whole by:* `no-such-gate.mjs`.', '   *Enforced whole by:* `plan-guard.mjs` and `hook-dispatch.mjs`.', 'A line that only mentions `*Enforced whole by:*` in prose.'].join('\n');
+      // The control: the instrument must find the missing gate and only that one before the real doctrine is trusted to pass it.
+      const found = wholeGates(fixture);
+      const missing = found.filter((f) => !hubHas(f));
+      const real = wholeGates(readFileSync(join(HERE, 'DOCTRINE.md'), 'utf8'));
+      return found.length === 3 && missing.length === 1 && missing[0] === 'no-such-gate.mjs' && real.every(hubHas);
+    },
+  },
+  {
+    name: 'the hub\'s own NOTES.md queues findings under "Found queue", every keyed line of that section read as a finding with a key of the form Q-HUB-N used once',
+    run(m) {
+      const q = m.dispatch.foundQueue(HERE);
+      const notes = readFileSync(join(HERE, 'NOTES.md'), 'utf8');
+      const section = (/^## Found queue[^\n]*\n([\s\S]*?)(?=^## |^# |$(?![\s\S]))/m.exec(notes) ?? [, ''])[1];
+      const keyed = section.split('\n').filter((l) => /^\s*(?:[-*]\s+)?\**Q-/.test(l));
+      const keys = q.map((x) => x.key);
+      return q.length > 0 && keyed.length === q.length && keys.every((k) => /^Q-HUB-\d+$/.test(k)) && new Set(keys).size === keys.length && q.every((x) => x.text.length >= 20);
     },
   },
 ];
@@ -2628,7 +3669,8 @@ const PLANTS = {
   read_fence_transcript: ['  if (p.transcript_path && a === resolve(String(p.transcript_path))) return true;\n', '', 'hook-dispatch.mjs'],
   read_fence_transcript_name: ["  if (p.session_id && dirname(dirname(a)) === join(dot, 'projects') && basename(a) === `${p.session_id}.jsonl`) return true;\n", '', 'hook-dispatch.mjs'],
   read_fence_repo_files: ["  if (['CLAUDE.md', 'NOTES.md', '.plan-scope', '.claude/PLAN', '.branch-guard'].includes(rel)) return true;\n", '', 'hook-dispatch.mjs'],
-  read_fence_hub_files: ["  return rel === 'DOCTRINE.md' || rel === 'LESSONS.md' || ['lessons', 'plans'].some(", "  return false && ['lessons', 'plans'].some(", 'hook-dispatch.mjs'],
+  read_fence_hub_files: ["  return rel === 'DOCTRINE.md' || rel === 'LESSONS.md' || rel === AIM_FILE || rel === RULES_FILE || ['lessons', 'plans'].some(", "  return false && ['lessons', 'plans'].some(", 'hook-dispatch.mjs'],
+  read_fence_aim_review: ['rel === AIM_FILE || ', '', 'hook-dispatch.mjs'],
   read_fence_read: ["    return f && of(f) ? null : (f ? `${f} is not of the record` : 'a Read names no file');", '    return null;', 'hook-dispatch.mjs'],
   read_fence_grep: ['    return of(f || cwd) ? null : `${f || `the working directory ${cwd}`} is not of the record`;', '    return null;', 'hook-dispatch.mjs'],
   read_fence_glob: ['    return of(target) ? null : `${target} is not of the record`;', '    return null;', 'hook-dispatch.mjs'],
@@ -2644,8 +3686,8 @@ const PLANTS = {
   send_file: ['    if (named.length && !outside.length) return null;', '    if (true) return null;', 'hook-dispatch.mjs'],
   send_file_pad: ['    const outside = named.filter((f) => !inScratchpad(absOf(f, cwd), p.session_id));', '    const outside = [];', 'hook-dispatch.mjs'],
   send_file_named: ['    if (named.length && !outside.length) return null;', '    if (!outside.length) return null;', 'hook-dispatch.mjs'],
-  dispatch_prompt: ['  if (!m) return refusal(`${head} Send exactly:', '  if (!m) return null; // ', 'hook-dispatch.mjs'],
-  dispatch_step: ['  if (!planSteps(plan.text).includes(Number(m[1])))', '  if (false)', 'hook-dispatch.mjs'],
+  dispatch_prompt: ['  if (n === null) return refusal(`${head} Send exactly:', '  if (n === null) return null; // ', 'hook-dispatch.mjs'],
+  dispatch_step: ['  if (!planSteps(plan.text).includes(n))', '  if (false)', 'hook-dispatch.mjs'],
   dispatch_workflow: ["  if (tool === 'Workflow') return 'DISPATCH GATE", "  if (false) return 'DISPATCH GATE", 'hook-dispatch.mjs'],
   dispatch_no_plan: ['  if (!plan) return refusal(`${head} No approved plan', '  if (false) return refusal(`${head} No approved plan', 'hook-dispatch.mjs'],
   dispatch_custom: ['  if (type && !BUILTIN_AGENT_TYPES.has(type)) {', '  if (false) {', 'hook-dispatch.mjs'],
@@ -2823,16 +3865,16 @@ const PLANTS = {
   // The dispatcher judges the owner's exit from plan mode before any gate reads the marker.
   dispatch_judge_exit: ["    run(`node \"${join(HUB, 'approved-plan-guard.mjs')}\" --judge-exit`, raw, root);\n", '\n', 'hook-dispatch.mjs'],
   // A correction from the owner ends the turn.
-  correction_refuse: ['      if (correction) return refuse(correctionMessage(correction), false);', '      if (false) return refuse(correctionMessage(correction), false);', 'hook-dispatch.mjs'],
-  correction_go: ['  if (last) return endsWithGoWord(last.text) ? null : { at: last.at };', '  if (last) return { at: last.at };', 'hook-dispatch.mjs'],
+  correction_refuse: ['      if (correction) {\n        let reviewed = false;', '      if (false) {\n        let reviewed = false;', 'hook-dispatch.mjs'],
+  correction_go: ['const correction = endsWithGoWord(last.text) ? null : when(idx[idx.length - 1]);', 'const correction = when(idx[idx.length - 1]);', 'hook-dispatch.mjs'],
   go_last_word: ["  return GO_WORDS.includes(words[words.length - 1]);", "  return GO_WORDS.includes(words.join(' '));", 'hook-dispatch.mjs'],
   correction_status: ['    if (status) {\n', '    if (false) {\n', 'hook-dispatch.mjs'],
   correction_taskstop: ['    if (!p.agent_id && !mainStop) {', '    if (!p.agent_id) {', 'hook-dispatch.mjs'],
   correction_agents: ['    if (!p.agent_id && !mainStop) {', '    if (!mainStop) {', 'hook-dispatch.mjs'],
-  correction_no_latch: ['      if (correction) return refuse(correctionMessage(correction), false);', '      if (correction) return refuse(correctionMessage(correction));', 'hook-dispatch.mjs'],
-  correction_midturn: ['    last = lastOwnerMessage(tail);\n    if (last) break;', "    last = lastOwnerMessage(tail.filter((e) => e?.type === 'user'));\n    if (last) break;", 'hook-dispatch.mjs'],
+  correction_no_latch: ['        return refuse(correctionMessage(correction, reviewed), false);', '        return refuse(correctionMessage(correction, reviewed));', 'hook-dispatch.mjs'],
+  correction_midturn: ['entries.forEach((e, i) => { if (isOwnerMessage(e)) idx.push(i); });', "entries.forEach((e, i) => { if (e?.type === 'user' && isOwnerMessage(e)) idx.push(i); });", 'hook-dispatch.mjs'],
   go_words: ["export const GO_WORDS = ['go', 'ok', 'continue', 'approved', 'yes'];", "export const GO_WORDS = ['go', 'ok', 'continue', 'approved'];", 'hook-dispatch.mjs'],
-  correction_fallback: ['    return r && r.go === false ? { at: Number(r.at) || 0 } : null;', '    return null;', 'hook-dispatch.mjs'],
+  correction_fallback: ['correction: r && r.go === false ? { at, typed: at } : null,', 'correction: null,', 'hook-dispatch.mjs'],
   correction_record: ['  if (!prompt.trim() || HARNESS_TAG.test(prompt)) return false;', '  if (!prompt.trim()) return false;', 'hook-dispatch.mjs'],
   correction_widen: ['  else for (const mb of [2, 8, 32]) {', '  else for (const mb of [2]) {', 'hook-dispatch.mjs'],
   // A read of the record passes a correction; an action and a read of anything else do not.
@@ -2874,10 +3916,10 @@ const PLANTS = {
   steps_choice: ['&& !opensWithChoice(reply) && !declaresStop(reply)', '&& !declaresStop(reply)', 'stop-guard.mjs'],
   steps_declared: ['&& !declaresStop(reply)\n', '\n', 'stop-guard.mjs'],
   steps_declared_open: ['(\\S[^\\n]{6,})/i;', '(\\S[^\\n]{0,})/i;', 'stop-guard.mjs'],
-  steps_correction: ['    && !correctionStanding({ session_id: hook.session_id, transcript_path: path })) left = stepsLeft(state);', '    ) left = stepsLeft(state);', 'stop-guard.mjs'],
+  steps_correction: ['&& !stopStanding(probe) && (reviewed || !correctionStanding(probe))) left = stepsLeft(state);', '&& !stopStanding(probe)) left = stepsLeft(state);', 'stop-guard.mjs'],
   steps_plan_in_force: ['  const plan = approvedPlan();\n  if (!plan || !state) return [];', "  const plan = { text: '## Steps\\n1. x\\n2. y\\n' };\n  if (!plan || !state) return [];", 'stop-guard.mjs'],
   steps_report_only: ["  for (const e of s.ends) if (e.how === 'a report' && e.step !== null) returned.add(e.step);", '  for (const e of s.ends) if (e.step !== null) returned.add(e.step);', 'report.mjs'],
-  steps_step_read: ['    const step = agentStep(path);\n    if (!end) {', '    const step = 1;\n    if (!end) {', 'report.mjs'],
+  steps_step_read: ['    const step = agentStep(path, head);\n    if (!end) {', '    const step = 1;\n    if (!end) {', 'report.mjs'],
   // The pointer: the first step in Order with no DONE hand-back, read by the status, the dispatch gate and the stop guard.
   pointer_order_read: ["    return line ? [...new Set([...line.replace(/^[^:]*:/, '').matchAll(/\\d+/g)].map((x) => Number(x[0])))] : [];", "    return line ? [...new Set([...m[1].matchAll(/\\d+/g)].map((x) => Number(x[0])))] : [];", 'report.mjs'],
   pointer_standing_not_order: ["  return order.length ? { order, standing: numbers('Standing') } : null;", "  return order.length ? { order: [...order, ...numbers('Standing')], standing: numbers('Standing') } : null;", 'report.mjs'],
@@ -2889,18 +3931,162 @@ const PLANTS = {
   pointer_undefined: ['  if (!st.pointer) return `next: not defined (${st.why}).`;\n', '\n', 'report.mjs'],
   pointer_backs: ["      ...(x.back.lines.length ? x.back.lines.map((l) => `    ${l}`) : ['    (the agent ended with no text)']),\n", '\n', 'report.mjs'],
   pointer_report_path: ["      `  Report file: ${x.report} (${x.reportWritten ? 'written' : 'not written'})`);", '      );', 'report.mjs'],
-  pointer_found: ['  for (const f of st.found) out.push(', '  for (const f of []) out.push(', 'report.mjs'],
-  pointer_found_read: ["if (/^Found:/.test(l.trim())) out.push(", 'if (true) out.push(', 'report.mjs'],
+  pointer_found: ['  for (const f of st.found) {\n    const s = sortOf(st.manager, f);', '  for (const f of []) {\n    const s = sortOf(st.manager, f);', 'report.mjs'],
+  mgr_step_wildcard: ["?? notes?.sorts?.get(`${f.step}.*`) ?? null;", '?? null;', 'report.mjs'],
+  mgr_specific_first: ["return notes?.sorts?.get(f.key) ?? notes?.sorts?.get(`${f.step}.*`) ?? null;", "return notes?.sorts?.get(`${f.step}.*`) ?? notes?.sorts?.get(f.key) ?? null;", 'report.mjs'],
+  pointer_found_read: ["if (/^Found:/.test(l.trim())) { k++;", 'if (true) { k++;', 'report.mjs'],
   pointer_page: ["      writeFileSync(join(pad, 'status', 'fix-run.html'), statusPage(state, status));", '      void 0;', 'report.mjs'],
   pointer_escape: [".replace(/</g, '&lt;')", '', 'report.mjs'],
   // The dispatch gate sends only N and a Standing step, and the stop guard reads N.
-  dispatch_pointer: ['  if (ptr && Number(m[1]) !== ptr.next && !ptr.standing.includes(Number(m[1]))) {', '  if (false) {', 'hook-dispatch.mjs'],
-  dispatch_pointer_none: ['  if (ptr && Number(m[1]) !== ptr.next && !ptr.standing', '  if (ptr && ptr.next !== null && Number(m[1]) !== ptr.next && !ptr.standing', 'hook-dispatch.mjs'],
-  dispatch_standing: [' && !ptr.standing.includes(Number(m[1]))) {', ') {', 'hook-dispatch.mjs'],
+  dispatch_pointer: ['  if (ptr && n !== ptr.next && !ptr.standing.includes(n)) {', '  if (false) {', 'hook-dispatch.mjs'],
+  dispatch_pointer_none: ['  if (ptr && n !== ptr.next && !ptr.standing', '  if (ptr && ptr.next !== null && n !== ptr.next && !ptr.standing', 'hook-dispatch.mjs'],
+  dispatch_standing: [' && !ptr.standing.includes(n)) {', ') {', 'hook-dispatch.mjs'],
   dispatch_pointer_prints: ["'next: none (every step in Order has a DONE hand-back)' : `next: step ${ptr.next}`}", "'next: none (every step in Order has a DONE hand-back)' : 'next: a step'}", 'hook-dispatch.mjs'],
-  dispatch_pointer_read: ['  if (ptr === undefined) { try { ptr = pointerFor(p, plan.text); } catch { ptr = null; } }', '  if (ptr === undefined) { ptr = null; }', 'hook-dispatch.mjs'],
+  dispatch_pointer_read: ['  else if (ptr === undefined) { try { ptr = pointerFor(p, plan.text); } catch { ptr = null; } }', '  else if (ptr === undefined) { ptr = null; }', 'hook-dispatch.mjs'],
   stop_pointer: ['  if (planOrder(plan.text)) {', '  if (false) {', 'stop-guard.mjs'],
   stop_pointer_named: ["the plan's pointer at next: step ${left[0]}, ", "the plan's pointer, ", 'stop-guard.mjs'],
+
+  // The review: a fresh agent clears every move before it goes (report.mjs reads the verdict, hook-dispatch.mjs gates on it).
+  review_verdict_parse: ['\\s+(ROUTE-CLEAR|ROUTE-REFUSED)\\b(.*)$/', '(?:\\s+(ROUTE-CLEAR|ROUTE-REFUSED)\\b)?(.*)$/', 'report.mjs'],
+  review_verdict_case: ['(ROUTE-CLEAR|ROUTE-REFUSED)\\b(.*)$/.exec(', '(ROUTE-CLEAR|ROUTE-REFUSED)\\b(.*)$/i.exec(', 'report.mjs'],
+  review_started: ['if (!(review.startAt > refAt)) return', 'if (false) return', 'report.mjs'],
+  review_start_unreadable: ['if (!(review.startAt > refAt)) return', 'if (review.startAt <= refAt) return', 'report.mjs'],
+  review_ref_order: ['Math.max(judged?.at ?? 0, planAt, Number(opts.after) || 0)', 'Math.max(0, planAt, Number(opts.after) || 0)', 'report.mjs'],
+  review_ref_plan: ['Math.max(judged?.at ?? 0, planAt, Number(opts.after) || 0)', 'Math.max(judged?.at ?? 0, 0, Number(opts.after) || 0)', 'report.mjs'],
+  review_ref_after: ['Math.max(judged?.at ?? 0, planAt, Number(opts.after) || 0)', 'Math.max(judged?.at ?? 0, planAt, 0)', 'report.mjs'],
+  review_order_only: ['if (e.step === null || !order.includes(e.step)) continue;', 'if (e.step === null) continue;', 'report.mjs'],
+  review_any_end: ['if (e.step === null || !order.includes(e.step)) continue;', "if (e.step === null || !order.includes(e.step) || e.how !== 'a report') continue;", 'report.mjs'],
+  review_reports_only: ["if (!reviewers.includes(e.step) || e.how !== 'a report') continue;", 'if (!reviewers.includes(e.step)) continue;', 'report.mjs'],
+  review_newest: ['if (!review || e.at > review.at) review = e;', 'if (!review) review = e;', 'report.mjs'],
+  review_off_aim: ["if (v.aim === 'OFF-AIM') return { ...parsed, kind: 'off-aim' };", "if (false) return { ...parsed, kind: 'off-aim' };", 'report.mjs'],
+  review_route: ["if (v.route === 'ROUTE-REFUSED') return", 'if (false) return', 'report.mjs'],
+  review_wrong_step: ['if (judged && v.step !== judged.step) return', 'if (false) return', 'report.mjs'],
+  review_no_next: ["if (v.next === null) return { ...parsed, kind: 'no-next' };", "if (false) return { ...parsed, kind: 'no-next' };", 'report.mjs'],
+  review_not_read: ["if (!read?.ends) return { ...hand, kind: 'not-read' };", "if (false) return { ...hand, kind: 'not-read' };", 'report.mjs'],
+  review_running: ['const waiting = reviewers.some((n) => read.runningSteps?.has(n));', 'const waiting = false;', 'report.mjs'],
+  review_full_path: ['.some((m) => ours.has(m[1]));', '.some((m) => m[1].length > 0);', 'report.mjs'],
+  review_follow: ['return namesReviewFile(b) && /\\bfollow/i.test(b); });', 'return namesReviewFile(b); });', 'report.mjs'],
+  review_status_print: ['  console.log(review);\n', '\n', 'report.mjs'],
+  review_block_text: ["? ` Send Standing step ${st.reviewers[0]}.`", "? ` Send step ${st.reviewers[0]}.`", 'report.mjs'],
+  review_gate_wired: ['      if (rv) return refuse(rv, false);\n', '\n', 'hook-dispatch.mjs'],
+  review_gate_no_latch: ['      if (rv) return refuse(rv, false);', '      if (rv) return refuse(rv);', 'hook-dispatch.mjs'],
+  dispatch_review_no_pointer: ['  if (aimReviewSteps(plan.text).length) ptr = null;\n  else if (ptr === undefined)', '  if (ptr === undefined)', 'hook-dispatch.mjs'],
+  review_gate_standing: ['o.standing.includes(n) || !aimReviewSteps(plan.text).length) return null;', '!aimReviewSteps(plan.text).length) return null;', 'hook-dispatch.mjs'],
+  review_gate_cleared: ["if (st.kind === 'cleared' && st.cleared === n) return null;", "if (st.kind === 'cleared') return null;", 'hook-dispatch.mjs'],
+  review_gate_error: ["if (!st) st = { kind: 'error',", "if (!st) return null; if (false) st = { kind: 'error',", 'hook-dispatch.mjs'],
+  review_gate_not_read: ["if (st.kind === 'not-enforced') return null;", "if (st.kind === 'not-enforced' || st.kind === 'not-read') return null;", 'hook-dispatch.mjs'],
+  review_gate_texts: ["Go back to plan mode, read the review's hand-back", "Go back, read the review's hand-back", 'hook-dispatch.mjs'],
+  aim_standing_wired: ['    if (aim) deny(aim);\n', '\n', 'plan-guard.mjs'],
+  // A correction lets the review step and a step cleared by a review begun after the message go; the owner's stop holds everything.
+  correction_lifts_review: ['  if (reviewers.includes(n)) return true;\n', '\n', 'hook-dispatch.mjs'],
+  correction_lifts_cleared: ["return !!st && st.kind === 'cleared' && st.cleared === n;", "return !!st && st.kind === 'cleared';", 'hook-dispatch.mjs'],
+  correction_lifts_plain: ["  if (p.agent_id || !/^(?:Agent|Task|SendMessage)$/.test(String(p.tool_name ?? ''))) return false;\n", '', 'hook-dispatch.mjs'],
+  correction_lifts_after: ['reviewState(p, plan, { after: correction?.typed })', 'reviewState(p, plan, {})', 'hook-dispatch.mjs'],
+  correction_lifts_wired: ["      try { if (correction && correctionLifts(p, correction)) correction = null; } catch { /* a send that cannot be judged stays held */ }\n", '', 'hook-dispatch.mjs'],
+  correction_says_review: [', except the Standing review step and the step that review clears', ', except nothing', 'hook-dispatch.mjs'],
+  stop_hold: ['      if (!record) return refuse(stopMessage(holds.stop), false);', '      if (false) return refuse(stopMessage(holds.stop), false);', 'hook-dispatch.mjs'],
+  stop_agents: ['try { record = !p.agent_id && readOfRecord(p); }', 'try { record = readOfRecord(p); }', 'hook-dispatch.mjs'],
+  stop_taskstop: ["if (holds.stop && p.tool_name !== 'TaskStop') {", 'if (holds.stop) {', 'hook-dispatch.mjs'],
+  stop_no_latch: ['if (!record) return refuse(stopMessage(holds.stop), false);', 'if (!record) return refuse(stopMessage(holds.stop));', 'hook-dispatch.mjs'],
+  stop_record_read: ['try { record = !p.agent_id && readOfRecord(p); } catch { record = false; }', 'record = false;', 'hook-dispatch.mjs'],
+  // The stop word is the whole word stop anywhere in a message that ends with no go-word; each plant takes one of those three parts out.
+  stop_anywhere: ["trim().split(' ').includes(STOP_WORD);", "trim().split(' ')[0] === STOP_WORD;", 'hook-dispatch.mjs'],
+  stop_whole_word: ["return String(text ?? '').toLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, ' ').trim().split(' ').includes(STOP_WORD);", "return String(text ?? '').toLowerCase().includes(STOP_WORD);", 'hook-dispatch.mjs'],
+  stop_go_message: ['return hasStopWord(text) && !endsWithGoWord(text);', 'return hasStopWord(text);', 'hook-dispatch.mjs'],
+  stop_plain_lift: ['i > stopAt && endsWithGoWord(words(i))', 'i > stopAt', 'hook-dispatch.mjs'],
+  stop_older_go: ['!idx.some((i) => i > stopAt && endsWithGoWord(words(i)))', '!idx.some((i) => endsWithGoWord(words(i)))', 'hook-dispatch.mjs'],
+  stop_newest: ['for (let k = idx.length - 1; k >= 0; k--) if (isStopMessage(words(idx[k]))) { stopAt = idx[k]; break; }', 'for (let k = 0; k < idx.length; k++) if (isStopMessage(words(idx[k]))) { stopAt = idx[k]; break; }', 'hook-dispatch.mjs'],
+  hold_typed: ['const typed = typedAt(entries, i);', 'const typed = NaN;', 'hook-dispatch.mjs'],
+  hold_settled: ['const settled = stopAt >= 0 || idx.some((i) => endsWithGoWord(words(i)));', 'const settled = true;', 'hook-dispatch.mjs'],
+  hold_fallback_stop: ['stop: r && r.stop === true ? { at: stopped, typed: stopped } : null };', 'stop: null };', 'hook-dispatch.mjs'],
+  record_stop: ['let stop = isStopMessage(prompt);', 'let stop = false;', 'hook-dispatch.mjs'],
+  record_stop_kept: ['  if (!stop && !go) {\n    try {', '  if (false) {\n    try {', 'hook-dispatch.mjs'],
+  stop_guard_stop: ['&& !stopStanding(probe) && (reviewed', '&& (reviewed', 'stop-guard.mjs'],
+  stop_guard_review_corr: ['(reviewed || !correctionStanding(probe))', '(!correctionStanding(probe))', 'stop-guard.mjs'],
+  stop_guard_names_cleared: ["? `The plan's review cleared step ${rv.cleared} and no other: send", "? `The plan's review cleared a step: send", 'stop-guard.mjs'],
+  stop_guard_names_review: ['send the Standing review step, ${reviewed.path} step ${aimReviewSteps(reviewed.text)[0]}, which', 'send the Standing review step, which', 'stop-guard.mjs'],
+  // The approval holds the plan's Goals, Asked, Files and Commands; the Steps and the Order may be amended without coming back.
+  scope_sections: ["export const SCOPE_SECTIONS = ['Goals', 'Asked', 'Files', 'Commands'];", "export const SCOPE_SECTIONS = ['Goals', 'Files', 'Commands'];", 'report.mjs'],
+  scope_unknown: ["const known = then && typeof then === 'object' && !Array.isArray(then);", 'const known = true;', 'report.mjs'],
+  scope_hashes: ["out[name] = createHash('sha256').update(planSection(text, name)).digest('hex');", "out[name] = createHash('sha256').update(String(text)).digest('hex');", 'report.mjs'],
+  status_scope: ["const moved = scoped ? scopeChanged(mk.scope, bytes.toString('utf8')) : [];", 'const moved = [];', 'report.mjs'],
+  scope_mark: ['    plan, hash: snap.hash, scope: snap.scope, at:', '    plan, hash: snap.hash, at:', 'approved-plan-guard.mjs'],
+  scope_app_exit: ['plan: x.plan, hash: snap.hash, scope: snap.scope, at:', 'plan: x.plan, hash: snap.hash, at:', 'approved-plan-guard.mjs'],
+  amend_scope_gate: ['  const moved = scopeChanged(mk.scope, after);\n  if (moved.length) {', '  const moved = scopeChanged(mk.scope, after);\n  if (false) {', 'approved-plan-guard.mjs'],
+  amend_agent: ["if (p.agent_id || !mk.scope || typeof mk.scope !== 'object'", "if (!mk.scope || typeof mk.scope !== 'object'", 'approved-plan-guard.mjs'],
+  amend_no_scope: ["!mk.scope || typeof mk.scope !== 'object' || Array.isArray(mk.scope) || ", '', 'approved-plan-guard.mjs'],
+  amend_session: ["if (mk.session && p.session_id && mk.session !== p.session_id) return 'The plan in force was approved in another session.';", "if (false) return 'The plan in force was approved in another session.';", 'approved-plan-guard.mjs'],
+  amend_hash: ['if (hashOf(mk.plan) !== mk.hash) return `The plan file', 'if (false) return `The plan file', 'approved-plan-guard.mjs'],
+  amend_multi: ['for (const e of Array.isArray(input?.edits) ? input.edits : []) {', 'for (const e of Array.isArray(input?.edits) ? input.edits.slice(0, 1) : []) {', 'approved-plan-guard.mjs'],
+  amend_ambiguous: ['if (n === 0 || (n > 1 && !e.replace_all)) return null;', 'if (n === 0) return null;', 'approved-plan-guard.mjs'],
+  amend_post: ['  if (moved.length) {\n    process.stderr.write(`approved-plan-guard --amend:', '  if (false) {\n    process.stderr.write(`approved-plan-guard --amend:', 'approved-plan-guard.mjs'],
+  amend_rehash: ['{ ...mk, hash: snap.hash, scope: snap.scope, amendedAt:', '{ ...mk, hash: mk.hash, scope: snap.scope, amendedAt:', 'approved-plan-guard.mjs'],
+  amend_post_agent: ['if (p.agent_id || !AMENDING.includes(tool)) process.exit(0);', 'if (!AMENDING.includes(tool)) process.exit(0);', 'approved-plan-guard.mjs'],
+  amend_wired: ["const o = run(`node \"${join(HUB, 'approved-plan-guard.mjs')}\" --amend`, raw, root);", 'const o = { deny: false, status: 0 };', 'hook-dispatch.mjs'],
+  // The shared rules: a plan that sends agents carries them or points at them, at the version the file has now.
+  rules_steps_only: ["  if (!planSection(text, 'Steps').trim()) return null;\n  const head = 'SHARED RULES (Doctrine §0e rule 13):';", "  const head = 'SHARED RULES (Doctrine §0e rule 13):';", 'hook-dispatch.mjs'],
+  rules_missing: ['  if (!section.trim()) {\n    return `${head} the plan sends agents', '  if (false) {\n    return `${head} the plan sends agents', 'hook-dispatch.mjs'],
+  rules_pointer_parse: ['(?:[-*]\\s+)?Rules:\\s*', '(?:[-*]\\s+)?Rulez:\\s*', 'hook-dispatch.mjs'],
+  rules_pointer_path: ["if (!rulesPaths().has(pointer.path)) return `${head} the plan's Rules line points at ${pointer.path}, which is not this hub's rules file. It names", "if (false) return `${head} the plan's Rules line points at ${pointer.path}, which is not this hub's rules file. It names", 'hook-dispatch.mjs'],
+  rules_pointer_version: ["if (pointer.version !== rules.version) return `${head} the plan's Rules line pins version ${pointer.version} and the file now says", "if (false) return `${head} the plan's Rules line pins version ${pointer.version} and the file now says", 'hook-dispatch.mjs'],
+  rules_copy_whole: ['  if (lacking.length) {', '  if (false) {', 'hook-dispatch.mjs'],
+  rules_unreadable: ['  if (!rules || rules.version === null || !rules.block.length) {', '  if (false) {', 'hook-dispatch.mjs'],
+  rules_pin_none: ["  const pointer = rulesPointer(planSection(text, 'Rules'));\n  if (!pointer) return null;", "  const pointer = rulesPointer(planSection(text, 'Rules'));", 'hook-dispatch.mjs'],
+  rules_pin_unread: ['  if (!rules || rules.version === null) return `${head} the plan points at', '  if (false) return `${head} the plan points at', 'hook-dispatch.mjs'],
+  rules_pin_path: ["if (!rulesPaths().has(pointer.path)) return `${head} the plan's Rules line points at ${pointer.path}, which is not this hub's rules file, so no step", "if (false) return `${head} the plan's Rules line points at ${pointer.path}, which is not this hub's rules file, so no step", 'hook-dispatch.mjs'],
+  rules_pin_version: ["  if (pointer.version !== rules.version) {\n    return `${head} the plan's Rules line pins version", "  if (false) {\n    return `${head} the plan's Rules line pins version", 'hook-dispatch.mjs'],
+  rules_gate_step: ['  if (!plan || sentStep(p, plan) === null) return null;\n  return rulesPinProblem(plan.text, file);', '  if (!plan) return null;\n  return rulesPinProblem(plan.text, file);', 'hook-dispatch.mjs'],
+  rules_gate_agent: ['export function rulesGate(p, plan = approvedPlan(), file = undefined) {\n  if (p.agent_id || ', 'export function rulesGate(p, plan = approvedPlan(), file = undefined) {\n  if (', 'hook-dispatch.mjs'],
+  rules_gate_wired: ['      if (rl) return refuse(rl, false);\n', '\n', 'hook-dispatch.mjs'],
+  rules_gate_no_latch: ['if (rl) return refuse(rl, false);', 'if (rl) return refuse(rl);', 'hook-dispatch.mjs'],
+  rules_plan_guard_wired: ['    if (rules) deny(rules);\n', '\n', 'plan-guard.mjs'],
+  queue_plan_guard_wired: ['    if (queued) deny(queued);\n', '\n', 'plan-guard.mjs'],
+  // The finding queue: read from the queue section of each named repository's NOTES.md, answered line by line.
+  queue_section: ["  for (const l of planSection(text, QUEUE_HEADING).split('\\n')) {", "  for (const l of text.split('\\n')) {", 'hook-dispatch.mjs'],
+  queue_key_forms: ['const QUEUE_KEY = /^\\s*(?:[-*]\\s+)?\\**(Q-', 'const QUEUE_KEY = /^\\s*(Q-', 'hook-dispatch.mjs'],
+  queue_roots_label: ['    if (labels.some((l) => labelNames(l, r))) roots.push(r);', '    roots.push(r);', 'hook-dispatch.mjs'],
+  queue_verdict_step: ['/^(?:fixed in step|carried to step)\\s+\\d+\\b/i.test(v)', '/^(?:fixed|carried)/i.test(v)', 'hook-dispatch.mjs'],
+  queue_verdict_reason: ['\\S.{9,}$/i.test(v)', '\\S.{0,}$/i.test(v)', 'hook-dispatch.mjs'],
+  queue_answered_section: ["  for (const l of planSection(text, 'Found answered').split('\\n')) {", "  for (const l of text.split('\\n')) {", 'hook-dispatch.mjs'],
+  queue_listed: ['`- ${q.key} (${q.repo}):', '`- (${q.repo}):', 'hook-dispatch.mjs'],
+  // The state page: the manager's notes, rendered and counted, never rewritten by a status.
+  mgr_found_key: ['key: `${step}.${k}`', 'key: `${step}.0`', 'report.mjs'],
+  mgr_sort_regex: ['(fixed|stopping|queued)\\s*:?\\s*(.*)$/i.exec(l)', '(fixed|queued)\\s*:?\\s*(.*)$/i.exec(l)', 'report.mjs'],
+  mgr_evidence_split: ["const split = (s) => { const i = s.indexOf(' | ');", 'const split = (s) => { const i = -1;', 'report.mjs'],
+  mgr_page_notes: ['    manager: managerNotes(managerPad), managerPath:', '    manager: managerNotes(null), managerPath:', 'report.mjs'],
+  mgr_outcome_fallback: ["const outcome = m.outcome || st.goalOne || '';", "const outcome = m.outcome || '';", 'report.mjs'],
+  mgr_unsorted_top: ['${groups.unsorted.length ? `<p class="m">Found lines not sorted yet:', '${false ? `<p class="m">Found lines not sorted yet:', 'report.mjs'],
+  mgr_escape: ['(label) => (x) => li(`${escapeHtml(x.text)}<br>', '(label) => (x) => li(`${x.text}<br>', 'report.mjs'],
+  mgr_print_tag: ["[${s ? s.how : 'unsorted'}]:", '[unsorted]:', 'report.mjs'],
+  mgr_print_line: ['  out.push(managerLine(st, groups));\n', '\n', 'report.mjs'],
+  mgr_sort_group: ["(s ? out[s.how] ?? out.unsorted : out.unsorted).push({ ...f, note: s?.note ?? '' });", "out.unsorted.push({ ...f, note: s?.note ?? '' });", 'report.mjs'],
+  // The manager fence writes the notes and nothing beside them; the record includes the shared rules.
+  fence_manager_write: ['    if (f && isManagerNotes(f, p.session_id)) return null;\n', '\n', 'hook-dispatch.mjs'],
+  manager_notes_path: ['  return resolve(String(path)).endsWith(`/${sid}/scratchpad/${MANAGER_NOTES}`);', '  return true;', 'hook-dispatch.mjs'],
+  record_rules: ['rel === AIM_FILE || rel === RULES_FILE ||', 'rel === AIM_FILE ||', 'hook-dispatch.mjs'],
+  // After a compaction the first read is the status page, held the way the doctrine's read is.
+  page_gate_marker: ["  try { due = JSON.parse(readFileSync(pageDueFile(p), 'utf8')); } catch { return null; }", "  try { due = JSON.parse(readFileSync(pageDueFile(p), 'utf8')); } catch { due = { at: 0 }; }", 'hook-dispatch.mjs'],
+  page_gate_missing: ['  if (!page || !existsSync(page)) return null;', '  if (!page) return null;', 'hook-dispatch.mjs'],
+  page_read_after: ['!Array.isArray(c) || !(t > since)) continue;', '!Array.isArray(c)) continue;', 'hook-dispatch.mjs'],
+  page_read_error: ["if (b?.type !== 'tool_result' || b.is_error || !asked.has(b.tool_use_id)) continue;", "if (b?.type !== 'tool_result' || !asked.has(b.tool_use_id)) continue;", 'hook-dispatch.mjs'],
+  page_read_partial: ['  return total > 0 && Array.from({ length: total }, (_, k) => k + 1).every((n) => lines.has(n));', '  return total > 0;', 'hook-dispatch.mjs'],
+  page_read_parts: ['      for (let k = 0; k < file.numLines; k++) lines.add(file.startLine + k);', '      lines.clear();\n      for (let k = 0; k < file.numLines; k++) lines.add(file.startLine + k);', 'hook-dispatch.mjs'],
+  page_read_same_file: ['      if (resolve(String(file?.filePath || asked.get(b.tool_use_id))) !== target) continue;\n', '\n', 'hook-dispatch.mjs'],
+  page_gate_clears: ["{ rmSync(pageDueFile(p), { force: true }); return null; }", '{ return null; }', 'hook-dispatch.mjs'],
+  page_gate_agent: ["  if (p.agent_id || p.tool_name === 'TaskStop') return null;\n  let due;", "  if (p.tool_name === 'TaskStop') return null;\n  let due;", 'hook-dispatch.mjs'],
+  page_gate_taskstop: ["  if (p.agent_id || p.tool_name === 'TaskStop') return null;\n  let due;", '  if (p.agent_id) return null;\n  let due;', 'hook-dispatch.mjs'],
+  page_gate_read_exempt: ['  if (isRead(p, opts.classify)) return null;\n  return `STATE PAGE GATE', '  return `STATE PAGE GATE', 'hook-dispatch.mjs'],
+  page_due_line: ['STATE PAGE DUE (Doctrine §0e rule 2): this session was compacted,', 'STATE PAGE DUE (Doctrine §0e rule 2): this session began,', 'hook-dispatch.mjs'],
+  page_due_wired: ["    try { printed.push(markPageDue(p)); } catch { /* the doctrine's own line stands */ }", '    void 0;', 'hook-dispatch.mjs'],
+  page_gate_wired: ['      if (page) return refuse(page, false);\n', '\n', 'hook-dispatch.mjs'],
+  page_gate_no_latch: ['if (page) return refuse(page, false);', 'if (page) return refuse(page);', 'hook-dispatch.mjs'],
+  // The card: one page of the owner's core asks, printed at every start and resume, bounded.
+  card_printed: ['for (const l of ownerCard()) say(l);\n', '\n', 'session-brief.mjs'],
+  card_bounded: ['const CARD_LINES = 40;', 'const CARD_LINES = 400;', 'session-brief.mjs'],
+  card_heading: ["const CARD_HEADING = 'The owner\\'s core asks, one page';", "const CARD_HEADING = 'The owner\\'s core rules, one page';", 'session-brief.mjs'],
+  card_missing_section: ['  if (!body.length) return [', '  if (false) return [', 'session-brief.mjs'],
+  card_missing_file: ["catch { return [`THE OWNER'S CORE ASKS: not printed (no CLAUDE.md beside this brief, at ${file}).`]; }", 'catch { return []; }', 'session-brief.mjs'],
+  card_rest_note: ['...(body.length > shown.length ? [', '...(false ? [', 'session-brief.mjs'],
 };
 
 async function runAll(dir, only) {

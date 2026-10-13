@@ -486,3 +486,5 @@ and the filename carries it.
 - **§392** — [A refused ExitPlanMode is itself a plan-mode call, so each refusal needs a fresh talk-through turn before the next call](lessons/392-a-refused-exitplanmode-is-a-plan-mode-call.md)
 - **§393** — [A timer runs an on-disk script with one bare command, and a script that reads the scratchpad for changes read its own report as one](lessons/393-a-timer-runs-one-bare-command-and-reads-its-own-report.md)
 - **§394** — [A plan that put the gates' install last so that its own method could run was a bypass of the gates, and approving the plan did not move the responsibility off the session](lessons/394-an-install-placed-last-so-the-method-could-run-is-a-bypass.md)
+- **§395** — [The approval priced every edit alike, a correction held every start alike, and no agent read a move before it went](lessons/395-one-price-for-every-edit-and-one-hold-for-every-message.md)
+- **§396** — [A paragraph a gate enforces whole stayed in the doctrine, which is read in full at every start and only grew](lessons/396-a-paragraph-a-gate-enforces-whole-stays-in-the-doctrine-and-it-only-grows.md)

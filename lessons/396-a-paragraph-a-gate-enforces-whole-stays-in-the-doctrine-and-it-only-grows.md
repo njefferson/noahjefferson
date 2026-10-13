@@ -1,0 +1,15 @@
+## 396 · A paragraph a gate enforces whole stayed in the doctrine, which is read in full at every start and only grew
+
+**Enforced by:** GATE hub:session-guards.test.mjs — a case fails when a line of the doctrine that says a gate enforces a paragraph whole names a file the hub does not have, and a control fixture naming a missing gate must be refused before the real doctrine is trusted to pass; it cannot find a paragraph that should have been replaced and was not
+**Enforced by:** JUDGEMENT — which paragraphs a gate enforces whole is the owner's choice, made from a list a session prepares, because the doctrine's text is the owner's
+**Smell:** a commit that adds a gate and an `*Enforced by:*` note to the doctrine and replaces no paragraph, so the doctrine is longer after it than before and the rule is described twice, once in prose and once in code that moves
+
+**Recorded 2026-10-12.** The doctrine is read in full at every startup and from the heading of section 0 up to the heading of section 3 after every compaction (lessons 383 and 385), and it had about two and a half thousand lines of text in it. Each rule that gained a gate kept its paragraph and gained a sentence saying what enforces it.
+
+**What the record did.** A paragraph that describes what a hook refuses on is a second statement of a guarded fact (lesson 199), and it was never removed once the hook existed. The gate and its paragraph can then move apart: a refusal changes in code and the prose keeps describing the old one. Every start pays for the reading of text that nothing in the session depends on, because the gate refuses the move whatever the session has read, and the read was already a large share of each fresh context (lesson 385).
+
+**What it looked like from inside.** Nobody was adding a paragraph that was wrong. Each addition recorded what a new gate does, honestly, in the place the rule lives, and a doctrine section that ends with its enforcement note reads as finished. Removing a paragraph is a cost to whoever has to be sure the gate really holds it whole, and nobody was asked to bear that cost, so the text only grew.
+
+**The fix.** When a gate enforces a paragraph whole, the paragraph is replaced by one line, `*Enforced whole by:*` and the gate's file name in backticks, and what the paragraph said and why stays in the lesson that recorded it. A paragraph a gate enforces only in part stays and names the part. The check that stands behind this is small on purpose: `session-guards.test.mjs` fails when such a line names a gate the hub does not have, so a replacement cannot be a pointer to nothing. Which paragraphs those are is not a thing a session decides, because the doctrine's text is the owner's: a session prepares the list, with the gate, the line of its code that enforces the paragraph and the line that would replace it, counts the paragraphs only partly enforced, and the owner chooses.
+
+**The general form.** A rule that is written in prose and then enforced by code is stated twice, and the two copies part. Once the code holds the rule, keep one line that names it, and keep the reasons where they are recorded.

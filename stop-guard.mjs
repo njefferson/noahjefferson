@@ -58,8 +58,13 @@
 // returned nothing), no agent the session launched is running, and the reply
 // neither opens with a choice for the owner nor declares the stop in its first
 // line with what is open. The main thread then sends the next step, or the same
-// step again, instead of ending. A waiting owner message, a standing correction
-// and a standing latch let the stop through, because each leaves no other move.
+// step again, instead of ending. A waiting owner message, a standing STOP, a
+// standing latch, and a standing correction where the plan has no review step,
+// let the stop through, because each leaves no other move; where the plan has a
+// review step a correction leaves one (the review, then the step it clears), so
+// the stop is refused and the refusal names that step. WHERE THE PLAN HAS A
+// REVIEW STEP, a plan with an Order is no longer sent in the pointer's order:
+// the refusal names the step the current review cleared, or the review step.
 //
 //   node stop-guard.mjs        (reads the hook payload on stdin)
 
@@ -68,8 +73,8 @@ import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { pendingMessages, startedAt } from './pending-guard.mjs';
 import { tailEntries, lastOwnerMessage } from './transcript-tail.mjs';
-import { latchStanding, approvedPlan, planSteps, correctionStanding } from './hook-dispatch.mjs';
-import { runningWork, stepsReturned, planOrder, pointerOf } from './report.mjs';
+import { latchStanding, approvedPlan, planSteps, correctionStanding, stopStanding } from './hook-dispatch.mjs';
+import { runningWork, stepsReturned, planOrder, pointerOf, reviewState, aimReviewSteps } from './report.mjs';
 
 /** The transcript is JSONL; the last assistant text is the reply just written. */
 const lastAssistantText = (path) => {
@@ -585,9 +590,9 @@ the report beneath them. Write the choice once.
 // What lets the turn end anyway, each of them a reason a turn must end rather
 // than carry on: an agent of the session is running (its completion notice
 // brings the session back); a message from the owner is waiting in the queue
-// (ending the turn delivers it); a correction from the owner stands, because
-// rule 3 makes answering it the whole turn and refuses every other call, so a
-// refused stop would leave no move at all; the reply opens with a choice only
+// (ending the turn delivers it); a stop from the owner stands, or a correction
+// does and the plan has no review step, because rule 3 then refuses every other
+// call, so a refused stop would leave no move at all; the reply opens with a choice only
 // the owner can settle (`opensWithChoice`); or its first line declares the stop
 // with what is open (`declaresStop`). A session whose agents or plan cannot be
 // read is not refused: this never holds a turn for steps it cannot count.
@@ -634,17 +639,37 @@ function hasPointer() {
   return !!plan && !!planOrder(plan.text);
 }
 
+// WHAT LETS A TURN END WITH STEPS LEFT, from the owner: a STOP, which holds every
+// call including the review and a cleared step, so a refused stop would leave no
+// move at all; and a CORRECTION, but only where the plan has no review step. With
+// a review step a correction leaves a move (the review, then the step it clears),
+// so the turn that answers the correction does not end the work: the stop is
+// refused and the review is sent (Doctrine §0e rules 2 and 3).
+let reviewed = null;
 let left = [];
 try {
   const state = stepsReturned({ session_id: hook.session_id, transcript_path: path });
+  const plan = approvedPlan();
+  reviewed = plan && aimReviewSteps(plan.text).length ? plan : null;
+  const probe = { session_id: hook.session_id, transcript_path: path };
   if (state && !state.running.length && !queuedOwner.length && !opensWithChoice(reply) && !declaresStop(reply)
-    && !correctionStanding({ session_id: hook.session_id, transcript_path: path })) left = stepsLeft(state);
+    && !stopStanding(probe) && (reviewed || !correctionStanding(probe))) left = stepsLeft(state);
 } catch { left = []; }
 if (left.length) {
   const pointed = hasPointer();
-  refuse(`STOP REFUSED — this turn ends with ${pointed ? `the plan's pointer at next: step ${left[0]}, ` : `${left.length} step${left.length === 1 ? '' : 's'} of the approved plan still open (${left.join(', ')}), `}no agent of this session running, and no choice for the owner or declared stop with what is open.
+  // WHERE THE PLAN HAS A REVIEW STEP, the next move is the review's: the step the
+  // current review cleared, or the review itself (`reviewState`, report.mjs).
+  let move = '';
+  if (reviewed) {
+    let rv = null;
+    try { rv = reviewState({ session_id: hook.session_id, transcript_path: path }, reviewed, { after: correctionStanding({ session_id: hook.session_id, transcript_path: path })?.typed || 0 }); } catch { rv = null; }
+    move = rv?.kind === 'cleared'
+      ? `The plan's review cleared step ${rv.cleared} and no other: send ${reviewed.path} step ${rv.cleared}.`
+      : `No review is current (${rv?.kind ?? 'unread'}): send the Standing review step, ${reviewed.path} step ${aimReviewSteps(reviewed.text)[0]}, which follows aim-review.md; the step it clears is the next move.`;
+  }
+  refuse(`STOP REFUSED — this turn ends with ${reviewed ? `the plan's steps not all done (the pointer reads next: step ${left[0]}), ` : pointed ? `the plan's pointer at next: step ${left[0]}, ` : `${left.length} step${left.length === 1 ? '' : 's'} of the approved plan still open (${left.join(', ')}), `}no agent of this session running, and no choice for the owner or declared stop with what is open.
 
-Doctrine §0e rule 2, §11c. An approved plan is the instruction for all of it, and a turn that ends here hands the owner back work the plan already gave you: every return to the owner has restarted the work. Do not end the turn. ${pointed ? `Send the step the pointer names, ${left[0]}, with the plan's path and the step's number: it stays next until an agent hands back for it with DONE as the first line, so a REFUSED or FAILED hand-back means sending it again.` : 'Send the next step, or the same step again if its agent ended at a refusal, with the plan\'s path and the step\'s number.'} Give the status at each agent's end. A turn may end only while an agent runs, with a choice only the owner can settle as the first thing in the reply, or declared in the first line: "Stopping here: open for you is <the specific thing>".
+Doctrine §0e rule 2, §11c. An approved plan is the instruction for all of it, and a turn that ends here hands the owner back work the plan already gave you: every return to the owner has restarted the work. Do not end the turn. ${reviewed ? move : pointed ? `Send the step the pointer names, ${left[0]}, with the plan's path and the step's number: it stays next until an agent hands back for it with DONE as the first line, so a REFUSED or FAILED hand-back means sending it again.` : 'Send the next step, or the same step again if its agent ended at a refusal, with the plan\'s path and the step\'s number.'} Give the status at each agent's end. A turn may end only while an agent runs, with a choice only the owner can settle as the first thing in the reply, or declared in the first line: "Stopping here: open for you is <the specific thing>".
 `, reply);
 }
 

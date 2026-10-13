@@ -311,6 +311,24 @@ if (tool === 'Bash') {
  * defines (`goalsProblem` in hook-dispatch.mjs). It is the first check made once
  * the five sections are there, and it fails closed: a CLAUDE.md with no such
  * section refuses every plan rather than passing them all.
+ *
+ * AND, FOR A PLAN WITH AN `## Order`, IT CARRIES THE REVIEW (Doctrine §0e
+ * rule 2). The next check made is that the plan's `Standing:` line names a
+ * step whose text tells its agent to follow the hub's aim-review.md by its full
+ * path (`aimStandingProblem` in hook-dispatch.mjs, `aimReviewSteps` in
+ * report.mjs). The dispatcher's review gate (`reviewGate`) sends no other step
+ * until that step's hand-back, read from its own transcript, clears it. A plan
+ * with no `## Order` has no pointer and no Standing line, and is not judged.
+ *
+ * AND, FOR A PLAN WITH A `## Steps`, IT CARRIES THE RULES AND ANSWERS THE QUEUE
+ * (Doctrine §0e rules 13 and 2). The next two checks are `rulesProblem`: the
+ * plan's `## Rules` section is the line pointing at the hub's agent-rules.md with
+ * its version, or holds every rule line of that file; and `foundAnsweredProblem`:
+ * every finding queued in the `## Found queue` of the NOTES.md of each repository
+ * the plan's Files names has a line in the plan's `## Found answered`, opening
+ * with the finding's key and a verdict. Both live in hook-dispatch.mjs with the
+ * plan parsing, and a plan with no Steps, or whose Files names no repository with
+ * a queue, is not judged by them.
  */
 /**
  * DO WHAT THE OWNER ASKED, AND NOTHING MORE (Doctrine §0f, LESSONS §379).
@@ -551,9 +569,25 @@ if (tool === 'ExitPlanMode') {
     // carries the hub CLAUDE.md's standing goals block word for word and names,
     // for every step, the goal it serves. Loaded here only, because this file
     // runs on every tool call and the plan parsing lives in hook-dispatch.mjs.
-    const { goalsProblem } = await import('./hook-dispatch.mjs');
+    const { goalsProblem, aimStandingProblem, rulesProblem, foundAnsweredProblem } = await import('./hook-dispatch.mjs');
     const goals = goalsProblem(top);
     if (goals) deny(goals);
+    // EVERY PLAN WITH AN ORDER CARRIES THE AIM REVIEW (Doctrine §0e rule 2): a
+    // Standing step that tells its agent to follow aim-review.md, which the
+    // dispatcher's aim gate sends after each DONE hand-back and refuses on.
+    const aim = aimStandingProblem(top);
+    if (aim) deny(aim);
+    // A PLAN THAT SENDS AGENTS CARRIES THE RULES, OR POINTS AT THEM (Doctrine §0e
+    // rule 13): a "## Rules" section that is the line naming the hub's
+    // agent-rules.md and its version, or every rule line of that file. A plan
+    // copies the rules only to let them drift, so the pointer is what is asked for.
+    const rules = rulesProblem(top);
+    if (rules) deny(rules);
+    // A PLAN ANSWERS WHAT THE LAST ONE LEFT (Doctrine §0e rule 2): every finding
+    // queued in the NOTES.md of a repository its Files names has a line in a
+    // "## Found answered" section, with its key and a verdict.
+    const queued = foundAnsweredProblem(top);
+    if (queued) deny(queued);
     const asked = askedProblem(top, p.transcript_path);
     if (asked) deny(asked);
     const talk = talkedThrough(p.transcript_path, planWrittenAt);

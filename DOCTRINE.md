@@ -216,6 +216,73 @@ every rule below while none of the hooks that enforce them was running
    *Enforced by:* `report.mjs` (`pointerState`, `pointerBlock`,
    `statusPage`), read from the agents' own transcripts the way
    `stepsReturned` reads them.
+   **Where the plan carries a review step, a fresh agent clears every move
+   before it goes.** A plan with an `## Order` has a `Standing:` step that
+   tells its agent to follow the live clone's `aim-review.md` by its full path,
+   and `plan-guard.mjs` refuses a plan with an Order and no such step. The
+   main thread names the next move from the evidence, any step of the plan and
+   not only N, and the review reads that move against the owner's aim and
+   against the guards' own code. Its hand-back is the verdict. Its first line
+   is ON-AIM or OFF-AIM, then ROUTE-CLEAR or ROUTE-REFUSED, then `step N` for
+   the hand-back judged and `next M` for the step whose route it read.
+   *Enforced by:* `reviewGate` in `hook-dispatch.mjs`, which refuses every
+   step but a Standing one unless the newest review hand-back began after the
+   end of every agent for a step in Order, a DONE hand-back or not, after the
+   plan file's last write and, while a correction stands, after the owner's
+   newest message was typed; opens ON-AIM ROUTE-CLEAR; names the step sent as
+   next; and names as its step the step of that newest end. The verdict is read
+   from the reviewer's own transcript and never from a file, because any agent
+   of the session can write the scratchpad. A missing, running, stale or
+   unreadable review refuses naming the review step. ROUTE-REFUSED refuses
+   naming the amendment of the plan's Steps or Order that answers it, and
+   OFF-AIM refuses with the plan-mode wording. None of these latches (rule 14).
+   With a review step in the plan and the session's agents unreadable, no step
+   is sent. The status prints one `Review:` line under the pointer, read by the
+   same function (`reviewState` in `report.mjs`), so the gate and the status
+   cannot disagree. The pointer still names N, and it still decides when the
+   plan has run to its end; the review decides which step goes.
+   **The state of the work is one page, and the manager's part of it is kept
+   where a status cannot rewrite it.** The status page's source,
+   `status/fix-run.html` in the session scratchpad, is written whole at every
+   status from the agents' transcripts and report files. What no agent's report
+   holds, the manager writes in `status/manager.txt` beside it (the manager fence
+   lets the main thread write that one file as it writes the page): plain text,
+   one item to a line, the plan's outcome in the owner's terms (`Outcome:`), each
+   explanation still standing and each ruled out, with the evidence after ` | `
+   (`Explanation standing:`, `Explanation ruled out:`), every decision with its
+   reason (`Decision:`), the next move (`Next:`), and a line such as
+   `Found 41.3 queued: note` for each `Found:` line of a report, keyed by its
+   step and its place among that step's Found lines (`Found 41.*` sorts a whole
+   step at once, and a line for one finding beats it). The page renders these
+   under their own headings, with the Found lines in three groups, put right,
+   stopping the plan, and queued for the next plan, and the lines not yet sorted
+   in a fourth, counted near the top of the page and in the status print, so a
+   finding is sorted when it lands and an unsorted one cannot hide. The outcome
+   falls back on the plan's first goal until the manager writes one.
+   *Enforced by:* `managerNotes`, `sortFound` and `statusPage` in `report.mjs`,
+   and `isManagerNotes` in the manager fence (rule 13). **After a compaction the
+   main thread's first read is that page**, held the way the doctrine's read is:
+   a SessionStart with source compact writes a due marker (`markPageDue`), and
+   `pageGate` in `hook-dispatch.mjs` refuses every main-thread call but a read
+   and the status until a Read result on the page, returned after the marker and
+   covering the whole file, is in the transcript. It holds nothing while the
+   page does not exist yet, it passes the main thread's `TaskStop`, and it does
+   not latch (rule 14).
+   **A finding is recorded for the next plan, and the next plan answers it line
+   by line.** A finding that is not put right and does not stop the plan goes in
+   the `## Found queue` section of the `NOTES.md` of the repository it is about,
+   one line each, opening with a key of the form `Q-TAG-3` (the tag is the
+   repository's, so a key in one repository cannot answer another's).
+   *Enforced by:* `foundAnsweredProblem` in `hook-dispatch.mjs`, which
+   `plan-guard.mjs` calls at `ExitPlanMode`: a plan whose Files names a
+   repository (by a label `labelNames` accepts) with queued findings is refused
+   unless it has a `## Found answered` section with a line for each, opening with
+   the key and then `fixed in step N`, `carried to step N`, `still queued` or
+   `dropped`, the last two with a reason of ten characters or more. It forces an
+   answer and cannot judge that the answer is true. A repository with no queue,
+   or a plan whose Files names none, is not judged. The queue is written by an
+   agent, in a step of a plan whose Files names the file, because the main
+   thread writes no repository file.
    **Work running in the background is the work.** While a background command
    or a workflow the session started is still running, the session does not
    end its turn: it stays and acts on each result as it lands. A declared stop
@@ -249,10 +316,14 @@ every rule below while none of the hooks that enforce them was running
    numbers, a step returned when an agent ended by a report for it. The main
    thread then sends the next step, or the same step again, instead of ending.
    A choice opens a reply when its numbered options carry the recommended
-   marker within the first two lines (§2). A waiting owner message, a
-   correction standing (rule 3 refuses every other call while one stands, so a
-   refused stop would leave no move) and a standing latch let the stop through,
-   and a session whose plan or agents cannot be read is not refused.
+   marker within the first two lines (§2). A waiting owner message, a stop
+   standing (rule 3), a correction standing where the plan has no review step
+   (rule 3 then refuses every other call, so a refused stop would leave no
+   move) and a standing latch let the stop through, and a session whose plan or
+   agents cannot be read is not refused. Where the plan has a review step a
+   correction leaves a move, the review and then the step it clears, so the
+   turn that answers the correction does not end the work, and the refusal
+   names the step the current review cleared, or the review step.
 3. **Reply to every point in a message from the owner.** A message saying
    something was done wrong is a full stop: answer it, and run nothing else in
    that turn. This rule had nothing behind it. It was broken four times on
@@ -268,8 +339,8 @@ every rule below while none of the hooks that enforce them was running
    first version took a go-word only as the whole message, and the owner's own
    go messages carry words before it. The list is the owner's to extend, and a
    session never adds to it. Every other message is a correction. While a
-   correction is the newest owner message, every main-thread action is
-   refused; what passes is the status command, `TaskStop` and a read of the
+   correction is the newest owner message, every new start on the main thread
+   is held; what passes is the status command, `TaskStop` and a read of the
    record, as rule 13's fence classifies one (the approved plan and the plans
    folder, the session scratchpad, the doctrine and lessons, each repo's notes
    and plan pointers, the session's transcript), so a question one file
@@ -277,11 +348,35 @@ every rule below while none of the hooks that enforce them was running
    to hold reads too, and on 2026-10-06 a question one file answered cost a
    refusal, a doctrine re-read and a go-word. An agent dispatch, a write, a
    `SendUserFile` and a read of anything outside the record stay held, and the
-   refusal says what passes. The refusal names this rule,
+   refusal says what passes. **Where the plan carries a review step (rule 2),
+   approved work goes on after one review, with no go-word:** the Standing
+   review step passes, and so does the step a review cleared that BEGAN AFTER
+   the correction was typed (`correctionLifts`), because that review read the
+   correction before it judged the move. A correction aimed at the very step a
+   review cleared earlier does not reach the new one unseen: the new reviewer
+   reads it and refuses or clears. The refusal names this rule,
    prints the list, never quotes the message, and does not latch (rule 14): the
    owner's next message lifts it, and a latch would only add a second wait.
-   Agents are not held by it, and the plan fence holds them (rule 13). Held
-   work (LESSONS §376) is sent again only in a turn that follows a go-word. A
+   Agents are not held by a correction, and the plan fence holds them (rule
+   13). **One word stops everything.** An owner message that carries the whole
+   word stop ANYWHERE in it, first, second or last, and does not end with a
+   go-word is a stop, and it holds
+   every call, the main thread's and every agent's, a step a review cleared
+   included, until a later message ends with a go-word; what passes is the
+   status command, `TaskStop`, an agent's own
+   return and, on the main thread, a read of the record. A plain message typed
+   after the stop does not lift it, and a message that carries the word and
+   also ends with a go-word is a go message and not a stop. The refusal does
+   not latch, and it is lifted by the go-word and nothing else. Only the whole
+   word counts ("stopped" and "stops" do not). The first version took the
+   word only as a message's first word, and a halt message that puts it second
+   would have stopped nothing.
+   Both holds are read by `ownerHolds` and `holdsIn` in `hook-dispatch.mjs`,
+   and the stop by `stopStanding`, which the stop guard reads too. A stop used to
+   stop agents only while its message was still queued
+   (`pending-guard.mjs`, which still reads a queued message by its first word),
+   and nothing held them once it had been delivered.
+   Held work (LESSONS §376) is sent again only in a turn that follows a go-word. A
    task notification, a scheduled message and an agent's hand-back are not
    messages from the owner. A message the harness never delivered is printed once,
    word for word, at the top of the turn of the prompt that overtook it
@@ -343,8 +438,8 @@ every rule below while none of the hooks that enforce them was running
     then only reads of the record: a read of a file or a directory (Read,
     Grep, Glob, and each file a Bash line names) passes only of the approved
     plan and every file directly under `~/.claude/plans/`, the session
-    scratchpad, the hub's `DOCTRINE.md`, `LESSONS.md`, `lessons/` and
-    `plans/`, the hub's and each sibling's `CLAUDE.md`, `NOTES.md`,
+    scratchpad, the hub's `DOCTRINE.md`, `LESSONS.md`, `aim-review.md`,
+    `agent-rules.md`, `lessons/` and `plans/`, the hub's and each sibling's `CLAUDE.md`, `NOTES.md`,
     `.plan-scope`, `.claude/PLAN` and `.branch-guard`, the session's own
     transcript under `~/.claude/projects/`, and the live clone's doctrine; a
     read of anything else, a source file or a tool of an app above all, or of
@@ -358,21 +453,57 @@ every rule below while none of the hooks that enforce them was running
     status page and nothing else (`status/fix-run.html` in the session
     scratchpad, as a plain page), or reading, listing or opening a page, and
     never its quickstart action; the
-    status command; a write to a plan file directly under `~/.claude/plans/`
-    or to the status page's source; `EnterPlanMode` and `ExitPlanMode`, so
+    status command; a write to a plan file directly under `~/.claude/plans/`,
+    to the status page's source or to the manager's notes for it
+    (`status/manager.txt` in the session scratchpad); `EnterPlanMode` and `ExitPlanMode`, so
     a plan can be amended after it lands; and the wait between statuses
     (rule 2), `node ~/.claude/hub/report.mjs --wait` exactly, the live clone's
     `report.mjs` with that one flag and nothing chained to it. The dispatch gate refuses an agent,
     or a message to one, whose prompt is anything but the approved plan's path
     and the number of a step in its `## Steps`; where the plan has an
-    `## Order` it also refuses any step but the pointer's N and the plan's
-    Standing steps (rule 2), and the refusal prints N, so the next step is
-    read and never chosen (an unreadable session or a plan with no `## Order`
-    has no pointer to enforce); it refuses an agent of a custom
+    `## Order` and no review step it also refuses any step but the pointer's N
+    and the plan's Standing steps (rule 2), and the refusal prints N, so the
+    next step is read and never chosen (an unreadable session or a plan with no
+    `## Order` has no pointer to enforce); where the plan has a review step the
+    pointer is not enforced here, any step of the plan may pass this gate, and
+    the review gate decides which one goes (rule 2); it refuses an agent of a custom
     type, because a custom type carries instructions of its own; and it refuses
     every workflow, so no script of the session's carries instructions the
     owner has not read. The plan counts only while its hash matches the one
     recorded at approval: a plan edited after approval grants nothing.
+    **The approval holds the plan's Goals, Asked, Files and Commands as the
+    owner approved them, and the Steps and the Order may be amended without
+    coming back.** The marker records a hash of each of the four sections
+    (`scopeHashes` in `report.mjs`, read through the one `planSection` every
+    gate shares). *Enforced by:* `approved-plan-guard.mjs`. A Write, Edit or
+    MultiEdit on the approved plan by the main thread passes when the text it
+    would leave has those four sections unchanged, and its PostToolUse
+    `--amend` then re-reads the real file and moves the marker's hash to the
+    file's only if the four still match: if the simulation was wrong, or the
+    re-read does not run, the marker keeps the old hash and no plan is in force,
+    which every gate refuses on. An edit to any of the four is refused naming
+    them, and the plan goes back through plan mode and the owner's button. An
+    agent never amends the plan, an edit that cannot be simulated is refused,
+    and a marker written before the scope was recorded keeps the whole-file
+    rule. The status prints which of the four changed. An amended step is
+    cleared by a fresh review before it goes (rule 2), because the plan's last
+    write makes every earlier review stale.
+    **A plan points at one rules file instead of copying it.** The rules every
+    agent follows were copied into each plan, and the copies drifted.
+    `agent-rules.md` at the hub root carries them, with a decimal `Rules version:
+    N` line, and an agent reads it by the path
+    `/root/.claude/hub/agent-rules.md`; the main thread can read it too
+    (`recordPath`). A plan that sends agents has a `## Rules` section that is the
+    line `Rules: /root/.claude/hub/agent-rules.md, version N.` or holds every
+    rule line of the file, whole: a copy may add rules and may never take one
+    away. *Enforced by:* `rulesProblem`, which `plan-guard.mjs` calls at
+    `ExitPlanMode`, and `rulesGate`, which refuses a step while the version the
+    plan pins is not the file's. That refusal does not latch (rule 14): the
+    remedy is to read the file and amend the Rules line, an edit that keeps the
+    approval because Rules is not one of the four approved sections, so moving to
+    a new version is the manager's act and the file itself changes only through a
+    released commit. A decimal version pins the pointer because a hash would have
+    to be written by an agent, which writes no hex.
     Agents are held by `plan-fence.mjs`, over every tool they call. A call
     passes only as the agent's own return, its own `TaskStop`, a read, or a
     write or Bash line inside the plan. A write lands only under a path the
@@ -398,26 +529,36 @@ every rule below while none of the hooks that enforce them was running
     second route §0d names, not a fresh start. While the latch stands, the main
     thread says in plain text what was refused and stops; an agent returns what
     it has, with the refusal's text.
-    Four refusals are not ends of a route: a status falling due is cleared by
+    Seven refusals are not ends of a route: a status falling due is cleared by
     giving it (rule 2); a call held while a message from the owner waits is
-    sent again once that message is delivered (LESSONS §376); a correction from
-    the owner standing is lifted by the owner's next message, which a latch
-    would only wait on a second time (rule 3); and once the owner has approved
-    a plan by leaving plan mode in the app, entering plan mode again for it is
-    refused, because that approval is carried on with, never asked for twice.
-    That last refusal lifts once an agent is sent under the plan or the owner
-    writes again, so a later amendment stays possible. Measured 2026-10-03: the owner's exit in the app ended plan mode
+    sent again once that message is delivered (LESSONS §376); a stop or a
+    correction from the owner standing is lifted by the owner's next message
+    (a go-word, for a stop), which a latch would only wait on a second time
+    (rule 3); a call held until the status page is read after a compaction is
+    cleared by reading it (rule 2); a move the review gate refuses is answered
+    by sending the review step, by amending the plan's Steps or Order, or by
+    entering plan mode, and a latch would stand in the way of each (rule 2); a
+    step the rules gate refuses, because the plan pins a rules version the file
+    has moved past, is answered by amending the Rules line (rule 13); and once the owner has
+    approved a plan by leaving plan mode in the app, entering plan mode again
+    for it is refused, because that approval is carried on with, never asked for
+    twice. That last refusal lifts once an agent is sent under the plan or the
+    owner writes again, so a later amendment stays possible. Measured 2026-10-03: the owner's exit in the app ended plan mode
     before the session's `ExitPlanMode` call was answered, the call came back
     "not in plan mode", no approval was recorded, the session entered plan mode
     again, and the owner approved the same plan twice.
     Added 2026-10-02.
     *Enforced by:* the refusal latch in `hook-dispatch.mjs`. Every PreToolUse
     refusal, by the manager fence, a family guard, a repo's hooks or the
-    dispatcher's own failure, writes a latch, except four: the status gate's
+    dispatcher's own failure, writes a latch, except seven: the status gate's
     (`report.mjs --gate`), after which the status stamps the clock and the
     refused call may run; `pending-guard.mjs`'s, which holds the call and
-    prints it at the top of the turn that delivers the message; the correction
-    check's (rule 3), which the owner's next message lifts; and the in-app
+    prints it at the top of the turn that delivers the message; the stop hold's
+    and the correction check's (rule 3), which the owner's next message lifts;
+    the state page gate's (`pageGate`, rule 2), which reading the page clears;
+    the review gate's (`reviewGate`, rule 2), whose three remedies are a send,
+    an amendment and entering plan mode; the rules gate's (`rulesGate`, rule 13),
+    whose remedy is an amendment of the Rules line; and the in-app
     approval check's (`approved-plan-guard.mjs --app-exit`, run on the main
     thread's `EnterPlanMode`). The latch's own refusal does not write one
     either, so it can never move the time an owner message has to come after.
@@ -483,6 +624,21 @@ every rule below while none of the hooks that enforce them was running
 first plan clones the hub to `/root/.claude/hub` and installs
 `hook-dispatch.mjs` from that clone. Measured 2026-09-28: installed inside an
 approved plan, they went live mid-session with no restart.
+
+**A paragraph a gate enforces whole is replaced by one line naming the gate.**
+The doctrine is read in full at every startup, so every paragraph in it is a
+cost on every session, and a paragraph that describes what a gate refuses on
+goes stale beside code that moves. When a gate enforces a paragraph whole, the
+paragraph is replaced by one line, `*Enforced whole by:*` and the gate's file
+name in backticks, and what the paragraph said and why it was written stays in
+the lesson that recorded it. A paragraph a gate enforces only in part stays, and
+says which part. Which paragraphs a gate enforces whole is the owner's choice,
+made from a list a session prepares, because the text is the owner's: a session
+never prunes on its own reading. *Enforced by:* `session-guards.test.mjs`, which
+fails when a line of this kind names a file the hub does not have, so a
+replacement cannot point at a gate that is not there. It cannot find a paragraph
+that should have been replaced and was not, which is why the list and the choice
+exist. (LESSONS §396.)
 
 ## 0f. Do what the owner asked, and nothing more.
 

@@ -20,6 +20,29 @@ its goal 1.
 5. An approved plan runs to its end through agents with no amendment; a refusal, a failure or a defect found on the way is handled by the main thread and recorded for the next plan, never handed back.
 6. The owner's rules bind as written, and the main thread is held by gates that leave it no choice to make, never by the owner reading its replies; where two rules meet, the conflict and one suggestion go to the owner once.
 
+## The owner's core asks, one page
+This section is printed at every start and resume by `session-brief.mjs`, beside
+the brief, and the full doctrine is read as well. Each line is an ask that is
+written in full elsewhere and broken anyway; the place is in brackets. A session
+never edits this page: its lines are the owner's to change.
+
+- Spend the owner's credit on judgement only: the cheapest model that holds the rules does the work, the top model manages, and a long run is priced before it starts. [Doctrine §11b]
+- Do what was asked and nothing more. A correction narrows the work. [Doctrine §0f]
+- A defect with a known fix is fixed, not asked about. A question to the owner is a choice only the owner can make. [Doctrine §0e rule 10; LESSONS §258]
+- Work only inside a plan the owner approved in plan mode, and talk it through first. The main session manages and the agents do the work. [Doctrine §0e rules 4 and 13]
+- A fresh agent clears every move before it goes, and an approved plan runs to its end. [Doctrine §0e rule 2; §11c]
+- A status at each agent's return says what changed and what it means. The state of the work lives on the status page, and its link goes in every progress reply. [Doctrine §0e rule 2; §7i]
+- A refusal from a hook is the owner speaking. Say what was refused and stop; another route to the same end is refused too. [Doctrine §0d; §0e rule 14]
+- A correction is answered point by point in the turn it arrives, and the word stop stops everything. [Doctrine §0e rule 3]
+- Every time given to the owner is California time. [Doctrine §2]
+- Never a table or a grid where the owner reads, and anything to paste is one fenced code block. [Doctrine §2]
+- A report ends in a short numbered list of choices only the owner can settle, the recommended one first, or in nothing. A choice about how a photograph looks carries its pictures. [Doctrine §2]
+- Never quote or name the owner in any file, and never put a chat link or a model's name in a commit or a pull request. [Doctrine §9b]
+- Only staging and main reach a remote, in every repo. [Doctrine §11]
+- A statement of state is read in the same turn, never remembered. A push is not a release and a green row is not a run for this commit. [Doctrine §0e rule 15; LESSONS §53, §161]
+- Start no process you will not manage, and confirm it dead by the resource. [Doctrine §11d]
+- AskUserQuestion is banned. [Doctrine §0]
+
 ## Start here: the brief is printed for you
 `.claude/hooks/session-start.sh` runs at session start and prints
 [`session-brief.mjs`](session-brief.mjs) — which branch this is versus where work
@@ -352,14 +375,21 @@ Every item below has actually happened.
  the session; after a compaction the
  messages since the previous one are printed verbatim before anything else.
  (LESSONS §376.)
-- **A CORRECTION FROM THE OWNER ENDS THE TURN, BY REFUSAL.** A message that
+- **A CORRECTION FROM THE OWNER HOLDS NEW STARTS, AND ONE WORD STOPS
+ EVERYTHING.** A message that
  does not end with a go-word (go, ok, continue, approved, yes; the owner's list
  to extend, never a session's) is a correction. While it is the owner's newest
- message, `hook-dispatch.mjs` refuses every main-thread action, without
- latching, and passes only the status command, `TaskStop` and a read of the
+ message, `hook-dispatch.mjs` holds every main-thread action, without
+ latching, and passes the status command, `TaskStop` and a read of the
  record as the manager fence classifies one, so a question one file answers is
  answered from that file in the turn it is asked: answer every point in it and
- end the turn. Held work is sent again only after a go-word. Nine corrections in a
+ end the turn. Where the plan has a review step the review step passes, and so
+ does a step that a review begun after the message was typed cleared, so
+ approved work the message does not touch goes on without a go-word. A message
+ that carries the whole word stop anywhere in it (first, second or last) and
+ does not end with a go-word holds the main thread and every agent, a cleared
+ step included, until a later message ends with a go-word. Held work is sent again
+ only after a go-word. Nine corrections in a
  row were once worked through on the session's own reading of what was meant.
  (Doctrine §0e rule 3.)
 - **EVERY TIME GIVEN TO THE OWNER IS CALIFORNIA LOCAL TIME.** (Doctrine §2;
@@ -376,8 +406,9 @@ Every item below has actually happened.
  path and a step number. The manager fence in `hook-dispatch.mjs` refuses
  every other tool on the main thread, and `plan-fence.mjs` holds each agent to
  the plan's Files and Commands. It passes a read only of the record (the plans,
- the session scratchpad, the doctrine and lessons, each repo's notes and plan
- pointers, the session's transcript) and refuses a read of an app's source with
+ the session scratchpad, the doctrine and lessons, the hub's `aim-review.md`
+ and `agent-rules.md`, each repo's notes and plan pointers, the session's
+ transcript) and refuses a read of an app's source with
  a reason to send an agent; it passes `SendUserFile` of files in the session
  scratchpad and of no other path, so a choice between pictures carries its
  pictures. (Doctrine §0e rule 13.)
@@ -391,14 +422,19 @@ Every item below has actually happened.
  refusal in the status print, which carries every hook refusal each agent
  received, and reports it. The main thread's `TaskStop` passes so it can stop
  what it started (§11d). Only a message the owner typed after the refusal
- clears the main thread's latch, by when it was typed. Four refusals do not
- latch: a status falling due, a call held for a waiting owner message, a
- correction from the owner standing, and entering plan mode again after the
+ clears the main thread's latch, by when it was typed. Seven refusals do not
+ latch: a status falling due, a call held for a waiting owner message, a stop
+ or a correction from the owner standing, a call held until the state page is
+ read after a compaction, a move the review gate refuses, a step the rules gate
+ refuses because the plan pins a rules version the file has moved past, and
+ entering plan mode again after the
  owner approved the plan by leaving plan mode in the app, which the dispatcher
  judges before any gate reads the approval. Give the status, send the held
- call again, answer the correction, or carry on with the approved plan; that
- last refusal lifts once an agent is sent under the plan or the owner writes
- again. (Doctrine §0d; §0e rule 14.)
+ call again, answer the correction, read the page, send the review or amend the
+ plan or enter plan mode as the review gate's refusal says, amend the Rules line
+ as the rules gate's refusal says, or carry on with the approved
+ plan; that last refusal lifts once an agent is sent under the plan or the
+ owner writes again. (Doctrine §0d; §0e rule 14.)
 - **NO `cd`, IN ANY COMMAND, BY THE MAIN THREAD OR AN AGENT.** Every path is
  written in full, so what a command touches can be read off its own words.
  `plan-fence.mjs` refuses a `cd`, `pushd` or `popd` anywhere in an agent's
@@ -429,8 +465,9 @@ Every item below has actually happened.
  session launched is running, and the reply neither opens with a choice for
  the owner nor declares the stop in its first line with what is open. The main
  thread then sends the next step, or the same step again, instead of ending. A
- waiting owner message, a standing correction and a standing latch let the stop
- through. (Doctrine §0e rule 2; LESSONS §381.)
+ waiting owner message, a standing stop, a standing latch, and a standing
+ correction where the plan has no review step, let the stop through.
+ (Doctrine §0e rule 2; LESSONS §381.)
 - **THE NEXT STEP IS READ OFF A POINTER, NEVER CHOSEN FROM MEMORY.** A plan's
  `## Order` section has an `Order:` line and an optional `Standing:` line, and
  every status prints `next: step N` after the goals: the first step in Order
@@ -441,6 +478,55 @@ Every item below has actually happened.
  of `## Steps` above for a plan that has an Order. The status also prints each
  hand-back, its report file's path and every `Found:` line, and writes the
  status page's source from the same read. (Doctrine §0e rules 2 and 13.)
+- **A PLAN WITH AN ORDER HAS A REVIEW STEP, AND A FRESH AGENT CLEARS EVERY MOVE
+ BEFORE IT GOES.** Its `Standing:` line names a step that tells its agent to
+ follow `/root/.claude/hub/aim-review.md` by that full path
+ (`plan-guard.mjs` refuses the plan without it). The main thread names the next
+ move, any step of the plan, and sends the review; the move goes only when the
+ review's hand-back, read from its own transcript and never from a file, began
+ after everything it judges and opens ON-AIM ROUTE-CLEAR naming that step as
+ next. `reviewGate` in `hook-dispatch.mjs` refuses otherwise, without latching,
+ and fails closed when the agents cannot be read. An edit to the plan's Steps
+ or Order keeps the approval and is cleared by a fresh review; an edit to its
+ Goals, Asked, Files or Commands voids it and goes back through plan mode.
+ (Doctrine §0e rules 2, 3 and 13.)
+- **THE STATE OF THE WORK IS ONE PAGE, AND THE FIRST READ AFTER A COMPACTION
+ IS THAT PAGE.** `status/fix-run.html` in the session scratchpad is rewritten
+ whole at every status, so the manager's part is written in `status/manager.txt`
+ beside it, plain text, one item to a line, which the manager fence lets the main
+ thread write and `report.mjs` renders into the page: `Outcome:` in the owner's
+ terms, `Explanation standing:` and `Explanation ruled out:` each with ` | ` and
+ its evidence, `Decision:` with ` | ` and its reason, `Next:`, and
+ `Found 41.3 fixed|stopping|queued:` to sort the third Found line of step 41's
+ report (`Found 41.*` sorts the whole step). A Found line not sorted prints as unsorted, counted at the top of the
+ page and in the status. After a compaction `pageGate` in `hook-dispatch.mjs`
+ holds the main thread to reads and the status until a Read of the page has
+ returned, the way the doctrine's read is held, and does not latch.
+ (Doctrine §0e rule 2.)
+- **A FINDING IS RECORDED FOR THE NEXT PLAN, AND THE NEXT PLAN ANSWERS IT.** A
+ repository's `NOTES.md` has a `## Found queue` section, one line per finding,
+ each opening with a key of the form `Q-TAG-3` (the tag is the repo's, so a key in
+ one repo cannot answer another's). `plan-guard.mjs` refuses `ExitPlanMode` for
+ a plan whose Files names a repository with queued findings unless the plan has a
+ `## Found answered` section with a line for each, opening with the key and then
+ `fixed in step N`, `carried to step N`, `still queued` or `dropped` with a
+ reason. It forces an answer and cannot judge that the answer is true.
+ (Doctrine §0e rule 2.)
+- **THE RULES EVERY AGENT FOLLOWS ARE ONE FILE, AND A PLAN POINTS AT IT.**
+ `/root/.claude/hub/agent-rules.md` carries the rules every plan used to copy,
+ with a decimal `Rules version: N` line. A plan that sends agents has a
+ `## Rules` section that is the line `Rules: /root/.claude/hub/agent-rules.md,
+ version N.` or every rule line of the file, whole (`plan-guard.mjs` refuses it
+ otherwise), and `rulesGate` sends no step while the version the plan pins is not
+ the file's, without latching. An agent reads the file by that path. The main
+ thread can read it. (Doctrine §0e rule 13.)
+- **DOCTRINE PARAGRAPHS ARE REPLACED, NOT ADDED TO, WHEN A GATE ENFORCES THEM
+ WHOLE.** The doctrine is read in full at every start and its length is a cost on
+ every session. A paragraph a gate enforces whole is replaced by one line,
+ `*Enforced whole by:*` and the gate's file name in backticks, and
+ `session-guards.test.mjs` fails when such a line names a file the hub does not
+ have. Which paragraphs those are is the owner's choice. (Doctrine §0e; LESSONS
+ §396.)
 - **REPLIES ARE WRITTEN TO THE DOCTRINE'S RULES BEFORE THEY ARE SENT.** The
  guards are not how a session finds out the format: a guard refusal for a
  shape the doctrine already names is a defect, not feedback. (Doctrine §2;

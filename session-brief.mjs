@@ -30,6 +30,13 @@
 // that silently omits the hub because the hub is not checked out is worse than
 // one that says so.
 //
+// ## The owner's core asks, one page, at every start and resume
+//
+// Beside the family and before the lessons, a bounded page of the asks that are
+// written in full elsewhere and broken anyway, read from a section of the hub
+// CLAUDE.md (section 3b below). It is printed at a startup, a compaction, a resume
+// and a clear alike. The full doctrine read is untouched: this is added beside it.
+//
 // ## What it prints after a compaction or a resume (LESSONS §385)
 //
 // The lessons' titles are printed at a STARTUP only. After a compaction or a
@@ -163,6 +170,48 @@ if (existsSync(reposMd)) {
 } else {
   say('REPOS: no REPOS.md in the hub — the family is undocumented.');
 }
+say();
+
+// --- 3b · the owner's core asks, one page ---------------------------------
+//
+// Printed at EVERY start and resume (a startup, a compaction, a resume, a clear),
+// beside the brief and not instead of anything in it: the full doctrine read stays
+// as the doctrine sets it (Doctrine §11e). The doctrine is read once, at the start,
+// and is long; what a session breaks four hours later is a handful of asks it read
+// and did not carry. This is those, on one page.
+//
+// The words live in ONE place, a short section of the hub CLAUDE.md, read from the
+// CLAUDE.md beside this script: no copy here, so the card cannot go stale in a
+// second file, and a repo that runs the hub's brief is shown the same page. The
+// page is bounded: past CARD_LINES lines only the first are printed and the rest
+// is counted, so a card that grows into a second doctrine says so rather than
+// scrolling the brief away. A hub without the section prints one line saying the
+// card was not found, never a confident blank.
+const CARD_HEADING = 'The owner\'s core asks, one page';
+const CARD_LINES = 40;
+/**
+ * The card's lines.
+ * @returns {string[]} the heading line and the body of the `## The owner's core
+ *   asks, one page` section of the hub's CLAUDE.md, at most CARD_LINES lines of
+ *   it, trailing space trimmed and blank lines at either end dropped, with a last
+ *   line counting what was not printed when the section is longer; or one line
+ *   saying why there is no card (no CLAUDE.md beside this script, or no such
+ *   section, or an empty one). Never throws.
+ */
+function ownerCard() {
+  const file = join(hub, 'CLAUDE.md');
+  let text = '';
+  try { text = readFileSync(file, 'utf8'); } catch { return [`THE OWNER'S CORE ASKS: not printed (no CLAUDE.md beside this brief, at ${file}).`]; }
+  const m = new RegExp(`^## ${CARD_HEADING.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\\n]*\\n([\\s\\S]*?)(?=^## |^# |$(?![\\s\\S]))`, 'm').exec(text);
+  const body = (m ? m[1] : '').split('\n').map((l) => l.replace(/\s+$/, ''));
+  while (body.length && !body[0]) body.shift();
+  while (body.length && !body[body.length - 1]) body.pop();
+  if (!body.length) return [`THE OWNER'S CORE ASKS: not printed (the hub CLAUDE.md has no non-empty "## ${CARD_HEADING}" section).`];
+  const shown = body.slice(0, CARD_LINES);
+  return [`THE OWNER'S CORE ASKS (one page, from the hub CLAUDE.md; the full doctrine is read as well):`, ...shown,
+    ...(body.length > shown.length ? [`  … ${body.length - shown.length} more lines in the "${CARD_HEADING}" section of ${file}; a card past ${CARD_LINES} lines is no longer one page.`] : [])];
+}
+for (const l of ownerCard()) say(l);
 say();
 
 // --- 4 · the lessons, by title only ----------------------------------------
