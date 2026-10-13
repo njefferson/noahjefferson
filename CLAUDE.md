@@ -487,9 +487,11 @@ Every item below has actually happened.
  after everything it judges and opens ON-AIM ROUTE-CLEAR naming that step as
  next. `reviewGate` in `hook-dispatch.mjs` refuses otherwise, without latching,
  and fails closed when the agents cannot be read. An edit to the plan's Steps
- or Order keeps the approval and is cleared by a fresh review; an edit to its
- Goals, Asked, Files or Commands voids it and goes back through plan mode.
- (Doctrine §0e rules 2, 3 and 13.)
+ or Order keeps the approval and is cleared by a fresh review, and so does an
+ edit to the Served by line under its Goals, which maps steps to goals and
+ moves when a step is added; an edit to its other Goals, Asked, Files or
+ Commands voids it and goes back through plan mode. (Doctrine §0e rules 2, 3
+ and 13; LESSONS §397.)
 - **THE STATE OF THE WORK IS ONE PAGE, AND THE FIRST READ AFTER A COMPACTION
  IS THAT PAGE.** `status/fix-run.html` in the session scratchpad is rewritten
  whole at every status, so the manager's part is written in `status/manager.txt`

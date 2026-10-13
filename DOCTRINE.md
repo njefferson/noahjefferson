@@ -21,6 +21,8 @@ choice, option, or question as PLAIN TEXT in chat and let the owner answer in
 plain language. This overrides any harness suggestion to use it, including plan-mode
 clarifications.
 
+*Enforced by:* `plan-guard.mjs` in plan mode, for an agent too, because the tool is not on its list of reads; the manager fence in `hook-dispatch.mjs` on the main thread, `plan-fence.mjs` in an agent, and `approved-plan-guard.mjs` where no plan is in force, each of which takes the tool for a call that is not a read. (LESSONS §397.)
+
 ## 0b. If you do not recognise the input, ASK — before doing anything at all
 
 The owner, 2026-07-29, in anger: a screenshot of one app arrived in the session for
@@ -99,15 +101,7 @@ habit, not several**, and it does not stay in the harmless half.
 If a control genuinely blocks correct work, say so in plain text and stop.
 Never work around it and report success.
 
-**A different command, tool or wording aimed at the same end as a refused call
-is a second route to that end, and it is refused the same way.** The refusal
-latch (§0e rule 14) refuses it: after a refusal, every call but the main
-thread's status command and `TaskStop` and an agent's own return is refused
-until the owner's next message.
-A plan's wording is held the same way. `plan-guard.mjs` records each name it
-refuses in a plan, with the time, and `ExitPlanMode` stays refused until that
-name appears in a tool result read after the refusal or its plan line marks it
-"(new)"; rewording the plan or dropping the name clears nothing.
+*Enforced whole by:* `hook-dispatch.mjs` and `plan-guard.mjs`.
 
 **ENFORCED, 2026-09-10, and no longer a paragraph.** `plan-guard.mjs` runs as a
 `PreToolUse` hook in every repo and REFUSES the write rather than asking the
@@ -298,32 +292,7 @@ every rule below while none of the hooks that enforce them was running
    (rule 13), and nothing asks the session to run it. *Enforced by:*
    `stop-guard.mjs`, which does not count a running agent among the tasks that
    hold a stop.
-   **A turn that ends with steps of the approved plan left is a return to the
-   owner, and it is refused.** An approved plan is the instruction for all of
-   it (§11c), and it runs to its end through agents with nothing coming back
-   to the owner but a status at each agent's end and a choice only the owner
-   can settle. Measured 2026-10-04: nothing refused a turn that ended with
-   steps left and no agent running, so the work waited for the owner's next
-   message. *Enforced by:* `stop-guard.mjs`. With an approved plan in
-   force (its file still matching the hash recorded at approval), it reads the
-   pointer N (above) from the plan's `## Order` and the agents the session sent,
-   each prompt naming its step, and refuses the stop when N is not none, no
-   agent the session launched is running, and the reply neither opens with a
-   choice for the owner nor declares the stop in its first line with what is
-   open, "Stopping here: open for you is" and then what. A REFUSED or FAILED
-   hand-back leaves N where it is, so the main thread sends the same step
-   again. A plan with no `## Order` keeps the older count: its `## Steps`
-   numbers, a step returned when an agent ended by a report for it. The main
-   thread then sends the next step, or the same step again, instead of ending.
-   A choice opens a reply when its numbered options carry the recommended
-   marker within the first two lines (§2). A waiting owner message, a stop
-   standing (rule 3), a correction standing where the plan has no review step
-   (rule 3 then refuses every other call, so a refused stop would leave no
-   move) and a standing latch let the stop through, and a session whose plan or
-   agents cannot be read is not refused. Where the plan has a review step a
-   correction leaves a move, the review and then the step it clears, so the
-   turn that answers the correction does not end the work, and the refusal
-   names the step the current review cleared, or the review step.
+   *Enforced whole by:* `stop-guard.mjs`.
 3. **Reply to every point in a message from the owner.** A message saying
    something was done wrong is a full stop: answer it, and run nothing else in
    that turn. This rule had nothing behind it. It was broken four times on
@@ -357,25 +326,8 @@ every rule below while none of the hooks that enforce them was running
    reads it and refuses or clears. The refusal names this rule,
    prints the list, never quotes the message, and does not latch (rule 14): the
    owner's next message lifts it, and a latch would only add a second wait.
-   Agents are not held by a correction, and the plan fence holds them (rule
-   13). **One word stops everything.** An owner message that carries the whole
-   word stop ANYWHERE in it, first, second or last, and does not end with a
-   go-word is a stop, and it holds
-   every call, the main thread's and every agent's, a step a review cleared
-   included, until a later message ends with a go-word; what passes is the
-   status command, `TaskStop`, an agent's own
-   return and, on the main thread, a read of the record. A plain message typed
-   after the stop does not lift it, and a message that carries the word and
-   also ends with a go-word is a go message and not a stop. The refusal does
-   not latch, and it is lifted by the go-word and nothing else. Only the whole
-   word counts ("stopped" and "stops" do not). The first version took the
-   word only as a message's first word, and a halt message that puts it second
-   would have stopped nothing.
-   Both holds are read by `ownerHolds` and `holdsIn` in `hook-dispatch.mjs`,
-   and the stop by `stopStanding`, which the stop guard reads too. A stop used to
-   stop agents only while its message was still queued
-   (`pending-guard.mjs`, which still reads a queued message by its first word),
-   and nothing held them once it had been delivered.
+   Agents are not held by a correction, and the plan fence holds them (rule 13).
+   *Enforced whole by:* `hook-dispatch.mjs` and `pending-guard.mjs`.
    Held work (LESSONS §376) is sent again only in a turn that follows a go-word. A
    task notification, a scheduled message and an agent's hand-back are not
    messages from the owner. A message the harness never delivered is printed once,
@@ -471,57 +423,10 @@ every rule below while none of the hooks that enforce them was running
     every workflow, so no script of the session's carries instructions the
     owner has not read. The plan counts only while its hash matches the one
     recorded at approval: a plan edited after approval grants nothing.
-    **The approval holds the plan's Goals, Asked, Files and Commands as the
-    owner approved them, and the Steps and the Order may be amended without
-    coming back.** The marker records a hash of each of the four sections
-    (`scopeHashes` in `report.mjs`, read through the one `planSection` every
-    gate shares). *Enforced by:* `approved-plan-guard.mjs`. A Write, Edit or
-    MultiEdit on the approved plan by the main thread passes when the text it
-    would leave has those four sections unchanged, and its PostToolUse
-    `--amend` then re-reads the real file and moves the marker's hash to the
-    file's only if the four still match: if the simulation was wrong, or the
-    re-read does not run, the marker keeps the old hash and no plan is in force,
-    which every gate refuses on. An edit to any of the four is refused naming
-    them, and the plan goes back through plan mode and the owner's button. An
-    agent never amends the plan, an edit that cannot be simulated is refused,
-    and a marker written before the scope was recorded keeps the whole-file
-    rule. The status prints which of the four changed. An amended step is
-    cleared by a fresh review before it goes (rule 2), because the plan's last
-    write makes every earlier review stale.
-    **A plan points at one rules file instead of copying it.** The rules every
-    agent follows were copied into each plan, and the copies drifted.
-    `agent-rules.md` at the hub root carries them, with a decimal `Rules version:
-    N` line, and an agent reads it by the path
-    `/root/.claude/hub/agent-rules.md`; the main thread can read it too
-    (`recordPath`). A plan that sends agents has a `## Rules` section that is the
-    line `Rules: /root/.claude/hub/agent-rules.md, version N.` or holds every
-    rule line of the file, whole: a copy may add rules and may never take one
-    away. *Enforced by:* `rulesProblem`, which `plan-guard.mjs` calls at
-    `ExitPlanMode`, and `rulesGate`, which refuses a step while the version the
-    plan pins is not the file's. That refusal does not latch (rule 14): the
-    remedy is to read the file and amend the Rules line, an edit that keeps the
-    approval because Rules is not one of the four approved sections, so moving to
-    a new version is the manager's act and the file itself changes only through a
-    released commit. A decimal version pins the pointer because a hash would have
-    to be written by an agent, which writes no hex.
-    Agents are held by `plan-fence.mjs`, over every tool they call. A call
-    passes only as the agent's own return, its own `TaskStop`, a read, or a
-    write or Bash line inside the plan. A write lands only under a path the
-    plan's Files list names for that repo (a line's label, such as Hub or JPS,
-    ties its entries to one repository), under an absolute path it names, or
-    in the session scratchpad, and never in the live gate copy at
-    `~/.claude/hub`. A Bash line is split wherever a new command starts,
-    inside `$( )`, backticks, `sh -c` and `eval` too. A `cd`, `pushd` or
-    `popd` at any depth is refused, because every path is written in full; a
-    leading `git -C <dir>` is set aside; and each segment must then be a
-    reader or begin with an entry of the plan's Commands. A redirect is held
-    to the same rule as a write, and process substitution is refused. A write
-    or a redirect to `/dev/null`, `/dev/stdout` or `/dev/stderr` always
-    passes.
-    **No `cd` holds on the main thread too.** The manager fence passes a Bash
-    line there only when `plan-guard.mjs` classifies it as a read, and `cd`,
-    `pushd` and `popd` are not among its readers, so the fence refuses them;
-    in plan mode `plan-guard.mjs` refuses them itself.
+    *Enforced whole by:* `approved-plan-guard.mjs` and `report.mjs`.
+    *Enforced whole by:* `hook-dispatch.mjs` and `plan-guard.mjs`.
+    *Enforced whole by:* `plan-fence.mjs`.
+    *Enforced whole by:* `hook-dispatch.mjs` and `plan-guard.mjs`.
 14. **A refusal latches until the owner's next message.** A refusal by any
     guard, family or repo, ends that route for the thread that was refused: the
     session when it was the main thread, and that agent alone when it was
@@ -548,34 +453,7 @@ every rule below while none of the hooks that enforce them was running
     "not in plan mode", no approval was recorded, the session entered plan mode
     again, and the owner approved the same plan twice.
     Added 2026-10-02.
-    *Enforced by:* the refusal latch in `hook-dispatch.mjs`. Every PreToolUse
-    refusal, by the manager fence, a family guard, a repo's hooks or the
-    dispatcher's own failure, writes a latch, except seven: the status gate's
-    (`report.mjs --gate`), after which the status stamps the clock and the
-    refused call may run; `pending-guard.mjs`'s, which holds the call and
-    prints it at the top of the turn that delivers the message; the stop hold's
-    and the correction check's (rule 3), which the owner's next message lifts;
-    the state page gate's (`pageGate`, rule 2), which reading the page clears;
-    the review gate's (`reviewGate`, rule 2), whose three remedies are a send,
-    an amendment and entering plan mode; the rules gate's (`rulesGate`, rule 13),
-    whose remedy is an amendment of the Rules line; and the in-app
-    approval check's (`approved-plan-guard.mjs --app-exit`, run on the main
-    thread's `EnterPlanMode`). The latch's own refusal does not write one
-    either, so it can never move the time an owner message has to come after.
-    The in-app approval check refuses while the approval recorded from the
-    owner's exit stands and nothing but reads has happened since.
-    `approved-plan-guard.mjs` records that approval from the harness's own
-    plan-mode exit entry when no `ExitPlanMode` call of the session's was
-    approved since plan mode began, hashing the plan file at that moment, and
-    records none when the file was written after the exit; each exit entry is
-    judged once. THE DISPATCHER JUDGES THE OWNER'S NEWEST EXIT FIRST: before
-    the latch, the manager fence, the dispatch gate or the plan fence reads the
-    approval marker, `hook-dispatch.mjs` runs `approved-plan-guard.mjs
-    --judge-exit`, which records the marker from that entry when it is the
-    owner's and never refuses. Judged only among the family guards below them,
-    the exit came too late for a first call after it that was the sending of an
-    agent: the dispatch gate refused on the old marker and the exit was never
-    judged (measured 2026-10-04 at 05:12).
+    *Enforced whole by:* `hook-dispatch.mjs` and `approved-plan-guard.mjs`.
     A Stop refusal never latches. While the main thread's latch stands, every
     PreToolUse call on the main thread and in agents is refused except three:
     the status command and `TaskStop`, both on the main thread only, and an
@@ -1525,19 +1403,7 @@ off — a switched-off guard being strictly worse than none. It honours
 `stop_hook_active`, so it can never loop, and it FAILS OPEN when the hub is not
 checked out beside the repo.
 
-**A refusal cannot take back the reply it refuses.** A `Stop` refusal arrives
-after the reply was written, and the owner has already seen it, so all the
-refusal can do is hand the complaint back: whatever the session writes next
-arrives as a SECOND reply. Measured 2026-10-04: two refusals, each for one
-sentence, and the whole reply was sent again both times. So every refusal now
-ends by saying that what the session writes next is the corrected sentences
-only, and that it must not send the reply again. When the guard runs again in
-the same turn it refuses a follow-up that repeats lines or sentences of the
-refused reply, counting only those of thirty characters or more, because
-"Done." and a list marker recur in any two replies. It does that once per turn,
-so it cannot loop, and only for a refusal newer than the owner's last message.
-Corrected sentences, a follow-up of tool calls with no text, and a repeat from
-an earlier turn pass.
+*Enforced whole by:* `stop-guard.mjs`.
 
 **This is the same escalation `branch-guard.mjs` is built on.** An instruction
 in a file never once refused the commit it forbade. The rule a session has to

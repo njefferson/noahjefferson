@@ -303,7 +303,7 @@ if (tool === 'Bash') {
  * it. The TOP block only — plan files accumulate superseded plans under
  * horizontal rules, and those were checked when they were current.
  *
- * AND IT CARRIES THE GOALS (Doctrine §0e rule 16). `ExitPlanMode` is also
+ * AND IT CARRIES THE GOALS (the standing goals in the hub CLAUDE.md). `ExitPlanMode` is also
  * refused unless the plan's `## Goals` section contains, word for word, the
  * numbered goals of the hub CLAUDE.md's "Goals every session serves" section
  * (it may add goals taken from the app's own roadmap), and has a line beginning
@@ -565,7 +565,8 @@ if (tool === 'ExitPlanMode') {
     return !m || !m[1].split('\n').some((l) => l.trim().length > 20);
   });
   if (missing.length === 0) {
-    // THE GOALS COME BEFORE ANY OTHER CHECK (Doctrine §0e rule 16): a plan
+    // THE GOALS COME BEFORE ANY OTHER CHECK (the standing goals in the hub
+    // CLAUDE.md): a plan
     // carries the hub CLAUDE.md's standing goals block word for word and names,
     // for every step, the goal it serves. Loaded here only, because this file
     // runs on every tool call and the plan parsing lives in hook-dispatch.mjs.
@@ -612,8 +613,14 @@ if (tool === 'ExitPlanMode') {
 // The harness's discovery tools read and list and nothing else. Missing from
 // this list, they were refused whenever no plan was in force, through
 // approved-plan-guard, which asks this file what a read is.
+// THE CHOICE POPUP IS NOT ON IT (Doctrine §0): it listed AskUserQuestion, so
+// plan mode, the manager fence and the plan fence all took the tool for a read
+// and nothing in the hub refused it. Off the list it falls to the default
+// refusal below, which plan mode gives, which the manager fence and the plan
+// fence give a call that is not a read, and which approved-plan-guard gives
+// when no plan is in force.
 if (['Read', 'Glob', 'Grep', 'NotebookRead', 'WebFetch', 'WebSearch',
-  'TodoWrite', 'AskUserQuestion', 'ToolSearch',
+  'TodoWrite', 'ToolSearch',
   'ListAgents', 'ReadNotifications', 'Skill',
   'TaskList', 'TaskGet', 'TaskOutput', 'ListMcpResourcesTool', 'ReadMcpResourceTool', 'ReadMcpResourceDirTool',
   'ListConnectors', 'ListSkills', 'SearchSkills', 'ListPlugins', 'SearchPlugins', 'SearchMcpRegistry'].includes(tool)) process.exit(0);

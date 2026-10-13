@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * A STATUS AT LEAST EVERY FIVE MINUTES, OR NOTHING ELSE RUNS (LESSONS §370).
+ * A STATUS WHEN AN AGENT HAS ENDED, OR NOTHING ELSE RUNS (LESSONS §370, §384).
  *
  * The owner's measure of silence is not a pause between tool calls; it is
  * hours of work with no idea when the next report comes. A rule saying so was
@@ -11,7 +11,7 @@
  *   node report.mjs "Status HH:MM — done: …; running: …; next: …; next status by HH:MM"
  *       stamps the time for this session and prints the status, PRECEDED BY
  *       THE GOALS EVERY SESSION SERVES (`goalsSection`, the hub CLAUDE.md's
- *       section of that name, Doctrine §0e rule 16), so the goals are in front
+ *       section of that name, the standing goals), so the goals are in front
  *       of the session at every status. THEN THE POINTER (`pointerState`,
  *       `pointerBlock`): `next: step N`, the first number on the approved
  *       plan's `Order:` line (under `## Order`) with no hand-back whose first
@@ -188,22 +188,50 @@ export function planSection(text, name) {
  * The owner approves what the work is for (Goals), what was asked (Asked), what
  * may be touched (Files) and what may be run (Commands); the Steps and the
  * Order are how the approved work is done, and an amendment to them keeps the
- * approval.
+ * approval. The Goals the owner approves are the goals themselves and not the
+ * `Served by:` line under them (`goalsWithoutServedBy`): that line maps steps to
+ * goals, so it moves whenever a step is added or renumbered.
  */
 export const SCOPE_SECTIONS = ['Goals', 'Asked', 'Files', 'Commands'];
+
+/**
+ * A plan's Goals section without its `Served by:` line.
+ * @param {string} section  the body of the `## Goals` section, as `planSection` returns it.
+ * @returns {string} the same text with the FIRST line that begins `Served by:`
+ *   taken out, which is the one line `servedBy` in hook-dispatch.mjs reads and the
+ *   only line left out: every other line, the numbered goals above all, stays as
+ *   written, and a second line beginning that way stays too, so it cannot carry
+ *   an edit past the approval. The text unchanged when no line begins so. The
+ *   Goals hash in `scopeHashes` is taken over this.
+ */
+export function goalsWithoutServedBy(section) {
+  const text = String(section ?? '');
+  const lines = text.split('\n');
+  const at = lines.findIndex((l) => /^Served by:/.test(l));
+  if (at < 0) return text;
+  lines.splice(at, 1);
+  return lines.join('\n');
+}
+
+const sha256 = (text) => createHash('sha256').update(text).digest('hex');
 
 /**
  * The hashes of a plan's approved scope.
  * @param {string} text  the plan.
  * @returns {Record<string, string>} for each of SCOPE_SECTIONS, the sha256 of its
  *   body as `planSection` returns it ('' when the plan has no such section, so
- *   a missing section has a hash too and adding one is a change). The approval
- *   marker records this at approval; `scopeChanged` and the amendment gate in
- *   approved-plan-guard.mjs compare against it.
+ *   a missing section has a hash too and adding one is a change), except that
+ *   Goals is hashed without its `Served by:` line (`goalsWithoutServedBy`), so a
+ *   step added or renumbered keeps the approval. The approval marker records this
+ *   at approval; `scopeChanged` and the amendment gate in approved-plan-guard.mjs
+ *   compare against it.
  */
 export function scopeHashes(text) {
   const out = {};
-  for (const name of SCOPE_SECTIONS) out[name] = createHash('sha256').update(planSection(text, name)).digest('hex');
+  for (const name of SCOPE_SECTIONS) {
+    const body = planSection(text, name);
+    out[name] = sha256(name === 'Goals' ? goalsWithoutServedBy(body) : body);
+  }
   return out;
 }
 
@@ -213,12 +241,17 @@ export function scopeHashes(text) {
  * @param {string} text  the plan as it stands (or would stand after an edit).
  * @returns {string[]} the names from SCOPE_SECTIONS whose hash differs, in that
  *   order; every name when `then` is not an object, so a missing or damaged
- *   record fails closed.
+ *   record fails closed. A marker recorded before the `Served by:` line left the
+ *   Goals hash holds the hash of the whole Goals section, and its Goals still
+ *   match while that whole section is unchanged, so a plan approved before this
+ *   change keeps its approval; such a marker is made over by the first amendment
+ *   (`--amend` in approved-plan-guard.mjs records `scopeHashes` again).
  */
 export function scopeChanged(then, text) {
   const now = scopeHashes(text);
   const known = then && typeof then === 'object' && !Array.isArray(then);
-  return SCOPE_SECTIONS.filter((n) => !known || then[n] !== now[n]);
+  const wholeGoals = sha256(planSection(text, 'Goals'));
+  return SCOPE_SECTIONS.filter((n) => !known || (then[n] !== now[n] && !(n === 'Goals' && then[n] === wholeGoals)));
 }
 
 /**
@@ -1632,7 +1665,7 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   const previous = readClock().at;
   mkdirSync(dirname(CLOCK), { recursive: true });
   writeFileSync(CLOCK, JSON.stringify({ at: Date.now(), status }, null, 1));
-  // THE GOALS COME FIRST (Doctrine §0e rule 16): the stamp is already written,
+  // THE GOALS COME FIRST (the standing goals in the hub CLAUDE.md): the stamp is already written,
   // so reading them can never cost the status. A section that cannot be read is
   // said so, never printed as an empty one.
   let goals = '';

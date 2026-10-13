@@ -24,7 +24,12 @@
  *   THE ONE EXCEPTION is the main thread amending the plan: a Write, Edit or
  *   MultiEdit on the approved plan passes when the text it would leave has the
  *   Goals, Asked, Files and Commands the marker recorded at approval (`scope`),
- *   so only the Steps and the Order, or sections outside the four, move. An
+ *   so only the Steps and the Order, or sections outside the four, move. The
+ *   Goals are taken without their `Served by:` line (`goalsWithoutServedBy` in
+ *   report.mjs), which maps steps to goals, so a step added or renumbered keeps
+ *   the approval; a marker recorded before that, holding the whole section's
+ *   hash, still matches while the whole section stands, and `--amend` records
+ *   the new kind at the first amendment. An
  *   edit to any of the four is refused naming them, and goes back through plan
  *   mode and the owner's button; an agent's edit, a marker with no `scope`, and
  *   an edit that cannot be simulated keep the old rule, a refusal.

@@ -41,7 +41,11 @@
  * rules a plan points at (agent-rules.md, `rulesProblem` at ExitPlanMode,
  * `rulesGate` at a send), the owner's core asks printed at every start
  * (session-brief.mjs), and the doctrine's pruning rule, whose one check is the
- * case that holds every `*Enforced whole by:*` line to a gate the hub has.
+ * case that holds every `*Enforced whole by:*` line to a gate the hub has. And
+ * the approval's Goals without their Served by line (report.mjs
+ * `goalsWithoutServedBy`, a marker of the old kind still matching), and the
+ * choice popup tool refused by plan mode, the manager fence, the plan fence and
+ * approved-plan-guard.mjs (LESSONS §397).
  * The whole suite runs under an empty home, so no real approval marker is read.
  *
  * In --plants mode a guard name a case cites with no plant behind it is a
@@ -2760,6 +2764,112 @@ const CASES = [
     },
   },
   {
+    name: 'the approval\'s Goals leave out the Served by line: a step added there, or the line dropped, moves none of the four, an edit of any other Goals line or of a second line that begins the same way is still a change of Goals, and a marker recorded before this change, holding the hash of the whole section, still matches while that section stands and loses Goals on an edit of any of its lines, the Served by line included',
+    guards: ['scope_served_by', 'scope_goals_rest', 'scope_served_by_first', 'scope_old_marker'],
+    run(m, dir) {
+      const base = scopedPlan(dir);
+      const hashes = m.report.scopeHashes(base);
+      const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const SERVED = 'Served by: steps 1, 2 and 3 serve goal 1.';
+      const firstBlockLine = GOALS_BLOCK.split('\n')[0];
+      // A marker of the old kind: its Goals entry is the hash of the whole section.
+      const old = { ...hashes, Goals: createHash('sha256').update(m.report.planSection(base, 'Goals')).digest('hex') };
+      const edits = {
+        addStep: (t) => t.replace(SERVED, 'Served by: steps 1, 2, 3 and 4 serve goal 1; step 4 serves goal 2.'),
+        dropLine: (t) => t.replace(`${SERVED}\n`, ''),
+        ownGoal: (t) => t.replace('1. The thing is built and read.', '1. The thing is built.'),
+        blockGoal: (t) => t.replace(firstBlockLine, `${firstBlockLine} And more.`),
+        secondLine: (t) => t.replace(`${SERVED}\n`, `${SERVED}\nServed by: step 9 serves goal 1.\n`),
+        steps: (t) => t.replace('1. **Build.** Make the thing.', '1. **Build.** Make the thing, and say what it did.'),
+      };
+      const moved = (then, name) => m.report.scopeChanged(then, edits[name](base));
+      // The instrument: every edit changes the text, or an edit that moves nothing could be one never made.
+      const changes = Object.keys(edits).every((k) => edits[k](base) !== base);
+      return changes && firstBlockLine.length > 20
+        && eq(m.report.scopeHashes(edits.addStep(base)), hashes) && eq(m.report.scopeHashes(edits.dropLine(base)), hashes)
+        && eq(moved(hashes, 'addStep'), []) && eq(moved(hashes, 'dropLine'), []) && eq(moved(hashes, 'steps'), [])
+        && eq(moved(hashes, 'ownGoal'), ['Goals']) && eq(moved(hashes, 'blockGoal'), ['Goals']) && eq(moved(hashes, 'secondLine'), ['Goals'])
+        && eq(m.report.scopeChanged(old, base), []) && eq(moved(old, 'steps'), [])
+        && eq(moved(old, 'ownGoal'), ['Goals']) && eq(moved(old, 'blockGoal'), ['Goals']) && eq(moved(old, 'addStep'), ['Goals']);
+    },
+  },
+  {
+    name: 'through approved-plan-guard, the main thread adds a step on the approved plan\'s Served by line with no new approval while an edit of any other Goals line is refused; a marker of the old kind lets a Steps amendment through and is recorded as the new kind by it, and refuses the Served by line and a Goals line until then',
+    guards: ['scope_served_by', 'scope_goals_rest', 'scope_old_marker', 'amend_rescope', 'amend_scope_gate'],
+    run(m, dir) {
+      const sha = (t) => createHash('sha256').update(t).digest('hex');
+      const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const text = scopedPlan(dir);
+      const ADD = { old_string: 'Served by: steps 1, 2 and 3 serve goal 1.', new_string: 'Served by: steps 1, 2, 3 and 4 serve goal 1; step 4 serves goal 2.' };
+      const GOAL = { old_string: '1. The thing is built and read.', new_string: '1. The thing is built.' };
+      const STEP = { old_string: '1. **Build.** Make the thing.', new_string: '1. **Build.** Make the thing, and say what it did.' };
+      // The owner's approval through the tool: the marker records the plan's hash and its scope.
+      const approve = (A) => {
+        writeFileSync(A.plan, text);
+        const tr = transcript([turn(0, 'start')]);
+        A.guard(tr, { hook_event_name: 'PostToolUse', tool_name: 'ExitPlanMode', tool_response: { plan: text, isAgent: false, filePath: A.plan } }, '--mark');
+        return tr;
+      };
+      const call = (A, tr, input, flag) => A.guard(tr, { tool_name: 'Edit', tool_input: { file_path: A.plan, ...input }, ...(flag ? { hook_event_name: 'PostToolUse' } : {}) }, flag);
+      const refused = (r, re) => r.status === 2 && re.test(r.stdout);
+      const statusOf = (Z) => spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the served-by test'], { encoding: 'utf8', env: { ...process.env, HOME: Z.home, CLAUDE_CODE_SESSION_ID: '' } }).stdout ?? '';
+      // A marker of the new kind: a step is added on the Served by line, and the marker follows the file.
+      const A = appHome(dir);
+      const trA = approve(A);
+      const scopeA = A.mk()?.scope;
+      const addPre = call(A, trA, ADD);
+      writeFileSync(A.plan, text.replace(ADD.old_string, ADD.new_string));
+      const addPost = call(A, trA, ADD, '--amend');
+      const mkA = A.mk();
+      const goalA = call(A, trA, GOAL);
+      const statusA = statusOf(A);
+      // A marker of the old kind, holding the hash of the whole Goals section.
+      const B = appHome(dir);
+      const trB = approve(B);
+      writeFileSync(B.marker, JSON.stringify({ ...B.mk(), scope: { ...B.mk().scope, Goals: sha(m.report.planSection(text, 'Goals')) } }));
+      const addOld = call(B, trB, ADD);
+      const goalOld = call(B, trB, GOAL);
+      const stepOld = call(B, trB, STEP);
+      writeFileSync(B.plan, text.replace(STEP.old_string, STEP.new_string));
+      call(B, trB, STEP, '--amend');
+      const mkB = B.mk();
+      const addAfter = call(B, trB, ADD);
+      return same(Object.keys(scopeA ?? {}), ['Goals', 'Asked', 'Files', 'Commands'])
+        && addPre.status === 0 && addPost.status === 0 && mkA?.hash === sha(text.replace(ADD.old_string, ADD.new_string)) && same(mkA.scope, scopeA) && mkA.amendments === 1
+        && refused(goalA, /Goals/) && /Scope: Goals, Asked, Files, Commands are as approved\./.test(statusA) && /Match: yes/.test(statusA)
+        && refused(addOld, /Goals/) && refused(goalOld, /Goals/) && stepOld.status === 0
+        && mkB?.hash === sha(text.replace(STEP.old_string, STEP.new_string)) && same(mkB.scope, m.report.scopeHashes(text)) && addAfter.status === 0;
+    },
+  },
+  {
+    name: 'the choice popup tool is refused wherever it is called: by plan-guard in plan mode, in an agent as well, by the manager fence on the main thread, by the plan fence in an agent with a plan approved and by approved-plan-guard with none; a read passes each of them',
+    guards: ['popup_not_a_read'],
+    run(m, dir) {
+      const w = world(dir, [turn(0, GO)]);
+      const POPUP = { tool_name: 'AskUserQuestion', tool_input: { questions: [{ question: 'Which one?', header: 'Pick', options: [{ label: 'a', description: 'a' }, { label: 'b', description: 'b' }], multiSelect: false }] } };
+      const READ = { tool_name: 'Read', tool_input: { file_path: w.plan } };
+      const guard = (extra) => spawnSync('node', [join(dir, 'plan-guard.mjs')], {
+        input: JSON.stringify({ session_id: sid('pu'), cwd: w.cwd, transcript_path: w.tr, hook_event_name: 'PreToolUse', ...extra }), encoding: 'utf8', env: { ...process.env, HOME: w.home } });
+      const refused = (r, re) => r.status === 2 && re.test(`${r.stdout}${r.stderr}`);
+      // plan-guard in plan mode, the main thread and an agent; the read is the control.
+      const planMain = guard({ permission_mode: 'plan', ...POPUP });
+      const planAgent = guard({ permission_mode: 'plan', agent_id: 'a1', ...POPUP });
+      const planRead = guard({ permission_mode: 'plan', ...READ });
+      // approved-plan-guard outside plan mode with no plan approved.
+      const A = appHome(dir);
+      const none = A.guard(w.tr, POPUP);
+      const noneRead = A.guard(w.tr, READ);
+      // The dispatcher, with a plan approved: the main thread outside and inside plan mode, an agent, and a read.
+      const main = w.call('PreToolUse', { session_id: sid('pu'), ...POPUP });
+      const inPlan = w.call('PreToolUse', { session_id: sid('pu'), permission_mode: 'plan', ...POPUP });
+      const agent = w.call('PreToolUse', { session_id: sid('pu'), agent_id: 'a1', ...POPUP });
+      const readMain = w.call('PreToolUse', { session_id: sid('pu'), ...READ });
+      return refused(planMain, /not known to be read-only/) && refused(planAgent, /not known to be read-only/) && planRead.status === 0
+        && refused(none, /No approved plan is in force/) && noneRead.status === 0
+        && refused(main, /MANAGER FENCE/) && refused(inPlan, /MANAGER FENCE/) && refused(agent, /PLAN FENCE/) && readMain.status === 0;
+    },
+  },
+  {
     name: 'reviewGate refuses a step of a plan with a review step unless the current review cleared that step, naming the review step wherever a send answers, the amendment for a refused route and plan mode for OFF-AIM; a Standing step, a subagent, a tool that sends no agent, a prompt that is no step and a plan with no review step pass; a state that cannot be read refuses',
     guards: ['review_gate_cleared', 'review_gate_standing', 'review_gate_error', 'review_gate_not_read', 'review_gate_texts'],
     run(m, dir) {
@@ -4008,7 +4118,15 @@ const PLANTS = {
   // The approval holds the plan's Goals, Asked, Files and Commands; the Steps and the Order may be amended without coming back.
   scope_sections: ["export const SCOPE_SECTIONS = ['Goals', 'Asked', 'Files', 'Commands'];", "export const SCOPE_SECTIONS = ['Goals', 'Files', 'Commands'];", 'report.mjs'],
   scope_unknown: ["const known = then && typeof then === 'object' && !Array.isArray(then);", 'const known = true;', 'report.mjs'],
-  scope_hashes: ["out[name] = createHash('sha256').update(planSection(text, name)).digest('hex');", "out[name] = createHash('sha256').update(String(text)).digest('hex');", 'report.mjs'],
+  scope_hashes: ["out[name] = sha256(name === 'Goals' ? goalsWithoutServedBy(body) : body);", 'out[name] = sha256(String(text));', 'report.mjs'],
+  // The Goals the owner approves leave out the Served by line; every other line of them is still hashed.
+  scope_served_by: ["out[name] = sha256(name === 'Goals' ? goalsWithoutServedBy(body) : body);", 'out[name] = sha256(body);', 'report.mjs'],
+  scope_goals_rest: ["  lines.splice(at, 1);\n  return lines.join('\\n');", "  lines.splice(0, lines.length);\n  return lines.join('\\n');", 'report.mjs'],
+  scope_served_by_first: ["  const at = lines.findIndex((l) => /^Served by:/.test(l));\n  if (at < 0) return text;\n  lines.splice(at, 1);", "  const kept = lines.filter((l) => !/^Served by:/.test(l));\n  if (kept.length === lines.length) return text;\n  lines.splice(0, lines.length, ...kept);", 'report.mjs'],
+  scope_old_marker: [" && !(n === 'Goals' && then[n] === wholeGoals)", '', 'report.mjs'],
+  amend_rescope: ['{ ...mk, hash: snap.hash, scope: snap.scope, amendedAt:', '{ ...mk, hash: snap.hash, scope: mk.scope, amendedAt:', 'approved-plan-guard.mjs'],
+  // The choice popup is not a read: take it back onto plan-guard's list and every gate that asks plan-guard passes it.
+  popup_not_a_read: ["'TodoWrite', 'ToolSearch',", "'TodoWrite', 'AskUserQuestion', 'ToolSearch',", 'plan-guard.mjs'],
   status_scope: ["const moved = scoped ? scopeChanged(mk.scope, bytes.toString('utf8')) : [];", 'const moved = [];', 'report.mjs'],
   scope_mark: ['    plan, hash: snap.hash, scope: snap.scope, at:', '    plan, hash: snap.hash, at:', 'approved-plan-guard.mjs'],
   scope_app_exit: ['plan: x.plan, hash: snap.hash, scope: snap.scope, at:', 'plan: x.plan, hash: snap.hash, at:', 'approved-plan-guard.mjs'],

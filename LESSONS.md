@@ -488,3 +488,4 @@ and the filename carries it.
 - **§394** — [A plan that put the gates' install last so that its own method could run was a bypass of the gates, and approving the plan did not move the responsibility off the session](lessons/394-an-install-placed-last-so-the-method-could-run-is-a-bypass.md)
 - **§395** — [The approval priced every edit alike, a correction held every start alike, and no agent read a move before it went](lessons/395-one-price-for-every-edit-and-one-hold-for-every-message.md)
 - **§396** — [A paragraph a gate enforces whole stayed in the doctrine, which is read in full at every start and only grew](lessons/396-a-paragraph-a-gate-enforces-whole-stays-in-the-doctrine-and-it-only-grows.md)
+- **§397** — [Nine paragraphs a gate enforces whole left the doctrine, and the approval stopped counting the line that maps steps to goals as part of the goals](lessons/397-nine-paragraphs-a-gate-enforces-whole-left-the-doctrine-and-the-approval-dropped-served-by.md)

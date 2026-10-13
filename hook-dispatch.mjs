@@ -49,7 +49,7 @@
  * transcript) and a SendUserFile only of files in the session scratchpad, which
  * also passes the wait between statuses (`report.mjs --wait`), and
  * whose dispatch gate sends a step only when the plan's `Served by:` line names
- * a goal for it (Doctrine §0e rule 16) and, where the plan has an `## Order`
+ * a goal for it (the standing goals in the hub CLAUDE.md) and, where the plan has an `## Order`
  * and no review step, only step N, the pointer, or a Standing step (§0e rule 13);
  * the report gate; the review gate (main thread only, `reviewGate`: where a
  * Standing step follows the hub's aim-review.md, a step of the plan goes only
@@ -329,10 +329,11 @@ export function servedBy(text) {
  *   names what is missing and, for steps, each step that serves none. An empty
  *   `block` is a refusal too: with no standing block to quote, the guard fails
  *   closed rather than passing every plan. The plan guard (ExitPlanMode)
- *   refuses on it (Doctrine §0e rule 16).
+ *   refuses on it (the standing goals in the hub CLAUDE.md, under "Goals every
+ *   session serves").
  */
 export function goalsProblem(text, block = goalsBlock()) {
-  const head = 'GOALS (Doctrine §0e rule 16):';
+  const head = 'GOALS (the standing goals in the hub CLAUDE.md):';
   if (!block) return `${head} the hub CLAUDE.md beside this guard has no "## Goals every session serves" section with numbered goals, so there is no standing block for the plan to quote. Restore the section; do not weaken this check.`;
   const section = planSection(text, 'Goals');
   if (!section.trim()) return `${head} the plan has no "## Goals" section. It quotes the hub CLAUDE.md's goals block word for word, may add goals from the app's own roadmap, and ends with a "Served by:" line naming the goals each step serves.`;
@@ -748,8 +749,8 @@ export function stopMessage(s) {
  *   in its `## Steps`, optionally with the word "step" between them, and the
  *   agent's type, when one is named, is one the harness defines
  *   (BUILTIN_AGENT_TYPES), and the plan's `Served by:` line names a goal for
- *   that step (`servedBy`: a step that serves none is not sent, Doctrine §0e
- *   rule 16). Anything else would carry instructions the owner has not read:
+ *   that step (`servedBy`: a step that serves none is not sent, by the standing
+ *   goals in the hub CLAUDE.md). Anything else would carry instructions the owner has not read:
  *   other words in the prompt, or a custom type's own definition.
  *   THE POINTER: when the plan defines one (an `Order:` line under `## Order`,
  *   report.mjs `planOrder`), the only steps sent are N, the first number in Order
@@ -781,10 +782,12 @@ export function dispatchGate(p, plan = approvedPlan(), pointer = undefined) {
   const n = sentStep(p, plan);
   if (n === null) return refusal(`${head} Send exactly: ${plan.path} step <n>`);
   if (!planSteps(plan.text).includes(n)) return refusal(`${head} The plan has no step ${n}; its steps are ${planSteps(plan.text).join(', ') || 'none'}.`);
-  // A STEP THAT SERVES NO GOAL IS NOT SENT (Doctrine §0e rule 16): the plan's
-  // "Served by:" line has to name, for this step, a goal its Goals section defines.
+  // A STEP THAT SERVES NO GOAL IS NOT SENT (the standing goals in the hub
+  // CLAUDE.md): the plan's "Served by:" line has to name, for this step, a goal its
+  // Goals section defines. That line is not part of the Goals the owner approves
+  // (`goalsWithoutServedBy` in report.mjs), so a step can be added to it with no new approval.
   if (!servedBy(plan.text).get(n)?.length) {
-    return refusal(`${head} The plan's "Served by:" line names no goal for step ${n}, so the step serves none and is not sent. The line is in the plan's "## Goals" section (Doctrine §0e rule 16).`);
+    return refusal(`${head} The plan's "Served by:" line names no goal for step ${n}, so the step serves none and is not sent. The line is in the plan's "## Goals" section; it may be amended with the Steps, and the approval holds.`);
   }
   // THE POINTER (Doctrine §0e rule 13): only step N and a Standing step are
   // sent. N is read from the agents' own hand-backs, never from the session.
@@ -1651,11 +1654,12 @@ async function main(event, raw, p) {
   const root = resolve(process.env.CLAUDE_PROJECT_DIR || p.cwd || process.cwd());
   const printed = [];
   // EVERY PreToolUse refusal, by any guard, family or repo, sets the latch
-  // (Doctrine §0d, §0e). Only seven do not: the latch's own, so it can never
-  // move the time an owner message has to come after; the report gate's;
-  // pending-guard's; the stop hold's and the correction check's; the in-app
-  // approval check's; and the review gate's (a move with no current review, a
-  // refused route, an OFF-AIM verdict). A Stop event and the other events never latch.
+  // (Doctrine §0d, §0e). Only nine do not, each passing latch = false below: the
+  // latch's own, so it can never move the time an owner message has to come
+  // after; pending-guard's; the stop hold's; the correction check's; the state
+  // page gate's; the report gate's; the review gate's (a move with no current
+  // review, a refused route, an OFF-AIM verdict); the rules gate's; and the
+  // in-app approval check's. A Stop event and the other events never latch.
   const refuse = (why, latch = true) => {
     process.stderr.write(why + '\n');
     if (latch && event === 'PreToolUse') { try { setLatch(p, why); } catch { /* the refusal stands either way */ } }
@@ -1831,7 +1835,8 @@ async function main(event, raw, p) {
   }
   // AN AMENDMENT OF THE APPROVED PLAN'S STEPS OR ORDER KEEPS THE APPROVAL
   // (Doctrine §0e rule 13). The write itself was let through only because the
-  // four approved sections (Goals, Asked, Files, Commands) stood unchanged in the
+  // four approved sections (Goals without its Served by line, Asked, Files,
+  // Commands) stood unchanged in the
   // text it would produce; this re-reads the REAL file, checks the four again,
   // and only then moves the marker's hash to the file's. If the real file's four
   // sections differ from what was simulated, or this does not run, the marker
@@ -1872,8 +1877,8 @@ async function main(event, raw, p) {
       const held = run(`node "${join(HUB, 'pending-guard.mjs')}" --held`, raw, root);
       if (held.out.trim()) printed.push(held.out.trim());
     }
-    // THE GOALS EVERY SESSION SERVES COME FIRST IN THE REMINDER (Doctrine §0e
-    // rule 16): the section of the hub CLAUDE.md, printed at every owner message
+    // THE GOALS EVERY SESSION SERVES COME FIRST IN THE REMINDER (the standing
+    // goals in the hub CLAUDE.md): the section of that file, printed at every owner message
     // so they are in front of the session whatever it has been reading. A
     // section that cannot be read is said so, never printed as an empty one.
     let goals = '';
