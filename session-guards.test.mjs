@@ -29,9 +29,10 @@
  * for it once a message typed after it has arrived, and hook-dispatch.mjs prints
  * it once at the top of that prompt's turn), and the stop guard refusing a turn
  * that ends with steps of the approved plan unreturned and no agent running.
- * And the prints after a compaction or a resume, bounded (LESSONS §385): the
- * doctrine due from the heading of §0 up to the heading of §3 and every line at
- * a startup (doctrine-read-guard.mjs), the owner's messages typed after the last
+ * And the prints after a compaction or a resume (LESSONS §385, §398): the doctrine
+ * due in full at a startup, a clear and a compaction, and after a resume only when
+ * the transcript since the last compaction does not already hold every line of it
+ * as it stands (doctrine-read-guard.mjs), the owner's messages typed after the last
  * reply, newest ten, with the count of the rest and a file holding all
  * (compact-recall.mjs), and the lessons as a count and a folder (session-brief.mjs).
  * And the state of the work on one page (report.mjs `managerNotes`, `sortFound`,
@@ -122,6 +123,20 @@ const transcript = (entries) => { const f = join(tmp('sg-tr-'), 't.jsonl'); writ
 // A transcript whose file name is its own: compact-recall.mjs names the file holding
 // every message after it, so two transcripts called t.jsonl would share one.
 const namedTranscript = (entries) => { const f = join(tmp('sg-tr-'), `${sid('rc')}.jsonl`); writeFileSync(f, entries.map((e) => JSON.stringify(e)).join('\n') + '\n'); return f; };
+// Read results on a file as the harness records them: for each range ([first line, how many, and the
+// file's length when it was read if that differs from `total`]) a Read call and its result, a second
+// apart from the time `when(0)` names. `when` gives the time of the k-th range: the default is fixed
+// seconds after the fixture epoch, long before any marker a case writes, and a case that reads after
+// its marker passes `(k) => later(5 + k)`.
+let READ_ID = 0;
+const fileReads = (file, total, ranges, when = (k) => ts(k + 1)) => ranges.flatMap(([start, count, tot = total], k) => {
+  const id = `fr${++READ_ID}`;
+  return [
+    { type: 'assistant', timestamp: when(k), message: { role: 'assistant', content: [{ type: 'tool_use', id, name: 'Read', input: { file_path: file } }] } },
+    { type: 'user', timestamp: when(k), message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: Array.from({ length: count }, (_, j) => `${start + j}\tline`).join('\n') }] },
+      toolUseResult: { type: 'text', file: { filePath: file, content: 'x', startLine: start, numLines: count, totalLines: tot } } },
+  ];
+});
 
 const ASK = 'Why did the restore skip 069? Answer before anything else.';
 const STOPMSG = 'STOP. Nothing more until I answer.';
@@ -1707,58 +1722,135 @@ const CASES = [
   },
 
   {
-    name: 'after a compaction or a resume the doctrine due is the lines from the heading of §0 up to the heading of §3, at any other start every line, and the line printed and the refusal say which',
-    guards: ['doctrine_bounded', 'doctrine_startup_full', 'doctrine_range_from', 'doctrine_range_to', 'doctrine_range_to_after', 'doctrine_range_missing',
-      'doctrine_range_read', 'doctrine_range_line', 'doctrine_range_refusal', 'doctrine_resumed_word', 'doctrine_marker_source'],
+    name: 'a startup, a clear and a compaction make every line of the doctrine due: a part of it clears nothing, a whole read timed before the marker clears nothing, and the line printed and the refusal name the lines and their number, or every line alone where the file cannot be counted',
+    guards: ['doctrine_compact_full', 'doctrine_startup_full', 'doctrine_lines_line', 'doctrine_lines_refusal', 'doctrine_marker_source'],
     run(m) {
       const hub = tmp('sg-hub-');
       const doc = join(hub, 'DOCTRINE.md');
-      // The heading of §0 is line 3 and the heading of §3 line 11, so the lines due after a compaction are 3 to 10.
-      writeFileSync(doc, ['# Doctrine', 'intro', '## 0. First', 'a', '## 0b. Second', 'b', '## 1. Identity', 'c', '## 2. Audience', 'd', '## 3. Taste', 'e', '## 4. Access', 'f'].join('\n') + '\n');
-      // No such headings: nothing says what to read less, so every line is due.
-      const bare = join(hub, 'BARE.md');
-      writeFileSync(bare, 'one\ntwo\nthree\nfour\nfive\n');
+      // Twelve lines of text and a final newline: thirteen as the harness records them, the empty text after the newline
+      // being the last (the live clone's file has 2549 lines of text and every Read of it recorded 2550). The bound this
+      // replaced would have made the middle eight of them due after a compaction.
+      writeFileSync(doc, Array.from({ length: 12 }, (_, i) => `line ${i + 1}`).join('\n') + '\n');
+      const N = 13;
+      const absent = join(hub, 'ABSENT.md');
       const s = sid('db');
-      let n = 0;
-      // Read results for ranges of a file ([first line, how many]), timed after the marker.
-      const reads = (file, total, ranges) => ranges.flatMap(([start, count]) => {
-        const id = `rr${++n}`;
-        const when = later(5 + n);
-        return [
-          { type: 'assistant', timestamp: when, message: { role: 'assistant', content: [{ type: 'tool_use', id, name: 'Read', input: { file_path: file } }] } },
-          { type: 'user', timestamp: when, message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: Array.from({ length: count }, (_, k) => `${start + k}\tline`).join('\n') }] },
-            toolUseResult: { type: 'text', file: { filePath: file, content: 'x', startLine: start, numLines: count, totalLines: total } } },
-        ];
-      });
-      // The refusal for a Bash call after those reads, or null once they clear the marker.
-      const gate = (source, file, ...ranges) => {
+      const after = (k) => later(5 + k);
+      // The refusal for a Bash call after the given reads of the file, or null once they clear the marker.
+      const gate = (source, entries, file = doc) => {
         m.doctrine.markDue({ session_id: s, source }, file);
-        return m.doctrine.decide({ session_id: s, tool_name: 'Bash', tool_input: {} }, reads(file, file === doc ? 14 : 5, ranges), { classify: () => false, doctrine: file });
+        return m.doctrine.decide({ session_id: s, tool_name: 'Bash', tool_input: {} }, entries, { classify: () => false, doctrine: file });
       };
       const refused = (r, text) => typeof r === 'string' && /^DOCTRINE GATE/.test(r) && r.includes(text);
-      const cleared = gate('compact', doc, [3, 8]) === null
-        && gate('compact', doc, [3, 4], [7, 4]) === null
-        && gate('compact', doc, [3, 9]) === null
-        && gate('resume', doc, [3, 8]) === null
-        && gate('startup', doc, [1, 14]) === null
-        && gate('compact', bare, [1, 5]) === null;
-      const missingHeading = gate('compact', doc, [4, 7]);
-      const missingLast = gate('compact', doc, [3, 7]);
-      const outside = gate('compact', doc, [1, 2], [11, 4]);
-      const startup = gate('startup', doc, [3, 8]);
-      const cleared2 = gate('clear', doc, [3, 8]);
-      const noHeadings = gate('compact', bare, [1, 3]);
-      const line = m.doctrine.markDue({ session_id: s, source: 'compact' }, doc);
+      const sources = ['startup', 'clear', 'compact'];
+      const cleared = sources.every((src) => gate(src, fileReads(doc, N, [[1, N]], after)) === null && gate(src, fileReads(doc, N, [[1, 7], [8, N - 7]], after)) === null);
+      // The old bound's lines, a part short at either end, and the whole file read before the marker.
+      const bound = sources.map((src) => gate(src, fileReads(doc, N, [[3, 8]], after)));
+      const shortFirst = sources.map((src) => gate(src, fileReads(doc, N, [[2, N - 1]], after)));
+      const shortLast = sources.map((src) => gate(src, fileReads(doc, N, [[1, N - 1]], after)));
+      const early = sources.map((src) => gate(src, fileReads(doc, N, [[1, N]])));
+      const named = (rs) => rs.every((r) => refused(r, `every line (lines 1 to ${N})`) && r.includes(doc));
+      const compact = m.doctrine.markDue({ session_id: s, source: 'compact' }, doc);
+      const started = m.doctrine.markDue({ session_id: s, source: 'startup' }, doc);
       const resumed = m.doctrine.markDue({ session_id: s, source: 'resume' }, doc);
       const recorded = JSON.parse(readFileSync(join(process.env.DOCTRINE_DUE_DIR, `${s}.json`), 'utf8')).source;
-      const started = m.doctrine.markDue({ session_id: s, source: 'startup' }, doc);
+      const printed = (l, how) => /^DOCTRINE DUE/.test(l) && !l.includes('\n') && l.includes(how) && l.includes(`every line (lines 1 to ${N})`) && l.includes(doc);
+      // A file whose lines cannot be counted: every line, with no number to give.
+      const blind = m.doctrine.markDue({ session_id: s, source: 'compact' }, absent);
+      const blindRefusal = gate('compact', [], absent);
       return cleared
-        && refused(missingHeading, 'lines 3 to 10') && refused(missingLast, 'lines 3 to 10') && refused(outside, 'lines 3 to 10')
-        && refused(startup, 'every line') && !/lines 3 to 10/.test(startup) && refused(cleared2, 'every line')
-        && refused(noHeadings, 'every line')
-        && /^DOCTRINE DUE/.test(line) && !line.includes('\n') && line.includes('was compacted') && line.includes('lines 3 to 10') && line.includes(doc)
-        && /^DOCTRINE DUE/.test(resumed) && resumed.includes('was resumed') && resumed.includes('lines 3 to 10') && recorded === 'resume'
-        && /^DOCTRINE DUE/.test(started) && started.includes('started') && started.includes('every line') && !started.includes('lines 3 to 10');
+        && named(bound) && named(shortFirst) && named(shortLast) && named(early)
+        && printed(compact, 'was compacted') && printed(started, 'started') && printed(resumed, 'was resumed') && recorded === 'resume'
+        && /^DOCTRINE DUE/.test(blind) && blind.includes('every line') && !blind.includes('lines 1 to')
+        && refused(blindRefusal, 'every line') && !blindRefusal.includes('lines 1 to');
+    },
+  },
+  {
+    name: 'a resume owes nothing when the Read results since its last compaction cover every line of the doctrine: the line printed says it is held, the first call runs and the marker is gone; a compaction after the same reads is not held',
+    guards: ['doctrine_resume_decide', 'doctrine_held_line', 'doctrine_compact_full', 'doctrine_count_convention'],
+    run(m) {
+      const hub = tmp('sg-hub-');
+      const doc = join(hub, 'DOCTRINE.md');
+      writeFileSync(doc, Array.from({ length: 12 }, (_, i) => `line ${i + 1}`).join('\n') + '\n');
+      const s = sid('rh');
+      const marker = join(process.env.DOCTRINE_DUE_DIR, `${s}.json`);
+      // Twelve lines of text and a final newline are thirteen lines as the harness records them (see the case above).
+      // A startup that read the file, a compaction, and the whole file read again in two parts after it.
+      const entries = [...fileReads(doc, 13, [[1, 13]], (k) => ts(1 + k)), boundary(10), summary(11), ...fileReads(doc, 13, [[1, 5], [6, 8]], (k) => ts(12 + k))];
+      const tr = transcript(entries);
+      const line = m.doctrine.markDue({ session_id: s, source: 'resume', transcript_path: tr }, doc);
+      const written = existsSync(marker) && JSON.parse(readFileSync(marker, 'utf8')).source === 'resume';
+      const first = m.doctrine.decide({ session_id: s, tool_name: 'Bash', tool_input: {} }, entries, { classify: () => false, doctrine: doc });
+      const gone = !existsSync(marker);
+      // The same transcript at a compaction: the reads came before the start fired, so every line is still due.
+      const compact = m.doctrine.markDue({ session_id: s, source: 'compact', transcript_path: tr }, doc);
+      const compacted = m.doctrine.decide({ session_id: s, tool_name: 'Bash', tool_input: {} }, entries, { classify: () => false, doctrine: doc });
+      return /^DOCTRINE HELD/.test(line) && !line.includes('\n') && line.includes('none is due') && line.includes('13 lines') && line.includes(doc)
+        && written && first === null && gone
+        && /^DOCTRINE DUE/.test(compact) && typeof compacted === 'string' && /^DOCTRINE GATE/.test(compacted) && existsSync(marker);
+    },
+  },
+  {
+    name: 'a resume after a part read owes every line: the line printed says it is due, the first call is refused naming every line and their number, and reading the rest clears it',
+    guards: ['doctrine_held_any', 'doctrine_cover', 'doctrine_lines_refusal'],
+    run(m) {
+      const hub = tmp('sg-hub-');
+      const doc = join(hub, 'DOCTRINE.md');
+      writeFileSync(doc, Array.from({ length: 12 }, (_, i) => `line ${i + 1}`).join('\n') + '\n');
+      const s = sid('rp');
+      const marker = join(process.env.DOCTRINE_DUE_DIR, `${s}.json`);
+      // The first seven lines read twice: the same part again covers nothing more. The file counts thirteen lines.
+      const part = fileReads(doc, 13, [[1, 7], [1, 7]]);
+      const line = m.doctrine.markDue({ session_id: s, source: 'resume', transcript_path: transcript(part) }, doc);
+      const call = (entries) => m.doctrine.decide({ session_id: s, tool_name: 'Bash', tool_input: {} }, entries, { classify: () => false, doctrine: doc });
+      const refused = call(part);
+      const rest = [...part, ...fileReads(doc, 13, [[8, 6]], (k) => ts(10 + k))];
+      return /^DOCTRINE DUE/.test(line) && line.includes('was resumed') && line.includes('every line (lines 1 to 13)') && !line.includes('none is due')
+        && typeof refused === 'string' && /^DOCTRINE GATE/.test(refused) && refused.includes('every line (lines 1 to 13)') && refused.includes(doc) && existsSync(marker)
+        && call(rest) === null && !existsSync(marker);
+    },
+  },
+  {
+    name: 'a resume whose only whole read came before the last compaction owes every line, because the compaction replaced that read with a summary; the whole file read after it clears the marker',
+    guards: ['doctrine_held_boundary'],
+    run(m) {
+      const hub = tmp('sg-hub-');
+      const doc = join(hub, 'DOCTRINE.md');
+      writeFileSync(doc, Array.from({ length: 12 }, (_, i) => `line ${i + 1}`).join('\n') + '\n');
+      const s = sid('rb');
+      const marker = join(process.env.DOCTRINE_DUE_DIR, `${s}.json`);
+      // The whole file read (thirteen lines as the harness counts them), then a compaction, then five lines of it.
+      const entries = [...fileReads(doc, 13, [[1, 13]], (k) => ts(1 + k)), boundary(10), summary(11), ...fileReads(doc, 13, [[1, 5]], (k) => ts(12 + k))];
+      const line = m.doctrine.markDue({ session_id: s, source: 'resume', transcript_path: transcript(entries) }, doc);
+      const call = (list) => m.doctrine.decide({ session_id: s, tool_name: 'Bash', tool_input: {} }, list, { classify: () => false, doctrine: doc });
+      const refused = call(entries);
+      const whole = [...entries, ...fileReads(doc, 13, [[6, 8]], (k) => ts(20 + k))];
+      return /^DOCTRINE DUE/.test(line) && line.includes('every line (lines 1 to 13)')
+        && typeof refused === 'string' && /^DOCTRINE GATE/.test(refused) && existsSync(marker)
+        && call(whole) === null && !existsSync(marker);
+    },
+  },
+  {
+    name: 'a resume holds the doctrine only as it stands: a result recorded when the file had another length counts for nothing, and a file whose lines cannot be counted is due in full',
+    guards: ['doctrine_held_current', 'doctrine_uncountable', 'doctrine_count_convention'],
+    run(m) {
+      const hub = tmp('sg-hub-');
+      const doc = join(hub, 'DOCTRINE.md');
+      writeFileSync(doc, Array.from({ length: 12 }, (_, i) => `line ${i + 1}`).join('\n') + '\n');
+      const absent = join(hub, 'ABSENT.md');
+      const resumeLine = (entries, file) => m.doctrine.markDue({ session_id: sid('rc'), source: 'resume', transcript_path: transcript(entries) }, file);
+      // Lines 1 to 5 were read when the file had eight lines, lines 6 to 13 after it grew to thirteen (twelve lines of text and
+      // a final newline): together they number every line, and the first part is not the text as it stands.
+      const stale = [...fileReads(doc, 13, [[1, 5, 8], [6, 8]])];
+      const staleLine = resumeLine(stale, doc);
+      const fresh = resumeLine([...fileReads(doc, 13, [[1, 5], [6, 8]])], doc);
+      // Results that count the twelve lines of text alone, the way the harness does not: they are of another length, and a
+      // guard that counted so would find every real result stale.
+      const textOnly = resumeLine([...fileReads(doc, 12, [[1, 5], [6, 7]])], doc);
+      // Every line of a file that cannot be counted: the reads exist, and the guard cannot say they cover it.
+      const blindLine = resumeLine(fileReads(absent, 13, [[1, 13]]), absent);
+      return /^DOCTRINE DUE/.test(staleLine) && staleLine.includes('every line (lines 1 to 13)')
+        && /^DOCTRINE HELD/.test(fresh) && /^DOCTRINE DUE/.test(textOnly)
+        && /^DOCTRINE DUE/.test(blindLine) && blindLine.includes('every line') && !blindLine.includes('lines 1 to');
     },
   },
   {
@@ -3878,17 +3970,20 @@ const PLANTS = {
   fence_wired: ['`node "${join(HUB, \'plan-fence.mjs\')}"`, ', '', 'hook-dispatch.mjs'],
   // The doctrine gate.
   doctrine_refuse: ['  return `DOCTRINE GATE', '  return null; // `DOCTRINE GATE', 'doctrine-read-guard.mjs'],
-  doctrine_cover: ['if (to >= from && rec.lines.size >= to - from + 1 && Array.from({ length: to - from + 1 }, (_, k) => from + k).every((n) => rec.lines.has(n))) return path;', 'if (rec.lines.size > 0) return path;', 'doctrine-read-guard.mjs'],
-  // After a compaction or a resume the lines due are the heading of §0 up to the heading of §3; at a startup, every line.
-  doctrine_bounded: ['  if (!BOUNDED_SOURCES.includes(source)) return null;', '  return null;', 'doctrine-read-guard.mjs'],
-  doctrine_startup_full: ['  if (!BOUNDED_SOURCES.includes(source)) return null;', '  if (false) return null;', 'doctrine-read-guard.mjs'],
-  doctrine_range_from: ['const from = lines.findIndex((l) => /^## 0\\. /.test(l));', 'const from = lines.findIndex((l) => /^## 0b\\. /.test(l));', 'doctrine-read-guard.mjs'],
-  doctrine_range_to: ['  return { from: from + 1, to };', '  return { from: from + 1, to: to - 1 };', 'doctrine-read-guard.mjs'],
-  doctrine_range_to_after: ['  return { from: from + 1, to };', '  return { from: from + 1, to: to + 1 };', 'doctrine-read-guard.mjs'],
-  doctrine_range_missing: ['  if (from < 0 || to <= from) return null;', '  if (from < 0 || to <= from) return { from: 1, to: 1 };', 'doctrine-read-guard.mjs'],
-  doctrine_range_read: ['if (readInFull(list, Number(due.at) || 0, doctrine, range)) {', 'if (readInFull(list, Number(due.at) || 0, doctrine)) {', 'doctrine-read-guard.mjs'],
-  doctrine_range_line: ["cover ${linesDue(dueRange(p.source ?? '', doctrine))}", 'cover ${linesDue(null)}', 'doctrine-read-guard.mjs'],
-  doctrine_range_refusal: ['cover ${linesDue(range)}, the main thread', 'cover ${linesDue(null)}, the main thread', 'doctrine-read-guard.mjs'],
+  doctrine_cover: ['if (to > 0 && rec.lines.size >= to && Array.from({ length: to }, (_, k) => k + 1).every((n) => rec.lines.has(n))) return path;', 'if (rec.lines.size > 0) return path;', 'doctrine-read-guard.mjs'],
+  // A startup, a clear and a compaction make every line due, and a resume owes the read only when the transcript since its
+  // last compaction does not hold the whole file as it stands now (LESSONS §398).
+  doctrine_compact_full: ["export const HELD_SOURCES = ['resume'];", "export const HELD_SOURCES = ['resume', 'compact'];", 'doctrine-read-guard.mjs'],
+  doctrine_startup_full: ["export const HELD_SOURCES = ['resume'];", "export const HELD_SOURCES = ['resume', 'startup', 'clear'];", 'doctrine-read-guard.mjs'],
+  doctrine_lines_line: ['until Read results on ${doctrine} cover ${linesDue(n)}, the main thread', 'until Read results on ${doctrine} cover every line, the main thread', 'doctrine-read-guard.mjs'],
+  doctrine_lines_refusal: ['cover ${linesDue(lineCount(doctrine))}, the main thread', 'cover every line, the main thread', 'doctrine-read-guard.mjs'],
+  doctrine_resume_decide: ["HELD_SOURCES.includes(due.source ?? '') ? heldNow(list, doctrine)", 'false ? heldNow(list, doctrine)', 'doctrine-read-guard.mjs'],
+  doctrine_held_line: ["HELD_SOURCES.includes(p.source ?? '') && heldNow(", 'false && heldNow(', 'doctrine-read-guard.mjs'],
+  doctrine_held_any: ['return readInFull(afterLastCompaction(entries), 0, doctrine, n) !== null;', 'return entries.length > 0;', 'doctrine-read-guard.mjs'],
+  doctrine_count_convention: ["return text ? text.split('\\n').length : null;", "return text ? text.replace(/\\n$/, '').split('\\n').length : null;", 'doctrine-read-guard.mjs'],
+  doctrine_held_boundary: ['  return entries.slice(at + 1);', '  return entries;', 'doctrine-read-guard.mjs'],
+  doctrine_held_current: ['if (current !== null && Number(file.totalLines) > 0 && Number(file.totalLines) !== current) continue;', 'if (false) continue;', 'doctrine-read-guard.mjs'],
+  doctrine_uncountable: ['if (n === null) return false;', 'if (false) return false;', 'doctrine-read-guard.mjs'],
   doctrine_resumed_word: ["source === 'resume' ? 'was resumed' : 'started'", "'started'", 'doctrine-read-guard.mjs'],
   doctrine_marker_source: ["JSON.stringify({ at: Date.now(), source: p.source ?? '' })", "JSON.stringify({ at: Date.now(), source: '' })", 'doctrine-read-guard.mjs'],
   // The brief prints the lessons' titles at a startup only, and a count and a folder where it cannot tell.

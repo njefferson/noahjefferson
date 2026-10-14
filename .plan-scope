@@ -1,27 +1,30 @@
 # Written by plan-scope-check.mjs --record. Not hand-edited.
 plan=/root/.claude/plans/read-noahjefferson-handoff-md-and-noahje-purring-raven.md
-planhash=89e73a56f57ea89c
-diffhash=5f427d3eb8d0e923
-verdict=IN-SCOPE: ten tracked hub files and one new lesson, all on the hub Files line, make the two changes the plan Asked section records and the work its step 53 orders, and nothing else; no app, sky file or other repository is touched and the only control relaxed is the one the plan names.
-# IN-SCOPE: ten tracked hub files and one new lesson, all on the hub Files line, make the two changes the plan Asked section records and the work its step 53 orders, and nothing else; no app, sky file or other repository is touched and the only control relaxed is the one the plan names.
+planhash=9b1555fe611f2b86
+diffhash=1a58f140ee5c02d0
+verdict=IN-SCOPE: the hub worktree's uncommitted work is step 69's doctrine-read change, eight modified files and one new lesson, all on the plan's hub Files line; a compaction owes the whole doctrine and a resume owes it only when the transcript does not hold the current text
+# IN-SCOPE: the hub worktree's uncommitted work is the doctrine-read change that step 69 of the plan orders, in eight modified tracked files and one new lesson, every one inside the hub Files line of the plan; it makes a compaction owe the whole doctrine again and a resume owe it only when the transcript does not already hold the current text, and nothing else.
 # 
-# What was judged: the worktree status (branch main, level with the remote, ten modified tracked files, one new untracked lesson, nothing staged), the whole diff read path by path (305 insertions and 190 deletions before the new lesson), the new lesson read whole, the worktree pointer and the earlier record, the plan read by its path, step 53 report, and the messages the scope check printed from the owner, which hold one question and go-words. Nothing in the diff answers to anything beyond the plan.
+# What was judged: the worktree's plan pointer; the status (branch main, level with the remote, eight modified tracked files, one untracked lesson, nothing staged, no record file yet); the whole diff read path by path (about 350 insertions and 165 deletions); the new lesson read whole; step 69's report; and the messages the scope check printed from the owner since the last compaction, which are go-words and a question about a different matter. The doctrine-read choice itself rests on the plan's Asked section, which records it.
 # 
-# Files: the eleven paths are hook-dispatch.mjs, report.mjs, plan-guard.mjs, approved-plan-guard.mjs, session-guards.test.mjs, DOCTRINE.md, CLAUDE.md, LESSONS.md, NOTES.md, aim-review.md and the one new file in the lessons folder, lesson 397. Every one is named on the hub Files line of the plan. No path outside that line changed, no file of the app repository changed, and the live clone was not touched.
+# Files: doctrine-read-guard.mjs (rewritten), hook-dispatch.mjs (one comment), session-guards.test.mjs, DOCTRINE.md (only the enforced-by paragraph of section 11e), CLAUDE.md (the whole-doctrine bullet and the bullet that bounds the prints), LESSONS.md (one index row), lessons/ (a line added to the bullet in lesson 385, and the new lesson 398), NOTES.md. Each is on the plan's hub Files line. session-brief.mjs is unchanged, which is right because it reads only the marker's source. Nothing of the app, nothing in the live clone, and no other hub file changed.
 # 
 # Asked items found in the diff, each once:
-# - The Goals hash leaves out the Served by line: report.mjs gains goalsWithoutServedBy and scopeHashes and scopeChanged use it; a marker recorded before the change keeps matching while the whole Goals section stands; approved-plan-guard.mjs changes in its header comment only; the guard test file gains three cases and six plants. Only the first Served by line is left out, so a second such line, every numbered goal and every other line stay hashed.
-# - The nine doctrine paragraphs that a gate enforces whole are each replaced by the one line step 45 gives (entries 1, 3, 4, 7, 8, 9, 10, 12 and 14); entries 2, 5, 6, 11, 13 and 15 are untouched; each removed paragraph stands whole in lesson 397 with its gate named, the lesson records the change of the Goals hash, and LESSONS.md gains one index line.
-# - The sharper review: aim-review.md gains the three tests for OFF-AIM, the app hooks and the permission classifier in its route section, and a floor option on the message script with a control that proves it.
-# - The choice popup: plan-guard.mjs no longer lists it among the reads, DOCTRINE.md section 0 gains one Enforced by line, and a case and a plant hold it.
-# - Comments: the citations of rule 16 name the standing goals in the hub CLAUDE.md, the count of refusals that do not latch says nine, and the report.mjs title says what the code does.
-# - CLAUDE.md changes in one sentence, the one that said the approval holds the whole Goals section; NOTES.md drops Q-HUB-7 and Q-HUB-14, gains Q-HUB-15 to Q-HUB-32 in the plan order, and Q-HUB-2 names renumbering past 397.
+# - A startup, a clear and a compaction make every line due. The old bound from the heading of section 0 to the heading of section 3 is gone from the guard, the line printed, the refusal and the tests.
+# - A resume owes nothing when Read results since the last compaction cover every line of the file as it stands now, and every line otherwise; a whole read made only before the last compaction, a part read, a result recorded at another length, and a file whose lines cannot be counted all leave it due in full. The line printed begins HELD or DUE and the refusal names the same lines.
+# - The bounds on the owner's messages and on the lessons' titles after a compaction are untouched.
+# - Tests: the old bounded case is replaced by five cases that cover the four the step names, each with plants that take one check out; the plant table is renewed to match.
+# - Text: section 11e, the two CLAUDE.md bullets, the lesson 385 pointer, the new lesson 398 with its index row declared as a gate on the session guards suite, and the queue note (Q-HUB-28 removed, Q-HUB-2's renumbering moved past 398).
 # 
-# Small additions beyond the literal words of step 53, each judged inside scope: the dispatch gate refusal text for a step that serves no goal now says the Served by line may be amended with the Steps and the approval holds; the goals problem label no longer cites rule 16; the opening sentence of the Found queue gains one sentence dating Q-HUB-15 onward; the report.mjs title cites lesson 384 as well. All sit in files on the list, all belong to the same two changes, and none changes what a gate decides.
+# Small widenings, judged inside scope:
+# - The CLAUDE.md bullet that bounds the prints also had its heading and its closing sentence reworded, beyond the doctrine clause alone, because the old heading would have said the doctrine was still bounded; the owner's-messages and lessons clauses keep their meaning.
+# - A fifth test case (a resume holds the doctrine only as it stands) is beyond the four listed; it sits in the same file, tests the current-length comparison the step asks for, and carries its own plants.
+# - The lesson index row and the lesson 385 pointer are the step's own text work.
 # 
-# Loosening check: the one relaxation is the Served by line leaving the approved Goals, which is the first change the plan Asked section records. Everything else holds or tightens: a second Served by line is still hashed, an old marker is not made weaker, and the popup is now refused where nothing refused it before.
+# Not touched, as the plan requires: the other session rules, the doctrine's other sections, lesson 387 and lessons 396 and 397 (which describe the bounded read as it stood, recorded by step 69 as a Found), the live clone, session-brief.mjs, pending-guard.mjs, and any app file.
 # 
-# Owner words: no owner message is quoted or copied into any added file, and none is quoted here.
+# Owner words: no owner message is quoted or copied into any added file that was read, and none is quoted here.
 # 
-# Found: the scope check prints the owner messages since the last compaction only, so the judgement against earlier messages rests on the Asked section of the plan for the two choices.
-# Found: this record covers the plan file and the tree as they stand; an edit of the plan file or of a worktree file before the commit of step 55 strands that commit until this step runs again (queued as Q-HUB-5).
+# Found: the lesson is untracked, so step 69's text checks did not read it; step 71 runs the privacy, quote and third-person checks after its add, and that run is the one that decides on the lesson's wording.
+# Found: this verdict covers the working tree as it stands; an edit of the plan file or of any tree file before the commit strands this record until the step runs again.
+# Found: the scope check prints the owner's messages since the last compaction only, so the judgement against the owner's earlier doctrine choice rests on the plan's Asked section, which records it.

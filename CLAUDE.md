@@ -543,19 +543,24 @@ Every item below has actually happened.
  COMPACTION** — every line, never its section list or a summary of it.
  `doctrine-read-guard.mjs` holds the main thread to reading and the status
  until Read results on `DOCTRINE.md` returned since cover every line. Only
- the live clone's copy, `/root/.claude/hub/DOCTRINE.md`, clears the gate.
- (Doctrine §11e; LESSONS §383.)
-- **AFTER A COMPACTION OR A RESUME THE THREE PRINTS ARE BOUNDED, AND THIS BOUNDS
- THE ITEM ABOVE FOR THOSE TWO STARTS ONLY.** A startup is unchanged: every line
- of the doctrine, every lesson title. After a compaction or a resume the
- doctrine due is the lines from the heading of §0 up to the heading of §3, and
- the line printed at SessionStart names them; the owner's messages come back
+ the live clone's copy, `/root/.claude/hub/DOCTRINE.md`, clears the gate. A
+ resume owes the read only when the session's transcript does not already hold
+ every line as it stands, read since its last compaction; the harness fires
+ resumes for sessions nobody left, and a held one costs nothing.
+ (Doctrine §11e; LESSONS §383, §398.)
+- **AFTER A COMPACTION OR A RESUME THE OWNER'S MESSAGES AND THE LESSONS ARE
+ BOUNDED, AND THE DOCTRINE IS NOT.** A startup is unchanged: every line
+ of the doctrine, every lesson title. After a compaction every line of the
+ doctrine is due as at a startup, and after a resume none is when the
+ transcript already holds every line as it stands (LESSONS §398), and
+ the line printed at SessionStart names the lines due; the owner's messages come back
  only if typed after the last reply, the newest ten, oldest first, with the
  count of the rest and the path of a file holding all of them
  (`compact-recall.mjs`, which bounds the §376 print named further up); and the
  brief prints the lessons as a count and the folder's path, with the reason on
  its own line where it cannot read the start's marker. Each of the three was a
- large share of a fresh context, and each compaction came sooner than the last.
+ large share of a fresh context, and each compaction came sooner than the last;
+ the doctrine's share is paid on purpose now (LESSONS §398).
  (Doctrine §11e; LESSONS §385.)
 - **ONLY `staging` AND `main` REACH A REMOTE, IN EVERY REPO.** The rule and
  what `push-guard.mjs` refuses are in the harness-branch item near the top of

@@ -1891,7 +1891,9 @@ async function main(event, raw, p) {
   if (event === 'SessionStart' && p.source !== 'compact') run(`node "${join(HUB, 'pending-guard.mjs')}" --start`, raw, root);
   // Every session start, the one after a compaction included, makes the whole
   // doctrine due again and prints one line saying so (Doctrine §11e), after
-  // the recalled messages, which come before anything else.
+  // the recalled messages, which come before anything else. A resume whose
+  // transcript already holds every line of the doctrine as it stands, read since
+  // the last compaction, owes nothing, and the line says so (LESSONS §398).
   let dueLine = '';
   if (event === 'SessionStart' && !p.agent_id) {
     const due = run(`node "${join(HUB, 'doctrine-read-guard.mjs')}" --due`, raw, root);

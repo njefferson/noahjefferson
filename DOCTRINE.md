@@ -1576,19 +1576,24 @@ document longer and the next session less likely to read it.
 *Enforced by:* `doctrine-read-guard.mjs`, on the main thread. Every
 SessionStart, the one the harness fires after a compaction included, writes a
 due marker for the session, records the start's source in it, and prints one
-line saying so and naming the lines that are due. While it stands, the main
-thread may only read and give the status. At a startup every line is due. After
-a compaction or a resume the lines due are those from the heading of §0 up to
-the heading of §3, which hold the rules the main thread acts on, and the line
-printed says so: the whole file read again after each one was a large share of
-a fresh context, so each compaction came sooner than the last (LESSONS §385).
-A doctrine whose headings cannot be found is read in full. The marker clears
-when the Read results on `DOCTRINE.md` returned after it cover the lines due,
-counted across as many reads as it takes from the lines each result actually
-returned, never an errored one. Only the hub's own `DOCTRINE.md` counts, the
-one beside the gate in the clone every gate runs from; a copy anywhere else is
-not the doctrine. Agents are not held by it: `plan-fence.mjs` holds them to
-the approved plan instead (§11b).
+line saying what is due and naming the lines. While it stands, the main
+thread may only read and give the status. At a startup, a clear and a
+compaction every line is due: the read carries the owner's rules word for word
+across the point where a summary replaces the conversation, and a part of the
+file carries a part of them (LESSONS §398). After a resume nothing is due when
+the Read results in the session's transcript since its last startup or
+compaction cover every line of the doctrine as it stands; every line is due
+otherwise, a part read, a whole read made only before the last compaction and a
+read of a file that has since changed length among them, because a resume keeps
+the conversation it had and no more. A doctrine whose lines cannot be counted
+is read in full. The marker clears when the Read results on `DOCTRINE.md`
+cover the lines due, counted across as many reads as it takes from the lines
+each result actually returned, never an errored one: for a startup, a clear and
+a compaction those returned after the marker, for a resume those since the last
+compaction. Only the hub's own `DOCTRINE.md` counts, the one beside the gate in
+the clone every gate runs from; a copy anywhere else is not the doctrine.
+Agents are not held by it: `plan-fence.mjs` holds them to the approved plan
+instead (§11b).
 
 **The tell, stated so it can be caught early:** the urge to write a NEW rule
 is itself the signal to go and check whether it is already written. That urge
