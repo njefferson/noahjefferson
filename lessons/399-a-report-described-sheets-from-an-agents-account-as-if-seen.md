@@ -1,0 +1,17 @@
+## 399 · A report described sheets from an agent's account of them as if they had been seen, and the choice put on them had to be withdrawn
+
+**Enforced by:** CHECKLIST open-before-describing — before a report says what a rendered picture shows, or puts a choice on it, the reporter opens that picture itself with the Read tool, at the size the thing it reports needs (one pixel of the photograph to one pixel of the sheet where the artefact is narrower than a twentieth of the frame), and every picture it did not open is named as the agent's reading and never described as seen
+
+**Smell:** a sentence about how a picture looks, written by someone who did not render it, with no line saying it was opened; a change described as absent or as cleared on a sheet whose scale cannot show it.
+
+**Recorded 2026-10-15, measured 2026-10-14 in Jefferson-Photography-Studio.** A plan to clear defects from a look's sky ended with a report to the owner and a choice about how blurred leaves should look, sent with sheets. The report said what the sheets showed. Three of them had been opened by the manager. The results it gave for the cirrus edge and for the rim of the leaf tips came from the agent's report: at the scale of those sheets a change at that edge cannot be seen, so the sheets could not support the result, and five of the frames it spoke of had not been opened at all. It was then asked whether the sheets sent at the end had truly been looked at, and for that part the answer was no.
+
+**What it cost.** The choice was withdrawn, because it rested on sheets not all seen. The sheets that had been opened showed a defect the fix brought with it, teal leaves and pale spots inside blurred foliage that the fix counted as sky, so the fix was held back from staging. The next plan opens every sheet itself, at full size and at each artefact, before anything is put forward.
+
+**Why it happens.** The rules that already cover this are written for whoever renders. A visual app is judged by looking (§328), and a picture has to be large enough to show the thing the recommendation rests on (§365). Here an agent rendered the sheets, opened them and wrote an account, and the manager then reported the account in its own voice. A sentence such as "the cirrus edge is unchanged" reads as seen whoever wrote it, and the reader cannot tell a looked-at picture from a relayed one. An agent's account is evidence of what the agent saw. It is not the reporter's looking, and a report built on it needs a line that says so.
+
+**The rule.** Whoever puts a sentence about a picture to a reader has opened that picture. Where the reporter has not, the sentence says it is the agent's reading and that it was not opened. A claim about a thing narrower than a twentieth of the frame rests on the picture at one pixel to one pixel, and a sheet at the scale of a phone screen answers no question about it. A choice about how a photograph looks goes out with pictures the reporter opened, beside the question (§359).
+
+**What no gate sees.** Nothing reads a sentence about how a picture looks, so this rests on the checklist item, on a plan's own rule that the main thread opens every sheet it reports on or sends, and on the question being asked. The question being asked is how this one was found, and it should not be the way the next is.
+
+**The general form.** A report is as seen as its reporter's own looking and no further. Looking passed down from an agent is labelled as passed down, and the label costs one clause.
