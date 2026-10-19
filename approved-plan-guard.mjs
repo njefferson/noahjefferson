@@ -76,6 +76,13 @@
  *   marker recorded from that exit stands and nothing has happened since but
  *   reads, until an agent is sent under the plan or the owner writes again.
  *
+ *   THE MARKER ALSO HOLDS THE HASH OF THE PLAN'S SCRIPT (`scriptHash`), taken from
+ *   its `## Script` section at approval (`scriptHashOf` in report.mjs), by the tool
+ *   and from the owner's exit in the app alike. An amendment moves `hash` and
+ *   `scope` and keeps `scriptHash`, so a script edited after approval matches
+ *   nothing, and a Workflow call is held to the one the owner read
+ *   (`workflowGate` in hook-dispatch.mjs).
+ *
  *   `node approved-plan-guard.mjs --done` ends the approved work: the last
  *   step of every plan runs it.
  *
@@ -89,7 +96,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { tailEntries, isOwnerMessage } from './transcript-tail.mjs';
-import { californiaTime, scopeHashes, scopeChanged, SCOPE_SECTIONS } from './report.mjs';
+import { californiaTime, scopeHashes, scopeChanged, SCOPE_SECTIONS, scriptHashOf } from './report.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MARKER = join(homedir(), '.claude', 'APPROVED-PLAN.json');
@@ -100,17 +107,21 @@ const RULE = 'PLAN MODE ONLY, AND TALK DURING THE WORK (Doctrine §0e): nothing 
 const hashOf = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
 
 /**
- * The marker's two records of a plan file, from ONE read.
+ * The marker's three records of a plan file, from ONE read.
  * @param {string} p  the plan file.
- * @returns {{hash: string, scope: Record<string, string>}} the sha256 of the file
- *   and the hashes of its approved scope (`scopeHashes`: Goals, Asked, Files,
- *   Commands). The marker holds both at approval: the whole-file hash is what
- *   every other gate compares, and the scope is what an amendment of the Steps
- *   or the Order is allowed to keep unchanged.
+ * @returns {{hash: string, scope: Record<string, string>, script: string}} the sha256 of
+ *   the file, the hashes of its approved scope (`scopeHashes`: Goals, Asked, Files,
+ *   Commands) and the hash of its script (`scriptHashOf`, '' when it has none). The
+ *   marker holds all three at approval: the whole-file hash is what every other gate
+ *   compares, the scope is what an amendment of the Steps or the Order is allowed to
+ *   keep unchanged, and the script's hash is what a Workflow call is held to
+ *   (`workflowGate`). An amendment moves the first two and never the third, so a
+ *   script edited after approval matches nothing.
  */
 const snapshotOf = (p) => {
   const bytes = readFileSync(p);
-  return { hash: createHash('sha256').update(bytes).digest('hex'), scope: scopeHashes(bytes.toString('utf8')) };
+  const text = bytes.toString('utf8');
+  return { hash: createHash('sha256').update(bytes).digest('hex'), scope: scopeHashes(text), script: scriptHashOf(text) };
 };
 
 if (process.argv.includes('--done')) {
@@ -285,7 +296,7 @@ function recordAppExit(p) {
     mkdirSync(dirname(MARKER), { recursive: true });
     const snap = snapshotOf(x.plan);
     writeFileSync(MARKER, JSON.stringify({
-      plan: x.plan, hash: snap.hash, scope: snap.scope, at: new Date().toISOString(), session: p.session_id ?? null,
+      plan: x.plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), session: p.session_id ?? null,
       via: `the owner's exit from plan mode in the app: entry ${x.uuid} at ${new Date(x.at).toISOString()}`, planMatchesFile: null, appExit: x.uuid,
     }, null, 1));
     outcome = 'recorded';
@@ -365,7 +376,7 @@ if (process.argv.includes('--mark')) {
   } catch { process.exit(0); }                                // the file went between the check and the read: no marker
   mkdirSync(dirname(MARKER), { recursive: true });
   writeFileSync(MARKER, JSON.stringify({
-    plan, hash: snap.hash, scope: snap.scope, at: new Date().toISOString(), session: p.session_id ?? null,
+    plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), session: p.session_id ?? null,
     via: `ExitPlanMode approval: result ${fromObject ? 'filePath' : 'text'}`, planMatchesFile,
   }, null, 1));
   process.exit(0);

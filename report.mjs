@@ -64,6 +64,26 @@
  *       and Commands changed since (`scopeChanged`). Before
  *       sending the first agent under any approval, the manager gives a status
  *       and reads it; the dispatch gate's refusals print the same lines.
+ *       A STATUS SHOWS WHAT CHANGED AND NOTHING TWICE. What the session's
+ *       statuses have printed is remembered (`readSeen`, `writeSeen`:
+ *       ~/.claude/report-seen/<session>.json), so the goals print once per
+ *       session; a hand-back prints once, under the step it is for, and the
+ *       ended-agents list does not print its text again; a Found line prints when it
+ *       is new, when its text, its sort or the manager's note changed, and while
+ *       it is unsorted; a running agent's hook refusal prints once; the approval
+ *       state prints in full only when it differs from the last. It adds the main
+ *       thread's own reads since the last status as a count and their paths, and
+ *       the refused reads of the record that no Read has since returned
+ *       (`readsBlock`; the dispatch gate sends no step while one is named). With no
+ *       session id there is no memory and everything prints, as it did. The whole
+ *       record stays on the status page, which is rewritten whole.
+ *   node report.mjs --page
+ *       Run by hook-dispatch.mjs when the notice of an agent's end arrives as a
+ *       prompt: rewrites the status page from the same read a status makes
+ *       (`writeStatusPage`) and does nothing else. It stamps no clock, prints no
+ *       status and writes no memory, so the status gate and the page gate are
+ *       unchanged. The session is read from the hook's payload on stdin, else
+ *       from CLAUDE_CODE_SESSION_ID.
  *   node report.mjs --gate
  *       PreToolUse, run by hook-dispatch.mjs: refuses the call when an agent
  *       the session launched has ENDED since the last status (`endedSince`).
@@ -91,7 +111,7 @@
  * No app notifications, ever (2026-09-28).
  */
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, statSync, openSync, readSync, closeSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve as resolvePath } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -252,6 +272,40 @@ export function scopeChanged(then, text) {
   const known = then && typeof then === 'object' && !Array.isArray(then);
   const wholeGoals = sha256(planSection(text, 'Goals'));
   return SCOPE_SECTIONS.filter((n) => !known || (then[n] !== now[n] && !(n === 'Goals' && then[n] === wholeGoals)));
+}
+
+/**
+ * The script a plan carries for a Workflow call.
+ * @param {string} text  the plan.
+ * @returns {string|null} the text of the plan's `## Script` section that a
+ *   Workflow call may carry: the content of the first fenced block there when
+ *   the section has one, else the section's text with blank lines taken off both
+ *   ends. null when the plan has no such section, when it is empty, or when what
+ *   it holds does not begin `export const meta`, which every workflow script
+ *   must (a section of prose is no script). The dispatch gate accepts a
+ *   Workflow call whose `script` is exactly this text (`workflowGate` in
+ *   hook-dispatch.mjs), and the approval marker records its hash (`scriptHashOf`)
+ *   when the plan is approved.
+ */
+export function planScript(text) {
+  const body = planSection(text, 'Script');
+  if (!body.trim()) return null;
+  const fence = /^```[^\n]*\n([\s\S]*?)\n```[ \t]*$/m.exec(body);
+  const script = fence ? fence[1] : body.replace(/^(?:[ \t]*\n)+/, '').replace(/\s+$/, '');
+  return /^export const meta\b/.test(script) ? script : null;
+}
+
+/**
+ * The hash of a plan's script, as the approval marker records it.
+ * @param {string} text  the plan.
+ * @returns {string} the sha256 of `planScript(text)`, or '' when the plan has none.
+ *   The marker holds it from the moment of approval and an amendment of the Steps
+ *   or the Order never moves it, so a script edited after approval no longer
+ *   matches and the Workflow call is refused.
+ */
+export function scriptHashOf(text) {
+  const s = planScript(text);
+  return s === null ? '' : sha256(s);
 }
 
 /**
@@ -519,22 +573,207 @@ export function agentEnds(sid, stampAt = 0) {
   return out.sort((a, b) => a.at - b.at);
 }
 
+// ---- what a status remembers, so that it shows what changed and nothing twice (Doctrine §0e rule 2) ----
+
+const safeKey = (sid) => String(sid ?? '').replace(/[^A-Za-z0-9_-]/g, '_');
+const seenFile = (sid) => join(process.env.REPORT_SEEN_DIR || join(homedir(), '.claude', 'report-seen'), `${safeKey(sid)}.json`);
+
+/**
+ * What the statuses of a session have already printed.
+ * @param {string} sid  the session id, or '' when the shell has none.
+ * @returns {{goals?: boolean, backs?: Record<string, number>, found?: Record<string, string>,
+ *   refusals?: Record<string, number>, approval?: string} | null} the record the
+ *   last status left in ~/.claude/report-seen/<sid>.json: whether the goals were
+ *   printed, each hand-back printed (`<agent id>@<time>`), each Found line as it
+ *   was printed (its text, its sort and the manager's note), how many hook
+ *   refusals of each agent were printed, and the hash of the approval state.
+ *   {} when the session has none yet or the file cannot be read, so the first
+ *   status prints everything; null when there is no session id, which means a
+ *   status with no memory that prints everything and records nothing.
+ */
+export function readSeen(sid) {
+  if (!sid) return null;
+  try {
+    const j = JSON.parse(readFileSync(seenFile(sid), 'utf8'));
+    return j && typeof j === 'object' && !Array.isArray(j) ? j : {};
+  } catch { return {}; }
+}
+
+/**
+ * Record what a status printed.
+ * @param {string} sid  the session id; nothing is written without one.
+ * @param {object|null} seen  `readSeen`'s answer before the status.
+ * @param {{backs: object, found: object, refusals: object, approval: string}} mark  what this status printed.
+ * @returns {boolean} true when the record was written. The new record is the old
+ *   one with this status's marks laid over it and `goals` set, so a failure to
+ *   write costs only a repeat in the next status, never a missing line.
+ */
+export function writeSeen(sid, seen, mark) {
+  if (!sid) return false;
+  try {
+    const f = seenFile(sid);
+    mkdirSync(dirname(f), { recursive: true });
+    const keep = (o, n) => Object.fromEntries(Object.entries(o ?? {}).slice(-n));
+    writeFileSync(f, JSON.stringify({
+      goals: true,
+      backs: keep({ ...(seen?.backs ?? {}), ...mark.backs }, 400),
+      found: keep({ ...(seen?.found ?? {}), ...mark.found }, 600),
+      refusals: { ...(seen?.refusals ?? {}), ...mark.refusals },
+      approval: mark.approval || seen?.approval || '',
+    }));
+    return true;
+  } catch { return false; }
+}
+
+const refusedFile = (sid) => join(process.env.REFUSED_READS_DIR || join(homedir(), '.claude', 'refused-reads'), `${safeKey(sid)}.json`);
+
+/**
+ * Record that a read of a path of the record was refused.
+ * @param {string} sid  the session id; nothing is recorded without one.
+ * @param {string} path  the absolute path the refused Read named.
+ * @param {string} [why]  the refusal's text, kept to 200 characters.
+ * @param {number} [at]  the time in ms; now by default.
+ * @returns {boolean} true when written. One entry per path (a later refusal
+ *   replaces the earlier), the newest 50 kept. `unreadRefusals` says which of
+ *   these have been read since; the status names them and the dispatch gate
+ *   sends no step while one is named (`readsGate` in hook-dispatch.mjs).
+ */
+export function noteRefusedRead(sid, path, why = '', at = Date.now()) {
+  if (!sid || !path) return false;
+  try {
+    const f = refusedFile(sid);
+    let list = [];
+    try { list = JSON.parse(readFileSync(f, 'utf8')).reads ?? []; } catch { list = []; }
+    list = list.filter((x) => x.path !== path);
+    list.push({ path: String(path), at, why: String(why).slice(0, 200) });
+    mkdirSync(dirname(f), { recursive: true });
+    writeFileSync(f, JSON.stringify({ reads: list.slice(-50) }));
+    return true;
+  } catch { return false; }
+}
+
+/**
+ * The refused reads recorded for a session.
+ * @param {string} sid  the session id.
+ * @returns {{path: string, at: number, why: string}[]} oldest first; [] when there are none or the record cannot be read.
+ */
+export function refusedReads(sid) {
+  if (!sid) return [];
+  try { const r = JSON.parse(readFileSync(refusedFile(sid), 'utf8')).reads; return Array.isArray(r) ? r : []; } catch { return []; }
+}
+
+/**
+ * The refused reads that no Read has since returned.
+ * @param {{path: string, at: number}[]} list  `refusedReads`' answer.
+ * @param {object[]} entries  the main transcript's entries (`tailEntries`).
+ * @returns {{path: string, at: number, why: string}[]} each refused read of a file
+ *   that still exists with no later Read call of the main thread on exactly that
+ *   path whose result was not an error. A file that is gone, or is not a regular
+ *   file, cannot be read and is dropped, so a path that was never there cannot
+ *   hold the dispatch gate for ever. THE INVARIANT `readsGate` relies on: a path
+ *   in this list can be cleared by reading it, and by nothing else.
+ */
+export function unreadRefusals(list, entries) {
+  const asked = new Map();
+  const reads = new Map();
+  for (const e of entries ?? []) {
+    if (e?.isSidechain || e?.agentId) continue;
+    const c = e?.message?.content;
+    if (e?.type === 'assistant' && Array.isArray(c)) {
+      for (const b of c) if (b?.type === 'tool_use' && b.name === 'Read') asked.set(b.id, resolvePath(String(b.input?.file_path ?? '')));
+    }
+    const t = Date.parse(e?.timestamp ?? '');
+    if (e?.type === 'user' && Array.isArray(c) && Number.isFinite(t)) {
+      for (const b of c) {
+        if (b?.type !== 'tool_result' || b.is_error || !asked.has(b.tool_use_id)) continue;
+        const p = asked.get(b.tool_use_id);
+        reads.set(p, Math.max(reads.get(p) ?? 0, t));
+      }
+    }
+  }
+  return (list ?? []).filter((x) => {
+    try { if (!statSync(x.path).isFile()) return false; } catch { return false; }
+    return !((reads.get(resolvePath(x.path)) ?? 0) > Number(x.at));
+  });
+}
+
+/**
+ * The main thread's reads since a time.
+ * @param {object[]} entries  the main transcript's entries.
+ * @param {number} since  the last status's time in ms (0 for all).
+ * @returns {{count: number, tools: Record<string, number>, paths: string[]}} the Read,
+ *   Grep and Glob calls the main thread made after `since` (a subagent's entries
+ *   are not in this file; a sidechain entry is skipped), how many of each, and the
+ *   distinct paths they named (a Read's file, a Grep's path or "the working
+ *   directory", a Glob's pattern), in the order first met.
+ */
+export function mainReadsSince(entries, since) {
+  const out = { count: 0, tools: {}, paths: [] };
+  for (const e of entries ?? []) {
+    if (e?.type !== 'assistant' || e.isSidechain || e.agentId) continue;
+    const t = Date.parse(e.timestamp ?? '');
+    if (!Number.isFinite(t) || t <= since) continue;
+    for (const b of Array.isArray(e.message?.content) ? e.message.content : []) {
+      if (b?.type !== 'tool_use' || !/^(?:Read|Grep|Glob)$/.test(b.name ?? '')) continue;
+      out.count++;
+      out.tools[b.name] = (out.tools[b.name] ?? 0) + 1;
+      const i = b.input ?? {};
+      const p = String(b.name === 'Read' ? (i.file_path ?? '') : b.name === 'Grep' ? (i.path ?? 'the working directory') : (i.pattern ?? ''));
+      if (p && !out.paths.includes(p)) out.paths.push(p);
+    }
+  }
+  return out;
+}
+
+/**
+ * The reads block a status prints.
+ * @param {string} sid  the session id, or '' when the shell has none.
+ * @param {number} since  the last status's time in ms.
+ * @returns {string} lines, never a table: how many reads the main thread made since
+ *   the last status, of which tools, with their paths (at most 30 shown, the rest
+ *   counted); then the refused reads of the record not read since, each with its
+ *   time, or that there are none. A plain line when the transcript cannot be read.
+ */
+export function readsBlock(sid, since) {
+  const f = sid ? sessionFiles(sid) : null;
+  if (!f) return `Main thread reads since the last status: not read (${sid ? `no transcript found for session ${sid}` : 'no CLAUDE_CODE_SESSION_ID in this shell'}).`;
+  const entries = tailEntries(f.main, 16 * 1024 * 1024);
+  const r = mainReadsSince(entries, since);
+  const kinds = Object.entries(r.tools).map(([k, n]) => `${k} ${n}`).join(', ');
+  const shown = r.paths.slice(0, 30);
+  const lines = [r.count
+    ? `Main thread reads since the last status: ${r.count} (${kinds}): ${shown.join(', ')}${r.paths.length > shown.length ? `, and ${r.paths.length - shown.length} more` : ''}.`
+    : 'Main thread reads since the last status: none.'];
+  const open = unreadRefusals(refusedReads(sid), entries);
+  if (!open.length) lines.push('Refused reads of the record not read since: none.');
+  else {
+    lines.push('Refused reads of the record NOT read since (the dispatch gate sends no step while one is named; reading the file clears it):');
+    for (const x of open) lines.push(`- ${x.path}, refused at ${californiaTime(new Date(x.at))} (California)${x.why ? `: ${x.why.replace(/\s+/g, ' ')}` : ''}`);
+  }
+  return lines.join('\n');
+}
+
 /**
  * The agents block a status prints.
  * @param {string} sid  the session id, or '' when the shell has none.
  * @param {number} stampAt  the last status's time in ms.
+ * @param {object[]|null} [ended]  the agents `agentEnds` found ended since the last status.
+ * @param {Map<string, number>} [printed]  agent id to the plan step whose hand-back this
+ *   status printed in full above (`pointerBlock`'s `mark.agents`); such an agent's last
+ *   entry is not printed a second time.
  * @returns {string} a headed list, never a table: one item per ended agent with
  *   how it ended, when (California), its transcript and its last entry; "none"
  *   when none ended; and a plain line when the session's files cannot be read,
- *   so the status never implies a read it did not make.
+ *   so the status never implies a read it did not make. An agent whose hand-back
+ *   is already above says so in place of the text, so nothing is printed twice.
  */
-export function agentsBlock(sid, stampAt, ended = undefined) {
+export function agentsBlock(sid, stampAt, ended = undefined, printed = new Map()) {
   if (ended === undefined) ended = sid ? agentEnds(sid, stampAt) : null;
   if (!ended) return `Agents ended since the last status: not read (${sid ? `no transcript found for session ${sid}` : 'no CLAUDE_CODE_SESSION_ID in this shell'}).`;
   if (!ended.length) return 'Agents ended since the last status: none.';
   return ['Agents ended since the last status, each read from its own transcript:', ...ended.map((a) =>
     `- ${a.id}${a.description ? ` "${a.description}"` : ''} ended ${a.at ? `at ${californiaTime(new Date(a.at))} (California) ` : ''}by ${a.how}.\n`
-    + `  Transcript: ${a.path}\n  Last entry: ${a.last.replace(/\n/g, '\n    ')}`)].join('\n');
+    + `  Transcript: ${a.path}\n  Last entry: ${printed.has(a.id) ? `its hand-back, printed above under step ${printed.get(a.id)}.` : a.last.replace(/\n/g, '\n    ')}`)].join('\n');
 }
 
 // ---- what an agent's own transcript says of its gates ----
@@ -590,26 +829,37 @@ export function agentReads(entries) {
  *   eight in full, the rest counted) and its last tool result, each read from
  *   the agent's own transcript by `agentReads`; "none" when there is no such
  *   agent; and a plain line when the session's files cannot be read, so a
- *   status never implies a read it did not make.
+ *   status never implies a read it did not make. With a memory (`seen`, from
+ *   `readSeen`) an agent that is still running is listed only when it has hook
+ *   refusals no earlier status printed, and then only those, so a refusal is
+ *   shown once; an agent that ended since the last status is listed in full.
+ *   `mark.refusals` is filled with each agent's refusal count for `writeSeen`.
  */
-export function gateReadsBlock(sid, ended = []) {
+export function gateReadsBlock(sid, ended = [], seen = null, mark = null) {
   const running = sid ? runningAgents(sid) : null;
   if (!running) return `Agents' hook refusals and last tool results: not read (${sid ? `no transcript found for session ${sid}` : 'no CLAUDE_CODE_SESSION_ID in this shell'}).`;
   const list = [...running.map((a) => ({ id: a.id, description: a.description, path: a.path, state: 'running' })),
     ...(ended ?? []).map((a) => ({ id: a.id, description: a.description, path: a.path, state: `ended by ${a.how}` }))];
   if (!list.length) return 'Agents\' hook refusals and last tool results: no agent is running and none has ended since the last status.';
-  const items = list.map((a) => {
+  const items = [];
+  for (const a of list) {
     const who = `- agent ${a.id}${a.description ? ` "${a.description}"` : ''} (${a.state})`;
     const r = agentReads(tailEntries(a.path, 16 * 1024 * 1024));
+    const before = a.state === 'running' && seen ? Number(seen.refusals?.[a.id]) || 0 : 0;
+    if (mark) mark.refusals[a.id] = r.refusals.length;
+    if (a.state === 'running' && seen && r.refusals.length <= before) continue;
     const when = (t) => (Number.isFinite(t) ? `${californiaTime(new Date(t))} (California)` : 'an unreadable time');
-    const shown = r.refusals.slice(-REFUSALS_SHOWN);
-    const head = r.refusals.length ? `${r.refusals.length} hook refusal${r.refusals.length === 1 ? '' : 's'}${r.refusals.length > shown.length ? `, the newest ${shown.length} below` : ''}.` : 'no hook refusals.';
-    const lines = [`${who}: ${head}`,
+    const fresh = r.refusals.slice(before);
+    const shown = fresh.slice(-REFUSALS_SHOWN);
+    const head = fresh.length
+      ? `${fresh.length} hook refusal${fresh.length === 1 ? '' : 's'}${before ? ' new since the last status' : ''}${fresh.length > shown.length ? `, the newest ${shown.length} below` : ''}.`
+      : 'no hook refusals.';
+    items.push([`${who}: ${head}`,
       ...shown.map((f) => `  Refused at ${when(f.at)}, ${f.tool || 'a call'}: ${clip(f.text).replace(/\n/g, '\n    ')}`),
       r.last ? `  Last tool result, ${r.last.tool || 'a call'}, ${when(r.last.at)}${r.last.error ? ', an error' : ''}: ${clip(r.last.text).replace(/\n/g, '\n    ')}`
-        : '  Last tool result: none yet.'];
-    return lines.join('\n');
-  });
+        : '  Last tool result: none yet.'].join('\n'));
+  }
+  if (!items.length) return 'Agents\' hook refusals and last tool results: no running agent has a hook refusal that an earlier status did not print, and none has ended since.';
   return ['Agents\' hook refusals and last tool results, each read from the agent\'s own transcript, never from what it said:', ...items].join('\n');
 }
 
@@ -1339,8 +1589,16 @@ export function openForOwner(st) {
  *   counts of the four groups in the heading line; then one line saying whether the
  *   manager's notes (`managerNotes`) are written and what they hold. A hand-back has
  *   two lines by rule and the print shows however many it finds.
+ *   WHAT CHANGED AND NOTHING TWICE: with a memory (`seen`, from `readSeen`) a
+ *   hand-back is printed once, the status that first meets it, and a Found line is
+ *   printed when it is new, when its text or its sort or the manager's note changed,
+ *   or while it is unsorted; a sorted line an earlier status printed is counted and
+ *   left to the status page. With no memory (`seen` null) everything prints, as it
+ *   did. `mark` (when given) is filled with what this print showed, for `writeSeen`:
+ *   `backs` (`<agent id>@<time>`), `found` (key to the stamp printed), and `agents`,
+ *   a Map of agent id to step for `agentsBlock`, which must not print those again.
  */
-export function pointerBlock(st) {
+export function pointerBlock(st, seen = null, mark = null) {
   if (!st.read) return `next: not read (${st.why}).`;
   if (!st.pointer) return `next: not defined (${st.why}).`;
   const p = st.pointer;
@@ -1348,19 +1606,31 @@ export function pointerBlock(st) {
     `Order, each step's state: ${st.steps.filter((x) => !x.standing).map((x) => `${x.step} ${x.state}`).join('; ')}.`,
     ...(st.steps.some((x) => x.standing) ? [`Standing, sent at any time: ${st.steps.filter((x) => x.standing).map((x) => `${x.step} ${x.state}`).join('; ')}.`] : [])];
   const backs = st.steps.filter((x) => x.back);
-  out.push(backs.length ? 'Hand-backs, the newest for each step, each read from the agent\'s own transcript:' : 'Hand-backs: no step has one yet.');
-  for (const x of backs) {
+  const backKey = (x) => `${x.back.id}@${x.back.at}`;
+  const fresh = backs.filter((x) => !seen || !seen.backs?.[backKey(x)]);
+  if (!backs.length) out.push('Hand-backs: no step has one yet.');
+  else if (!fresh.length) out.push('Hand-backs: none new since the last status; the status page carries each one.');
+  else out.push('Hand-backs new since the last status, the newest for each step, each read from the agent\'s own transcript:');
+  for (const x of fresh) {
     out.push(`- step ${x.step}, ended ${x.back.at ? `${californiaTime(new Date(x.back.at))} (California) ` : ''}by ${x.back.how}:`,
       ...(x.back.lines.length ? x.back.lines.map((l) => `    ${l}`) : ['    (the agent ended with no text)']),
       `  Report file: ${x.report} (${x.reportWritten ? 'written' : 'not written'})`);
+    if (mark) { mark.backs[backKey(x)] = 1; mark.agents.set(x.back.id, x.step); }
   }
   const groups = sortFound(st.found, st.manager);
-  out.push(st.found.length
-    ? `Found, from the report files (${st.found.length}: ${groups.fixed.length} fixed, ${groups.stopping.length} stopping the plan, ${groups.queued.length} queued, ${groups.unsorted.length} unsorted):`
-    : 'Found, from the report files: none.');
-  for (const f of st.found) {
-    const s = sortOf(st.manager, f);
-    out.push(`- step ${f.step} #${f.n} [${s ? s.how : 'unsorted'}]: ${f.line}${s?.note ? ` (${s.note})` : ''}`);
+  if (!st.found.length) out.push('Found, from the report files: none.');
+  else {
+    out.push(`Found, from the report files (${st.found.length}: ${groups.fixed.length} fixed, ${groups.stopping.length} stopping the plan, ${groups.queued.length} queued, ${groups.unsorted.length} unsorted):`);
+    let held = 0;
+    for (const f of st.found) {
+      const s = sortOf(st.manager, f);
+      const how = s ? s.how : 'unsorted';
+      const stamp = `${f.line}|${how}|${s?.note ?? ''}`;
+      if (seen && seen.found?.[f.key] === stamp && how !== 'unsorted') { held++; continue; }
+      out.push(`- step ${f.step} #${f.n} [${how}]: ${f.line}${s?.note ? ` (${s.note})` : ''}`);
+      if (mark) mark.found[f.key] = stamp;
+    }
+    if (held) out.push(`(${held} Found line${held === 1 ? '' : 's'} sorted and printed by an earlier status ${held === 1 ? 'is' : 'are'} not printed again; the status page carries ${held === 1 ? 'it' : 'them'}.)`);
   }
   out.push(managerLine(st, groups));
   return out.join('\n');
@@ -1470,6 +1740,27 @@ ${foundGroup('Not sorted yet', groups.unsorted)}
 </body>
 </html>
 `;
+}
+
+/**
+ * Write the status page without giving a status.
+ * @param {string} sid  the session id.
+ * @param {{at: number, status: string}} [clock]  the last status as the clock holds it; read when omitted.
+ * @returns {string|null} the page's path after it was rewritten from `pointerState`,
+ *   the same read a status makes, with the LAST status's text and time in its header;
+ *   null when the session has no scratchpad. THE INVARIANT its caller relies on
+ *   (hook-dispatch.mjs, at an agent's hand-back): it writes the page and only the
+ *   page. It does not stamp the clock, print a status, or touch the status memory
+ *   (`writeSeen`), so the status gate and the page gate cannot tell that it ran.
+ */
+export function writeStatusPage(sid, clock = readClock()) {
+  const pad = sid ? scratchpadOf(sid) : null;
+  if (!pad) return null;
+  const state = pointerState(sid);
+  mkdirSync(join(pad, 'status'), { recursive: true });
+  const file = join(pad, 'status', 'fix-run.html');
+  writeFileSync(file, statusPage(state, clock.status || 'no status has been given yet', clock.at ? new Date(clock.at) : new Date()));
+  return file;
 }
 
 /**
@@ -1653,6 +1944,21 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
     console.log(out);
     process.exit(0);
   }
+  if (process.argv[2] === '--page') {
+    // THE STATUS PAGE AT A HAND-BACK (hook-dispatch.mjs runs this when the
+    // notification of an agent's end arrives as a prompt): the page is rewritten
+    // from the same read a status makes, and NOTHING ELSE happens. The clock is
+    // not stamped, no status is printed and no memory is written, so the status
+    // gate and the page gate are exactly what they were. The session is read from
+    // the payload on stdin (the hook's own), else from the shell's variable.
+    let hook = {};
+    try { hook = JSON.parse(readFileSync(0, 'utf8')); } catch { /* no payload: the variable below */ }
+    const who = String(hook.session_id || process.env.CLAUDE_CODE_SESSION_ID || '');
+    let wrote = null;
+    try { wrote = writeStatusPage(who); } catch (e) { console.log(`status page: not written (${e?.message ?? e})`); process.exit(0); }
+    console.log(wrote ? `status page written: ${wrote}` : 'status page: not written (no scratchpad found for the session)');
+    process.exit(0);
+  }
   const given = process.argv.slice(2).join(' ').trim();
   if (!given) { console.error('usage: node report.mjs "Status HH:MM — done: …; running: …; next: …; next status by HH:MM"'); process.exit(1); }
   // The time in a status is the CLOCK's, written here, never the session's
@@ -1665,21 +1971,29 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   const previous = readClock().at;
   mkdirSync(dirname(CLOCK), { recursive: true });
   writeFileSync(CLOCK, JSON.stringify({ at: Date.now(), status }, null, 1));
-  // THE GOALS COME FIRST (the standing goals in the hub CLAUDE.md): the stamp is already written,
-  // so reading them can never cost the status. A section that cannot be read is
-  // said so, never printed as an empty one.
-  let goals = '';
-  try { goals = goalsSection(); } catch { goals = ''; }
-  console.log(goals || `${GOALS_HEADING}: not read (no such section in the CLAUDE.md beside report.mjs).`);
-  console.log('');
-  // THE POINTER COMES NEXT, after the goals: `next: step N`, read from the plan's
-  // Order and the agents' hand-backs, then each hand-back and the Found lines of
-  // every report file. The status page's source is written from the same read.
-  // After the stamp, so a failure reading any of it never costs the status.
+  // WHAT THE STATUSES OF THIS SESSION HAVE PRINTED is read first (`readSeen`):
+  // a status shows what changed and nothing twice (Doctrine §0e rule 2). With no
+  // session id there is no memory, and everything prints.
   const sid = String(process.env.CLAUDE_CODE_SESSION_ID ?? '');
+  const seen = readSeen(sid);
+  const mark = { backs: {}, found: {}, refusals: {}, approval: '', agents: new Map() };
+  // THE GOALS COME FIRST, ONCE PER SESSION (the standing goals in the hub CLAUDE.md):
+  // the stamp is already written, so reading them can never cost the status. A
+  // section that cannot be read is said so, never printed as an empty one. Every
+  // owner message prints them again (hook-dispatch.mjs), so a later status leaves them out.
+  if (!seen?.goals) {
+    let goals = '';
+    try { goals = goalsSection(); } catch { goals = ''; }
+    console.log(goals || `${GOALS_HEADING}: not read (no such section in the CLAUDE.md beside report.mjs).`);
+    console.log('');
+  }
+  // THE POINTER COMES NEXT, after the goals: `next: step N`, read from the plan's
+  // Order and the agents' hand-backs, then each new hand-back and the Found lines
+  // new or unsorted. The status page's source is written from the same read.
+  // After the stamp, so a failure reading any of it never costs the status.
   let state = null;
   try { state = pointerState(sid); } catch (e) { state = { read: false, why: `the read failed (${e?.message ?? e})`, pointer: null, steps: [], found: [], title: '', titles: new Map(), leaves: [] }; }
-  console.log(pointerBlock(state));
+  console.log(pointerBlock(state, seen, mark));
   // THE REVIEW, right under the pointer and never inside pointerBlock, whose
   // first line has to stay `next: step N`. The same `reviewState` the dispatcher's
   // review gate refuses on. A failure reading it is printed, never skipped.
@@ -1696,10 +2010,16 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
       writeFileSync(join(pad, 'status', 'fix-run.html'), statusPage(state, status));
     }
   } catch { /* the page is a convenience; the print above is the status */ }
+  // The main thread's own reads since the last status, as a count and their paths,
+  // and the refused reads of the record that no Read has since returned: the
+  // dispatch gate sends no step while one is named (`readsGate`).
+  let readsLine = '';
+  try { readsLine = readsBlock(sid, previous); } catch (e) { readsLine = `Main thread reads since the last status: not read (${e?.message ?? e}).`; }
+  console.log(readsLine);
   let ended;
   try { ended = sid ? agentEnds(sid, previous) : null; } catch { ended = null; }
   let block = '';
-  try { block = agentsBlock(sid, previous, ended); } catch (e) { block = `Agents ended since the last status: not read (${e?.message ?? e}).`; }
+  try { block = agentsBlock(sid, previous, ended, mark.agents); } catch (e) { block = `Agents ended since the last status: not read (${e?.message ?? e}).`; }
   console.log(block);
   let progress = '';
   try { progress = progressBlock(sid); } catch (e) { progress = `Running agents' progress: not read (${e?.message ?? e}).`; }
@@ -1707,11 +2027,20 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   // Every refusal each agent received and its last tool result, from its own
   // transcript: the manager judges an agent's work from these, not its report.
   let reads = '';
-  try { reads = gateReadsBlock(sid, ended ?? []); } catch (e) { reads = `Agents' hook refusals and last tool results: not read (${e?.message ?? e}).`; }
+  try { reads = gateReadsBlock(sid, ended ?? [], seen, mark); } catch (e) { reads = `Agents' hook refusals and last tool results: not read (${e?.message ?? e}).`; }
   console.log(reads);
   // The approval state, read from disk: before sending the first agent under
-  // any approval the manager gives a status and reads this.
+  // any approval the manager gives a status and reads this. Printed in full when
+  // it is not what the last status printed, else as one line.
   let approval = '';
-  try { approval = approvalBlock(); } catch (e) { approval = `Approval state: not read (${e?.message ?? e}).`; }
+  try {
+    approval = approvalBlock();
+    mark.approval = sha256(approval);
+    if (seen && seen.approval === mark.approval) {
+      approval = `Approval state, read from disk now: unchanged since the last status (${/- Match: yes/.test(approval) ? 'the plan file is the plan that was approved, so the plan is in force' : 'no plan is in force; the status that printed it said why'}).`;
+    }
+  } catch (e) { approval = `Approval state: not read (${e?.message ?? e}).`; }
   console.log(approval);
+  // What this status printed is remembered, so the next one leaves it out.
+  writeSeen(sid, seen, mark);
 }

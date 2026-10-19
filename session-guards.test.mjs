@@ -47,6 +47,14 @@
  * `goalsWithoutServedBy`, a marker of the old kind still matching), and the
  * choice popup tool refused by plan mode, the manager fence, the plan fence and
  * approved-plan-guard.mjs (LESSONS §397).
+ * And the manager's reading and the loop's cost (LESSONS §400 to §405): the saved
+ * tool results, IR-SCIENCE.md and the decision records on the record list; a refused
+ * read of the record recorded, named by the status and read again before a step goes
+ * (`readsGate`); a status that shows what changed and nothing twice (`readSeen`); the
+ * status page rewritten at a hand-back (`report.mjs --page`); a plan's own script
+ * accepted by `workflowGate` behind a constant that is off, with the script's hash in
+ * the approval marker; a latched agent's own report write; and the rules read first
+ * (`rulesFirst` in plan-fence.mjs).
  * The whole suite runs under an empty home, so no real approval marker is read.
  *
  * In --plants mode a guard name a case cites with no plant behind it is a
@@ -96,6 +104,7 @@ process.env.OWNER_TURN_DIR = join(STATE, 'owner-turn');
 process.env.PAGE_DUE_DIR = join(STATE, 'page-due');
 process.env.STOP_REFUSED_DIR = join(STATE, 'stop-refused');
 process.env.SKIPPED_PRINTED_DIR = join(STATE, 'skipped-printed');
+process.env.REFUSED_READS_DIR = join(STATE, 'refused-reads');
 // The stop guard reads the approval marker under the home directory, and a real
 // session's marker (a plan in force, steps left, no agent of the test's running)
 // would refuse every case that ends a turn with no declaration. The whole suite
@@ -216,10 +225,20 @@ function world(dir, entries = [], planText = STEPS_PLAN) {
   writeFileSync(join(home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now(), status: 'Status' }));
   const cwd = tmp('sg-cwd-');
   const tr = transcript(entries);
-  const call = (event, payload, env = {}) => spawnSync('node', [join(dir, 'hook-dispatch.mjs'), event], {
-    input: JSON.stringify({ cwd, transcript_path: tr, hook_event_name: event, ...payload }), encoding: 'utf8',
-    env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: cwd, ...env },
-  });
+  const subsDir = join(tr.slice(0, -'.jsonl'.length), 'subagents');
+  const call = (event, payload, env = {}) => {
+    // The plan fence asks every agent to have read the shared rules first (`rulesFirst`): an agent a case makes a call as,
+    // without a transcript of its own, is given one that holds that Read and its hand-back, so the case is about what it names.
+    // A transcript the case wrote itself (`putAgent`) is left as it is.
+    if (payload.agent_id && !existsSync(join(subsDir, `agent-${payload.agent_id}.jsonl`))) {
+      mkdirSync(subsDir, { recursive: true });
+      writeFileSync(join(subsDir, `agent-${payload.agent_id}.jsonl`), jsonl(rulesReadEntries(dir, payload.agent_id)));
+    }
+    return spawnSync('node', [join(dir, 'hook-dispatch.mjs'), event], {
+      input: JSON.stringify({ cwd, transcript_path: tr, hook_event_name: event, ...payload }), encoding: 'utf8',
+      env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: cwd, ...env },
+    });
+  };
   return { home, plan, cwd, tr, call };
 }
 /**
@@ -247,6 +266,13 @@ function reviewWorld(dir, entries = [turn(0, GO)]) {
   };
 }
 const latched = (s) => existsSync(join(process.env.REFUSAL_LATCH_DIR, `${s}.json`));
+// An agent that read the shared rules first, as an agent's own transcript shows it: a prompt that names no step, the Read of the
+// hub copy's agent-rules.md and its result, and a hand-back (so the agent is not counted as one still running).
+const rulesReadEntries = (dir, id) => [at({ type: 'user', message: { role: 'user', content: 'Read the rules.' } }, later(-300)),
+  at(tool(0, `${id}-rules`, 'Read', { file_path: join(dir, 'agent-rules.md') }), later(-299)), at(result(0, `${id}-rules`, '1\tRules version: 1'), later(-298)),
+  at(tool(0, `${id}-back`, 'SubagentHandback', { message: 'Rules read.' }), later(-297)), at(result(0, `${id}-back`, 'Report delivered to your caller.'), later(-296))];
+// The plan fence's decision with the rules-first check set aside, for the cases that are about something else.
+const decideFence = (m, p, opts = {}) => m.fence.decide(p, { rules: () => null, ...opts });
 const owner = (t, text) => ({ type: 'user', timestamp: t, origin: { kind: 'human' }, message: { role: 'user', content: text } });
 const jsonl = (entries) => entries.map((e) => JSON.stringify(e)).join('\n') + '\n';
 
@@ -372,6 +398,16 @@ const wholeGates = (text) => String(text).split('\n').flatMap((l) => {
   const w = /^\s*(?:\d+\.\s+)?\*Enforced whole by:\*\s+(.+)$/.exec(l);
   return w ? [...w[1].matchAll(/`([^`\s]+)`/g)].map((x) => x[1]) : [];
 });
+
+// ---- fixtures for a plan's own script (Doctrine §0e rule 13) ----
+// A script as a plan carries it: it begins `export const meta`, and each agent is told a plan path and a step number as a string literal.
+const SCRIPT = ["export const meta = { name: 'two-steps', description: 'Run the two steps of the plan; each agent is told one step.' }",
+  "const one = await agent('/plans/gate-test.md step 1', { label: 'one' })",
+  "await agent('/plans/gate-test.md step 2')",
+  'return one'].join('\n');
+// STEPS_PLAN with a `## Script` section holding `script` in a fenced block.
+const scriptPlan = (script = SCRIPT) => STEPS_PLAN.replace('## Commands', `## Script\n\`\`\`js\n${script}\n\`\`\`\n\n## Commands`);
+const sha256 = (t) => createHash('sha256').update(t).digest('hex');
 
 /** Each case: (m, dir) → true when the guards behaved. `guards` names the plants it must catch. */
 const CASES = [
@@ -1572,14 +1608,14 @@ const CASES = [
       const r = repo({ 'keep.mjs': 'x\n' });
       const plan = fencePlan(basename(r.dir));
       const s = sid('pf');
-      const w = (file_path, extra = {}) => m.fence.decide({ session_id: s, agent_id: 'a1', tool_name: 'Write', tool_input: { file_path }, cwd: r.dir, ...extra }, { plan });
+      const w = (file_path, extra = {}) => decideFence(m,{ session_id: s, agent_id: 'a1', tool_name: 'Write', tool_input: { file_path }, cwd: r.dir, ...extra }, { plan });
       const fenced = (x) => /^PLAN FENCE/.test(x ?? '');
       return w(join(r.dir, 'keep.mjs')) === null && w(join(r.dir, 'src', 'deep', 'x.ts')) === null && w(join(r.dir, 'docs', 'notes.md')) === null
         && w(`/tmp/claude-0/-home-user/${s}/scratchpad/a.txt`) === null
         && fenced(w(join(r.dir, 'other.mjs'))) && fenced(w(join(r.dir, 'src', '..', 'other.mjs'))) && fenced(w(join(r.dir, 'src')))
         && fenced(w(join(r.dir, 'docs', 'other.md'))) && fenced(w(`/tmp/claude-0/-home-user/someone-else/scratchpad/a.txt`))
         && w(join(r.dir, 'other.mjs'), { agent_id: undefined }) === null
-        && fenced(m.fence.decide({ session_id: s, agent_id: 'a1', tool_name: 'Edit', tool_input: { file_path: join(r.dir, 'keep.mjs') }, cwd: r.dir }, { plan: null }));
+        && fenced(decideFence(m,{ session_id: s, agent_id: 'a1', tool_name: 'Edit', tool_input: { file_path: join(r.dir, 'keep.mjs') }, cwd: r.dir }, { plan: null }));
     },
   },
   {
@@ -1591,7 +1627,7 @@ const CASES = [
       const plan = fencePlan(basename(r.dir));
       const s = sid('pb');
       const scratch = `/tmp/claude-0/-home-user/${s}/scratchpad`;
-      const b = (command, cwd = r.dir) => m.fence.decide({ session_id: s, agent_id: 'a1', tool_name: 'Bash', tool_input: { command }, cwd }, { plan });
+      const b = (command, cwd = r.dir) => decideFence(m,{ session_id: s, agent_id: 'a1', tool_name: 'Bash', tool_input: { command }, cwd }, { plan });
       const pass = [`git -C ${r.dir} status`, `git -C ${r.dir} commit -m "x; y"`, 'node tools/build.mjs --fast', 'git log --oneline | head -3',
         `node tools/a.mjs > ${scratch}/out.txt`, 'node tools/a.mjs > src/out.txt 2>&1', 'git commit -m "$(cat msg.txt)"', 'npm ci',
         'git push origin staging', `node ${r.dir}/tools/x.mjs`, 'cat keep.mjs 2>/dev/null'].map((c) => [c, b(c)]);
@@ -1603,7 +1639,7 @@ const CASES = [
       const bad = [...pass.filter(([, x]) => x !== null), ...refuse.filter(([, x]) => !/^PLAN FENCE/.test(x ?? '')),
         ...cds.filter(([, x]) => !/^PLAN FENCE.* is a (cd|pushd|popd), and a \1 is refused: write every path in full/.test(x ?? ''))];
       if (bad.length) throw new Error(`wrong on: ${bad.map(([c]) => JSON.stringify(c)).join(', ')}`);
-      return m.fence.decide({ session_id: s, tool_name: 'Bash', tool_input: { command: 'rm -rf x' }, cwd: r.dir }, { plan }) === null;
+      return decideFence(m,{ session_id: s, tool_name: 'Bash', tool_input: { command: 'rm -rf x' }, cwd: r.dir }, { plan }) === null;
     },
   },
   {
@@ -1612,7 +1648,7 @@ const CASES = [
     run(m) {
       const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
       const s = sid('pe');
-      const call = (tool_name, tool_input = {}, reads) => m.fence.decide({ session_id: s, agent_id: 'a1', tool_name, tool_input, cwd: '/' }, { plan, ...(reads ? { reads } : {}) });
+      const call = (tool_name, tool_input = {}, reads) => decideFence(m,{ session_id: s, agent_id: 'a1', tool_name, tool_input, cwd: '/' }, { plan, ...(reads ? { reads } : {}) });
       const fenced = (x) => /^PLAN FENCE/.test(x ?? '');
       const no = () => false;
       return call('Read', { file_path: '/etc/hostname' }) === null && call('mcp__github__get_file_contents', { owner: 'o', repo: 'r', path: 'a' }) === null
@@ -1621,7 +1657,7 @@ const CASES = [
         && call('TaskStop', { task_id: 'x' }, no) === null && fenced(call('Artifact', { file_path: '/tmp/x.html' }))
         && fenced(call('mcp__github__push_files', { branch: 'main' })) && fenced(call('mcp__github__actions_run_trigger', {}))
         && fenced(call('ExitPlanMode', {})) && fenced(call('SomeToolNobodyHasHeardOf', {}))
-        && m.fence.decide({ session_id: s, tool_name: 'Agent', tool_input: {} }, { plan }) === null;
+        && decideFence(m,{ session_id: s, tool_name: 'Agent', tool_input: {} }, { plan }) === null;
     },
   },
   {
@@ -1637,8 +1673,8 @@ const CASES = [
         '## Files touched',
         '- ABG: `keep.mjs`', '- other-repo, changed: `src/`', '- Hub, new: `a.mjs`', '- `free.mjs`', `- Live: \`${live}/\`, \`${live}/hook-dispatch.mjs\``, ''].join('\n') };
       const s = sid('pl');
-      const w = (file_path) => m.fence.decide({ session_id: s, agent_id: 'a1', tool_name: 'Write', tool_input: { file_path }, cwd: '/' }, { plan });
-      const b = (command) => m.fence.decide({ session_id: s, agent_id: 'a1', tool_name: 'Bash', tool_input: { command }, cwd: abg.dir }, { plan, classify: () => true });
+      const w = (file_path) => decideFence(m,{ session_id: s, agent_id: 'a1', tool_name: 'Write', tool_input: { file_path }, cwd: '/' }, { plan });
+      const b = (command) => decideFence(m,{ session_id: s, agent_id: 'a1', tool_name: 'Bash', tool_input: { command }, cwd: abg.dir }, { plan, classify: () => true });
       const fenced = (x) => /^PLAN FENCE/.test(x ?? '');
       return w(join(abg.dir, 'keep.mjs')) === null && fenced(w(join(oth.dir, 'keep.mjs')))
         && w(join(oth.dir, 'src', 'x.ts')) === null && fenced(w(join(abg.dir, 'src', 'x.ts')))
@@ -3658,8 +3694,8 @@ const CASES = [
       const p = { session_id: 'rr' };
       const plan = { path: '/plans/x.md', text: STEPS_PLAN.replace('## Commands', `## Rules\n${rulesLine(dir)}\n\n## Commands`) };
       const live = join(homedir(), '.claude', 'hub', 'agent-rules.md');
-      const agentRead = m.fence.decide({ session_id: 's', agent_id: 'a1', tool_name: 'Read', tool_input: { file_path: live } }, { plan, reads: (q) => q.tool_name === 'Read' });
-      const agentWrite = m.fence.decide({ session_id: 's', agent_id: 'a1', tool_name: 'Write', tool_input: { file_path: live, content: 'x' } }, { plan });
+      const agentRead = decideFence(m,{ session_id: 's', agent_id: 'a1', tool_name: 'Read', tool_input: { file_path: live } }, { plan, reads: (q) => q.tool_name === 'Read' });
+      const agentWrite = decideFence(m,{ session_id: 's', agent_id: 'a1', tool_name: 'Write', tool_input: { file_path: live, content: 'x' } }, { plan });
       return m.dispatch.recordPath(join(hub.dir, 'agent-rules.md'), p) && !m.dispatch.recordPath(join(hub.dir, 'src.mjs'), p) && !m.dispatch.recordPath(join(app.dir, 'agent-rules.md'), p)
         && agentRead === null && typeof agentWrite === 'string' && /live gate copy/.test(agentWrite);
     },
@@ -3794,6 +3830,435 @@ const CASES = [
       return q.length > 0 && keyed.length === q.length && keys.every((k) => /^Q-HUB-\d+$/.test(k)) && new Set(keys).size === keys.length && q.every((x) => x.text.length >= 20);
     },
   },
+
+  // ---- the manager reads the saved tool results, the science file and the decision records (step 108) ----
+  {
+    name: 'the manager fence passes a read of the session\'s own saved tool results, and in every repository its IR-SCIENCE.md and the .md files directly in docs/decisions; another session\'s results, a folder or another type inside docs/decisions and an app\'s source stay outside the record',
+    guards: ['record_tool_results', 'record_tool_results_session', 'record_ir_science', 'record_decisions', 'record_decisions_flat', 'record_decisions_md'],
+    run(m) {
+      const s = sid('tr');
+      const dot = join(homedir(), '.claude');
+      const proj = join(dot, 'projects', '-home-user');
+      const sib = repo({ 'NOTES.md': 'n', 'app.ts': 'x' }, 'sibdec');
+      const of = (f) => m.dispatch.recordPath(f, { session_id: s }, () => undefined);
+      const results = of(join(proj, s, 'tool-results', 'b07s4b48n.txt')) && of(join(proj, s, 'tool-results')) && of(join(proj, s, 'tool-results', 'sub', 'x.txt'));
+      const notResults = !of(join(proj, 'another-session', 'tool-results', 'x.txt')) && !of(join(proj, s, 'subagents', 'agent-x.jsonl')) && !of(join(proj, s))
+        && !of(join(proj, s, 'tool-results', '..', 'x.txt')) && !of(join(dot, 'tool-results', 'x.txt'));
+      const science = of(join(sib.dir, 'IR-SCIENCE.md'));
+      const records = of(join(sib.dir, 'docs', 'decisions', '066-film-model.md')) && of(join(sib.dir, 'docs', 'decisions'));
+      const notRecords = !of(join(sib.dir, 'docs', 'decisions', 'sub', '066.md')) && !of(join(sib.dir, 'docs', 'decisions', 'notes.txt'))
+        && !of(join(sib.dir, 'docs', 'ARCHITECTURE.md')) && !of(join(sib.dir, 'docs', 'decisions.md')) && !of(join(sib.dir, 'app.ts'));
+      // Through the fence, with every call a read for the classifier: a decision record goes, the source is refused with the reason to send an agent.
+      const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
+      const fence = (file_path) => m.dispatch.managerFence({ session_id: s, tool_name: 'Read', tool_input: { file_path } }, { plan, classify: () => true });
+      return results && notResults && science && records && notRecords
+        && fence(join(sib.dir, 'docs', 'decisions', '066-film-model.md')) === null && fence(join(proj, s, 'tool-results', 'b07s4b48n.txt')) === null
+        && /Send an agent/.test(fence(join(sib.dir, 'app.ts')) ?? '') && /IR-SCIENCE\.md and docs\/decisions/.test(fence(join(sib.dir, 'app.ts')) ?? '');
+    },
+  },
+
+  // ---- a refused read of the record is read again before a step goes (step 108) ----
+  {
+    name: 'a Read of the record that a hook refuses or that fails is recorded; the status names each such file until a Read has returned on it, the dispatch gate sends no step meanwhile and does not latch, and a refused read outside the record, of a file that is not there, or an agent\'s, is not recorded',
+    guards: ['refused_note', 'refused_note_main', 'refused_note_exists', 'refused_note_record', 'refused_failure', 'refused_cleared', 'refused_cleared_error', 'refused_gone', 'reads_gate', 'reads_gate_step', 'reads_gate_tool', 'reads_gate_wired', 'reads_gate_no_latch', 'reads_status_block'],
+    run(m, dir) {
+      const w = world(dir);
+      const s = sid('rg');
+      const call = (payload, event = 'PreToolUse') => w.call(event, { session_id: s, ...payload });
+      const refusedNow = () => m.report.refusedReads(s).map((x) => x.path);
+      // A write outside the record is refused and latches; the latch then refuses a Read of the plan, a file of the record that exists.
+      call({ tool_name: 'Write', tool_input: { file_path: join(w.cwd, 'x.txt'), content: 'x' } });
+      const heldRead = call({ tool_name: 'Read', tool_input: { file_path: w.plan } });
+      // Not recorded: a file outside the record, a file of the record that is not there, and an agent's read.
+      const source = join(w.cwd, 'app.ts');
+      writeFileSync(source, 'export const x = 1;\n');
+      call({ tool_name: 'Read', tool_input: { file_path: source } });
+      call({ tool_name: 'Read', tool_input: { file_path: join(w.home, '.claude', 'plans', 'not-there.md') } });
+      const other = join(w.home, '.claude', 'plans', 'other.md');
+      writeFileSync(other, '# another plan\n');
+      call({ agent_id: 'a1', tool_name: 'Read', tool_input: { file_path: other } });
+      const recorded = refusedNow();
+      // The owner writes: the latch is gone, and a step is refused by the reads gate, which does not latch.
+      appendFileSync(w.tr, jsonl([owner(later(2), GO)]));
+      const send = () => call({ tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } });
+      const held = send();
+      const notLatched = !latched(s);
+      // A Read that failed after the refusal does not clear it; one that returned does.
+      appendFileSync(w.tr, jsonl([at(tool(0, 'rd0', 'Read', { file_path: w.plan }), later(4)), at(result(0, 'rd0', 'File content exceeds maximum allowed tokens', true), later(5))]));
+      const afterError = send();
+      appendFileSync(w.tr, jsonl([at(tool(0, 'rd1', 'Read', { file_path: w.plan }), later(6)), at(result(0, 'rd1', '1\tx'), later(7))]));
+      const cleared = send();
+      // The gate by itself: a Workflow is held, a prompt that is no step of the plan, an agent's call and a Read are not.
+      const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
+      const open = [{ path: '/x/rec.md', at: Date.now(), why: 'refused' }];
+      const gate = (tool_name, input, extra = {}) => m.dispatch.readsGate({ session_id: 'rg2', tool_name, tool_input: input, ...extra }, plan, open);
+      const unit = /READS GATE/.test(gate('Agent', { prompt: '/plans/gate-test.md step 1' }) ?? '') && /READS GATE/.test(gate('Workflow', { script: 'x' }) ?? '')
+        && gate('SendMessage', { message: 'Go back and fix the test.' }) === null && gate('Agent', { prompt: '/plans/gate-test.md step 1' }, { agent_id: 'a1' }) === null
+        && gate('Read', { file_path: '/x/rec.md' }) === null && m.dispatch.readsGate({ session_id: 'rg2', tool_name: 'Agent', tool_input: { prompt: '/plans/gate-test.md step 1' } }, plan, []) === null;
+      // A Read that FAILED is recorded too (PostToolUseFailure).
+      const s3 = sid('rg');
+      w.call('PostToolUseFailure', { session_id: s3, tool_name: 'Read', tool_input: { file_path: w.plan }, error: 'File content exceeds maximum allowed tokens' });
+      const failedRecorded = m.report.refusedReads(s3).map((x) => x.path).join() === w.plan;
+      // The status names the refused read until a Read returns on it, and a file that is gone is not named.
+      const s2 = sid('rb');
+      const projDir = join(homedir(), '.claude', 'projects', '-home-user');
+      mkdirSync(projDir, { recursive: true });
+      const main = join(projDir, `${s2}.jsonl`);
+      writeFileSync(main, jsonl([turn(0, 'start')]));
+      const file = join(tmp('sg-rec-'), 'rec.md');
+      writeFileSync(file, 'x');
+      m.report.noteRefusedRead(s2, file, 'refused for the test');
+      const before = m.report.readsBlock(s2, 0);
+      appendFileSync(main, jsonl([at(tool(0, 'q0', 'Read', { file_path: file }), later(3)), at(result(0, 'q0', 'too long', true), later(4))]));
+      const still = m.report.readsBlock(s2, 0);
+      appendFileSync(main, jsonl([at(tool(0, 'q1', 'Read', { file_path: file }), later(5)), at(result(0, 'q1', '1\tx'), later(6))]));
+      const after = m.report.readsBlock(s2, 0);
+      m.report.noteRefusedRead(s2, file, 'refused again', Date.now() + 60000);
+      const again = m.report.readsBlock(s2, 0);
+      rmSync(file);
+      const gone = m.report.readsBlock(s2, 0);
+      return heldRead.status === 2 && recorded.join() === w.plan
+        && held.status === 2 && /READS GATE/.test(held.stderr) && held.stderr.includes(w.plan) && notLatched
+        && afterError.status === 2 && /READS GATE/.test(afterError.stderr) && cleared.status === 0 && unit && failedRecorded
+        && before.includes('Refused reads of the record NOT read since') && before.includes(file) && before.includes('refused for the test')
+        && still.includes(file) && !/not read since: none\./.test(still) && /Refused reads of the record not read since: none\./.test(after) && after.includes('Main thread reads since the last status: 2 (Read 2)')
+        && again.includes(file) && /not read since: none\./.test(gone);
+    },
+  },
+
+  // ---- a status shows what changed and nothing twice (step 108) ----
+  {
+    name: 'a status prints what changed and nothing twice: the goals once per session, a hand-back once, a Found line when it is new, changed or unsorted, a running agent\'s hook refusal once, the approval state in full only when it changed, the main thread\'s reads since the last status, and no hand-back text a second time under the ended agents; with no session id it prints everything each time',
+    guards: ['seen_goals', 'seen_backs', 'seen_found', 'seen_found_unsorted', 'seen_found_changed', 'seen_refusals', 'seen_refusals_new', 'seen_approval', 'seen_agents_dedupe', 'seen_written', 'reads_main_since', 'reads_main_tools', 'reads_main_sidechain', 'reads_print'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      const s = sid('sn');
+      const proj = join(home, '.claude', 'projects', '-home-user');
+      const subs = join(proj, s, 'subagents');
+      mkdirSync(subs, { recursive: true });
+      const main = join(proj, `${s}.jsonl`);
+      const plan = join(home, '.claude', 'plans', 'gate-test.md');
+      mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
+      writeFileSync(plan, ORDER_PLAN);
+      writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: sha256(ORDER_PLAN), at: new Date().toISOString() }));
+      writeFileSync(join(home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now() - 10 * 60000, status: 'Status' }));
+      // The main thread's reads: two since the last status (a Read and a Grep), one before it, a Bash that is no read, and an entry of a sidechain.
+      writeFileSync(main, jsonl([turn(0, 'start'), at(tool(0, 'o1', 'Read', { file_path: '/x/older.md' }), later(-1200)),
+        at(tool(0, 'm1', 'Read', { file_path: '/x/newer.md' }), later(-120)), at(tool(0, 'm2', 'Grep', { pattern: 'x', path: '/x/dir' }), later(-110)),
+        at(tool(0, 'm3', 'Bash', { command: 'git status' }), later(-100)), { ...at(tool(0, 'm4', 'Read', { file_path: '/x/side.md' }), later(-90)), isSidechain: true }]));
+      const temp = tmp('sg-tmp-');
+      const pad = join(temp, 'claude-0', '-home-user', s, 'scratchpad');
+      mkdirSync(join(pad, 'progress'), { recursive: true });
+      mkdirSync(join(pad, 'status'), { recursive: true });
+      const handed = (id, n, secs, first, second) => {
+        writeFileSync(join(subs, `agent-${id}.jsonl`), jsonl([at({ type: 'user', message: { role: 'user', content: `${plan} step ${n}` } }, later(secs - 300)),
+          at(tool(0, `${id}-h`, 'SubagentHandback', { message: `${first}\n${second}` }), later(secs)), at(result(0, `${id}-h`, 'Report delivered to your caller.'), later(secs + 1))]));
+        writeFileSync(join(subs, `agent-${id}.meta.json`), JSON.stringify({ agentType: 'general-purpose', description: `Plan step ${n}` }));
+      };
+      // A running agent that a hook refused once.
+      const refusal = (n, text) => [at(tool(0, `r${n}`, 'Bash', { command: 'cd /x' }), later(-60 + n)), at(result(0, `r${n}`, `PreToolUse:Bash hook error: [node hook-dispatch.mjs]: ${text}`, true), later(-59 + n))];
+      writeFileSync(join(subs, 'agent-runner.jsonl'), jsonl([at({ type: 'user', message: { role: 'user', content: `${plan} step 3` } }, later(-400)), ...refusal(0, 'PLAN FENCE refused the first cd')]));
+      writeFileSync(join(subs, 'agent-runner.meta.json'), JSON.stringify({ agentType: 'general-purpose', description: 'Plan step 3' }));
+      handed('a1', 1, -100, 'DONE', 'The goals are written.');
+      handed('a2', 2, -90, 'REFUSED', 'The fence refused the write.');
+      writeFileSync(join(pad, 'progress', 'step-1-report.txt'), 'Work.\nFound: the doc check was not run\nFound: a second thing, left for later\n');
+      const run = (sidEnv) => spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the memory test'], { encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: sidEnv, TMPDIR: temp } }).stdout ?? '';
+      const count = (text, needle) => text.split(needle).length - 1;
+      const first = run(s);
+      const second = run(s);
+      // A new hand-back, a second refusal of the running agent, and the manager sorting one Found line.
+      handed('a3', 2, -5, 'DONE', 'The check is read.');
+      appendFileSync(join(subs, 'agent-runner.jsonl'), jsonl(refusal(2, 'PLAN FENCE refused the second cd')));
+      writeFileSync(join(pad, 'status', 'manager.txt'), 'Found 1.1 fixed: put right in step 3\n');
+      const third = run(s);
+      const fourth = run(s);
+      const seenFile = join(home, '.claude', 'report-seen', `${s}.json`);
+      // No session id: no memory, so the goals and the approval state print again.
+      const bare1 = run(''), bare2 = run('');
+      return first.includes('Goals every session serves') && first.includes('Hand-backs new since the last status') && first.includes('- step 1, ended') && first.includes('- step 2, ended')
+        && count(first, 'The goals are written.') === 1 && first.includes('Last entry: its hand-back, printed above under step 1.')
+        && first.includes('- step 1 #1 [unsorted]: Found: the doc check was not run') && first.includes('- step 1 #2 [unsorted]')
+        && first.includes('Main thread reads since the last status: 2 (Read 1, Grep 1): /x/newer.md, /x/dir.') && !first.includes('older.md') && !first.includes('side.md')
+        && first.includes('Plan it names:') && /\(running\): 1 hook refusal\./.test(first) && first.includes('refused the first cd')
+        && !second.includes('Goals every session serves') && second.includes('Hand-backs: none new since the last status') && !second.includes('The goals are written.') && !second.includes('- step 1, ended')
+        && second.includes('- step 1 #1 [unsorted]') && second.includes('- step 1 #2 [unsorted]') && second.includes('Approval state, read from disk now: unchanged since the last status')
+        && !second.includes('Plan it names:') && second.includes('Agents ended since the last status: none.') && second.includes('Main thread reads since the last status: none.')
+        && /no running agent has a hook refusal that an earlier status did not print/.test(second) && !second.includes('refused the first cd')
+        && !third.includes('Goals every session serves') && count(third, 'The check is read.') === 1 && third.includes('printed above under step 2')
+        && third.includes('- step 1 #1 [fixed]: Found: the doc check was not run (put right in step 3)') && third.includes('- step 1 #2 [unsorted]')
+        && /\(running\): 1 hook refusal new since the last status\./.test(third) && third.includes('refused the second cd') && !third.includes('refused the first cd')
+        && !fourth.includes('- step 1 #1 [fixed]') && fourth.includes('- step 1 #2 [unsorted]') && /\(1 Found line sorted and printed by an earlier status is not printed again/.test(fourth)
+        && existsSync(seenFile) && !existsSync(join(home, '.claude', 'report-seen', '.json'))
+        && bare1.includes('Goals every session serves') && bare2.includes('Goals every session serves') && bare1.includes('Plan it names:') && bare2.includes('Plan it names:');
+    },
+  },
+
+  // ---- the status page at a hand-back (step 108) ----
+  {
+    name: 'the status page is rewritten, with the last status\'s own header, when the notice of an agent\'s end arrives as a prompt (a task notification with an end marker, or an agent\'s hand-back); report.mjs --page stamps nothing, prints no status and writes no memory, and an owner message or a notice with no end marker writes nothing',
+    guards: ['page_handback_wired', 'page_handback_marker', 'page_handback_owner', 'page_flag_no_stamp', 'page_flag_header', 'page_flag_session'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      const s = sid('pg');
+      const proj = join(home, '.claude', 'projects', '-home-user');
+      mkdirSync(join(proj, s, 'subagents'), { recursive: true });
+      const main = join(proj, `${s}.jsonl`);
+      writeFileSync(main, jsonl([turn(0, 'start')]));
+      const plan = join(home, '.claude', 'plans', 'gate-test.md');
+      mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
+      writeFileSync(plan, ORDER_PLAN);
+      writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: sha256(ORDER_PLAN), at: new Date().toISOString() }));
+      const clockText = JSON.stringify({ at: Date.now() - 7 * 60000, status: 'Status 09:00 — the page test' });
+      const clock = join(home, '.claude', 'report-clock.json');
+      writeFileSync(clock, clockText);
+      const temp = tmp('sg-tmp-');
+      const pad = join(temp, 'claude-0', '-home-user', s, 'scratchpad');
+      mkdirSync(pad, { recursive: true });
+      const page = join(pad, 'status', 'fix-run.html');
+      const env = { ...process.env, HOME: home, TMPDIR: temp, CLAUDE_PROJECT_DIR: home };
+      const prompt = (text) => spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'UserPromptSubmit'], {
+        input: JSON.stringify({ session_id: s, transcript_path: main, cwd: home, hook_event_name: 'UserPromptSubmit', prompt: text }), encoding: 'utf8', env });
+      const written = () => existsSync(page);
+      const notice = (status) => `<task-notification>\n<task-id>wabc</task-id>\n<tool-use-id>toolu_1</tool-use-id>\n<output-file>/tmp/o</output-file>\n<status>${status}</status>\n<summary>Agent "Plan step 2" ${status}</summary>\n</task-notification>`;
+      const ownerMsg = prompt('Please carry on with the plan. Go.');
+      const quiet = prompt(notice('running'));
+      const none = !written();
+      const ended = prompt(notice('completed'));
+      const html = written() ? readFileSync(page, 'utf8') : '';
+      const unchanged = readFileSync(clock, 'utf8') === clockText && !existsSync(join(home, '.claude', 'report-seen', `${s}.json`));
+      rmSync(page, { force: true });
+      const peer = prompt('<agent-message from="a1b2c3">\n[Subagent hand-back] Step one is built.\n</agent-message>');
+      const peerWritten = written();
+      rmSync(page, { force: true });
+      // The flag by itself: the session from the hook's payload, else from the shell's variable.
+      const direct = spawnSync('node', [join(dir, 'report.mjs'), '--page'], { input: JSON.stringify({ session_id: s }), encoding: 'utf8', env: { ...env, CLAUDE_CODE_SESSION_ID: '' } });
+      const viaPayload = written();
+      rmSync(page, { force: true });
+      const viaVariable = spawnSync('node', [join(dir, 'report.mjs'), '--page'], { input: '', encoding: 'utf8', env: { ...env, CLAUDE_CODE_SESSION_ID: s } });
+      return ownerMsg.status === 0 && quiet.status === 0 && none
+        && ended.status === 0 && html.includes('<title>Plan run status</title>') && html.includes('Status 09:00 — the page test') && !/Plan run status/.test(ended.stdout) && !ended.stdout.includes('next: step')
+        && unchanged && peer.status === 0 && peerWritten
+        && direct.status === 0 && /status page written/.test(direct.stdout) && viaPayload && !/Status 1/.test(direct.stdout)
+        && viaVariable.status === 0 && written() && readFileSync(clock, 'utf8') === clockText;
+    },
+  },
+
+  // ---- a plan's own script may run its steps (step 108) ----
+  {
+    name: 'a Workflow call is refused while scripts are not accepted, whatever it carries; with them accepted only the approved plan\'s own script goes: passed inline and byte for byte, with the hash the marker recorded, every agent told a literal plan path and a step of its Steps that serves a goal, nothing outside the script\'s own words',
+    guards: ['workflow_const', 'workflow_off', 'workflow_no_plan', 'workflow_no_script', 'workflow_hash', 'workflow_inline', 'workflow_equal', 'workflow_problem', 'script_agent_literal', 'script_template_subst', 'script_step_exists', 'script_step_served', 'script_forbidden', 'script_agent_type', 'script_regex', 'script_no_agent', 'script_meta', 'script_planscript_fence', 'script_hash_of'],
+    run(m) {
+      const planOf = (script) => ({ path: '/plans/gate-test.md', text: scriptPlan(script), scriptHash: sha256(script) });
+      const good = planOf(SCRIPT);
+      const f = (script, plan = good, o = {}, tool_input = { script }) => m.dispatch.managerFence({ session_id: 'wf', tool_name: 'Workflow', tool_input }, { plan, classify: () => false, ...o });
+      const refusedWith = (x, re) => /^DISPATCH GATE/.test(x ?? '') && re.test(x);
+      // As shipped scripts are not accepted: the exact script, with its hash, is still refused.
+      const off = m.dispatch.WORKFLOW_SCRIPTS_ACCEPTED === false && refusedWith(f(SCRIPT), /workflow is refused, so no script/);
+      const on = { scripts: true };
+      const bad = (script, re) => { const x = f(script, planOf(script), on); return refusedWith(x, re); };
+      const exact = f(SCRIPT, good, on) === null;
+      const gate = [
+        refusedWith(f(SCRIPT, null, on), /no approved plan is in force/),
+        refusedWith(f(SCRIPT, { path: '/plans/gate-test.md', text: STEPS_PLAN, scriptHash: '' }, on), /no "## Script" section/),
+        refusedWith(f(SCRIPT, { ...good, scriptHash: null }, on), /does not hold the hash/), refusedWith(f(SCRIPT, { ...good, scriptHash: sha256('another script') }, on), /does not hold the hash/),
+        refusedWith(f(SCRIPT, good, on, { script: SCRIPT, scriptPath: '/x.js' }), /inline/), refusedWith(f(SCRIPT, good, on, { scriptPath: '/x.js' }), /inline/),
+        refusedWith(f(SCRIPT, good, on, { script: SCRIPT, args: ['a'] }), /inline/), refusedWith(f(`${SCRIPT} `, good, on), /byte for byte/),
+        // The approval holds the hash of another script: the section was edited after approval.
+        refusedWith(f(SCRIPT, { ...good, text: scriptPlan(SCRIPT.replace('step 2', 'step 1')) }, on), /does not hold the hash/),
+      ].every(Boolean);
+      const agentLine = (p) => `await agent('${p}')`;
+      const head = SCRIPT.split('\n')[0];
+      const reads = [
+        bad(`${head}\n${agentLine('/plans/gate-test.md step 1 and tidy up')}`, /not exactly \/plans\/gate-test\.md and a step number/),
+        bad(`${head}\n${agentLine('/plans/other.md step 1')}`, /not exactly/), bad(`${head}\n${agentLine('/plans/gate-test.md step 9')}`, /Steps do not have/),
+        bad(`${head}\nconst p = '/plans/gate-test.md step 1'\nawait agent(p)`, /other than as a call whose first argument is a string literal/),
+        bad(`${head}\nconst n = 1\nawait agent(\`/plans/gate-test.md step 1\${n}\`)`, /other than as a call whose first argument is a string literal/),
+        bad(`${head}\nconst a = agent\nawait a('/plans/gate-test.md step 1')`, /other than as a call/),
+        bad(`${head}\nconst t = \`x \${await agent('/plans/gate-test.md step 9')}\``, /Steps do not have/),
+        bad(`${head}\nawait workflow('other')`, /"workflow", which a plan's script may not/), bad(`${head}\neval('1')\n${agentLine('/plans/gate-test.md step 1')}`, /"eval"/),
+        bad(`${head}\nawait import('x')\n${agentLine('/plans/gate-test.md step 1')}`, /"import"/), bad(`${head}\nglobalThis.x = 1\n${agentLine('/plans/gate-test.md step 1')}`, /"globalThis"/),
+        bad(`${head}\nawait agent('/plans/gate-test.md step 1', { agentType: 'house-builder' })`, /agentType/),
+        bad(`${head}\nconst x = ''\nawait agent('/plans/gate-test.md step 1', { agentType: \`general-purpose\${x}\` })`, /agentType/),
+        bad(`${head}\nconst r = /x'/\n${agentLine('/plans/gate-test.md step 1')}`, /regular expression/), bad(`${head}\nconst k = 1`, /starts no agent/),
+      ].every(Boolean);
+      const fine = [
+        f(`${head}\nawait agent('/plans/gate-test.md step 1', { agentType: 'general-purpose' })\nconst half = 6 / 3\nlog(\`done \${half}\`) // agent('x') in a comment`, planOf(`${head}\nawait agent('/plans/gate-test.md step 1', { agentType: 'general-purpose' })\nconst half = 6 / 3\nlog(\`done \${half}\`) // agent('x') in a comment`), on) === null,
+      ].every(Boolean);
+      // A step that serves no goal is not sent, in a script as at the dispatch gate.
+      const unserved = (() => {
+        const text = scriptPlan().replace('Served by: steps 1 and 2 serve goal 1.', 'Served by: step 1 serves goal 1.');
+        return refusedWith(f(SCRIPT, { path: '/plans/gate-test.md', text, scriptHash: sha256(SCRIPT) }, on), /serves no goal/);
+      })();
+      // What a plan's script is: the first fenced block of its section, else the section, and only when it begins `export const meta`.
+      const prose = `${STEPS_PLAN.replace('## Commands', '## Script\nNo script runs in this plan.\n\n## Commands')}`;
+      const raw = STEPS_PLAN.replace('## Commands', `## Script\n${SCRIPT}\n\n## Commands`);
+      const shape = m.report.planScript(scriptPlan()) === SCRIPT && m.report.planScript(prose) === null && m.report.planScript(raw) === SCRIPT && m.report.planScript(STEPS_PLAN) === null
+        && m.report.scriptHashOf(scriptPlan()) === sha256(SCRIPT) && m.report.scriptHashOf(STEPS_PLAN) === '';
+      return off && exact && gate && reads && fine && unserved && shape;
+    },
+  },
+  {
+    name: 'through hook-dispatch with scripts switched on in a copy of the guards, a Workflow call carrying the approved plan\'s script goes, and one whose marker holds no script hash, another script\'s hash, or a script that differs by a character is refused',
+    guards: ['workflow_marker_read'],
+    run(m, dir) {
+      const copy = tmp('sg-on-');
+      for (const f of FILES) copyFileSync(join(dir, f), join(copy, f));
+      const flag = 'export const WORKFLOW_SCRIPTS_ACCEPTED = false;';
+      const src = readFileSync(join(copy, 'hook-dispatch.mjs'), 'utf8');
+      if (!src.includes(flag)) return false;
+      writeFileSync(join(copy, 'hook-dispatch.mjs'), src.replace(flag, 'export const WORKFLOW_SCRIPTS_ACCEPTED = true;'));
+      // The plan's path is only known once its home exists, so the script is written with it and the plan is rewritten.
+      const w = world(copy, [], STEPS_PLAN);
+      const script = SCRIPT.split('/plans/gate-test.md').join(w.plan);
+      const text = scriptPlan(script);
+      writeFileSync(w.plan, text);
+      const marker = join(w.home, '.claude', 'APPROVED-PLAN.json');
+      const approve = (extra) => writeFileSync(marker, JSON.stringify({ plan: w.plan, hash: sha256(text), ...extra }));
+      const send = (body) => w.call('PreToolUse', { session_id: sid('wk'), tool_name: 'Workflow', tool_input: { script: body } });
+      approve({ scriptHash: sha256(script) });
+      const ok = send(script);
+      const changed = send(`${script}\n`);
+      approve({});
+      const noHash = send(script);
+      approve({ scriptHash: sha256('another script') });
+      const other = send(script);
+      return ok.status === 0 && changed.status === 2 && /byte for byte/.test(changed.stderr) && noHash.status === 2 && /does not hold the hash/.test(noHash.stderr)
+        && other.status === 2 && /does not hold the hash/.test(other.stderr);
+    },
+  },
+  {
+    name: 'the approval marker records the hash of the plan\'s script when the plan is approved, through the tool and from the owner\'s exit in the app; an amendment of the Steps moves the marker\'s hash and never the script\'s, so a script edited after approval matches nothing',
+    guards: ['script_mark', 'script_app_exit', 'script_amend_keeps'],
+    run(m, dir) {
+      const text = scriptPlan();
+      const A = appHome(dir);
+      writeFileSync(A.plan, text);
+      const tr = transcript([turn(0, 'start')]);
+      A.guard(tr, { hook_event_name: 'PostToolUse', tool_name: 'ExitPlanMode', tool_response: { plan: text, isAgent: false, filePath: A.plan } }, '--mark');
+      const mk0 = A.mk();
+      const STEP = { old_string: '1. **Build.** Make the thing.', new_string: '1. **Build.** Make the thing, and say what it did.' };
+      writeFileSync(A.plan, text.replace(STEP.old_string, STEP.new_string));
+      A.guard(tr, { tool_name: 'Edit', tool_input: { file_path: A.plan, ...STEP }, hook_event_name: 'PostToolUse' }, '--amend');
+      const mk1 = A.mk();
+      const edited = text.replace(STEP.old_string, STEP.new_string).replace("await agent('/plans/gate-test.md step 2')", "await agent('/plans/gate-test.md step 1')");
+      writeFileSync(A.plan, edited);
+      A.guard(tr, { tool_name: 'Edit', tool_input: { file_path: A.plan, old_string: 'x', new_string: 'y' }, hook_event_name: 'PostToolUse' }, '--amend');
+      const mk2 = A.mk();
+      // The owner's exit from plan mode in the app records it too.
+      const F = appHome(dir);
+      writeFileSync(F.plan, text);
+      const hourAgo = (Date.now() - 60 * 60 * 1000) / 1000;
+      utimesSync(F.plan, hourAgo, hourAgo);
+      const uf = uid();
+      const trF = transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, F.plan, uf)]);
+      F.guard(trF, { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
+      return mk0?.scriptHash === sha256(SCRIPT) && mk1?.hash === sha256(text.replace(STEP.old_string, STEP.new_string)) && mk1.scriptHash === sha256(SCRIPT)
+        && mk2?.hash === sha256(edited) && mk2.scriptHash === sha256(SCRIPT) && m.report.scriptHashOf(edited) !== mk2.scriptHash
+        && F.mk()?.scriptHash === sha256(SCRIPT);
+    },
+  },
+
+  // ---- a latched agent writes its own report; an agent reads the rules first (step 108) ----
+  {
+    name: 'a latched agent may write its own progress note and report, step-N.txt and step-N-report.txt directly in progress/ in the scratchpad for the step its prompt names; any other file, another step\'s, another tool and every other call stay refused, and its return passes',
+    guards: ['report_write_latch', 'report_write_tool', 'report_write_dir', 'report_write_scratchpad', 'report_write_name', 'report_write_own'],
+    run(m, dir) {
+      const w = world(dir);
+      const s = sid('lw');
+      const pad = `/tmp/claude-0/-home-user/${s}/scratchpad`;
+      const subs = join(w.tr.slice(0, -'.jsonl'.length), 'subagents');
+      mkdirSync(subs, { recursive: true });
+      // The agent was sent for step 3 and has read the rules.
+      writeFileSync(join(subs, 'agent-a1.jsonl'), jsonl([at({ type: 'user', message: { role: 'user', content: `${w.plan} step 3` } }, later(-300)), ...rulesReadEntries(dir, 'a1').slice(1)]));
+      const call = (tool_name, tool_input) => w.call('PreToolUse', { session_id: s, agent_id: 'a1', tool_name, tool_input });
+      const latch = call('Write', { file_path: join(w.cwd, 'stray.txt'), content: 'x' });
+      const held = call('Bash', { command: 'git status' });
+      const write = (p, tool_name = 'Write') => call(tool_name, { file_path: p, content: 'x', old_string: 'a', new_string: 'b', edits: [{ old_string: 'a', new_string: 'b' }] });
+      const passes = write(`${pad}/progress/step-3-report.txt`).status === 0 && write(`${pad}/progress/step-3.txt`).status === 0
+        && write(`${pad}/progress/step-3-report.txt`, 'Edit').status === 0 && write(`${pad}/progress/step-3.txt`, 'MultiEdit').status === 0;
+      const stays = [
+        write(`${pad}/progress/step-4-report.txt`), write(`${pad}/progress/step-3.txt.bak`), write(`${pad}/progress/notes.txt`), write(`${pad}/progress/sub/step-3.txt`),
+        write(`${pad}/status/fix-run.html`), write(`${pad}/step-3.txt`), write(`${pad}/status/step-3.txt`), write(join(w.cwd, 'stray.txt')), write(`/tmp/claude-0/-home-user/another-session/scratchpad/progress/step-3.txt`),
+        write(`${pad}/progress/step-3.txt`, 'NotebookEdit'), call('Read', { file_path: `${pad}/progress/step-3-report.txt` }), call('Bash', { command: 'git status' }),
+      ].every((r) => r.status === 2 && /REFUSAL LATCH/.test(r.stderr));
+      const back = call('SubagentHandback', { message: 'Refused by the plan fence; nothing was written.' });
+      return latch.status === 2 && held.status === 2 && /REFUSAL LATCH/.test(held.stderr) && passes && stays && back.status === 0;
+    },
+  },
+  {
+    name: 'an agent\'s first call is the Read of the shared rules: every other call is refused until its own transcript holds a Read of agent-rules.md that was not refused; the Read itself, the live clone\'s copy, its return, its TaskStop and a progress note or report in the scratchpad pass; with no transcript of its own the call is refused',
+    guards: ['rules_first', 'rules_first_read', 'rules_first_live', 'rules_first_transcript', 'rules_first_head', 'rules_first_error', 'rules_first_other_file', 'rules_first_none', 'rules_first_report'],
+    run(m, dir) {
+      const s = sid('rf');
+      const tr = transcript([turn(0, 'start')]);
+      const subs = join(tr.slice(0, -'.jsonl'.length), 'subagents');
+      mkdirSync(subs, { recursive: true });
+      const rules = join(dir, 'agent-rules.md');
+      const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
+      // No `rules` option: the real check runs.
+      const decide = (extra = {}, id = 'a1') => m.fence.decide({ session_id: s, agent_id: id, transcript_path: tr, cwd: '/', tool_name: 'Bash', tool_input: { command: 'git status' }, ...extra }, { plan });
+      const agent = (id, entries) => writeFileSync(join(subs, `agent-${id}.jsonl`), jsonl(entries));
+      const prompt = at({ type: 'user', message: { role: 'user', content: 'Go to step 2.' } }, later(-300));
+      const readRules = (id, file = rules, error = null) => [at(tool(0, `${id}-r`, 'Read', { file_path: file }), later(-290)), ...(error === null ? [] : [at(result(0, `${id}-r`, error ? 'File not found' : '1\tRules version: 1', error), later(-289))])];
+      const refused = (x, re = /RULES FIRST/) => /^PLAN FENCE/.test(x ?? '') && re.test(x);
+      const noFile = refused(decide(), /No transcript of this agent was found/);
+      const itself = decide({ tool_name: 'Read', tool_input: { file_path: rules } }) === null
+        && decide({ tool_name: 'Read', tool_input: { file_path: join(homedir(), '.claude', 'hub', 'agent-rules.md') } }) === null;
+      const otherRead = refused(decide({ tool_name: 'Read', tool_input: { file_path: join(dir, 'CLAUDE.md') } }));
+      const returns = decide({ tool_name: 'SubagentHandback', tool_input: { message: 'x' } }) === null && decide({ tool_name: 'TaskStop', tool_input: { task_id: 'bxyz789' } }) === null;
+      const report = decide({ tool_name: 'Write', tool_input: { file_path: `/tmp/claude-0/-home-user/${s}/scratchpad/progress/step-2-report.txt`, content: 'x' } }) === null
+        && refused(decide({ tool_name: 'Write', tool_input: { file_path: `/tmp/claude-0/-home-user/${s}/scratchpad/progress/notes.txt`, content: 'x' } }));
+      agent('a1', [prompt]);
+      const emptyAgent = refused(decide(), /holds no Read of that file/);
+      agent('a1', [prompt, ...readRules('a1', join(dir, 'CLAUDE.md'), false)]);
+      const wrongFile = refused(decide());
+      agent('a1', [prompt, ...readRules('a1', rules, true)]);
+      const refusedRead = refused(decide());
+      agent('a1', [prompt, ...readRules('a1', rules, false)]);
+      const ok = decide() === null;
+      agent('a1', [prompt, ...readRules('a1')]);
+      const issued = decide() === null;
+      // The Read sits at the start of the transcript: an agent that has since printed more than the tail a check might read
+      // (here five megabytes) is not refused for it.
+      agent('a1', [prompt, ...readRules('a1', rules, false), at(tool(0, 'big1', 'Bash', { command: 'git log' }), later(-200)), at(result(0, 'big1', 'x'.repeat(5 * 1024 * 1024)), later(-199))]);
+      const afterBig = decide() === null;
+      // Through hook-dispatch: the refusal latches that agent alone, and it can still write its report.
+      const w = world(dir);
+      const sw = sid('rf');
+      const sub2 = join(w.tr.slice(0, -'.jsonl'.length), 'subagents');
+      mkdirSync(sub2, { recursive: true });
+      writeFileSync(join(sub2, 'agent-ax.jsonl'), jsonl([at({ type: 'user', message: { role: 'user', content: `${w.plan} step 2` } }, later(-300))]));
+      const call = (tool_name, tool_input) => w.call('PreToolUse', { session_id: sw, agent_id: 'ax', tool_name, tool_input });
+      const first = call('Bash', { command: 'git status' });
+      const next = call('Read', { file_path: w.plan });
+      const note = call('Write', { file_path: `/tmp/claude-0/-home-user/${sw}/scratchpad/progress/step-2.txt`, content: 'REFUSED' });
+      const flow = first.status === 2 && /RULES FIRST/.test(first.stderr) && next.status === 2 && /REFUSAL LATCH/.test(next.stderr) && note.status === 0 && !latched(sw);
+      return noFile && itself && otherRead && returns && report && emptyAgent && wrongFile && refusedRead && ok && issued && afterBig && flow;
+    },
+  },
+
+  // ---- the allow rules that keep an agent's commands out of the harness's own judgement (step 108) ----
+  {
+    name: 'the hub\'s own .claude/settings.json parses, keeps its hooks, and allows only Artifact and rules that each name one command shape: a bare Bash, a wildcard alone and a rule for a whole program are found first in a planted list, before the real file is trusted to pass',
+    run() {
+      const broad = (list) => list.filter((r) => {
+        if (r === 'Artifact') return false;
+        const m = /^Bash\((.+)\)$/.exec(r);
+        if (!m) return true;
+        const body = m[1].replace(/:\*$/, '').trim();
+        return !body || body === '*' || /^(?:git|node|npm|npx|python3?|bash|sh|curl|wget|rm|sudo)$/.test(body);
+      });
+      // The control: the instrument must find these seven and only these before the real file is judged.
+      const planted = ['Artifact', 'Bash', 'Bash(*)', 'Bash(:*)', 'Bash(node:*)', 'Bash(git:*)', 'Bash(npm:*)', 'Bash(python3:*)', 'Bash(git status:*)', 'Bash(node --check:*)'];
+      const found = broad(planted);
+      let real = null;
+      try { real = JSON.parse(readFileSync(join(HERE, '.claude', 'settings.json'), 'utf8')); } catch { return false; }
+      const allow = real?.permissions?.allow;
+      return found.join('|') === 'Bash|Bash(*)|Bash(:*)|Bash(node:*)|Bash(git:*)|Bash(npm:*)|Bash(python3:*)'
+        && Array.isArray(allow) && allow.every((r) => typeof r === 'string') && broad(allow).length === 0 && new Set(allow).size === allow.length
+        && ['SessionStart', 'Stop', 'PreToolUse'].every((e) => Array.isArray(real.hooks?.[e]) && real.hooks[e].length > 0);
+    },
+  },
 ];
 
 const PLANTS = {
@@ -3870,7 +4335,7 @@ const PLANTS = {
   read_fence_doctrine: ["  if (a === join(dot, 'hub', 'DOCTRINE.md') || a === join(HUB, 'DOCTRINE.md')) return true;\n", '', 'hook-dispatch.mjs'],
   read_fence_transcript: ['  if (p.transcript_path && a === resolve(String(p.transcript_path))) return true;\n', '', 'hook-dispatch.mjs'],
   read_fence_transcript_name: ["  if (p.session_id && dirname(dirname(a)) === join(dot, 'projects') && basename(a) === `${p.session_id}.jsonl`) return true;\n", '', 'hook-dispatch.mjs'],
-  read_fence_repo_files: ["  if (['CLAUDE.md', 'NOTES.md', '.plan-scope', '.claude/PLAN', '.branch-guard'].includes(rel)) return true;\n", '', 'hook-dispatch.mjs'],
+  read_fence_repo_files: ["  if (['CLAUDE.md', 'NOTES.md', '.plan-scope', '.claude/PLAN', '.branch-guard', 'IR-SCIENCE.md', 'docs/decisions'].includes(rel)) return true;\n", '', 'hook-dispatch.mjs'],
   read_fence_hub_files: ["  return rel === 'DOCTRINE.md' || rel === 'LESSONS.md' || rel === AIM_FILE || rel === RULES_FILE || ['lessons', 'plans'].some(", "  return false && ['lessons', 'plans'].some(", 'hook-dispatch.mjs'],
   read_fence_aim_review: ['rel === AIM_FILE || ', '', 'hook-dispatch.mjs'],
   read_fence_read: ["    return f && of(f) ? null : (f ? `${f} is not of the record` : 'a Read names no file');", '    return null;', 'hook-dispatch.mjs'],
@@ -3890,7 +4355,7 @@ const PLANTS = {
   send_file_named: ['    if (named.length && !outside.length) return null;', '    if (!outside.length) return null;', 'hook-dispatch.mjs'],
   dispatch_prompt: ['  if (n === null) return refusal(`${head} Send exactly:', '  if (n === null) return null; // ', 'hook-dispatch.mjs'],
   dispatch_step: ['  if (!planSteps(plan.text).includes(n))', '  if (false)', 'hook-dispatch.mjs'],
-  dispatch_workflow: ["  if (tool === 'Workflow') return 'DISPATCH GATE", "  if (false) return 'DISPATCH GATE", 'hook-dispatch.mjs'],
+  dispatch_workflow: ["  if (tool === 'Workflow') return workflowGate(", "  if (false) return workflowGate(", 'hook-dispatch.mjs'],
   dispatch_no_plan: ['  if (!plan) return refusal(`${head} No approved plan', '  if (false) return refusal(`${head} No approved plan', 'hook-dispatch.mjs'],
   dispatch_custom: ['  if (type && !BUILTIN_AGENT_TYPES.has(type)) {', '  if (false) {', 'hook-dispatch.mjs'],
   plan_hash: ["    if (createHash('sha256').update(bytes).digest('hex') !== String(mk.hash)) return null;\n", '\n', 'hook-dispatch.mjs'],
@@ -3910,9 +4375,9 @@ const PLANTS = {
   // The refusal latch.
   latch_write: ["    if (latch && event === 'PreToolUse') { try { setLatch(p, why); }", '    if (false) { try { setLatch(p, why); }', 'hook-dispatch.mjs'],
   latch_stop_event: ["    if (latch && event === 'PreToolUse') { try {", '    if (latch) { try {', 'hook-dispatch.mjs'],
-  latch_refuse: ['    if (latch && !status && !mainStop) return refuse(latchMessage(latch), false);\n', '\n', 'hook-dispatch.mjs'],
+  latch_refuse: ['    if (latch && !status && !mainStop && !reportWrite) return refuse(latchMessage(latch), false);\n', '\n', 'hook-dispatch.mjs'],
   latch_return: ["    if (p.agent_id && AGENT_RETURN.has(String(p.tool_name ?? ''))) return 0;\n", '\n', 'hook-dispatch.mjs'],
-  latch_status: ['    if (latch && !status && !mainStop) return', '    if (latch && !mainStop) return', 'hook-dispatch.mjs'],
+  latch_status: ['    if (latch && !status && !mainStop && !reportWrite) return', '    if (latch && !mainStop && !reportWrite) return', 'hook-dispatch.mjs'],
   latch_repo: ['        if (o.deny) return refuse(o.reason);\n', "        if (o.deny) { process.stderr.write(o.reason + '\\n'); return 2; }\n", 'hook-dispatch.mjs'],
   latch_clear: ['if (list.some((e, i) => isOwnerMessage(e) && typedAt(list, i) > at)) {', 'if (list.some((e, i) => typedAt(list, i) > at)) {', 'hook-dispatch.mjs'],
   latch_after: ['isOwnerMessage(e) && typedAt(list, i) > at)', 'isOwnerMessage(e))', 'hook-dispatch.mjs'],
@@ -4131,12 +4596,12 @@ const PLANTS = {
   pointer_first: ['next: o.order.find((n) => !done.has(n)) ?? null', 'next: [...o.order].reverse().find((n) => !done.has(n)) ?? null', 'report.mjs'],
   pointer_done_only: [' && DONE.test(firstLineOf(e.last))) done.add(e.step);', ') done.add(e.step);', 'report.mjs'],
   pointer_report_only: ["if (e.how === 'a report' && e.step !== null && DONE.test(", 'if (e.step !== null && DONE.test(', 'report.mjs'],
-  pointer_print: ['  console.log(pointerBlock(state));\n', '\n', 'report.mjs'],
+  pointer_print: ['  console.log(pointerBlock(state, seen, mark));\n', '\n', 'report.mjs'],
   pointer_none: ["  const out = [p.next === null ? 'next: none' : `next: step ${p.next}`,", '  const out = [`next: step ${p.next}`,', 'report.mjs'],
   pointer_undefined: ['  if (!st.pointer) return `next: not defined (${st.why}).`;\n', '\n', 'report.mjs'],
   pointer_backs: ["      ...(x.back.lines.length ? x.back.lines.map((l) => `    ${l}`) : ['    (the agent ended with no text)']),\n", '\n', 'report.mjs'],
   pointer_report_path: ["      `  Report file: ${x.report} (${x.reportWritten ? 'written' : 'not written'})`);", '      );', 'report.mjs'],
-  pointer_found: ['  for (const f of st.found) {\n    const s = sortOf(st.manager, f);', '  for (const f of []) {\n    const s = sortOf(st.manager, f);', 'report.mjs'],
+  pointer_found: ['    for (const f of st.found) {\n      const s = sortOf(st.manager, f);', '    for (const f of []) {\n      const s = sortOf(st.manager, f);', 'report.mjs'],
   mgr_step_wildcard: ["?? notes?.sorts?.get(`${f.step}.*`) ?? null;", '?? null;', 'report.mjs'],
   mgr_specific_first: ["return notes?.sorts?.get(f.key) ?? notes?.sorts?.get(`${f.step}.*`) ?? null;", "return notes?.sorts?.get(`${f.step}.*`) ?? notes?.sorts?.get(f.key) ?? null;", 'report.mjs'],
   pointer_found_read: ["if (/^Found:/.test(l.trim())) { k++;", 'if (true) { k++;', 'report.mjs'],
@@ -4223,8 +4688,8 @@ const PLANTS = {
   // The choice popup is not a read: take it back onto plan-guard's list and every gate that asks plan-guard passes it.
   popup_not_a_read: ["'TodoWrite', 'ToolSearch',", "'TodoWrite', 'AskUserQuestion', 'ToolSearch',", 'plan-guard.mjs'],
   status_scope: ["const moved = scoped ? scopeChanged(mk.scope, bytes.toString('utf8')) : [];", 'const moved = [];', 'report.mjs'],
-  scope_mark: ['    plan, hash: snap.hash, scope: snap.scope, at:', '    plan, hash: snap.hash, at:', 'approved-plan-guard.mjs'],
-  scope_app_exit: ['plan: x.plan, hash: snap.hash, scope: snap.scope, at:', 'plan: x.plan, hash: snap.hash, at:', 'approved-plan-guard.mjs'],
+  scope_mark: ['    plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at:', '    plan, hash: snap.hash, scriptHash: snap.script, at:', 'approved-plan-guard.mjs'],
+  scope_app_exit: ['plan: x.plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at:', 'plan: x.plan, hash: snap.hash, scriptHash: snap.script, at:', 'approved-plan-guard.mjs'],
   amend_scope_gate: ['  const moved = scopeChanged(mk.scope, after);\n  if (moved.length) {', '  const moved = scopeChanged(mk.scope, after);\n  if (false) {', 'approved-plan-guard.mjs'],
   amend_agent: ["if (p.agent_id || !mk.scope || typeof mk.scope !== 'object'", "if (!mk.scope || typeof mk.scope !== 'object'", 'approved-plan-guard.mjs'],
   amend_no_scope: ["!mk.scope || typeof mk.scope !== 'object' || Array.isArray(mk.scope) || ", '', 'approved-plan-guard.mjs'],
@@ -4248,7 +4713,7 @@ const PLANTS = {
   rules_pin_unread: ['  if (!rules || rules.version === null) return `${head} the plan points at', '  if (false) return `${head} the plan points at', 'hook-dispatch.mjs'],
   rules_pin_path: ["if (!rulesPaths().has(pointer.path)) return `${head} the plan's Rules line points at ${pointer.path}, which is not this hub's rules file, so no step", "if (false) return `${head} the plan's Rules line points at ${pointer.path}, which is not this hub's rules file, so no step", 'hook-dispatch.mjs'],
   rules_pin_version: ["  if (pointer.version !== rules.version) {\n    return `${head} the plan's Rules line pins version", "  if (false) {\n    return `${head} the plan's Rules line pins version", 'hook-dispatch.mjs'],
-  rules_gate_step: ['  if (!plan || sentStep(p, plan) === null) return null;\n  return rulesPinProblem(plan.text, file);', '  if (!plan) return null;\n  return rulesPinProblem(plan.text, file);', 'hook-dispatch.mjs'],
+  rules_gate_step: ["  if (!plan || (p.tool_name !== 'Workflow' && sentStep(p, plan) === null)) return null;\n  return rulesPinProblem(plan.text, file);", '  if (!plan) return null;\n  return rulesPinProblem(plan.text, file);', 'hook-dispatch.mjs'],
   rules_gate_agent: ['export function rulesGate(p, plan = approvedPlan(), file = undefined) {\n  if (p.agent_id || ', 'export function rulesGate(p, plan = approvedPlan(), file = undefined) {\n  if (', 'hook-dispatch.mjs'],
   rules_gate_wired: ['      if (rl) return refuse(rl, false);\n', '\n', 'hook-dispatch.mjs'],
   rules_gate_no_latch: ['if (rl) return refuse(rl, false);', 'if (rl) return refuse(rl);', 'hook-dispatch.mjs'],
@@ -4270,7 +4735,7 @@ const PLANTS = {
   mgr_outcome_fallback: ["const outcome = m.outcome || st.goalOne || '';", "const outcome = m.outcome || '';", 'report.mjs'],
   mgr_unsorted_top: ['${groups.unsorted.length ? `<p class="m">Found lines not sorted yet:', '${false ? `<p class="m">Found lines not sorted yet:', 'report.mjs'],
   mgr_escape: ['(label) => (x) => li(`${escapeHtml(x.text)}<br>', '(label) => (x) => li(`${x.text}<br>', 'report.mjs'],
-  mgr_print_tag: ["[${s ? s.how : 'unsorted'}]:", '[unsorted]:', 'report.mjs'],
+  mgr_print_tag: ["      const how = s ? s.how : 'unsorted';", "      const how = 'unsorted';", 'report.mjs'],
   mgr_print_line: ['  out.push(managerLine(st, groups));\n', '\n', 'report.mjs'],
   mgr_sort_group: ["(s ? out[s.how] ?? out.unsorted : out.unsorted).push({ ...f, note: s?.note ?? '' });", "out.unsorted.push({ ...f, note: s?.note ?? '' });", 'report.mjs'],
   // The manager fence writes the notes and nothing beside them; the record includes the shared rules.
@@ -4300,6 +4765,91 @@ const PLANTS = {
   card_missing_section: ['  if (!body.length) return [', '  if (false) return [', 'session-brief.mjs'],
   card_missing_file: ["catch { return [`THE OWNER'S CORE ASKS: not printed (no CLAUDE.md beside this brief, at ${file}).`]; }", 'catch { return []; }', 'session-brief.mjs'],
   card_rest_note: ['...(body.length > shown.length ? [', '...(false ? [', 'session-brief.mjs'],
+
+  // The manager reads the session's saved tool results, IR-SCIENCE.md and the decision records (step 108).
+  record_tool_results: ["  if (p.session_id) {\n    const parts = relative(join(dot, 'projects'), a).split('/');", "  if (false) {\n    const parts = relative(join(dot, 'projects'), a).split('/');", 'hook-dispatch.mjs'],
+  record_tool_results_session: ['parts[1] === String(p.session_id) && ', '', 'hook-dispatch.mjs'],
+  record_ir_science: ["'.branch-guard', 'IR-SCIENCE.md', 'docs/decisions']", "'.branch-guard', 'docs/decisions']", 'hook-dispatch.mjs'],
+  record_decisions: ["'IR-SCIENCE.md', 'docs/decisions'].includes(rel)", "'IR-SCIENCE.md'].includes(rel)", 'hook-dispatch.mjs'],
+  record_decisions_flat: ['/^docs\\/decisions\\/[^/]+\\.md$/.test(rel)', '/^docs\\/decisions\\/.+\\.md$/.test(rel)', 'hook-dispatch.mjs'],
+  record_decisions_md: ['/^docs\\/decisions\\/[^/]+\\.md$/.test(rel)', '/^docs\\/decisions\\/[^/]+$/.test(rel)', 'hook-dispatch.mjs'],
+  // A refused read of the record is recorded, named by the status and read again before a step goes.
+  refused_note: ["    if (event === 'PreToolUse') { try { noteRefusedReadCall(p, why); }", "    if (false) { try { noteRefusedReadCall(p, why); }", 'hook-dispatch.mjs'],
+  refused_note_main: ["if (p.agent_id || p.tool_name !== 'Read' || !p.session_id) return false;", "if (p.tool_name !== 'Read' || !p.session_id) return false;", 'hook-dispatch.mjs'],
+  refused_note_exists: ['  try { if (!statSync(abs).isFile()) return false; } catch { return false; }\n  let record = false;', '  let record = false;', 'hook-dispatch.mjs'],
+  refused_note_record: ['  return record ? noteRefusedRead(p.session_id, abs, why) : false;', '  return noteRefusedRead(p.session_id, abs, why);', 'hook-dispatch.mjs'],
+  refused_failure: ["  if (event === 'PostToolUseFailure') { try { noteRefusedReadCall(", "  if (false) { try { noteRefusedReadCall(", 'hook-dispatch.mjs'],
+  refused_cleared: ['    return !((reads.get(resolvePath(x.path)) ?? 0) > Number(x.at));', '    return true;', 'report.mjs'],
+  refused_cleared_error: ["if (b?.type !== 'tool_result' || b.is_error || !asked.has(b.tool_use_id)) continue;\n        const p = asked.get(b.tool_use_id);", "if (b?.type !== 'tool_result' || !asked.has(b.tool_use_id)) continue;\n        const p = asked.get(b.tool_use_id);", 'report.mjs'],
+  refused_gone: ['    try { if (!statSync(x.path).isFile()) return false; } catch { return false; }\n    return !((reads', '    return !((reads', 'report.mjs'],
+  reads_gate: ['  const named = list.slice(0, 10)', '  return null;\n  const named = list.slice(0, 10)', 'hook-dispatch.mjs'],
+  reads_gate_step: ["if (p.tool_name !== 'Workflow' && (!plan || sentStep(p, plan) === null)) return null;\n  let list = open;", 'if (false) return null;\n  let list = open;', 'hook-dispatch.mjs'],
+  reads_gate_tool: ["if (p.tool_name !== 'Workflow' && (!plan || sentStep(p, plan) === null)) return null;\n  let list = open;", 'if (!plan || sentStep(p, plan) === null) return null;\n  let list = open;', 'hook-dispatch.mjs'],
+  reads_gate_wired: ['      if (rr) return refuse(rr, false);\n', '\n', 'hook-dispatch.mjs'],
+  reads_gate_no_latch: ['if (rr) return refuse(rr, false);', 'if (rr) return refuse(rr);', 'hook-dispatch.mjs'],
+  reads_status_block: ["    lines.push('Refused reads of the record NOT read since (the dispatch gate", "    lines.push('Refused reads of the record are open (the dispatch gate", 'report.mjs'],
+  // A status shows what changed and nothing twice.
+  seen_goals: ["  if (!seen?.goals) {\n    let goals = '';", "  if (true) {\n    let goals = '';", 'report.mjs'],
+  seen_backs: ['  const fresh = backs.filter((x) => !seen || !seen.backs?.[backKey(x)]);', '  const fresh = backs;', 'report.mjs'],
+  seen_found: ["      if (seen && seen.found?.[f.key] === stamp && how !== 'unsorted') { held++; continue; }", '      if (false) { held++; continue; }', 'report.mjs'],
+  seen_found_unsorted: ["seen.found?.[f.key] === stamp && how !== 'unsorted') { held++; continue; }", 'seen.found?.[f.key] === stamp) { held++; continue; }', 'report.mjs'],
+  seen_found_changed: ["      const stamp = `${f.line}|${how}|${s?.note ?? ''}`;", '      const stamp = `${f.line}`;', 'report.mjs'],
+  seen_refusals: ["    if (a.state === 'running' && seen && r.refusals.length <= before) continue;", '    if (false) continue;', 'report.mjs'],
+  seen_refusals_new: ['    const fresh = r.refusals.slice(before);', '    const fresh = r.refusals;', 'report.mjs'],
+  seen_approval: ['    if (seen && seen.approval === mark.approval) {', '    if (false) {', 'report.mjs'],
+  seen_agents_dedupe: ['Last entry: ${printed.has(a.id) ?', 'Last entry: ${false ?', 'report.mjs'],
+  seen_written: ['  writeSeen(sid, seen, mark);\n}', '  void 0;\n}', 'report.mjs'],
+  reads_main_since: ['    if (!Number.isFinite(t) || t <= since) continue;', '    if (!Number.isFinite(t)) continue;', 'report.mjs'],
+  reads_main_tools: ["/^(?:Read|Grep|Glob)$/.test(b.name ?? '')) continue;", "/^(?:Read|Grep|Glob|Bash)$/.test(b.name ?? '')) continue;", 'report.mjs'],
+  reads_main_sidechain: ["    if (e?.type !== 'assistant' || e.isSidechain || e.agentId) continue;\n    const t = Date.parse", "    if (e?.type !== 'assistant') continue;\n    const t = Date.parse", 'report.mjs'],
+  reads_print: ['  console.log(readsLine);\n', '\n', 'report.mjs'],
+  // The status page is rewritten at a hand-back and the flag stamps nothing.
+  page_handback_wired: ['    if (isHandBackNotice(p.prompt)) { try { run(', '    if (false) { try { run(', 'hook-dispatch.mjs'],
+  page_handback_marker: ['(?:completed|failed|killed|stopped|cancelled)<\\/status>/.test(t)', '(?:\\w+)<\\/status>/.test(t)', 'hook-dispatch.mjs'],
+  page_handback_owner: ['  return /^\\s*<task-notification\\b', '  return true || /^\\s*<task-notification\\b', 'hook-dispatch.mjs'],
+  page_flag_no_stamp: ['    let wrote = null;\n    try { wrote = writeStatusPage(who); }', "    writeFileSync(CLOCK, JSON.stringify({ at: Date.now(), status: 'stamped' }));\n    let wrote = null;\n    try { wrote = writeStatusPage(who); }", 'report.mjs'],
+  page_flag_header: ["statusPage(state, clock.status || 'no status has been given yet', clock.at ? new Date(clock.at) : new Date())", "statusPage(state, 'x', new Date())", 'report.mjs'],
+  page_flag_session: ["const who = String(hook.session_id || process.env.CLAUDE_CODE_SESSION_ID || '');", "const who = String(process.env.CLAUDE_CODE_SESSION_ID || '');", 'report.mjs'],
+  // A plan's own script may run its steps, behind one constant that is off.
+  workflow_const: ['export const WORKFLOW_SCRIPTS_ACCEPTED = false;', 'export const WORKFLOW_SCRIPTS_ACCEPTED = true;', 'hook-dispatch.mjs'],
+  workflow_off: ["  if (!('scripts' in opts ? opts.scripts : WORKFLOW_SCRIPTS_ACCEPTED)) return off;", '  if (false) return off;', 'hook-dispatch.mjs'],
+  workflow_no_plan: ["  if (!plan) return why('because no approved plan is in force.');", "  if (false) return why('because no approved plan is in force.');", 'hook-dispatch.mjs'],
+  workflow_no_script: ['  if (want === null) return why(', '  if (false) return why(', 'hook-dispatch.mjs'],
+  workflow_hash: ["  if (!plan.scriptHash || plan.scriptHash !== createHash('sha256').update(want).digest('hex')) {", '  if (false) {', 'hook-dispatch.mjs'],
+  workflow_inline: ["  if (typeof input.script !== 'string' || Object.keys(input).some((k) => k !== 'script')) {", "  if (typeof input.script !== 'string') {", 'hook-dispatch.mjs'],
+  workflow_equal: ['  if (input.script !== want) return why(', '  if (false) return why(', 'hook-dispatch.mjs'],
+  workflow_problem: ['  const bad = scriptProblem(want, plan);\n  return bad ?', '  const bad = null;\n  return bad ?', 'hook-dispatch.mjs'],
+  workflow_marker_read: ["scriptHash: typeof mk.scriptHash === 'string' ? mk.scriptHash : null", 'scriptHash: null', 'hook-dispatch.mjs'],
+  script_agent_literal: ["    if (open?.v !== '(' || lit?.t !== 'str' || lit.subst || !(after?.v === ',' || after?.v === ')')) return", '    if (false) return', 'hook-dispatch.mjs'],
+  script_template_subst: ["tokens.push({ t: 'str', v, subst: true }); return { open: true }; }", "tokens.push({ t: 'str', v }); return { open: true }; }", 'hook-dispatch.mjs'],
+  script_step_exists: ['    if (!steps.includes(n)) return', '    if (false) return', 'hook-dispatch.mjs'],
+  script_step_served: ['    if (!served.get(n)?.length) return', '    if (false) return', 'hook-dispatch.mjs'],
+  script_forbidden: ['    if (SCRIPT_FORBIDDEN.has(t.v)) return', '    if (false) return', 'hook-dispatch.mjs'],
+  script_agent_type: ["      if (colon?.v !== ':' || lit?.t !== 'str' || lit.subst || !BUILTIN_AGENT_TYPES.has(lit.v)) return", '      if (false) return', 'hook-dispatch.mjs'],
+  script_regex: ["return { tokens, problem: 'the script holds a regular expression literal, which the gate does not read' };", 'return { tokens, problem: null };', 'hook-dispatch.mjs'],
+  script_no_agent: ["  return calls ? null : 'the script starts no agent';", '  return null;', 'hook-dispatch.mjs'],
+  script_meta: ['  return /^export const meta\\b/.test(script) ? script : null;', '  return script;', 'report.mjs'],
+  script_planscript_fence: ['  const script = fence ? fence[1] : body.replace', '  const script = body.replace', 'report.mjs'],
+  script_hash_of: ["  return s === null ? '' : sha256(s);", '  return sha256(text);', 'report.mjs'],
+  script_mark: ['    plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at:', '    plan, hash: snap.hash, scope: snap.scope, at:', 'approved-plan-guard.mjs'],
+  script_app_exit: ['plan: x.plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at:', 'plan: x.plan, hash: snap.hash, scope: snap.scope, at:', 'approved-plan-guard.mjs'],
+  script_amend_keeps: ['{ ...mk, hash: snap.hash, scope: snap.scope, amendedAt:', '{ ...mk, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, amendedAt:', 'approved-plan-guard.mjs'],
+  // A latched agent writes its own report; an agent reads the rules first.
+  report_write_latch: ['if (latch && !status && !mainStop && !reportWrite) return refuse(', 'if (latch && !status && !mainStop) return refuse(', 'hook-dispatch.mjs'],
+  report_write_tool: ["if (!p.agent_id || !/^(?:Write|Edit|MultiEdit)$/.test(String(p.tool_name ?? ''))) return false;", 'if (!p.agent_id) return false;', 'hook-dispatch.mjs'],
+  report_write_dir: ["basename(dirname(abs)) !== 'progress' || ", '', 'hook-dispatch.mjs'],
+  report_write_scratchpad: ['if (!inScratchpad(abs, p.session_id) || ', 'if (', 'hook-dispatch.mjs'],
+  report_write_name: ['(?:-report)?\\.txt$/.exec(basename(abs));', '(?:-report)?\\.txt/.exec(basename(abs));', 'hook-dispatch.mjs'],
+  report_write_own: ['  return own === null || own === Number(m[1]);', '  return true;', 'hook-dispatch.mjs'],
+  rules_first: ["  const first = 'rules' in opts ? opts.rules(p) : rulesFirst(p);\n  if (first) return first;", '  const first = null;\n  if (first) return first;', 'plan-fence.mjs'],
+  rules_first_read: ["  if (tool === 'Read' && files.has(resolve(p.cwd || process.cwd(), String(p.tool_input?.file_path ?? '')))) return null;", '  if (false) return null;', 'plan-fence.mjs'],
+  rules_first_live: ["const files = new Set([resolve(homedir(), '.claude', 'hub', RULES_FILE), resolve(dirname(SELF), RULES_FILE)]);", 'const files = new Set([resolve(dirname(SELF), RULES_FILE)]);', 'plan-fence.mjs'],
+  rules_first_transcript: ['  if (f && rulesWereRead(headEntries(f, 512 * 1024), files)) return null;', '  if (f) return null;', 'plan-fence.mjs'],
+  rules_first_head: ['rulesWereRead(headEntries(f, 512 * 1024), files)', 'rulesWereRead(headEntries(f, 64), files)', 'plan-fence.mjs'],
+  rules_first_error: ["if (e.type === 'user' && b?.type === 'tool_result' && b.is_error) failed.add(b.tool_use_id);", 'if (false) failed.add(b.tool_use_id);', 'plan-fence.mjs'],
+  rules_first_other_file: ["b.name === 'Read' && files.has(resolve(String(b.input?.file_path ?? '')))) asked.add(b.id);", "b.name === 'Read') asked.add(b.id);", 'plan-fence.mjs'],
+  rules_first_none: ['  return `${HEAD} RULES FIRST:', '  if (!f) return null;\n  return `${HEAD} RULES FIRST:', 'plan-fence.mjs'],
+  rules_first_report: ['  if (agentReportWrite(p)) return null;\n  const files = new Set(', '  const files = new Set(', 'plan-fence.mjs'],
 };
 
 async function runAll(dir, only) {

@@ -29,7 +29,10 @@
  * guard whatever its text names; pending-guard; the judging of the owner's
  * newest exit from plan mode in the app (approved-plan-guard --judge-exit,
  * which records the approval marker from it and never refuses), so that no
- * gate below reads a marker that is about to change; the refusal latch; the
+ * gate below reads a marker that is about to change; the refusal latch (a
+ * latched agent's own progress note and report, `step-N.txt` and
+ * `step-N-report.txt` in the scratchpad's progress folder, pass it:
+ * `agentReportWrite`); the
  * stop hold (the whole session, agents too: while the newest owner message that
  * carries the whole word stop anywhere and no go-word stands, with no later
  * message carrying a go-word, every call is refused but an agent's own return,
@@ -45,8 +48,9 @@
  * session's status page has returned, as the doctrine's read is held); the manager
  * fence with its dispatch gate (main thread only),
  * which passes a read only of the record (the plans, the session scratchpad,
- * the doctrine and lessons, each repo's notes and plan pointers, the session's
- * transcript) and a SendUserFile only of files in the session scratchpad, which
+ * the doctrine and lessons, each repo's notes, plan pointers, IR-SCIENCE.md and
+ * decision records, the session's transcript and the tool results saved beside
+ * it) and a SendUserFile only of files in the session scratchpad, which
  * also passes the wait between statuses (`report.mjs --wait`), and
  * whose dispatch gate sends a step only when the plan's `Served by:` line names
  * a goal for it (the standing goals in the hub CLAUDE.md) and, where the plan has an `## Order`
@@ -59,7 +63,10 @@
  * the verdict is read from the reviewer's own transcript, Doctrine §0e rule 2);
  * the rules gate (main thread only, `rulesGate`: where a plan's Rules line points
  * at the hub's agent-rules.md and pins a version, no step is sent while the file's
- * version is another, Doctrine §0e rule 13); for the main thread's
+ * version is another, Doctrine §0e rule 13); the reads gate (main thread only,
+ * `readsGate`: a Read of the record that a hook refused or that failed is recorded
+ * (`noteRefusedReadCall`), the status names it, and no step, Workflow included, is
+ * sent until a Read has returned on that file; it does not latch); for the main thread's
  * EnterPlanMode, the in-app approval check
  * (approved-plan-guard --app-exit); the family guards (drive, approved-plan,
  * reply, keep-info); push-guard; plan-fence (subagents only);
@@ -94,11 +101,17 @@
  * each), then, only when the prompt ends with a go-word, the calls
  * pending-guard held while a message from the owner waited, then the goals
  * every session serves (the hub CLAUDE.md's section) ahead of the reminder.
+ * When the prompt is the notice that an agent or a task has ended (a task
+ * notification with an end marker, or an agent's hand-back: `isHandBackNotice`)
+ * the status page is rewritten as well, by `report.mjs --page`, which stamps
+ * nothing and prints no status. A Workflow call goes to `workflowGate`, which
+ * refuses it unless scripts are accepted (WORKFLOW_SCRIPTS_ACCEPTED, off) and the
+ * call carries the approved plan's own script.
  *
  * It runs from a stable clone (the setup script puts one at ~/.claude/hub), so
  * a broken edit in the working copy cannot refuse its own fix.
  */
-import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, createReadStream, rmSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, createReadStream, rmSync, statSync } from 'node:fs';
 import { join, dirname, resolve, basename, relative } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
@@ -107,7 +120,8 @@ import { createInterface } from 'node:readline';
 import { createHash } from 'node:crypto';
 import { recallFor } from './compact-recall.mjs';
 import { tailEntries, isOwnerMessage, textOf } from './transcript-tail.mjs';
-import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf } from './report.mjs';
+import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
+  planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
 import { HARNESS_TAG } from './pending-guard.mjs';
@@ -246,12 +260,13 @@ export function isManagerNotes(path, sid) {
 
 /**
  * The plan the owner approved, as the approval marker names it.
- * @returns {{path: string, text: string} | null} the plan file and its text,
- *   or null when no marker stands, its file cannot be read, or the file's
- *   sha256 is no longer the hash recorded at approval. The dispatch gate and
- *   the plan fence read their steps, Files and Commands out of this, so a null
- *   must make both refuse rather than allow: a plan edited after approval
- *   grants nothing.
+ * @returns {{path: string, text: string, scriptHash: string|null} | null} the plan
+ *   file and its text, with the hash of its script the marker recorded at approval
+ *   (`scriptHash`, null for a marker written before it was recorded), or null when
+ *   no marker stands, its file cannot be read, or the file's sha256 is no longer
+ *   the hash recorded at approval. The dispatch gate and the plan fence read their
+ *   steps, Files and Commands out of this, so a null must make both refuse rather
+ *   than allow: a plan edited after approval grants nothing.
  */
 export function approvedPlan() {
   try {
@@ -259,7 +274,7 @@ export function approvedPlan() {
     if (!mk?.plan || !mk.hash) return null;
     const bytes = readFileSync(mk.plan);
     if (createHash('sha256').update(bytes).digest('hex') !== String(mk.hash)) return null;
-    return { path: String(mk.plan), text: bytes.toString('utf8') };
+    return { path: String(mk.plan), text: bytes.toString('utf8'), scriptHash: typeof mk.scriptHash === 'string' ? mk.scriptHash : null };
   } catch { return null; }
 }
 
@@ -511,6 +526,51 @@ export function latchMessage(l) {
     + 'Until the owner writes again every call is refused except the status command, the main thread\'s TaskStop (so it can stop what it started) and a subagent\'s own return. '
     + 'Say in plain text what was refused, and stop. A subagent returns what it has, with the refusal\'s text. '
     + 'Another command, tool or wording for the same end is a second route, not a fresh start.';
+}
+
+/**
+ * Is this call a latched agent writing its own report?
+ * @param {object} p  a PreToolUse payload.
+ * @returns {boolean} true only for a subagent's Write, Edit or MultiEdit of a file
+ *   directly in `progress/` of this session's scratchpad named `step-N.txt` or
+ *   `step-N-report.txt`, where, if the agent's own transcript names the step it was
+ *   sent for (`agentStep`), N is that step. The agent's transcript is
+ *   `<main transcript without .jsonl>/subagents/agent-<agent id>.jsonl`; when it
+ *   cannot be found or names no step, any N passes. THE INVARIANT main() relies on:
+ *   a latched agent can write its progress note and its report and nothing else,
+ *   so a refusal does not cost the step its record, and the latch still holds every
+ *   other call but the agent's own return.
+ */
+export function agentReportWrite(p) {
+  if (!p.agent_id || !/^(?:Write|Edit|MultiEdit)$/.test(String(p.tool_name ?? ''))) return false;
+  const f = String(p.tool_input?.file_path ?? '');
+  if (!f) return false;
+  const abs = resolve(p.cwd ? String(p.cwd) : process.cwd(), f);
+  if (!inScratchpad(abs, p.session_id) || basename(dirname(abs)) !== 'progress' || basename(dirname(dirname(abs))) !== 'scratchpad') return false;
+  const m = /^step-(\d+)(?:-report)?\.txt$/.exec(basename(abs));
+  if (!m) return false;
+  const tr = String(p.transcript_path ?? '');
+  let own = null;
+  if (tr.endsWith('.jsonl')) {
+    const file = join(tr.slice(0, -'.jsonl'.length), 'subagents', `agent-${p.agent_id}.jsonl`);
+    try { if (existsSync(file)) own = agentStep(file); } catch { own = null; }
+  }
+  return own === null || own === Number(m[1]);
+}
+
+/**
+ * Is a prompt the notice that an agent or a background task has ended?
+ * @param {string} prompt  the text of a UserPromptSubmit event.
+ * @returns {boolean} true when it opens with a task notification that carries an end
+ *   marker (`<status>` completed, failed, killed, stopped or cancelled), or with an
+ *   agent's hand-back as the harness delivers it (`[Subagent hand-back]`, in an
+ *   `<agent-message>` or bare). These are the prompts `recordOwnerTurn` sets aside as
+ *   not the owner's; the status page is rewritten when one arrives.
+ */
+export function isHandBackNotice(prompt) {
+  const t = String(prompt ?? '');
+  return /^\s*<task-notification\b[\s\S]*?<status>(?:completed|failed|killed|stopped|cancelled)<\/status>/.test(t)
+    || /^\s*(?:<agent-message\b[^>]*>\s*)?\[Subagent hand-back\]/i.test(t);
 }
 
 // ---- a correction from the owner ends the turn (Doctrine §0e rule 3) ----
@@ -1042,9 +1102,65 @@ export function rulesPinProblem(text, file = join(HUB, RULES_FILE)) {
  *   an agent. main() calls it with latch false.
  */
 export function rulesGate(p, plan = approvedPlan(), file = undefined) {
-  if (p.agent_id || !/^(?:Agent|Task|SendMessage)$/.test(String(p.tool_name ?? ''))) return null;
-  if (!plan || sentStep(p, plan) === null) return null;
+  if (p.agent_id || !/^(?:Agent|Task|SendMessage|Workflow)$/.test(String(p.tool_name ?? ''))) return null;
+  if (!plan || (p.tool_name !== 'Workflow' && sentStep(p, plan) === null)) return null;
   return rulesPinProblem(plan.text, file);
+}
+
+// ---- a refused read of the record is read again before a step goes (Doctrine §0e rule 13) ----
+
+/**
+ * Record a refused read, when it was a read of the record.
+ * @param {object} p  a main-thread payload of a refused call (PreToolUse) or of a
+ *   failed one (PostToolUseFailure).
+ * @param {string} why  the refusal's or the failure's text.
+ * @returns {boolean} true when the refusal was recorded (`noteRefusedRead` in
+ *   report.mjs): the call is the main thread's Read, of a regular file that exists, and
+ *   `recordPath` says that file is of the record. A refused read of anything
+ *   else is the manager fence doing its work and is not recorded, and neither is
+ *   a read of a file that is not there, because neither can be read to clear
+ *   the record. The status names what is recorded and `readsGate` sends no step
+ *   while it stands.
+ */
+export function noteRefusedReadCall(p, why) {
+  if (p.agent_id || p.tool_name !== 'Read' || !p.session_id) return false;
+  const f = String(p.tool_input?.file_path ?? '');
+  if (!f) return false;
+  const abs = absOf(f, p.cwd ? String(p.cwd) : process.cwd());
+  try { if (!statSync(abs).isFile()) return false; } catch { return false; }
+  let record = false;
+  try { record = recordPath(abs, p, () => approvedPlan()?.path); } catch { record = false; }
+  return record ? noteRefusedRead(p.session_id, abs, why) : false;
+}
+
+/**
+ * THE READS GATE: no step is sent while a refused read of the record has not been read.
+ * @param {object} p  a main-thread Agent, Task, SendMessage or Workflow call.
+ * @param {{path: string, text: string} | null} [plan]  the plan in force.
+ * @param {{path: string, at: number, why: string}[]|undefined} [open]  `unreadRefusals`'
+ *   answer, passed by the test; read from the session's record and transcript when undefined.
+ * @returns {string|null} null for a subagent's call, for a tool that sends no agent, for
+ *   a prompt that is not a step of the plan (the dispatch gate judges that), and when
+ *   no refused read stands. Otherwise the refusal, which names each path, when it was
+ *   refused, and the remedy: Read it. A record that cannot be read does not refuse
+ *   (`refusedReads` answers [] for a session with none), and a path that is gone is
+ *   not named (`unreadRefusals`), so the gate can always be cleared by reading what
+ *   it names. main() calls it with latch false: reading the file is the way out, and a
+ *   latch would wait on the owner for nothing.
+ */
+export function readsGate(p, plan = approvedPlan(), open = undefined) {
+  if (p.agent_id || !/^(?:Agent|Task|SendMessage|Workflow)$/.test(String(p.tool_name ?? ''))) return null;
+  if (p.tool_name !== 'Workflow' && (!plan || sentStep(p, plan) === null)) return null;
+  let list = open;
+  if (list === undefined) {
+    const refused = refusedReads(p.session_id);
+    list = refused.length ? unreadRefusals(refused, tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024)) : [];
+  }
+  if (!list.length) return null;
+  const named = list.slice(0, 10).map((x) => `- ${x.path}, refused at ${californiaTime(new Date(x.at))} (California)`);
+  return `READS GATE (Doctrine §0e rule 13): ${list.length === 1 ? 'a read' : `${list.length} reads`} of the record the main thread made ${list.length === 1 ? 'was' : 'were'} refused and no Read has returned since, so the main thread has not read what it needs and no step is sent on it:\n`
+    + `${named.join('\n')}${list.length > named.length ? `\n… and ${list.length - named.length} more` : ''}\n`
+    + 'Read each file now (a Read with an offset and a limit, as often as it takes), then send the step. This refusal does not latch: reading clears it.';
 }
 
 // ---- the finding queue: findings recorded for the next plan (Doctrine §0e rule 2) ----
@@ -1249,7 +1365,7 @@ const pathLike = (w) => /^(?:\/|~|\.\.?(?:\/|$))/.test(w) || w.includes('/');
 const absOf = (w, cwd) => resolve(cwd || process.cwd(), /^~(?=\/|$)/.test(w) ? w.replace(/^~/, homedir()) : w);
 const READ_FENCE = 'MANAGER FENCE (Doctrine §0e rule 13): the main thread reads only the record: the approved plan and the plans folder, '
   + 'the session scratchpad, the hub\'s DOCTRINE.md, LESSONS.md, aim-review.md, agent-rules.md, lessons/ and plans/, each repo\'s CLAUDE.md, NOTES.md, .plan-scope, '
-  + '.claude/PLAN and .branch-guard, this session\'s transcript and the live clone\'s doctrine. ';
+  + '.claude/PLAN and .branch-guard, IR-SCIENCE.md and docs/decisions/*.md, this session\'s transcript and the tool results saved beside it, and the live clone\'s doctrine. ';
 
 /**
  * The git repository a path sits in.
@@ -1276,8 +1392,12 @@ function repoRootOf(abs) {
  *   scratchpad itself); a file directly under `~/.claude/plans/` (or the folder)
  *   or the approved plan wherever it is; this hub's DOCTRINE.md or the live
  *   clone's; this session's transcript (`transcript_path`, or
- *   `~/.claude/projects/<project>/<session>.jsonl`); in any repository its
- *   CLAUDE.md, NOTES.md, .plan-scope, .claude/PLAN and .branch-guard; and in a
+ *   `~/.claude/projects/<project>/<session>.jsonl`) and the files the harness
+ *   saved beside it, `~/.claude/projects/<project>/<session>/tool-results/`
+ *   (a print too long for the conversation is read whole there, never from its
+ *   preview); in any repository its CLAUDE.md, NOTES.md, .plan-scope,
+ *   .claude/PLAN and .branch-guard, its IR-SCIENCE.md and its decision records,
+ *   the `.md` files directly in `docs/decisions/` (and that folder); and in a
  *   hub (this one, the live clone, or a root holding DOCTRINE.md and
  *   hook-dispatch.mjs) its DOCTRINE.md, LESSONS.md, aim-review.md (the file a
  *   review step follows, which the manager reads to know what it is sending),
@@ -1297,10 +1417,16 @@ export function recordPath(abs, p, planPath) {
   if (a === join(dot, 'hub', 'DOCTRINE.md') || a === join(HUB, 'DOCTRINE.md')) return true;
   if (p.transcript_path && a === resolve(String(p.transcript_path))) return true;
   if (p.session_id && dirname(dirname(a)) === join(dot, 'projects') && basename(a) === `${p.session_id}.jsonl`) return true;
+  // The session's own saved tool results: <projects>/<project>/<session>/tool-results, the folder and what is below it.
+  if (p.session_id) {
+    const parts = relative(join(dot, 'projects'), a).split('/');
+    if (parts.length >= 3 && parts[0] !== '..' && parts[1] === String(p.session_id) && parts[2] === 'tool-results' && !parts.includes('..')) return true;
+  }
   const root = repoRootOf(a);
   if (!root) return false;
   const rel = relative(root, a);
-  if (['CLAUDE.md', 'NOTES.md', '.plan-scope', '.claude/PLAN', '.branch-guard'].includes(rel)) return true;
+  if (['CLAUDE.md', 'NOTES.md', '.plan-scope', '.claude/PLAN', '.branch-guard', 'IR-SCIENCE.md', 'docs/decisions'].includes(rel)) return true;
+  if (/^docs\/decisions\/[^/]+\.md$/.test(rel)) return true;
   const hub = root === HUB || root === join(dot, 'hub') || (existsSync(join(root, 'DOCTRINE.md')) && existsSync(join(root, 'hook-dispatch.mjs')));
   if (!hub) return false;
   return rel === 'DOCTRINE.md' || rel === 'LESSONS.md' || rel === AIM_FILE || rel === RULES_FILE || ['lessons', 'plans'].some((d) => rel === d || rel.startsWith(`${d}/`));
@@ -1436,6 +1562,167 @@ function filesNamed(v, key = '', out = []) {
   return out;
 }
 
+// ---- a plan's own script may run its steps (Doctrine §0e rule 13) ----
+
+/**
+ * WHETHER A PLAN'S SCRIPT IS ACCEPTED AT ALL. Off until the probe of the plan that
+ * built the script gate shows that the plan fence holds an agent a workflow runs: an
+ * agent started inside a script has to be refused a command outside its step's
+ * Commands, as one sent by the manager is. While this is false every Workflow call is
+ * refused, whatever the plan holds, exactly as before the gate existed.
+ */
+export const WORKFLOW_SCRIPTS_ACCEPTED = false;
+
+// Words a script may not use at all: each reaches outside the plan's own steps or builds code the owner did not read.
+const SCRIPT_FORBIDDEN = new Set(['workflow', 'eval', 'Function', 'require', 'import', 'process', 'globalThis', 'constructor', '__proto__']);
+
+/**
+ * The tokens of a workflow script that the dispatch gate reads.
+ * @param {string} src  the script.
+ * @returns {{tokens: {t: string, v: string, subst?: boolean}[], problem: string|null}} identifiers
+ *   (`id`), strings and template literals (`str`, with `subst` when a template holds
+ *   `${`), and the punctuation characters (`p`), with comments and white space left
+ *   out; a template's substitutions are lexed as code, so an `agent(` inside one is
+ *   met. `problem` is set, and the tokens are not to be trusted, when the script holds
+ *   a regular expression literal (a `/` where a division cannot be), which this lexer
+ *   does not read: it refuses rather than guess where such a literal ends.
+ */
+function scriptTokens(src) {
+  const tokens = [];
+  const stack = []; // each open template substitution: the brace depth inside it
+  let i = 0;
+  let prev = '';
+  const n = src.length;
+  const readString = (q) => {
+    let v = '';
+    i++;
+    while (i < n && src[i] !== q) { if (src[i] === '\\') { v += src[i + 1] ?? ''; i += 2; } else { v += src[i++]; } }
+    i++;
+    return v;
+  };
+  // Reads a template from just after its opening backtick (or after the `}` ending a substitution) up to the closing backtick or the next `${`.
+  const readTemplate = () => {
+    let v = '';
+    let subst = false;
+    while (i < n && src[i] !== '`') {
+      if (src[i] === '\\') { v += src[i + 1] ?? ''; i += 2; continue; }
+      if (src[i] === '$' && src[i + 1] === '{') { subst = true; i += 2; stack.push(0); tokens.push({ t: 'str', v, subst: true }); return { open: true }; }
+      v += src[i++];
+    }
+    i++;
+    tokens.push({ t: 'str', v, subst });
+    return { open: false };
+  };
+  while (i < n) {
+    const c = src[i];
+    if (/\s/.test(c)) { i++; continue; }
+    if (c === '/' && src[i + 1] === '/') { while (i < n && src[i] !== '\n') i++; continue; }
+    if (c === '/' && src[i + 1] === '*') { const e = src.indexOf('*/', i + 2); i = e < 0 ? n : e + 2; continue; }
+    if (c === '"' || c === "'") { tokens.push({ t: 'str', v: readString(c) }); prev = 'v'; continue; }
+    if (c === '`') { i++; readTemplate(); prev = 'v'; continue; }
+    if (/[A-Za-z_$]/.test(c)) {
+      let j = i;
+      while (j < n && /[\w$]/.test(src[j])) j++;
+      const word = src.slice(i, j);
+      tokens.push({ t: 'id', v: word });
+      i = j;
+      // A keyword that takes an expression is followed by a regular expression, not a division.
+      prev = /^(?:return|typeof|case|in|of|throw|delete|void|new|else|do|instanceof|yield|await)$/.test(word) ? 'k' : 'v';
+      continue;
+    }
+    if (/[0-9]/.test(c)) { let j = i; while (j < n && /[\w.]/.test(src[j])) j++; tokens.push({ t: 'p', v: 'num' }); i = j; prev = 'v'; continue; }
+    if (c === '/') {
+      // A division follows a value or a closing bracket; anywhere else it opens a regular expression, which is not read.
+      if (prev === 'v') { tokens.push({ t: 'p', v: '/' }); i++; prev = '/'; continue; }
+      return { tokens, problem: 'the script holds a regular expression literal, which the gate does not read' };
+    }
+    if (stack.length && c === '{') { stack[stack.length - 1]++; }
+    if (stack.length && c === '}') {
+      if (stack[stack.length - 1] === 0) { stack.pop(); i++; readTemplate(); prev = 'v'; continue; }
+      stack[stack.length - 1]--;
+    }
+    tokens.push({ t: 'p', v: c });
+    prev = c === ')' || c === ']' ? 'v' : c;
+    i++;
+  }
+  return { tokens, problem: stack.length ? 'the script holds a template literal that is never closed' : null };
+}
+
+/**
+ * What is wrong with an accepted-looking workflow script, read against the plan.
+ * @param {string} script  the plan's script (`planScript`), which the call must carry exactly.
+ * @param {{path: string, text: string}} plan  the plan in force.
+ * @returns {string|null} null when every agent the script starts is told a string literal
+ *   that is exactly the plan's path and the number of a step in its `## Steps` that
+ *   serves a goal (`sentStep`, `servedBy`), every `agentType` is a built-in one, and the
+ *   script uses none of SCRIPT_FORBIDDEN; else the first thing found. Each use of the
+ *   word `agent` has to be a call whose first argument is such a literal: the word
+ *   used any other way (passed on, renamed, called through a property) is refused. A
+ *   template literal with a substitution is not a literal. This reads the script the
+ *   owner approved, byte for byte, so it is a second lock: the first is the equality
+ *   `workflowGate` demands.
+ */
+export function scriptProblem(script, plan) {
+  const { tokens, problem } = scriptTokens(script);
+  if (problem) return problem;
+  const steps = planSteps(plan.text);
+  const served = servedBy(plan.text);
+  let calls = 0;
+  for (let k = 0; k < tokens.length; k++) {
+    const t = tokens[k];
+    if (t.t !== 'id') continue;
+    if (SCRIPT_FORBIDDEN.has(t.v)) return `the script uses "${t.v}", which a plan's script may not`;
+    if (t.v === 'agentType') {
+      const colon = tokens[k + 1], lit = tokens[k + 2];
+      if (colon?.v !== ':' || lit?.t !== 'str' || lit.subst || !BUILTIN_AGENT_TYPES.has(lit.v)) return `the script names an agentType that is not a literal built-in type (${[...BUILTIN_AGENT_TYPES].join(', ')})`;
+    }
+    if (t.v !== 'agent') continue;
+    const open = tokens[k + 1], lit = tokens[k + 2], after = tokens[k + 3];
+    if (open?.v !== '(' || lit?.t !== 'str' || lit.subst || !(after?.v === ',' || after?.v === ')')) return 'the script uses "agent" other than as a call whose first argument is a string literal';
+    const n = sentStep({ tool_name: 'Agent', tool_input: { prompt: lit.v } }, plan);
+    if (n === null) return `an agent in the script is told "${lit.v.slice(0, 80)}", which is not exactly ${plan.path} and a step number`;
+    if (!steps.includes(n)) return `an agent in the script is sent for step ${n}, which the plan's Steps do not have`;
+    if (!served.get(n)?.length) return `an agent in the script is sent for step ${n}, which serves no goal in the plan's "Served by:" line`;
+    calls++;
+  }
+  return calls ? null : 'the script starts no agent';
+}
+
+/**
+ * The dispatch gate's answer to a Workflow call.
+ * @param {object} p  a main-thread Workflow call.
+ * @param {{path: string, text: string, scriptHash?: string|null}|null} [plan]  the plan
+ *   in force, with the hash of its script as the approval marker recorded it.
+ * @param {{scripts?: boolean}} [opts]  `scripts` replaces `WORKFLOW_SCRIPTS_ACCEPTED`, for the test.
+ * @returns {string|null} null only when scripts are accepted and the call carries the
+ *   plan's `## Script` section byte for byte as its inline `script` (and no other
+ *   input: no path to a script file, no resume, no arguments), that text hashes to
+ *   the value the marker recorded when the plan was approved (an edit to the section
+ *   after approval therefore matches nothing), and `scriptProblem` finds nothing.
+ *   Otherwise the refusal. While scripts are not accepted the refusal is the one
+ *   every workflow had before this gate: no script of the session's carries
+ *   instructions the owner has not read. THE INVARIANT the caller relies on: a
+ *   Workflow that passes is the one script the owner read in the plan that was approved.
+ */
+export function workflowGate(p, plan = approvedPlan(), opts = {}) {
+  const off = 'DISPATCH GATE (Doctrine §0e): a workflow is refused, so no script of the session\'s carries instructions the owner has not read. Send an agent with the plan\'s path and a step number.';
+  if (!('scripts' in opts ? opts.scripts : WORKFLOW_SCRIPTS_ACCEPTED)) return off;
+  const why = (t) => `DISPATCH GATE (Doctrine §0e): a workflow is refused, ${t}\n${approvalBlock()}`;
+  if (!plan) return why('because no approved plan is in force.');
+  const want = planScript(plan.text);
+  if (want === null) return why('because the approved plan has no "## Script" section holding a script that begins `export const meta`.');
+  if (!plan.scriptHash || plan.scriptHash !== createHash('sha256').update(want).digest('hex')) {
+    return why('because the approval marker does not hold the hash of this plan\'s script (the script was added or changed after the plan was approved, or the plan was approved before scripts were recorded), so it is not the script the owner read.');
+  }
+  const input = p.tool_input ?? {};
+  if (typeof input.script !== 'string' || Object.keys(input).some((k) => k !== 'script')) {
+    return why('because a plan\'s script is passed inline as `script` and nothing else: no file path, no resume of a run, no arguments.');
+  }
+  if (input.script !== want) return why('because the call\'s script is not, byte for byte, the plan\'s "## Script" section.');
+  const bad = scriptProblem(want, plan);
+  return bad ? why(`because ${bad}.`) : null;
+}
+
 /**
  * The manager fence: the main thread plans, sends agents, checks and reports.
  * @param {object} p  a PreToolUse payload.
@@ -1457,8 +1744,9 @@ function filesNamed(v, key = '', out = []) {
  *   EnterPlanMode or ExitPlanMode, the wait between
  *   statuses, `node <this hub>/report.mjs --wait` exactly (WAIT) — the
  *   status command never reaches this. EnterPlanMode must pass, or no plan could be
- *   amended once the fence stands. Everything else, a Workflow included, is
- *   refused with the reason.
+ *   amended once the fence stands. A Workflow goes to `workflowGate`: refused,
+ *   unless scripts are accepted (WORKFLOW_SCRIPTS_ACCEPTED) and the call carries
+ *   the approved plan's own script. Everything else is refused with the reason.
  */
 export function managerFence(p, opts = {}) {
   if (p.agent_id) return null;
@@ -1466,7 +1754,7 @@ export function managerFence(p, opts = {}) {
   const input = p.tool_input ?? {};
   const head = `MANAGER FENCE (Doctrine §0e): the main thread plans, sends agents, checks their results and reports; it does no work itself. ${tool} is not one of those.`;
   if (tool === 'Agent' || tool === 'Task' || tool === 'SendMessage') return dispatchGate(p, 'plan' in opts ? opts.plan : approvedPlan(), 'pointer' in opts ? opts.pointer : undefined);
-  if (tool === 'Workflow') return 'DISPATCH GATE (Doctrine §0e): a workflow is refused, so no script of the session\'s carries instructions the owner has not read. Send an agent with the plan\'s path and a step number.';
+  if (tool === 'Workflow') return workflowGate(p, 'plan' in opts ? opts.plan : approvedPlan(), opts);
   if (tool === 'TaskStop' || tool === 'ExitPlanMode' || tool === 'EnterPlanMode') return null;
   // The main thread may not end its turn while an agent runs, and none of its
   // other calls can wait: this one does, and returns on what it waits for.
@@ -1662,6 +1950,8 @@ async function main(event, raw, p) {
   // in-app approval check's. A Stop event and the other events never latch.
   const refuse = (why, latch = true) => {
     process.stderr.write(why + '\n');
+    // A refused Read of a file of the record is recorded, so it is read again before a step goes (`readsGate`).
+    if (event === 'PreToolUse') { try { noteRefusedReadCall(p, why); } catch { /* the refusal stands either way */ } }
     if (latch && event === 'PreToolUse') { try { setLatch(p, why); } catch { /* the refusal stands either way */ } }
     return 2;
   };
@@ -1705,7 +1995,12 @@ async function main(event, raw, p) {
     const status = p.tool_name === 'Bash' && REPORT.test(String(p.tool_input?.command ?? ''));
     const mainStop = p.tool_name === 'TaskStop' && !p.agent_id;
     const latch = latchStanding(p);
-    if (latch && !status && !mainStop) return refuse(latchMessage(latch), false);
+    // A LATCHED AGENT WRITES ITS OWN REPORT: its progress note and report file in the
+    // scratchpad pass the latch, so a refusal does not cost its step the record of what
+    // it did. Every other call of it is still refused but its own return.
+    let reportWrite = false;
+    try { reportWrite = !!latch && agentReportWrite(p); } catch { reportWrite = false; }
+    if (latch && !status && !mainStop && !reportWrite) return refuse(latchMessage(latch), false);
     if (status) {
       // A subagent cannot tell the owner anything, so its stamp would unlock
       // the main thread with no status given.
@@ -1787,7 +2082,7 @@ async function main(event, raw, p) {
     // amendment of the plan's Steps answers a refused route, and entering plan
     // mode is the remedy for an OFF-AIM verdict. A Standing step passes. A failure
     // reading the review refuses: a gate that stops gating in silence is the defect.
-    if (!p.agent_id && /^(?:Agent|Task|SendMessage)$/.test(String(p.tool_name ?? ''))) {
+    if (!p.agent_id && /^(?:Agent|Task|SendMessage|Workflow)$/.test(String(p.tool_name ?? ''))) {
       let rv = null;
       try { rv = reviewGate(p); } catch (e) {
         rv = `REVIEW GATE (Doctrine §0e rule 2): the review could not be read (${e?.message ?? e}); the gate refuses rather than stop gating.`;
@@ -1801,6 +2096,16 @@ async function main(event, raw, p) {
         rl = `RULES GATE (Doctrine §0e rule 13): the rules file could not be read (${e?.message ?? e}); the gate refuses rather than stop gating.`;
       }
       if (rl) return refuse(rl, false);
+      // A REFUSED READ OF THE RECORD IS READ BEFORE A STEP GOES (Doctrine §0e rule 13):
+      // while a read of the record the main thread made was refused and no Read has
+      // returned on it since, no step is sent. Its own call and not latched: reading
+      // the file clears it, and a latch would wait on the owner for nothing. A failure
+      // reading the record refuses, as the gates above do.
+      let rr = null;
+      try { rr = readsGate(p); } catch (e) {
+        rr = `READS GATE (Doctrine §0e rule 13): the refused reads could not be read (${e?.message ?? e}); the gate refuses rather than stop gating.`;
+      }
+      if (rr) return refuse(rr, false);
     }
     // AN APPROVAL PRESSED IN THE APP COUNTS. When the owner's own exit from
     // plan mode in the app has been recorded as the approval of the plan, plan
@@ -1851,6 +2156,9 @@ async function main(event, raw, p) {
   // words are put in front of the session now, after the repos' own hooks,
   // like --mark's outcome.
   let replyNote = '';
+  // A Read of a file of the record that FAILED (the file was too long to return, or the harness refused it) is a
+  // refused read too: it is recorded, and read again before a step goes (`readsGate`).
+  if (event === 'PostToolUseFailure') { try { noteRefusedReadCall(p, String(p.error ?? p.tool_response ?? 'the Read failed')); } catch { /* recorded or not, the failure stands */ } }
   if ((event === 'PostToolUse' && /^(Bash|WebFetch)$/.test(p.tool_name ?? '')) || event === 'PostToolUseFailure') {
     const o = run(`node "${join(HUB, 'reply-guard.mjs')}" --record ${event}`, raw, root);
     if (o.deny) replyNote = o.reason;
@@ -1859,6 +2167,12 @@ async function main(event, raw, p) {
     // Whether this prompt ends with a go-word is recorded here: it is
     // `correctionStanding`'s fallback when the transcript cannot be read.
     try { recordOwnerTurn(p); } catch { /* the transcript is the verdict's source */ }
+    // THE STATUS PAGE AT A HAND-BACK: the notice that an agent has ended arrives as a
+    // prompt, and the page is rewritten from the same read a status makes (report.mjs
+    // --page), at that event and no other. It stamps nothing and prints nothing, so the
+    // status gate and the page gate are as they were. The event is one the dispatcher
+    // already receives, so no settings file wires anything new.
+    if (isHandBackNotice(p.prompt)) { try { run(`node "${join(HUB, 'report.mjs')}" --page`, raw, root, 30); } catch { /* the page is a convenience */ } }
     // A MESSAGE THE HARNESS NEVER DELIVERED IS PRINTED AT THE TOP OF THE TURN
     // THAT SHOWS IT WAS PASSED OVER, in any turn, go-word or not: it is what
     // the owner wrote and nothing here sends it again, so the session answers

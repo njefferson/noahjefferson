@@ -407,11 +407,22 @@ Every item below has actually happened.
  every other tool on the main thread, and `plan-fence.mjs` holds each agent to
  the plan's Files and Commands. It passes a read only of the record (the plans,
  the session scratchpad, the doctrine and lessons, the hub's `aim-review.md`
- and `agent-rules.md`, each repo's notes and plan pointers, the session's
- transcript) and refuses a read of an app's source with
+ and `agent-rules.md`, each repo's notes, plan pointers, `IR-SCIENCE.md` and
+ decision records (the `.md` files directly in `docs/decisions/`), the session's
+ transcript and the tool results the harness saved beside it, so a print too
+ long for the conversation is read whole and never from its preview) and
+ refuses a read of an app's source with
  a reason to send an agent; it passes `SendUserFile` of files in the session
  scratchpad and of no other path, so a choice between pictures carries its
- pictures. (Doctrine §0e rule 13.)
+ pictures. A Read of a file of the record that a hook refused, or that failed,
+ is recorded; the status names it until a Read has returned on that file, and
+ the reads gate (`readsGate`) sends no step, Workflow included, meanwhile,
+ without latching. A Workflow is refused unless the plan's own `## Script`
+ section, passed inline byte for byte with the hash the approval marker holds,
+ starts only agents told a literal plan path and a step that serves a goal; that
+ acceptance (`WORKFLOW_SCRIPTS_ACCEPTED` in `hook-dispatch.mjs`) is off until a
+ probe shows the plan fence holds an agent a workflow runs.
+ (Doctrine §0e rule 13; LESSONS §400, §403.)
 - **A REFUSAL LATCHES UNTIL THE OWNER'S NEXT MESSAGE.** Another command, tool
  or wording for the same end is a second route, not a fresh start. After a
  PreToolUse refusal on the main thread, `hook-dispatch.mjs` refuses every call
@@ -420,14 +431,19 @@ Every item below has actually happened.
  agent only: every later call of it is refused but its own return, and the
  main thread and the other agents are not held; the main thread reads the
  refusal in the status print, which carries every hook refusal each agent
- received, and reports it. The main thread's `TaskStop` passes so it can stop
+ received, and reports it. A latched agent's own progress note and report,
+ `step-N.txt` and `step-N-report.txt` directly in `progress/` of the session
+ scratchpad, for the step its prompt names, pass its latch, so a refusal does not
+ cost the step its record; every other call of it is still refused but its
+ return (LESSONS §404). The main thread's `TaskStop` passes so it can stop
  what it started (§11d). Only a message the owner typed after the refusal
- clears the main thread's latch, by when it was typed. Seven refusals do not
+ clears the main thread's latch, by when it was typed. Eight refusals do not
  latch: a status falling due, a call held for a waiting owner message, a stop
  or a correction from the owner standing, a call held until the state page is
  read after a compaction, a move the review gate refuses, a step the rules gate
- refuses because the plan pins a rules version the file has moved past, and
- entering plan mode again after the
+ refuses because the plan pins a rules version the file has moved past, a step
+ the reads gate refuses because a refused read of the record has not been read,
+ and entering plan mode again after the
  owner approved the plan by leaving plan mode in the app, which the dispatcher
  judges before any gate reads the approval. Give the status, send the held
  call again, answer the correction, read the page, send the review or amend the
@@ -454,11 +470,20 @@ Every item below has actually happened.
  an agent to find at the end of its run. A status is due when an agent has
  ended since the last one, and at no other time: the main thread ends its turn
  while an agent runs, the harness's completion notification brings it back,
- and no wait runs between statuses. `report.mjs` prints in every status the
- agents ended since the last one, each running agent's progress note (flagging
- a stale one), every hook refusal each agent received and its last tool
- result, read from the agent's own transcript, and the approval state read from
- disk. (Doctrine §0e rule 2; LESSONS §384.)
+ and no wait runs between statuses. A status shows what changed and nothing
+ twice: `report.mjs` remembers what the session's statuses have printed
+ (`~/.claude/report-seen/`), so the goals print once per session, a hand-back
+ once under its step with the ended-agents list pointing at it, a Found line when
+ it is new, changed or unsorted, a running agent's hook refusal once, and the
+ approval state in full only when it changed. It prints the agents ended since
+ the last status with their hook refusals and last tool result, read from each
+ agent's own transcript, each running agent's progress note (flagging a stale
+ one), the main thread's reads since the last status as a count and their
+ paths, and the refused reads of the record not yet read. The whole record stays
+ on the status page, which the dispatcher also rewrites when the notice of an
+ agent's end arrives as a prompt (`report.mjs --page`: it stamps nothing and
+ prints no status). With no session id nothing is remembered and everything
+ prints. (Doctrine §0e rule 2; LESSONS §384, §401, §402.)
 - **A TURN THAT ENDS WITH STEPS LEFT IS A RETURN TO THE OWNER, AND IT IS
  REFUSED.** With an approved plan in force, `stop-guard.mjs` refuses a stop
  when a step of its `## Steps` has had no agent hand back for it, no agent the
@@ -476,8 +501,9 @@ Every item below has actually happened.
  refuses any step but N and a Standing step and prints N in the refusal, and
  `stop-guard.mjs` refuses a stop while N is not none, which replaces the count
  of `## Steps` above for a plan that has an Order. The status also prints each
- hand-back, its report file's path and every `Found:` line, and writes the
- status page's source from the same read. (Doctrine §0e rules 2 and 13.)
+ new hand-back, its report file's path and every `Found:` line that is new or
+ unsorted, and writes the status page's source from the same read.
+ (Doctrine §0e rules 2 and 13.)
 - **A PLAN WITH AN ORDER HAS A REVIEW STEP, AND A FRESH AGENT CLEARS EVERY MOVE
  BEFORE IT GOES.** Its `Standing:` line names a step that tells its agent to
  follow `/root/.claude/hub/aim-review.md` by that full path
@@ -494,7 +520,8 @@ Every item below has actually happened.
  and 13; LESSONS §397.)
 - **THE STATE OF THE WORK IS ONE PAGE, AND THE FIRST READ AFTER A COMPACTION
  IS THAT PAGE.** `status/fix-run.html` in the session scratchpad is rewritten
- whole at every status, so the manager's part is written in `status/manager.txt`
+ whole at every status and at every agent's hand-back (LESSONS §402), so the
+ manager's part is written in `status/manager.txt`
  beside it, plain text, one item to a line, which the manager fence lets the main
  thread write and `report.mjs` renders into the page: `Outcome:` in the owner's
  terms, `Explanation standing:` and `Explanation ruled out:` each with ` | ` and
@@ -520,8 +547,13 @@ Every item below has actually happened.
  `## Rules` section that is the line `Rules: /root/.claude/hub/agent-rules.md,
  version N.` or every rule line of the file, whole (`plan-guard.mjs` refuses it
  otherwise), and `rulesGate` sends no step while the version the plan pins is not
- the file's, without latching. An agent reads the file by that path. The main
- thread can read it. (Doctrine §0e rule 13.)
+ the file's, without latching. An agent reads the file by that path, and its
+ first call is that Read: `plan-fence.mjs` refuses every other call of an agent
+ until its own transcript holds a Read of the file that was not refused (its
+ return, its `TaskStop` and a progress note or report in the scratchpad pass),
+ because an agent is sent only a plan path and a step number and the CLAUDE.md
+ it is handed is what tells it. The main thread can read it. (Doctrine §0e rule
+ 13; LESSONS §404.)
 - **DOCTRINE PARAGRAPHS ARE REPLACED, NOT ADDED TO, WHEN A GATE ENFORCES THEM
  WHOLE.** The doctrine is read in full at every start and its length is a cost on
  every session. A paragraph a gate enforces whole is replaced by one line,
