@@ -431,6 +431,86 @@ is ready, call ExitPlanMode.
 `, reply);
 }
 
+/** 6b. THE OWNER'S EMOTION NAMED, A PROMISE OF FUTURE CONDUCT, AND A GO-WORD ASKED FOR
+ *  UNDER A CORRECTION (Doctrine §0e rule 3, LESSONS §406). Three shapes a reply takes when
+ *  it manages the owner instead of answering:
+ *    (a) it NAMES A FEELING OF THE OWNER'S, in the second person or the third (the words are
+ *        the FEELING list below). What a person feels is not the session's to say, and
+ *        saying it answers nothing the message asked.
+ *    (b) it PROMISES FUTURE CONDUCT: "from now on I will", "next time I will", "this will not
+ *        happen again", "I promise". A promise is words about a later turn, and the gates
+ *        are what hold a later turn; the reply says what was wrong and what was done.
+ *    (c) its OPEN LINE (the first line) ASKS FOR A GO-WORD while the owner's newest message
+ *        is a correction: "say go to continue". A go-word is the owner's to give or not;
+ *        asking for one under a correction parks the turn for a nod, and the work the
+ *        correction does not touch goes on without one.
+ *  Judged before the declaration, because a declared stop excuses stopping and never the
+ *  shape of the reply. Fenced code is set aside, so a reply that QUOTES a pattern in a code
+ *  block (this guard's own lessons do) is not refused for it. The patterns sit between the
+ *  two marker lines so a scratch run can load exactly these and count what they would have
+ *  refused over a session's replies. */
+// BEGIN STOP PATTERNS
+const FEELING = String.raw`(?:frustrat\w*|annoy\w*|angry|anger|upset|irritat\w*|disappoint\w*|exasperat\w*|fed up|furious|unhappy|impatien\w*|anxious|worried)`;
+const EMOTION = [
+  new RegExp(String.raw`\b(?:you(?:'re| are| were| must be| seem| sound)|you(?:'ve| have) (?:been|every right to be))\s+(?:\w+ly\s+)?(?:so\s+|very\s+|really\s+|quite\s+|rightly\s+|understandably\s+)?${FEELING}\b`, 'i'),
+  new RegExp(String.raw`\byour\s+(?:evident\s+|obvious\s+|clear\s+|understandable\s+|growing\s+)?${FEELING}\b`, 'i'),
+  new RegExp(String.raw`\bI\s+(?:can\s+)?(?:see|hear|understand|sense|appreciate|know|realize|realise)\s+(?:that\s+)?(?:you|how)\b[^.!?\n]{0,60}\b${FEELING}\b`, 'i'),
+  new RegExp(String.raw`\bthe owner(?:'s|\s+is|\s+was|\s+feels|\s+felt|\s+seems|\s+seemed)\b[^.!?\n]{0,40}\b${FEELING}\b`, 'i'),
+  /\bunderstandably\s+(?:upset|annoyed|frustrated|angry|cross)\b/i,
+];
+const PROMISE = [
+  /\bfrom now on,?\s+(?:I|I'll|we|the session|sessions|every session|each session)\b/i,
+  /\b(?:next time|in future|going forward)\b[^.!?\n]{0,30}\bI(?:'ll|\s+will|\s+shall)\b/i,
+  /\bI\s+(?:promise|swear|guarantee|assure you|give you my word)\b/i,
+  /\bI(?:'ll|\s+will|\s+shall)\s+(?:never|always|make sure|be (?:more )?careful|do better|try harder|remember to|keep (?:that|this) in mind|take more care)\b/i,
+  /\b(?:this|that|it)\s+(?:will|won't|will not|shall not)\s+(?:happen|occur|be repeated|recur)\s+again\b/i,
+  /\bI(?:'ll|\s+will)\s+not\s+(?:do|make|repeat) (?:that|this|it|the same mistake)\s+again\b/i,
+  /\bI won't\s+(?:do|make|repeat) (?:that|this|it|the same mistake)\s+again\b/i,
+];
+const GO_ASK = [
+  /\b(?:say|reply|answer|respond|type|send|write|give me|tell me)\b[^.!?\n]{0,50}\b(?:go|ok|okay|continue|approved|yes)\b/i,
+  /\bgo-word\b/i,
+  /\b(?:a|the)\s+(?:go|ok|yes)\s+(?:from you|to continue|and I)\b/i,
+];
+/**
+ * Which of the three shapes a reply takes.
+ * @param {string} text  the reply.
+ * @param {boolean} correction  whether the owner's newest message is a correction.
+ * @returns {{kind: string, said: string}|null} the first shape found, with the words that
+ *   matched, judged on the reply with fenced code removed: 'emotion', 'promise', or
+ *   'go-word' (only when `correction` is true, and only on the reply's first non-blank
+ *   line); null when none. The words are the session's own and never the owner's.
+ */
+function managingShape(text, correction) {
+  const prose = String(text).replace(/```[\s\S]*?```/g, ' ');
+  for (const re of EMOTION) { const m = re.exec(prose); if (m) return { kind: 'emotion', said: m[0].trim().slice(0, 80) }; }
+  for (const re of PROMISE) { const m = re.exec(prose); if (m) return { kind: 'promise', said: m[0].trim().slice(0, 80) }; }
+  if (correction) {
+    const open = prose.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+    for (const re of GO_ASK) { const m = re.exec(open); if (m) return { kind: 'go-word', said: m[0].trim().slice(0, 80) }; }
+  }
+  return null;
+}
+// END STOP PATTERNS
+let correctionNow = null;
+try { correctionNow = correctionStanding({ session_id: hook.session_id, transcript_path: path }); } catch { correctionNow = null; }
+const managing = managingShape(reply, !!correctionNow);
+if (managing) {
+  const why = {
+    emotion: 'names the owner\'s emotion',
+    promise: 'promises future conduct',
+    'go-word': 'opens by asking for a go-word while the owner\'s newest message is a correction',
+  }[managing.kind];
+  refuse(`STOP REFUSED — this reply ${why} ("${managing.said}").
+
+Doctrine §0e rule 3, LESSONS §406. ${managing.kind === 'emotion'
+    ? 'What the owner feels is never named: answer what the message asked, point by point, and say what was wrong and what was done about it.'
+    : managing.kind === 'promise'
+      ? 'A promise is words about a later turn, and the gates are what hold a later turn. Say what was wrong and what was done, and stop there.'
+      : 'A go-word is the owner\'s to give. While a correction stands, answer every point in it and end the turn; held work is sent again after a go-word, and work the correction does not touch goes on without one.'}
+`, reply);
+}
+
 /** 7. ASKING FOR THE NEXT WORK, OR OFFERING TO DROP THE CHECKS (Doctrine §0g,
  *  LESSONS §380). Each repo's ranked roadmap names the next work, so a reply
  *  asking the owner what to build next hands back a question the record already

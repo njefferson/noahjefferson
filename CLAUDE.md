@@ -47,7 +47,8 @@ never edits this page: its lines are the owner's to change.
 `.claude/hooks/session-start.sh` runs at session start and prints
 [`session-brief.mjs`](session-brief.mjs) — which branch this is versus where work
 belongs, whether the doctrine has moved since this repo last reconciled, the repo
-family, and every LESSONS title. **It exists because all of that was already
+family, every LESSONS title, and each repository's `STATE.md` whole where one
+exists (LESSONS §411). **It exists because all of that was already
 written down and none of it was being read.** A session loads exactly one file
 automatically, and every other rule here had to be opened by somebody who
 remembered it existed.
@@ -437,18 +438,20 @@ Every item below has actually happened.
  cost the step its record; every other call of it is still refused but its
  return (LESSONS §404). The main thread's `TaskStop` passes so it can stop
  what it started (§11d). Only a message the owner typed after the refusal
- clears the main thread's latch, by when it was typed. Eight refusals do not
+ clears the main thread's latch, by when it was typed. Nine refusals do not
  latch: a status falling due, a call held for a waiting owner message, a stop
  or a correction from the owner standing, a call held until the state page is
  read after a compaction, a move the review gate refuses, a step the rules gate
  refuses because the plan pins a rules version the file has moved past, a step
  the reads gate refuses because a refused read of the record has not been read,
- and entering plan mode again after the
+ a step the judgement gate refuses because the newest hand-back has no written
+ judgement, and entering plan mode again after the
  owner approved the plan by leaving plan mode in the app, which the dispatcher
  judges before any gate reads the approval. Give the status, send the held
  call again, answer the correction, read the page, send the review or amend the
  plan or enter plan mode as the review gate's refusal says, amend the Rules line
- as the rules gate's refusal says, or carry on with the approved
+ as the rules gate's refusal says, write the `Judged` line as the judgement
+ gate's refusal says, or carry on with the approved
  plan; that last refusal lifts once an agent is sent under the plan or the
  owner writes again. (Doctrine §0d; §0e rule 14.)
 - **NO `cd`, IN ANY COMMAND, BY THE MAIN THREAD OR AN AGENT.** Every path is
@@ -520,15 +523,27 @@ Every item below has actually happened.
  and 13; LESSONS §397.)
 - **THE STATE OF THE WORK IS ONE PAGE, AND THE FIRST READ AFTER A COMPACTION
  IS THAT PAGE.** `status/fix-run.html` in the session scratchpad is rewritten
- whole at every status and at every agent's hand-back (LESSONS §402), so the
- manager's part is written in `status/manager.txt`
- beside it, plain text, one item to a line, which the manager fence lets the main
- thread write and `report.mjs` renders into the page: `Outcome:` in the owner's
- terms, `Explanation standing:` and `Explanation ruled out:` each with ` | ` and
- its evidence, `Decision:` with ` | ` and its reason, `Next:`, and
- `Found 41.3 fixed|stopping|queued:` to sort the third Found line of step 41's
- report (`Found 41.*` sorts the whole step). A Found line not sorted prints as unsorted, counted at the top of the
- page and in the status. After a compaction `pageGate` in `hook-dispatch.mjs`
+ whole at every status and at every agent's hand-back (LESSONS §402), in one
+ shape (LESSONS §414): a heading, an updated line in California time, the
+ `Version:` lines, one section for each step in Order and each Standing step,
+ `Open for you`, and `Found and not fixed`. A step's heading is its number and
+ its title from the plan, with a chip that says its state in colour and in words:
+ green `done` for a hand-back opening DONE, amber `running`, amber `under review`
+ for the step the unnumbered `Next:` line names first while a review runs, red
+ `open` for a refusal, a failure or an interruption with no DONE, and purple
+ `held` with what it waits on. The Standing review step is one `Reviews` line
+ with no chip. The manager's part is written in `status/manager.txt` beside it,
+ plain text, one item to a line, which the manager fence lets the main thread
+ write and `report.mjs` renders: `Version:` and `Open:`, one line each; `What
+ 41:`, `Why 41:` and `Next 41:` for step 41's section; `Done 41:` to count a step
+ done by decision whatever its newest end; `Next:` with no number, the next move;
+ `Judged 41:` with the judgement of step 41's hand-back (the judgement gate,
+ below); and `Found 41.3 fixed|stopping|queued:` to sort the third Found line of
+ step 41's report (`Found 41.*` sorts the whole step). Of the Found lines of the
+ plan's own steps the page draws those sorted as stopping the plan or queued,
+ each tagged in words, in the report's own words, and counts those not sorted
+ yet; it draws no `Outcome:`, `Explanation` or `Decision:` line and no fixed
+ Found line: those stay in the notes. After a compaction `pageGate` in `hook-dispatch.mjs`
  holds the main thread to reads and the status until a Read of the page has
  returned, the way the doctrine's read is held, and does not latch.
  (Doctrine §0e rule 2.)
@@ -548,12 +563,55 @@ Every item below has actually happened.
  version N.` or every rule line of the file, whole (`plan-guard.mjs` refuses it
  otherwise), and `rulesGate` sends no step while the version the plan pins is not
  the file's, without latching. An agent reads the file by that path, and its
- first call is that Read: `plan-fence.mjs` refuses every other call of an agent
- until its own transcript holds a Read of the file that was not refused (its
+ first call is that Read, or the Read of the approved plan or of the steps file
+ beside it, since the plan is what names the file to an agent sent only its path
+ and a step number: `plan-fence.mjs` refuses every other call of an agent
+ until its own transcript holds a Read of the rules that was not refused (its
  return, its `TaskStop` and a progress note or report in the scratchpad pass),
- because an agent is sent only a plan path and a step number and the CLAUDE.md
- it is handed is what tells it. The main thread can read it. (Doctrine §0e rule
- 13; LESSONS §404.)
+ because the CLAUDE.md an agent is handed is what tells it. An agent a Workflow
+ starts keeps its transcript below `subagents/workflows/<run>/`, and is found
+ there as well (`agentFiles` in `report.mjs`, which the status, the pointer, the
+ stop guard and the fence all read through). The main thread can read it.
+ (Doctrine §0e rule 13; LESSONS §404, §410.)
+- **AN AGENT MAY BE SENT THE STEPS FILE IN THE PLAN'S PLACE.** Approval, the
+ owner's exit from plan mode in the app and every amendment write
+ `<plan>.steps.md` beside the plan, holding only its Rules, Steps and Commands
+ sections (`approved-plan-guard.mjs`, `stepsFileText` in `report.mjs`). The
+ dispatch gate accepts a prompt that is the steps file's path and a step number,
+ and refuses it when the file is missing or is not exactly what the plan in
+ force gives, so an agent is never sent a copy that has drifted.
+ (Doctrine §0e rule 13; LESSONS §409.)
+- **THE NEWEST HAND-BACK IS JUDGED IN WRITING BEFORE THE NEXT STEP GOES.**
+ `status/manager.txt` in the session scratchpad carries one line, `Judged N:
+ <what the hand-back showed against the plan, whether it is whole, and what the
+ plan does about it>`, for each end of an agent for step N of the plan's Order,
+ however it ended, written after that end. `judgedGate` in `hook-dispatch.mjs`
+ refuses a send of any other step until the line is there, passes a Standing
+ step, fails closed when the session's agents cannot be read, and does not latch.
+ Every status prints a Judgement line under the Review line, read by the same
+ function. The line is a record that a judgement was made and is fresh; the
+ reading is the manager's. (Doctrine §0e rule 2; LESSONS §407.)
+- **A PLAN RESTS ON QUOTED EVIDENCE AND ACCOUNTS FOR THE ROADMAP.** A plan that
+ sends agents and whose Files names a repository has a `## What is` section
+ whose bullets each quote, in double quotes, twelve characters or more of a line
+ present in a file the bullet names that a named repository holds, and a
+ `## Roadmap` section with a bullet for every open item of the repository's
+ `## Next capability release` (the decision number or the title, `in` or `out`,
+ and a reason). `plan-guard.mjs` refuses `ExitPlanMode` otherwise. A `## Found
+ answered` line may answer a run of findings the plan leaves untouched in one
+ line, `Q-TAG-1 to Q-TAG-12 still queued: <reason>`. It forces the evidence to
+ be openable and the omissions to be stated, and cannot judge that either is
+ sound. (Doctrine §0e rule 2; LESSONS §408.)
+- **EACH REPOSITORY'S SETTINGS ALLOW THE COMMAND SHAPES A PLAN LISTS, ONE RULE
+ EACH, AND NOTHING BROADER.** In the harness's automatic mode a command no rule
+ names is judged by the harness itself, and that judgement has spoiled whole
+ sessions. `permissions.allow` in a repository's `.claude/settings.json` holds
+ one prefix rule for each shape the plan's Commands list, never a bare `Bash`,
+ a wildcard alone or a rule for a whole program, and the file is parsed after
+ each write because the dispatcher skips a repository whose settings fail to
+ parse. This holds for a session launched inside that repository; whether it
+ binds a session launched at a parent folder with several repositories under it
+ is not measured. (LESSONS §405.)
 - **DOCTRINE PARAGRAPHS ARE REPLACED, NOT ADDED TO, WHEN A GATE ENFORCES THEM
  WHOLE.** The doctrine is read in full at every start and its length is a cost on
  every session. A paragraph a gate enforces whole is replaced by one line,
@@ -565,6 +623,22 @@ Every item below has actually happened.
  guards are not how a session finds out the format: a guard refusal for a
  shape the doctrine already names is a defect, not feedback. (Doctrine §2;
  LESSONS §384.)
+- **A REPLY NEVER NAMES THE OWNER'S FEELING, PROMISES CONDUCT FOR A LATER TURN,
+ OR ASKS FOR A GO-WORD UNDER A CORRECTION.** What the owner feels is not the
+ session's to say, a promise is words about a turn the gates hold, and a go-word
+ is the owner's to give. `stop-guard.mjs` refuses a reply that names a feeling or
+ promises conduct, and one whose first line asks for a go-word while the owner's
+ newest message is a correction, once, with the reason; fenced code is set aside.
+ Say what was wrong and what was done, and stop. (Doctrine §0e rule 3;
+ LESSONS §406.)
+- **THE SUITE RUNS UNDER A PLANTED SESSION, AND ITS PLANTS RUN NARROWED FOR A
+ QUICK LOOK.** `session-guards.test.mjs` replaces the inherited session id with
+ a planted one before any case runs and compares the planted status page and
+ manager notes byte for byte after every case, so a run never rewrites the live
+ session's page (LESSONS §412). `--plants --files=a.mjs,b.mjs` or `--plants
+ --touched` runs only the plants of those guard files, `--dry` lists them, and
+ `--case=` narrows the cases; the full run, once, over the integrated change, is
+ the gate (LESSONS §413).
 - **AN OPEN CHOICE IS THE FIRST THING IN A REPLY, UNTIL IT IS ANSWERED.** A
  choice placed under a long report was missed. The numbered options, the
  recommendation first, open the reply, after a stop declaration and one

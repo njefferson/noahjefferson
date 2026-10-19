@@ -51,7 +51,7 @@
 // wrong about.
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { join, resolve, dirname } from 'node:path';
+import { join, resolve, dirname, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
@@ -171,6 +171,38 @@ if (existsSync(reposMd)) {
   say('REPOS: no REPOS.md in the hub — the family is undocumented.');
 }
 say();
+
+// --- 3a · each repository's STATE.md, whole ---------------------------------
+//
+// A repository that keeps a `STATE.md` at its root keeps there what a session needs to
+// know about the state of the work in it and nothing else: where the work stands, what
+// is running, what is owed. Like the lessons above, a state that is written down and not
+// opened is not known, so the brief prints each one WHOLE (never a preview or a count):
+// the repository this brief is for, the hub, and every other repository beside either of
+// them. A repository with none prints nothing of its own; when none has one the brief
+// says so in one line, so that silence is never taken for a read that found nothing.
+const stateRepos = [];
+for (const d of [repo, hub]) if (!stateRepos.includes(d)) stateRepos.push(d);
+for (const parent of new Set([dirname(repo), dirname(hub)])) {
+  let kids = [];
+  try { kids = readdirSync(parent).sort(); } catch { kids = []; }
+  for (const k of kids) {
+    const d = join(parent, k);
+    if (!stateRepos.includes(d) && existsSync(join(d, '.git'))) stateRepos.push(d);
+  }
+}
+let statesPrinted = 0;
+for (const d of stateRepos) {
+  const f = join(d, 'STATE.md');
+  if (!existsSync(f)) continue;
+  let t = '';
+  try { t = readFileSync(f, 'utf8'); } catch { say(`STATE.md of ${basename(d)}: ${f} exists and could not be read.`); say(); continue; }
+  say(`STATE.md of ${basename(d)} (${f}), whole:`);
+  say(t.replace(/\s+$/, ''));
+  say();
+  statesPrinted++;
+}
+if (!statesPrinted) { say(`STATE.md: none of the ${stateRepos.length} repositor${stateRepos.length === 1 ? 'y' : 'ies'} beside this brief keeps one.`); say(); }
 
 // --- 3b · the owner's core asks, one page ---------------------------------
 //

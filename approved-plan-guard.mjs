@@ -83,6 +83,14 @@
  *   nothing, and a Workflow call is held to the one the owner read
  *   (`workflowGate` in hook-dispatch.mjs).
  *
+ *   THE STEPS FILE (`writeStepsFile`). Wherever the marker names a plan or moves its
+ *   hash (approval by the tool, the owner's exit in the app, an amendment), this also
+ *   writes `<plan>.steps.md` beside the plan, holding only the plan's Rules, Steps and
+ *   Commands (`stepsFileText` in report.mjs). The dispatch gate accepts a prompt naming
+ *   that file in the plan's place, and refuses it if the file is not what the plan in
+ *   force would give, so an agent reads a few hundred lines in place of the whole plan
+ *   and can never be sent a stale copy.
+ *
  *   `node approved-plan-guard.mjs --done` ends the approved work: the last
  *   step of every plan runs it.
  *
@@ -96,7 +104,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { tailEntries, isOwnerMessage } from './transcript-tail.mjs';
-import { californiaTime, scopeHashes, scopeChanged, SCOPE_SECTIONS, scriptHashOf } from './report.mjs';
+import { californiaTime, scopeHashes, scopeChanged, SCOPE_SECTIONS, scriptHashOf, stepsFilePath, stepsFileText } from './report.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MARKER = join(homedir(), '.claude', 'APPROVED-PLAN.json');
@@ -123,6 +131,26 @@ const snapshotOf = (p) => {
   const text = bytes.toString('utf8');
   return { hash: createHash('sha256').update(bytes).digest('hex'), scope: scopeHashes(text), script: scriptHashOf(text) };
 };
+
+/**
+ * Write the steps file beside a plan.
+ * @param {string} plan  the approved plan file, absolute.
+ * @returns {string|null} the steps file's path once `stepsFileText` of the plan's text
+ *   is written there (`stepsFilePath`: the plan's path with `.steps.md`), null when the
+ *   plan cannot be read or the file cannot be written; a failure is not fatal, and the
+ *   dispatch gate refuses a prompt naming a steps file that is not the plan's current
+ *   one, so a file that is missing or stale is never sent to an agent. Called wherever
+ *   the marker names a plan or moves its hash (approval, the owner's exit in the app,
+ *   an amendment), so the file is always the plan the marker holds. It holds the plan's
+ *   Rules, Steps and Commands only: an agent reads that much instead of the whole plan.
+ */
+function writeStepsFile(plan) {
+  try {
+    const file = stepsFilePath(plan);
+    writeFileSync(file, stepsFileText(readFileSync(plan, 'utf8'), plan));
+    return file;
+  } catch { return null; }
+}
 
 if (process.argv.includes('--done')) {
   rmSync(MARKER, { force: true });
@@ -299,6 +327,7 @@ function recordAppExit(p) {
       plan: x.plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), session: p.session_id ?? null,
       via: `the owner's exit from plan mode in the app: entry ${x.uuid} at ${new Date(x.at).toISOString()}`, planMatchesFile: null, appExit: x.uuid,
     }, null, 1));
+    writeStepsFile(x.plan);
     outcome = 'recorded';
   }
   const keep = Object.entries(judged).slice(-99);
@@ -379,6 +408,7 @@ if (process.argv.includes('--mark')) {
     plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), session: p.session_id ?? null,
     via: `ExitPlanMode approval: result ${fromObject ? 'filePath' : 'text'}`, planMatchesFile,
   }, null, 1));
+  writeStepsFile(plan);
   process.exit(0);
 }
 
@@ -468,6 +498,7 @@ if (process.argv.includes('--amend')) {
     process.exit(2);
   }
   writeFileSync(MARKER, JSON.stringify({ ...mk, hash: snap.hash, scope: snap.scope, amendedAt: new Date().toISOString(), amendments: (Number(mk.amendments) || 0) + 1 }, null, 1));
+  writeStepsFile(mk.plan);
   process.exit(0);
 }
 

@@ -10,8 +10,12 @@
  * PreToolUse, run by hook-dispatch.mjs, for EVERY call a subagent makes (a
  * payload carrying `agent_id`). THE RULES COME FIRST (`rulesFirst`): until the
  * agent's own transcript holds a Read of the shared rules file that was not
- * refused, nothing runs but that Read, its return, its TaskStop and a progress
- * note or report in the scratchpad (`agentReportWrite`). Then a call passes
+ * refused, nothing runs but that Read, a Read of the approved plan (or of the
+ * steps file beside it), which is what names the rules file to an agent sent only
+ * the plan's path and a step number, its return, its TaskStop and a progress
+ * note or report in the scratchpad (`agentReportWrite`). An agent started by a
+ * Workflow keeps its transcript under `subagents/workflows/<run>/`, and is found
+ * there as well (`agentTranscriptPath`). Then a call passes
  * only as one of five things; anything else is refused:
  *
  *   its own return (SubagentHandback, StructuredOutput)
@@ -47,7 +51,7 @@ import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { approvedPlan, planFiles, planCommands, inScratchpad, planGuardReads, isRead, labelNames, AGENT_RETURN, agentReportWrite } from './hook-dispatch.mjs';
 import { commandsIn, heredocs } from './reply-guard.mjs';
-import { sessionFiles, RULES_FILE } from './report.mjs';
+import { agentTranscriptPath, stepsFilePath, RULES_FILE } from './report.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
 const WRITES = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
@@ -209,22 +213,15 @@ export function beginsWithEntry(words, entries, cwd) {
 /**
  * The agent's own transcript.
  * @param {object} p  a subagent's PreToolUse payload.
- * @returns {string|null} `<main transcript without .jsonl>/subagents/agent-<agent id>.jsonl`
- *   when the payload names the main transcript and the file is there, else the same
- *   file found through the session id (`sessionFiles`); null when neither is.
+ * @returns {string|null} `agentTranscriptPath` in report.mjs: `<main transcript without
+ *   .jsonl>/subagents/agent-<agent id>.jsonl` when the payload names the main transcript
+ *   and the file is there, else the same file found through the session id; in either
+ *   place also one level below `workflows/<run>/`, where the agents of a Workflow keep
+ *   theirs, so an agent a script starts is judged by its own Read of the rules and not
+ *   refused for having no transcript. null when none is found.
  */
 function agentTranscript(p) {
-  const tr = String(p.transcript_path ?? '');
-  const name = `agent-${p.agent_id}.jsonl`;
-  if (tr.endsWith('.jsonl')) {
-    const f = join(tr.slice(0, -'.jsonl'.length), 'subagents', name);
-    if (existsSync(f)) return f;
-  }
-  try {
-    const s = sessionFiles(String(p.session_id ?? ''));
-    if (s && existsSync(join(s.agents, name))) return join(s.agents, name);
-  } catch { /* not found below */ }
-  return null;
+  return agentTranscriptPath(p);
 }
 
 /**
@@ -279,20 +276,30 @@ export function rulesWereRead(entries, files) {
 /**
  * THE RULES COME FIRST: an agent's first call is the Read of the shared rules file.
  * @param {object} p  a subagent's PreToolUse payload (not its return, not its TaskStop).
+ * @param {{path: string}|null} [plan]  the approved plan, by the path the dispatch gate
+ *   recorded (`approvedPlan`); read from the approval marker when omitted, and null
+ *   when none is in force.
  * @returns {string|null} null for the Read of `agent-rules.md` (the live clone's or this
- *   hub's) itself, for a latched agent writing its own report (`agentReportWrite`), and
- *   once the agent's own transcript holds a Read of that file that was not refused; else
- *   the refusal, which names the file to read. With no transcript to look in the agent
- *   has read nothing, so the call is refused: a gate that cannot find what it checks
- *   fails shut and says so, never open. The agents' prompt is only the plan's path and a
- *   step, so what tells an agent to read the file first is the hub CLAUDE.md and this
- *   refusal. Doctrine §0e rule 13.
+ *   hub's) itself, for the Read of the approved plan's file or of the steps file written
+ *   beside it (`stepsFilePath`), for a latched agent writing its own report
+ *   (`agentReportWrite`), and once the agent's own transcript holds a Read of the rules
+ *   that was not refused; else the refusal, which names the file to read. With no
+ *   transcript to look in the agent has read nothing, so the call is refused: a gate that
+ *   cannot find what it checks fails shut and says so, never open.
+ *   THE PLAN MAY BE READ BEFORE THE RULES, AND NOTHING ELSE MAY. An agent is sent only the
+ *   plan's path and a step number, and the CLAUDE.md it is handed is the checkout's, so
+ *   the plan is what names the rules file: every agent of a session read the plan first,
+ *   and a fence that refused that Read would have latched each of them at its first call.
+ *   The Read of the rules stays required before any other call. Doctrine §0e rule 13.
  */
-export function rulesFirst(p) {
+export function rulesFirst(p, plan = approvedPlan()) {
   if (agentReportWrite(p)) return null;
   const files = new Set([resolve(homedir(), '.claude', 'hub', RULES_FILE), resolve(dirname(SELF), RULES_FILE)]);
   const tool = String(p.tool_name ?? '');
-  if (tool === 'Read' && files.has(resolve(p.cwd || process.cwd(), String(p.tool_input?.file_path ?? '')))) return null;
+  const reads = tool === 'Read' ? resolve(p.cwd || process.cwd(), String(p.tool_input?.file_path ?? '')) : '';
+  if (tool === 'Read' && files.has(reads)) return null;
+  const planFiles = plan?.path ? new Set([resolve(String(plan.path)), resolve(stepsFilePath(String(plan.path)))]) : new Set();
+  if (tool === 'Read' && planFiles.has(reads)) return null;
   const f = agentTranscript(p);
   if (f && rulesWereRead(headEntries(f, 512 * 1024), files)) return null;
   return `${HEAD} RULES FIRST: an agent's first call is a Read of ${resolve(homedir(), '.claude', 'hub', RULES_FILE)}, and no other call runs before it, so ${tool || 'this call'} is refused. `
@@ -323,9 +330,9 @@ export function decide(p, opts = {}) {
   // the agent with the process still running.
   if (tool === 'TaskStop') return null;
   // THE RULES COME FIRST: until the agent has read the shared rules, nothing else runs.
-  const first = 'rules' in opts ? opts.rules(p) : rulesFirst(p);
-  if (first) return first;
   const plan = 'plan' in opts ? opts.plan : approvedPlan();
+  const first = 'rules' in opts ? opts.rules(p) : rulesFirst(p, plan);
+  if (first) return first;
   const where = plan ? `the plan at ${plan.path}` : 'no approved plan (so only readers and the scratchpad)';
   if (!WRITES.has(tool) && tool !== 'Bash') {
     if (isRead(p, opts.reads)) return null;

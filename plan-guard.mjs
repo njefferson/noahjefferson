@@ -328,7 +328,16 @@ if (tool === 'Bash') {
  * the plan's Files names has a line in the plan's `## Found answered`, opening
  * with the finding's key and a verdict. Both live in hook-dispatch.mjs with the
  * plan parsing, and a plan with no Steps, or whose Files names no repository with
- * a queue, is not judged by them.
+ * a queue, is not judged by them. A "## Found answered" line may be a RANGE of
+ * keys a plan leaves untouched: `Q-JPS-1 to Q-JPS-12 still queued: <reason>`.
+ *
+ * AND A PLAN WITH STEPS THAT NAMES A REPOSITORY RESTS ON QUOTED EVIDENCE AND
+ * ACCOUNTS FOR THE ROADMAP (Doctrine §0e rule 2). `whatIsProblem`: every bullet
+ * of its `## What is` quotes, in double quotes, a line of a file it names that a
+ * repository the Files names holds. `roadmapProblem`: every open roadmap item of
+ * those repositories (the `- [ ] **Title**` bullets of NOTES.md's `## Next
+ * capability release`) has a bullet in its `## Roadmap`, opening with the item's
+ * key and then `in` or `out` and why. Both are read from hook-dispatch.mjs.
  */
 /**
  * DO WHAT THE OWNER ASKED, AND NOTHING MORE (Doctrine §0f, LESSONS §379).
@@ -553,7 +562,7 @@ if (tool === 'ExitPlanMode') {
       planWrittenAt = statSync(input.planFilePath).mtimeMs;
     } else if (typeof input.plan === 'string' && input.plan.trim()) plan = input.plan;
     else {
-      const newest = readdirSync(dir).filter((f) => f.endsWith('.md') && !/\.workshop\.md$|-agent-[^/]*\.md$|ultraplan\.md$/.test(f))
+      const newest = readdirSync(dir).filter((f) => f.endsWith('.md') && !/\.workshop\.md$|\.steps\.md$|-agent-[^/]*\.md$|ultraplan\.md$/.test(f))
         .map((f) => ({ f, t: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.t - a.t)[0];
       if (newest) { plan = readFileSync(join(dir, newest.f), 'utf8'); planWrittenAt = newest.t; }
     }
@@ -570,7 +579,7 @@ if (tool === 'ExitPlanMode') {
     // carries the hub CLAUDE.md's standing goals block word for word and names,
     // for every step, the goal it serves. Loaded here only, because this file
     // runs on every tool call and the plan parsing lives in hook-dispatch.mjs.
-    const { goalsProblem, aimStandingProblem, rulesProblem, foundAnsweredProblem } = await import('./hook-dispatch.mjs');
+    const { goalsProblem, aimStandingProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem } = await import('./hook-dispatch.mjs');
     const goals = goalsProblem(top);
     if (goals) deny(goals);
     // EVERY PLAN WITH AN ORDER CARRIES THE AIM REVIEW (Doctrine §0e rule 2): a
@@ -589,6 +598,13 @@ if (tool === 'ExitPlanMode') {
     // "## Found answered" section, with its key and a verdict.
     const queued = foundAnsweredProblem(top);
     if (queued) deny(queued);
+    // A PLAN RESTS ON QUOTED EVIDENCE AND SAYS WHAT BECOMES OF THE ROADMAP (Doctrine §0e rule 2):
+    // each "## What is" bullet quotes a line present in a file it names, and each open roadmap
+    // item of a repository the Files names has a line in "## Roadmap", in or out and why.
+    const what = whatIsProblem(top);
+    if (what) deny(what);
+    const road = roadmapProblem(top);
+    if (road) deny(road);
     const asked = askedProblem(top, p.transcript_path);
     if (asked) deny(asked);
     const talk = talkedThrough(p.transcript_path, planWrittenAt);

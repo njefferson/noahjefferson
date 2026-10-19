@@ -32,7 +32,8 @@
  * gate below reads a marker that is about to change; the refusal latch (a
  * latched agent's own progress note and report, `step-N.txt` and
  * `step-N-report.txt` in the scratchpad's progress folder, pass it:
- * `agentReportWrite`); the
+ * `agentReportWrite`, which finds the agent's transcript where a Workflow's
+ * agents keep theirs too, `agentTranscriptPath`); the
  * stop hold (the whole session, agents too: while the newest owner message that
  * carries the whole word stop anywhere and no go-word stands, with no later
  * message carrying a go-word, every call is refused but an agent's own return,
@@ -121,7 +122,7 @@ import { createHash } from 'node:crypto';
 import { recallFor } from './compact-recall.mjs';
 import { tailEntries, isOwnerMessage, textOf } from './transcript-tail.mjs';
 import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
-  planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep } from './report.mjs';
+  planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, judgedState } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
 import { HARNESS_TAG } from './pending-guard.mjs';
@@ -535,7 +536,9 @@ export function latchMessage(l) {
  *   directly in `progress/` of this session's scratchpad named `step-N.txt` or
  *   `step-N-report.txt`, where, if the agent's own transcript names the step it was
  *   sent for (`agentStep`), N is that step. The agent's transcript is
- *   `<main transcript without .jsonl>/subagents/agent-<agent id>.jsonl`; when it
+ *   `<main transcript without .jsonl>/subagents/agent-<agent id>.jsonl`, or one level
+ *   below `subagents/workflows/<run>/` for an agent a Workflow started
+ *   (`agentTranscriptPath`); when it
  *   cannot be found or names no step, any N passes. THE INVARIANT main() relies on:
  *   a latched agent can write its progress note and its report and nothing else,
  *   so a refusal does not cost the step its record, and the latch still holds every
@@ -549,12 +552,8 @@ export function agentReportWrite(p) {
   if (!inScratchpad(abs, p.session_id) || basename(dirname(abs)) !== 'progress' || basename(dirname(dirname(abs))) !== 'scratchpad') return false;
   const m = /^step-(\d+)(?:-report)?\.txt$/.exec(basename(abs));
   if (!m) return false;
-  const tr = String(p.transcript_path ?? '');
   let own = null;
-  if (tr.endsWith('.jsonl')) {
-    const file = join(tr.slice(0, -'.jsonl'.length), 'subagents', `agent-${p.agent_id}.jsonl`);
-    try { if (existsSync(file)) own = agentStep(file); } catch { own = null; }
-  }
+  try { const file = agentTranscriptPath(p); if (file) own = agentStep(file); } catch { own = null; }
   return own === null || own === Number(m[1]);
 }
 
@@ -840,7 +839,11 @@ export function dispatchGate(p, plan = approvedPlan(), pointer = undefined) {
   }
   if (!plan) return refusal(`${head} No approved plan is in force, so no agent can be sent.`);
   const n = sentStep(p, plan);
-  if (n === null) return refusal(`${head} Send exactly: ${plan.path} step <n>`);
+  if (n === null) return refusal(`${head} Send exactly: ${plan.path} step <n>, or ${stepsFilePath(plan.path)} step <n>`);
+  if (namesStepsFile(p, plan)) {
+    const bad = stepsFileProblem(plan);
+    if (bad) return refusal(`${head} ${bad}`);
+  }
   if (!planSteps(plan.text).includes(n)) return refusal(`${head} The plan has no step ${n}; its steps are ${planSteps(plan.text).join(', ') || 'none'}.`);
   // A STEP THAT SERVES NO GOAL IS NOT SENT (the standing goals in the hub
   // CLAUDE.md): the plan's "Served by:" line has to name, for this step, a goal its
@@ -878,8 +881,45 @@ export function dispatchGate(p, plan = approvedPlan(), pointer = undefined) {
 export function sentStep(p, plan) {
   const input = p.tool_input ?? {};
   const said = p.tool_name === 'SendMessage' ? (input.message ?? input.prompt ?? input.content) : input.prompt;
-  const m = plan && typeof said === 'string' ? new RegExp(`^\\s*${esc(plan.path)}\\s+(?:step\\s+)?(\\d+)\\s*$`, 'i').exec(said) : null;
+  const names = plan ? [plan.path, stepsFilePath(plan.path)].map(esc).join('|') : '';
+  const m = plan && typeof said === 'string' ? new RegExp(`^\\s*(?:${names})\\s+(?:step\\s+)?(\\d+)\\s*$`, 'i').exec(said) : null;
   return m ? Number(m[1]) : null;
+}
+
+/**
+ * Does a main-thread send name the plan's steps file, and not the plan?
+ * @param {object} p  an Agent, Task or SendMessage call.
+ * @param {{path: string}|null} plan  the plan in force.
+ * @returns {boolean} true only when the prompt (a message, for SendMessage) is exactly
+ *   `<steps file path> step <N>` (`stepsFilePath` of the plan's path): the one prompt
+ *   `dispatchGate` then holds to `stepsFileProblem` before it sends.
+ */
+export function namesStepsFile(p, plan) {
+  const input = p.tool_input ?? {};
+  const said = p.tool_name === 'SendMessage' ? (input.message ?? input.prompt ?? input.content) : input.prompt;
+  return !!plan && typeof said === 'string' && new RegExp(`^\\s*${esc(stepsFilePath(plan.path))}\\s+(?:step\\s+)?\\d+\\s*$`, 'i').test(said);
+}
+
+/**
+ * What is wrong with the steps file of the plan in force.
+ * @param {{path: string, text: string}} plan  the plan in force.
+ * @param {string} [file]  the steps file; `stepsFilePath` of the plan's path by default.
+ * @returns {string|null} null when the file on disk is exactly `stepsFileText` of the
+ *   plan's text, the file approved-plan-guard.mjs wrote at approval or at the last
+ *   amendment; otherwise a sentence saying it is missing or is not the plan in force.
+ *   An agent sent the steps file reads only that, so a file that is not the plan's
+ *   Rules, Steps and Commands as they stand now would hand it another plan's work:
+ *   the gate fails closed on a file it cannot read and sends no step by it.
+ */
+export function stepsFileProblem(plan, file = stepsFilePath(plan.path)) {
+  let disk;
+  try { disk = readFileSync(file, 'utf8'); } catch (e) {
+    return `The steps file ${file} cannot be read (${e?.code ?? e?.message ?? e}), so a prompt naming it is not sent. Send the plan's path and the step number, or approve and amend the plan again, which writes the file.`;
+  }
+  if (disk !== stepsFileText(plan.text, plan.path)) {
+    return `The steps file ${file} is not the Rules, Steps and Commands of the plan in force as they stand now, so it is not sent. The approval and every amendment rewrite it; send the plan's path and the step number instead.`;
+  }
+  return null;
 }
 
 /**
@@ -1163,12 +1203,57 @@ export function readsGate(p, plan = approvedPlan(), open = undefined) {
     + 'Read each file now (a Read with an offset and a limit, as often as it takes), then send the step. This refusal does not latch: reading clears it.';
 }
 
+// ---- the manager's written judgement of each hand-back (Doctrine §0e rule 2) ----
+
+/**
+ * THE JUDGEMENT GATE: no step is sent until the newest hand-back has been judged in writing.
+ * @param {object} p  a main-thread Agent, Task or SendMessage call.
+ * @param {{path: string, text: string} | null} [plan]  the plan in force.
+ * @param {ReturnType<typeof judgedState>|null|undefined} [state]  report.mjs `judgedState`'s
+ *   answer, passed by the test; read from the session when undefined.
+ * @returns {string|null} null for a subagent's call, for a tool that sends no agent, for a
+ *   prompt that is not a step of the plan (the dispatch gate judges that), for a Standing
+ *   step (the review step is sent between hand-backs and judges them), for a plan with no
+ *   `## Order`, and when no agent has ended for a step in Order yet. Otherwise null only
+ *   when status/manager.txt in the session scratchpad carries a line keyed `Judged N:`
+ *   (N the step of the newest end of an agent for a step in Order, whatever its first
+ *   line: a REFUSED or FAILED hand-back is judged too) for every end of that step, and was
+ *   written after that end (`judgedState`), so a line left from an earlier send of the
+ *   same step does not stand for the next one. Else the refusal, which names the file and
+ *   the line to write. A state that cannot be read refuses, as the review gate does: a
+ *   gate that stops gating in silence is the defect. main() calls it with latch false:
+ *   writing the line is the way out, and a latch would wait on the owner for nothing.
+ */
+export function judgedGate(p, plan = approvedPlan(), state = undefined) {
+  if (p.agent_id || !/^(?:Agent|Task|SendMessage)$/.test(String(p.tool_name ?? ''))) return null;
+  const n = sentStep(p, plan);
+  const o = plan ? planOrder(plan.text) : null;
+  if (n === null || !o || o.standing.includes(n)) return null;
+  let st = state;
+  let failure = '';
+  if (st === undefined) { try { st = judgedState(p, plan); } catch (e) { st = null; failure = String(e?.message ?? e); } }
+  const head = 'JUDGEMENT GATE (Doctrine §0e rule 2):';
+  if (!st) return `${head} the manager's judgement could not be read (${failure || 'an error'}); the gate refuses rather than stop gating.`;
+  if (st.kind === 'not-enforced' || st.kind === 'judged') return null;
+  if (st.kind === 'not-read') return `${head} the session's agents cannot be read, so whether the newest hand-back has been judged cannot be told and step ${n} is not sent.`;
+  const where = st.file || 'status/manager.txt in the session scratchpad (no scratchpad was found for this session)';
+  const found = st.kind === 'no-pad' ? 'no notes file could be read'
+    : st.kind === 'none' ? 'the file holds no such line'
+      : st.kind === 'short' ? `the file holds ${st.have} such line${st.have === 1 ? '' : 's'} for ${st.ends} ends of that step, so the newest end has none of its own`
+        : `its last write (${st.notesAt ? californiaTime(new Date(st.notesAt)) : 'never'}) is not after that end`;
+  return `${head} the newest hand-back of a step in Order is step ${st.step}'s, ended ${californiaTime(new Date(st.endAt))} (California), and ${where} has no line keyed "Judged ${st.step}:" written after it (${found}). `
+    + `Read the hand-back and write one line: "Judged ${st.step}: <what it showed against the plan, whether it is whole, and what the plan does about it>". Step ${n} is not sent until it is there. `
+    + 'This refusal does not latch: writing the line clears it.';
+}
+
 // ---- the finding queue: findings recorded for the next plan (Doctrine §0e rule 2) ----
 
 /** The heading, in a repository's NOTES.md, of the section that queues findings for the next plan. */
 export const QUEUE_HEADING = 'Found queue';
 // A queued finding opens with its key, Q-<repo tag>-<number>: the tag is the repo's, so a key in one repo cannot answer another's.
 const QUEUE_KEY = /^\s*(?:[-*]\s+)?\**(Q-[A-Za-z0-9]+-\d+)\**\s*[:.]?\s*(.*)$/;
+// A range of one repo's keys in a plan's "Found answered": `Q-JPS-1 to Q-JPS-12 still queued: <reason>`.
+const QUEUE_RANGE = /^\s*(?:[-*]\s+)?\**Q-([A-Za-z0-9]+)-(\d+)\**\s+(?:to|through|[-–—])\s+\**Q-([A-Za-z0-9]+)-(\d+)\**\s*[:.]?\s*(.*)$/i;
 
 /**
  * The findings a repository has queued.
@@ -1227,7 +1312,11 @@ export function queueRoots(text, dir = process.env.CLAUDE_PROJECT_DIR || process
  *   opening with the finding's key and then `fixed in step N`, `carried to step N`,
  *   `still queued` or `dropped` followed by a reason of at least ten characters. A
  *   key seen in two repositories counts once. The refusal lists each finding that
- *   is unanswered, with its key and the start of its text. It forces an answer and
+ *   is unanswered, with its key and the start of its text. A RANGE LINE answers the
+ *   keys a plan leaves untouched in one line, `Q-JPS-1 to Q-JPS-12 still queued: <the
+ *   reason>` (`to`, `through` or a dash between two keys of one repository's tag, the
+ *   lower first, and only the verdict `still queued` with a reason of ten characters or
+ *   more): every queued key between them, the ends included, counts as answered. It forces an answer and
  *   cannot judge that it is true. plan-guard.mjs refuses ExitPlanMode on it, so the
  *   next plan in any repository has to answer what the last one left.
  */
@@ -1238,6 +1327,21 @@ export function foundAnsweredProblem(text, opts = {}) {
   if (!queued.size) return null;
   const answered = new Set();
   for (const l of planSection(text, 'Found answered').split('\n')) {
+    // A RANGE LINE answers the keys a plan leaves untouched in one line:
+    // "Q-JPS-1 to Q-JPS-12 still queued: <the reason>" (to, through, or a dash), both ends of
+    // one repo's tag, the lower first. Only "still queued" with a reason may take a range:
+    // a finding fixed, carried or dropped is answered by its own line.
+    const r = QUEUE_RANGE.exec(l);
+    if (r) {
+      const lo = Number(r[2]), hi = Number(r[4]);
+      if (r[1] === r[3] && lo <= hi && /^still queued\b[\s,:;.-]*\S.{9,}$/i.test(r[5].trim())) {
+        for (const q of queued.values()) {
+          const k = /^Q-([A-Za-z0-9]+)-(\d+)$/.exec(q.key);
+          if (k && k[1] === r[1] && Number(k[2]) >= lo && Number(k[2]) <= hi) answered.add(q.key);
+        }
+      }
+      continue;
+    }
     const m = QUEUE_KEY.exec(l);
     if (!m) continue;
     const v = m[2].trim();
@@ -1248,6 +1352,128 @@ export function foundAnsweredProblem(text, opts = {}) {
   const shown = open.slice(0, 10).map((q) => `- ${q.key} (${q.repo}): ${q.text.length > 100 ? `${q.text.slice(0, 100)}…` : q.text}`);
   return `FOUND QUEUE (Doctrine §0e rule 2): the repositories this plan's Files names hold ${open.length} queued finding${open.length === 1 ? '' : 's'} the plan does not answer, and what one plan found and left is answered by the next. `
     + 'Add a "## Found answered" section with one line for each, opening with its key and then "fixed in step N", "carried to step N", "still queued, <the reason>" or "dropped, <the reason>":\n'
+    + `${shown.join('\n')}${open.length > shown.length ? `\n… and ${open.length - shown.length} more` : ''}`;
+}
+
+// ---- a plan is made from quoted evidence and from the whole roadmap (Doctrine §0e rule 2) ----
+
+// A source file named in a line of the plan: a path or a bare file name with an extension a repository holds as text.
+const SOURCE_FILE = /(?<![\w./-])((?:\/|[\w.-]+\/)*[\w.-]+\.(?:md|mjs|cjs|js|ts|tsx|json|txt|html|css|sh|yml|yaml|toml))(?![\w-])/g;
+// A span a line quotes: between straight or curly double quotes, at least twelve characters.
+const QUOTED_SPAN = /"([^"\n]{12,})"|“([^”\n]{12,})”/g;
+// What the plan's "What is" and "Roadmap" lines are made of: a bullet or a number, then the words.
+const LIST_LINE = /^\s*(?:[-*]|\d+[.)])\s+(\S.*)$/;
+const flat = (s) => String(s).replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim();
+
+/**
+ * Where a file a plan line names may be.
+ * @param {string} name  as written in the plan: an absolute path, a path, or a bare file name.
+ * @param {string[]} roots  the repositories the plan's Files names (`queueRoots`).
+ * @returns {string[]} every existing file the name can mean: the path itself if absolute;
+ *   else, in each root, the name under the root, and a bare name also under `docs/decisions/`,
+ *   `docs/`, `lessons/` and `plans/`. [] when none exists.
+ */
+function namedFileCandidates(name, roots) {
+  const cands = name.startsWith('/') ? [name] : roots.flatMap((r) => [join(r, name),
+    ...(name.includes('/') ? [] : ['docs/decisions', 'docs', 'lessons', 'plans'].map((d) => join(r, d, name)))]);
+  return [...new Set(cands)].filter((f) => { try { return statSync(f).isFile(); } catch { return false; } });
+}
+
+/**
+ * Does every "What is" line of a plan quote a line present in a file it names?
+ * @param {string} text  the plan (its current block).
+ * @param {{roots?: string[], dir?: string}} [opts]  the repositories to search, and the launch
+ *   directory they are found from; found from the plan's Files by default (`queueRoots`).
+ * @returns {string|null} the refusal, or null. The plan's `## What is` section lists what the
+ *   plan rests on, one bullet each, and a bullet is evidence only if it QUOTES: it holds a
+ *   span in double quotes (twelve characters or more; `...` or an ellipsis inside it stands
+ *   for words left out, and each stretch between them is looked for on its own), and names a
+ *   file (`SOURCE_FILE`) outside the quote that some repository the Files names holds
+ *   (`namedFileCandidates`), and every stretch of the quote is present in that file, white
+ *   space and curly quotes set aside. The refusal lists each bullet that fails and why: no
+ *   quote, no file named, a file no repository holds, or a quote the file does not carry.
+ *   A plan whose Files names no repository, or with no `## Steps`, is not judged; one that
+ *   names a repository and has Steps without the section, or with a section holding no
+ *   bullet, is refused. It cannot judge that the line means what the plan says it does.
+ *   plan-guard.mjs refuses ExitPlanMode on it.
+ */
+export function whatIsProblem(text, opts = {}) {
+  if (!planSection(text, 'Steps').trim()) return null;
+  const roots = opts.roots ?? queueRoots(text, opts.dir);
+  if (!roots.length) return null;
+  const head = 'WHAT IS (Doctrine §0e rule 2): a plan rests on evidence it can quote.';
+  const lines = planSection(text, 'What is').split('\n').map((l) => LIST_LINE.exec(l)?.[1]).filter(Boolean);
+  if (!lines.length) return `${head} The plan sends agents into ${roots.map((r) => basename(r)).join(', ')} and has no "## What is" section with a bullet in it. Each bullet quotes, in double quotes, a line of a file it names, such as NOTES.md or IR-SCIENCE.md.`;
+  const bad = [];
+  for (const line of lines) {
+    const spans = [...line.matchAll(QUOTED_SPAN)].map((m) => m[1] ?? m[2]);
+    const outside = line.replace(QUOTED_SPAN, ' ');
+    const label = `"${line.length > 80 ? `${line.slice(0, 80)}…` : line}"`;
+    if (!spans.length) { bad.push(`- ${label}: it quotes nothing (a span in double quotes of twelve characters or more)`); continue; }
+    const named = [...outside.matchAll(SOURCE_FILE)].map((m) => m[1]);
+    if (!named.length) { bad.push(`- ${label}: it names no file outside the quote`); continue; }
+    const files = named.flatMap((n) => namedFileCandidates(n, roots));
+    if (!files.length) { bad.push(`- ${label}: no repository the Files names holds ${named.join(' or ')}`); continue; }
+    const stretches = spans.flatMap((s) => s.split(/\s*(?:\.{3}|…)\s*/)).map(flat).filter((s) => s.length >= 4);
+    const held = files.some((f) => { let t = ''; try { t = flat(readFileSync(f, 'utf8')); } catch { return false; } return stretches.every((s) => t.includes(s)); });
+    if (!held) bad.push(`- ${label}: ${files.length === 1 ? 'the file does' : 'none of the files'} not carry${files.length === 1 ? '' : ' it'} the quote (${files.map((f) => basename(f)).join(', ')})`);
+  }
+  if (!bad.length) return null;
+  return `${head} ${bad.length} of the "## What is" bullets ${bad.length === 1 ? 'does' : 'do'} not quote a line present in a file they name:\n${bad.slice(0, 8).join('\n')}${bad.length > 8 ? `\n… and ${bad.length - 8} more` : ''}\n`
+    + 'Quote the line itself, in double quotes, and name the file it is in; a sentence from a conversation or a page that is not in a repository is not evidence here.';
+}
+
+/**
+ * A repository's open roadmap items.
+ * @param {string} root  a repository's root directory.
+ * @returns {{key: string, title: string}[]} each top-level `- [ ] **Title**` bullet of the
+ *   `## Next capability release` section of the root's NOTES.md (the section the app's
+ *   in-app roadmap is built from, which holds open items only), in file order; `key` is
+ *   the item's decision number from its `<!-- decision: NNN -->` marker, else its title.
+ *   [] when the file or the section is not there, as in a repository that keeps no roadmap.
+ */
+export function roadmapItems(root) {
+  let text = '';
+  try { text = readFileSync(join(root, 'NOTES.md'), 'utf8'); } catch { return []; }
+  const out = [];
+  for (const l of planSection(text, 'Next capability release').split('\n')) {
+    const m = /^- \[ \] \*\*(.+?)\*\*(.*)$/.exec(l);
+    if (!m) continue;
+    const d = /<!--\s*decision:\s*(\d+)\s*-->/.exec(m[2]);
+    out.push({ key: d ? d[1] : m[1].trim(), title: m[1].trim() });
+  }
+  return out;
+}
+
+/**
+ * Does a plan say, for every open roadmap item of the repositories it names, whether it is in and why?
+ * @param {string} text  the plan (its current block).
+ * @param {{roots?: string[], dir?: string}} [opts]  as `whatIsProblem` takes them.
+ * @returns {string|null} the refusal, or null. Each open roadmap item of each repository the
+ *   plan's Files names (`roadmapItems`) has a line in the plan's `## Roadmap` section: a
+ *   bullet opening with the item's key (its decision number, else its title), then `in` or
+ *   `out` as a word, then a reason of at least ten characters. The refusal lists the items
+ *   with no such line. A plan with no `## Steps`, or whose Files names no repository that
+ *   keeps a roadmap, is not judged. It forces a statement and cannot judge that it is true.
+ *   plan-guard.mjs refuses ExitPlanMode on it.
+ */
+export function roadmapProblem(text, opts = {}) {
+  if (!planSection(text, 'Steps').trim()) return null;
+  const roots = opts.roots ?? queueRoots(text, opts.dir);
+  const items = roots.flatMap((r) => roadmapItems(r).map((i) => ({ ...i, repo: basename(r) })));
+  if (!items.length) return null;
+  const said = planSection(text, 'Roadmap').split('\n').map((l) => LIST_LINE.exec(l)?.[1]).filter(Boolean).map((l) => l.replace(/^\*+|\*+$/g, '').replace(/\*\*/g, ''));
+  const answered = (i) => said.some((l) => {
+    const k = String(i.key).toLowerCase();
+    const low = l.toLowerCase().replace(/^decision\s+/, '');
+    if (!low.startsWith(k)) return false;
+    return /^[\s:,;.-]*(?:in|out)\b[\s:,;.-]*\S.{9,}$/i.test(low.slice(k.length));
+  });
+  const open = items.filter((i) => !answered(i));
+  if (!open.length) return null;
+  const shown = open.slice(0, 12).map((i) => `- ${i.key} (${i.repo}): ${i.title.length > 90 ? `${i.title.slice(0, 90)}…` : i.title}`);
+  return `ROADMAP (Doctrine §0e rule 2): the repositories this plan's Files names hold ${items.length} open roadmap item${items.length === 1 ? '' : 's'}, and ${open.length} ${open.length === 1 ? 'has' : 'have'} no line in the plan. `
+    + 'Add a "## Roadmap" section with one bullet for each, opening with its key (the decision number, else the title), then "in" or "out", then why (ten characters or more):\n'
     + `${shown.join('\n')}${open.length > shown.length ? `\n… and ${open.length - shown.length} more` : ''}`;
 }
 
@@ -2106,6 +2332,15 @@ async function main(event, raw, p) {
         rr = `READS GATE (Doctrine §0e rule 13): the refused reads could not be read (${e?.message ?? e}); the gate refuses rather than stop gating.`;
       }
       if (rr) return refuse(rr, false);
+      // THE NEWEST HAND-BACK IS JUDGED IN WRITING BEFORE THE NEXT STEP GOES (Doctrine
+      // §0e rule 2): status/manager.txt carries a line keyed "Judged N:" for the newest
+      // end of an agent for a step in Order, written after that end. A Standing step
+      // passes. Its own call and not latched: writing the line is the way out.
+      let jg = null;
+      try { jg = judgedGate(p); } catch (e) {
+        jg = `JUDGEMENT GATE (Doctrine §0e rule 2): the judgement could not be read (${e?.message ?? e}); the gate refuses rather than stop gating.`;
+      }
+      if (jg) return refuse(jg, false);
     }
     // AN APPROVAL PRESSED IN THE APP COUNTS. When the owner's own exit from
     // plan mode in the app has been recorded as the approval of the plan, plan

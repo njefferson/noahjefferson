@@ -24,15 +24,15 @@
  *       move from this print instead of choosing it from memory, and the dispatch
  *       gate and the stop guard read the same pointer (`pointerFor`). The status
  *       page's source, `status/fix-run.html` in the session scratchpad, is
- *       written from the same read (`statusPage`), whole, at every status, and
- *       carries the plan's outcome in the owner's terms, the explanations still
- *       standing and those ruled out with the evidence for each, every decision
- *       with its reason, the next move and every Found line sorted as fixed,
- *       stopping the plan or queued for the next plan. The manager's part is
+ *       written from the same read (`statusPage`), whole, at every status, in the
+ *       shape the owner reads: a heading and an updated line, Versions, one
+ *       section for each step with a chip in colour and in words, Open for you,
+ *       and the Found lines not fixed. The manager's part is
  *       written by the main thread in `status/manager.txt` beside it
  *       (`managerNotes`), a file this command never rewrites, so what the manager
- *       writes survives the next status; a Found line it has not sorted prints as
- *       unsorted, counted at the top of the page and in this print. After a
+ *       writes survives the next status; the Decision, Explanation and fixed Found
+ *       lines stay in that file and are not drawn on the page; a Found line it has
+ *       not sorted prints as unsorted, tagged on the page and counted in this print. After a
  *       compaction the first read of the main thread is that page (hook-dispatch.mjs
  *       `pageGate`). RIGHT UNDER THE POINTER, ONE
  *       LINE FOR THE REVIEW (`reviewState`, `reviewBlock`): the first line of the
@@ -309,6 +309,40 @@ export function scriptHashOf(text) {
 }
 
 /**
+ * Where the steps file of a plan is written.
+ * @param {string} planPath  the plan file's path, `.md`.
+ * @returns {string} the same path with `.steps.md` for the `.md`, beside the plan. An
+ *   agent can be sent this file in place of the plan (`sentStep`), and read it first
+ *   (`rulesFirst`): it holds the plan's Rules, Steps and Commands and nothing else, so an
+ *   agent no longer reads the whole plan to learn its step.
+ */
+export function stepsFilePath(planPath) {
+  return String(planPath).replace(/\.md$/i, '') + '.steps.md';
+}
+
+/**
+ * The text of a plan's steps file.
+ * @param {string} text  the plan.
+ * @param {string} [planPath]  the plan file's path, named in the file's first line.
+ * @returns {string} a first line saying it is derived from the plan and holds only its
+ *   Rules, Steps and Commands, then EVERY section of the plan whose heading opens
+ *   `## Rules`, `## Steps` or `## Commands` (a plan has `## Rules` and may have
+ *   `## Rules of this plan` beside it, and an agent needs both), in the order the
+ *   plan has them, each with its heading line and its body as `planSection` reads a
+ *   body, trailing space trimmed; a plan with none of them gives the first line alone.
+ *   THE INVARIANT its two callers rely on: the file is a pure function of the plan's
+ *   text, so approved-plan-guard.mjs writes it at approval and at every amendment, and
+ *   the dispatch gate refuses a prompt naming a steps file that is not what this
+ *   returns for the plan in force.
+ */
+export function stepsFileText(text, planPath = '') {
+  const parts = [`<!-- Derived from ${planPath || 'the approved plan'}: only its Rules, Steps and Commands. Rewritten at every approval and amendment; do not edit. -->`, ''];
+  const re = /^(## (?:Rules|Steps|Commands)\b[^\n]*)\n([\s\S]*?)(?=^## |^# |$(?![\s\S]))/gmi;
+  for (const m of String(text ?? '').matchAll(re)) parts.push(m[1], m[2].replace(/\s+$/, ''), '');
+  return parts.join('\n');
+}
+
+/**
  * The approval state as it stands on disk, read now, in lines a session can act on.
  * @param {string} [marker]  the approval marker's path; `~/.claude/APPROVED-PLAN.json` by default.
  * @returns {string} a headed list, never a table: the marker or none; the plan
@@ -399,22 +433,93 @@ export function endedSince(p, stampAt) {
   const sid = String(p?.session_id ?? '');
   const f = tr.endsWith('.jsonl') ? { main: tr, agents: join(tr.slice(0, -'.jsonl'.length), 'subagents') } : sessionFiles(sid);
   if (!f) return null;
-  let names = [];
-  try { names = readdirSync(f.agents).filter((n) => /^agent-[\w-]+\.jsonl$/.test(n)); } catch { return []; }
+  const found = agentFiles(f.agents);
   const start = startedAt({ session_id: sid });
   let notified = null;
   const out = [];
-  for (const n of names) {
-    const file = join(f.agents, n);
-    try { if (statSync(file).mtimeMs <= stampAt) continue; } catch { continue; }
+  for (const a of found) {
+    try { if (statSync(a.file).mtimeMs <= stampAt) continue; } catch { continue; }
     notified ??= notifiedStatuses(f.main);
-    const id = n.slice('agent-'.length, -'.jsonl'.length);
-    let meta = {};
-    try { meta = JSON.parse(readFileSync(join(f.agents, `agent-${id}.meta.json`), 'utf8')); } catch { meta = {}; }
-    const end = agentEnd(tailEntries(file, 4 * 1024 * 1024), meta, start, notified.get(id) ?? '');
-    if (end && end.at > stampAt) out.push({ id, description: String(meta.description ?? ''), how: end.how, at: end.at });
+    const id = a.id;
+    const end = agentEnd(tailEntries(a.file, 4 * 1024 * 1024), agentMeta(a), start, notified.get(id) ?? '');
+    if (end && end.at > stampAt) out.push({ id, description: String(agentMeta(a).description ?? ''), how: end.how, at: end.at });
   }
   return out.sort((a, b) => a.at - b.at);
+}
+
+/**
+ * Every agent transcript of a session, the Workflow agents' included.
+ * @param {string} dir  the session's `subagents/` folder (`sessionFiles(...).agents`).
+ * @returns {{id: string, name: string, file: string, folder: string}[]} one entry per
+ *   `agent-<id>.jsonl` found, sorted by file name, the first of an id kept: those
+ *   directly in `dir`, then those one level below `dir/workflows/<run>/`, where the
+ *   agents of a Workflow keep theirs (measured on this session's disk: `subagents/
+ *   workflows/<run>/agent-<id>.jsonl` and its `.meta.json` beside it), then those in
+ *   `<session>/workflows/<run>/` beside the subagents folder, which holds only a
+ *   run's script folder (`scripts`) today and is read in case a harness moves the
+ *   agents there. `folder` is where its `.meta.json` sits. [] when `dir` cannot be
+ *   read. The status, the waits, the pointer, the stop guard and the plan fence all
+ *   find an agent here, so a Workflow's agent is seen by each of them or by none.
+ */
+export function agentFiles(dir) {
+  const out = [];
+  const seen = new Set();
+  const take = (folder) => {
+    let names = [];
+    try { names = readdirSync(folder); } catch { return; }
+    for (const n of names) {
+      const m = /^agent-([\w-]+)\.jsonl$/.exec(n);
+      if (!m || seen.has(m[1])) continue;
+      seen.add(m[1]);
+      out.push({ id: m[1], name: n, file: join(folder, n), folder });
+    }
+  };
+  const runs = (parent) => {
+    let ds = [];
+    try { ds = readdirSync(parent, { withFileTypes: true }).filter((d) => d.isDirectory() && d.name !== 'scripts').map((d) => d.name).sort(); } catch { return []; }
+    return ds.map((d) => join(parent, d));
+  };
+  take(dir);
+  for (const r of runs(join(dir, 'workflows'))) take(r);
+  for (const r of runs(join(dirname(dir), 'workflows'))) take(r);
+  return out.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+}
+
+/**
+ * A subagent's own transcript, found from the payload of one of its calls.
+ * @param {object} p  a subagent's hook payload: `agent_id`, and `transcript_path`
+ *   (the session's) or `session_id`.
+ * @returns {string|null} the agent's `agent-<id>.jsonl` (`agentFiles`: directly in the
+ *   subagents folder, or one level below `workflows/<run>/` where a Workflow's agents
+ *   keep theirs), found beside the session transcript the payload names and, failing
+ *   that, through the session id (`sessionFiles`); null when the payload names no
+ *   agent or neither route holds the file. The plan fence reads the agent's rules
+ *   Read from it and the dispatcher reads the step it was sent for, so both look in
+ *   the same places.
+ */
+export function agentTranscriptPath(p) {
+  const id = String(p?.agent_id ?? '');
+  if (!/^[\w-]+$/.test(id)) return null;
+  const tr = String(p?.transcript_path ?? '');
+  const dirs = [];
+  if (tr.endsWith('.jsonl')) dirs.push(join(tr.slice(0, -'.jsonl'.length), 'subagents'));
+  try { const s = sessionFiles(String(p?.session_id ?? '')); if (s) dirs.push(s.agents); } catch { /* not found below */ }
+  for (const d of dirs) {
+    const hit = agentFiles(d).find((a) => a.id === id);
+    if (hit) return hit.file;
+  }
+  return null;
+}
+
+/**
+ * One agent's `.meta.json`.
+ * @param {{id: string, folder: string}} a  an entry of `agentFiles`.
+ * @returns {object} the parsed file beside the agent's transcript, or {} when it is
+ *   not there or not JSON; `agentEnd` reads `stoppedByUser` from it and the status
+ *   reads `description`.
+ */
+export function agentMeta(a) {
+  try { return JSON.parse(readFileSync(join(a.folder, `agent-${a.id}.meta.json`), 'utf8')) ?? {}; } catch { return {}; }
 }
 
 /**
@@ -554,19 +659,16 @@ export function agentEnds(sid, stampAt = 0) {
   const done = new Set(Array.isArray(rec?.ids) ? rec.ids : []);
   const notified = notifiedStatuses(f.main);
   const start = startedAt({ session_id: sid });
-  let names = [];
-  try { names = readdirSync(f.agents).filter((n) => /^agent-[\w-]+\.jsonl$/.test(n)); } catch { names = []; }
   const out = [];
-  for (const n of names) {
-    const id = n.slice('agent-'.length, -'.jsonl'.length);
+  for (const a of agentFiles(f.agents)) {
+    const id = a.id;
     if (done.has(id)) continue;
-    let meta = {};
-    try { meta = JSON.parse(readFileSync(join(f.agents, `agent-${id}.meta.json`), 'utf8')); } catch { meta = {}; }
-    const end = agentEnd(tailEntries(join(f.agents, n), 4 * 1024 * 1024), meta, start, notified.get(id) ?? '');
+    const meta = agentMeta(a);
+    const end = agentEnd(tailEntries(a.file, 4 * 1024 * 1024), meta, start, notified.get(id) ?? '');
     if (!end) continue;
     done.add(id);
     if (!rec && !(end.at > stampAt)) continue;
-    out.push({ id, description: String(meta.description ?? ''), ...end, path: join(f.agents, n) });
+    out.push({ id, description: String(meta.description ?? ''), ...end, path: a.file });
   }
   mkdirSync(dirname(recFile), { recursive: true });
   writeFileSync(recFile, JSON.stringify({ ids: [...done] }, null, 1));
@@ -965,14 +1067,11 @@ export function runningAgents(sid, f = sessionFiles(sid)) {
   if (!f) return null;
   const notified = notifiedStatuses(f.main);
   const start = startedAt({ session_id: sid });
-  let names = [];
-  try { names = readdirSync(f.agents).filter((n) => /^agent-[\w-]+\.jsonl$/.test(n)).sort(); } catch { names = []; }
   const out = [];
-  for (const n of names) {
-    const id = n.slice('agent-'.length, -'.jsonl'.length);
-    let meta = {};
-    try { meta = JSON.parse(readFileSync(join(f.agents, `agent-${id}.meta.json`), 'utf8')); } catch { meta = {}; }
-    const path = join(f.agents, n);
+  for (const a of agentFiles(f.agents)) {
+    const id = a.id;
+    const meta = agentMeta(a);
+    const path = a.file;
     if (agentEnd(tailEntries(path, 4 * 1024 * 1024), meta, start, notified.get(id) ?? '')) continue;
     out.push({ id, description: String(meta.description ?? ''), step: agentStep(path), path });
   }
@@ -1062,18 +1161,15 @@ export function stepEnds(p) {
   const sid = String(p?.session_id ?? '');
   const f = tr.endsWith('.jsonl') ? { main: tr, agents: join(tr.slice(0, -'.jsonl'.length), 'subagents') } : sessionFiles(sid);
   if (!f) return null;
-  let names = [];
-  try { names = readdirSync(f.agents).filter((n) => /^agent-[\w-]+\.jsonl$/.test(n)).sort(); } catch { names = []; }
   const notified = notifiedStatuses(f.main);
   const start = startedAt({ session_id: sid });
   const ends = [];
   const running = [];
   const runningSteps = new Set();
-  for (const n of names) {
-    const id = n.slice('agent-'.length, -'.jsonl'.length);
-    const path = join(f.agents, n);
-    let meta = {};
-    try { meta = JSON.parse(readFileSync(join(f.agents, `agent-${id}.meta.json`), 'utf8')); } catch { meta = {}; }
+  for (const a of agentFiles(f.agents)) {
+    const id = a.id;
+    const path = a.file;
+    const meta = agentMeta(a);
     let end;
     try { end = agentEnd(tailEntries(path, 4 * 1024 * 1024), meta, start, notified.get(id) ?? ''); } catch { continue; }
     const head = agentHead(path);
@@ -1381,6 +1477,70 @@ export function reviewBlock(st) {
 }
 
 /**
+ * Where the manager's written judgement of the newest hand-back stands: the one reader
+ * the dispatcher's judgement gate (`judgedGate`) and the status (`judgedBlock`) share.
+ * @param {object} p  a PreToolUse payload or `{session_id}`, as `stepEnds` reads it.
+ * @param {{path: string, text: string} | null} plan  the plan in force.
+ * @param {{ends?: object[]|null, pad?: string|null}} [opts]  `ends` in place of
+ *   `stepEnds`' (the test passes them) and `pad` the scratchpad (found from the session
+ *   id when omitted).
+ * @returns {{kind: string, step: number|null, endAt: number, ends: number, have: number,
+ *   notesAt: number, file: string}} `kind` is: 'not-enforced' (no plan, no `## Order`, or no
+ *   agent has ended for a step in Order); 'not-read' (the session's agents cannot be read:
+ *   the gate fails CLOSED here); 'judged'; or one of the four ways it is not: 'no-pad' (no
+ *   scratchpad, so no notes file), 'none' (no `Judged N:` line for the step), 'short'
+ *   (fewer such lines than ends of that step, so the newest end has none of its own) and
+ *   'stale' (the file's last write is not after the newest end). `step` is the step of
+ *   the newest end of an agent for a step in Order, however it ended (a refusal and an
+ *   interruption are judged too), `endAt` its time, `ends` how many ends that step has,
+ *   `have` how many `Judged <step>:` lines `managerNotes` finds, `notesAt` the notes
+ *   file's last write in ms and `file` its path. THE INVARIANT: 'judged' only when
+ *   `have >= ends` and `notesAt > endAt`, so a line left by an earlier send of the same
+ *   step, with the file written to since for another reason, is not the newest judgement.
+ */
+export function judgedState(p, plan, opts = {}) {
+  const base = { kind: 'not-enforced', step: null, endAt: 0, ends: 0, have: 0, notesAt: 0, file: '' };
+  if (!plan) return base;
+  const o = planOrder(plan.text);
+  if (!o) return base;
+  const read = 'ends' in opts ? { ends: opts.ends } : stepEnds(p);
+  if (!read?.ends) return { ...base, kind: 'not-read' };
+  let newest = null;
+  for (const e of read.ends) {
+    if (e.step === null || !o.order.includes(e.step)) continue;
+    if (!newest || e.at > newest.at) newest = e;
+  }
+  if (!newest) return base;
+  const ends = read.ends.filter((e) => e.step === newest.step).length;
+  const pad = 'pad' in opts ? opts.pad : (p?.session_id ? scratchpadOf(String(p.session_id)) : null);
+  const file = pad ? join(pad, MANAGER_FILE) : '';
+  let have = 0, notesAt = 0;
+  if (file) {
+    have = (managerNotes(pad).judged.get(newest.step) ?? []).length;
+    try { notesAt = statSync(file).mtimeMs; } catch { notesAt = 0; }
+  }
+  const st = { ...base, step: newest.step, endAt: newest.at, ends, have, notesAt, file };
+  if (have >= ends && notesAt > newest.at) return { ...st, kind: 'judged' };
+  return { ...st, kind: !file ? 'no-pad' : have === 0 ? 'none' : have < ends ? 'short' : 'stale' };
+}
+
+/**
+ * The judgement line a status prints, under the review line.
+ * @param {ReturnType<typeof judgedState>} st  `judgedState`'s answer.
+ * @returns {string} one line, never a table: whether the newest end of a step in Order
+ *   has its `Judged N:` line, or why the dispatcher's judgement gate holds the next step.
+ */
+export function judgedBlock(st) {
+  const at = st.endAt ? californiaStamp(st.endAt) : '';
+  switch (st.kind) {
+    case 'not-enforced': return 'Judgement: nothing to judge (no agent has ended for a step in Order, or the plan has no Order).';
+    case 'not-read': return 'Judgement: not read (the session\'s agents cannot be read), so no step is sent.';
+    case 'judged': return `Judgement: step ${st.step}'s newest hand-back (ended ${at}) is judged in ${st.file}.`;
+    default: return `Judgement: OWED. Step ${st.step}'s newest hand-back ended ${at}; ${st.file || 'status/manager.txt (no scratchpad found)'} needs a line "Judged ${st.step}: <what it showed and what the plan does about it>" written after it (${st.have} line${st.have === 1 ? '' : 's'} for ${st.ends} end${st.ends === 1 ? '' : 's'}), and no step is sent until it is there.`;
+  }
+}
+
+/**
  * The plan in force, read the way `approvedPlan` in hook-dispatch.mjs reads it.
  * @param {string} [marker]  the approval marker's path; `~/.claude/APPROVED-PLAN.json` by default.
  * @returns {{path: string, text: string} | null} the plan file and its text only
@@ -1441,7 +1601,20 @@ export const MANAGER_FILE = 'status/manager.txt';
  *   the plan is done, in the owner's terms>`; `Explanation standing: <the
  *   explanation> | <the evidence for it>`; `Explanation ruled out: <the explanation>
  *   | <the evidence against it>`; `Decision: <what was decided> | <the reason>`;
- *   `Next: <the next move>`; and `Found <step>.<n> fixed|stopping|queued: <note>`,
+ *   `Next: <the next move>`; `Judged <step>: <what the step's hand-back showed against
+ *   the plan and what the plan does about it>`, one line for each end of that step, which
+ *   the dispatcher's judgement gate reads (`judgedState`; `judged` maps a step to its
+ *   lines, in file order); the six keys the status page's shape is drawn from
+ *   (`statusPage`): `Version: <one line of what production, staging or the hub carries>`
+ *   (`versions`, in file order), `Open: <one thing waiting on the owner>` (`open`, in
+ *   file order), and the four that carry a step number, `What <step>: <what the step is>`,
+ *   `Why <step>: <why now>`, `Next <step>: <what follows it>` (`what`, `why` and
+ *   `nexts` map a step to its line, a later line for the same step replacing an earlier
+ *   one) and `Done <step>: <why the step counts as done>` (`done` maps a step to its
+ *   text, which may be empty: the main thread counts a step done by decision, whatever
+ *   its newest hand-back says). `Next: ...` with no step number is the unnumbered key above
+ *   and `Next 119: ...` is the numbered one; neither reads the other's line.
+ *   Also `Found <step>.<n> fixed|stopping|queued: <note>`,
  *   which sorts the nth `Found:` line of that step's report (`foundLines`) as put
  *   right, stopping the plan, or recorded for the next plan; `Found <step>.*` sorts
  *   every Found line of that step at once, and a line for one `<step>.<n>` beats it
@@ -1453,7 +1626,8 @@ export const MANAGER_FILE = 'status/manager.txt';
  *   trusted as markup (`statusPage` escapes it).
  */
 export function managerNotes(pad) {
-  const out = { read: false, outcome: '', standing: [], ruledOut: [], decisions: [], next: '', sorts: new Map() };
+  const out = { read: false, outcome: '', standing: [], ruledOut: [], decisions: [], next: '', sorts: new Map(), judged: new Map(),
+    versions: [], open: [], what: new Map(), why: new Map(), nexts: new Map(), done: new Map() };
   if (!pad) return out;
   let text = '';
   try { text = readFileSync(join(pad, MANAGER_FILE), 'utf8'); } catch { return out; }
@@ -1468,6 +1642,13 @@ export function managerNotes(pad) {
     else if ((m = /^Explanation ruled out\s*:\s*(.+)$/i.exec(l))) { const [t, e] = split(m[1]); out.ruledOut.push({ text: t, evidence: e }); }
     else if ((m = /^Decision\s*:\s*(.+)$/i.exec(l))) { const [t, r] = split(m[1]); out.decisions.push({ text: t, reason: r }); }
     else if ((m = /^Next\s*:\s*(.+)$/i.exec(l))) out.next = m[1].trim();
+    else if ((m = /^Judged\s+(\d+)\s*:\s*(\S.*)$/i.exec(l))) out.judged.set(Number(m[1]), [...(out.judged.get(Number(m[1])) ?? []), m[2].trim()]);
+    else if ((m = /^Version\s*:\s*(\S.*)$/i.exec(l))) out.versions.push(m[1].trim());
+    else if ((m = /^Open\s*:\s*(\S.*)$/i.exec(l))) out.open.push(m[1].trim());
+    else if ((m = /^What\s+(\d+)\s*:\s*(\S.*)$/i.exec(l))) out.what.set(Number(m[1]), m[2].trim());
+    else if ((m = /^Why\s+(\d+)\s*:\s*(\S.*)$/i.exec(l))) out.why.set(Number(m[1]), m[2].trim());
+    else if ((m = /^Next\s+(\d+)\s*:\s*(\S.*)$/i.exec(l))) out.nexts.set(Number(m[1]), m[2].trim());
+    else if ((m = /^Done\s+(\d+)\s*:\s*(.*)$/i.exec(l))) out.done.set(Number(m[1]), m[2].trim());
     else if ((m = /^Found\s+(\d+)\.(\d+|\*)\s+(fixed|stopping|queued)\s*:?\s*(.*)$/i.exec(l))) out.sorts.set(`${Number(m[1])}.${m[2] === '*' ? '*' : Number(m[2])}`, { how: m[3].toLowerCase(), note: m[4].trim() });
   }
   return out;
@@ -1513,7 +1694,10 @@ export function sortFound(found, notes) {
  * @returns {{read: boolean, why: string, planPath: string, pointer: object|null,
  *   steps: {step: number, standing: boolean, state: string, back: object|null, report: string, reportWritten: boolean}[],
  *   found: object[], title: string, titles: Map<number, string>, leaves: string[],
- *   goalOne: string, manager: ReturnType<typeof managerNotes>, managerPath: string}}
+ *   goalOne: string, reviewers: number[], manager: ReturnType<typeof managerNotes>, managerPath: string}}
+ *   `reviewers` are the Standing steps that follow the hub's review file
+ *   (`aimReviewSteps`), [] when none does or no plan is in force: the status page draws
+ *   them as one Reviews line and not as steps with a chip.
  *   `read` is false, with `why`, when no plan is in force or its agents cannot be
  *   read; `pointer` is null when the plan defines none. Each of `steps` is a
  *   number of the plan's Order, then its Standing ones, with its state: DONE, a
@@ -1530,13 +1714,13 @@ export function pointerState(sid, plan = planInForce()) {
   // The manager's notes do not depend on a plan being in force: after a plan is
   // out of force they are still what the page should show.
   const managerPad = sid ? scratchpadOf(sid) : null;
-  const blank = { read: false, why: '', planPath: '', pointer: null, steps: [], found: [], title: '', titles: new Map(), leaves: [], goalOne: '',
+  const blank = { read: false, why: '', planPath: '', pointer: null, steps: [], found: [], title: '', titles: new Map(), leaves: [], goalOne: '', reviewers: [],
     manager: managerNotes(managerPad), managerPath: managerPad ? join(managerPad, MANAGER_FILE) : `${MANAGER_FILE} (no scratchpad found)` };
   if (!plan) return { ...blank, why: 'no plan is in force, and the approval state printed below says why' };
   const title = (/^#\s+(.+)$/m.exec(plan.text) ?? [])[1] ?? '';
   const leaves = [...(/^## Leaves open\b[^\n]*\n([\s\S]*?)(?=^## |^# |$(?![\s\S]))/mi.exec(plan.text) ?? [, ''])[1].matchAll(/^\s*-\s+(.+?)\s*$/gm)].map((x) => x[1]);
   const goalOne = (planSection(plan.text, 'Goals').split('\n').find((l) => /^\d+\.\s/.test(l)) ?? '').replace(/^\d+\.\s*/, '').trim();
-  const base = { ...blank, planPath: plan.path, title, titles: stepTitles(plan.text), leaves, goalOne };
+  const base = { ...blank, planPath: plan.path, title, titles: stepTitles(plan.text), leaves, goalOne, reviewers: aimReviewSteps(plan.text) };
   if (!planOrder(plan.text)) return { ...base, read: true, why: 'the plan in force has no "## Order" section with an "Order:" line' };
   const s = sid ? stepEnds({ session_id: sid }) : null;
   if (!s) return { ...base, why: `no transcript was found for the session${sid ? ` ${sid}` : ' (no CLAUDE_CODE_SESSION_ID in this shell)'}` };
@@ -1649,46 +1833,134 @@ function managerLine(st, groups) {
   const m = st.manager;
   if (!m?.read) {
     return `State page: no manager notes at ${st.managerPath}. The page carries only the pointer and the Found lines until they are written there, as plain text, one item to a line: `
-      + '"Outcome: …", "Explanation standing: … | evidence", "Explanation ruled out: … | evidence", "Decision: … | reason", "Next: …" and "Found 41.3 fixed|stopping|queued: note" ("Found 41.* …" sorts a whole step at once).';
+      + '"Outcome: …", "Explanation standing: … | evidence", "Explanation ruled out: … | evidence", "Decision: … | reason", "Next: …", "Judged 41: …" and "Found 41.3 fixed|stopping|queued: note" ("Found 41.* …" sorts a whole step at once); '
+      + 'the page itself is drawn from "Version: …", "Open: …", "What 41: …", "Why 41: …", "Next 41: …" and "Done 41: …".';
   }
-  return `State page: manager notes read from ${st.managerPath}: ${m.outcome ? 'an outcome written' : 'no outcome (the plan\'s first goal stands in)'}; `
+  return `State page: manager notes read from ${st.managerPath}: ${m.outcome ? 'an outcome written' : 'no outcome written'}; `
     + `explanations standing ${m.standing.length}, ruled out ${m.ruledOut.length}; decisions ${m.decisions.length}; ${m.next ? 'a next move written' : 'no next move written'}; `
-    + `${groups.unsorted.length} of ${st.found.length} Found lines unsorted.`;
+    + `${groups.unsorted.length} of ${st.found.length} Found lines unsorted. Page lines: ${m.versions.length} version, ${m.open.length} open, what ${m.what.size}, why ${m.why.size}, next ${m.nexts.size}, done ${m.done.size}.`;
 }
 
 const escapeHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /**
- * The status page, as plain HTML from the same state the print comes from.
+ * How one step shows on the status page: its chip's colour and its words.
+ * @param {ReturnType<typeof pointerState>} st  `pointerState`'s answer.
+ * @param {{step: number, standing: boolean, state: string}} x  one of its `steps`.
+ * @returns {{cls: 'done'|'wait'|'held'|'open', words: string}} `cls` picks the chip's
+ *   colour token and `words` is what the chip says, so the state never rests on colour
+ *   alone. In this order: `done` (green) for a hand-back opening DONE and for a step the
+ *   manager's notes name on a `Done N:` line whatever its newest end, because the main
+ *   thread counts a step done by decision; `running` (amber) for a step an agent is
+ *   running; `under review` (amber) for the step the notes' unnumbered `Next:` line names
+ *   first while a review step is running; `open` (red) for a step whose newest end is a
+ *   refusal, a failure, an interruption or any hand-back that does not open DONE; and
+ *   `held` (purple) for a step not sent, with what it waits on: `after step K`, K the
+ *   nearest step before it in Order that is not done, `next to send` where none is, and
+ *   `sent at any time` for a Standing step. THE INVARIANT `statusPage` relies on: each
+ *   step gets exactly one chip and the order above is the precedence, so a step counted
+ *   done by decision never shows red for the refusal it was counted past, and a step is
+ *   never both running and held.
+ */
+export function stepChip(st, x) {
+  const m = st.manager ?? managerNotes(null);
+  if (m.done.has(x.step) || x.state === 'DONE') return { cls: 'done', words: 'done' };
+  if (x.state === 'running') return { cls: 'wait', words: 'running' };
+  const reviewing = (st.steps ?? []).some((y) => (st.reviewers ?? []).includes(y.step) && y.state === 'running');
+  const named = /\b(\d+)\b/.exec(m.next);
+  if (reviewing && named && Number(named[1]) === x.step) return { cls: 'wait', words: 'under review' };
+  if (x.state !== 'not sent') return { cls: 'open', words: 'open' };
+  if (x.standing) return { cls: 'held', words: 'held, sent at any time' };
+  const order = st.pointer?.order ?? [];
+  let after = null;
+  for (let i = order.indexOf(x.step) - 1; i >= 0 && after === null; i--) {
+    const y = (st.steps ?? []).find((z) => z.step === order[i]);
+    if (y && y.state !== 'DONE' && !m.done.has(y.step)) after = y.step;
+  }
+  return { cls: 'held', words: after === null ? 'held, next to send' : `held, after step ${after}` };
+}
+
+/**
+ * The one line under the status page's Reviews heading.
+ * @param {ReturnType<typeof pointerState>} st  `pointerState`'s answer.
+ * @returns {string} the first words of the newest verdict among the review steps'
+ *   hand-backs (`st.reviewers`): `ON-AIM ROUTE-CLEAR step 117 next 119` when the first line
+ *   parses as a verdict (`parseVerdict`), else the first twelve words of that line;
+ *   `none has handed back` when no review step has a hand-back; with `; a review is
+ *   running` after it while one runs. It never carries more than the first line of a
+ *   hand-back, so the page cannot carry a reviewer's report.
+ */
+export function reviewWords(st) {
+  const mine = (st.steps ?? []).filter((x) => (st.reviewers ?? []).includes(x.step));
+  const backs = mine.map((x) => x.back).filter(Boolean).sort((a, b) => b.at - a.at);
+  const first = String(backs[0]?.lines?.[0] ?? '');
+  const v = parseVerdict(first);
+  const said = !backs.length ? 'none has handed back'
+    : v ? `${v.aim} ${v.route}${v.step === null ? '' : ` step ${v.step}`}${v.next === null ? '' : ` next ${v.next}`}`
+      : first.split(/\s+/).filter(Boolean).slice(0, 12).join(' ') || '(no text)';
+  return mine.some((x) => x.state === 'running') ? `${said}; a review is running` : said;
+}
+
+/**
+ * The status page, as plain HTML from the same state the print comes from, in the shape
+ * the owner reads: a heading, an updated line, Versions, one section for each step in Order
+ * and each Standing step, Open for you, and Found and not fixed.
  * @param {ReturnType<typeof pointerState>} st  `pointerState`'s answer.
  * @param {string} given  the status the session wrote, as stamped.
  * @param {Date} [now]  the time of the status; now when omitted.
  * @returns {string} a complete HTML document with a title, colour tokens for both
- *   themes and no table: the plan's outcome in the owner's terms (the manager's
- *   line, else the plan's first goal), each step in Order with its state, the
- *   Standing steps, the explanations still standing and those ruled out each with
- *   its evidence, every decision with its reason, the next move, the last status
- *   time in California time, every `Found:` line sorted into stopping the plan,
- *   fixed, queued for the next plan or not sorted yet with the count of that last
- *   group near the top, and what is open for the owner. The manager's part comes
- *   from `st.manager` (`managerNotes`), so it survives the page being rewritten
- *   whole at every status. Every string from a report file, a hand-back or the
- *   manager's notes is escaped. Every item is on a line of its own, so a Read of the
- *   page, which cuts a line past its limit, loses none of a long list.
+ *   themes (six-digit values, a dark pair for each), no table and a layout that reads at
+ *   phone width. In order: the heading; the updated line, the plan's title and the last
+ *   status's time in California time with the status; the `next: step N` line and the
+ *   manager's unnumbered `Next:` line, which the reviewer's file names as the line it reads;
+ *   the Versions section, one bullet for each `Version:` line of the manager's notes; then
+ *   one section for each step in Order and for each Standing step that is not a review: its
+ *   heading the step's number and its title from the plan, its chip (`stepChip`) in colour
+ *   and in words, and bullets, each on a line of its own: what it is (the `What N:` line,
+ *   else the title up to its first comma), where it stands (the first line of its newest
+ *   hand-back; `ended by <how>, with no hand-back` when its newest end was a refusal or an
+ *   interruption, whose last text is a tool result and not a hand-back; `running, no
+ *   hand-back yet`; or `not sent`), a `Counted done:` bullet where the notes carry a `Done N:`
+ *   text, and the `Why N:` and `Next N:` lines where there are some; one Reviews section with
+ *   one line (`reviewWords`) and no chip where the plan has a review step; Open for you, from
+ *   the `Open:` lines, or from what the plan itself leaves open (`openForOwner`) where none
+ *   is written; and Found and not fixed, of the Found lines of this plan's own steps (a
+ *   session's older reports hold the findings of earlier plans, which the notes queue
+ *   carries) every one the manager sorted as queued and, before them, those sorted as
+ *   stopping the plan, which is not fixed either, each tagged in words, in the report's
+ *   own words, then one line counting the Found lines with no sort yet (counted and not
+ *   listed, since the status print lists them). No Decision, Explanation or fixed Found line is
+ *   drawn: those stay in the manager's notes.
+ *   Every string from a report file, a hand-back or the notes is escaped.
  */
 export function statusPage(st, given, now = new Date()) {
   const li = (s) => `<li>${s}</li>`;
-  const stepItem = (x) => li(`<strong>Step ${x.step}</strong>${st.titles.get(x.step) ? ` ${escapeHtml(st.titles.get(x.step))}` : ''}: <span class="s">${escapeHtml(x.state)}</span>`
-    + (x.back ? `<br><span class="m">${escapeHtml(x.back.lines.slice(0, 2).join(' | '))}</span>` : ''));
   const next = !st.read ? `not read (${st.why})` : !st.pointer ? `not defined (${st.why})` : st.pointer.next === null ? 'none' : `step ${st.pointer.next}`;
-  const open = openForOwner(st);
   const m = st.manager ?? managerNotes(null);
-  const groups = sortFound(st.found, m);
-  const outcome = m.outcome || st.goalOne || '';
-  const outcomeFrom = m.outcome ? '' : (st.goalOne ? ' <span class="m">(the plan\'s first goal; the manager has written no outcome yet)</span>' : '');
-  const withWhy = (label) => (x) => li(`${escapeHtml(x.text)}<br><span class="m">${label}: ${x.evidence || x.reason ? escapeHtml(x.evidence || x.reason) : 'none written'}</span>`);
-  const foundItem = (f) => li(`<strong>Step ${f.step} #${f.n}</strong>: ${escapeHtml(f.line)}${f.note ? `<br><span class="m">${escapeHtml(f.note)}</span>` : ''}`);
-  const foundGroup = (title, list) => `<h3>${title} (${list.length})</h3>\n<ul>${list.map(foundItem).join('\n') || li('none')}</ul>`;
+  // Only the Found lines of this plan's own steps: a session's older reports hold the findings of earlier plans, which the notes queue already carries.
+  const inPlan = new Set(st.steps.map((x) => x.step));
+  const groups = sortFound(st.found.filter((f) => !inPlan.size || inPlan.has(f.step)), m);
+  const reviewers = st.reviewers ?? [];
+  const stepSection = (x) => {
+    const chip = stepChip(st, x);
+    const name = st.titles.get(x.step) ?? '';
+    const what = m.what.get(x.step) ?? name.split(',')[0].trim();
+    const stands = !x.back ? (x.state === 'running' ? 'running, no hand-back yet' : 'not sent')
+      : x.back.how !== 'a report' ? `ended by ${x.back.how}, with no hand-back` : (x.back.lines[0] ?? 'a hand-back with no text');
+    const bullets = [li(`What it is: ${escapeHtml(what || 'not described')}`), li(`Where it stands: ${escapeHtml(stands)}`),
+      ...(m.done.get(x.step) ? [li(`Counted done: ${escapeHtml(m.done.get(x.step))}`)] : []),
+      ...(m.why.has(x.step) ? [li(`Why: ${escapeHtml(m.why.get(x.step))}`)] : []),
+      ...(m.nexts.has(x.step) ? [li(`Next: ${escapeHtml(m.nexts.get(x.step))}`)] : [])];
+    return `<section>\n<h2>${x.step}. ${escapeHtml(name || `Step ${x.step}`)} <span class="chip ${chip.cls}">${escapeHtml(chip.words)}</span></h2>\n<ul>\n${bullets.join('\n')}\n</ul>\n</section>`;
+  };
+  const steps = st.steps.filter((x) => !reviewers.includes(x.step));
+  const stepsHtml = steps.map(stepSection).join('\n') || `<section>\n<h2>Steps</h2>\n<ul>\n${li('none')}\n</ul>\n</section>`;
+  const reviewsHtml = reviewers.length ? `<section>\n<h2>Reviews</h2>\n<p>${escapeHtml(reviewWords(st))}</p>\n</section>\n` : '';
+  const foundItem = ([tag, f]) => li(`<span class="tag">${tag}</span> Step ${f.step} #${f.n}: ${escapeHtml(f.line.replace(/^Found:\s*/, ''))}`);
+  const notFixed = [...groups.stopping.map((f) => ['stopping the plan', f]), ...groups.queued.map((f) => ['queued', f])];
+  const un = groups.unsorted.length;
+  const unsortedLine = un ? [li(`${un} Found line${un === 1 ? ' is' : 's are'} not sorted yet by the manager; the status print lists ${un === 1 ? 'it' : 'each'}.`)] : [];
+  const open = m.open.length ? m.open : openForOwner(st);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -1696,46 +1968,55 @@ export function statusPage(st, given, now = new Date()) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Plan run status</title>
 <style>
-:root { --bg: #ffffff; --txt: #1b1f24; --txt-2: #4a5360; --line: #c9ced6; --card: #f4f6f8; --ok: #0b6b3a; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #14171b; --txt: #e8ebef; --txt-2: #aab2bd; --line: #3a414b; --card: #1d2228; --ok: #6fd39b; } }
-:root[data-theme="dark"] { --bg: #14171b; --txt: #e8ebef; --txt-2: #aab2bd; --line: #3a414b; --card: #1d2228; --ok: #6fd39b; }
-body { margin: 0; padding: 16px; background: var(--bg); color: var(--txt); font: 16px/1.5 system-ui, sans-serif; overflow-wrap: anywhere; }
-main { max-width: 42rem; margin: 0 auto; }
-h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
-h2 { font-size: 1.05rem; margin: 1.5rem 0 .5rem; }
-h3 { font-size: 1rem; margin: 1rem 0 .25rem; }
-p, li { margin: .25rem 0; }
-ul { padding-left: 1.25rem; }
-.m { color: var(--txt-2); font-size: .9rem; }
-.s { font-weight: 600; }
-.next { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: .75rem 1rem; }
+/* One reading column; each step a block with a state chip in colour and in words, then its bullets. */
+:root {
+  --bg: #f6f7f5; --fg: #1d2420; --muted: #56615b; --line: #d5dbd6; --chip-bg: #e8ece9;
+  --done: #1f6b3a; --wait: #8a5a00; --held: #6b3fa0; --open: #9b2c2c;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141917; --fg: #e3e8e4; --muted: #a3ada6; --line: #2e3833; --chip-bg: #222a26;
+  --done: #6fcf8f; --wait: #e8b24a; --held: #c4a3f0; --open: #f08a8a; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #141917; --fg: #e3e8e4; --muted: #a3ada6; --line: #2e3833; --chip-bg: #222a26;
+  --done: #6fcf8f; --wait: #e8b24a; --held: #c4a3f0; --open: #f08a8a; color-scheme: dark; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; overflow-wrap: anywhere; }
+main { max-width: 44rem; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 1.6rem; margin: 0 0 4px; text-wrap: balance; }
+.asof { color: var(--muted); font-size: .9rem; margin: 0 0 8px; }
+.next { margin: 0 0 24px; }
+section { border-top: 1px solid var(--line); padding-block: 16px; }
+h2 { font-size: 1.1rem; margin: 0 0 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; background: var(--chip-bg); font-weight: 600; }
+.tag { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; color: var(--muted); }
+.done { color: var(--done); } .wait { color: var(--wait); } .held { color: var(--held); } .open { color: var(--open); }
+ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 6px; }
+p { margin: 0 0 8px; }
 </style>
 </head>
 <body>
 <main>
 <h1>Plan run status</h1>
-<p class="m">${escapeHtml(st.title)}</p>
-<p class="m">Last status ${escapeHtml(californiaStamp(now))}: ${escapeHtml(given)}</p>
+<p class="asof">${escapeHtml(st.title)}${st.title ? ' · ' : ''}updated ${escapeHtml(californiaStamp(now))}: ${escapeHtml(given)}</p>
 <p class="next"><strong>next: ${escapeHtml(next)}</strong>${m.next ? `<br>The next move: ${escapeHtml(m.next)}` : ''}</p>
-${groups.unsorted.length ? `<p class="m">Found lines not sorted yet: ${groups.unsorted.length} of ${st.found.length}.</p>\n` : ''}<h2>What the plan is for</h2>
-<p>${outcome ? escapeHtml(outcome) : 'none written'}${outcomeFrom}</p>
-<h2>Steps in Order</h2>
-<ul>${st.steps.filter((x) => !x.standing).map(stepItem).join('\n') || li('none')}</ul>
-<h2>Standing steps</h2>
-<ul>${st.steps.filter((x) => x.standing).map(stepItem).join('\n') || li('none')}</ul>
-<h2>Explanations still standing</h2>
-<ul>${m.standing.map(withWhy('Evidence')).join('\n') || li('none written')}</ul>
-<h2>Explanations ruled out</h2>
-<ul>${m.ruledOut.map(withWhy('Evidence against')).join('\n') || li('none written')}</ul>
-<h2>Decisions and why</h2>
-<ul>${m.decisions.map(withWhy('Reason')).join('\n') || li('none written')}</ul>
-<h2>Found lines, sorted</h2>
-${foundGroup('Stopping the plan', groups.stopping)}
-${foundGroup('Fixed', groups.fixed)}
-${foundGroup('Queued for the next plan', groups.queued)}
-${foundGroup('Not sorted yet', groups.unsorted)}
-<h2>Open for the owner</h2>
-<ul>${open.map((o) => li(escapeHtml(o))).join('\n')}</ul>
+<section>
+<h2>Versions</h2>
+<ul>
+${m.versions.map((v) => li(escapeHtml(v))).join('\n') || li('none written')}
+</ul>
+</section>
+${stepsHtml}
+${reviewsHtml}<section>
+<h2>Open for you</h2>
+<ul>
+${open.map((o) => li(escapeHtml(o))).join('\n')}
+</ul>
+</section>
+<section>
+<h2>Found and not fixed</h2>
+<ul>
+${[...notFixed.map(foundItem), ...unsortedLine].join('\n') || li('none')}
+</ul>
+</section>
 </main>
 </body>
 </html>
@@ -1824,9 +2105,8 @@ function noteSig(pad, step) {
  *   to the status, so the next status still prints this agent.
  */
 function endOf(sid, f, id) {
-  let meta = {};
-  try { meta = JSON.parse(readFileSync(join(f.agents, `agent-${id}.meta.json`), 'utf8')); } catch { meta = {}; }
-  return agentEnd(tailEntries(join(f.agents, `agent-${id}.jsonl`), 4 * 1024 * 1024), meta,
+  const a = agentFiles(f.agents).find((x) => x.id === id) ?? { id, folder: f.agents, file: join(f.agents, `agent-${id}.jsonl`) };
+  return agentEnd(tailEntries(a.file, 4 * 1024 * 1024), agentMeta(a),
     startedAt({ session_id: sid }), notifiedStatuses(f.main).get(id) ?? '');
 }
 
@@ -2000,6 +2280,11 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   let review = '';
   try { review = reviewBlock(reviewState({ session_id: sid }, planInForce())); } catch (e) { review = `Review: not read (${e?.message ?? e}).`; }
   console.log(review);
+  // THE JUDGEMENT, under the review: whether the newest hand-back has its written line,
+  // the same `judgedState` the dispatcher's judgement gate refuses on.
+  let judged = '';
+  try { judged = judgedBlock(judgedState({ session_id: sid }, planInForce())); } catch (e) { judged = `Judgement: not read (${e?.message ?? e}).`; }
+  console.log(judged);
   console.log('');
   console.log(status);
   if (m && m[1].padStart(5, '0') !== hhmm) console.log(`(the status said ${m[1]}; the clock says ${hhmm}, and that is what was stamped)`);
