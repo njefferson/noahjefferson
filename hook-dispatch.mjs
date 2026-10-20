@@ -2356,7 +2356,9 @@ async function main(event, raw, p) {
       `node "${join(HUB, 'approved-plan-guard.mjs')}"`, `node "${join(HUB, 'reply-guard.mjs')}"`, `node "${join(HUB, 'keep-info-guard.mjs')}"`,
       `node "${join(HUB, 'push-guard.mjs')}"`, `node "${join(HUB, 'plan-fence.mjs')}"`, `node "${join(HUB, 'doctrine-read-guard.mjs')}"`]) {
       const o = run(g, raw, root);
-      if (o.deny) return refuse(o.reason);
+      // A RULES FIRST refusal of an agent's first call sets no latch (lesson 415): only the plan
+      // fence writes the mark (FIRST_REFUSAL in plan-fence.mjs), and every other refusal latches.
+      if (o.deny) return refuse(o.reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')));
       // A family guard that crashed or timed out has not said yes. The header's
       // promise — a crash refuses everything but reads — held only for a crash
       // of THIS file; a guard exiting 1 was read as a pass.

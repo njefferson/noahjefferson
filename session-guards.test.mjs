@@ -4339,7 +4339,7 @@ const CASES = [
   },
   {
     name: 'an agent\'s first call is the Read of the shared rules: every other call is refused until its own transcript holds a Read of agent-rules.md that was not refused; the Read itself, the live clone\'s copy, its return, its TaskStop and a progress note or report in the scratchpad pass; with no transcript of its own the call is refused',
-    guards: ['rules_first', 'rules_first_read', 'rules_first_live', 'rules_first_transcript', 'rules_first_head', 'rules_first_error', 'rules_first_other_file', 'rules_first_none', 'rules_first_report'],
+    guards: ['rules_first', 'rules_first_read', 'rules_first_live', 'rules_first_transcript', 'rules_first_head', 'rules_first_error', 'rules_first_other_file', 'rules_first_none', 'rules_first_report', 'rules_first_mark', 'rules_first_second', 'rules_first_skip_latch'],
     run(m, dir) {
       const s = sid('rf');
       const tr = transcript([turn(0, 'start')]);
@@ -4382,9 +4382,15 @@ const CASES = [
       writeFileSync(join(sub2, 'agent-ax.jsonl'), jsonl([at({ type: 'user', message: { role: 'user', content: `${w.plan} step 2` } }, later(-300))]));
       const call = (tool_name, tool_input) => w.call('PreToolUse', { session_id: sw, agent_id: 'ax', tool_name, tool_input });
       const first = call('Bash', { command: 'git status' });
-      const next = call('Read', { file_path: w.plan });
+      // The harness records the refused call as an error result in the agent's transcript, before the agent's next call.
+      writeFileSync(join(sub2, 'agent-ax.jsonl'), jsonl([at({ type: 'user', message: { role: 'user', content: `${w.plan} step 2` } }, later(-300)), at(tool(0, 'ax-1', 'Bash', { command: 'git status' }), later(-260)), at(result(0, 'ax-1', first.stderr, true), later(-259))]));
+      // The first refusal sets no latch; the second refusal latches the agent, which may still write its report and nothing else.
+      const next = call('Bash', { command: 'git log' });
       const note = call('Write', { file_path: `/tmp/claude-0/-home-user/${sw}/scratchpad/progress/step-2.txt`, content: 'REFUSED' });
-      const flow = first.status === 2 && /RULES FIRST/.test(first.stderr) && next.status === 2 && /REFUSAL LATCH/.test(next.stderr) && note.status === 0 && !latched(sw);
+      const after = call('Bash', { command: 'git log' });
+      const flow = first.status === 2 && /RULES FIRST, NO LATCH/.test(first.stderr) && !latched(sw)
+        && next.status === 2 && /RULES FIRST:/.test(next.stderr) && !/NO LATCH/.test(next.stderr) && note.status === 0
+        && after.status === 2 && /REFUSAL LATCH/.test(after.stderr) && !latched(sw);
       return noFile && itself && otherRead && returns && report && emptyAgent && wrongFile && refusedRead && ok && issued && afterBig && flow;
     },
   },
@@ -4780,7 +4786,7 @@ const CASES = [
   },
   {
     name: 'an agent may read the approved plan, or the steps file beside it, before the rules, because the plan is what names them, and nothing else: another file, a write and a command stay refused with the rules named, the rules read stays required for every other call, and with no plan in force the plan\'s path is not special',
-    guards: ['rules_first_plan_read', 'rules_first_plan_steps', 'rules_first_plan_only', 'rules_first_plan_passed'],
+    guards: ['rules_first_plan_read', 'rules_first_plan_steps', 'rules_first_plan_only', 'rules_first_plan_passed', 'rules_first_skip_latch'],
     run(m, dir) {
       const s = sid('rp');
       const tr = transcript([turn(0, 'start')]);
@@ -4806,9 +4812,15 @@ const CASES = [
       const first = call('Read', { file_path: w.plan });
       const stillFree = !latched(sw);
       const second = call('Bash', { command: 'git status' });
-      const third = call('Read', { file_path: w.plan });
+      const secondNoLatch = !latched(sw) && /RULES FIRST, NO LATCH/.test(second.stderr);
+      // The refused call is recorded in the agent's transcript as an error result, as the harness records it.
+      writeFileSync(join(sub2, 'agent-ax.jsonl'), jsonl([at({ type: 'user', message: { role: 'user', content: `${w.plan} step 2` } }, later(-300)), at(tool(0, 'ax-2', 'Bash', { command: 'git status' }), later(-260)), at(result(0, 'ax-2', second.stderr, true), later(-259))]));
+      // The second refusal latches: the next command is refused, and so is the plan's Read.
+      const third = call('Bash', { command: 'git log' });
+      const fourth = call('Read', { file_path: w.plan });
       return planRead && stepsRead && otherPlan && notReads && noPlan
-        && first.status === 0 && stillFree && second.status === 2 && /RULES FIRST/.test(second.stderr) && third.status === 2 && /REFUSAL LATCH/.test(third.stderr);
+        && first.status === 0 && stillFree && second.status === 2 && secondNoLatch && third.status === 2 && /RULES FIRST:/.test(third.stderr) && !/NO LATCH/.test(third.stderr)
+        && fourth.status === 2 && /REFUSAL LATCH/.test(fourth.stderr);
     },
   },
 
@@ -5458,8 +5470,12 @@ const PLANTS = {
   rules_first_head: ['rulesWereRead(headEntries(f, 512 * 1024), files)', 'rulesWereRead(headEntries(f, 64), files)', 'plan-fence.mjs'],
   rules_first_error: ["if (e.type === 'user' && b?.type === 'tool_result' && b.is_error) failed.add(b.tool_use_id);", 'if (false) failed.add(b.tool_use_id);', 'plan-fence.mjs'],
   rules_first_other_file: ["b.name === 'Read' && files.has(resolve(String(b.input?.file_path ?? '')))) asked.add(b.id);", "b.name === 'Read') asked.add(b.id);", 'plan-fence.mjs'],
-  rules_first_none: ['  return `${HEAD} RULES FIRST:', '  if (!f) return null;\n  return `${HEAD} RULES FIRST:', 'plan-fence.mjs'],
+  rules_first_none: ['  return `${HEAD} ${first ? FIRST_REFUSAL : \'RULES FIRST:\'}', '  if (!f) return null;\n  return `${HEAD} ${first ? FIRST_REFUSAL : \'RULES FIRST:\'}', 'plan-fence.mjs'],
   rules_first_report: ['  if (agentReportWrite(p)) return null;\n  const files = new Set(', '  const files = new Set(', 'plan-fence.mjs'],
+  // The first refusal sets no latch (lesson 415): the fence marks only the first refusal, and only the second latches.
+  rules_first_mark: ['  const first = !!f && !rulesRefusedBefore(entries);', '  const first = !!f;', 'plan-fence.mjs'],
+  rules_first_second: ['  const first = !!f && !rulesRefusedBefore(entries);', '  const first = !!f || true;', 'plan-fence.mjs'],
+  rules_first_skip_latch: ["refuse(o.reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')));", 'refuse(o.reason);', 'hook-dispatch.mjs'],
 
   // The manager's written judgement of each hand-back (step 119).
   judged_gate_wired: ['      if (jg) return refuse(jg, false);\n', '\n', 'hook-dispatch.mjs'],

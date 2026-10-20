@@ -274,6 +274,29 @@ export function rulesWereRead(entries, files) {
 }
 
 /**
+ * The mark of an agent's FIRST refusal for its first call, which sets no latch (lesson 415).
+ * hook-dispatch.mjs skips the latch for a plan-fence refusal carrying it, and only for that one.
+ */
+export const FIRST_REFUSAL = 'RULES FIRST, NO LATCH:';
+
+/**
+ * Has the agent already been refused for the rules-first check?
+ * @param {object[]} entries  the agent's transcript, in file order.
+ * @returns {boolean} true when a refused call (an error result) names the rules-first
+ *   refusal in its text. A plan or a rules file read back as a result is not an error and does not count.
+ */
+export function rulesRefusedBefore(entries) {
+  for (const e of entries ?? []) {
+    const c = e?.message?.content;
+    if (!Array.isArray(c)) continue;
+    for (const b of c) {
+      if (e.type === 'user' && b?.type === 'tool_result' && b.is_error && /RULES FIRST/.test(JSON.stringify(b.content ?? ''))) return true;
+    }
+  }
+  return false;
+}
+
+/**
  * THE RULES COME FIRST: an agent's first call is the Read of the shared rules file.
  * @param {object} p  a subagent's PreToolUse payload (not its return, not its TaskStop).
  * @param {{path: string}|null} [plan]  the approved plan, by the path the dispatch gate
@@ -302,9 +325,16 @@ export function rulesFirst(p, plan = approvedPlan()) {
   if (tool === 'Read' && planFiles.has(reads)) return null;
   const f = agentTranscript(p);
   if (f && rulesWereRead(headEntries(f, 512 * 1024), files)) return null;
-  return `${HEAD} RULES FIRST: an agent's first call is a Read of ${resolve(homedir(), '.claude', 'hub', RULES_FILE)}, and no other call runs before it, so ${tool || 'this call'} is refused. `
+  // THE FIRST REFUSAL SETS NO LATCH (lesson 415): only the agent's first refusal of this kind carries
+  // FIRST_REFUSAL; one after it does not, and latches as every refusal does.
+  const entries = f ? headEntries(f, 512 * 1024) : [];
+  const first = !!f && !rulesRefusedBefore(entries);
+  const rulesPath = resolve(homedir(), '.claude', 'hub', RULES_FILE);
+  return `${HEAD} ${first ? FIRST_REFUSAL : 'RULES FIRST:'} an agent's first call is a Read of ${rulesPath}, and no other call runs before it, so ${tool || 'this call'} is refused. `
     + `${f ? 'Its own transcript holds no Read of that file that was not refused.' : 'No transcript of this agent was found to show that it was read.'} `
-    + 'Read the file, then do the step; at any refusal, stop and hand back REFUSED.';
+    + (first
+      ? `This refusal sets no latch, and it is not the refusal the rules' line on refusals means: your next call is the Read tool on ${rulesPath}, and then you do the step with every file read through the Read or Grep tool.`
+      : 'Read the file, then do the step; at any refusal, stop and hand back REFUSED.');
 }
 
 /**

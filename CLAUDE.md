@@ -572,7 +572,8 @@ Every item below has actually happened.
  starts keeps its transcript below `subagents/workflows/<run>/`, and is found
  there as well (`agentFiles` in `report.mjs`, which the status, the pointer, the
  stop guard and the fence all read through). The main thread can read it.
- (Doctrine §0e rule 13; LESSONS §404, §410.)
+ The first such refusal sets no latch and says so in its text, and tells the agent to read the rules and go on; a second one latches (LESSONS §415).
+ (Doctrine §0e rule 13; LESSONS §404, §410, §415.)
 - **AN AGENT MAY BE SENT THE STEPS FILE IN THE PLAN'S PLACE.** Approval, the
  owner's exit from plan mode in the app and every amendment write
  `<plan>.steps.md` beside the plan, holding only its Rules, Steps and Commands
