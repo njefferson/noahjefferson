@@ -402,8 +402,8 @@ every rule below while none of the hooks that enforce them was running
     transcript under `~/.claude/projects/`, and the live clone's doctrine; a
     read of anything else, a source file or a tool of an app above all, or of
     the GitHub connector's file contents or code search, is refused with a
-    reason that says to send an agent, and that refusal latches (rule 14); a
-    read that names no file, a tool search or a web read, passes as before;
+    reason that says to send an agent, and that refusal sets no latch (rule
+    14); a read that names no file, a tool search or a web read, passes as before;
     `SendUserFile` of files that sit in the session scratchpad, so a choice
     between pictures carries its pictures in the same message as the
     question (§2), and of no other path; sending
@@ -429,6 +429,12 @@ every rule below while none of the hooks that enforce them was running
     every workflow, so no script of the session's carries instructions the
     owner has not read. The plan counts only while its hash matches the one
     recorded at approval: a plan edited after approval grants nothing.
+    `node ~/.claude/hub/hook-dispatch.mjs --can <tool> <path or command line>`
+    prints whether the manager fence and the latch would pass that call on the
+    main thread now, and why, and changes nothing; the fence passes it as it
+    passes the status command, refuses it with anything chained to it, and names
+    it in every refusal of a call that is not of the record, beside what the
+    main thread may use.
     *Enforced whole by:* `approved-plan-guard.mjs` and `report.mjs`.
     *Enforced whole by:* `hook-dispatch.mjs` and `plan-guard.mjs`.
     *Enforced whole by:* `plan-fence.mjs`.
@@ -440,7 +446,7 @@ every rule below while none of the hooks that enforce them was running
     second route §0d names, not a fresh start. While the latch stands, the main
     thread says in plain text what was refused and stops; an agent returns what
     it has, with the refusal's text.
-    Seven refusals are not ends of a route: a status falling due is cleared by
+    Eight refusals are not ends of a route: a status falling due is cleared by
     giving it (rule 2); a call held while a message from the owner waits is
     sent again once that message is delivered (LESSONS §376); a stop or a
     correction from the owner standing is lifted by the owner's next message
@@ -450,7 +456,12 @@ every rule below while none of the hooks that enforce them was running
     by sending the review step, by amending the plan's Steps or Order, or by
     entering plan mode, and a latch would stand in the way of each (rule 2); a
     step the rules gate refuses, because the plan pins a rules version the file
-    has moved past, is answered by amending the Rules line (rule 13); and once the owner has
+    has moved past, is answered by amending the Rules line (rule 13); a main-thread
+    call the manager fence refuses only because it is not of the record, a read of
+    a path outside it or a tool or command line the fence does not pass, is
+    answered by a call the fence passes, which the refusal lists beside the check
+    command, and a latch would only add a wait for the owner to a miss that
+    changed nothing (rule 13); and once the owner has
     approved a plan by leaving plan mode in the app, entering plan mode again
     for it is refused, because that approval is carried on with, never asked for
     twice. That last refusal lifts once an agent is sent under the plan or the

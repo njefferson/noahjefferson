@@ -449,7 +449,11 @@ Every item below has actually happened.
  a step the judgement gate refuses because the newest hand-back or the step about
  to go has no written judgement in its parts, and entering plan mode again after the
  owner approved the plan by leaving plan mode in the app, which the dispatcher
- judges before any gate reads the approval. Give the status, send the held
+ judges before any gate reads the approval. An eleventh sets no latch either: a
+ main-thread call the manager fence refuses only because it is not of the
+ record, whose refusal lists what the main thread may use;
+ `node /root/.claude/hub/hook-dispatch.mjs --can <tool> <path or command line>`
+ says beforehand whether the fence and the latch would pass a call. Give the status, send the held
  call again, answer the correction, read the filed messages and the page, send the
  review or amend the
  plan or enter plan mode as the review gate's refusal says, amend the Rules line

@@ -936,15 +936,44 @@ export function replyText(text) {
 }
 
 /**
+ * What an Artifact call's page held, for the identity of the call.
+ * @param {string} file  the call's `file_path`.
+ * @param {string} [cwd]  the directory a relative path is read from; the process's own by default.
+ * @param {number} [asOf]  ms: when the call was made, known only when the call is read back from the transcript.
+ * @returns {string} the sha256 of the file's bytes now; `unreadable` when the file cannot be read; and, when
+ *   `asOf` is given and the file was changed after it, `changed-since`, because what the page held at the
+ *   call is then not known and must match no later call.
+ */
+function pageDigest(file, cwd, asOf) {
+  try {
+    const abs = resolve(cwd || process.cwd(), file);
+    if (asOf && statSync(abs).mtimeMs > asOf) return 'changed-since';
+    return createHash('sha256').update(readFileSync(abs)).digest('hex');
+  } catch { return 'unreadable'; }
+}
+
+/**
  * The identity of a call, for "the same call again".
  * @param {string} tool   the tool name.
  * @param {object} input  its input.
+ * @param {string} [cwd]  the directory a relative `file_path` is read from.
+ * @param {number} [asOf]  ms: when the call was made, when that is known (`pageDigest`).
  * @returns {string} a sha256 of the tool and what the call DOES — a Bash
  *   command's text, any other tool's input without its description — so a
- *   relabelled retry is still the same call.
+ *   relabelled retry is still the same call. AN ARTIFACT CALL THAT NAMES A FILE (the publish of the status
+ *   page) is keyed by the page AND the content the page held at the call (`pageDigest`): the same path
+ *   with changed content is a different call, so a publish of a page edited since a failed one is not a
+ *   repeat, and an identical publish of unchanged content after a failure still is. The reply guard's
+ *   `decide`, `record` and `catchUp` all key through here, so they cannot disagree about it.
  */
-export function callHash(tool, input) {
-  const what = tool === 'Bash' ? String(input?.command ?? '') : JSON.stringify({ ...(input ?? {}), description: undefined });
+export function callHash(tool, input, cwd, asOf) {
+  let what;
+  if (tool === 'Bash') what = String(input?.command ?? '');
+  else {
+    const body = { ...(input ?? {}), description: undefined };
+    if (tool === 'Artifact' && typeof input?.file_path === 'string' && input.file_path) body.pageContent = pageDigest(input.file_path, cwd, asOf);
+    what = JSON.stringify(body);
+  }
   return createHash('sha256').update(`${tool}\n${what}`).digest('hex');
 }
 
@@ -1088,7 +1117,7 @@ function catchUp(p, ev) {
       const text = typeof b.content === 'string' ? b.content : Array.isArray(b.content) ? b.content.filter((x) => x?.type === 'text').map((x) => x.text).join('\n') : '';
       done.add(b.tool_use_id);
       if (b.is_error && !PLAN_TOOL.test(u.name ?? '') && !NOT_A_FAILURE.test(text) && !(u.name === 'Bash' && parseRead(String(u.input?.command ?? '')))) {
-        const h = callHash(u.name, u.input);
+        const h = callHash(u.name, u.input, p.cwd, t);
         append(p, { kind: 'fail', use: b.tool_use_id, agent, tool: u.name, h, id: h.slice(0, 8), text: cap(text, 8000), t });
       }
       const q = { ...p, tool_name: u.name, tool_input: u.input };
@@ -1153,7 +1182,7 @@ export function decide(p) {
   // A failed request whose failure was a host declining is governed by the
   // host rules below, which name the cause and its route; once those allow it
   // (the owner opened the host), the identical request is the right one.
-  const h = callHash(tool, p.tool_input);
+  const h = callHash(tool, p.tool_input, p.cwd);
   let fi = -1;
   if (!PLAN_TOOL.test(tool)) for (let i = ev.length - 1; i >= 0; i--) if (ev[i].kind === 'fail' && ev[i].agent === agent && ev[i].h === h) { fi = i; break; }
   if (fi >= 0 && ev[fi].use && ev.some((e) => e.kind === 'decline' && e.use === ev[fi].use)) fi = -1;
@@ -1229,7 +1258,7 @@ export function record(p, event) {
     if (p.is_interrupt) return '';
     out = String(p.error ?? '');
     if (!PLAN_TOOL.test(tool) && !NOT_A_FAILURE.test(out) && !(tool === 'Bash' && parseRead(String(p.tool_input?.command ?? '')))) {
-      const h = callHash(tool, p.tool_input);
+      const h = callHash(tool, p.tool_input, p.cwd);
       append(p, { kind: 'fail', use, agent, tool, h, id: h.slice(0, 8), text: cap(out, 8000) });
     }
   } else if (event === 'PostToolUse') {

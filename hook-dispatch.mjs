@@ -78,7 +78,10 @@
  * PreToolUse refusal, family or repo, sets a latch, except the
  * report gate's, pending-guard's, the stop hold's, the correction check's, the
  * recall gate's, the state page gate's, the in-app approval check's, the review
- * gate's, the rules gate's, the reads gate's and the judgement gate's: a status falling due (an agent has
+ * gate's, the rules gate's, the reads gate's, the judgement gate's and the manager
+ * fence's refusal of a call that is not of the record (`FENCE_NO_LATCH`: it names
+ * what the main thread may use and the check, `--can`, which says beforehand whether
+ * the fence and the latch would pass a call): a status falling due (an agent has
  * ended) is cleared by giving it, and the refused call may then run; a call
  * held while an owner
  * message waits is sent again once the message is delivered, and a latch would
@@ -127,7 +130,7 @@ import { createHash } from 'node:crypto';
 import { recallParts } from './compact-recall.mjs';
 import { tailEntries, isOwnerMessage, textOf } from './transcript-tail.mjs';
 import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
-  planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, judgedState, stepNumbers, markCompacted, JUDGED_PARTS, WHY_PARTS } from './report.mjs';
+  planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, judgedState, stepNumbers, markCompacted, sessionFiles, JUDGED_PARTS, WHY_PARTS } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
 import { HARNESS_TAG } from './pending-guard.mjs';
@@ -168,6 +171,22 @@ export const isStatusCommand = (cmd) => REPORT.test(String(cmd ?? ''));
  * @returns {boolean} true only for this hub's `report.mjs --wait`, nothing chained.
  */
 export const isWaitCommand = (cmd) => WAIT.test(String(cmd ?? ''));
+
+// The check a main-thread call can be put to before it is made (`canCall`): this hub's hook-dispatch.mjs with
+// `--can`, a tool name and ONE argument, which is a word of path characters or a quoted string with nothing in it
+// for the shell to expand, and nothing chained. It changes nothing, so the main thread's gates pass it as they
+// pass the status command, a latch included, and a line with anything chained to it is not it.
+const CAN_ARG = '(?:"[^"`$\\\\]*"|\'[^\']*\'|[^\\s"\'`$\\\\;&|<>(){}*?\\[\\]!#]+)';
+const CAN = new RegExp('^\\s*node\\s+"?' + join(HUB, 'hook-dispatch.mjs').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  + '"?\\s+--can\\s+[A-Za-z][A-Za-z0-9_]*\\s+' + CAN_ARG + '\\s*$');
+
+/**
+ * Is a Bash line the check of a call (`hook-dispatch.mjs --can`)?
+ * @param {string} cmd  a command line.
+ * @returns {boolean} true only for this hub's `hook-dispatch.mjs --can <tool> <one argument>`
+ *   with nothing chained to it (the same test the latch, the fence and `main` use).
+ */
+export const isCanCommand = (cmd) => CAN.test(String(cmd ?? ''));
 
 // The tools an agent hands its result back with. `StructuredOutput` is the
 // plan's name for it; `SubagentHandback` is the name this harness gives the
@@ -468,8 +487,10 @@ export function typedAt(entries, i) {
  *   holds that agent alone: the main thread and every other agent pass it, and
  *   nothing clears it, because the agent's one move is its own return, which
  *   passes every guard. stop-guard.mjs relies on this to let a latched session stop.
+ * @param {boolean} [readOnly]  true for the check of a call (`canCall`): the answer is the same, but the
+ *   file of a latch an owner message has cleared is left where it is, so the check changes nothing.
  */
-export function latchStanding(p, entries) {
+export function latchStanding(p, entries, readOnly = false) {
   if (p.agent_id) {
     try {
       const a = JSON.parse(readFileSync(latchFile(p, p.agent_id), 'utf8'));
@@ -481,7 +502,7 @@ export function latchStanding(p, entries) {
   const at = Number(l?.at) || 0;
   const list = entries ?? tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024);
   if (list.some((e, i) => isOwnerMessage(e) && typedAt(list, i) > at)) {
-    rmSync(latchFile(p), { force: true });
+    if (!readOnly) rmSync(latchFile(p), { force: true });
     return null;
   }
   return { at, tool: String(l.tool ?? ''), agent: l.agent ?? null, reason: String(l.reason ?? '') };
@@ -1668,6 +1689,31 @@ const READ_FENCE = 'MANAGER FENCE (Doctrine §0e rule 13): the main thread reads
   + '.claude/PLAN and .branch-guard, IR-SCIENCE.md and docs/decisions/*.md, this session\'s transcript and the tool results saved beside it, and the live clone\'s doctrine. ';
 
 /**
+ * The mark of a manager-fence refusal that sets no latch.
+ * `main` skips the latch for a refusal of the manager fence that carries it, and only for that one.
+ * The refusals that carry it are the fence's refusals of a call that is not of the record; the dispatch
+ * gate's and the workflow gate's, returned through the fence as well, do not, and latch as before.
+ */
+export const FENCE_NO_LATCH = 'MANAGER FENCE, NO LATCH:';
+
+/**
+ * What a manager-fence refusal of a call that is not of the record ends with.
+ * @returns {string} the mark `main` reads (`FENCE_NO_LATCH`), the statement that the refusal sets no
+ *   latch, what the main thread may use, and the check command (`hook-dispatch.mjs --can`) that says
+ *   beforehand whether a call would pass. The refusal's reader is the main thread, which had no way to
+ *   know what passes except by making a call and being refused; every refusal of `managerFence` that
+ *   is not the dispatch gate's or the workflow gate's ends with it, and `main` reads the mark.
+ */
+function notOfRecord() {
+  return ` ${FENCE_NO_LATCH} this refusal sets no latch, so the next call is judged on its own. `
+    + 'The main thread may use: a read of the record (the plans, the session scratchpad, the doctrine and lessons, each repo\'s notes and plan pointers, this session\'s transcript); '
+    + 'an agent sent with the approved plan\'s path and a step number; TaskStop; the status command; the wait between statuses (report.mjs --wait); '
+    + 'a write to its plan file under ~/.claude/plans/, to the status page\'s source or to its manager notes; Artifact publishing the status page, or reading, listing or opening a page; '
+    + 'SendUserFile of files in the session scratchpad; EnterPlanMode and ExitPlanMode. '
+    + `To check a call before making it, run: node ${join(HUB, 'hook-dispatch.mjs')} --can <tool> "<path or command line>". It says whether the manager fence and the latch would pass the call, and changes nothing.`;
+}
+
+/**
  * The git repository a path sits in.
  * @param {string} abs  an absolute path.
  * @returns {string|null} the nearest ancestor directory (the path itself is
@@ -2047,6 +2093,12 @@ export function workflowGate(p, plan = approvedPlan(), opts = {}) {
  *   amended once the fence stands. A Workflow goes to `workflowGate`: refused,
  *   unless scripts are accepted (WORKFLOW_SCRIPTS_ACCEPTED) and the call carries
  *   the approved plan's own script. Everything else is refused with the reason.
+ *   A refusal of a call that is not of the record (a read outside it, a write, a
+ *   SendUserFile, an Artifact call or a tool the fence does not pass) ends with
+ *   `notOfRecord()`: the mark `FENCE_NO_LATCH`, which `main` reads to set no latch,
+ *   what the main thread may use, and the check command (`canCall`). The dispatch
+ *   gate's and the workflow gate's refusals, returned through here, do not carry it
+ *   and latch as before.
  */
 export function managerFence(p, opts = {}) {
   if (p.agent_id) return null;
@@ -2059,6 +2111,8 @@ export function managerFence(p, opts = {}) {
   // The main thread may not end its turn while an agent runs, and none of its
   // other calls can wait: this one does, and returns on what it waits for.
   if (tool === 'Bash' && WAIT.test(String(input.command ?? ''))) return null;
+  // The check of a call changes nothing and is how the main thread learns what passes (`canCall`).
+  if (tool === 'Bash' && CAN.test(String(input.command ?? ''))) return null;
   if (tool === 'Artifact') {
     const a = String(input.action ?? 'publish');
     // Never quickstart: neither the plan nor rule 13 names it, and it starts
@@ -2066,14 +2120,14 @@ export function managerFence(p, opts = {}) {
     if (['read', 'list', 'open'].includes(a)) return null;
     const plain = !input.asset && !input.files && !input.file_paths && !input.type_url && !input.from_url && !input.asset_ids;
     if (a === 'publish' && plain && isStatusPage(input.file_path, p.session_id)) return null;
-    return `${head} On the main thread Artifact publishes the status page only, ${STATUS_PAGE} in this session's scratchpad, or reads, lists or opens a page (Doctrine §7i).`;
+    return `${head} On the main thread Artifact publishes the status page only, ${STATUS_PAGE} in this session's scratchpad, or reads, lists or opens a page (Doctrine §7i).${notOfRecord()}`;
   }
   if (FILE_WRITES.has(tool)) {
     const f = String(input.file_path ?? input.notebook_path ?? '');
     if (f && f.endsWith('.md') && dirname(resolve(f)) === resolve(homedir(), '.claude', 'plans')) return null;
     if (f && isStatusPage(f, p.session_id)) return null;
     if (f && isManagerNotes(f, p.session_id)) return null;
-    return `${head} The main thread writes only its plan file, the status page's source (${STATUS_PAGE}) and its own notes for the page (${MANAGER_NOTES}), the last two in the session scratchpad; ${f || 'this file'} is written by an agent sent with a plan step.`;
+    return `${head} The main thread writes only its plan file, the status page's source (${STATUS_PAGE}) and its own notes for the page (${MANAGER_NOTES}), the last two in the session scratchpad; ${f || 'this file'} is written by an agent sent with a plan step.${notOfRecord()}`;
   }
   // A choice between pictures carries its pictures in the same message as the
   // question (Doctrine §2): the main thread sends the owner files from this
@@ -2084,15 +2138,113 @@ export function managerFence(p, opts = {}) {
     const outside = named.filter((f) => !inScratchpad(absOf(f, cwd), p.session_id));
     if (named.length && !outside.length) return null;
     return `MANAGER FENCE (Doctrine §2, §0e): the main thread sends the owner files only from this session's scratchpad, so a choice between pictures carries its pictures. `
-      + `${named.length ? `${outside[0]} is not in it` : 'This call names no file'}; a file elsewhere is copied into the scratchpad by an agent sent with a plan step.`;
+      + `${named.length ? `${outside[0]} is not in it` : 'This call names no file'}; a file elsewhere is copied into the scratchpad by an agent sent with a plan step.${notOfRecord()}`;
   }
   if (isRead(p, opts.classify ?? planGuardReads)) {
     // A READ PASSES ONLY OF THE RECORD (Doctrine §0e rule 13): the manager reads
     // what it manages by, and diagnosing from an app's source is an agent's work.
     const outside = readOutsideRecord(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path);
-    return outside === null ? null : `${READ_FENCE}${outside}. Send an agent with the approved plan's path and a step number to read it.`;
+    return outside === null ? null : `${READ_FENCE}${outside}. Send an agent with the approved plan's path and a step number to read it.${notOfRecord()}`;
   }
-  return `${head} It is not a read; send an agent with the approved plan's path and a step number.`;
+  return `${head} It is not a read; send an agent with the approved plan's path and a step number.${notOfRecord()}`;
+}
+
+/**
+ * Put a main-thread call to the check before it is made.
+ * @param {object} p  a payload shaped like a main-thread PreToolUse payload: `tool_name`, `tool_input`, `cwd`,
+ *   and `session_id` and `transcript_path` when the session is known (no `agent_id`: the check is the main thread's).
+ * @param {{classify?: (p: object) => boolean, plan?: object|null, pointer?: object|null, entries?: object[]}} [opts]
+ *   what `managerFence` takes, and the transcript's entries for `latchStanding`, for the test.
+ * @returns {{free: boolean, fence: string|null, noLatch: boolean, latch: object|null, latchKnown: boolean, passesLatch: boolean, passes: boolean}}
+ *   `free` is true for the status command and the check itself, which `main` passes before the latch is
+ *   looked at and before the fence is asked, so `fence` is null for them; otherwise `fence` is the manager
+ *   fence's refusal or null, and `noLatch` is true when that refusal carries `FENCE_NO_LATCH`; `latch` is the
+ *   session's latch as `latchStanding` reads it without removing the file (null when none stands), `latchKnown`
+ *   is false when the payload names no session; `passesLatch` is true for `free` calls and TaskStop;
+ *   `passes` is true only when the fence would pass the call and no latch would stop it. It writes and removes
+ *   nothing, and its answer for the fence and the latch is the one `main` reaches, because it calls the same
+ *   two functions; the gates it does not ask are named by `canText`.
+ */
+export function canCall(p, opts = {}) {
+  const tool = String(p.tool_name ?? '');
+  const cmd = String(p.tool_input?.command ?? '');
+  const free = tool === 'Bash' && (REPORT.test(cmd) || CAN.test(cmd));
+  const passesLatch = free || tool === 'TaskStop';
+  const fence = free ? null : managerFence(p, opts);
+  const latchKnown = !!p.session_id;
+  let latch = null;
+  if (latchKnown) { try { latch = latchStanding(p, opts.entries, true); } catch { latch = null; } }
+  return { free, fence, noLatch: !!fence && fence.includes(FENCE_NO_LATCH), latch, latchKnown, passesLatch, passes: !fence && (passesLatch || !latch) };
+}
+
+/**
+ * The words of the check.
+ * @param {object} p  the payload `canCall` was given.
+ * @param {ReturnType<typeof canCall>} r  its answer.
+ * @param {string} [shown]  the argument as the caller gave it, for the first line.
+ * @returns {string} lines saying what the manager fence would do with the call and whether the refusal latches,
+ *   what the latch would do, the result, and the gates the check does not ask. The fence's own refusal is
+ *   printed whole, as the main thread would have met it.
+ */
+export function canText(p, r, shown = '') {
+  const lines = [`CHECK ONLY, NOTHING WAS RUN OR CHANGED: ${p.tool_name} ${shown}, as the main thread of ${p.session_id ? `session ${p.session_id}` : 'an unknown session'} would make it now.`];
+  if (r.free) lines.push('MANAGER FENCE: not asked. The status command and this check pass every gate of the main thread before the fence, the latch included.');
+  else lines.push(r.fence === null ? 'MANAGER FENCE: would pass.' : `MANAGER FENCE: would refuse. ${r.fence}`);
+  if (!r.latchKnown) lines.push('LATCH: not read, because this shell holds no CLAUDE_CODE_SESSION_ID; the session is unknown, so the latch is not judged and a path in the session scratchpad cannot be told from one outside it.');
+  else if (!r.latch) lines.push('LATCH: none stands.');
+  else lines.push(`LATCH: stands (set at ${californiaTime(new Date(r.latch.at))} California by a refusal of ${r.latch.tool || 'a call'}). `
+    + (r.passesLatch ? 'This call passes it: the status command, this check and the main thread\'s TaskStop pass a latch.'
+      : 'Every call but the status command, this check, the main thread\'s TaskStop and an agent\'s own return is refused until the owner writes again.'));
+  if (r.passes) lines.push('RESULT: the manager fence and the latch would pass this call.');
+  else {
+    const by = [];
+    if (r.latch && !r.passesLatch) by.push('the latch');
+    if (r.fence) by.push(`the manager fence, whose refusal ${r.noLatch ? 'sets no latch' : 'latches the main thread until the owner writes again'}`);
+    lines.push(`RESULT: this call would be refused by ${by.join(' and ')}.`);
+  }
+  lines.push('NOT JUDGED HERE: the stop and correction holds, the recall and page gates, the report gate, the review, rules, reads and judgement gates that hold a step, plan mode, and the family guards (reply, keep-info, push, doctrine-read); a call this check passes can still be refused by one of them.');
+  return lines.join('\n');
+}
+
+/**
+ * The tool input a check builds from a tool name and one argument.
+ * @param {string} tool  the tool's name.
+ * @param {string} arg  a path, a pattern, a prompt or a command line.
+ * @returns {object} the tool's input with the argument under the key the tool reads it from: `command` for Bash,
+ *   `file_path` for Read, Write, Edit and MultiEdit, `notebook_path` for NotebookEdit, `path` for Grep, `pattern` for Glob,
+ *   `file_paths` for SendUserFile, `prompt` for Agent and Task, `message` for SendMessage, and for Artifact an
+ *   `action` when the argument is one of read, list, open, quickstart, delete, pin or unpin, else a publish of that
+ *   file; any other tool gets `path`. `managerFence` judges these keys exactly as it judges a real call's.
+ */
+export function inputFor(tool, arg) {
+  if (tool === 'Bash') return { command: arg };
+  if (['Read', 'Write', 'Edit', 'MultiEdit'].includes(tool)) return { file_path: arg };
+  if (tool === 'NotebookEdit') return { notebook_path: arg };
+  if (tool === 'Grep') return { pattern: 'x', path: arg };
+  if (tool === 'Glob') return { pattern: arg };
+  if (tool === 'SendUserFile') return { file_paths: [arg] };
+  if (tool === 'Artifact') return /^(?:read|list|open|quickstart|delete|pin|unpin)$/.test(arg) ? { action: arg, url: 'u' } : { action: 'publish', file_path: arg };
+  if (tool === 'Agent' || tool === 'Task') return { prompt: arg };
+  if (tool === 'SendMessage') return { message: arg };
+  return { path: arg };
+}
+
+/**
+ * The check as the command line makes it: `hook-dispatch.mjs --can <tool> <path or command line>`.
+ * @param {string[]} args  the words after `--can`: the tool name, then the argument (more than one word is joined by spaces).
+ * @param {object} [env]  the environment; `CLAUDE_CODE_SESSION_ID` names the session whose latch and scratchpad are judged.
+ * @param {string} [cwd]  the directory a relative path is resolved against.
+ * @returns {string} `canText` of the call as the main thread of that session would make it, or a usage line
+ *   when there is no tool name or no argument. Nothing is written, removed or run.
+ */
+export function canMain(args, env = process.env, cwd = process.cwd()) {
+  const tool = String(args[0] ?? '');
+  const arg = args.slice(1).join(' ');
+  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(tool) || !arg) return `usage: node ${join(HUB, 'hook-dispatch.mjs')} --can <tool name> "<path or command line>"`;
+  const sid = String(env.CLAUDE_CODE_SESSION_ID ?? '').trim();
+  const files = sid ? sessionFiles(sid) : null;
+  const p = { ...(sid ? { session_id: sid } : {}), ...(files ? { transcript_path: files.main } : {}), cwd, tool_name: tool, tool_input: inputFor(tool, arg) };
+  return canText(p, canCall(p), arg);
 }
 
 /**
@@ -2242,7 +2394,8 @@ async function main(event, raw, p) {
   const root = resolve(process.env.CLAUDE_PROJECT_DIR || p.cwd || process.cwd());
   const printed = [];
   // EVERY PreToolUse refusal, by any guard, family or repo, sets the latch
-  // (Doctrine §0d, §0e). Only nine do not, each passing latch = false below: the
+  // (Doctrine §0d, §0e). Only ten do not, each passing latch = false below: the manager
+  // fence's refusal of a call that is not of the record (`FENCE_NO_LATCH`); the
   // latch's own, so it can never move the time an owner message has to come
   // after; pending-guard's; the stop hold's; the correction check's; the state
   // page gate's; the report gate's; the review gate's (a move with no current
@@ -2292,7 +2445,10 @@ async function main(event, raw, p) {
     // (Doctrine §11d). Measured: while latched, the main thread could not stop
     // two watchers it had started, and they ran to their time limits. An
     // agent's TaskStop stays latched; the agent returns instead.
-    const status = p.tool_name === 'Bash' && REPORT.test(String(p.tool_input?.command ?? ''));
+    // THE CHECK OF A CALL (`hook-dispatch.mjs --can`) PASSES AS THE STATUS COMMAND DOES, on the main thread: it
+    // changes nothing, and a latched main thread is the one that most needs to ask what would pass. An agent's
+    // is not exempt; the plan fence judges it.
+    const status = p.tool_name === 'Bash' && (REPORT.test(String(p.tool_input?.command ?? '')) || (!p.agent_id && CAN.test(String(p.tool_input?.command ?? ''))));
     const mainStop = p.tool_name === 'TaskStop' && !p.agent_id;
     const latch = latchStanding(p);
     // A LATCHED AGENT WRITES ITS OWN REPORT: its progress note and report file in the
@@ -2371,8 +2527,11 @@ async function main(event, raw, p) {
       }
       if (page) return refuse(page, false);
     }
+    // A REFUSAL OF A CALL THAT IS NOT OF THE RECORD SETS NO LATCH: the refusal carries `FENCE_NO_LATCH`, says what
+    // the main thread may use and names the check command. The dispatch gate's and the workflow gate's
+    // refusals come back through the fence without the mark and latch as before.
     const fence = managerFence(p);
-    if (fence) return refuse(fence);
+    if (fence) return refuse(fence, !fence.includes(FENCE_NO_LATCH));
     // A STATUS FALLING DUE NEVER STOPS THE WORK. The report gate's refusal does
     // not latch: giving the status stamps the clock, and the refused call may
     // then run. Latched, the session stopped on it (measured 17:54).
@@ -2600,6 +2759,8 @@ async function main(event, raw, p) {
 if (process.argv[1] && process.argv[1].endsWith('hook-dispatch.mjs')) {
   const event = process.argv[2];
   if (event === '--install') { console.log(`hook-dispatch: wired ${EVENTS.join(', ')} in ${install()}`); process.exit(0); }
+  // The check of a call: prints what the manager fence and the latch would do, changes nothing, exits 0 whatever it finds.
+  if (event === '--can') { console.log(canMain(process.argv.slice(3))); process.exit(0); }
   let raw = '';
   try { raw = readFileSync(0, 'utf8'); } catch { /* no payload */ }
   let p = {};

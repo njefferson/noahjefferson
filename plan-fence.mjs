@@ -45,7 +45,7 @@
  *
  *   node plan-fence.mjs     (payload on stdin; exit 2 refuses, reason on stderr)
  */
-import { readFileSync, existsSync, openSync, readSync, closeSync } from 'node:fs';
+import { readFileSync, existsSync, openSync, readSync, closeSync, statSync } from 'node:fs';
 import { resolve, dirname, join, relative, normalize, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -252,6 +252,19 @@ function headEntries(path, bytes) {
 }
 
 /**
+ * Every entry of an agent's transcript.
+ * @param {string} path  the agent's transcript.
+ * @returns {object[]} all the entries in the file, in file order, however large it is; a torn line is
+ *   left out; [] when the file cannot be read. THE RULES-FIRST CHECK READS THIS, NOT A WINDOW: the harness
+ *   writes about four hundred kilobytes before an agent's first call, so a Read of the rules made after the
+ *   agent's first message lands past a window of the file's start, and an agent that had read them was
+ *   refused for it (Q-HUB-46, measured on 20 October). The window is kept as the fast path in `rulesFirst`.
+ */
+function wholeEntries(path) {
+  try { return headEntries(path, statSync(path).size + 1); } catch { return []; }
+}
+
+/**
  * Has the agent read the shared rules?
  * @param {object[]} entries  the agent's transcript, in file order.
  * @param {Set<string>} files  the rules files that count (absolute paths).
@@ -324,10 +337,14 @@ export function rulesFirst(p, plan = approvedPlan()) {
   const planFiles = plan?.path ? new Set([resolve(String(plan.path)), resolve(stepsFilePath(String(plan.path)))]) : new Set();
   if (tool === 'Read' && planFiles.has(reads)) return null;
   const f = agentTranscript(p);
+  // The start of the transcript first, which is where an agent's first call is and costs a small read; a Read of
+  // the rules made after the agent's first message can lie past it (the harness writes about four hundred
+  // kilobytes before the first call), so when the window does not show it the WHOLE transcript is read (Q-HUB-46).
   if (f && rulesWereRead(headEntries(f, 512 * 1024), files)) return null;
+  const entries = f ? wholeEntries(f) : [];
+  if (f && rulesWereRead(entries, files)) return null;
   // THE FIRST REFUSAL SETS NO LATCH (lesson 415): only the agent's first refusal of this kind carries
   // FIRST_REFUSAL; one after it does not, and latches as every refusal does.
-  const entries = f ? headEntries(f, 512 * 1024) : [];
   const first = !!f && !rulesRefusedBefore(entries);
   const rulesPath = resolve(homedir(), '.claude', 'hub', RULES_FILE);
   return `${HEAD} ${first ? FIRST_REFUSAL : 'RULES FIRST:'} an agent's first call is a Read of ${rulesPath}, and no other call runs before it, so ${tool || 'this call'} is refused. `
