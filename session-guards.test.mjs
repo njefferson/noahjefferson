@@ -4005,6 +4005,135 @@ const CASES = [
       return true;
     },
   },
+  // ---- the steps of a plan with no Order and the time chips of every step (NOTES Q-HUB-42, LESSONS §419) ----
+  {
+    name: 'the manager\'s notes carry the two keys of the time chips: `Start N: HH:MM` is read as minutes after midnight in California time, a later line for a step replacing an earlier one, and a clock time that is not one (an hour past 23, a minute past 59, words) is not read; `Estimate N: M min` is read as a whole number of minutes above zero with the word min optional; a line with no step number is read as neither',
+    guards: ['page_notes_start', 'page_notes_estimate', 'page_notes_start_range', 'page_notes_estimate_positive'],
+    run(m) {
+      const pad = join(tmp('sg-keys-'), 'pad');
+      mkdirSync(join(pad, 'status'), { recursive: true });
+      writeFileSync(join(pad, 'status', 'manager.txt'), ['Start 4: 07:15', 'Start 4: 7:20', 'Start 5: 23:59', 'Start 6: 24:00', 'Start 7: 07:60', 'Start 8: soon', 'Start: 08:00',
+        'Estimate 4: 25 min', 'Estimate 5: 40', 'Estimate 5: 45 minutes', 'Estimate 6: 0 min', 'Estimate 7: many', 'Estimate: 30 min', ''].join('\n'));
+      const n = m.report.managerNotes(pad);
+      const none = m.report.managerNotes(null);
+      const checks = [
+        ['a start is minutes after midnight, and a later line for the step replaces an earlier one', n.starts.get(4) === 7 * 60 + 20 && n.starts.get(5) === 23 * 60 + 59],
+        ['a start that is not a clock time is not read, nor one with no step', !n.starts.has(6) && !n.starts.has(7) && !n.starts.has(8) && n.starts.size === 2],
+        ['an estimate is whole minutes, with min, minutes or neither after it, and the later line wins', n.estimates.get(4) === 25 && n.estimates.get(5) === 45],
+        ['an estimate of zero or in words is not read, nor one with no step', !n.estimates.has(6) && !n.estimates.has(7) && n.estimates.size === 2],
+        ['no notes, no keys', none.starts.size === 0 && none.estimates.size === 0],
+      ];
+      const failed = checks.filter(([, ok]) => !ok).map(([label]) => label);
+      if (failed.length) throw new Error(`the keys failed: ${failed.join('; ')}`);
+      return true;
+    },
+  },
+  {
+    name: 'a plan with no Order line gets the page of one with an Order: a section for every step of its Steps section in the order of the steps, each with the chip and the bullets an Order step gets and the held ones saying what they wait on; a done step shows how long it took, measured to the end of the agent whose hand-back opened DONE however much later another agent ended; and a plan with an Order still draws only the steps in its Order and Standing lines',
+    guards: ['page_noorder_steps', 'page_noorder_done', 'page_chip_held_order', 'page_noorder_only_when_none', 'page_done_at', 'page_done_end_is_done'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      const s = sid('no');
+      const proj = join(home, '.claude', 'projects', '-home-user');
+      const subs = join(proj, s, 'subagents');
+      mkdirSync(subs, { recursive: true });
+      writeFileSync(join(proj, `${s}.jsonl`), JSON.stringify(turn(0, 'start')) + '\n');
+      const plan = join(home, '.claude', 'plans', 'gate-test.md');
+      mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
+      const approve = (text) => { writeFileSync(plan, text); writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: createHash('sha256').update(text).digest('hex'), at: new Date().toISOString() })); };
+      writeFileSync(join(home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now() - 10 * 60000, status: 'Status' }));
+      const temp = tmp('sg-tmp-');
+      const pad = join(temp, 'claude-0', '-home-user', s, 'scratchpad');
+      mkdirSync(join(pad, 'progress'), { recursive: true });
+      mkdirSync(join(pad, 'status'), { recursive: true });
+      // An agent that began `begin` seconds after the fixture epoch and handed back at `end`; its last entry is a second later.
+      const handed = (id, n, begin, end, first) => {
+        writeFileSync(join(subs, `agent-${id}.jsonl`), jsonl([{ type: 'user', timestamp: ts(begin), message: { role: 'user', content: `${plan} step ${n}` } },
+          tool(begin + 10, `${id}-b`, 'Bash', { command: 'git status' }), result(begin + 11, `${id}-b`, 'clean'),
+          tool(end, `${id}-h`, 'SubagentHandback', { message: `${first}\nThe second line.` }), result(end + 1, `${id}-h`, 'Report delivered to your caller.')]));
+        writeFileSync(join(subs, `agent-${id}.meta.json`), JSON.stringify({ agentType: 'general-purpose', description: `Plan step ${n}` }));
+      };
+      const status = () => spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the no-order test'], { encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: s, TMPDIR: temp } }).stdout ?? '';
+      const page = () => { try { return readFileSync(join(pad, 'status', 'fix-run.html'), 'utf8'); } catch { return ''; } };
+      const at1 = (out, a, b) => out.indexOf(a) >= 0 && out.indexOf(a) < out.indexOf(b);
+      const THREE = STEPS_PLAN.replace('2. **Check.** Read the thing.', '2. **Check.** Read the thing.\n3. **Wait.** Wait on the thing.');
+      approve(THREE);
+      // Nothing sent: every step is held, each after the one before it.
+      const printed0 = status(), page0 = page();
+      // Step 1 handed back DONE at 1800 seconds and a later send of it ended REFUSED at 3000; step 2 ended REFUSED. The fixture epoch is 05:00 in California.
+      handed('d1', 1, 0, 1800, 'DONE');
+      handed('d1b', 1, 1900, 3000, 'REFUSED');
+      handed('d2', 2, 3100, 3200, 'REFUSED');
+      writeFileSync(join(pad, 'status', 'manager.txt'), ['Start 1: 05:00', 'Estimate 3: 15 min', ''].join('\n'));
+      const printed1 = status(), page1 = page();
+      // The same steps with an Order of 1 and 2, Standing 3, and a fourth step in neither list.
+      approve(THREE.replace('3. **Wait.** Wait on the thing.', '3. **Wait.** Wait on the thing.\n4. **Stray.** Never sent.').replace('## Steps', '## Order\nOrder: 1 2\nStanding: 3\n\n## Steps'));
+      status();
+      const ordered = page();
+      const checks = [
+        ['the print still says the plan defines no pointer', /^next: not defined \(/m.test(printed0) && /^next: not defined \(/m.test(printed1)],
+        ['a section for every step, in the order of the steps, each held after the one before', page0.includes('<h2>1. Build <span class="chip held">held, next to send</span></h2>')
+          && page0.includes('<h2>2. Check <span class="chip held">held, after step 1</span></h2>') && page0.includes('<h2>3. Wait <span class="chip held">held, after step 2</span></h2>')
+          && at1(page0, '<h2>1. Build', '<h2>2. Check') && at1(page0, '<h2>2. Check', '<h2>3. Wait')],
+        ['the bullets an Order step gets', page0.includes('<li>What it is: Build</li>') && page0.includes('<li>Where it stands: not sent</li>') && page0.includes('next: not defined')],
+        ['no time chip and no sentence about estimates while no key is written', !page0.includes('Estimates are the plan') && !/<h2>[^\n]*<\/span><span class="chip/.test(page0)],
+        ['a step with a DONE hand-back is green, one that ended REFUSED is open, and the one after it waits on it', page1.includes('<span class="chip done">done</span>') && page1.includes('<h2>2. Check <span class="chip open">open</span></h2>')
+          && page1.includes('<li>Where it stands: REFUSED</li>')],
+        ['a done step shows how long it took, to the end of the agent whose hand-back opened DONE and not to the later REFUSED one', page1.includes('<h2>1. Build <span class="chip done">done</span><span class="chip done">took 30 min</span></h2>')],
+        ['a held step shows its estimate, and the page says estimates are the plan\'s', page1.includes('<h2>3. Wait <span class="chip held">held, after step 2</span><span class="chip held">estimate 15 min</span></h2>')
+          && page1.includes('Estimates are the plan\'s and not measurements.')],
+        ['a plan with an Order draws its Order steps and its Standing step, with the pointer, and not a step in neither', ordered.includes('<strong>next: step 2</strong>') && ordered.includes('<h2>1. Build') && ordered.includes('<h2>2. Check')
+          && ordered.includes('<h2>3. Wait <span class="chip held">held, sent at any time</span>') && !ordered.includes('<h2>4. Stray')],
+      ];
+      const failed = checks.filter(([, ok]) => !ok).map(([label]) => label);
+      if (failed.length) throw new Error(`the page of a plan with no Order failed: ${failed.join('; ')}`);
+      return true;
+    },
+  },
+  {
+    name: 'the time chips are drawn beside the state chip in its colour from the manager\'s Start and Estimate lines: a running step shows its start and the clock time its estimate ends at, or its estimate alone where no start is written; a held step shows its estimate in minutes; a done step shows how long it took, from its start to the end of the agent that handed back DONE, the start\'s date taken from that end\'s date in California, and nothing where the result is negative or no agent\'s DONE ended it; a step with no line gets no chip, nor does an open step; and the updated line says estimates are the plan\'s and not measurements only when a chip is drawn',
+    guards: ['page_chip_started', 'page_chip_ends', 'page_chip_estimate_running', 'page_chip_estimate_held', 'page_chip_held_only', 'page_chip_took', 'page_chip_took_negative', 'page_chip_took_date', 'page_chip_no_key',
+      'page_chip_no_estimate_key', 'page_chip_time_style', 'page_estimate_note', 'page_estimate_note_only_when_drawn', 'page_estimate_note_period'],
+    run(m) {
+      const pad = join(tmp('sg-chips-'), 'pad');
+      mkdirSync(join(pad, 'status'), { recursive: true });
+      writeFileSync(join(pad, 'status', 'manager.txt'), ['Start 1: 07:15', 'Estimate 1: 20 min', 'Start 2: 08:00', 'Start 3: 20:00', 'Start 5: 07:00', 'Done 5: counted done by decision',
+        'Start 6: 09:10', 'Estimate 6: 25 min', 'Start 7: 23:50', 'Estimate 7: 30 min', 'Estimate 8: 40 min', 'Estimate 9: 15 min', 'Start 11: 10:00', 'Start 12: 07:00', 'Estimate 12: 30 min', ''].join('\n'));
+      const notes = m.report.managerNotes(pad);
+      // Both ends are California days in October, at the offset of daylight time: 14:38:30 UTC is 07:38 on the 19th, 03:30 UTC on the 20th is 20:30 on the 19th.
+      const morning = Date.parse('2026-10-19T14:38:30Z'), evening = Date.parse('2026-10-20T03:30:00Z');
+      const row = (n, state, extra = {}) => ({ step: n, standing: false, state, back: null, report: '', reportWritten: false, doneAt: null, ...extra });
+      const steps = [row(1, 'DONE', { doneAt: morning }), row(2, 'DONE', { doneAt: morning }), row(3, 'DONE', { doneAt: evening }), row(4, 'DONE', { doneAt: morning }), row(5, 'running'), row(6, 'running'), row(7, 'running'),
+        row(8, 'running'), row(9, 'not sent'), row(10, 'not sent'), row(11, 'not sent'), row(12, 'REFUSED')];
+      const st = { read: true, why: '', planPath: '/plans/x.md', title: 'A plan', goalOne: '', leaves: [], reviewers: [], manager: notes, managerPath: '', found: [],
+        titles: new Map(steps.map((x) => [x.step, ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'][x.step]])),
+        pointer: { order: steps.map((x) => x.step), standing: [], done: new Set([1, 2, 3, 4]), next: 5 }, steps };
+      const now = new Date('2026-10-19T14:15:00Z');
+      const page = m.report.statusPage(st, 'Status 07:15 — the chip test', now);
+      const dotted = m.report.statusPage(st, 'Status 07:15 — the chip test.', now);
+      const bare = m.report.statusPage({ ...st, manager: m.report.managerNotes(null) }, 'Status 07:15 — the chip test', now);
+      const head = (n, title, cls, words, chips = []) => `<h2>${n}. ${title} <span class="chip ${cls}">${words}</span>${chips.map((c) => `<span class="chip ${cls}">${c}</span>`).join('')}</h2>`;
+      const words = (n) => m.report.stepTimeChips(st, steps[n - 1], m.report.stepChip(st, steps[n - 1])).join(' | ');
+      const checks = [
+        ['a done step shows how long it took, from its start to the end of the agent that handed back DONE', page.includes(head(1, 'One', 'done', 'done', ['took 23 min'])) && words(1) === 'took 23 min'],
+        ['a start later than the end draws no chip', page.includes(head(2, 'Two', 'done', 'done')) && words(2) === ''],
+        ['the start\'s date is the end\'s date in California, not in UTC', page.includes(head(3, 'Three', 'done', 'done', ['took 30 min']))],
+        ['a done step with no line draws none, nor one counted done by decision whatever its line', page.includes(head(4, 'Four', 'done', 'done')) && page.includes(head(5, 'Five', 'done', 'done')) && words(5) === ''],
+        ['a running step shows when it started and when its estimate ends', page.includes(head(6, 'Six', 'wait', 'running', ['started 09:10', 'estimate ends 09:35']))],
+        ['the end of an estimate runs past midnight as a clock time', page.includes(head(7, 'Seven', 'wait', 'running', ['started 23:50', 'estimate ends 00:20']))],
+        ['a running step with an estimate and no start shows the estimate alone', page.includes(head(8, 'Eight', 'wait', 'running', ['estimate 40 min']))],
+        ['a held step shows its estimate in minutes, in the held colour', page.includes(head(9, 'Nine', 'held', 'held, after step 8', ['estimate 15 min']))],
+        ['a held step with no line, or with a start only, draws none', page.includes(head(10, 'Ten', 'held', 'held, after step 9')) && page.includes(head(11, 'Eleven', 'held', 'held, after step 10'))],
+        ['an open step draws none however many lines it has', page.includes(head(12, 'Twelve', 'open', 'open')) && words(12) === ''],
+        ['the updated line says estimates are the plan\'s, with a full stop before it where the status has none', page.includes('Status 07:15 — the chip test. Estimates are the plan\'s and not measurements.</p>')],
+        ['and without a second full stop where the status has one', dotted.includes('Status 07:15 — the chip test. Estimates are the plan\'s and not measurements.</p>') && !dotted.includes('chip test.. Estimates')],
+        ['with no line written, no chip and no sentence, and the updated line is as it was', bare.includes(head(1, 'One', 'done', 'done')) && !bare.includes('Estimates are the plan') && bare.includes('(California): Status 07:15 — the chip test</p>')],
+      ];
+      const failed = checks.filter(([, ok]) => !ok).map(([label]) => label);
+      if (failed.length) throw new Error(`the time chips failed: ${failed.join('; ')}`);
+      return true;
+    },
+  },
   {
     name: 'the main thread may write status/manager.txt in its own scratchpad, as it writes the status page, and nothing beside it: not another session\'s notes, not a file next to them, not a file that only begins the same way',
     guards: ['fence_manager_write', 'manager_notes_path'],
@@ -5857,6 +5986,32 @@ const PLANTS = {
   page_tokens_six: ['--chip-bg: #e8ece9;', '--chip-bg: #e8ece9' + 'cc;', 'report.mjs'],
   page_one_per_line: ["${bullets.join('\\n')}", "${bullets.join('')}", 'report.mjs'],
   page_updated_line: ['updated ${escapeHtml(californiaStamp(now))}', 'updated ${escapeHtml(now.toISOString())}', 'report.mjs'],
+
+  // The two keys of the time chips, the steps of a plan with no Order, and the chips themselves (Q-HUB-42).
+  page_notes_start: ['out.starts.set(Number(m[1]), Number(m[2]) * 60 + Number(m[3]));', 'void 0;', 'report.mjs'],
+  page_notes_estimate: ['out.estimates.set(Number(m[1]), Number(m[2]));', 'void 0;', 'report.mjs'],
+  page_notes_start_range: [' && Number(m[2]) < 24 && Number(m[3]) < 60) out.starts.set(', ') out.starts.set(', 'report.mjs'],
+  page_notes_estimate_positive: [' && Number(m[2]) > 0) out.estimates.set(', ') out.estimates.set(', 'report.mjs'],
+  page_noorder_steps: ['steps: s0 ? nums.map((step) => stepRow(step, false, done0, s0, pad)) : [] };', 'steps: [] };', 'report.mjs'],
+  page_noorder_done: [', s0.ends).done : null;', ', []).done : null;', 'report.mjs'],
+  page_noorder_only_when_none: ['  if (!planOrder(plan.text)) {\n    // No Order line', '  if (true) {\n    // No Order line', 'report.mjs'],
+  page_chip_held_order: ['const order = st.pointer?.order ?? (st.steps ?? []).filter((z) => !z.standing).map((z) => z.step);', 'const order = st.pointer?.order ?? [];', 'report.mjs'],
+  page_done_at: ["const doneEnd = mine.filter((e) => e.how === 'a report' && DONE.test(firstLineOf(e.last))).at(-1) ?? null;", 'const doneEnd = null;', 'report.mjs'],
+  page_done_end_is_done: ["mine.filter((e) => e.how === 'a report' && DONE.test(firstLineOf(e.last))).at(-1)", 'mine.at(-1)', 'report.mjs'],
+  page_chip_started: ['if (start !== undefined) out.push(`started ${clock(start)}`);', 'void 0;', 'report.mjs'],
+  page_chip_ends: ['if (start !== undefined && estimate !== undefined) out.push(`estimate ends ${clock(start + estimate)}`);', 'if (false) out.push(`estimate ends ${clock(start + estimate)}`);', 'report.mjs'],
+  page_chip_estimate_running: ['else if (estimate !== undefined) out.push(`estimate ${estimate} min`);', 'else if (false) void 0;', 'report.mjs'],
+  page_chip_estimate_held: ["if (x.state === 'not sent' && estimate !== undefined) out.push(`estimate ${estimate} min`);", 'void 0;', 'report.mjs'],
+  page_chip_held_only: ["if (x.state === 'not sent' && estimate !== undefined)", 'if (estimate !== undefined)', 'report.mjs'],
+  page_chip_took: ['if (took >= 0) out.push(`took ${took} min`);', 'void 0;', 'report.mjs'],
+  page_chip_took_negative: ['if (took >= 0) out.push(', 'if (true) out.push(', 'report.mjs'],
+  page_chip_took_date: ['const day = wall(onDay.getTime());', 'const day = onDay.getTime();', 'report.mjs'],
+  page_chip_no_key: ['const start = m.starts?.get(x.step);', 'const start = m.starts?.get(x.step) ?? 0;', 'report.mjs'],
+  page_chip_no_estimate_key: ['const estimate = m.estimates?.get(x.step);', 'const estimate = m.estimates?.get(x.step) ?? 0;', 'report.mjs'],
+  page_chip_time_style: ['<span class="chip ${chip.cls}">${escapeHtml(t)}</span>', '<span class="chip">${escapeHtml(t)}</span>', 'report.mjs'],
+  page_estimate_note: ["Estimates are the plan's and not measurements.`", '`', 'report.mjs'],
+  page_estimate_note_only_when_drawn: ['const estimateNote = timed ?', 'const estimateNote = true ?', 'report.mjs'],
+  page_estimate_note_period: ["/[.!?]\\s*$/.test(given) ? '' : '.'", "false ? '' : '.'", 'report.mjs'],
 };
 
 async function runAll(dir, only, filter) {

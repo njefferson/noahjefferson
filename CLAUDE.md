@@ -543,8 +543,11 @@ Every item below has actually happened.
  `Judged 41:` with the five-part judgement of step 41's hand-back (the judgement
  gate, below, which reads `Why 41:` as four parts of reasons); and `Found 41.3
  fixed|stopping|queued:` to sort the third Found line of
- step 41's report (`Found 41.*` sorts the whole step). Of the Found lines of the
- plan's own steps the page draws those sorted as stopping the plan or queued,
+ step 41's report (`Found 41.*` sorts the whole step). A plan with no `Order:` line
+ gets a section for every step of its `## Steps` as well, and `Start 41: 07:15`
+ (California time) and `Estimate 41: 25 min` put time chips beside a step's state
+ chip, the estimates being the plan's and not measurements (LESSONS §419). Of the
+ Found lines of the plan's own steps the page draws those sorted as stopping the plan or queued,
  each tagged in words, in the report's own words, and counts those not sorted
  yet; it draws no `Outcome:`, `Explanation` or `Decision:` line and no fixed
  Found line: those stay in the notes. After a compaction `pageGate` in `hook-dispatch.mjs`

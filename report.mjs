@@ -187,6 +187,32 @@ function californiaStamp(t) {
 }
 
 /**
+ * An instant given as a California clock time on the California day of another instant.
+ * @param {Date} onDay  any instant; only its California date is used, never the date in UTC.
+ * @param {number} minutes  minutes after midnight on that California date, 0 to 1439.
+ * @returns {number} the instant, in ms, whose California wall clock reads that date and
+ *   that time; a whole number of minutes, so a difference between it and the minute an
+ *   agent ended in is a whole number of minutes. The wall clock of a guess differs from
+ *   the guess by the zone's offset, so the guess is moved by the offset read at the
+ *   guess, three times, which settles on either side of a change of the clock. Only
+ *   `stepTimeChips` reads it: the day comes from the END of the step's agent and not
+ *   from now, so a step that finished just after midnight is measured on its own day.
+ */
+function californiaInstant(onDay, minutes) {
+  const wall = (t) => {
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' })
+      .formatToParts(new Date(t)).map((x) => [x.type, Number(x.value)]));
+    return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute);
+  };
+  const day = wall(onDay.getTime());
+  const wholeDay = 1440 * 60000;
+  const target = day - (day % wholeDay) + minutes * 60000;
+  let t = target;
+  for (let i = 0; i < 3; i++) t = target - (wall(t) - t);
+  return t;
+}
+
+/**
  * One `## Heading` section of a plan.
  * @param {string} text  the plan.
  * @param {string} name  the heading's first word or words, e.g. "Steps".
@@ -1759,7 +1785,13 @@ export const MANAGER_FILE = 'status/manager.txt';
  *   order, which the judgement gate counts against the sends of the step) and `Done
  *   <step>: <why the step counts as done>` (`done` maps a step to its
  *   text, which may be empty: the main thread counts a step done by decision, whatever
- *   its newest hand-back says). `Next: ...` with no step number is the unnumbered key above
+ *   its newest hand-back says); and the two that carry the time chips, `Start <step>: HH:MM`
+ *   (`starts` maps a step to the minutes after midnight, California time, at which the manager
+ *   sent it; an hour past 23 or a minute past 59 is not read, and a later line for the same step
+ *   replaces an earlier one) and `Estimate <step>: <M> min` (`estimates` maps a step to the
+ *   plan's estimate in minutes, a whole number above zero, the word min optional). Neither is a
+ *   measurement the renderer takes: `stepTimeChips` draws what the manager wrote.
+ *   `Next: ...` with no step number is the unnumbered key above
  *   and `Next 119: ...` is the numbered one; neither reads the other's line.
  *   Also `Found <step>.<n> fixed|stopping|queued: <note>`,
  *   which sorts the nth `Found:` line of that step's report (`foundLines`) as put
@@ -1774,7 +1806,7 @@ export const MANAGER_FILE = 'status/manager.txt';
  */
 export function managerNotes(pad) {
   const out = { read: false, outcome: '', standing: [], ruledOut: [], decisions: [], next: '', sorts: new Map(), judged: new Map(),
-    versions: [], open: [], what: new Map(), why: new Map(), whys: new Map(), nexts: new Map(), done: new Map() };
+    versions: [], open: [], what: new Map(), why: new Map(), whys: new Map(), nexts: new Map(), done: new Map(), starts: new Map(), estimates: new Map() };
   if (!pad) return out;
   let text = '';
   try { text = readFileSync(join(pad, MANAGER_FILE), 'utf8'); } catch { return out; }
@@ -1799,6 +1831,8 @@ export function managerNotes(pad) {
     }
     else if ((m = /^Next\s+(\d+)\s*:\s*(\S.*)$/i.exec(l))) out.nexts.set(Number(m[1]), m[2].trim());
     else if ((m = /^Done\s+(\d+)\s*:\s*(.*)$/i.exec(l))) out.done.set(Number(m[1]), m[2].trim());
+    else if ((m = /^Start\s+(\d+)\s*:\s*(\d{1,2}):(\d{2})\s*$/i.exec(l)) && Number(m[2]) < 24 && Number(m[3]) < 60) out.starts.set(Number(m[1]), Number(m[2]) * 60 + Number(m[3]));
+    else if ((m = /^Estimate\s+(\d+)\s*:\s*(\d+)\s*(?:min(?:ute)?s?)?\s*$/i.exec(l)) && Number(m[2]) > 0) out.estimates.set(Number(m[1]), Number(m[2]));
     else if ((m = /^Found\s+(\d+)\.(\d+|\*)\s+(fixed|stopping|queued)\s*:?\s*(.*)$/i.exec(l))) out.sorts.set(`${Number(m[1])}.${m[2] === '*' ? '*' : Number(m[2])}`, { how: m[3].toLowerCase(), note: m[4].trim() });
   }
   return out;
@@ -1853,7 +1887,12 @@ export function sortFound(found, notes) {
  *   number of the plan's Order, then its Standing ones, with its state: DONE, a
  *   hand-back's first line (REFUSED, FAILED or anything else), "ended by <how>",
  *   "running" or "not sent"; `back` is the newest ended agent for it, with the
- *   hand-back's lines, and `report` the path its report file is written to.
+ *   hand-back's lines, and `report` the path its report file is written to
+ *   (`stepRow` builds each row, `doneAt` included). A plan with no Order line has
+ *   no pointer, and its `steps` are still one row for each number that opens a
+ *   line of its `## Steps` section (`stepNumbers`), in the order of the steps and
+ *   none Standing, read the way an Order step is, so the page draws a section for
+ *   every step; they are `[]` when its agents cannot be read, and its `found` is `[]`.
  *   `goalOne` is the first numbered goal of the plan's own Goals section, the
  *   outcome the page falls back on when the manager has written none; `manager` is
  *   `managerNotes` of the session scratchpad and `managerPath` where the manager
@@ -1872,28 +1911,54 @@ export function pointerState(sid, plan = planInForce()) {
   const leaves = [...(/^## Leaves open\b[^\n]*\n([\s\S]*?)(?=^## |^# |$(?![\s\S]))/mi.exec(plan.text) ?? [, ''])[1].matchAll(/^\s*-\s+(.+?)\s*$/gm)].map((x) => x[1]);
   const goalOne = (planSection(plan.text, 'Goals').split('\n').find((l) => /^\d+\.\s/.test(l)) ?? '').replace(/^\d+\.\s*/, '').trim();
   const base = { ...blank, planPath: plan.path, title, titles: stepTitles(plan.text), leaves, goalOne, reviewers: aimReviewSteps(plan.text) };
-  if (!planOrder(plan.text)) return { ...base, read: true, why: 'the plan in force has no "## Order" section with an "Order:" line' };
+  const pad = managerPad;
+  if (!planOrder(plan.text)) {
+    // No Order line: no pointer, and still a section for every step of the plan's Steps section, in the order of the steps.
+    // The steps' DONE hand-backs are read by `pointerOf`, the one definition of DONE, over an Order line made from those numbers.
+    const nums = stepNumbers(plan.text).order;
+    const s0 = sid && nums.length ? stepEnds({ session_id: sid }) : null;
+    const done0 = s0 ? pointerOf(`## Order\nOrder: ${nums.join(' ')}\n`, s0.ends).done : null;
+    return { ...base, read: true, why: 'the plan in force has no "## Order" section with an "Order:" line', steps: s0 ? nums.map((step) => stepRow(step, false, done0, s0, pad)) : [] };
+  }
   const s = sid ? stepEnds({ session_id: sid }) : null;
   if (!s) return { ...base, why: `no transcript was found for the session${sid ? ` ${sid}` : ' (no CLAUDE_CODE_SESSION_ID in this shell)'}` };
   const pointer = pointerOf(plan.text, s.ends);
-  const pad = scratchpadOf(sid);
-  const steps = [...pointer.order.map((step) => ({ step, standing: false })), ...pointer.standing.filter((n) => !pointer.order.includes(n)).map((step) => ({ step, standing: true }))].map(({ step, standing }) => {
-    const mine = s.ends.filter((e) => e.step === step).sort((a, b) => a.at - b.at);
-    const newest = mine.at(-1) ?? null;
-    const lines = newest ? String(newest.last ?? '').split('\n').map((l) => l.trim()).filter(Boolean) : [];
-    const back = newest ? { id: newest.id, how: newest.how, at: newest.at, lines, path: newest.path } : null;
-    const state = pointer.done.has(step) ? 'DONE'
-      : s.runningSteps.has(step) ? 'running'
-        : !newest ? 'not sent'
-          : newest.how !== 'a report' ? `ended by ${newest.how}, no hand-back to count`
-            : /^(?:REFUSED|FAILED)\b/.test(lines[0] ?? '') ? lines[0].match(/^(?:REFUSED|FAILED)/)[0]
-              : `hand-back opens "${clip(lines[0] ?? '').slice(0, 40)}", not DONE`;
-    const report = pad ? join(pad, 'progress', `step-${step}-report.txt`) : `progress/step-${step}-report.txt (no scratchpad found)`;
-    let reportWritten = false;
-    try { reportWritten = !!pad && statSync(report).isFile(); } catch { reportWritten = false; }
-    return { step, standing, state, back, report, reportWritten };
-  });
+  const steps = [...pointer.order.map((step) => ({ step, standing: false })), ...pointer.standing.filter((n) => !pointer.order.includes(n)).map((step) => ({ step, standing: true }))]
+    .map(({ step, standing }) => stepRow(step, standing, pointer.done, s, pad));
   return { ...base, read: true, pointer, steps, found: foundLines(pad) };
+}
+
+/**
+ * One step of a plan as the print and the page read it.
+ * @param {number} step  the step's number.
+ * @param {boolean} standing  whether the plan lists it as a Standing step.
+ * @param {Set<number>} done  the steps with a DONE hand-back (`pointerOf`'s `done`).
+ * @param {{ends: object[], runningSteps: Set<number>}} s  `stepEnds`' answer, not null.
+ * @param {string|null} pad  the session scratchpad, null when there is none.
+ * @returns {{step: number, standing: boolean, state: string, back: object|null, report: string, reportWritten: boolean, doneAt: number|null}}
+ *   `state` is DONE, a hand-back's first line (REFUSED, FAILED or anything else), "ended by
+ *   <how>", "running" or "not sent", as `pointerState` documents; `back` the newest ended
+ *   agent for the step; `doneAt` the end, in ms, of the newest agent whose hand-back opened
+ *   DONE (the very end `stepEnds` read for it), null when no agent's did. The invariant
+ *   `stepTimeChips` relies on: `doneAt` is the end of an agent that handed back DONE and of no
+ *   other, so a duration measured to it is the duration of the work that was counted done.
+ */
+function stepRow(step, standing, done, s, pad) {
+  const mine = s.ends.filter((e) => e.step === step).sort((a, b) => a.at - b.at);
+  const newest = mine.at(-1) ?? null;
+  const lines = newest ? String(newest.last ?? '').split('\n').map((l) => l.trim()).filter(Boolean) : [];
+  const back = newest ? { id: newest.id, how: newest.how, at: newest.at, lines, path: newest.path } : null;
+  const state = done.has(step) ? 'DONE'
+    : s.runningSteps.has(step) ? 'running'
+      : !newest ? 'not sent'
+        : newest.how !== 'a report' ? `ended by ${newest.how}, no hand-back to count`
+          : /^(?:REFUSED|FAILED)\b/.test(lines[0] ?? '') ? lines[0].match(/^(?:REFUSED|FAILED)/)[0]
+            : `hand-back opens "${clip(lines[0] ?? '').slice(0, 40)}", not DONE`;
+  const report = pad ? join(pad, 'progress', `step-${step}-report.txt`) : `progress/step-${step}-report.txt (no scratchpad found)`;
+  let reportWritten = false;
+  try { reportWritten = !!pad && statSync(report).isFile(); } catch { reportWritten = false; }
+  const doneEnd = mine.filter((e) => e.how === 'a report' && DONE.test(firstLineOf(e.last))).at(-1) ?? null;
+  return { step, standing, state, back, report, reportWritten, doneAt: doneEnd ? doneEnd.at : null };
 }
 
 /**
@@ -1985,7 +2050,7 @@ function managerLine(st, groups) {
   if (!m?.read) {
     return `State page: no manager notes at ${st.managerPath}. The page carries only the pointer and the Found lines until they are written there, as plain text, one item to a line: `
       + '"Outcome: …", "Explanation standing: … | evidence", "Explanation ruled out: … | evidence", "Decision: … | reason", "Next: …", "Judged 41: …" and "Found 41.3 fixed|stopping|queued: note" ("Found 41.* …" sorts a whole step at once); '
-      + 'the page itself is drawn from "Version: …", "Open: …", "What 41: …", "Why 41: …", "Next 41: …" and "Done 41: …".';
+      + 'the page itself is drawn from "Version: …", "Open: …", "What 41: …", "Why 41: …", "Next 41: …", "Done 41: …", "Start 41: HH:MM" and "Estimate 41: M min".';
   }
   return `State page: manager notes read from ${st.managerPath}: ${m.outcome ? 'an outcome written' : 'no outcome written'}; `
     + `explanations standing ${m.standing.length}, ruled out ${m.ruledOut.length}; decisions ${m.decisions.length}; ${m.next ? 'a next move written' : 'no next move written'}; `
@@ -2008,7 +2073,9 @@ const escapeHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '
  *   refusal, a failure, an interruption or any hand-back that does not open DONE; and
  *   `held` (purple) for a step not sent, with what it waits on: `after step K`, K the
  *   nearest step before it in Order that is not done, `next to send` where none is, and
- *   `sent at any time` for a Standing step. THE INVARIANT `statusPage` relies on: each
+ *   `sent at any time` for a Standing step. A plan with no Order line has no pointer, and
+ *   its held words are taken from the order of its steps instead (`st.steps`, the steps
+ *   that are not Standing), so the same words read the same way. THE INVARIANT `statusPage` relies on: each
  *   step gets exactly one chip and the order above is the precedence, so a step counted
  *   done by decision never shows red for the refusal it was counted past, and a step is
  *   never both running and held.
@@ -2022,13 +2089,56 @@ export function stepChip(st, x) {
   if (reviewing && named && Number(named[1]) === x.step) return { cls: 'wait', words: 'under review' };
   if (x.state !== 'not sent') return { cls: 'open', words: 'open' };
   if (x.standing) return { cls: 'held', words: 'held, sent at any time' };
-  const order = st.pointer?.order ?? [];
+  const order = st.pointer?.order ?? (st.steps ?? []).filter((z) => !z.standing).map((z) => z.step);
   let after = null;
   for (let i = order.indexOf(x.step) - 1; i >= 0 && after === null; i--) {
     const y = (st.steps ?? []).find((z) => z.step === order[i]);
     if (y && y.state !== 'DONE' && !m.done.has(y.step)) after = y.step;
   }
   return { cls: 'held', words: after === null ? 'held, next to send' : `held, after step ${after}` };
+}
+
+/**
+ * The time chips of one step, drawn beside its state chip.
+ * @param {ReturnType<typeof pointerState>} st  `pointerState`'s answer; its `manager` holds the
+ *   `Start N:` and `Estimate N:` lines (`managerNotes`).
+ * @param {{step: number, state: string, doneAt?: number|null}} x  one of its `steps`.
+ * @param {{cls: string, words: string}} chip  `stepChip`'s answer for the same step.
+ * @returns {string[]} the words of each chip, in the order they are drawn, [] for none.
+ *   A done step (`chip.cls` done) shows `took M min`: from its Start line to the end of the
+ *   agent whose hand-back opened DONE (`doneAt`, as `stepEnds` read it), the Start line's
+ *   date taken from that end's date in California (`californiaInstant`) and both cut to the
+ *   minute, and nothing when it has no Start line, when no agent's DONE ended it (it was
+ *   counted done by decision), or when the result is negative. A running step shows
+ *   `started HH:MM` and, with an estimate, `estimate ends HH:MM`, the Start line plus the
+ *   estimate as a clock time in California; with an estimate and no Start line it shows
+ *   `estimate M min`. A step not sent, held or under review, shows `estimate M min`. Every
+ *   other step, an open one included, and any step with no line to read, shows none: its Start
+ *   line belongs to a send that has ended. The invariant `statusPage` relies on: every figure
+ *   here is the manager's own line or the difference of two clock times, never a reading of the
+ *   clock now, and the words say `estimate` wherever the figure is the plan's and not a measurement.
+ */
+export function stepTimeChips(st, x, chip) {
+  const m = st.manager ?? managerNotes(null);
+  const start = m.starts?.get(x.step);
+  const estimate = m.estimates?.get(x.step);
+  const clock = (min) => `${String(Math.floor((min % 1440) / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+  const out = [];
+  if (chip.cls === 'done') {
+    if (start !== undefined && Number.isFinite(x.doneAt)) {
+      const took = Math.floor(x.doneAt / 60000) - californiaInstant(new Date(x.doneAt), start) / 60000;
+      if (took >= 0) out.push(`took ${took} min`);
+    }
+    return out;
+  }
+  if (x.state === 'running') {
+    if (start !== undefined) out.push(`started ${clock(start)}`);
+    if (start !== undefined && estimate !== undefined) out.push(`estimate ends ${clock(start + estimate)}`);
+    else if (estimate !== undefined) out.push(`estimate ${estimate} min`);
+    return out;
+  }
+  if (x.state === 'not sent' && estimate !== undefined) out.push(`estimate ${estimate} min`);
+  return out;
 }
 
 /**
@@ -2067,9 +2177,13 @@ export function reviewWords(st) {
  *   in California time (`compactedWords`), which stays until a later compaction; the `next: step N` line and the
  *   manager's unnumbered `Next:` line, which the reviewer's file names as the line it reads;
  *   the Versions section, one bullet for each `Version:` line of the manager's notes; then
- *   one section for each step in Order and for each Standing step that is not a review: its
- *   heading the step's number and its title from the plan, its chip (`stepChip`) in colour
- *   and in words, and bullets, each on a line of its own: what it is (the `What N:` line,
+ *   one section for each step in Order and for each Standing step that is not a review (for
+ *   a plan with no Order line, one for every step of its Steps section, in the order of the
+ *   steps): its heading the step's number and its title from the plan, its chip (`stepChip`)
+ *   in colour and in words, then its time chips (`stepTimeChips`, in the same colour, drawn only
+ *   for a step with a `Start N:` or `Estimate N:` line to read; when any is drawn the updated line
+ *   ends with the sentence that estimates are the plan's and not measurements, and otherwise it
+ *   is as it was), and bullets, each on a line of its own: what it is (the `What N:` line,
  *   else the title up to its first comma), where it stands (the first line of its newest
  *   hand-back; `ended by <how>, with no hand-back` when its newest end was a refusal or an
  *   interruption, whose last text is a tool result and not a hand-back; `running, no
@@ -2094,8 +2208,12 @@ export function statusPage(st, given, now = new Date()) {
   const inPlan = new Set(st.steps.map((x) => x.step));
   const groups = sortFound(st.found.filter((f) => !inPlan.size || inPlan.has(f.step)), m);
   const reviewers = st.reviewers ?? [];
+  let timed = 0;
   const stepSection = (x) => {
     const chip = stepChip(st, x);
+    const times = stepTimeChips(st, x, chip);
+    timed += times.length;
+    const timeHtml = times.map((t) => `<span class="chip ${chip.cls}">${escapeHtml(t)}</span>`).join('');
     const name = st.titles.get(x.step) ?? '';
     const what = m.what.get(x.step) ?? name.split(',')[0].trim();
     const stands = !x.back ? (x.state === 'running' ? 'running, no hand-back yet' : 'not sent')
@@ -2104,10 +2222,11 @@ export function statusPage(st, given, now = new Date()) {
       ...(m.done.get(x.step) ? [li(`Counted done: ${escapeHtml(m.done.get(x.step))}`)] : []),
       ...(m.why.has(x.step) ? [li(`Why: ${escapeHtml(m.why.get(x.step))}`)] : []),
       ...(m.nexts.has(x.step) ? [li(`Next: ${escapeHtml(m.nexts.get(x.step))}`)] : [])];
-    return `<section>\n<h2>${x.step}. ${escapeHtml(name || `Step ${x.step}`)} <span class="chip ${chip.cls}">${escapeHtml(chip.words)}</span></h2>\n<ul>\n${bullets.join('\n')}\n</ul>\n</section>`;
+    return `<section>\n<h2>${x.step}. ${escapeHtml(name || `Step ${x.step}`)} <span class="chip ${chip.cls}">${escapeHtml(chip.words)}</span>${timeHtml}</h2>\n<ul>\n${bullets.join('\n')}\n</ul>\n</section>`;
   };
   const steps = st.steps.filter((x) => !reviewers.includes(x.step));
   const stepsHtml = steps.map(stepSection).join('\n') || `<section>\n<h2>Steps</h2>\n<ul>\n${li('none')}\n</ul>\n</section>`;
+  const estimateNote = timed ? `${/[.!?]\s*$/.test(given) ? '' : '.'} Estimates are the plan's and not measurements.` : '';
   const reviewsHtml = reviewers.length ? `<section>\n<h2>Reviews</h2>\n<p>${escapeHtml(reviewWords(st))}</p>\n</section>\n` : '';
   const foundItem = ([tag, f]) => li(`<span class="tag">${tag}</span> Step ${f.step} #${f.n}: ${escapeHtml(f.line.replace(/^Found:\s*/, ''))}`);
   const notFixed = [...groups.stopping.map((f) => ['stopping the plan', f]), ...groups.queued.map((f) => ['queued', f])];
@@ -2149,7 +2268,7 @@ p { margin: 0 0 8px; }
 <body>
 <main>
 <h1>Plan run status</h1>
-<p class="asof">${escapeHtml(st.title)}${st.title ? ' · ' : ''}updated ${escapeHtml(californiaStamp(now))}: ${escapeHtml(given)}</p>
+<p class="asof">${escapeHtml(st.title)}${st.title ? ' · ' : ''}updated ${escapeHtml(californiaStamp(now))}: ${escapeHtml(given)}${escapeHtml(estimateNote)}</p>
 ${st.compacted ? `<p class="asof">${escapeHtml(compactedWords(st.compacted))}</p>\n` : ''}<p class="next"><strong>next: ${escapeHtml(next)}</strong>${m.next ? `<br>The next move: ${escapeHtml(m.next)}` : ''}</p>
 <section>
 <h2>Versions</h2>

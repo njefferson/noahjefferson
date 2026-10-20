@@ -1,6 +1,6 @@
 # Written by plan-scope-check.mjs --record. Not hand-edited.
 plan=/root/.claude/plans/read-noahjefferson-handoff-md-and-noahje-purring-raven.md
-planhash=f6a20bbd6f461e7d
-diffhash=0257959cd1036a35
-verdict=IN-SCOPE:
-# IN-SCOPE: The hub worktree's diff is within what step 129 of the plan names. NOTES.md gains five queue lines, Q-HUB-42 to Q-HUB-46, in the same form as the line above them, each stating a finding and where it was found. LESSONS.md gains one index row for lesson 418. The new file lessons/418-a-call-reworded-after-a-refusal-lost-a-night.md is the lesson the step asked for, in the form the lessons check holds. Nothing outside those three paths changed, nothing was discarded, and the worktree's plan pointer already names this plan. The plan's Files section names the hub's NOTES.md, lessons/ and LESSONS.md as changed in the worktree, so each change is covered. No owner message is copied into any file and no person is named or quoted.
+planhash=5c640cac71a6f88a
+diffhash=497fee8591dca156
+verdict=IN-SCOPE: step 133's page change, its cases and plants, the CLAUDE.md sentence, the Q-HUB-46 correction, the lesson index row and lesson 419, nothing else
+# IN-SCOPE: The hub worktree's uncommitted diff is what step 133 of the plan names: the status page's renderer (report.mjs) draws a section for every step of a plan with no Order line, and draws the start and estimate time chips from the Start and Estimate keys the manager writes; session-guards.test.mjs carries the cases and plants for it; CLAUDE.md gains one sentence in the bullet on the state of the work being one page; NOTES.md changes only the Q-HUB-46 line, corrected to its cause; LESSONS.md gains one index row, and the new lesson 419 file sits in lessons/. All five changed tracked files and the one untracked lesson file are named in the plan's Files section for the hub. Nothing outside those paths changed, nothing was discarded, and no owner message is copied into any of them.
