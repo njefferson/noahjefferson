@@ -374,8 +374,9 @@ Every item below has actually happened.
  has arrived as a prompt: it is then printed once at the top of that prompt's
  turn instead, so a message the queue loses cannot hold work for the rest of
  the session; after a compaction the
- messages since the previous one are printed verbatim before anything else.
- (LESSONS §376.)
+ newest ten of the messages since the previous one are printed verbatim before
+ anything else, and all of them are filed for the main thread to read whole.
+ (LESSONS §376, §416.)
 - **A CORRECTION FROM THE OWNER HOLDS NEW STARTS, AND ONE WORD STOPS
  EVERYTHING.** A message that
  does not end with a go-word (go, ok, continue, approved, yes; the owner's list
@@ -438,20 +439,22 @@ Every item below has actually happened.
  cost the step its record; every other call of it is still refused but its
  return (LESSONS §404). The main thread's `TaskStop` passes so it can stop
  what it started (§11d). Only a message the owner typed after the refusal
- clears the main thread's latch, by when it was typed. Nine refusals do not
+ clears the main thread's latch, by when it was typed. Ten refusals do not
  latch: a status falling due, a call held for a waiting owner message, a stop
- or a correction from the owner standing, a call held until the state page is
- read after a compaction, a move the review gate refuses, a step the rules gate
+ or a correction from the owner standing, a call held until the owner's messages
+ and then the state page are read after a compaction, a move the review gate
+ refuses, a step the rules gate
  refuses because the plan pins a rules version the file has moved past, a step
  the reads gate refuses because a refused read of the record has not been read,
- a step the judgement gate refuses because the newest hand-back has no written
- judgement, and entering plan mode again after the
+ a step the judgement gate refuses because the newest hand-back or the step about
+ to go has no written judgement in its parts, and entering plan mode again after the
  owner approved the plan by leaving plan mode in the app, which the dispatcher
  judges before any gate reads the approval. Give the status, send the held
- call again, answer the correction, read the page, send the review or amend the
+ call again, answer the correction, read the filed messages and the page, send the
+ review or amend the
  plan or enter plan mode as the review gate's refusal says, amend the Rules line
- as the rules gate's refusal says, write the `Judged` line as the judgement
- gate's refusal says, or carry on with the approved
+ as the rules gate's refusal says, write the `Judged` and `Why` lines as the
+ judgement gate's refusal says, or carry on with the approved
  plan; that last refusal lifts once an agent is sent under the plan or the
  owner writes again. (Doctrine §0d; §0e rule 14.)
 - **NO `cd`, IN ANY COMMAND, BY THE MAIN THREAD OR AN AGENT.** Every path is
@@ -537,15 +540,18 @@ Every item below has actually happened.
  write and `report.mjs` renders: `Version:` and `Open:`, one line each; `What
  41:`, `Why 41:` and `Next 41:` for step 41's section; `Done 41:` to count a step
  done by decision whatever its newest end; `Next:` with no number, the next move;
- `Judged 41:` with the judgement of step 41's hand-back (the judgement gate,
- below); and `Found 41.3 fixed|stopping|queued:` to sort the third Found line of
+ `Judged 41:` with the five-part judgement of step 41's hand-back (the judgement
+ gate, below, which reads `Why 41:` as four parts of reasons); and `Found 41.3
+ fixed|stopping|queued:` to sort the third Found line of
  step 41's report (`Found 41.*` sorts the whole step). Of the Found lines of the
  plan's own steps the page draws those sorted as stopping the plan or queued,
  each tagged in words, in the report's own words, and counts those not sorted
  yet; it draws no `Outcome:`, `Explanation` or `Decision:` line and no fixed
  Found line: those stay in the notes. After a compaction `pageGate` in `hook-dispatch.mjs`
  holds the main thread to reads and the status until a Read of the page has
- returned, the way the doctrine's read is held, and does not latch.
+ returned, the way the doctrine's read is held, and does not latch; the page
+ carries one line under its updated line saying the session was compacted and at what
+ time in California time, until a later compaction replaces it (LESSONS §416).
  (Doctrine §0e rule 2.)
 - **A FINDING IS RECORDED FOR THE NEXT PLAN, AND THE NEXT PLAN ANSWERS IT.** A
  repository's `NOTES.md` has a `## Found queue` section, one line per finding,
@@ -582,16 +588,24 @@ Every item below has actually happened.
  and refuses it when the file is missing or is not exactly what the plan in
  force gives, so an agent is never sent a copy that has drifted.
  (Doctrine §0e rule 13; LESSONS §409.)
-- **THE NEWEST HAND-BACK IS JUDGED IN WRITING BEFORE THE NEXT STEP GOES.**
- `status/manager.txt` in the session scratchpad carries one line, `Judged N:
- <what the hand-back showed against the plan, whether it is whole, and what the
- plan does about it>`, for each end of an agent for step N of the plan's Order,
- however it ended, written after that end. `judgedGate` in `hook-dispatch.mjs`
- refuses a send of any other step until the line is there, passes a Standing
- step, fails closed when the session's agents cannot be read, and does not latch.
- Every status prints a Judgement line under the Review line, read by the same
- function. The line is a record that a judgement was made and is fresh; the
- reading is the manager's. (Doctrine §0e rule 2; LESSONS §407.)
+- **THE NEWEST HAND-BACK IS JUDGED IN WRITING, IN FIVE PARTS, AND THE STEP ABOUT
+ TO GO CARRIES FOUR, BEFORE THE NEXT STEP GOES.** `status/manager.txt` in the
+ session scratchpad carries one line, `Judged N: is: <what the hand-back showed,
+ read from the transcript and the report> | why: <why it ended as it did> |
+ route: <what that means for the route> | fails: <where the route fails next> |
+ cheapest: <the cheapest route from here that holds the owner's rules>`, for each
+ end of an agent for step N of the plan, however it ended, written after that
+ end; and one line, `Why M: now: <why it goes now> | wrong: <what would make it
+ wrong> | fails: <where it fails next> | cheapest: <why this is the cheapest
+ route>`, for the step M about to go, one for each earlier end of that step and
+ one for this send. Each part is ten characters or more. `judgedGate` in
+ `hook-dispatch.mjs` refuses a send until the lines are there, in a plan with an
+ Order (its Order, its Standing steps passing) and in a plan without one (its
+ `## Steps`), fails closed when the session's agents cannot be read, and does not
+ latch. Every status prints a Judgement line under the Review line, read by the
+ same function. The lines are a record that a judgement was made, in the parts
+ the owner asked for, and fresh; the reading is the manager's.
+ (Doctrine §0e rule 2; LESSONS §407, §417.)
 - **A PLAN RESTS ON QUOTED EVIDENCE AND ACCOUNTS FOR THE ROADMAP.** A plan that
  sends agents and whose Files names a repository has a `## What is` section
  whose bullets each quote, in double quotes, twelve characters or more of a line
@@ -655,20 +669,32 @@ Every item below has actually happened.
  every line as it stands, read since its last compaction; the harness fires
  resumes for sessions nobody left, and a held one costs nothing.
  (Doctrine §11e; LESSONS §383, §398.)
-- **AFTER A COMPACTION OR A RESUME THE OWNER'S MESSAGES AND THE LESSONS ARE
- BOUNDED, AND THE DOCTRINE IS NOT.** A startup is unchanged: every line
- of the doctrine, every lesson title. After a compaction every line of the
- doctrine is due as at a startup, and after a resume none is when the
+- **AFTER A COMPACTION OR A RESUME THE PRINTS ARE BOUNDED, THE DOCTRINE IS NOT,
+ AND THE OWNER'S MESSAGES ARE READ WHOLE FROM A FILE.** A startup is unchanged:
+ every line of the doctrine, every lesson title. After a compaction every line of
+ the doctrine is due as at a startup, and after a resume none is when the
  transcript already holds every line as it stands (LESSONS §398), and
- the line printed at SessionStart names the lines due; the owner's messages come back
- only if typed after the last reply, the newest ten, oldest first, with the
- count of the rest and the path of a file holding all of them
- (`compact-recall.mjs`, which bounds the §376 print named further up); and the
- brief prints the lessons as a count and the folder's path, with the reason on
- its own line where it cannot read the start's marker. Each of the three was a
- large share of a fresh context, and each compaction came sooner than the last;
- the doctrine's share is paid on purpose now (LESSONS §398).
- (Doctrine §11e; LESSONS §385.)
+ the line printed at SessionStart names the lines due; the print of the owner's
+ messages is the newest ten since the previous compaction (or since the session's
+ start where there was none), oldest first, with the count of the rest and the
+ path of a file holding every one of them, answered or not, whole and in order,
+ written under the session scratchpad and named for the compaction
+ (`compact-recall.mjs`, which bounds the §376 print named further up); the file
+ is a print of the session's own transcript for the session's own reading, and
+ nothing copies it into a repository. After such a start `recallGate` in
+ `hook-dispatch.mjs` holds the main thread to reading and the status, without
+ latching, until Read results covering every line of that file, returned after
+ the start, are in the transcript; it holds nothing while the file does not
+ exist and passes `TaskStop`. The compaction is then said: the dispatcher records
+ it with its time, the first status after it prints the time in California time,
+ the status page carries it under its updated line, and `stop-guard.mjs` refuses
+ the first reply after it whose first line does not say that a compaction
+ happened and at what time (it may share that line with a stop declaration; a
+ follow-up that carries it discharges the refusal). The brief prints the lessons
+ as a count and the folder's path, with the reason on its own line where it cannot
+ read the start's marker. Each print was a large share of a fresh context, and each
+ compaction came sooner than the last; the doctrine's share is paid on purpose
+ now (LESSONS §398). (Doctrine §11e; LESSONS §385, §416.)
 - **ONLY `staging` AND `main` REACH A REMOTE, IN EVERY REPO.** The rule and
  what `push-guard.mjs` refuses are in the harness-branch item near the top of
  this list. (Doctrine §11.)

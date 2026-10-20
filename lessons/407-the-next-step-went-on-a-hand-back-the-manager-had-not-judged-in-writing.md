@@ -6,6 +6,8 @@
 
 **What the gate does now.** The manager writes one line in `status/manager.txt` of the session scratchpad for each hand-back, `Judged N: <what the hand-back showed against the plan, whether it is whole, and what the plan does about it>`. `judgedState` in `report.mjs` reads the newest end of an agent for a step in the plan's Order, however it ended, and counts the lines for that step against the ends of that step; the file's last write has to be after the end, so a line left by an earlier send of the same step does not stand for the next. `judgedGate` in `hook-dispatch.mjs` refuses a send of any other step until the state is judged, exempts a Standing step, fails closed when the session's agents cannot be read, and does not latch: writing the line is the way out. Every status prints a Judgement line under the Review line from the same function.
 
+*Replaced on 2026-10-20 by §417:* the line has five named parts, the step about to go has a line of four, and a plan with no Order is gated too; the paragraph above describes the line as it was, a free sentence.
+
 **What the check cannot see.** Whether the line is true or says anything. It forces a written judgement to exist and be fresh; the reading of the hand-back stays the manager's, and the review step and the owner's reading are what weigh it.
 
 **The general form.** A step that must be done between two sends is made a thing the second send cannot happen without, and the thing is written where the owner reads the state of the work.

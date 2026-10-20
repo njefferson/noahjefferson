@@ -188,7 +188,13 @@ every rule below while none of the hooks that enforce them was running
    force", and the session could not see why. The manager judges an agent's
    work from these reads, never from its report, because the report says what
    the agent believes happened. What a status then says about them is
-   judgement.
+   judgement. The judgement before a send is written down in
+   `status/manager.txt` in five parts (what the hand-back showed, why it ended as it
+   did, what that means for the route, where the route fails next, and the cheapest
+   route from here that holds the owner's rules), the step about to go carries four
+   (why now, what would make it wrong, where it fails next, why it is the cheapest
+   route), and `judgedGate` in `hook-dispatch.mjs` refuses a send without them, in a
+   plan with an Order or without one.
    **Every status prints the pointer, and each hand-back, after the goals.**
    The main thread keeps no memory of the plan: it reads its next move from
    this print instead of choosing it. The plan's `## Order` section carries an

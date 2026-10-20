@@ -1,36 +1,42 @@
 #!/usr/bin/env node
 /**
- * AFTER A COMPACTION, THE OWNER'S OWN WORDS COME BACK FIRST (LESSONS §376), AND
- * ONLY THE ONES NOT YET ANSWERED, BOUNDED (LESSONS §385).
+ * AFTER A COMPACTION, THE OWNER'S OWN WORDS COME BACK (LESSONS §376), THE NEWEST
+ * TEN PRINTED AND EVERY ONE FILED (LESSONS §385, §416).
  *
  * A compaction replaces the conversation with a summary, and a summary is a
  * paraphrase: what an instruction said becomes what the summary says it said,
  * and a message that arrived late in a long run of tool calls can be reduced
  * to a clause or lost. The transcript still holds every message verbatim.
  *
- * hook-dispatch.mjs calls `recallFor` on SessionStart with source `compact` and
- * prints its block FIRST, before the tool census and before any repo's brief:
- * the owner's messages typed after the newest assistant reply before the
- * compaction, oldest first. Everything earlier was answered by that reply, and
- * printing it all again was a large share of the context each compaction was
- * meant to free. At most ten are printed, the newest ten, because a later
- * message overrides an earlier one; the block then says how many are not
- * printed and names the file holding every one of them, which is written beside.
+ * hook-dispatch.mjs calls `recallParts` on SessionStart with source `compact`
+ * and prints its block FIRST, before the tool census and before any repo's
+ * brief: the newest ten of the owner's messages since the previous compaction,
+ * oldest first, because a later message overrides an earlier one. The block then
+ * says how many are not printed and names the file holding EVERY message of the
+ * stretch, whole and in order, which is written under the session's scratchpad
+ * and named for the compaction (`compaction-N.txt`). The dispatcher then holds
+ * the main thread to reading and the status until a Read result covering that
+ * whole file has returned (`recallGate`), because ten messages of a long run is
+ * the summary's own mistake again, smaller.
  *
  *   node compact-recall.mjs <transcript.jsonl>   prints the same block and
- *                                                writes the same file
+ *                                                writes the file beside the
+ *                                                other recall files
  *
- * "After the previous compaction" still bounds the search: the messages after
- * the last `compact_boundary` that has any after it. The hook may run before or
- * after the new boundary is written; if no owner message follows the newest one,
- * the newest is this compaction's and the one before it is the previous.
+ * "Since the previous compaction" bounds the search: the messages after the last
+ * `compact_boundary` that has any after it, or since the session's start where
+ * there was none. The hook may run before or after the new boundary is written;
+ * if no owner message follows the newest one, the newest is this compaction's
+ * and the one before it is the previous.
  *
  * `messagesSinceCompaction` keeps its older contract, every owner message since
  * the previous compaction, because plan-scope-check.mjs prints them all to the
  * scope judge; it only tags each with whether a reply followed it.
  *
- * The file is `<transcript's name>.txt` in $COMPACT_RECALL_DIR, or
- * ~/.claude/compact-recall; the next compaction of the same session replaces it.
+ * Without a scratchpad the file is `<transcript's name>.txt` in
+ * $COMPACT_RECALL_DIR, or ~/.claude/compact-recall, and no gate holds anything
+ * for it. The file is a print of the session's own transcript for the session's
+ * own reading; nothing copies it into a repository.
  */
 import { createReadStream, mkdirSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
@@ -69,17 +75,20 @@ function isReply(e) {
 }
 
 /**
- * The owner's messages since the previous compaction.
+ * The owner's messages since the previous compaction, and which compaction this is.
  * @param {string} path  the session transcript.
- * @returns {Promise<{text: string, at: string, afterReply: boolean}[]>} oldest
- *   first, each text exactly as it was sent, with no cap. `afterReply` is true
- *   for a message typed after the newest assistant reply in that stretch, the
- *   ones no reply has answered, and true for every message when no reply
- *   precedes them. Streams the whole file once, parsing only lines that can hold
- *   a message, a reply or a boundary, because a transcript can pass 500 MB.
- *   Empty when the file cannot be read.
+ * @returns {Promise<{msgs: {text: string, at: string, afterReply: boolean}[], n: number}>}
+ *   `msgs`: oldest first, each text exactly as it was sent, with no cap.
+ *   `afterReply` is true for a message typed after the newest assistant reply in
+ *   that stretch, the ones no reply has answered, and true for every message when
+ *   no reply precedes them. `n`: the number of the compaction the stretch ends
+ *   at, counted from 1 (the boundaries written, plus this one when the hook runs
+ *   before its own boundary is written), so the file named for it is the same
+ *   whichever side of the boundary the hook ran. Streams the whole file once,
+ *   parsing only lines that can hold a message, a reply or a boundary, because a
+ *   transcript can pass 500 MB. `{msgs: [], n: 1}` when the file cannot be read.
  */
-export async function messagesSinceCompaction(path) {
+export async function stretchSinceCompaction(path) {
   const segs = [[]];
   let lastWasBoundary = false;
   try {
@@ -97,21 +106,29 @@ export async function messagesSinceCompaction(path) {
       if (isReply(e)) { segs.at(-1).push({ reply: true }); lastWasBoundary = false; continue; }
       if (isOwnerMessage(e)) { segs.at(-1).push({ text: textOf(e), at: e.timestamp ?? '' }); lastWasBoundary = false; }
     }
-  } catch { return []; }
+  } catch { return { msgs: [], n: 1 }; }
   const last = segs.at(-1);
   const seg = last.some((x) => !x.reply) || segs.length < 2 ? last : segs.at(-2);
   let lastReply = -1;
   for (let i = seg.length - 1; i >= 0; i--) if (seg[i].reply) { lastReply = i; break; }
-  const out = [];
-  seg.forEach((x, i) => { if (!x.reply) out.push({ text: x.text, at: x.at, afterReply: i > lastReply }); });
-  return out;
+  const msgs = [];
+  seg.forEach((x, i) => { if (!x.reply) msgs.push({ text: x.text, at: x.at, afterReply: i > lastReply }); });
+  return { msgs, n: seg === last ? segs.length : segs.length - 1 };
 }
 
-// The messages no reply has answered; a message with no tag counts as one.
-const unanswered = (msgs) => msgs.filter((m) => m.afterReply !== false);
+/**
+ * The owner's messages since the previous compaction.
+ * @param {string} path  the session transcript.
+ * @returns {Promise<{text: string, at: string, afterReply: boolean}[]>} the `msgs`
+ *   of `stretchSinceCompaction`: every one, oldest first, each tagged with
+ *   whether a reply followed it. plan-scope-check.mjs prints them all to its judge.
+ */
+export async function messagesSinceCompaction(path) {
+  return (await stretchSinceCompaction(path)).msgs;
+}
 
 /**
- * Where the file holding every unanswered message is written.
+ * Where the file holding every message of the stretch is written, with no scratchpad.
  * @param {string} path  the session transcript.
  * @returns {string} `<transcript's name>.txt` under $COMPACT_RECALL_DIR, or under
  *   ~/.claude/compact-recall, with anything but letters, digits, `_` and `-`
@@ -123,22 +140,26 @@ function recallFile(path) {
 }
 
 /**
- * Write the file that holds every unanswered message, uncapped.
- * @param {string} path  the session transcript, which names the file.
+ * Write the file that holds every message of the stretch, uncapped.
+ * @param {string} path  the session transcript, which names the file when no
+ *   compaction number is given.
  * @param {{text: string, at: string, afterReply?: boolean}[]} msgs  from
- *   `messagesSinceCompaction`.
+ *   `stretchSinceCompaction`.
+ * @param {{dir?: string, n?: number}} [opts]  `dir` the folder to write in (the
+ *   session scratchpad's `recall`) and `n` the compaction's number, which names
+ *   the file `compaction-<n>.txt`; without them the file is `recallFile`'s.
  * @returns {string} the file's path, or '' when there is nothing to write or the
  *   write failed; `recallBlock` then says no file was written rather than
- *   citing one. The file holds each message numbered, with its time, exactly as
- *   sent, and replaces any earlier one for the same session.
+ *   citing one. THE INVARIANT `recallGate` relies on: the file holds EVERY message
+ *   of the stretch, answered or not, numbered with its time, exactly as sent and
+ *   in order, and replaces any earlier file of the same name.
  */
-export function saveRecall(path, msgs) {
-  const open = unanswered(msgs);
-  if (!open.length) return '';
-  const file = recallFile(path);
+export function saveRecall(path, msgs, opts = {}) {
+  if (!msgs.length) return '';
+  const file = opts.dir ? join(opts.dir, `compaction-${Number(opts.n) || 1}.txt`) : recallFile(path);
   try {
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, open.map((m, i) => `--- ${i + 1} of ${open.length}${m.at ? `, ${m.at}` : ''} ---\n${m.text}`).join('\n') + '\n');
+    writeFileSync(file, msgs.map((m, i) => `--- ${i + 1} of ${msgs.length}${m.at ? `, ${m.at}` : ''} ---\n${m.text}`).join('\n') + '\n');
     return file;
   } catch { return ''; }
 }
@@ -146,37 +167,52 @@ export function saveRecall(path, msgs) {
 /**
  * The block hook-dispatch prints.
  * @param {{text: string, at: string, afterReply?: boolean}[]} msgs  from
- *   `messagesSinceCompaction`.
+ *   `stretchSinceCompaction`.
  * @param {string} [file]  the path `saveRecall` returned, or '' for none.
- * @returns {string} the newest `SHOWN` unanswered messages verbatim, oldest
+ * @returns {string} the newest `SHOWN` messages of the stretch verbatim, oldest
  *   first, numbered by their place among all of them, under one heading, then
- *   the count not printed and the path of the file holding all; '' when no
- *   message is unanswered, so the caller prints nothing rather than an empty
+ *   the count not printed and the path of the file holding all; '' when the
+ *   stretch holds none, so the caller prints nothing rather than an empty
  *   heading. The count line is always last, and never cites a file that was not
  *   written.
  */
 export function recallBlock(msgs, file = '') {
-  const open = unanswered(msgs);
-  if (!open.length) return '';
-  const shown = open.slice(-SHOWN);
-  const rest = open.length - shown.length;
-  return `THE OWNER'S MESSAGES TYPED AFTER THE LAST REPLY BEFORE THE COMPACTION, VERBATIM, OLDEST FIRST (LESSONS §376, §385). These outrank the summary: where the summary differs, these are right.\n`
-    + shown.map((m, i) => `--- ${rest + i + 1} of ${open.length}${m.at ? `, ${m.at}` : ''} ---\n${m.text}`).join('\n')
+  if (!msgs.length) return '';
+  const shown = msgs.slice(-SHOWN);
+  const rest = msgs.length - shown.length;
+  return `THE OWNER'S MESSAGES SINCE THE PREVIOUS COMPACTION, THE NEWEST ${shown.length}, VERBATIM, OLDEST FIRST (LESSONS §376, §385, §416). These outrank the summary: where the summary differs, these are right.\n`
+    + shown.map((m, i) => `--- ${rest + i + 1} of ${msgs.length}${m.at ? `, ${m.at}` : ''} ---\n${m.text}`).join('\n')
     + '\n--- end of the owner\'s messages ---\n'
     + `Not printed here: ${rest} older (the ${shown.length} printed are the newest). `
-    + (file ? `All ${open.length} are in the file ${file}.` : `All ${open.length} are in the transcript only: the file could not be written.`);
+    + (file ? `All ${msgs.length} are in the file ${file}.` : `All ${msgs.length} are in the transcript only: the file could not be written.`);
 }
 
 /**
  * The whole print for one compaction: read, write the file, build the block.
  * @param {string} path  the session transcript.
- * @returns {Promise<string>} the block `recallBlock` builds from the unanswered
- *   messages with the file `saveRecall` wrote; '' when there are none. This is
- *   what hook-dispatch.mjs prints first after a compaction.
+ * @param {string} [dir]  the folder the file goes in (the session scratchpad's
+ *   `recall`); the older default place when omitted.
+ * @returns {Promise<{block: string, file: string, n: number, count: number}>}
+ *   `block` is what `recallBlock` builds from the stretch with the file
+ *   `saveRecall` wrote ('' when the stretch holds no message); `file` that file's
+ *   path ('' when none was written), `n` the compaction's number and `count` how
+ *   many messages the file holds. hook-dispatch.mjs prints `block` first after a
+ *   compaction and makes the main thread read `file` whole.
  */
-export async function recallFor(path) {
-  const msgs = await messagesSinceCompaction(path);
-  return recallBlock(msgs, saveRecall(path, msgs));
+export async function recallParts(path, dir = '') {
+  const { msgs, n } = await stretchSinceCompaction(path);
+  const file = saveRecall(path, msgs, dir ? { dir, n } : {});
+  return { block: recallBlock(msgs, file), file, n, count: msgs.length };
+}
+
+/**
+ * The block of one compaction's print.
+ * @param {string} path  the session transcript.
+ * @param {string} [dir]  as `recallParts` takes it.
+ * @returns {Promise<string>} `recallParts`' `block`; '' when the stretch holds none.
+ */
+export async function recallFor(path, dir = '') {
+  return (await recallParts(path, dir)).block;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === SELF) {

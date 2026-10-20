@@ -727,6 +727,71 @@ export function writeSeen(sid, seen, mark) {
   } catch { return false; }
 }
 
+// ---- the compaction is said, once in a status and once in the first reply (Doctrine §0e rule 2, LESSONS §416) ----
+
+const compactedFile = (sid) => join(process.env.COMPACTED_DIR || join(homedir(), '.claude', 'compacted'), `${safeKey(sid)}.json`);
+
+/**
+ * Record that a session was compacted just now.
+ * @param {string} sid  the session id; nothing is written without one.
+ * @param {number} [at]  the time in ms; now by default.
+ * @returns {boolean} true when written. The record, one file for each session that a
+ *   later compaction replaces whole, holds the time and two flags: whether a status has
+ *   printed the notice (`printed`) and whether the first reply has said it (`told`).
+ *   hook-dispatch.mjs writes it at a SessionStart whose source is a compaction.
+ */
+export function markCompacted(sid, at = Date.now()) {
+  if (!sid) return false;
+  try {
+    const f = compactedFile(sid);
+    mkdirSync(dirname(f), { recursive: true });
+    writeFileSync(f, JSON.stringify({ at, printed: false, told: false }));
+    return true;
+  } catch { return false; }
+}
+
+/**
+ * The compaction a session last had.
+ * @param {string} sid  the session id.
+ * @returns {{at: number, printed: boolean, told: boolean} | null} the record
+ *   `markCompacted` left, null when there is none, it cannot be read, or it holds
+ *   no time. The status, the status page and the stop guard all read it here, so
+ *   they cannot disagree about when the session was compacted.
+ */
+export function readCompacted(sid) {
+  if (!sid) return null;
+  try {
+    const j = JSON.parse(readFileSync(compactedFile(sid), 'utf8'));
+    return j && Number.isFinite(Number(j.at)) && Number(j.at) > 0 ? { at: Number(j.at), printed: !!j.printed, told: !!j.told } : null;
+  } catch { return null; }
+}
+
+/**
+ * Set a flag of the compaction record.
+ * @param {string} sid  the session id.
+ * @param {{printed?: boolean, told?: boolean}} patch  the flags to set.
+ * @returns {boolean} true when the record existed and was rewritten with the flags laid
+ *   over it; false when there is no record, so a flag is never set for a compaction
+ *   that was not recorded.
+ */
+export function setCompacted(sid, patch) {
+  const c = readCompacted(sid);
+  if (!c) return false;
+  try { writeFileSync(compactedFile(sid), JSON.stringify({ ...c, ...patch })); return true; } catch { return false; }
+}
+
+/**
+ * The words the notice of a compaction uses.
+ * @param {{at: number}} c  `readCompacted`'s answer.
+ * @returns {string} "Compacted at HH:MM California time on YYYY-MM-DD.", the time read
+ *   from the record. The status prints it, the page carries it, and the stop guard
+ *   holds the first reply's first line to the same time.
+ */
+export function compactedWords(c) {
+  const d = new Date(c.at);
+  return `Compacted at ${californiaTime(d)} California time on ${d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })}.`;
+}
+
 const refusedFile = (sid) => join(process.env.REFUSED_READS_DIR || join(homedir(), '.claude', 'refused-reads'), `${safeKey(sid)}.json`);
 
 /**
@@ -1245,6 +1310,53 @@ export function stepTitles(text) {
 }
 
 /**
+ * The step numbers a plan sends, and which of them are Standing.
+ * @param {string} text  the plan.
+ * @returns {{order: number[], standing: number[]}} where the plan has an `## Order`,
+ *   the numbers `planOrder` reads, in the order written, and its Standing ones;
+ *   otherwise the numbers that open a line of its `## Steps` section (each `N.`),
+ *   in plan order and without repeats, and no Standing step. Both empty when the
+ *   plan has neither. THE ONE LIST the judgement gate and the judgement state
+ *   share, so a plan with no Order is judged before each send the way a plan with
+ *   one is.
+ */
+export function stepNumbers(text) {
+  const o = planOrder(text);
+  if (o) return { order: o.order, standing: o.standing };
+  return { order: [...new Set([...planSection(text, 'Steps').matchAll(/^(\d+)\.\s/gm)].map((m) => Number(m[1])))], standing: [] };
+}
+
+/** The parts of a `Judged N:` line, in the order the manager writes them (Doctrine §0e rule 2). */
+export const JUDGED_PARTS = ['is', 'why', 'route', 'fails', 'cheapest'];
+/** The parts of a `Why N:` line: the reasons for the step about to go. */
+export const WHY_PARTS = ['now', 'wrong', 'fails', 'cheapest'];
+/** The fewest characters a part must carry for the line to count as written. */
+export const PART_MIN = 10;
+
+/**
+ * Which parts of a judgement line are missing.
+ * @param {string} text  a notes line after its key, e.g. everything after `Judged 41:`.
+ * @param {string[]} parts  the labels it must carry (`JUDGED_PARTS` or `WHY_PARTS`).
+ * @returns {string[]} each label of `parts` the line does not carry, or carries with
+ *   fewer than `PART_MIN` characters after it, in the order of `parts`; [] when the
+ *   line is whole. A part opens a segment of the line split on ` | ` with its label
+ *   and a colon (`is: …`); a segment that opens with no label belongs to the part
+ *   before it, so a bar inside a part's own words does not cut it short. A label
+ *   that appears twice counts once, the first. It forces each part to be written
+ *   and cannot judge that what is written is true.
+ */
+export function missingParts(text, parts) {
+  const got = new Map();
+  let last = '';
+  for (const seg of String(text ?? '').split(' | ')) {
+    const m = /^\s*(is|why|route|fails|cheapest|now|wrong)\s*:\s*([\s\S]*)$/i.exec(seg);
+    if (m && !got.has(m[1].toLowerCase())) { last = m[1].toLowerCase(); got.set(last, m[2]); }
+    else if (last) got.set(last, `${got.get(last)} | ${seg}`);
+  }
+  return parts.filter((l) => String(got.get(l) ?? '').trim().length < PART_MIN);
+}
+
+/**
  * Which step is next, as the plan's Order and the agents' hand-backs say.
  * @param {string} text  the plan.
  * @param {{step: number|null, how: string, last: string}[]} ends  `stepEnds`' `ends`.
@@ -1481,62 +1593,94 @@ export function reviewBlock(st) {
  * the dispatcher's judgement gate (`judgedGate`) and the status (`judgedBlock`) share.
  * @param {object} p  a PreToolUse payload or `{session_id}`, as `stepEnds` reads it.
  * @param {{path: string, text: string} | null} plan  the plan in force.
- * @param {{ends?: object[]|null, pad?: string|null}} [opts]  `ends` in place of
- *   `stepEnds`' (the test passes them) and `pad` the scratchpad (found from the session
- *   id when omitted).
+ * @param {{ends?: object[]|null, pad?: string|null, send?: number|null}} [opts]  `ends` in
+ *   place of `stepEnds`' (the test passes them), `pad` the scratchpad (found from the session
+ *   id when omitted) and `send` the step about to be sent, which the dispatcher's gate
+ *   passes and a status does not.
  * @returns {{kind: string, step: number|null, endAt: number, ends: number, have: number,
- *   notesAt: number, file: string}} `kind` is: 'not-enforced' (no plan, no `## Order`, or no
- *   agent has ended for a step in Order); 'not-read' (the session's agents cannot be read:
- *   the gate fails CLOSED here); 'judged'; or one of the four ways it is not: 'no-pad' (no
- *   scratchpad, so no notes file), 'none' (no `Judged N:` line for the step), 'short'
- *   (fewer such lines than ends of that step, so the newest end has none of its own) and
- *   'stale' (the file's last write is not after the newest end). `step` is the step of
- *   the newest end of an agent for a step in Order, however it ended (a refusal and an
- *   interruption are judged too), `endAt` its time, `ends` how many ends that step has,
- *   `have` how many `Judged <step>:` lines `managerNotes` finds, `notesAt` the notes
- *   file's last write in ms and `file` its path. THE INVARIANT: 'judged' only when
- *   `have >= ends` and `notesAt > endAt`, so a line left by an earlier send of the same
- *   step, with the file written to since for another reason, is not the newest judgement.
+ *   partial: number, missing: string[], notesAt: number, file: string, send: number|null,
+ *   whyHave: number, whyNeed: number, whyMissing: string[]}} `kind` is: 'not-enforced' (no
+ *   plan, no step in it, or no agent has ended for a step of it and none is being sent);
+ *   'not-read' (the session's agents cannot be read: the gate fails CLOSED here); 'judged';
+ *   or one of the ways it is not: 'no-pad' (no scratchpad, so no notes file), 'none' (no
+ *   `Judged N:` line for the step), 'short' (fewer whole lines than ends of that step, so
+ *   the newest end has none of its own), 'incomplete' (a line is there and lacks a part, or
+ *   carries it with fewer than `PART_MIN` characters: `missing` says which), 'stale' (the
+ *   file's last write is not after the newest end), and, for the step being sent, 'why-none',
+ *   'why-short' and 'why-incomplete' (its `Why <send>:` lines, counted against the sends of
+ *   that step, one for each earlier end and one for this send). The plan's steps are its
+ *   Order where it has one and its `## Steps` where it has not (`stepNumbers`); a Standing
+ *   step being sent is not enforced. `step` is the step of the newest end of an agent for a
+ *   step of the plan, however it ended (a refusal and an interruption are judged too),
+ *   `endAt` its time, `ends` how many ends that step has, `have` how many of its
+ *   `Judged <step>:` lines carry all five parts (`JUDGED_PARTS`), `partial` how many do not,
+ *   `notesAt` the notes file's last write in ms and `file` its path. `whyHave` and
+ *   `whyNeed` count whole `Why` lines (`WHY_PARTS`) against the need. THE INVARIANT: 'judged'
+ *   only when `have >= ends`, `notesAt > endAt` and, for a step being sent, `whyHave >=
+ *   whyNeed`, so a line left by an earlier send of the same step, with the file written to
+ *   since for another reason, is not the newest judgement.
  */
 export function judgedState(p, plan, opts = {}) {
-  const base = { kind: 'not-enforced', step: null, endAt: 0, ends: 0, have: 0, notesAt: 0, file: '' };
+  const base = { kind: 'not-enforced', step: null, endAt: 0, ends: 0, have: 0, partial: 0, missing: [], notesAt: 0, file: '', send: null, whyHave: 0, whyNeed: 0, whyMissing: [] };
   if (!plan) return base;
-  const o = planOrder(plan.text);
-  if (!o) return base;
+  const sn = stepNumbers(plan.text);
+  if (!sn.order.length) return base;
+  const send = Number.isInteger(opts.send) ? opts.send : null;
+  if (send !== null && sn.standing.includes(send)) return base;
   const read = 'ends' in opts ? { ends: opts.ends } : stepEnds(p);
   if (!read?.ends) return { ...base, kind: 'not-read' };
   let newest = null;
   for (const e of read.ends) {
-    if (e.step === null || !o.order.includes(e.step)) continue;
+    if (e.step === null || !sn.order.includes(e.step)) continue;
     if (!newest || e.at > newest.at) newest = e;
   }
-  if (!newest) return base;
-  const ends = read.ends.filter((e) => e.step === newest.step).length;
+  if (!newest && send === null) return base;
   const pad = 'pad' in opts ? opts.pad : (p?.session_id ? scratchpadOf(String(p.session_id)) : null);
   const file = pad ? join(pad, MANAGER_FILE) : '';
-  let have = 0, notesAt = 0;
-  if (file) {
-    have = (managerNotes(pad).judged.get(newest.step) ?? []).length;
-    try { notesAt = statSync(file).mtimeMs; } catch { notesAt = 0; }
+  const notes = file ? managerNotes(pad) : null;
+  let notesAt = 0;
+  if (file) { try { notesAt = statSync(file).mtimeMs; } catch { notesAt = 0; } }
+  const st = { ...base, send, file, notesAt };
+  if (newest) {
+    const lines = notes?.judged.get(newest.step) ?? [];
+    const short = lines.filter((l) => missingParts(l, JUDGED_PARTS).length);
+    Object.assign(st, { step: newest.step, endAt: newest.at, ends: read.ends.filter((e) => e.step === newest.step).length,
+      have: lines.length - short.length, partial: short.length, missing: short.length ? missingParts(short.at(-1), JUDGED_PARTS) : [] });
   }
-  const st = { ...base, step: newest.step, endAt: newest.at, ends, have, notesAt, file };
-  if (have >= ends && notesAt > newest.at) return { ...st, kind: 'judged' };
-  return { ...st, kind: !file ? 'no-pad' : have === 0 ? 'none' : have < ends ? 'short' : 'stale' };
+  if (!file) return { ...st, kind: 'no-pad' };
+  if (newest) {
+    if (st.have < st.ends) return { ...st, kind: st.partial > 0 ? 'incomplete' : st.have === 0 ? 'none' : 'short' };
+    if (!(notesAt > newest.at)) return { ...st, kind: 'stale' };
+  }
+  if (send !== null) {
+    const lines = notes.whys.get(send) ?? [];
+    const short = lines.filter((l) => missingParts(l, WHY_PARTS).length);
+    const need = read.ends.filter((e) => e.step === send).length + 1;
+    Object.assign(st, { whyHave: lines.length - short.length, whyNeed: need, whyMissing: short.length ? missingParts(short.at(-1), WHY_PARTS) : [] });
+    if (st.whyHave < need) return { ...st, kind: short.length ? 'why-incomplete' : st.whyHave === 0 ? 'why-none' : 'why-short' };
+  }
+  return { ...st, kind: 'judged' };
 }
 
 /**
  * The judgement line a status prints, under the review line.
  * @param {ReturnType<typeof judgedState>} st  `judgedState`'s answer.
- * @returns {string} one line, never a table: whether the newest end of a step in Order
- *   has its `Judged N:` line, or why the dispatcher's judgement gate holds the next step.
+ * @returns {string} one line, never a table: whether the newest end of a step of the plan
+ *   has its `Judged N:` line with the five parts, or why the dispatcher's judgement gate
+ *   holds the next step; the judged line also says the step about to go needs its own
+ *   `Why` line. The OWED line names the file and the whole form to write.
  */
 export function judgedBlock(st) {
   const at = st.endAt ? californiaStamp(st.endAt) : '';
+  const where = st.file || 'status/manager.txt (no scratchpad found)';
   switch (st.kind) {
-    case 'not-enforced': return 'Judgement: nothing to judge (no agent has ended for a step in Order, or the plan has no Order).';
+    case 'not-enforced': return 'Judgement: nothing to judge (no agent has ended for a step of the plan, or the plan has no steps).';
     case 'not-read': return 'Judgement: not read (the session\'s agents cannot be read), so no step is sent.';
-    case 'judged': return `Judgement: step ${st.step}'s newest hand-back (ended ${at}) is judged in ${st.file}.`;
-    default: return `Judgement: OWED. Step ${st.step}'s newest hand-back ended ${at}; ${st.file || 'status/manager.txt (no scratchpad found)'} needs a line "Judged ${st.step}: <what it showed and what the plan does about it>" written after it (${st.have} line${st.have === 1 ? '' : 's'} for ${st.ends} end${st.ends === 1 ? '' : 's'}), and no step is sent until it is there.`;
+    case 'judged': return `Judgement: step ${st.step}'s newest hand-back (ended ${at}) is judged in ${st.file}; the step about to go needs its own "Why <step>: now: … | wrong: … | fails: … | cheapest: …" line there.`;
+    case 'why-none':
+    case 'why-short':
+    case 'why-incomplete': return `Judgement: OWED. Step ${st.send} is about to go and ${where} holds ${st.whyHave} whole "Why ${st.send}:" line${st.whyHave === 1 ? '' : 's'} of the ${st.whyNeed} it needs (now, wrong, fails, cheapest, each ten characters or more), and no step is sent until it is there.`;
+    default: return `Judgement: OWED. Step ${st.step}'s newest hand-back ended ${at}; ${where} needs a line "Judged ${st.step}: is: <what the hand-back showed> | why: <why it ended as it did> | route: <what that means for the route> | fails: <where the route fails next> | cheapest: <the cheapest route from here that holds the owner's rules>" written after it, each part ten characters or more (${st.have} whole line${st.have === 1 ? '' : 's'} for ${st.ends} end${st.ends === 1 ? '' : 's'}${(st.missing ?? []).length ? `; the newest line held lacks ${st.missing.join(', ')}` : ''}), and no step is sent until it is there.`;
   }
 }
 
@@ -1601,16 +1745,19 @@ export const MANAGER_FILE = 'status/manager.txt';
  *   the plan is done, in the owner's terms>`; `Explanation standing: <the
  *   explanation> | <the evidence for it>`; `Explanation ruled out: <the explanation>
  *   | <the evidence against it>`; `Decision: <what was decided> | <the reason>`;
- *   `Next: <the next move>`; `Judged <step>: <what the step's hand-back showed against
- *   the plan and what the plan does about it>`, one line for each end of that step, which
- *   the dispatcher's judgement gate reads (`judgedState`; `judged` maps a step to its
- *   lines, in file order); the six keys the status page's shape is drawn from
+ *   `Next: <the next move>`; `Judged <step>: is: … | why: … | route: … | fails: … |
+ *   cheapest: …`, one line for each end of that step, which the dispatcher's judgement
+ *   gate reads (`judgedState`; `judged` maps a step to its lines, in file order, whole or
+ *   not: `missingParts` says which parts a line lacks); the six keys the status page's
+ *   shape is drawn from
  *   (`statusPage`): `Version: <one line of what production, staging or the hub carries>`
  *   (`versions`, in file order), `Open: <one thing waiting on the owner>` (`open`, in
  *   file order), and the four that carry a step number, `What <step>: <what the step is>`,
- *   `Why <step>: <why now>`, `Next <step>: <what follows it>` (`what`, `why` and
- *   `nexts` map a step to its line, a later line for the same step replacing an earlier
- *   one) and `Done <step>: <why the step counts as done>` (`done` maps a step to its
+ *   `Why <step>: now: … | wrong: … | fails: … | cheapest: …`, `Next <step>: <what follows
+ *   it>` (`what`, `why` and `nexts` map a step to its newest line, a later line for the
+ *   same step replacing an earlier one; `whys` maps a step to every `Why` line in file
+ *   order, which the judgement gate counts against the sends of the step) and `Done
+ *   <step>: <why the step counts as done>` (`done` maps a step to its
  *   text, which may be empty: the main thread counts a step done by decision, whatever
  *   its newest hand-back says). `Next: ...` with no step number is the unnumbered key above
  *   and `Next 119: ...` is the numbered one; neither reads the other's line.
@@ -1627,7 +1774,7 @@ export const MANAGER_FILE = 'status/manager.txt';
  */
 export function managerNotes(pad) {
   const out = { read: false, outcome: '', standing: [], ruledOut: [], decisions: [], next: '', sorts: new Map(), judged: new Map(),
-    versions: [], open: [], what: new Map(), why: new Map(), nexts: new Map(), done: new Map() };
+    versions: [], open: [], what: new Map(), why: new Map(), whys: new Map(), nexts: new Map(), done: new Map() };
   if (!pad) return out;
   let text = '';
   try { text = readFileSync(join(pad, MANAGER_FILE), 'utf8'); } catch { return out; }
@@ -1646,7 +1793,10 @@ export function managerNotes(pad) {
     else if ((m = /^Version\s*:\s*(\S.*)$/i.exec(l))) out.versions.push(m[1].trim());
     else if ((m = /^Open\s*:\s*(\S.*)$/i.exec(l))) out.open.push(m[1].trim());
     else if ((m = /^What\s+(\d+)\s*:\s*(\S.*)$/i.exec(l))) out.what.set(Number(m[1]), m[2].trim());
-    else if ((m = /^Why\s+(\d+)\s*:\s*(\S.*)$/i.exec(l))) out.why.set(Number(m[1]), m[2].trim());
+    else if ((m = /^Why\s+(\d+)\s*:\s*(\S.*)$/i.exec(l))) {
+      out.why.set(Number(m[1]), m[2].trim());
+      out.whys.set(Number(m[1]), [...(out.whys.get(Number(m[1])) ?? []), m[2].trim()]);
+    }
     else if ((m = /^Next\s+(\d+)\s*:\s*(\S.*)$/i.exec(l))) out.nexts.set(Number(m[1]), m[2].trim());
     else if ((m = /^Done\s+(\d+)\s*:\s*(.*)$/i.exec(l))) out.done.set(Number(m[1]), m[2].trim());
     else if ((m = /^Found\s+(\d+)\.(\d+|\*)\s+(fixed|stopping|queued)\s*:?\s*(.*)$/i.exec(l))) out.sorts.set(`${Number(m[1])}.${m[2] === '*' ? '*' : Number(m[2])}`, { how: m[3].toLowerCase(), note: m[4].trim() });
@@ -1715,7 +1865,8 @@ export function pointerState(sid, plan = planInForce()) {
   // out of force they are still what the page should show.
   const managerPad = sid ? scratchpadOf(sid) : null;
   const blank = { read: false, why: '', planPath: '', pointer: null, steps: [], found: [], title: '', titles: new Map(), leaves: [], goalOne: '', reviewers: [],
-    manager: managerNotes(managerPad), managerPath: managerPad ? join(managerPad, MANAGER_FILE) : `${MANAGER_FILE} (no scratchpad found)` };
+    manager: managerNotes(managerPad), managerPath: managerPad ? join(managerPad, MANAGER_FILE) : `${MANAGER_FILE} (no scratchpad found)`,
+    compacted: sid ? readCompacted(sid) : null };
   if (!plan) return { ...blank, why: 'no plan is in force, and the approval state printed below says why' };
   const title = (/^#\s+(.+)$/m.exec(plan.text) ?? [])[1] ?? '';
   const leaves = [...(/^## Leaves open\b[^\n]*\n([\s\S]*?)(?=^## |^# |$(?![\s\S]))/mi.exec(plan.text) ?? [, ''])[1].matchAll(/^\s*-\s+(.+?)\s*$/gm)].map((x) => x[1]);
@@ -1911,7 +2062,9 @@ export function reviewWords(st) {
  * @returns {string} a complete HTML document with a title, colour tokens for both
  *   themes (six-digit values, a dark pair for each), no table and a layout that reads at
  *   phone width. In order: the heading; the updated line, the plan's title and the last
- *   status's time in California time with the status; the `next: step N` line and the
+ *   status's time in California time with the status; under it, where the session was
+ *   compacted (`st.compacted`, read from the marker), one line saying so and at what time
+ *   in California time (`compactedWords`), which stays until a later compaction; the `next: step N` line and the
  *   manager's unnumbered `Next:` line, which the reviewer's file names as the line it reads;
  *   the Versions section, one bullet for each `Version:` line of the manager's notes; then
  *   one section for each step in Order and for each Standing step that is not a review: its
@@ -1997,7 +2150,7 @@ p { margin: 0 0 8px; }
 <main>
 <h1>Plan run status</h1>
 <p class="asof">${escapeHtml(st.title)}${st.title ? ' · ' : ''}updated ${escapeHtml(californiaStamp(now))}: ${escapeHtml(given)}</p>
-<p class="next"><strong>next: ${escapeHtml(next)}</strong>${m.next ? `<br>The next move: ${escapeHtml(m.next)}` : ''}</p>
+${st.compacted ? `<p class="asof">${escapeHtml(compactedWords(st.compacted))}</p>\n` : ''}<p class="next"><strong>next: ${escapeHtml(next)}</strong>${m.next ? `<br>The next move: ${escapeHtml(m.next)}` : ''}</p>
 <section>
 <h2>Versions</h2>
 <ul>
@@ -2267,6 +2420,18 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
     console.log(goals || `${GOALS_HEADING}: not read (no such section in the CLAUDE.md beside report.mjs).`);
     console.log('');
   }
+  // THE COMPACTION IS SAID IN THE FIRST STATUS AFTER IT (LESSONS §416), read from the marker the
+  // dispatcher wrote at the start the compaction made: when it was, in California time. Once
+  // only: the flag is set as the line prints, and the status page carries the line until the
+  // next compaction. A marker that cannot be read costs the line, never the status.
+  try {
+    const compacted = sid ? readCompacted(sid) : null;
+    if (compacted && !compacted.printed) {
+      console.log(`${compactedWords(compacted)} This session's context was replaced by a summary at that time.`);
+      console.log('');
+      setCompacted(sid, { printed: true });
+    }
+  } catch { /* the status stands without the line */ }
   // THE POINTER COMES NEXT, after the goals: `next: step N`, read from the plan's
   // Order and the agents' hand-backs, then each new hand-back and the Found lines
   // new or unsorted. The status page's source is written from the same read.

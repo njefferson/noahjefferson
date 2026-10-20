@@ -44,7 +44,10 @@
  * the Standing review step, and the sending of a step that a review which BEGAN
  * after that message cleared, so a question is answered from a file in the turn it
  * is asked and approved work goes on after one review; any other action stays
- * held); the state page gate (main thread only, `pageGate`: after a compaction
+ * held); the recall gate (main thread only, `recallGate`: after a compaction the
+ * main thread only reads and gives the status until Read results covering every
+ * line of the file of the owner's messages since the previous compaction have
+ * returned, LESSONS §416); the state page gate (main thread only, `pageGate`: after a compaction
  * the main thread only reads and gives the status until a Read result on the
  * session's status page has returned, as the doctrine's read is held); the manager
  * fence with its dispatch gate (main thread only),
@@ -74,8 +77,8 @@
  * doctrine-read-guard (main thread only); then each repo's hooks. EVERY
  * PreToolUse refusal, family or repo, sets a latch, except the
  * report gate's, pending-guard's, the stop hold's, the correction check's, the
- * state page gate's, the in-app approval check's, the review gate's and the rules
- * gate's: a status falling due (an agent has
+ * recall gate's, the state page gate's, the in-app approval check's, the review
+ * gate's, the rules gate's, the reads gate's and the judgement gate's: a status falling due (an agent has
  * ended) is cleared by giving it, and the refused call may then run; a call
  * held while an owner
  * message waits is sent again once the message is delivered, and a latch would
@@ -96,7 +99,9 @@
  * and the main thread and the other agents are not held. Stop refusals never
  * latch. SessionStart makes the
  * doctrine due and prints one line saying so (§11e), and after a compaction makes
- * the status page due and prints a second (`markPageDue`). UserPromptSubmit prints,
+ * the status page due and prints a second (`markPageDue`), makes the filed messages
+ * due and prints a third (`markRecallDue`), and records the compaction with its
+ * time (`markCompacted`). UserPromptSubmit prints,
  * before anything else, each owner message the harness never delivered that a
  * message typed after it has now overtaken (pending-guard --skipped, once
  * each), then, only when the prompt ends with a go-word, the calls
@@ -119,10 +124,10 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
 import { createHash } from 'node:crypto';
-import { recallFor } from './compact-recall.mjs';
+import { recallParts } from './compact-recall.mjs';
 import { tailEntries, isOwnerMessage, textOf } from './transcript-tail.mjs';
 import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
-  planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, judgedState } from './report.mjs';
+  planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, judgedState, stepNumbers, markCompacted, JUDGED_PARTS, WHY_PARTS } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
 import { HARNESS_TAG } from './pending-guard.mjs';
@@ -1203,47 +1208,62 @@ export function readsGate(p, plan = approvedPlan(), open = undefined) {
     + 'Read each file now (a Read with an offset and a limit, as often as it takes), then send the step. This refusal does not latch: reading clears it.';
 }
 
-// ---- the manager's written judgement of each hand-back (Doctrine §0e rule 2) ----
+// ---- the manager's written judgement of each hand-back, and its reasons for each send (Doctrine §0e rule 2) ----
 
 /**
- * THE JUDGEMENT GATE: no step is sent until the newest hand-back has been judged in writing.
+ * THE JUDGEMENT GATE (LESSONS §407, §417): no step is sent until the newest hand-back has been
+ * judged in writing, in five parts, and the step about to go has its reasons written, in four.
  * @param {object} p  a main-thread Agent, Task or SendMessage call.
  * @param {{path: string, text: string} | null} [plan]  the plan in force.
  * @param {ReturnType<typeof judgedState>|null|undefined} [state]  report.mjs `judgedState`'s
- *   answer, passed by the test; read from the session when undefined.
+ *   answer, passed by the test; read from the session, with the step being sent, when undefined.
  * @returns {string|null} null for a subagent's call, for a tool that sends no agent, for a
  *   prompt that is not a step of the plan (the dispatch gate judges that), for a Standing
- *   step (the review step is sent between hand-backs and judges them), for a plan with no
- *   `## Order`, and when no agent has ended for a step in Order yet. Otherwise null only
- *   when status/manager.txt in the session scratchpad carries a line keyed `Judged N:`
- *   (N the step of the newest end of an agent for a step in Order, whatever its first
- *   line: a REFUSED or FAILED hand-back is judged too) for every end of that step, and was
- *   written after that end (`judgedState`), so a line left from an earlier send of the
- *   same step does not stand for the next one. Else the refusal, which names the file and
- *   the line to write. A state that cannot be read refuses, as the review gate does: a
- *   gate that stops gating in silence is the defect. main() calls it with latch false:
- *   writing the line is the way out, and a latch would wait on the owner for nothing.
+ *   step (the review step is sent between hand-backs and judges them), and for a plan with
+ *   no step. The plan's steps are its Order where it has one and its `## Steps` where it has
+ *   not (`stepNumbers`), so a plan with no Order is gated too. Otherwise null only when
+ *   status/manager.txt in the session scratchpad carries, written after the newest end of an
+ *   agent for a step of the plan: a line keyed `Judged N:` (N the step of that newest end,
+ *   whatever its first line: a REFUSED or FAILED hand-back is judged too) for every end of
+ *   that step, each with the five parts `is`, `why`, `route`, `fails` and `cheapest`
+ *   (`JUDGED_PARTS`), each of ten characters or more; and a line keyed `Why M:` (M the step
+ *   being sent) for each earlier end of that step and one more for this send, each with the
+ *   four parts `now`, `wrong`, `fails` and `cheapest` (`WHY_PARTS`), each of ten characters
+ *   or more (`judgedState`), so a line left from an earlier send does not stand for the next
+ *   one. Else the refusal, which names the file and the line to write. A state that cannot
+ *   be read refuses, as the review gate does: a gate that stops gating in silence is the
+ *   defect. main() calls it with latch false: writing the line is the way out, and a latch
+ *   would wait on the owner for nothing. It forces each part to be written and cannot judge
+ *   that what is written is true.
  */
 export function judgedGate(p, plan = approvedPlan(), state = undefined) {
   if (p.agent_id || !/^(?:Agent|Task|SendMessage)$/.test(String(p.tool_name ?? ''))) return null;
   const n = sentStep(p, plan);
-  const o = plan ? planOrder(plan.text) : null;
-  if (n === null || !o || o.standing.includes(n)) return null;
+  const sn = plan ? stepNumbers(plan.text) : null;
+  if (n === null || !sn || sn.standing.includes(n)) return null;
   let st = state;
   let failure = '';
-  if (st === undefined) { try { st = judgedState(p, plan); } catch (e) { st = null; failure = String(e?.message ?? e); } }
+  if (st === undefined) { try { st = judgedState(p, plan, { send: n }); } catch (e) { st = null; failure = String(e?.message ?? e); } }
   const head = 'JUDGEMENT GATE (Doctrine §0e rule 2):';
   if (!st) return `${head} the manager's judgement could not be read (${failure || 'an error'}); the gate refuses rather than stop gating.`;
   if (st.kind === 'not-enforced' || st.kind === 'judged') return null;
   if (st.kind === 'not-read') return `${head} the session's agents cannot be read, so whether the newest hand-back has been judged cannot be told and step ${n} is not sent.`;
   const where = st.file || 'status/manager.txt in the session scratchpad (no scratchpad was found for this session)';
+  if (/^why-/.test(st.kind)) {
+    const have = st.whyHave ?? 0, need = st.whyNeed ?? 1;
+    const found = st.kind === 'why-incomplete' ? `its newest line lacks ${(st.whyMissing ?? []).join(', ') || 'a part'} or carries a part under ten characters` : `the file holds ${have} whole line${have === 1 ? '' : 's'}`;
+    return `${head} step ${n} is about to go and ${where} holds ${have} whole line${have === 1 ? '' : 's'} keyed "Why ${n}:" of the ${need} it needs, one for each earlier end of that step and one for this send (${found}). `
+      + `Write one line: "Why ${n}: ${WHY_PARTS[0]}: <why it goes now> | ${WHY_PARTS[1]}: <what would make it wrong> | ${WHY_PARTS[2]}: <where it fails next> | ${WHY_PARTS[3]}: <why this is the cheapest route>", each part ten characters or more. `
+      + 'This refusal does not latch: writing the line clears it.';
+  }
   const found = st.kind === 'no-pad' ? 'no notes file could be read'
     : st.kind === 'none' ? 'the file holds no such line'
       : st.kind === 'short' ? `the file holds ${st.have} such line${st.have === 1 ? '' : 's'} for ${st.ends} ends of that step, so the newest end has none of its own`
-        : `its last write (${st.notesAt ? californiaTime(new Date(st.notesAt)) : 'never'}) is not after that end`;
-  return `${head} the newest hand-back of a step in Order is step ${st.step}'s, ended ${californiaTime(new Date(st.endAt))} (California), and ${where} has no line keyed "Judged ${st.step}:" written after it (${found}). `
-    + `Read the hand-back and write one line: "Judged ${st.step}: <what it showed against the plan, whether it is whole, and what the plan does about it>". Step ${n} is not sent until it is there. `
-    + 'This refusal does not latch: writing the line clears it.';
+        : st.kind === 'incomplete' ? `the file holds ${st.partial ?? 0} line${st.partial === 1 ? '' : 's'} for that step that lack ${(st.missing ?? []).join(', ') || 'a part'} or carry a part under ten characters`
+          : `its last write (${st.notesAt ? californiaTime(new Date(st.notesAt)) : 'never'}) is not after that end`;
+  return `${head} the newest hand-back of a step of the plan is step ${st.step}'s, ended ${californiaTime(new Date(st.endAt))} (California), and ${where} has no line keyed "Judged ${st.step}:" with all five parts written after it (${found}). `
+    + `Read the hand-back and write one line: "Judged ${st.step}: ${JUDGED_PARTS[0]}: <what it showed, read from the transcript and the report> | ${JUDGED_PARTS[1]}: <why it ended as it did> | ${JUDGED_PARTS[2]}: <what that means for the route> | ${JUDGED_PARTS[3]}: <where the route fails next> | ${JUDGED_PARTS[4]}: <the cheapest route from here that holds the owner's rules>", each part ten characters or more. `
+    + `Step ${n} is not sent until it is there, and not until a "Why ${n}:" line of four parts is there too. This refusal does not latch: writing the line clears it.`;
 }
 
 // ---- the finding queue: findings recorded for the next plan (Doctrine §0e rule 2) ----
@@ -1578,6 +1598,60 @@ export function pageGate(p, entries, opts = {}) {
     + `Until a Read result on ${page} has returned, the main thread may only read and give the status. `
     + 'Read the whole page now: it holds the outcome, the explanations standing and ruled out, the decisions with their reasons, the next move and every Found line sorted, and a summary of it, or another copy, is not it. '
     + 'This refusal does not latch: reading the page clears it.';
+}
+
+// ---- the owner's messages are the main thread's read after a compaction (Doctrine §0e rule 2, LESSONS §416) ----
+
+const recallDueFile = (p) => join(process.env.RECALL_DUE_DIR || join(homedir(), '.claude', 'recall-due'), `${safeId(p)}.json`);
+
+/**
+ * Make the filed messages due for this session: the main thread reads them whole.
+ * @param {object} p  the SessionStart payload.
+ * @param {string} file  the file `compact-recall.mjs` wrote under the session scratchpad,
+ *   holding every message the owner typed since the previous compaction.
+ * @returns {string} the one line printed at SessionStart, naming the file. The marker
+ *   records the time and the file, and only a Read result timed after the time counts
+ *   (`recallGate`, which reads it through `pageRead`, so a file too long for one Read
+ *   is read in parts and still counts).
+ */
+export function markRecallDue(p, file) {
+  const f = recallDueFile(p);
+  mkdirSync(dirname(f), { recursive: true });
+  writeFileSync(f, JSON.stringify({ at: Date.now(), file }) + '\n');
+  return `OWNER'S MESSAGES DUE (Doctrine §0e rule 2): the print above is the newest of what the owner typed since the previous compaction, and ${file} holds all of it. `
+    + 'The main thread may only read and give the status until a Read result covering that whole file has returned; a summary, or the print above, is not it.';
+}
+
+/**
+ * THE RECALL GATE: after a compaction the main thread reads every message the owner typed.
+ * @param {object} p  a main-thread PreToolUse payload.
+ * @param {object[]} [entries]  transcript entries, for the test.
+ * @param {{file?: string|null, classify?: (p: object) => boolean}} [opts]  the filed
+ *   messages' path and the read classifier, for the test.
+ * @returns {string|null} null for a subagent, for the main thread's TaskStop, when no
+ *   marker stands (`markRecallDue` writes one at a compaction), while the file does not
+ *   exist (there is nothing to read), for a read, and once Read results on exactly that
+ *   file, returned after the marker, have between them covered every line of it
+ *   (`pageRead`; the marker is then removed). Otherwise the refusal, naming the file. It
+ *   does not latch: reading the file is the way out, and a latch would wait on the owner
+ *   for nothing. The status command never reaches this: the dispatcher passes it first.
+ *   THE INVARIANT it holds: the main thread acts on a compaction's work only after the
+ *   owner's own words since the previous compaction have been in front of it, whole,
+ *   which the ten the print shows do not guarantee.
+ */
+export function recallGate(p, entries, opts = {}) {
+  if (p.agent_id || p.tool_name === 'TaskStop') return null;
+  let due;
+  try { due = JSON.parse(readFileSync(recallDueFile(p), 'utf8')); } catch { return null; }
+  const file = 'file' in opts ? opts.file : due.file;
+  if (!file || !existsSync(file)) return null;
+  const list = entries ?? tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024);
+  if (pageRead(list, Number(due.at) || 0, file)) { rmSync(recallDueFile(p), { force: true }); return null; }
+  if (isRead(p, opts.classify)) return null;
+  return `RECALL GATE (Doctrine §0e rule 2): this session was compacted and the owner's messages since the previous compaction have not been read whole. `
+    + `Until Read results covering every line of ${file} have returned, the main thread may only read and give the status. `
+    + 'Read the whole file now, in parts if it is long: a summary of it, or the newest ten the start printed, is not it. '
+    + 'This refusal does not latch: reading the file clears it.';
 }
 
 // ---- what a read on the main thread may be of (Doctrine §0e rule 13) ----
@@ -2282,7 +2356,15 @@ async function main(event, raw, p) {
     // after the compaction, the main thread reads and gives the status. It does not
     // latch (reading the page is the way out). A gate that fails to run refuses
     // what is not a read, as every family guard does: it has not said yes.
+    // THE OWNER'S OWN WORDS COME BEFORE THE PAGE (LESSONS §416): the messages filed at the
+    // compaction are read whole first, held the same way and for the same reason, and the
+    // refusal does not latch either.
     if (!p.agent_id && !mainStop) {
+      let recall = null;
+      try { recall = recallGate(p); } catch (e) {
+        recall = READS.has(p.tool_name ?? '') ? null : `RECALL GATE (Doctrine §0e rule 2): the gate could not run (${e?.message ?? e}); only reads run until it is fixed.`;
+      }
+      if (recall) return refuse(recall, false);
       let page = null;
       try { page = pageGate(p); } catch (e) {
         page = READS.has(p.tool_name ?? '') ? null : `STATE PAGE GATE (Doctrine §0e rule 2): the gate could not run (${e?.message ?? e}); only reads run until it is fixed.`;
@@ -2451,12 +2533,18 @@ async function main(event, raw, p) {
     dueLine = due.out.trim().split('\n')[0] ?? '';
   }
   if (event === 'SessionStart' && p.source === 'compact' && p.transcript_path) {
-    // The messages typed after the last reply before the compaction, the newest
-    // ten, verbatim, before anything else is printed, with the count of the rest
-    // and the file holding all: a summary is a paraphrase, and these are what it
-    // paraphrased (LESSONS §376, §385).
-    const recall = await recallFor(p.transcript_path);
-    if (recall) printed.push(recall);
+    // The newest ten of the messages typed since the previous compaction, verbatim,
+    // before anything else is printed, with the count of the rest and the file holding
+    // every one, written under the session's scratchpad: a summary is a paraphrase, and
+    // these are what it paraphrased (LESSONS §376, §385, §416). The main thread is then
+    // held to reading that file whole (`recallGate`); with no scratchpad there is no
+    // file the fence lets it read, so nothing is held.
+    const pad = scratchpadOf(String(p.session_id ?? ''));
+    const recall = await recallParts(p.transcript_path, pad ? join(pad, 'recall') : '');
+    if (recall.block) printed.push(recall.block);
+    if (pad && recall.file && !p.agent_id) {
+      try { printed.push(markRecallDue(p, recall.file)); } catch { /* the print above stands; the gate is lost for this start */ }
+    }
     printed.push('AFTER COMPACTION: every tool used earlier in this session still exists. Try each route before reporting a limit (LESSONS §370).\n'
       + await toolCensus(p.transcript_path));
   }
@@ -2466,6 +2554,10 @@ async function main(event, raw, p) {
   // costs the line and the gate, never the start.
   if (event === 'SessionStart' && p.source === 'compact' && !p.agent_id) {
     try { printed.push(markPageDue(p)); } catch { /* the doctrine's own line stands */ }
+    // The compaction is recorded with its time, so the first status prints it, the page
+    // carries it and the first reply opens with it (LESSONS §416). A failure costs the
+    // notice, never the start.
+    try { markCompacted(String(p.session_id ?? '')); } catch { /* the notice is lost for this start */ }
   }
 
   // ---- each touched repo's own hooks ----

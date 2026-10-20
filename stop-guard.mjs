@@ -66,6 +66,16 @@
 // REVIEW STEP, a plan with an Order is no longer sent in the pointer's order:
 // the refusal names the step the current review cleared, or the review step.
 //
+// ## THE FIRST REPLY AFTER A COMPACTION SAYS SO (Doctrine §0e rule 2, LESSONS §416)
+//
+// A session that was compacted goes on as though nothing had happened, and the
+// owner reads a reply written from a summary without being told it is one. The
+// dispatcher records the compaction with its time at the start the compaction
+// makes (`markCompacted` in report.mjs). The first reply after it is refused
+// unless its FIRST line says that a compaction happened and at what time in
+// California time, read from the record: it may share that line with a stop
+// declaration. The record's `told` flag is then set, so only that one reply is held.
+//
 //   node stop-guard.mjs        (reads the hook payload on stdin)
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -74,7 +84,7 @@ import { join, dirname } from 'node:path';
 import { pendingMessages, startedAt } from './pending-guard.mjs';
 import { tailEntries, lastOwnerMessage } from './transcript-tail.mjs';
 import { latchStanding, approvedPlan, planSteps, correctionStanding, stopStanding } from './hook-dispatch.mjs';
-import { runningWork, stepsReturned, planOrder, pointerOf, reviewState, aimReviewSteps } from './report.mjs';
+import { runningWork, stepsReturned, planOrder, pointerOf, reviewState, aimReviewSteps, readCompacted, setCompacted, compactedWords, californiaTime } from './report.mjs';
 
 /** The transcript is JSONL; the last assistant text is the reply just written. */
 const lastAssistantText = (path) => {
@@ -222,6 +232,15 @@ const path = hook.transcript_path;
 // session that keeps repeating is let through on the next stop, never looped.
 // A record older than the owner's newest message belongs to an earlier turn.
 if (hook.stop_hook_active) {
+  // A follow-up that carries the compaction notice discharges it: the refusal for a first line
+  // without it asked for exactly that sentence, and the next stop is not held for it again.
+  try {
+    const c = readCompacted(payloadSession);
+    if (c && !c.told && path) {
+      const said = lastAssistantText(path);
+      if (/compact/i.test(said) && said.includes(californiaTime(new Date(c.at)))) setCompacted(payloadSession, { told: true });
+    }
+  } catch { /* judged again at the next stop */ }
   try {
     const rec = JSON.parse(readFileSync(refusedFile(), 'utf8'));
     const ownerAt = lastOwnerMessage(tailEntries(path ?? '', 16 * 1024 * 1024))?.at ?? 0;
@@ -253,6 +272,29 @@ try { if (latchStanding(hook)) process.exit(0); } catch { /* no latch readable: 
 let reply = '';
 try { reply = lastAssistantText(path); } catch { process.exit(0); }
 if (!reply) process.exit(0);
+
+/** 00. THE FIRST REPLY AFTER A COMPACTION SAYS THAT ONE HAPPENED, AND WHEN (Doctrine §0e rule 2,
+ *  LESSONS §416). The record the dispatcher wrote at the start the compaction made holds its
+ *  time (`readCompacted`). While the record's `told` flag is not set, the reply's FIRST line
+ *  has to carry the word "compact" and the time in California time (HH:MM, as `compactedWords`
+ *  gives it); a reply that does is let through and sets the flag, one that does not is refused
+ *  once with the words to use. The line may be shared with a stop declaration. Judged before
+ *  every other shape, because it is about the first line and the others read the rest. A
+ *  session with no record is not held. */
+let compacted = null;
+try { compacted = readCompacted(payloadSession); } catch { compacted = null; }
+if (compacted && !compacted.told) {
+  const time = californiaTime(new Date(compacted.at));
+  const open = reply.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+  if (/compact/i.test(open) && open.includes(time)) {
+    try { setCompacted(payloadSession, { told: true }); } catch { /* held again at the next stop */ }
+  } else {
+    refuse(`STOP REFUSED — this is the first reply since the session was compacted, and its first line does not say so and when.
+
+Doctrine §0e rule 2, LESSONS §416. The owner reads a reply written from a summary without being told it is one. Open the follow-up with a line in these words: "${compactedWords(compacted)}" It may share its line with a stop declaration. The corrected line is all the follow-up needs.
+`, reply);
+  }
+}
 
 /** 0. GOING QUIET WHILE ITS OWN WORK RUNS (Doctrine §0e rule 2, LESSONS §381).
  *  A background command or a workflow this session started is work the session

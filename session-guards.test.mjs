@@ -32,9 +32,14 @@
  * And the prints after a compaction or a resume (LESSONS §385, §398): the doctrine
  * due in full at a startup, a clear and a compaction, and after a resume only when
  * the transcript since the last compaction does not already hold every line of it
- * as it stands (doctrine-read-guard.mjs), the owner's messages typed after the last
- * reply, newest ten, with the count of the rest and a file holding all
- * (compact-recall.mjs), and the lessons as a count and a folder (session-brief.mjs).
+ * as it stands (doctrine-read-guard.mjs), the owner's messages since the previous
+ * compaction, newest ten, with the count of the rest and a file under the scratchpad
+ * holding every one that the main thread is held to read whole (compact-recall.mjs,
+ * `recallGate`; LESSONS §416), the compaction said in the first status, on the page
+ * and in the first line of the first reply (`markCompacted`, stop-guard.mjs), and the
+ * lessons as a count and a folder (session-brief.mjs). And the judgement before each
+ * send in five parts and the reasons for the step in four, in a plan with an Order or
+ * without one (`judgedState`, `judgedGate`; LESSONS §407, §417).
  * And the state of the work on one page (report.mjs `managerNotes`, `sortFound`,
  * `statusPage`; the manager fence's write of `status/manager.txt`; the state page
  * gate after a compaction), the finding queue every plan answers line by line
@@ -102,6 +107,8 @@ process.env.PLAN_GUARD_NAMES_DIR = join(STATE, 'names');
 process.env.HELD_WORK_DIR = join(STATE, 'held');
 process.env.OWNER_TURN_DIR = join(STATE, 'owner-turn');
 process.env.PAGE_DUE_DIR = join(STATE, 'page-due');
+process.env.RECALL_DUE_DIR = join(STATE, 'recall-due');
+process.env.COMPACTED_DIR = join(STATE, 'compacted');
 process.env.STOP_REFUSED_DIR = join(STATE, 'stop-refused');
 process.env.SKIPPED_PRINTED_DIR = join(STATE, 'skipped-printed');
 process.env.REFUSED_READS_DIR = join(STATE, 'refused-reads');
@@ -272,6 +279,13 @@ function world(dir, entries = [], planText = STEPS_PLAN) {
       mkdirSync(subsDir, { recursive: true });
       writeFileSync(join(subsDir, `agent-${payload.agent_id}.jsonl`), jsonl(rulesReadEntries(dir, payload.agent_id)));
     }
+    // A send of a plan's step by the main thread is held by the judgement gate, in a plan with no Order as in one with an Order,
+    // until the manager's notes carry the step's Why line. A case about something else is given the notes; a case that wrote its
+    // own (`judgedPad` before the call) keeps them.
+    if (event === 'PreToolUse' && !payload.agent_id && /^(?:Agent|Task|SendMessage)$/.test(payload.tool_name ?? '') && payload.session_id) {
+      const base = env.TMPDIR ?? tmpdir();
+      if (!existsSync(join(base, 'claude-0', '-home-user', payload.session_id, 'scratchpad', 'status', 'manager.txt'))) judgedPad(payload.session_id, {}, 0, MANY_WHYS, base);
+    }
     return spawnSync('node', [join(dir, 'hook-dispatch.mjs'), event], {
       input: JSON.stringify({ cwd, transcript_path: tr, hook_event_name: event, ...payload }), encoding: 'utf8',
       env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: cwd, ...env },
@@ -310,18 +324,39 @@ function reviewWorld(dir, entries = [turn(0, GO)], opts = {}) {
     },
   };
 }
+// A whole judgement line (five parts, each ten characters or more) and a whole Why line (four parts) as the manager writes them.
+const judgedLine = (n, i = 1) => `Judged ${n}: is: the case read hand-back ${i} | why: it ended as the case set it up | route: the plan sends the next step | fails: nowhere the case can see | cheapest: this is the cheapest route here`;
+const whyLine = (n, i = 1) => `Why ${n}: now: the case sends this step (${i}) | wrong: nothing the case can see | fails: nowhere the case can see | cheapest: this is the cheapest route here`;
+// Enough Why lines for every step a fixture plan has, so a case about the Judged lines is not also about the Why lines.
+const MANY_WHYS = Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => [n, 4]));
 /**
- * A scratchpad for a session, with the manager's notes holding Judged lines.
+ * A scratchpad for a session, with the manager's notes holding Judged lines and Why lines.
  * @param {string} s  the session id.
- * @param {Record<number, number>} lines  how many `Judged N:` lines to write for each step N.
+ * @param {Record<number, number>} lines  how many whole `Judged N:` lines to write for each step N.
  * @param {number} [ageSeconds]  how long ago the notes file was last written (0: just now).
+ * @param {Record<number, number>} [whys]  how many whole `Why N:` lines to write for each step N; four for each of
+ *   steps 1 to 9 by default, so the sends of a fixture plan are not refused for them.
+ * @param {string} [base]  the temp folder the scratchpad sits under; the suite's own by default, and the folder a case
+ *   hands the hook run as TMPDIR otherwise.
  * @returns {string} the notes file's path, under the suite's temp folder, where `scratchpadOf` finds it for a hook run that
- *   inherits the suite's environment. The judgement gate refuses a step until the newest end of an Order step has its line.
+ *   inherits the suite's environment. The judgement gate refuses a step until the newest end of a step of the plan has its
+ *   line and the step being sent has its Why line.
  */
-function judgedPad(s, lines, ageSeconds = 0) {
-  const file = join(tmpdir(), 'claude-0', '-home-user', s, 'scratchpad', 'status', 'manager.txt');
+function judgedPad(s, lines, ageSeconds = 0, whys = MANY_WHYS, base = tmpdir()) {
+  return notesPad(s, [...Object.entries(lines).flatMap(([n, c]) => Array.from({ length: c }, (_, i) => judgedLine(n, i + 1))),
+    ...Object.entries(whys).flatMap(([n, c]) => Array.from({ length: c }, (_, i) => whyLine(n, i + 1)))].join('\n'), ageSeconds, base);
+}
+/**
+ * A scratchpad for a session, with the manager's notes holding exactly the text given.
+ * @param {string} s  the session id.
+ * @param {string} text  the notes, one item to a line.
+ * @param {number} [ageSeconds]  how long ago the notes file was last written (0: just now).
+ * @param {string} [base]  the temp folder the scratchpad sits under; the suite's own by default.
+ * @returns {string} the notes file's path, where `scratchpadOf` finds it for a hook run that inherits the suite's environment.
+ */
+function notesPad(s, text, ageSeconds = 0, base = tmpdir()) {
+  const file = join(base, 'claude-0', '-home-user', s, 'scratchpad', 'status', 'manager.txt');
   mkdirSync(dirname(file), { recursive: true });
-  const text = Object.entries(lines).flatMap(([n, c]) => Array.from({ length: c }, (_, i) => `Judged ${n}: the case judged this hand-back (${i + 1}).`)).join('\n');
   writeFileSync(file, text ? `${text}\n` : '');
   if (ageSeconds) { const t = (Date.now() - ageSeconds * 1000) / 1000; utimesSync(file, t, t); }
   return file;
@@ -709,32 +744,38 @@ const CASES = [
   },
 
   {
-    name: 'after a compaction only the messages typed after the last assistant reply come back: the newest ten, oldest first, then the count of the rest and the path of a file holding every one',
-    guards: ['recall_after_reply', 'recall_prefilter', 'recall_unanswered', 'recall_cap', 'recall_newest', 'recall_rest', 'recall_file_write', 'recall_file_all', 'recall_file_name', 'segment_pick'],
+    name: 'after a compaction the newest ten of the messages since the previous one come back, oldest first, then the count of the rest and the path of a file holding every one of them, answered or not, whole and in order, named for the compaction whichever side of its boundary the hook ran',
+    guards: ['recall_after_reply', 'recall_prefilter', 'recall_cap', 'recall_newest', 'recall_rest', 'recall_file_write', 'recall_file_all', 'recall_file_answered', 'recall_file_name', 'recall_number', 'recall_for', 'segment_pick'],
     async run(m) {
       const answered = 'typed-before-the-reply, answered by it';
       const typed = [...'abcdefghijkl'].map((c) => `typed-${c}-after-the-reply`);
       const after = typed.map((t, i) => (i % 2 ? mid(20 + i, t) : turn(20 + i, t)));
       const written = namedTranscript([turn(0, answered), reply(5, 'Done, anything else?'), ...after, boundary(40), summary(40)]);
       const pending = namedTranscript([turn(0, answered), reply(5, 'Done, anything else?'), ...after]);
-      // Every message since the previous compaction still comes back, which plan-scope-check.mjs prints to its judge; each is tagged.
-      const w = await m.recall.messagesSinceCompaction(written);
-      const p = await m.recall.messagesSinceCompaction(pending);
+      const second = namedTranscript([turn(0, answered), boundary(10), summary(10), turn(20, 'typed-in-the-second-stretch'), boundary(40), summary(40)]);
+      // Every message since the previous compaction comes back, which plan-scope-check.mjs prints to its judge; each is tagged.
+      const w = await m.recall.stretchSinceCompaction(written);
+      const p = await m.recall.stretchSinceCompaction(pending);
+      const s2 = await m.recall.stretchSinceCompaction(second);
       const open = (x) => x.filter((y) => y.afterReply).map((y) => y.text).join('|');
-      const file = m.recall.saveRecall(written, w);
-      const block = m.recall.recallBlock(w, file);
+      const where = tmp('sg-recall-');
+      const file = m.recall.saveRecall(written, w.msgs, { dir: where, n: w.n });
+      const block = m.recall.recallBlock(w.msgs, file);
       const filed = file && existsSync(file) ? readFileSync(file, 'utf8') : '';
-      const other = m.recall.saveRecall(pending, p);
+      const again = m.recall.saveRecall(pending, p.msgs, { dir: where, n: p.n });
+      const file2 = m.recall.saveRecall(second, s2.msgs, { dir: where, n: s2.n });
       const order = typed.slice(2).map((t) => block.indexOf(t));
-      return w.length === 13 && p.length === 13 && w[0].text === answered && !w[0].afterReply
-        && open(w) === typed.join('|') && open(p) === typed.join('|')
+      const filedAt = [answered, ...typed].map((t) => filed.indexOf(t));
+      return w.msgs.length === 13 && p.msgs.length === 13 && w.msgs[0].text === answered && !w.msgs[0].afterReply
+        && open(w.msgs) === typed.join('|') && open(p.msgs) === typed.join('|')
+        && w.n === 1 && p.n === 1 && s2.n === 2 && s2.msgs.length === 1
         && !block.includes(answered) && !block.includes(typed[0]) && !block.includes(typed[1])
         && order.every((i, k) => i >= 0 && (k === 0 || i > order[k - 1]))
-        && block.includes('--- 3 of 12') && block.includes('--- 12 of 12') && !block.includes('--- 2 of 12')
-        && /Not printed here: 2 older/.test(block) && !!file && block.includes(file)
-        && basename(file) === `${basename(written, '.jsonl')}.txt` && !!other && other !== file
-        && typed.every((t) => filed.includes(t)) && !filed.includes(answered)
-        && (await m.recall.recallFor(written)) === block;
+        && block.includes('--- 4 of 13') && block.includes('--- 13 of 13') && !block.includes('--- 3 of 13')
+        && /Not printed here: 3 older/.test(block) && !!file && block.includes(file)
+        && basename(file) === 'compaction-1.txt' && again === file && !!file2 && basename(file2) === 'compaction-2.txt'
+        && filedAt.every((i, k) => i >= 0 && (k === 0 || i > filedAt[k - 1])) && filed.includes('--- 1 of 13') && filed.includes('--- 13 of 13')
+        && (await m.recall.recallFor(written, where)) === block;
     },
   },
   {
@@ -754,17 +795,160 @@ const CASES = [
     },
   },
   {
-    name: 'hook-dispatch prints at most ten of the messages after a compaction, with the count of the rest and the file that holds them all, before the tool census',
+    name: 'hook-dispatch prints at most ten of the messages since the previous compaction, with the count of the rest and the file that holds them all, before the tool census; with no scratchpad the file is the older default and nothing is held for it',
     guards: ['dispatch_recall', 'recall_for'],
     run(m, dir) {
       const typed = [...'abcdefghijkl'].map((c) => `typed-${c}-after-the-reply`);
       const f = namedTranscript([turn(0, 'start'), reply(5, 'Done.'), ...typed.map((t, i) => turn(10 + i, t)), tool(30, 'u1', 'Bash', { command: 'ls' }), result(31, 'u1', 'x'), boundary(40), summary(40)]);
       const cwd = tmp('sg-cwd-');
-      const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'SessionStart'], { input: JSON.stringify({ session_id: sid('dr'), source: 'compact', transcript_path: f, cwd }), encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: cwd } });
+      const s = sid('dr');
+      const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'SessionStart'], { input: JSON.stringify({ session_id: s, source: 'compact', transcript_path: f, cwd }), encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: cwd } });
       const out = r.stdout ?? '';
       const file = join(process.env.COMPACT_RECALL_DIR, `${basename(f, '.jsonl')}.txt`);
-      return r.status === 0 && out.includes('Not printed here: 2 older') && out.includes(file) && existsSync(file)
+      return r.status === 0 && out.includes('Not printed here: 3 older') && out.includes(file) && existsSync(file) && !existsSync(join(process.env.RECALL_DUE_DIR, `${s}.json`))
         && out.indexOf(typed[11]) >= 0 && out.indexOf(typed[11]) < out.indexOf('AFTER COMPACTION') && !out.includes(typed[1]) && out.includes(typed[2]);
+    },
+  },
+
+  // ---- the owner's messages are read whole after a compaction, and the compaction is said (LESSONS §416) ----
+  {
+    name: 'a compaction start with a scratchpad files every message of the stretch under it, named for the compaction, and records the compaction: the main thread is then refused everything but a read, the status and TaskStop, without a latch, until Read results covering the whole file have returned after the start',
+    guards: ['recall_scratchpad', 'recall_due_wired', 'recall_due_line', 'recall_gate_wired', 'recall_gate_no_latch', 'compacted_marker_wired'],
+    run(m, dir) {
+      const temp = tmp('sg-tmp-');
+      const env = { TMPDIR: temp };
+      const s = sid('rg');
+      const pad = join(temp, 'claude-0', '-home-user', s, 'scratchpad');
+      mkdirSync(pad, { recursive: true });
+      const typed = [...'abcdefghijkl'].map((c) => `typed-${c}-before-the-compaction`);
+      // The owner's newest message ends with a go-word, so no correction stands and the only hold is the one under test.
+      const w = world(dir, [turn(0, 'start'), ...typed.map((t, i) => turn(1 + i, t)), turn(13, GO), boundary(40), summary(40)]);
+      const send = () => w.call('PreToolUse', { session_id: s, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } }, env);
+      const start = w.call('SessionStart', { session_id: s, source: 'compact' }, env);
+      const file = join(pad, 'recall', 'compaction-1.txt');
+      const filed = existsSync(file) ? readFileSync(file, 'utf8') : '';
+      const total = filed.split('\n').length - 1;
+      const marker = join(process.env.RECALL_DUE_DIR, `${s}.json`);
+      const due = existsSync(marker);
+      const stamped = m.report.readCompacted(s);
+      // The doctrine's own marker is cleared: this case is about the owner's messages.
+      rmSync(join(process.env.DOCTRINE_DUE_DIR, `${s}.json`), { force: true });
+      const held = send();
+      const notLatched = !latched(s);
+      const reading = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: file } }, env);
+      const stamp = w.call('PreToolUse', { session_id: s, tool_name: 'Bash', tool_input: { command: `node "${join(dir, 'report.mjs')}" "Status 10:00 — done"` } }, env);
+      appendFileSync(w.tr, jsonl(fileReads(file, total, [[1, 10]], (k) => later(2 + k))));
+      const partial = send();
+      appendFileSync(w.tr, jsonl(fileReads(file, total, [[11, total - 10]], (k) => later(4 + k))));
+      const after = send();
+      return start.status === 0 && due && total === 28 && ['start', ...typed, GO].every((t) => filed.includes(t))
+        && start.stdout.includes('Not printed here: 4 older') && start.stdout.includes(file) && /OWNER'S MESSAGES DUE/.test(start.stdout)
+        && !!stamped && Math.abs(stamped.at - Date.now()) < 120000 && !stamped.told
+        && held.status === 2 && /RECALL GATE/.test(held.stderr) && held.stderr.includes(file) && notLatched
+        && reading.status === 0 && stamp.status === 0
+        && partial.status === 2 && /RECALL GATE/.test(partial.stderr)
+        && after.status === 0 && !existsSync(marker);
+    },
+  },
+  {
+    name: 'the recall gate holds the main thread to reads after a compaction until Read results covering every line of the filed messages have returned after the marker: part of the file, another file, an earlier read and an error each leave it held; no marker, no file yet, a subagent and TaskStop are not held, and the read removes the marker',
+    guards: ['recall_gate_marker', 'recall_gate_missing', 'recall_gate_whole', 'recall_gate_after', 'recall_gate_clears', 'recall_gate_agent', 'recall_gate_taskstop', 'recall_gate_read_exempt'],
+    run(m) {
+      const s = sid('ru');
+      const where = tmp('sg-recall-');
+      const file = join(where, 'compaction-1.txt');
+      writeFileSync(file, '--- 1 of 2 ---\none\n--- 2 of 2 ---\ntwo\n');
+      const other = join(where, 'other.txt');
+      const marker = join(process.env.RECALL_DUE_DIR, `${s}.json`);
+      const call = (extra = {}, entries = [], opts = {}) => m.dispatch.recallGate({ session_id: s, tool_name: 'Agent', tool_input: {}, ...extra }, entries, { file, classify: (q) => q.tool_name === 'Read', ...opts });
+      const rd = (id, secs, name, totals = { numLines: 4, totalLines: 4 }, isError = false) => [at(tool(0, id, 'Read', { file_path: name }), later(secs)),
+        { ...at(result(0, id, 'x', isError), later(secs + 1)), toolUseResult: { type: 'text', file: { filePath: name, content: 'x', startLine: 1, ...totals } } }];
+      const noMarker = call();
+      const line = m.dispatch.markRecallDue({ session_id: s }, file);
+      const held = call();
+      const fileGone = call({}, [], { file: join(where, 'absent.txt') });
+      const noFile = call({}, [], { file: null });
+      const readCall = call({ tool_name: 'Read', tool_input: { file_path: file } });
+      const agent = call({ agent_id: 'a1' });
+      const stop = call({ tool_name: 'TaskStop' });
+      const partial = call({}, rd('q1', 2, file, { numLines: 2, totalLines: 4 }));
+      const elsewhere = call({}, rd('q2', 2, other));
+      const early = call({}, rd('q3', -60, file));
+      const errored = call({}, rd('q4', 2, file, undefined, true));
+      const stillDue = existsSync(marker);
+      const cleared = call({}, rd('q5', 2, file));
+      const removed = !existsSync(marker);
+      // A file too long for one Read is read in parts: parts that together cover every line clear the gate.
+      m.dispatch.markRecallDue({ session_id: s }, file);
+      const parts = call({}, [...rd('q6', 2, file, { numLines: 2, totalLines: 4 }), ...rd('q7', 4, file, { startLine: 3, numLines: 2, totalLines: 4 })]);
+      const partsRemoved = !existsSync(marker);
+      const held2 = (r) => typeof r === 'string' && /^RECALL GATE/.test(r) && r.includes(file) && /does not latch/.test(r);
+      return noMarker === null && /^OWNER'S MESSAGES DUE/.test(line) && line.includes(file) && line.includes('Read result') && !line.includes('\n')
+        && held2(held) && fileGone === null && noFile === null && readCall === null && agent === null && stop === null
+        && held2(partial) && held2(elsewhere) && held2(early) && held2(errored) && stillDue
+        && cleared === null && removed && parts === null && partsRemoved;
+    },
+  },
+  {
+    name: 'the compaction is said: the marker holds its time, the first status after it prints the time in California time once, the status page carries it under its updated line until a later compaction replaces it, and a session with no marker prints and carries nothing',
+    guards: ['compacted_marker_time', 'compacted_words_time', 'compacted_status_print', 'compacted_status_once', 'compacted_page_line'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      const temp = tmp('sg-tmp-');
+      const s = sid('cn');
+      const pad = join(temp, 'claude-0', '-home-user', s, 'scratchpad');
+      mkdirSync(join(pad, 'status'), { recursive: true });
+      const status = () => spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the compaction test'], { encoding: 'utf8', env: { ...process.env, HOME: home, TMPDIR: temp, CLAUDE_CODE_SESSION_ID: s } }).stdout ?? '';
+      const page = () => { try { return readFileSync(join(pad, 'status', 'fix-run.html'), 'utf8'); } catch { return ''; } };
+      const first = status();
+      const quiet = !first.includes('Compacted at') && !page().includes('Compacted at') && m.report.readCompacted(s) === null;
+      const when = Date.parse('2026-10-20T21:07:00Z');
+      const wrote = m.report.markCompacted(s, when);
+      const got = m.report.readCompacted(s);
+      const words = 'Compacted at 14:07 California time on 2026-10-20.';
+      const said = status();
+      const again = status();
+      const carried = page().includes(`</p>\n<p class="asof">${words}</p>\n<p class="next">`) && page().indexOf('updated ') < page().indexOf(words);
+      m.report.markCompacted(s, Date.parse('2026-10-21T01:30:00Z'));
+      const next = status();
+      return quiet && wrote && !!got && got.at === when && !got.printed && !got.told && m.report.compactedWords(got) === words
+        && said.includes(words) && !again.includes('Compacted at') && carried
+        && next.includes('Compacted at 18:30 California time on 2026-10-20.') && page().includes('Compacted at 18:30 California time on 2026-10-20.');
+    },
+  },
+  {
+    name: 'the first reply after a compaction must open with a line saying so and at what time in California time, read from the marker: a first line without the word, without the time, or with both on a later line is refused once with the words to use; a line that carries both, alone or sharing a stop declaration, passes and the next reply is not held; a follow-up that carries it discharges the marker, and a session with no marker is not held',
+    guards: ['compact_stop_check', 'compact_stop_time', 'compact_stop_word', 'compact_stop_first_line', 'compact_stop_told', 'compact_stop_followup'],
+    run(m, dir) {
+      const when = Date.parse('2026-10-20T21:07:00Z');
+      const say = (s, text, extra = {}) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: s, transcript_path: transcript([turn(0, GO), reply(5, text)]), ...extra }), encoding: 'utf8' });
+      const refusedFor = (r) => r.status === 2 && /LESSONS §416/.test(r.stderr) && r.stderr.includes('Compacted at 14:07 California time on 2026-10-20.');
+      const PLAIN = 'The page lists the open steps.';
+      const s = sid('cs');
+      const unmarked = say(s, PLAIN);
+      m.report.markCompacted(s, when);
+      const bare = say(s, PLAIN);
+      const lateLine = say(s, `${PLAIN}\n\nCompacted at 14:07 California time.`);
+      const noTime = say(s, 'Compacted earlier today.');
+      const noWord = say(s, 'At 14:07 the work went on.');
+      const stillOpen = m.report.readCompacted(s)?.told === false;
+      const ok = say(s, `Compacted at 14:07 California time. ${PLAIN}`);
+      const toldNow = m.report.readCompacted(s)?.told === true;
+      const next = say(s, PLAIN);
+      const s2 = sid('cs');
+      m.report.markCompacted(s2, when);
+      const declared = say(s2, 'Stopping here: open for you is the choice below. Compacted at 14:07 California time.');
+      const s3 = sid('cs');
+      m.report.markCompacted(s3, when);
+      const followed = say(s3, 'Compacted at 14:07 California time.', { stop_hook_active: true });
+      const s4 = sid('cs');
+      m.report.markCompacted(s4, when);
+      const ignored = say(s4, PLAIN, { stop_hook_active: true });
+      return unmarked.status === 0 && refusedFor(bare) && refusedFor(lateLine) && refusedFor(noTime) && refusedFor(noWord) && stillOpen
+        && ok.status === 0 && toldNow && next.status === 0
+        && declared.status === 0 && m.report.readCompacted(s2)?.told === true
+        && followed.status === 0 && m.report.readCompacted(s3)?.told === true
+        && ignored.status === 0 && m.report.readCompacted(s4)?.told === false;
     },
   },
 
@@ -4420,20 +4604,23 @@ const CASES = [
 
   // ---- the manager's written judgement of each hand-back (step 119) ----
   {
-    name: 'the judgement gate sends no step until status/manager.txt holds a line "Judged N:" for the newest hand-back of a step in Order, written after it, and one line for each end of that step: a REFUSED hand-back is judged too, a line for another step judges nothing, a Standing step goes without one, and the refusal names the line to write and does not latch',
-    guards: ['judged_gate_wired', 'judged_gate_no_latch', 'judged_gate_standing', 'judged_state_after', 'judged_state_count', 'judged_state_step', 'judged_notes_parse'],
+    name: 'the judgement gate sends no step until status/manager.txt holds, written after the newest hand-back of a step of the plan, a line "Judged N:" with all five parts for each end of that step and a line "Why M:" with all four parts for each earlier end of the step being sent and one more: a REFUSED hand-back is judged too, a line for another step judges nothing, a line short of a part or with a part under ten characters judges nothing, a Standing step goes without one, a plan with no Order is gated the same way, and each refusal names the line to write and does not latch',
+    guards: ['judged_gate_wired', 'judged_gate_no_latch', 'judged_gate_standing', 'judged_state_after', 'judged_state_count', 'judged_state_step', 'judged_notes_parse', 'judged_parts', 'judged_part_min', 'judged_why_gate', 'judged_why_parts', 'judged_why_count', 'judged_no_order'],
     run(m, dir) {
       const w = world(dir, [], ORDER_PLAN);
       const subs = join(w.tr.slice(0, -'.jsonl'.length), 'subagents');
       mkdirSync(subs, { recursive: true });
       const agent = (id, n, first) => putAgent(subs, w.plan, id, n, -300, -100, first);
-      const send = (n, lines, age = 0) => {
+      const sendTo = (world_, n, pad) => {
         const s = sid('jg');
-        judgedPad(s, lines, age);
-        return { s, r: w.call('PreToolUse', { session_id: s, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step ${n}`, subagent_type: 'general-purpose' } }) };
+        pad(s);
+        return { s, r: world_.call('PreToolUse', { session_id: s, tool_name: 'Agent', tool_input: { prompt: `${world_.plan} step ${n}`, subagent_type: 'general-purpose' } }) };
       };
+      const send = (n, lines, age = 0, whys = MANY_WHYS) => sendTo(w, n, (s) => judgedPad(s, lines, age, whys));
+      const raw = (n, text) => sendTo(w, n, (s) => notesPad(s, text));
       const owed = (x, re) => x.r.status === 2 && /JUDGEMENT GATE/.test(x.r.stderr) && re.test(x.r.stderr) && !latched(x.s);
       const goes = (x) => x.r.status === 0;
+      const manyWhys = Object.entries(MANY_WHYS).map(([n, c]) => Array.from({ length: c }, (_, i) => whyLine(n, i + 1)).join('\n')).join('\n');
       const nothing = send(1, {});
       agent('r1', 1, 'REFUSED');
       const refusedOwed = send(1, {});
@@ -4441,24 +4628,47 @@ const CASES = [
       const otherStep = send(1, { 2: 1 });
       const stale = send(1, { 1: 1 }, 300);
       const standing = send(3, {});
+      // A line short of parts, or with a part under ten characters, judges nothing.
+      const partial = raw(1, `Judged 1: is: it was whole | why: it ended as set up | route: the plan sends next\n${manyWhys}`);
+      const thin = raw(1, `${judgedLine(1).replace('is: the case read hand-back 1', 'is: ok')}\n${manyWhys}`);
+      // The step being sent has a Why line for each earlier end of it and one more.
+      const whyShort = send(1, { 1: 1 }, 0, { 1: 1 });
+      const whyNone = send(1, { 1: 1 }, 0, {});
+      const whyPartial = raw(1, `${judgedLine(1)}\nWhy 1: now: sent again | wrong: nothing\n${whyLine(1)}`);
+      const whyWhole = send(1, { 1: 1 }, 0, { 1: 2 });
       agent('d1', 1, 'DONE');
       const short = send(2, { 1: 1 });
       const whole = send(2, { 1: 2 });
+      // A plan with no Order is gated the same way.
+      const w2 = world(dir, [], STEPS_PLAN);
+      const subs2 = join(w2.tr.slice(0, -'.jsonl'.length), 'subagents');
+      mkdirSync(subs2, { recursive: true });
+      const free = sendTo(w2, 1, (s) => judgedPad(s, {}));
+      const freeWhy = sendTo(w2, 1, (s) => judgedPad(s, {}, 0, {}));
+      putAgent(subs2, w2.plan, 'p1', 1, -300, -100, 'DONE');
+      const freeOwed = sendTo(w2, 2, (s) => judgedPad(s, {}));
+      const freeJudged = sendTo(w2, 2, (s) => judgedPad(s, { 1: 1 }));
       return goes(nothing) && owed(refusedOwed, /"Judged 1:/) && /status\/manager\.txt/.test(refusedOwed.r.stderr) && goes(refusedJudged)
         && owed(otherStep, /no line keyed "Judged 1:"/) && owed(stale, /is not after that end/) && goes(standing)
-        && owed(short, /holds 1 such line for 2 ends of that step/) && goes(whole);
+        && owed(partial, /lack fails, cheapest/) && owed(thin, /lack is /)
+        && owed(whyShort, /holds 1 whole line keyed "Why 1:" of the 2 it needs/) && owed(whyNone, /"Why 1:/) && owed(whyPartial, /lacks .*cheapest/) && goes(whyWhole)
+        && owed(short, /holds 1 such line for 2 ends of that step/) && goes(whole)
+        && goes(free) && owed(freeWhy, /"Why 1:/) && owed(freeOwed, /"Judged 1:/) && goes(freeJudged);
     },
   },
   {
-    name: 'the judgement state is read from the notes and the newest end of a step in Order: judged, owed with no line, short of one line per end, stale after a later write, a step outside Order and a plan with no Order judge nothing, the newest end of any step is the one read, and an unreadable session or notes pad is refused and not passed',
-    guards: ['judged_state_after', 'judged_state_count', 'judged_state_step', 'judged_state_order', 'judged_state_newest', 'judged_state_unread', 'judged_gate_closed', 'judged_gate_not_read', 'judged_gate_subagent', 'judged_notes_parse'],
+    name: 'the judgement state is read from the notes, the plan\'s steps and the newest end of a step: judged, owed with no line, short of one whole line per end, incomplete when a line lacks a part or carries one under ten characters, stale after a later write, a step outside the plan judges nothing, a plan with no Order is judged by its Steps, the step being sent needs a Why line for each earlier end and one more, a Standing step needs none, the newest end of any step is the one read, and an unreadable session or notes pad is refused and not passed',
+    guards: ['judged_state_after', 'judged_state_count', 'judged_state_step', 'judged_state_order', 'judged_state_newest', 'judged_state_unread', 'judged_gate_closed', 'judged_gate_not_read', 'judged_gate_subagent', 'judged_gate_standing', 'judged_notes_parse', 'judged_parts', 'judged_part_min', 'judged_why_gate', 'judged_why_parts', 'judged_why_count', 'judged_no_order'],
     run(m, dir) {
-      const pad = tmp('sg-pad-');
-      mkdirSync(join(pad, 'status'), { recursive: true });
-      writeFileSync(join(pad, 'status', 'manager.txt'), 'Judged 1: it was whole, and the plan sends step 2 next.\n');
+      const padWith = (text) => { const d = tmp('sg-pad-'); mkdirSync(join(d, 'status'), { recursive: true }); writeFileSync(join(d, 'status', 'manager.txt'), `${text}\n`); return d; };
+      const pad = padWith(`${judgedLine(1)}\n${whyLine(2)}`);
+      const partialPad = padWith('Judged 1: is: it was whole | why: it ended as set up | route: the plan sends next');
+      const thinPad = padWith(judgedLine(1).replace('is: the case read hand-back 1', 'is: ok'));
+      const whyPartialPad = padWith(`${judgedLine(1)}\nWhy 2: now: sent again | wrong: nothing`);
       const PL = { path: '/plans/gate-test.md', text: ORDER_PLAN };
+      const FREE = { path: PL.path, text: STEPS_PLAN };
       const endAt = Date.now() - 60000;
-      const st = (ends, o = {}) => m.report.judgedState({ session_id: 'js' }, o.plan ?? PL, { ends, pad: 'pad' in o ? o.pad : pad });
+      const st = (ends, o = {}) => m.report.judgedState({ session_id: 'js' }, o.plan ?? PL, { ends, pad: 'pad' in o ? o.pad : pad, send: o.send });
       const P = { session_id: 'js', tool_name: 'Agent', tool_input: { prompt: `${PL.path} step 2` } };
       const owedState = { kind: 'none', step: 1, endAt, ends: 1, have: 0, notesAt: 0, file: '/pad/status/manager.txt' };
       const refuses = (x, re) => typeof x === 'string' && /^JUDGEMENT GATE/.test(x) && re.test(x);
@@ -4469,19 +4679,31 @@ const CASES = [
         && st([{ step: 4, at: endAt }]).kind === 'not-enforced' && st([{ step: null, at: endAt }]).kind === 'not-enforced'
         && st([{ step: 1, at: endAt - 5000 }, { step: 2, at: endAt }]).kind === 'none'
         && st([{ step: 1, at: endAt }], { pad: null }).kind === 'no-pad'
-        && st(null).kind === 'not-read' && st([{ step: 1, at: endAt }], { plan: { path: PL.path, text: STEPS_PLAN } }).kind === 'not-enforced'
+        && st(null).kind === 'not-read'
+        && st([{ step: 1, at: endAt }], { plan: FREE }).kind === 'judged' && st([{ step: 2, at: endAt }], { plan: FREE }).kind === 'none'
+        && st([{ step: 1, at: endAt }], { plan: { path: PL.path, text: PLAN(OWN_WORDS) } }).kind === 'not-enforced'
         && m.report.judgedState({ session_id: 'js' }, null).kind === 'not-enforced'
+        && st([{ step: 1, at: endAt }], { pad: partialPad }).kind === 'incomplete' && st([{ step: 1, at: endAt }], { pad: partialPad }).missing.join() === 'fails,cheapest'
+        && st([{ step: 1, at: endAt }], { pad: thinPad }).kind === 'incomplete' && st([{ step: 1, at: endAt }], { pad: thinPad }).missing.join() === 'is'
+        && st([{ step: 1, at: endAt }], { send: 2 }).kind === 'judged'
+        && st([{ step: 1, at: endAt }, { step: 2, at: endAt - 1000 }], { send: 2 }).kind === 'why-short'
+        && st([{ step: 1, at: endAt }], { send: 1 }).kind === 'why-none'
+        && st([{ step: 1, at: endAt }], { pad: whyPartialPad, send: 2 }).kind === 'why-incomplete' && st([{ step: 1, at: endAt }], { pad: whyPartialPad, send: 2 }).whyMissing.join() === 'wrong,fails,cheapest'
+        && st([{ step: 1, at: endAt }], { send: 3 }).kind === 'not-enforced'
+        && st([], { send: 2 }).kind === 'judged' && st([], { send: 1 }).kind === 'why-none' && st([]).kind === 'not-enforced'
         && refuses(m.dispatch.judgedGate(P, PL, { kind: 'not-read' }), /cannot be read/) && refuses(m.dispatch.judgedGate(P, PL, null), /could not be read/)
         && refuses(m.dispatch.judgedGate(P, PL, owedState), /Judged 1:/)
+        && refuses(m.dispatch.judgedGate(P, PL, { kind: 'why-none', send: 2, whyHave: 0, whyNeed: 1, file: '/pad/status/manager.txt' }), /"Why 2:/)
+        && refuses(m.dispatch.judgedGate(P, PL, { ...owedState, kind: 'incomplete', partial: 1, missing: ['fails'] }), /lack fails/)
         && m.dispatch.judgedGate(P, PL, { ...owedState, kind: 'judged' }) === null && m.dispatch.judgedGate(P, PL, { ...owedState, kind: 'not-enforced' }) === null
         && m.dispatch.judgedGate({ ...P, agent_id: 'a1' }, PL, owedState) === null && m.dispatch.judgedGate({ ...P, tool_name: 'Bash' }, PL, owedState) === null
         && m.dispatch.judgedGate({ ...P, tool_input: { prompt: 'something else' } }, PL, owedState) === null
         && m.dispatch.judgedGate({ ...P, tool_input: { prompt: `${PL.path} step 3` } }, PL, owedState) === null
-        && m.dispatch.judgedGate(P, { path: PL.path, text: STEPS_PLAN }, owedState) === null;
+        && refuses(m.dispatch.judgedGate(P, FREE, owedState), /Judged 1:/);
     },
   },
   {
-    name: 'every status prints a Judgement line under the Review line, read by the function the judgement gate refuses on: nothing to judge, a hand-back owed its line with the file and the line to write, and a hand-back judged',
+    name: 'every status prints a Judgement line under the Review line, read by the function the judgement gate refuses on: nothing to judge, a hand-back owed its line with the file and the five parts to write, a line short of a part named as such, and a hand-back judged with the step about to go reminded of its own line',
     guards: ['judged_status_print', 'judged_block_text'],
     run(m, dir) {
       const home = tmp('sg-home-');
@@ -4504,13 +4726,16 @@ const CASES = [
       const first = status();
       putAgent(subs, plan, 'a1', 1, -900, -800, 'DONE');
       const owedOut = status();
-      writeFileSync(join(pad, 'status', 'manager.txt'), 'Judged 1: it was whole, and the plan sends step 2 next.\n');
+      writeFileSync(join(pad, 'status', 'manager.txt'), 'Judged 1: is: it was whole | why: it ended as set up | route: the plan sends next\n');
+      const partialOut = status();
+      writeFileSync(join(pad, 'status', 'manager.txt'), `${judgedLine(1)}\n`);
       const judgedOut = status();
       const before = (out, a, b) => out.indexOf(a) >= 0 && out.indexOf(a) < out.indexOf(b);
       return /^Judgement: nothing to judge/m.test(first) && before(first, 'Review:', 'Judgement:')
-        && /^Judgement: OWED\. Step 1's newest hand-back ended .*"Judged 1: <what it showed and what the plan does about it>".*no step is sent until it is there\.$/m.test(owedOut)
+        && /^Judgement: OWED\. Step 1's newest hand-back ended .*"Judged 1: is: <what the hand-back showed> \| why: <why it ended as it did> \| route: .* \| fails: .* \| cheapest: .*".*no step is sent until it is there\.$/m.test(owedOut)
         && owedOut.includes(join(pad, 'status', 'manager.txt')) && before(owedOut, 'Review:', 'Judgement: OWED')
-        && /^Judgement: step 1's newest hand-back \(ended .*\) is judged in /m.test(judgedOut) && judgedOut.includes(join(pad, 'status', 'manager.txt'));
+        && /^Judgement: OWED\..*the newest line held lacks fails, cheapest\)/m.test(partialOut)
+        && /^Judgement: step 1's newest hand-back \(ended .*\) is judged in .*"Why <step>: now: … \| wrong: … \| fails: … \| cheapest: …"/m.test(judgedOut) && judgedOut.includes(join(pad, 'status', 'manager.txt'));
     },
   },
 
@@ -4903,18 +5128,46 @@ const PLANTS = {
   old_sentences: ['    if (old.has(s)) return;\n', '\n', 'keep-info-guard.mjs'],
   all_mode: ["if (x.includes('a')) all = true; ", '', 'keep-info-guard.mjs'],
   segment_pick: ['  const seg = last.some((x) => !x.reply) || segs.length < 2 ? last : segs.at(-2);', '  const seg = last;', 'compact-recall.mjs'],
-  dispatch_recall: ['    if (recall) printed.push(recall);\n', '\n', 'hook-dispatch.mjs'],
-  // The prints after a compaction are bounded: the messages typed after the last reply, the newest ten, the rest counted and filed.
+  dispatch_recall: ['    if (recall.block) printed.push(recall.block);\n', '\n', 'hook-dispatch.mjs'],
+  // The prints after a compaction are bounded: the newest ten of the messages since the previous compaction, the rest counted and every one filed.
   recall_after_reply: ['  for (let i = seg.length - 1; i >= 0; i--) if (seg[i].reply) { lastReply = i; break; }\n', '\n', 'compact-recall.mjs'],
   recall_prefilter: ['const holdsText = line.includes(\'"assistant"\') && line.includes(\'"text"\');', 'const holdsText = false;', 'compact-recall.mjs'],
-  recall_unanswered: ['const unanswered = (msgs) => msgs.filter((m) => m.afterReply !== false);', 'const unanswered = (msgs) => msgs;', 'compact-recall.mjs'],
   recall_cap: ['export const SHOWN = 10;', 'export const SHOWN = 100;', 'compact-recall.mjs'],
-  recall_newest: ['  const shown = open.slice(-SHOWN);', '  const shown = open.slice(0, SHOWN);', 'compact-recall.mjs'],
+  recall_newest: ['  const shown = msgs.slice(-SHOWN);', '  const shown = msgs.slice(0, SHOWN);', 'compact-recall.mjs'],
   recall_rest: ['    + `Not printed here: ${rest} older (the ${shown.length} printed are the newest). `\n', '\n', 'compact-recall.mjs'],
-  recall_file_write: ['    writeFileSync(file, open.map(', '    void (file, open.map(', 'compact-recall.mjs'],
-  recall_file_all: ['writeFileSync(file, open.map(', 'writeFileSync(file, open.slice(-SHOWN).map(', 'compact-recall.mjs'],
-  recall_for: ['  return recallBlock(msgs, saveRecall(path, msgs));', '  return recallBlock(msgs);', 'compact-recall.mjs'],
-  recall_file_name: ["  const name = basename(String(path), '.jsonl')", "  const name = 'session'; String(path)", 'compact-recall.mjs'],
+  recall_file_write: ['    writeFileSync(file, msgs.map(', '    void (file, msgs.map(', 'compact-recall.mjs'],
+  recall_file_all: ['writeFileSync(file, msgs.map(', 'writeFileSync(file, msgs.slice(-SHOWN).map(', 'compact-recall.mjs'],
+  recall_file_answered: ['writeFileSync(file, msgs.map(', 'writeFileSync(file, msgs.filter((m) => m.afterReply !== false).map(', 'compact-recall.mjs'],
+  recall_for: ['  const file = saveRecall(path, msgs, dir ? { dir, n } : {});', "  const file = '';", 'compact-recall.mjs'],
+  recall_file_name: ["`compaction-${Number(opts.n) || 1}.txt`", '`compaction-1.txt`', 'compact-recall.mjs'],
+  recall_number: ['  return { msgs, n: seg === last ? segs.length : segs.length - 1 };', '  return { msgs, n: segs.length };', 'compact-recall.mjs'],
+  // The filed messages are read whole after a compaction (LESSONS §416): where they are written, the marker, the gate and its exits.
+  recall_scratchpad: ["pad ? join(pad, 'recall') : ''", "''", 'hook-dispatch.mjs'],
+  recall_due_wired: ["      try { printed.push(markRecallDue(p, recall.file)); } catch { /* the print above stands; the gate is lost for this start */ }\n", '\n', 'hook-dispatch.mjs'],
+  recall_due_line: ["OWNER'S MESSAGES DUE (Doctrine §0e rule 2): the print above", "OWNER'S WORDS FILED (Doctrine §0e rule 2): the print above", 'hook-dispatch.mjs'],
+  recall_gate_wired: ['      if (recall) return refuse(recall, false);\n', '\n', 'hook-dispatch.mjs'],
+  recall_gate_no_latch: ['if (recall) return refuse(recall, false);', 'if (recall) return refuse(recall);', 'hook-dispatch.mjs'],
+  recall_gate_marker: ["  try { due = JSON.parse(readFileSync(recallDueFile(p), 'utf8')); } catch { return null; }", "  try { due = JSON.parse(readFileSync(recallDueFile(p), 'utf8')); } catch { due = { at: 0 }; }", 'hook-dispatch.mjs'],
+  recall_gate_missing: ['  if (!file || !existsSync(file)) return null;', '  if (!file) return null;', 'hook-dispatch.mjs'],
+  recall_gate_whole: ['if (pageRead(list, Number(due.at) || 0, file)) { rmSync(recallDueFile(p)', 'if (true) { rmSync(recallDueFile(p)', 'hook-dispatch.mjs'],
+  recall_gate_after: ['pageRead(list, Number(due.at) || 0, file)', 'pageRead(list, 0, file)', 'hook-dispatch.mjs'],
+  recall_gate_clears: ['{ rmSync(recallDueFile(p), { force: true }); return null; }', '{ return null; }', 'hook-dispatch.mjs'],
+  recall_gate_agent: ["  if (p.agent_id || p.tool_name === 'TaskStop') return null;\n  let due;\n  try { due = JSON.parse(readFileSync(recallDueFile(p)", "  if (p.tool_name === 'TaskStop') return null;\n  let due;\n  try { due = JSON.parse(readFileSync(recallDueFile(p)", 'hook-dispatch.mjs'],
+  recall_gate_taskstop: ["  if (p.agent_id || p.tool_name === 'TaskStop') return null;\n  let due;\n  try { due = JSON.parse(readFileSync(recallDueFile(p)", "  if (p.agent_id) return null;\n  let due;\n  try { due = JSON.parse(readFileSync(recallDueFile(p)", 'hook-dispatch.mjs'],
+  recall_gate_read_exempt: ['  if (isRead(p, opts.classify)) return null;\n  return `RECALL GATE', '  return `RECALL GATE', 'hook-dispatch.mjs'],
+  // The compaction is said (LESSONS §416): the marker with its time, the first status, the page, and the first reply.
+  compacted_marker_wired: ["    try { markCompacted(String(p.session_id ?? '')); } catch { /* the notice is lost for this start */ }", '    void 0;', 'hook-dispatch.mjs'],
+  compacted_marker_time: ['writeFileSync(f, JSON.stringify({ at, printed: false, told: false }));', 'writeFileSync(f, JSON.stringify({ at: 0, printed: false, told: false }));', 'report.mjs'],
+  compacted_words_time: ['`Compacted at ${californiaTime(d)} California time', '`Compacted at ${d.toISOString().slice(11, 16)} California time', 'report.mjs'],
+  compacted_status_print: ["      console.log(`${compactedWords(compacted)} This session's context was replaced by a summary at that time.`);\n      console.log('');\n", '', 'report.mjs'],
+  compacted_status_once: ['      setCompacted(sid, { printed: true });\n', '', 'report.mjs'],
+  compacted_page_line: ['${st.compacted ? `<p class="asof">', '${false ? `<p class="asof">', 'report.mjs'],
+  compact_stop_check: ['if (compacted && !compacted.told) {', 'if (false && compacted && !compacted.told) {', 'stop-guard.mjs'],
+  compact_stop_time: ['if (/compact/i.test(open) && open.includes(time)) {', 'if (/compact/i.test(open) && true) {', 'stop-guard.mjs'],
+  compact_stop_word: ['if (/compact/i.test(open) && open.includes(time)) {', 'if (open.includes(time)) {', 'stop-guard.mjs'],
+  compact_stop_first_line: ["const open = reply.split('\\n').map((l) => l.trim()).find(Boolean) ?? '';", 'const open = reply;', 'stop-guard.mjs'],
+  compact_stop_told: ['    try { setCompacted(payloadSession, { told: true }); } catch { /* held again at the next stop */ }', '    void 0;', 'stop-guard.mjs'],
+  compact_stop_followup: ['said.includes(californiaTime(new Date(c.at)))) setCompacted(payloadSession, { told: true });', 'said.includes(californiaTime(new Date(c.at)))) void 0;', 'stop-guard.mjs'],
   recall_reply_text: ["    && e.message.content.some((b) => b?.type === 'text' && String(b.text ?? '').trim());", '    && e.message.content.some(() => true);', 'compact-recall.mjs'],
   recall_reply_sidechain: ['e.isSidechain !== true && ', '', 'compact-recall.mjs'],
   plan_tool_record: ['    if (!PLAN_TOOL.test(tool) && !NOT_A_FAILURE.test(out)', '    if (!NOT_A_FAILURE.test(out)', 'reply-guard.mjs'],
@@ -5480,14 +5733,21 @@ const PLANTS = {
   // The manager's written judgement of each hand-back (step 119).
   judged_gate_wired: ['      if (jg) return refuse(jg, false);\n', '\n', 'hook-dispatch.mjs'],
   judged_gate_no_latch: ['if (jg) return refuse(jg, false);', 'if (jg) return refuse(jg);', 'hook-dispatch.mjs'],
-  judged_gate_standing: ['if (n === null || !o || o.standing.includes(n)) return null;', 'if (n === null || !o) return null;', 'hook-dispatch.mjs'],
+  judged_gate_standing: ['if (n === null || !sn || sn.standing.includes(n)) return null;', 'if (n === null || !sn) return null;', 'hook-dispatch.mjs'],
   judged_gate_closed: ["  if (!st) return `${head} the manager's judgement could not be read", "  if (!st) return null; void `${head} the manager's judgement could not be read", 'hook-dispatch.mjs'],
   judged_gate_not_read: ["  if (st.kind === 'not-read') return", '  if (false) return', 'hook-dispatch.mjs'],
   judged_gate_subagent: ['export function judgedGate(p, plan = approvedPlan(), state = undefined) {\n  if (p.agent_id || ', 'export function judgedGate(p, plan = approvedPlan(), state = undefined) {\n  if (false || ', 'hook-dispatch.mjs'],
-  judged_state_after: ["  if (have >= ends && notesAt > newest.at) return { ...st, kind: 'judged' };", "  if (have >= ends) return { ...st, kind: 'judged' };", 'report.mjs'],
-  judged_state_count: ['  if (have >= ends && notesAt > newest.at) return', '  if (have >= 1 && notesAt > newest.at) return', 'report.mjs'],
-  judged_state_step: ['    have = (managerNotes(pad).judged.get(newest.step) ?? []).length;', '    have = [...managerNotes(pad).judged.values()].flat().length;', 'report.mjs'],
-  judged_state_order: ['    if (e.step === null || !o.order.includes(e.step)) continue;\n    if (!newest', '    if (e.step === null) continue;\n    if (!newest', 'report.mjs'],
+  judged_state_after: ["    if (!(notesAt > newest.at)) return { ...st, kind: 'stale' };\n", '', 'report.mjs'],
+  judged_state_count: ['    if (st.have < st.ends) return', '    if (st.have < 1) return', 'report.mjs'],
+  judged_state_step: ['const lines = notes?.judged.get(newest.step) ?? [];', 'const lines = [...(notes?.judged.values() ?? [])].flat();', 'report.mjs'],
+  judged_state_order: ['    if (e.step === null || !sn.order.includes(e.step)) continue;\n    if (!newest', '    if (e.step === null) continue;\n    if (!newest', 'report.mjs'],
+  // The five parts of a Judged line, the four of a Why line, the length of a part, the count of Why lines, and a plan with no Order (LESSONS §417).
+  judged_parts: ['have: lines.length - short.length, partial: short.length,', 'have: lines.length, partial: short.length,', 'report.mjs'],
+  judged_part_min: ['export const PART_MIN = 10;', 'export const PART_MIN = 0;', 'report.mjs'],
+  judged_why_gate: ['  if (send !== null) {\n    const lines = notes.whys.get(send) ?? [];', '  if (false) {\n    const lines = notes.whys.get(send) ?? [];', 'report.mjs'],
+  judged_why_parts: ['whyHave: lines.length - short.length,', 'whyHave: lines.length,', 'report.mjs'],
+  judged_why_count: ['const need = read.ends.filter((e) => e.step === send).length + 1;', 'const need = 1;', 'report.mjs'],
+  judged_no_order: ["  return { order: [...new Set([...planSection(text, 'Steps').matchAll(/^(\\d+)\\.\\s/gm)].map((m) => Number(m[1])))], standing: [] };", '  return { order: [], standing: [] };', 'report.mjs'],
   judged_state_newest: ['    if (!newest || e.at > newest.at) newest = e;', '    if (!newest || e.at < newest.at) newest = e;', 'report.mjs'],
   judged_state_unread: ["  if (!read?.ends) return { ...base, kind: 'not-read' };", '  if (!read?.ends) return base;', 'report.mjs'],
   judged_notes_parse: ['    else if ((m = /^Judged\\s+(\\d+)\\s*:\\s*(\\S.*)$/i.exec(l))) out.judged.set(', '    else if (false) out.judged.set(', 'report.mjs'],
