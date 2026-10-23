@@ -512,7 +512,11 @@ Every item below has actually happened.
  `stop-guard.mjs` refuses a stop while N is not none, which replaces the count
  of `## Steps` above for a plan that has an Order. The status also prints each
  new hand-back, its report file's path and every `Found:` line that is new or
- unsorted, and writes the status page's source from the same read.
+ unsorted, and writes the status page's source from the same read. The Standing
+ line holds the review and a route check and gains no step after approval, and a
+ step number that was not in the plan at approval is refused with a refusal that
+ says the step needs the owner's button and sets no latch (`approvalSetProblem`
+ in `hook-dispatch.mjs`, from the lists the marker records).
  (Doctrine §0e rules 2 and 13.)
 - **A PLAN WITH AN ORDER HAS A REVIEW STEP, AND A FRESH AGENT CLEARS EVERY MOVE
  BEFORE IT GOES.** Its `Standing:` line names a step that tells its agent to

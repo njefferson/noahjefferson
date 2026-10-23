@@ -60,6 +60,12 @@
  * accepted by `workflowGate` behind a constant that is off, with the script's hash in
  * the approval marker; a latched agent's own report write; and the rules read first
  * (`rulesFirst` in plan-fence.mjs).
+ * And the step numbers a plan held at approval (Doctrine §0e rules 2 and 13): the marker's
+ * `steps` and `standing` lists written by the tool's approval and by the owner's exit in the
+ * app and kept as they were through every amendment (`approvedStepSet`), read back by
+ * `approvedPlan`, and the dispatch gate and the review gate holding a send to them
+ * (`approvalSetProblem`): a step added after approval needs the owner's button, the Standing
+ * line holds the review and a route check and gains no step, and neither refusal latches.
  * The whole suite runs under an empty home, so no real approval marker is read.
  *
  * In --plants mode a guard name a case cites with no plant behind it is a
@@ -3292,6 +3298,165 @@ const CASES = [
         && lifts(2, clear, {}, null) === false;
     },
   },
+
+  // ---- the step numbers the plan held at approval (approved-plan-guard.mjs, hook-dispatch.mjs; Doctrine §0e rules 2 and 13) ----
+  {
+    name: 'at approval the marker records the step numbers of the plan\'s Steps and those on its Standing line, by the tool\'s approval and by the owner\'s exit in the app; an amendment of a step\'s text, of the Order, and one that adds a step and puts it on the Standing line all keep the approval, move the hash, and leave the recorded numbers as they were',
+    guards: ['approved_step_set', 'approval_steps_snapshot', 'approval_steps_mark', 'approval_steps_exit', 'approval_steps_amend_keep'],
+    run(m, dir) {
+      const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const text = scopedPlan(dir);
+      const seen = m.report.approvedStepSet(text);
+      // The tool's approval records the lists beside the plan's hash.
+      const A = appHome(dir);
+      writeFileSync(A.plan, text);
+      const trA = transcript([turn(0, 'start')]);
+      A.guard(trA, { hook_event_name: 'PostToolUse', tool_name: 'ExitPlanMode', tool_response: { plan: text, isAgent: false, filePath: A.plan } }, '--mark');
+      const mkA = A.mk();
+      // The owner's exit in the app records them too.
+      const B = appHome(dir);
+      writeFileSync(B.plan, text);
+      const hourAgo = (Date.now() - 60 * 60 * 1000) / 1000;
+      utimesSync(B.plan, hourAgo, hourAgo);
+      const ub = uid();
+      const trB = transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, B.plan, ub)]);
+      B.guard(trB, { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
+      const mkB = B.mk();
+      // Four amendments in a row, each let through before it is written and carried after: a step's text, the Order, the
+      // Standing line, and a new step. None of them moves what was recorded.
+      const edit = (input, flag) => A.guard(trA, { tool_name: 'Edit', tool_input: { file_path: A.plan, ...input }, ...(flag ? { hook_event_name: 'PostToolUse' } : {}) }, flag);
+      const E1 = { old_string: '1. **Build.** Make the thing.', new_string: '1. **Build.** Make the thing, and say what it did.' };
+      const E2 = { old_string: 'Order: 1 2', new_string: 'Order: 2 1' };
+      const E3 = { old_string: 'Standing: 3', new_string: 'Standing: 3 4' };
+      const E4 = { old_string: 'for the move named on the status page.', new_string: 'for the move named on the status page.\n4. **Extra.** Never sent.' };
+      let cur = text;
+      const pre = [];
+      for (const e of [E1, E2, E3, E4]) {
+        pre.push(edit(e).status);
+        cur = cur.replace(e.old_string, e.new_string);
+        writeFileSync(A.plan, cur);
+        edit(e, '--amend');
+      }
+      const after = A.mk();
+      return eq(seen.steps, [1, 2, 3]) && eq(seen.standing, [3])
+        && eq(mkA?.steps, seen.steps) && eq(mkA?.standing, seen.standing)
+        && mkB?.appExit === ub && eq(mkB?.steps, seen.steps) && eq(mkB?.standing, seen.standing)
+        && eq(pre, [0, 0, 0, 0]) && cur !== text && after?.hash === sha256(cur) && after?.amendments === 4
+        && eq(after?.steps, seen.steps) && eq(after?.standing, seen.standing);
+    },
+  },
+  {
+    name: 'hook-dispatch reads the recorded lists out of the marker: a marker that holds them gives them back, one written before they were recorded gives null for each, and a list that is not whole numbers gives an empty one that no step is in',
+    guards: ['approved_plan_lists'],
+    run(m, dir) {
+      const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const text = reviewPlan(dir);
+      const w = world(dir, [turn(0, GO)], text);
+      const marker = join(w.home, '.claude', 'APPROVED-PLAN.json');
+      const readWith = (lists) => {
+        writeFileSync(marker, JSON.stringify({ plan: w.plan, hash: sha256(text), ...lists }));
+        const prior = process.env.HOME;
+        process.env.HOME = w.home;
+        try { return m.dispatch.approvedPlan(); } finally { process.env.HOME = prior; }
+      };
+      const held = readWith({ steps: [1, 2, 3], standing: [3] });
+      const old = readWith({});
+      const bad = readWith({ steps: 'all', standing: [3, 'x'] });
+      return eq(held?.steps, [1, 2, 3]) && eq(held?.standing, [3])
+        && old?.steps === null && old?.standing === null
+        && eq(bad?.steps, []) && eq(bad?.standing, []);
+    },
+  },
+  {
+    name: 'the dispatch gate refuses a step that was not in the plan\'s Steps at approval, saying it needs the owner\'s button and carrying the mark that sets no latch; a recorded step, an edit of a recorded step\'s text, an edit of the Order of the recorded steps and a marker that recorded no lists pass as before, and a recorded Standing step that is not a review or a route check is refused only where the lists were recorded',
+    guards: ['approval_set_steps', 'approval_set_no_latch', 'approval_set_dispatch_wired', 'approval_set_recorded_only'],
+    run(m, dir) {
+      const base = scopedPlan(dir);
+      const withStep = (t, line) => t.replace('for the move named on the status page.', `for the move named on the status page.\n${line}`).replace('Served by: steps 1, 2 and 3 serve goal 1.', 'Served by: steps 1, 2, 3 and 4 serve goal 1.');
+      const added = withStep(base, '4. **Extra.** Never sent.');
+      const textEdit = base.replace('1. **Build.** Make the thing.', '1. **Build.** Make the thing, and say what it did.');
+      const orderEdit = base.replace('Order: 1 2', 'Order: 2 1');
+      const plan = (text, extra = {}) => ({ path: '/plans/gate-test.md', text, steps: [1, 2, 3], standing: [3], ...extra });
+      const gate = (n, pl) => m.dispatch.dispatchGate({ tool_name: 'Agent', tool_input: { prompt: `/plans/gate-test.md step ${n}` } }, pl, null);
+      const none = { steps: null, standing: null };
+      const bad = gate(4, plan(added));
+      // The instrument: every edit changes the text, so a pass for one is a pass for an edit that was made.
+      const changed = [added, textEdit, orderEdit].every((t) => t !== base);
+      // A plan with a plain Standing step and no review: judged as before with no lists, refused with them.
+      const timer = (extra) => gate(3, { path: '/plans/gate-test.md', text: ORDER_PLAN, ...extra });
+      return changed
+        && typeof bad === 'string' && /^DISPATCH GATE/.test(bad) && /STEP NOT IN THE PLAN AT APPROVAL/.test(bad) && /owner's button/.test(bad)
+        && /step 4 was not in the plan's Steps/.test(bad) && /were 1, 2, 3\)/.test(bad) && bad.includes(m.dispatch.FENCE_NO_LATCH)
+        && gate(1, plan(base)) === null && gate(1, plan(textEdit)) === null && gate(2, plan(orderEdit)) === null
+        && gate(4, plan(added, none)) === null
+        && typeof gate(1, plan(base, { steps: [] })) === 'string' && typeof gate(1, plan(base, { steps: [2, 3] })) === 'string'
+        && timer(none) === null && typeof timer({ steps: [1, 2, 3], standing: [3] }) === 'string';
+    },
+  },
+  {
+    name: 'the Standing line holds the review and a route check and gains no step after approval: a step put on it after the approval, whether it was in the Steps then or was added, is refused by the review gate and by the dispatch gate with the rule\'s name and no latch; a Standing step recorded at approval that is neither the review nor a route check named in its own first line is refused, and the review step and a route check recorded at approval pass',
+    guards: ['approval_set_standing_new', 'approval_set_standing_kind', 'approval_set_first_line', 'approval_set_route_check', 'approval_set_review_gate', 'approval_set_dispatch_wired'],
+    run(m, dir) {
+      const base = scopedPlan(dir);
+      const withStep = (t, line) => t.replace('for the move named on the status page.', `for the move named on the status page.\n${line}`).replace('Served by: steps 1, 2 and 3 serve goal 1.', 'Served by: steps 1, 2, 3 and 4 serve goal 1.').replace('Standing: 3', 'Standing: 3 4');
+      const moved = base.replace('Standing: 3', 'Standing: 2 3');
+      const added = withStep(base, '4. **Extra.** Never sent.');
+      const late = withStep(base, '4. **Extra.** Never sent.\n   - A route check is named only on this second line.');
+      const route = withStep(base, '4. **Standing: route check.** Read the route of the next move.');
+      const changed = [moved, added, late, route].every((t) => t !== base);
+      const lists = (steps, standing) => ({ steps, standing });
+      const plan = (text, l) => ({ path: '/plans/gate-test.md', text, ...l });
+      const call = (n) => ({ tool_name: 'Agent', tool_input: { prompt: `/plans/gate-test.md step ${n}` } });
+      const missing = { kind: 'missing', reviewers: [3], step: null, first: '', review: null, cleared: null };
+      const review = (n, pl) => m.dispatch.reviewGate(call(n), pl, missing);
+      const dispatch = (n, pl) => m.dispatch.dispatchGate(call(n), pl, null);
+      const says = (r, ...re) => typeof r === 'string' && re.every((x) => x.test(r));
+      const RULE = /THE STANDING LINE HOLDS THE REVIEW AND A ROUTE CHECK AND GAINS NO STEP AFTER APPROVAL/;
+      const MARK = new RegExp(m.dispatch.FENCE_NO_LATCH.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      const old = lists([1, 2, 3], [3]);
+      const wide = lists([1, 2, 3, 4], [3, 4]);
+      return changed
+        // Put on the line after approval: a step that was in the Steps, and a step that was added.
+        && says(review(2, plan(moved, old)), /^REVIEW GATE/, RULE, /step 2 is on the plan's Standing line now/, /does not latch/)
+        && says(dispatch(2, plan(moved, old)), /^DISPATCH GATE/, RULE, /step 2 is on the plan's Standing line now/, MARK)
+        && says(review(4, plan(added, old)), RULE, /step 4 is on the plan's Standing line now/)
+        && says(dispatch(4, plan(added, old)), RULE, /step 4 is on the plan's Standing line now/, MARK)
+        // Recorded on the line at approval, and neither the review nor a route check named in its first line.
+        && says(review(4, plan(added, wide)), RULE, /neither the review step/)
+        && says(dispatch(4, plan(added, wide)), RULE, /neither the review step/, MARK)
+        && says(review(4, plan(late, wide)), RULE, /neither the review step/) && says(dispatch(4, plan(late, wide)), RULE, /neither the review step/, MARK)
+        // The review step and a route check recorded at approval go.
+        && review(3, plan(base, old)) === null && dispatch(3, plan(base, old)) === null
+        && review(4, plan(route, wide)) === null && dispatch(4, plan(route, wide)) === null
+        // A marker that recorded no lists is judged as before: a Standing step goes.
+        && review(2, plan(moved, lists(null, null))) === null;
+    },
+  },
+  {
+    name: 'through hook-dispatch, with a marker that recorded the plan\'s step numbers, a step added after approval and a step put on the Standing line after it are refused without a latch, the first saying the step needs the owner\'s button and the second naming the Standing rule; the recorded review step goes, and a marker that recorded no lists holds neither',
+    guards: ['approved_plan_lists', 'approval_set_dispatch_wired', 'approval_set_no_latch', 'approval_set_steps', 'approval_set_standing_new'],
+    run(m, dir) {
+      const base = scopedPlan(dir);
+      const added = base.replace('for the move named on the status page.', 'for the move named on the status page.\n4. **Extra.** Never sent.').replace('Served by: steps 1, 2 and 3 serve goal 1.', 'Served by: steps 1, 2, 3 and 4 serve goal 1.');
+      const moved = base.replace('Standing: 3', 'Standing: 2 3');
+      const mk = (text, lists) => {
+        const w = world(dir, [turn(0, GO)], text);
+        writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha256(text), at: new Date().toISOString(), ...lists }));
+        return w;
+      };
+      const send = (w, n) => { const id = sid('as'); return { r: w.call('PreToolUse', { session_id: id, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step ${n}`, subagent_type: 'general-purpose' } }), id }; };
+      const lists = { steps: [1, 2, 3], standing: [3] };
+      const newStep = send(mk(added, lists), 4);
+      const onLine = send(mk(moved, lists), 2);
+      const reviewStep = send(mk(base, lists), 3);
+      const noLists = send(mk(added, {}), 4);
+      return added !== base && moved !== base
+        && newStep.r.status === 2 && /STEP NOT IN THE PLAN AT APPROVAL/.test(newStep.r.stderr) && /owner's button/.test(newStep.r.stderr) && !latched(newStep.id)
+        && onLine.r.status === 2 && /THE STANDING LINE HOLDS THE REVIEW AND A ROUTE CHECK/.test(onLine.r.stderr) && !latched(onLine.id)
+        && reviewStep.r.status === 0
+        && noLists.r.status === 2 && /REVIEW GATE/.test(noLists.r.stderr) && !/STEP NOT IN THE PLAN AT APPROVAL/.test(noLists.r.stderr);
+    },
+  },
   {
     name: 'the owner\'s holds are read from the transcript: a message carrying the whole word stop ANYWHERE in it, first, second or last, and no go-word stands until a later message ends with a go-word; a message carrying the word and a go-word is no stop and lifts one; a plain message, a harness message and a stop said again do not lift it, "stopped" and "unstoppable" are not the word, and a correction is the newest message when it does not end with a go-word, with the time it was typed',
     guards: ['stop_anywhere', 'stop_whole_word', 'stop_go_message', 'stop_plain_lift', 'stop_older_go', 'stop_newest', 'hold_typed'],
@@ -5828,7 +5993,23 @@ const PLANTS = {
   review_gate_wired: ['      if (rv) return refuse(rv, false);\n', '\n', 'hook-dispatch.mjs'],
   review_gate_no_latch: ['      if (rv) return refuse(rv, false);', '      if (rv) return refuse(rv);', 'hook-dispatch.mjs'],
   dispatch_review_no_pointer: ['  if (aimReviewSteps(plan.text).length) ptr = null;\n  else if (ptr === undefined)', '  if (ptr === undefined)', 'hook-dispatch.mjs'],
-  review_gate_standing: ['o.standing.includes(n) || !aimReviewSteps(plan.text).length) return null;', '!aimReviewSteps(plan.text).length) return null;', 'hook-dispatch.mjs'],
+  review_gate_standing: ['  if (o.standing.includes(n)) {\n    const unread = approvalSetProblem(plan, n);', '  if (false) {\n    const unread = approvalSetProblem(plan, n);', 'hook-dispatch.mjs'],
+  // The step numbers the plan held at approval (approved-plan-guard.mjs, hook-dispatch.mjs, report.mjs).
+  approved_step_set: ['  return { steps, standing: planOrder(text)?.standing ?? [] };', '  return { steps, standing: [] };', 'report.mjs'],
+  approval_steps_snapshot: ['script: scriptHashOf(text), ...approvedStepSet(text) };', 'script: scriptHashOf(text) };', 'approved-plan-guard.mjs'],
+  approval_steps_mark: ['    steps: snap.steps, standing: snap.standing,\n    via:', '    via:', 'approved-plan-guard.mjs'],
+  approval_steps_exit: ['      steps: snap.steps, standing: snap.standing,\n      via:', '      via:', 'approved-plan-guard.mjs'],
+  approval_steps_amend_keep: ['{ ...mk, hash: snap.hash, scope: snap.scope, amendedAt:', '{ ...mk, hash: snap.hash, scope: snap.scope, steps: snap.steps, standing: snap.standing, amendedAt:', 'approved-plan-guard.mjs'],
+  approved_plan_lists: ['steps: recorded(mk.steps), standing: recorded(mk.standing) };', 'steps: null, standing: null };', 'hook-dispatch.mjs'],
+  approval_set_steps: ['  if (Array.isArray(plan.steps) && !plan.steps.includes(n)) {', '  if (false) {', 'hook-dispatch.mjs'],
+  approval_set_no_latch: ['${unread} ${FENCE_NO_LATCH} this refusal sets no latch', '${unread} this refusal sets no latch', 'hook-dispatch.mjs'],
+  approval_set_dispatch_wired: ['  const unread = approvalSetProblem(plan, n);\n  if (unread) return refusal(', '  const unread = null;\n  if (unread) return refusal(', 'hook-dispatch.mjs'],
+  approval_set_recorded_only: ['  if (Array.isArray(plan.standing) && (planOrder(plan.text)?.standing ?? []).includes(n)) {', '  if ((planOrder(plan.text)?.standing ?? []).includes(n)) {', 'hook-dispatch.mjs'],
+  approval_set_standing_new: ['    if (!plan.standing.includes(n)) {', '    if (false) {', 'hook-dispatch.mjs'],
+  approval_set_standing_kind: ['    if (!aimReviewSteps(plan.text).includes(n) && !ROUTE_CHECK.test(first)) {', '    if (false) {', 'hook-dispatch.mjs'],
+  approval_set_first_line: ["    const first = String(stepBody(plan.text, n)).split('\\n')[0] ?? '';", '    const first = String(stepBody(plan.text, n));', 'hook-dispatch.mjs'],
+  approval_set_route_check: ['!aimReviewSteps(plan.text).includes(n) && !ROUTE_CHECK.test(first)) {', '!aimReviewSteps(plan.text).includes(n)) {', 'hook-dispatch.mjs'],
+  approval_set_review_gate: ['  if (o.standing.includes(n)) {\n    const unread = approvalSetProblem(plan, n);\n    return unread ?', '  if (o.standing.includes(n)) {\n    const unread = null;\n    return unread ?', 'hook-dispatch.mjs'],
   review_gate_cleared: ["if (st.kind === 'cleared' && st.cleared === n) return null;", "if (st.kind === 'cleared') return null;", 'hook-dispatch.mjs'],
   review_gate_error: ["if (!st) st = { kind: 'error',", "if (!st) return null; if (false) st = { kind: 'error',", 'hook-dispatch.mjs'],
   review_gate_not_read: ["if (st.kind === 'not-enforced') return null;", "if (st.kind === 'not-enforced' || st.kind === 'not-read') return null;", 'hook-dispatch.mjs'],

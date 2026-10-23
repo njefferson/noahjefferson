@@ -1352,6 +1352,22 @@ export function stepNumbers(text) {
   return { order: [...new Set([...planSection(text, 'Steps').matchAll(/^(\d+)\.\s/gm)].map((m) => Number(m[1])))], standing: [] };
 }
 
+/**
+ * The step numbers a plan holds, as the approval records them.
+ * @param {string} text  the plan at the moment of approval.
+ * @returns {{steps: number[], standing: number[]}} `steps`: each number that opens a line of the
+ *   `## Steps` section (each `N.`), in plan order and without repeats; `standing`: the numbers on the
+ *   `Standing:` line under `## Order` (`planOrder`), in the order written, [] when the plan has no
+ *   Order. THE ONE READING of what a plan held when it was approved: approved-plan-guard.mjs writes
+ *   both lists into the marker at approval and an amendment never moves them, and the dispatch gate
+ *   and the review gate (`approvalSetProblem` in hook-dispatch.mjs) hold a send to them, so a step
+ *   added to the Steps, or put on the Standing line, after the approval is not a step that was read.
+ */
+export function approvedStepSet(text) {
+  const steps = [...new Set([...planSection(text, 'Steps').matchAll(/^(\d+)\.\s/gm)].map((m) => Number(m[1])))];
+  return { steps, standing: planOrder(text)?.standing ?? [] };
+}
+
 /** The parts of a `Judged N:` line, in the order the manager writes them (Doctrine §0e rule 2). */
 export const JUDGED_PARTS = ['is', 'why', 'route', 'fails', 'cheapest'];
 /** The parts of a `Why N:` line: the reasons for the step about to go. */

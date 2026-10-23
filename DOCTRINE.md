@@ -240,7 +240,12 @@ every rule below while none of the hooks that enforce them was running
    is sent. The status prints one `Review:` line under the pointer, read by the
    same function (`reviewState` in `report.mjs`), so the gate and the status
    cannot disagree. The pointer still names N, and it still decides when the
-   plan has run to its end; the review decides which step goes.
+   plan has run to its end; the review decides which step goes. The Standing
+   line holds the review and a route check and gains no step after approval:
+   the marker records its numbers at approval, and `reviewGate` and the dispatch
+   gate refuse a Standing step that was not on it then, or that is neither the
+   review nor a route check named in its own first line, with a refusal that
+   does not latch.
    **The state of the work is one page, and the manager's part of it is kept
    where a status cannot rewrite it.** The status page's source,
    `status/fix-run.html` in the session scratchpad, is written whole at every
@@ -428,7 +433,11 @@ every rule below while none of the hooks that enforce them was running
     type, because a custom type carries instructions of its own; and it refuses
     every workflow, so no script of the session's carries instructions the
     owner has not read. The plan counts only while its hash matches the one
-    recorded at approval: a plan edited after approval grants nothing.
+    recorded at approval: a plan edited after approval grants nothing. A step
+    number that was not in the plan's Steps at approval, which the marker
+    records, is refused with a refusal that says the step needs the owner's
+    button and sets no latch, while an edit of a recorded step's text or of the
+    Order of the recorded steps keeps the approval.
     `node ~/.claude/hub/hook-dispatch.mjs --can <tool> <path or command line>`
     prints whether the manager fence and the latch would pass that call on the
     main thread now, and why, and changes nothing; the fence passes it as it

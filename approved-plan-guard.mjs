@@ -83,6 +83,16 @@
  *   nothing, and a Workflow call is held to the one the owner read
  *   (`workflowGate` in hook-dispatch.mjs).
  *
+ *   THE MARKER ALSO HOLDS THE STEP NUMBERS THE PLAN HAD WHEN IT WAS APPROVED (`steps`:
+ *   those of its `## Steps` section, `standing`: those on its `Standing:` line,
+ *   `approvedStepSet` in report.mjs), by the tool and from the owner's exit in the app
+ *   alike. An amendment keeps both exactly as approved, so an edit of a step's text or of
+ *   the Order of the approved steps keeps the approval and changes nothing recorded, while
+ *   a step added after approval, or put on the Standing line after it, is not in the
+ *   recorded set and `approvalSetProblem` in hook-dispatch.mjs refuses to send it: it
+ *   needs the owner's button. A marker written before this was recorded holds neither
+ *   list and carries no such check.
+ *
  *   THE STEPS FILE (`writeStepsFile`). Wherever the marker names a plan or moves its
  *   hash (approval by the tool, the owner's exit in the app, an amendment), this also
  *   writes `<plan>.steps.md` beside the plan, holding only the plan's Rules, Steps and
@@ -104,7 +114,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { tailEntries, isOwnerMessage } from './transcript-tail.mjs';
-import { californiaTime, scopeHashes, scopeChanged, SCOPE_SECTIONS, scriptHashOf, stepsFilePath, stepsFileText } from './report.mjs';
+import { californiaTime, scopeHashes, scopeChanged, SCOPE_SECTIONS, scriptHashOf, stepsFilePath, stepsFileText, approvedStepSet } from './report.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MARKER = join(homedir(), '.claude', 'APPROVED-PLAN.json');
@@ -115,21 +125,24 @@ const RULE = 'PLAN MODE ONLY, AND TALK DURING THE WORK (Doctrine §0e): nothing 
 const hashOf = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
 
 /**
- * The marker's three records of a plan file, from ONE read.
+ * The marker's records of a plan file, from ONE read.
  * @param {string} p  the plan file.
- * @returns {{hash: string, scope: Record<string, string>, script: string}} the sha256 of
- *   the file, the hashes of its approved scope (`scopeHashes`: Goals, Asked, Files,
- *   Commands) and the hash of its script (`scriptHashOf`, '' when it has none). The
- *   marker holds all three at approval: the whole-file hash is what every other gate
- *   compares, the scope is what an amendment of the Steps or the Order is allowed to
- *   keep unchanged, and the script's hash is what a Workflow call is held to
- *   (`workflowGate`). An amendment moves the first two and never the third, so a
- *   script edited after approval matches nothing.
+ * @returns {{hash: string, scope: Record<string, string>, script: string, steps: number[], standing: number[]}}
+ *   the sha256 of the file, the hashes of its approved scope (`scopeHashes`: Goals, Asked, Files,
+ *   Commands), the hash of its script (`scriptHashOf`, '' when it has none), and the step
+ *   numbers it holds now (`approvedStepSet`): those of its Steps section and those on its
+ *   Standing line. The marker holds all of them at approval: the whole-file hash is what every
+ *   other gate compares, the scope is what an amendment of the Steps or the Order is allowed to
+ *   keep unchanged, the script's hash is what a Workflow call is held to (`workflowGate`), and
+ *   the two lists of numbers are what a send is held to (`approvalSetProblem` in
+ *   hook-dispatch.mjs). An amendment moves the hash and the scope and never the rest, so a
+ *   script edited after approval matches nothing and a step added after it is not one that
+ *   was approved.
  */
 const snapshotOf = (p) => {
   const bytes = readFileSync(p);
   const text = bytes.toString('utf8');
-  return { hash: createHash('sha256').update(bytes).digest('hex'), scope: scopeHashes(text), script: scriptHashOf(text) };
+  return { hash: createHash('sha256').update(bytes).digest('hex'), scope: scopeHashes(text), script: scriptHashOf(text), ...approvedStepSet(text) };
 };
 
 /**
@@ -325,6 +338,7 @@ function recordAppExit(p) {
     const snap = snapshotOf(x.plan);
     writeFileSync(MARKER, JSON.stringify({
       plan: x.plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), session: p.session_id ?? null,
+      steps: snap.steps, standing: snap.standing,
       via: `the owner's exit from plan mode in the app: entry ${x.uuid} at ${new Date(x.at).toISOString()}`, planMatchesFile: null, appExit: x.uuid,
     }, null, 1));
     writeStepsFile(x.plan);
@@ -406,6 +420,7 @@ if (process.argv.includes('--mark')) {
   mkdirSync(dirname(MARKER), { recursive: true });
   writeFileSync(MARKER, JSON.stringify({
     plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), session: p.session_id ?? null,
+    steps: snap.steps, standing: snap.standing,
     via: `ExitPlanMode approval: result ${fromObject ? 'filePath' : 'text'}`, planMatchesFile,
   }, null, 1));
   writeStepsFile(plan);

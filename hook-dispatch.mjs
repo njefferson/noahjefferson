@@ -64,7 +64,11 @@
  * when the newest review hand-back began after the newest end of an agent for a
  * step in Order, after the plan's last write and, under a correction, after the
  * owner's newest message, and reads ON-AIM ROUTE-CLEAR naming that step as next;
- * the verdict is read from the reviewer's own transcript, Doctrine §0e rule 2);
+ * the verdict is read from the reviewer's own transcript, Doctrine §0e rule 2; a
+ * Standing step passes it only when the approval recorded it on the Standing line and it is
+ * the review or a route check named in its own first line, and a step the plan did not hold
+ * at approval is not sent at all: `approvalSetProblem`, asked by this gate and by the dispatch
+ * gate, whose refusals set no latch);
  * the rules gate (main thread only, `rulesGate`: where a plan's Rules line points
  * at the hub's agent-rules.md and pins a version, no step is sent while the file's
  * version is another, Doctrine §0e rule 13); the reads gate (main thread only,
@@ -130,7 +134,7 @@ import { createHash } from 'node:crypto';
 import { recallParts } from './compact-recall.mjs';
 import { tailEntries, isOwnerMessage, textOf } from './transcript-tail.mjs';
 import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
-  planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, judgedState, stepNumbers, markCompacted, sessionFiles, JUDGED_PARTS, WHY_PARTS } from './report.mjs';
+  planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, judgedState, stepNumbers, stepBody, markCompacted, sessionFiles, JUDGED_PARTS, WHY_PARTS } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
 import { HARNESS_TAG } from './pending-guard.mjs';
@@ -285,13 +289,16 @@ export function isManagerNotes(path, sid) {
 
 /**
  * The plan the owner approved, as the approval marker names it.
- * @returns {{path: string, text: string, scriptHash: string|null} | null} the plan
- *   file and its text, with the hash of its script the marker recorded at approval
- *   (`scriptHash`, null for a marker written before it was recorded), or null when
- *   no marker stands, its file cannot be read, or the file's sha256 is no longer
- *   the hash recorded at approval. The dispatch gate and the plan fence read their
- *   steps, Files and Commands out of this, so a null must make both refuse rather
- *   than allow: a plan edited after approval grants nothing.
+ * @returns {{path: string, text: string, scriptHash: string|null, steps: number[]|null, standing: number[]|null} | null}
+ *   the plan file and its text, with the hash of its script the marker recorded at approval
+ *   (`scriptHash`, null for a marker written before it was recorded), and the step numbers
+ *   the plan held at approval: `steps` (its Steps section) and `standing` (its Standing
+ *   line), each null for a marker written before they were recorded, which carries no check
+ *   on them, and [] for a marker whose field is there and is not a list of whole numbers,
+ *   which no step can be in. Null when no marker stands, its file cannot be read, or the
+ *   file's sha256 is no longer the hash recorded at approval. The dispatch gate and the
+ *   plan fence read their steps, Files and Commands out of this, so a null must make both
+ *   refuse rather than allow: a plan edited after approval grants nothing.
  */
 export function approvedPlan() {
   try {
@@ -299,7 +306,8 @@ export function approvedPlan() {
     if (!mk?.plan || !mk.hash) return null;
     const bytes = readFileSync(mk.plan);
     if (createHash('sha256').update(bytes).digest('hex') !== String(mk.hash)) return null;
-    return { path: String(mk.plan), text: bytes.toString('utf8'), scriptHash: typeof mk.scriptHash === 'string' ? mk.scriptHash : null };
+    const recorded = (v) => (v === undefined ? null : Array.isArray(v) && v.every((x) => Number.isInteger(x)) ? v : []);
+    return { path: String(mk.plan), text: bytes.toString('utf8'), scriptHash: typeof mk.scriptHash === 'string' ? mk.scriptHash : null, steps: recorded(mk.steps), standing: recorded(mk.standing) };
   } catch { return null; }
 }
 
@@ -311,6 +319,51 @@ export function approvedPlan() {
  */
 export function planSteps(text) {
   return [...planSection(text, 'Steps').matchAll(/^(\d+)\.\s/gm)].map((m) => Number(m[1]));
+}
+
+/** The words that name a Standing step as a route check, in the step's own first line. */
+const ROUTE_CHECK = /\broute[- ]check\b/i;
+
+/**
+ * Is this step one the plan held when it was approved, and may a Standing step go?
+ * THE STANDING LINE HOLDS THE REVIEW AND A ROUTE CHECK AND GAINS NO STEP AFTER APPROVAL
+ * (Doctrine §0e rules 2 and 13): a Standing step passes the review gate and the pointer, so
+ * a step edited onto that line after the owner's button would be sent with no review at all.
+ * @param {{text: string, steps?: number[]|null, standing?: number[]|null} | null} plan  the plan
+ *   in force, with the step numbers its approval recorded (`approvedPlan`).
+ * @param {number} n  the step a send names.
+ * @returns {string|null} null when nothing is wrong or nothing can be told: no plan, a marker
+ *   that recorded no lists (`steps` or `standing` null or absent: written before they were
+ *   recorded, and checked against nothing), or a step the record allows. Otherwise the refusal,
+ *   three kinds, the Standing ones first. A step on the plan's Standing line now (the part
+ *   that needs `standing` recorded) that was not on it at approval; a step on the Standing
+ *   line that is neither a review step (`aimReviewSteps`: its text follows the hub's
+ *   aim-review.md by its full path) nor a route check, which its own first line names with the
+ *   words route check; and a step that was not in the plan's Steps at approval (the part that
+ *   needs `steps` recorded), which needs the owner's button. An edit of a recorded step's text
+ *   or of the Order of the recorded steps raises none of them. The dispatch gate and the
+ *   review gate both call this, so they cannot judge two different sets, and neither of their
+ *   refusals latches.
+ */
+export function approvalSetProblem(plan, n) {
+  if (!plan || !Number.isInteger(n)) return null;
+  const rule = 'THE STANDING LINE HOLDS THE REVIEW AND A ROUTE CHECK AND GAINS NO STEP AFTER APPROVAL (Doctrine §0e rules 2 and 13):';
+  if (Array.isArray(plan.standing) && (planOrder(plan.text)?.standing ?? []).includes(n)) {
+    if (!plan.standing.includes(n)) {
+      return `${rule} step ${n} is on the plan's Standing line now and was not on it when the plan was approved (the Standing line then held ${plan.standing.join(', ') || 'no step'}), so it is not sent: a Standing step goes with no review, and putting one there after the owner's button is not the owner's approval. `
+        + 'A step that needs to go is added in a new plan through plan mode, behind the owner\'s button.';
+    }
+    const first = String(stepBody(plan.text, n)).split('\n')[0] ?? '';
+    if (!aimReviewSteps(plan.text).includes(n) && !ROUTE_CHECK.test(first)) {
+      return `${rule} step ${n} is on the Standing line and is neither the review step (its text follows ${join(HUB, AIM_FILE)} by its full path) nor a route check named as one in its own first line, so it is not sent. `
+        + 'The Standing line holds those two and nothing else: any other step goes through the Order and the review.';
+    }
+  }
+  if (Array.isArray(plan.steps) && !plan.steps.includes(n)) {
+    return `STEP NOT IN THE PLAN AT APPROVAL (Doctrine §0e rule 13): step ${n} was not in the plan's Steps when the plan was approved (the steps then were ${plan.steps.join(', ') || 'none'}), so it is not sent: a step the owner has not read needs the owner's button, in a new plan through plan mode. `
+      + 'An edit of a recorded step\'s text, or of the Order of the recorded steps, keeps the approval and needs no button.';
+  }
+  return null;
 }
 
 /**
@@ -837,6 +890,11 @@ export function stopMessage(s) {
  *   that step (`servedBy`: a step that serves none is not sent, by the standing
  *   goals in the hub CLAUDE.md). Anything else would carry instructions the owner has not read:
  *   other words in the prompt, or a custom type's own definition.
+ *   THE STEPS THE PLAN HELD AT APPROVAL: where the marker recorded them (`approvedPlan`), a
+ *   step that was not in the plan's Steps then, a Standing step that was not on the Standing
+ *   line then, and a Standing step that is neither the review nor a route check named as one
+ *   in its own first line, are refused (`approvalSetProblem`). Those refusals carry the mark
+ *   `FENCE_NO_LATCH` and set no latch, because their remedy is the owner's button.
  *   THE POINTER: when the plan defines one (an `Order:` line under `## Order`,
  *   report.mjs `planOrder`), the only steps sent are N, the first number in Order
  *   with no DONE hand-back, and the plan's Standing steps; any other step is
@@ -871,6 +929,13 @@ export function dispatchGate(p, plan = approvedPlan(), pointer = undefined) {
     if (bad) return refusal(`${head} ${bad}`);
   }
   if (!planSteps(plan.text).includes(n)) return refusal(`${head} The plan has no step ${n}; its steps are ${planSteps(plan.text).join(', ') || 'none'}.`);
+  // A STEP THE PLAN DID NOT HOLD AT APPROVAL IS NOT SENT, NOR IS A STANDING STEP THAT IS NOT THE REVIEW OR A ROUTE
+  // CHECK (`approvalSetProblem`; Doctrine §0e rules 2 and 13). An edit of the Steps or the Order keeps the approval,
+  // so a step added by one, or put on the Standing line by one, is checked here against the numbers the marker
+  // recorded at approval. The refusal carries the mark that sets no latch: the remedy is the owner's button, and
+  // a latch would only stop the main thread's other calls as well.
+  const unread = approvalSetProblem(plan, n);
+  if (unread) return refusal(`${head} ${unread} ${FENCE_NO_LATCH} this refusal sets no latch, so the next call is judged on its own.`);
   // A STEP THAT SERVES NO GOAL IS NOT SENT (the standing goals in the hub
   // CLAUDE.md): the plan's "Served by:" line has to name, for this step, a goal its
   // Goals section defines. That line is not part of the Goals the owner approves
@@ -963,7 +1028,9 @@ export function stepsFileProblem(plan, file = stepsFilePath(plan.path)) {
  * @returns {string|null} the refusal, or null. Null for a subagent's call, for a
  *   tool that sends no agent, for a prompt that is not a plan step (the dispatch
  *   gate judges that), for a plan with no review step (not enforced), for a
- *   Standing step in every case (the review step is one), and for a step the
+ *   Standing step the approval recorded that is the review or a route check
+ *   (the review step is one; any other Standing step is refused by
+ *   `approvalSetProblem`, with a refusal that does not latch), and for a step the
  *   current review CLEARED (ON-AIM ROUTE-CLEAR naming that step as next, begun
  *   after the newest end of an agent for a step in Order, after the plan's last
  *   write and after `after`, its "step" the step of that newest end). The other
@@ -984,7 +1051,13 @@ export function reviewGate(p, plan = approvedPlan(), state = undefined) {
   if (p.agent_id || !/^(?:Agent|Task|SendMessage)$/.test(String(p.tool_name ?? ''))) return null;
   const n = sentStep(p, plan);
   const o = plan ? planOrder(plan.text) : null;
-  if (n === null || !o || o.standing.includes(n) || !aimReviewSteps(plan.text).length) return null;
+  if (n === null || !o || !aimReviewSteps(plan.text).length) return null;
+  // A Standing step passes this gate, which is why the Standing line gains no step after approval: one that was not on
+  // it at approval, or that is neither the review nor a route check, is refused here (`approvalSetProblem`).
+  if (o.standing.includes(n)) {
+    const unread = approvalSetProblem(plan, n);
+    return unread ? `REVIEW GATE (Doctrine §0e rule 2): ${unread} This refusal does not latch.` : null;
+  }
   let st = state;
   let failure = '';
   if (st === undefined) { try { st = reviewState(p, plan); } catch (e) { st = null; failure = String(e?.message ?? e); } }
@@ -1691,8 +1764,9 @@ const READ_FENCE = 'MANAGER FENCE (Doctrine §0e rule 13): the main thread reads
 /**
  * The mark of a manager-fence refusal that sets no latch.
  * `main` skips the latch for a refusal of the manager fence that carries it, and only for that one.
- * The refusals that carry it are the fence's refusals of a call that is not of the record; the dispatch
- * gate's and the workflow gate's, returned through the fence as well, do not, and latch as before.
+ * The refusals that carry it are the fence's refusals of a call that is not of the record, and the dispatch
+ * gate's refusals of a step outside the set the approval recorded (`approvalSetProblem`); the dispatch
+ * gate's other refusals and the workflow gate's, returned through the fence as well, do not, and latch as before.
  */
 export const FENCE_NO_LATCH = 'MANAGER FENCE, NO LATCH:';
 
@@ -2097,8 +2171,9 @@ export function workflowGate(p, plan = approvedPlan(), opts = {}) {
  *   SendUserFile, an Artifact call or a tool the fence does not pass) ends with
  *   `notOfRecord()`: the mark `FENCE_NO_LATCH`, which `main` reads to set no latch,
  *   what the main thread may use, and the check command (`canCall`). The dispatch
- *   gate's and the workflow gate's refusals, returned through here, do not carry it
- *   and latch as before.
+ *   gate's refusals of a step outside the set the approval recorded carry the mark
+ *   and set no latch; its other refusals and the workflow gate's, returned through
+ *   here, do not carry it and latch as before.
  */
 export function managerFence(p, opts = {}) {
   if (p.agent_id) return null;
@@ -2528,8 +2603,9 @@ async function main(event, raw, p) {
       if (page) return refuse(page, false);
     }
     // A REFUSAL OF A CALL THAT IS NOT OF THE RECORD SETS NO LATCH: the refusal carries `FENCE_NO_LATCH`, says what
-    // the main thread may use and names the check command. The dispatch gate's and the workflow gate's
-    // refusals come back through the fence without the mark and latch as before.
+    // the main thread may use and names the check command. The dispatch gate's refusals of a step outside the set
+    // the approval recorded carry it and set no latch; its other refusals and the workflow gate's come back
+    // through the fence without the mark and latch as before.
     const fence = managerFence(p);
     if (fence) return refuse(fence, !fence.includes(FENCE_NO_LATCH));
     // A STATUS FALLING DUE NEVER STOPS THE WORK. The report gate's refusal does
