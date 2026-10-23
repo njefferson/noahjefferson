@@ -708,6 +708,10 @@ the report beneath them. Write the choice once.
 // older count: its `## Steps` numbers (`planSteps`), and a step is returned when
 // an agent sent for it ENDED BY A REPORT; an agent that ended at a refusal or an
 // interruption returned nothing, so its step is still left and is sent again.
+// Either way only a step whose number the approval recorded counts as left
+// (`stepsLeft`): a step added after approval is refused by the dispatch gate, so
+// counting it would hold a stop for a move that can never be made. A marker that
+// recorded no step list counts every step, as before.
 //
 // What lets the turn end anyway, each of them a reason a turn must end rather
 // than carry on: an agent of the session is running (its completion notice
@@ -737,22 +741,30 @@ const declaresStop = (text) => DECLARED_OPEN.test(text);
  * The approved plan's steps no agent has returned for.
  * @param {{returned: Set<number>, running: string[]} | null} state  `stepsReturned`'s answer.
  * @returns {number[]} the plan's `## Steps` numbers, in plan order, that no
- *   agent ended by a report for; empty when no approved plan is in force (none
- *   recorded, or its file no longer matches the hash recorded at approval) or
- *   when `state` is null. The refusal below names exactly these.
+ *   agent ended by a report for and that the approval recorded; empty when no
+ *   approved plan is in force (none recorded, or its file no longer matches the
+ *   hash recorded at approval) or when `state` is null. The refusal below names
+ *   exactly these. A step the marker did not record, one added to the Steps or the
+ *   Order after the approval, is never left: the dispatch gate refuses to send it
+ *   (`approvalSetProblem`), so counting it would hold every stop of the plan with no
+ *   move that clears it. A marker that recorded no step list counts as before.
  */
 function stepsLeft(state) {
   const plan = approvedPlan();
   if (!plan || !state) return [];
+  // THE STEPS THE APPROVAL RECORDED (Doctrine §0e rules 2 and 13): a step the marker does not hold cannot be sent, so it
+  // cannot be a step left. A marker written before the lists were recorded (`steps` null) holds every step, as before.
+  const held = (n) => !Array.isArray(plan.steps) || plan.steps.includes(n);
   // THE POINTER (Doctrine §0e rule 2): where the plan has an `## Order`, the one
-  // step left is N, the first number in Order with no hand-back opening DONE; a
+  // step left is N, the first recorded number in Order with no hand-back opening DONE; a
   // REFUSED or FAILED hand-back leaves it where it is. A plan with no Order keeps
   // the older count of steps no agent ended by a report for.
   if (planOrder(plan.text)) {
-    const next = pointerOf(plan.text, state.ends).next;
+    const pointer = pointerOf(plan.text, state.ends);
+    const next = pointer.order.find((n) => !pointer.done.has(n) && held(n)) ?? null;
     return next === null ? [] : [next];
   }
-  return planSteps(plan.text).filter((n) => !state.returned.has(n));
+  return planSteps(plan.text).filter((n) => !state.returned.has(n) && held(n));
 }
 
 /** Does the approved plan in force define a pointer (an `Order:` line)? */

@@ -92,6 +92,13 @@
  *   recorded set and `approvalSetProblem` in hook-dispatch.mjs refuses to send it: it
  *   needs the owner's button. A marker written before this was recorded holds neither
  *   list and carries no such check.
+ *   A THIRD LIST, `review`, holds the numbers of the plan's review steps at approval: those
+ *   Standing steps whose text names the review file by its full path (`aimReviewSteps`).
+ *   An amendment keeps it as approved, so a review step whose text is edited until it no
+ *   longer names that file leaves the marker saying there was a review, and
+ *   `reviewRecordProblem` in hook-dispatch.mjs refuses every send while the plan's Steps
+ *   carry no such step: the plan goes back through plan mode. A marker written before it
+ *   was recorded, and one that recorded no review step, carry no such check.
  *
  *   THE STEPS FILE (`writeStepsFile`). Wherever the marker names a plan or moves its
  *   hash (approval by the tool, the owner's exit in the app, an amendment), this also
@@ -127,17 +134,18 @@ const hashOf = (p) => createHash('sha256').update(readFileSync(p)).digest('hex')
 /**
  * The marker's records of a plan file, from ONE read.
  * @param {string} p  the plan file.
- * @returns {{hash: string, scope: Record<string, string>, script: string, steps: number[], standing: number[]}}
+ * @returns {{hash: string, scope: Record<string, string>, script: string, steps: number[], standing: number[], review: number[]}}
  *   the sha256 of the file, the hashes of its approved scope (`scopeHashes`: Goals, Asked, Files,
  *   Commands), the hash of its script (`scriptHashOf`, '' when it has none), and the step
- *   numbers it holds now (`approvedStepSet`): those of its Steps section and those on its
- *   Standing line. The marker holds all of them at approval: the whole-file hash is what every
- *   other gate compares, the scope is what an amendment of the Steps or the Order is allowed to
- *   keep unchanged, the script's hash is what a Workflow call is held to (`workflowGate`), and
- *   the two lists of numbers are what a send is held to (`approvalSetProblem` in
- *   hook-dispatch.mjs). An amendment moves the hash and the scope and never the rest, so a
- *   script edited after approval matches nothing and a step added after it is not one that
- *   was approved.
+ *   numbers it holds now (`approvedStepSet`): those of its Steps section, those on its
+ *   Standing line and those of its review steps. The marker holds all of them at approval: the
+ *   whole-file hash is what every other gate compares, the scope is what an amendment of the
+ *   Steps or the Order is allowed to keep unchanged, the script's hash is what a Workflow call is
+ *   held to (`workflowGate`), and the three lists of numbers are what a send is held to
+ *   (`approvalSetProblem` and `reviewRecordProblem` in hook-dispatch.mjs, `stepsLeft` in
+ *   stop-guard.mjs). An amendment moves the hash and the scope and never the rest, so a
+ *   script edited after approval matches nothing, a step added after it is not one that
+ *   was approved, and a review step edited until it names no review file is still recorded.
  */
 const snapshotOf = (p) => {
   const bytes = readFileSync(p);
@@ -338,6 +346,7 @@ function recordAppExit(p) {
     const snap = snapshotOf(x.plan);
     writeFileSync(MARKER, JSON.stringify({
       plan: x.plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), session: p.session_id ?? null,
+      review: snap.review,
       steps: snap.steps, standing: snap.standing,
       via: `the owner's exit from plan mode in the app: entry ${x.uuid} at ${new Date(x.at).toISOString()}`, planMatchesFile: null, appExit: x.uuid,
     }, null, 1));
@@ -420,6 +429,7 @@ if (process.argv.includes('--mark')) {
   mkdirSync(dirname(MARKER), { recursive: true });
   writeFileSync(MARKER, JSON.stringify({
     plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), session: p.session_id ?? null,
+    review: snap.review,
     steps: snap.steps, standing: snap.standing,
     via: `ExitPlanMode approval: result ${fromObject ? 'filePath' : 'text'}`, planMatchesFile,
   }, null, 1));
@@ -512,6 +522,7 @@ if (process.argv.includes('--amend')) {
       + 'A changed plan goes back through plan mode.\n');
     process.exit(2);
   }
+  // `...mk` keeps steps, standing and review exactly as approved: an amendment moves the hash and the scope and nothing recorded.
   writeFileSync(MARKER, JSON.stringify({ ...mk, hash: snap.hash, scope: snap.scope, amendedAt: new Date().toISOString(), amendments: (Number(mk.amendments) || 0) + 1 }, null, 1));
   writeStepsFile(mk.plan);
   process.exit(0);

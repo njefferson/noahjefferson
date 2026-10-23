@@ -1355,17 +1355,21 @@ export function stepNumbers(text) {
 /**
  * The step numbers a plan holds, as the approval records them.
  * @param {string} text  the plan at the moment of approval.
- * @returns {{steps: number[], standing: number[]}} `steps`: each number that opens a line of the
- *   `## Steps` section (each `N.`), in plan order and without repeats; `standing`: the numbers on the
- *   `Standing:` line under `## Order` (`planOrder`), in the order written, [] when the plan has no
- *   Order. THE ONE READING of what a plan held when it was approved: approved-plan-guard.mjs writes
- *   both lists into the marker at approval and an amendment never moves them, and the dispatch gate
- *   and the review gate (`approvalSetProblem` in hook-dispatch.mjs) hold a send to them, so a step
- *   added to the Steps, or put on the Standing line, after the approval is not a step that was read.
+ * @returns {{steps: number[], standing: number[], review: number[]}} `steps`: each number that opens a
+ *   line of the `## Steps` section (each `N.`), in plan order and without repeats; `standing`: the numbers
+ *   on the `Standing:` line under `## Order` (`planOrder`), in the order written, [] when the plan has no
+ *   Order; `review`: those Standing steps whose text names the review file by its full path and says
+ *   follow (`aimReviewSteps`), [] when the plan has none. THE ONE READING of what a plan held when it was
+ *   approved: approved-plan-guard.mjs writes all three lists into the marker at approval and an amendment
+ *   never moves them, and the dispatch gate and the review gate (`approvalSetProblem` and
+ *   `reviewRecordProblem` in hook-dispatch.mjs) hold a send to them, so a step added to the Steps, or put
+ *   on the Standing line, after the approval is not a step that was read, and a review step whose text has
+ *   been edited until it no longer names the review file is not a review. The stop guard counts a step
+ *   left only among the `steps` (`stepsLeft` in stop-guard.mjs).
  */
 export function approvedStepSet(text) {
   const steps = [...new Set([...planSection(text, 'Steps').matchAll(/^(\d+)\.\s/gm)].map((m) => Number(m[1])))];
-  return { steps, standing: planOrder(text)?.standing ?? [] };
+  return { steps, standing: planOrder(text)?.standing ?? [], review: aimReviewSteps(text) };
 }
 
 /** The parts of a `Judged N:` line, in the order the manager writes them (Doctrine §0e rule 2). */

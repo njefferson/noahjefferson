@@ -245,7 +245,11 @@ every rule below while none of the hooks that enforce them was running
    the marker records its numbers at approval, and `reviewGate` and the dispatch
    gate refuse a Standing step that was not on it then, or that is neither the
    review nor a route check named in its own first line, with a refusal that
-   does not latch.
+   does not latch. The review step's text keeps the review file's path: the
+   marker also records the review step's number, and both gates refuse every
+   step, a Standing one included, while no Standing step of the plan names
+   `aim-review.md` by its full path any more, with a refusal that says the plan
+   goes back through plan mode and does not latch.
    **The state of the work is one page, and the manager's part of it is kept
    where a status cannot rewrite it.** The status page's source,
    `status/fix-run.html` in the session scratchpad, is written whole at every
@@ -455,7 +459,7 @@ every rule below while none of the hooks that enforce them was running
     second route §0d names, not a fresh start. While the latch stands, the main
     thread says in plain text what was refused and stops; an agent returns what
     it has, with the refusal's text.
-    Eight refusals are not ends of a route: a status falling due is cleared by
+    Eleven refusals are not ends of a route: a status falling due is cleared by
     giving it (rule 2); a call held while a message from the owner waits is
     sent again once that message is delivered (LESSONS §376); a stop or a
     correction from the owner standing is lifted by the owner's next message
@@ -465,7 +469,15 @@ every rule below while none of the hooks that enforce them was running
     by sending the review step, by amending the plan's Steps or Order, or by
     entering plan mode, and a latch would stand in the way of each (rule 2); a
     step the rules gate refuses, because the plan pins a rules version the file
-    has moved past, is answered by amending the Rules line (rule 13); a main-thread
+    has moved past, is answered by amending the Rules line (rule 13); a step the
+    dispatch gate refuses because the plan's Steps did not hold it when the plan
+    was approved is answered by a new plan through plan mode and the owner's
+    button (rule 13); a Standing step either gate refuses because it was not on
+    the Standing line at approval, or is neither the review nor a route check,
+    is answered the same way (rule 2); a send either gate refuses because the
+    plan's review step has been edited until no Standing step names the review
+    file by its full path is answered the same way (rule 2), and a latch would
+    only add a second wait for the owner to each of those three; a main-thread
     call the manager fence refuses only because it is not of the record, a read of
     a path outside it or a tool or command line the fence does not pass, is
     answered by a call the fence passes, which the refusal lists beside the check

@@ -453,7 +453,12 @@ Every item below has actually happened.
  main-thread call the manager fence refuses only because it is not of the
  record, whose refusal lists what the main thread may use;
  `node /root/.claude/hub/hook-dispatch.mjs --can <tool> <path or command line>`
- says beforehand whether the fence and the latch would pass a call. Give the status, send the held
+ says beforehand whether the fence and the latch would pass a call. Three more
+ set none, because the way on is a new plan through plan mode and the owner's
+ button: a step the approval did not record, a Standing step that was not on
+ the line at approval or is neither the review nor a route check, and any send
+ while no Standing step names the review file by its full path any more
+ (`approvalSetProblem` and `reviewRecordProblem` in `hook-dispatch.mjs`). Give the status, send the held
  call again, answer the correction, read the filed messages and the page, send the
  review or amend the
  plan or enter plan mode as the review gate's refusal says, amend the Rules line

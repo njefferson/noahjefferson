@@ -68,7 +68,9 @@
  * Standing step passes it only when the approval recorded it on the Standing line and it is
  * the review or a route check named in its own first line, and a step the plan did not hold
  * at approval is not sent at all: `approvalSetProblem`, asked by this gate and by the dispatch
- * gate, whose refusals set no latch);
+ * gate, whose refusals set no latch; and while the approval recorded a review step and no Standing
+ * step of the plan now names the review file by its full path, no step is sent at all, a Standing
+ * one included: `reviewRecordProblem`, asked by the same two gates, whose refusals set no latch);
  * the rules gate (main thread only, `rulesGate`: where a plan's Rules line points
  * at the hub's agent-rules.md and pins a version, no step is sent while the file's
  * version is another, Doctrine §0e rule 13); the reads gate (main thread only,
@@ -289,13 +291,15 @@ export function isManagerNotes(path, sid) {
 
 /**
  * The plan the owner approved, as the approval marker names it.
- * @returns {{path: string, text: string, scriptHash: string|null, steps: number[]|null, standing: number[]|null} | null}
+ * @returns {{path: string, text: string, scriptHash: string|null, steps: number[]|null, standing: number[]|null, review: number[]|null} | null}
  *   the plan file and its text, with the hash of its script the marker recorded at approval
  *   (`scriptHash`, null for a marker written before it was recorded), and the step numbers
- *   the plan held at approval: `steps` (its Steps section) and `standing` (its Standing
- *   line), each null for a marker written before they were recorded, which carries no check
+ *   the plan held at approval: `steps` (its Steps section), `standing` (its Standing
+ *   line) and `review` (those Standing steps that named the review file by its full path),
+ *   each null for a marker written before they were recorded, which carries no check
  *   on them, and [] for a marker whose field is there and is not a list of whole numbers,
- *   which no step can be in. Null when no marker stands, its file cannot be read, or the
+ *   which no step can be in (and which, for `review`, records no review step to keep).
+ *   Null when no marker stands, its file cannot be read, or the
  *   file's sha256 is no longer the hash recorded at approval. The dispatch gate and the
  *   plan fence read their steps, Files and Commands out of this, so a null must make both
  *   refuse rather than allow: a plan edited after approval grants nothing.
@@ -307,7 +311,7 @@ export function approvedPlan() {
     const bytes = readFileSync(mk.plan);
     if (createHash('sha256').update(bytes).digest('hex') !== String(mk.hash)) return null;
     const recorded = (v) => (v === undefined ? null : Array.isArray(v) && v.every((x) => Number.isInteger(x)) ? v : []);
-    return { path: String(mk.plan), text: bytes.toString('utf8'), scriptHash: typeof mk.scriptHash === 'string' ? mk.scriptHash : null, steps: recorded(mk.steps), standing: recorded(mk.standing) };
+    return { path: String(mk.plan), text: bytes.toString('utf8'), scriptHash: typeof mk.scriptHash === 'string' ? mk.scriptHash : null, review: recorded(mk.review), steps: recorded(mk.steps), standing: recorded(mk.standing) };
   } catch { return null; }
 }
 
@@ -364,6 +368,34 @@ export function approvalSetProblem(plan, n) {
       + 'An edit of a recorded step\'s text, or of the Order of the recorded steps, keeps the approval and needs no button.';
   }
   return null;
+}
+
+/**
+ * Has the plan's review step been edited away since the approval recorded it?
+ * THE REVIEW STEP'S TEXT KEEPS THE REVIEW FILE'S PATH (Doctrine §0e rules 2 and 13): the review gate enforces
+ * only where a Standing step names the review file by its full path (`aimReviewSteps`), so editing that step's
+ * text until it names no file, or taking it off the Standing line, switched the gate off for every step after the
+ * edit, and the dispatch gate fell back on the pointer. An edit of a step's text keeps the approval, by design,
+ * so the approval has to say that there was a review.
+ * @param {{text: string, review?: number[]|null} | null} plan  the plan in force, with the review step
+ *   numbers its approval recorded (`approvedPlan`).
+ * @returns {string|null} null when nothing is wrong or nothing can be told: no plan; a marker that recorded no
+ *   review list (`review` null or absent: written before it was recorded, and checked against nothing); a marker
+ *   that recorded an empty one (the plan had no review step, so there is none to keep); or a plan whose Steps
+ *   still carry a Standing step that names the review file by its full path and says follow
+ *   (`aimReviewSteps`, the very condition the review gate enforces on). Otherwise the refusal: the marker
+ *   records a review step and the plan no longer has one. It names the rule, lists the recorded numbers, and
+ *   says the plan goes back through plan mode. It does not depend on the step sent: the dispatch gate and the
+ *   review gate both ask it before they judge anything else, a Standing step included, because the review
+ *   itself cannot be sent when no step follows the review file. Neither gate's refusal of it latches.
+ */
+export function reviewRecordProblem(plan) {
+  if (!plan || !Array.isArray(plan.review) || !plan.review.length) return null;
+  if (aimReviewSteps(plan.text).length) return null;
+  return 'THE REVIEW STEP KEEPS THE REVIEW FILE\'S PATH (Doctrine §0e rules 2 and 13): '
+    + `the plan recorded review step${plan.review.length === 1 ? '' : 's'} ${plan.review.join(', ')} when it was approved, and no Standing step of the plan now tells its agent to follow ${join(HUB, AIM_FILE)} by its full path, `
+    + 'so the review gate would stop gating and every move would go with no review. No step is sent, a Standing step included. '
+    + 'Editing the review step\'s text until it names no review file, or taking it off the Standing line, is not the owner\'s approval: the plan goes back through plan mode and the owner\'s button.';
 }
 
 /**
@@ -895,6 +927,9 @@ export function stopMessage(s) {
  *   line then, and a Standing step that is neither the review nor a route check named as one
  *   in its own first line, are refused (`approvalSetProblem`). Those refusals carry the mark
  *   `FENCE_NO_LATCH` and set no latch, because their remedy is the owner's button.
+ *   THE REVIEW STEP KEEPS ITS PATH: where the marker recorded a review step, every step, a Standing
+ *   one included, is refused while no Standing step of the plan names the review file by its full
+ *   path (`reviewRecordProblem`), with the same mark and the same absence of a latch.
  *   THE POINTER: when the plan defines one (an `Order:` line under `## Order`,
  *   report.mjs `planOrder`), the only steps sent are N, the first number in Order
  *   with no DONE hand-back, and the plan's Standing steps; any other step is
@@ -929,6 +964,13 @@ export function dispatchGate(p, plan = approvedPlan(), pointer = undefined) {
     if (bad) return refusal(`${head} ${bad}`);
   }
   if (!planSteps(plan.text).includes(n)) return refusal(`${head} The plan has no step ${n}; its steps are ${planSteps(plan.text).join(', ') || 'none'}.`);
+  // NO STEP IS SENT, A STANDING ONE INCLUDED, WHILE THE REVIEW STEP THE APPROVAL RECORDED HAS BEEN EDITED AWAY
+  // (`reviewRecordProblem`; Doctrine §0e rules 2 and 13). The review gate enforces only where a Standing step names the
+  // review file by its full path, so without this an edit of that step's text, which keeps the approval, switched the
+  // review off and let the pointer send every step. The refusal carries the mark that sets no latch: the remedy is the
+  // owner's button on the plan, and a latch would only stop the main thread's other calls as well.
+  const gone = reviewRecordProblem(plan);
+  if (gone) return refusal(`${head} ${gone} ${FENCE_NO_LATCH} this refusal sets no latch, so the next call is judged on its own.`);
   // A STEP THE PLAN DID NOT HOLD AT APPROVAL IS NOT SENT, NOR IS A STANDING STEP THAT IS NOT THE REVIEW OR A ROUTE
   // CHECK (`approvalSetProblem`; Doctrine §0e rules 2 and 13). An edit of the Steps or the Order keeps the approval,
   // so a step added by one, or put on the Standing line by one, is checked here against the numbers the marker
@@ -1027,7 +1069,10 @@ export function stepsFileProblem(plan, file = stepsFilePath(plan.path)) {
  *   state that could not be read, and refuses.
  * @returns {string|null} the refusal, or null. Null for a subagent's call, for a
  *   tool that sends no agent, for a prompt that is not a plan step (the dispatch
- *   gate judges that), for a plan with no review step (not enforced), for a
+ *   gate judges that), for a plan with no review step (not enforced, unless the
+ *   approval recorded one: `reviewRecordProblem` refuses every step of such a plan,
+ *   a Standing one included, before this is judged, and that refusal does not
+ *   latch), for a
  *   Standing step the approval recorded that is the review or a route check
  *   (the review step is one; any other Standing step is refused by
  *   `approvalSetProblem`, with a refusal that does not latch), and for a step the
@@ -1050,6 +1095,11 @@ export function stepsFileProblem(plan, file = stepsFilePath(plan.path)) {
 export function reviewGate(p, plan = approvedPlan(), state = undefined) {
   if (p.agent_id || !/^(?:Agent|Task|SendMessage)$/.test(String(p.tool_name ?? ''))) return null;
   const n = sentStep(p, plan);
+  // A REVIEW STEP THAT THE APPROVAL RECORDED AND THE PLAN NO LONGER HAS REFUSES EVERY STEP, A STANDING ONE INCLUDED
+  // (`reviewRecordProblem`): without it the next line returns null for a plan whose review step was edited until it
+  // names no review file, which is the plan the gate is there to hold. It is asked before anything else is judged.
+  const gone = n === null ? null : reviewRecordProblem(plan);
+  if (gone) return `REVIEW GATE (Doctrine §0e rule 2): ${gone} This refusal does not latch.`;
   const o = plan ? planOrder(plan.text) : null;
   if (n === null || !o || !aimReviewSteps(plan.text).length) return null;
   // A Standing step passes this gate, which is why the Standing line gains no step after approval: one that was not on
