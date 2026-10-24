@@ -54,7 +54,8 @@
  * which passes a read only of the record (the plans, the session scratchpad,
  * the doctrine and lessons, each repo's notes, plan pointers, IR-SCIENCE.md and
  * decision records, the session's transcript and the tool results saved beside
- * it) and a SendUserFile only of files in the session scratchpad, which
+ * it), exactly one history read of a session repository or the hub worktree
+ * (`gitHistoryRead`, LESSONS §423) and a SendUserFile only of files in the session scratchpad, which
  * also passes the wait between statuses (`report.mjs --wait`), and
  * whose dispatch gate sends a step only when the plan's `Served by:` line names
  * a goal for it (the standing goals in the hub CLAUDE.md) and, where the plan has an `## Order`
@@ -1641,9 +1642,158 @@ export function roadmapProblem(text, opts = {}) {
     + `${shown.join('\n')}${open.length > shown.length ? `\n… and ${open.length - shown.length} more` : ''}`;
 }
 
+// ---- a plan that marks a roadmap item as work reads the app's commit log first (Doctrine §0e rule 2, LESSONS §423) ----
+
+/**
+ * The branches a repository ships on and stages on.
+ * @param {string} root  a repository's root directory.
+ * @returns {{production: string, staging: string}} `promote=` and `work=` of the root's `.branch-guard`, the file that says
+ *   where a repository's work commits and where it is moved to; `main` and `staging` for a name the file does not give or
+ *   gives as a pattern (`claude/*`). A repository whose work branch is its production branch (the hub: `work=main`) reads the
+ *   same name twice. `commitLogRead` and `shippedCheckProblem` both ask it, so the read a plan needs and the line it writes
+ *   name the same two branches.
+ */
+export function repoBranches(root) {
+  let text = '';
+  try { text = readFileSync(join(root, '.branch-guard'), 'utf8'); } catch { /* no file: the defaults below */ }
+  const key = (k) => new RegExp(`^[ \\t]*${k}[ \\t]*=[ \\t]*([^\\s#]+)`, 'm').exec(text)?.[1];
+  const plain = (n) => (n && !/[*?[\]{}]/.test(n) ? n : undefined);
+  return { production: plain(key('promote')) ?? 'main', staging: plain(key('work')) ?? 'staging' };
+}
+
+/**
+ * The open roadmap items a plan marks `in`.
+ * @param {string} text  the plan (its current block).
+ * @param {{key: string, title: string}[]} items  a repository's open items (`roadmapItems`).
+ * @returns {{key: string, title: string}[]} the items whose bullet in the plan's `## Roadmap` opens with the item's key (its
+ *   decision number, else its title; a leading "decision" and bold marks set aside) and then the word `in`, read as
+ *   `roadmapProblem` reads the same bullet. An item marked `out`, or with no bullet, is not among them.
+ */
+export function itemsMarkedIn(text, items) {
+  const said = planSection(text, 'Roadmap').split('\n').map((l) => LIST_LINE.exec(l)?.[1]).filter(Boolean).map((l) => l.replace(/^\*+|\*+$/g, '').replace(/\*\*/g, ''));
+  return items.filter((i) => said.some((l) => {
+    const k = String(i.key).toLowerCase();
+    const low = l.toLowerCase().replace(/^decision\s+/, '');
+    return low.startsWith(k) && /^[\s:,;.-]*in\b/.test(low.slice(k.length));
+  }));
+}
+
+/**
+ * Did the session read a repository's commit log of its production and its staging branch after the plan was first written?
+ * @param {object[]} entries  the session's transcript entries (`tailEntries`), in file order.
+ * @param {string} root  a repository's root directory.
+ * @param {string} [planFile]  the plan file's path; with none, or when `entries` hold no write of it, all of `entries` counts as after.
+ * @returns {boolean} true when, after the first Write, Edit or MultiEdit of the plan file in `entries`, a Bash call ran
+ *   `git -C <root> log` (the root as a full path; any other global option refuses it) whose arguments name the repository's
+ *   production branch and its staging branch (`repoBranches`), each as a whole name or as the last part of a path of refs
+ *   (`origin/main`) on either side of a range, and whose result came back and is not an error, a denial or a hook's refusal. THE
+ *   INVARIANT `shippedCheckProblem` relies on: the read is a result the session saw, never a command it only wrote.
+ */
+export function commitLogRead(entries, root, planFile = '') {
+  const { production, staging } = repoBranches(root);
+  const want = [...new Set([production, staging])];
+  const rootAbs = resolve(root);
+  const plan = planFile ? resolve(String(planFile)) : '';
+  let planAt = -1;
+  const calls = [];
+  entries.forEach((e, i) => {
+    const c = e?.message?.content;
+    if (e?.type !== 'assistant' || !Array.isArray(c)) return;
+    for (const b of c) {
+      if (b?.type !== 'tool_use') continue;
+      if (plan && planAt < 0 && /^(?:Write|Edit|MultiEdit)$/.test(String(b.name ?? '')) && b.input?.file_path && resolve(String(b.input.file_path)) === plan) planAt = i;
+      if (b.name === 'Bash') calls.push({ id: b.id, at: i, command: String(b.input?.command ?? '') });
+    }
+  });
+  const answered = new Set();
+  for (const e of entries) {
+    const c = e?.message?.content;
+    if (e?.type !== 'user' || !Array.isArray(c) || e.toolDenialKind) continue;
+    for (const b of c) {
+      if (b?.type !== 'tool_result' || b.is_error) continue;
+      const text = typeof b.content === 'string' ? b.content : Array.isArray(b.content) ? b.content.map((x) => x?.text ?? '').join('\n') : '';
+      if (/^PreToolUse:\S+ hook error/.test(text)) continue;
+      answered.add(b.tool_use_id);
+    }
+  }
+  const logNames = (command) => {
+    const w = command.trim().split(/\s+/);
+    if (w[0] !== 'git') return false;
+    let k = 1;
+    let dir = null;
+    while (k < w.length && w[k].startsWith('-')) {
+      if (w[k] === '-C' && w[k + 1]) { dir = w[k + 1]; k += 2; continue; }
+      return false;
+    }
+    if (dir === null || !dir.startsWith('/') || resolve(dir) !== rootAbs || w[k] !== 'log') return false;
+    const parts = w.slice(k + 1).filter((x) => !x.startsWith('-')).flatMap((x) => x.split(/\.\.\.?/));
+    return want.every((b) => parts.some((x) => x === b || x.endsWith(`/${b}`)));
+  };
+  return calls.some((u) => u.at > planAt && answered.has(u.id) && logNames(u.command));
+}
+
+/**
+ * Does a plan that marks a roadmap item in rest on a read of the app's commit log?
+ * A PLAN IS NOT WRITTEN FROM THE NOTES' ROADMAP ALONE (Doctrine §0e rule 2, LESSONS §423): a line in the notes is not the state of
+ * the app, and a plan that names five shipped items as work to build was written from one. So a plan that marks an item in has
+ * to rest on a read of the commit log of the repository's production and staging branches, made by the session after the plan
+ * file was first written, and has to say what that read showed, item by item.
+ * @param {string} text  the plan (its current block).
+ * @param {{roots?: string[], dir?: string, entries?: object[], planFile?: string}} [opts]  the repositories to read (found from the
+ *   plan's Files by default, as `roadmapProblem` finds them), the launch directory they are found from, the transcript's entries
+ *   (`tailEntries`) and the plan file's path.
+ * @returns {string|null} the refusal, or null. A plan with no `## Steps`, or that marks no open item of a repository's roadmap in
+ *   (`itemsMarkedIn` of `roadmapItems`), is not judged. Otherwise two things are asked: for each such repository, a read
+ *   (`commitLogRead`), and for each such item, a line in the plan's `## Shipped check` opening with the item's key and a colon,
+ *   then `not shipped, read against <production> and <staging> on <the date>` with the repository's own two branch names
+ *   (`repoBranches`), or `shipped on <branch> by "<the commit subject>"`, which is refused as work already done: shipped
+ *   work is marked out, not built. The refusal names each missing read and each missing or wrong line. It forces the read and the
+ *   statement and cannot judge that either is true: no parser tells a subject that names an item from one that does not, so
+ *   the review and the audit judge that. plan-guard.mjs refuses ExitPlanMode on it, after `roadmapProblem`.
+ */
+export function shippedCheckProblem(text, opts = {}) {
+  if (!planSection(text, 'Steps').trim()) return null;
+  const roots = opts.roots ?? queueRoots(text, opts.dir);
+  const marked = roots.flatMap((r) => itemsMarkedIn(text, roadmapItems(r)).map((i) => ({ ...i, root: r, repo: basename(r) })));
+  if (!marked.length) return null;
+  const problems = [];
+  const entries = opts.entries ?? [];
+  for (const root of new Set(marked.map((i) => i.root))) {
+    if (commitLogRead(entries, root, opts.planFile ?? '')) continue;
+    const { production, staging } = repoBranches(root);
+    const both = [...new Set([production, staging])];
+    const keys = marked.filter((i) => i.root === root).map((i) => i.key).join(', ');
+    problems.push(`no result of a git log on ${basename(root)} (the repository the plan marks ${keys} in) naming ${both.join(' and ')} came back in this session after the plan file was first written. `
+      + `Read it from the main thread, for example: git -C ${root} log --format=%s -n 300 ${both.map((b) => `origin/${b}`).join(' ')}`);
+  }
+  const lines = planSection(text, 'Shipped check').split('\n').map((l) => l.replace(/^\s*(?:[-*]|\d+[.)])\s+/, '').replace(/\*\*/g, '').trim()).filter(Boolean);
+  for (const i of marked) {
+    const { production, staging } = repoBranches(i.root);
+    const key = String(i.key).toLowerCase();
+    const mine = lines.filter((l) => l.toLowerCase().startsWith(key) && /^\s*:/.test(l.slice(key.length))).map((l) => l.slice(key.length).replace(/^\s*:?\s*/, ''));
+    const shipped = mine.map((b) => /^shipped on\s+(\S+)\s+by\s+"([^"]{4,})"/i.exec(b)).find(Boolean);
+    if (shipped) {
+      problems.push(`${i.key} (${i.repo}): the plan marks it in, and its line in the Shipped check says it shipped on ${shipped[1]} by "${shipped[2]}". `
+        + 'Work that is on a branch is work already done, and a plan does not build it: mark it out in the Roadmap and leave it to the archive.');
+      continue;
+    }
+    const notShipped = mine.map((b) => /^not shipped,\s*read against\s+(\S+)\s+and\s+(\S+)\s+on\s+(\S.{2,})$/i.exec(b)).filter(Boolean);
+    if (notShipped.some((x) => x[1].toLowerCase() === production.toLowerCase() && x[2].toLowerCase() === staging.toLowerCase())) continue;
+    if (notShipped.length) {
+      problems.push(`${i.key} (${i.repo}): its line in the Shipped check reads against ${notShipped[0][1]} and ${notShipped[0][2]}, and this repository ships on ${production} and stages on ${staging}. Write the line against those two.`);
+      continue;
+    }
+    problems.push(`the plan's "## Shipped check" has no line for ${i.key} (${i.repo}), which the plan marks in. Write "${i.key}: not shipped, read against ${production} and ${staging} on <the date>" `
+      + `when the log shows it on neither branch, or "${i.key}: shipped on <branch> by \\"<the commit subject>\\"" when it shows it, and then mark the item out: shipped work is not built.`);
+  }
+  if (!problems.length) return null;
+  return 'SHIPPED CHECK (Doctrine §0e rule 2, LESSONS §423): a plan that marks a roadmap item in names it as work to build, and a line in the notes is not the state of the app. '
+    + `The commit log of the repository's two branches is, so it is read first and the plan says what it showed, item by item:\n${problems.map((x) => `- ${x}`).join('\n')}`;
+}
+
 // ---- the state page is the main thread's first read after a compaction (Doctrine §0e rule 2) ----
 
-const pageDueFile = (p) => join(process.env.PAGE_DUE_DIR || join(homedir(), '.claude', 'page-due'), `${safeId(p)}.json`);
+const pageDueFile =(p) => join(process.env.PAGE_DUE_DIR || join(homedir(), '.claude', 'page-due'), `${safeId(p)}.json`);
 
 /**
  * Where this session's status page is.
@@ -1831,6 +1981,7 @@ export const FENCE_NO_LATCH = 'MANAGER FENCE, NO LATCH:';
 function notOfRecord() {
   return ` ${FENCE_NO_LATCH} this refusal sets no latch, so the next call is judged on its own. `
     + 'The main thread may use: a read of the record (the plans, the session scratchpad, the doctrine and lessons, each repo\'s notes and plan pointers, this session\'s transcript); '
+    + 'a history read of a session repository (git -C <full path> log, ls-remote, branch or show-ref, with the arguments the check lists); '
     + 'an agent sent with the approved plan\'s path and a step number; TaskStop; the status command; the wait between statuses (report.mjs --wait); '
     + 'a write to its plan file under ~/.claude/plans/, to the status page\'s source or to its manager notes; Artifact publishing the status page, or reading, listing or opening a page; '
     + 'SendUserFile of files in the session scratchpad; EnterPlanMode and ExitPlanMode. '
@@ -2193,17 +2344,129 @@ export function workflowGate(p, plan = approvedPlan(), opts = {}) {
   return bad ? why(`because ${bad}.`) : null;
 }
 
+// ---- the main thread reads a repository's history, and nothing else of git (Doctrine §0e rule 13, LESSONS §423) ----
+
+// What a word of such a line may be made of: no quote, space, `$`, backtick, `;`, `&`, `|`, `<`, `>`, parenthesis, brace, `*`, `?`,
+// bracket, `!`, `#` or backslash, so a line made only of these words expands nothing and chains nothing in a shell.
+const GIT_WORD = /^[A-Za-z0-9._\/@^~%=+,:-]+$/;
+// A name on a remote or a branch: it opens with a letter or a digit, so it is never a flag, an absolute path or a tilde.
+const GIT_REF = /^[A-Za-z0-9][A-Za-z0-9._\/@^~-]*$/;
+// A revision, or a range of two (`a..b`, `a...b`), each written as a GIT_REF.
+const GIT_RANGE = /^[A-Za-z0-9][A-Za-z0-9._\/@^~-]*?(?:\.\.\.?[A-Za-z0-9][A-Za-z0-9._\/@^~-]*)?$/;
+// A path that steps up out of its place.
+const GIT_UP = /(^|\/)\.\.(\/|$)/;
+
+/**
+ * Are these the arguments of a git log the main thread may run?
+ * @param {string[]} args  the words after `log`.
+ * @returns {boolean} true only for the subject format (`--format=%s`, `--pretty=format:%s`), `--oneline`, a count (`-N`, `-n N` or
+ *   `--max-count=N`, N of up to five digits), branch names and revision ranges (`GIT_RANGE`, never a path that steps up), and the
+ *   double dash as the last word. Anything else is false, a path after the double dash and every other flag included.
+ */
+function gitLogArgs(args) {
+  let ended = false;
+  for (let k = 0; k < args.length; k++) {
+    const a = args[k];
+    if (ended) return false;
+    if (a === '--') { ended = true; continue; }
+    if (a === '--oneline' || a === '--format=%s' || a === '--pretty=format:%s') continue;
+    if (/^-\d{1,5}$/.test(a) || /^--max-count=\d{1,5}$/.test(a)) continue;
+    if (a === '-n' && /^\d{1,5}$/.test(args[k + 1] ?? '')) { k++; continue; }
+    if (a.startsWith('-') || !GIT_RANGE.test(a) || GIT_UP.test(a)) return false;
+  }
+  return true;
+}
+
+/**
+ * Are these the arguments of a git ls-remote the main thread may run?
+ * @param {string[]} args  the words after `ls-remote`.
+ * @returns {boolean} true only for `--heads`, then at most one remote's name (a bare word, never a URL or a path) and branch names.
+ */
+function gitLsRemoteArgs(args) {
+  let remote = false;
+  for (const a of args) {
+    if (a === '--heads') continue;
+    if (!remote) {
+      if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(a)) return false;
+      remote = true;
+    } else if (!GIT_REF.test(a) || GIT_UP.test(a)) return false;
+  }
+  return true;
+}
+
+/**
+ * Are these the arguments of a git branch in list mode?
+ * @param {string[]} args  the words after `branch`.
+ * @returns {boolean} true only for list flags and no name at all: with a name and no list flag git creates a branch.
+ */
+const gitBranchArgs = (args) => args.every((a) => ['-a', '-r', '-v', '-vv', '-l', '--list', '--all', '--remotes'].includes(a));
+
+/**
+ * Are these the arguments of a git show-ref the main thread may run?
+ * @param {string[]} args  the words after `show-ref`.
+ * @returns {boolean} true only for `--heads`, `-s`, `--hash` and `--verify`, and branch or ref names.
+ */
+const gitShowRefArgs = (args) => args.every((a) => ['--heads', '-s', '--hash', '--verify'].includes(a) || (GIT_REF.test(a) && !GIT_UP.test(a)));
+
+/**
+ * The repositories a main-thread history read may name.
+ * @param {object} p  a PreToolUse payload: `cwd` is the launch directory and `session_id` names the scratchpad.
+ * @param {{repos?: string[]}} [opts]  the list itself, for the test.
+ * @returns {string[]} absolute, normal-form paths: the repositories (directories holding a `.git`) that are the launch directory,
+ *   directly below it, or, when it is one itself, directly beside it; and the repositories directly below `worktree/` in this
+ *   session's scratchpad, which is where the hub worktree is. Nothing else is the session's: the live gate clone and a path
+ *   anywhere else are not.
+ */
+export function gitHistoryRepos(p, opts = {}) {
+  if (opts.repos) return opts.repos.map((r) => resolve(String(r)));
+  const kids = (d) => { try { return readdirSync(d).map((n) => join(d, n)); } catch { return []; } };
+  const at = resolve(p.cwd ? String(p.cwd) : process.cwd());
+  const cands = [at, ...kids(at), ...(existsSync(join(at, '.git')) ? kids(dirname(at)) : [])];
+  const pad = p.session_id ? scratchpadOf(String(p.session_id)) : null;
+  if (pad) cands.push(...kids(join(pad, 'worktree')));
+  return [...new Set(cands.map((d) => resolve(d)))].filter((d) => existsSync(join(d, '.git')));
+}
+
+/**
+ * Is a Bash line exactly one read of a session repository's history?
+ * @param {string} command  the line.
+ * @param {object} p  the payload, for `gitHistoryRepos`.
+ * @param {{repos?: string[]}} [opts]  as `gitHistoryRepos` takes it.
+ * @returns {boolean} true only when, trimmed, the line is `git -C <full path> <log, ls-remote, branch or show-ref> <arguments>`
+ *   made of `GIT_WORD` words split on spaces (so no tab, newline, quote, `$`, chaining or redirect can be in it, not even in the name of
+ *   a repository's folder), the path is, as written, one of `gitHistoryRepos` (so absolute, with no `..` and no trailing slash), and the arguments are that subcommand's own
+ *   list (`gitLogArgs`, `gitLsRemoteArgs`, `gitBranchArgs`, `gitShowRefArgs`). Nothing else of git: no diff, show, status, fetch, tag,
+ *   remote, config, rev-parse, cat-file, grep or blame, and no `-c` or `--git-dir`. THE INVARIANT `managerFence` relies on: a line this
+ *   accepts shows the names and ids of commits and refs and their subjects and no file of the repository, and writes nothing. It
+ *   is not a read of the record, which is why the fence asks it before the read check.
+ */
+export function gitHistoryRead(command, p, opts = {}) {
+  const line = String(command ?? '').trim();
+  if (!line || /[\r\n\t]/.test(line)) return false;
+  const words = line.split(/ +/);
+  if (!words.every((w) => GIT_WORD.test(w))) return false;
+  if (words[0] !== 'git' || words[1] !== '-C' || !words[2] || !words[3]) return false;
+  const path = words[2];
+  const args = words.slice(4);
+  const fine = new Map([['log', gitLogArgs], ['ls-remote', gitLsRemoteArgs], ['branch', gitBranchArgs], ['show-ref', gitShowRefArgs]]).get(words[3]);
+  if (!fine || !fine(args)) return false;
+  return gitHistoryRepos(p, opts).includes(path);
+}
+
 /**
  * The manager fence: the main thread plans, sends agents, checks and reports.
  * @param {object} p  a PreToolUse payload.
- * @param {{classify?: (p: object) => boolean, plan?: object|null, pointer?: object|null}} [opts]
- *   the read classifier (plan-guard's), the approved plan and the pointer
- *   (`dispatchGate`'s third argument), for the test.
+ * @param {{classify?: (p: object) => boolean, plan?: object|null, pointer?: object|null, repos?: string[]}} [opts]
+ *   the read classifier (plan-guard's), the approved plan, the pointer
+ *   (`dispatchGate`'s third argument) and the session's repositories (`gitHistoryRepos`), for the test.
  * @returns {string|null} null for a subagent's call; on the main thread, null
  *   only for a read OF THE RECORD (`readOutsideRecord`: a read of a file or a
  *   directory passes only where `recordPath` says it is of the record, and a
  *   read of anything else is refused with the reason to send an agent; a read
  *   that names no file, ToolSearch or a web read, passes as before), a
+ *   history read of a session repository or the hub worktree (`gitHistoryRead`: exactly
+ *   `git -C <full path>` and log, ls-remote, branch in list mode or show-ref, with the arguments
+ *   it lists, and nothing else of git), a
  *   SendUserFile of files that `inScratchpad` places in this session's
  *   scratchpad (one file elsewhere refuses the call), an agent sent through the
  *   dispatch gate, TaskStop, an
@@ -2238,6 +2501,12 @@ export function managerFence(p, opts = {}) {
   if (tool === 'Bash' && WAIT.test(String(input.command ?? ''))) return null;
   // The check of a call changes nothing and is how the main thread learns what passes (`canCall`).
   if (tool === 'Bash' && CAN.test(String(input.command ?? ''))) return null;
+  // THE MAIN THREAD READS A REPOSITORY'S HISTORY (LESSONS §423): `git -C <full path> log`, `ls-remote`, `branch` in list mode or
+  // `show-ref` on a repository of the session or the hub worktree, with the arguments `gitHistoryRead` lists, and nothing else of git.
+  // It is asked before the read check because it is not a read of the record, and plan-guard's own list of readers carries neither
+  // ls-remote nor show-ref. A plan that marks a roadmap item in rests on this read (`shippedCheckProblem`), so the main thread has to
+  // be able to make it.
+  if (tool === 'Bash' && gitHistoryRead(String(input.command ?? ''), p, opts)) return null;
   if (tool === 'Artifact') {
     const a = String(input.action ?? 'publish');
     // Never quickstart: neither the plan nor rule 13 names it, and it starts

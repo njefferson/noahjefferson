@@ -466,28 +466,32 @@ const QUEUE_NOTES = ['# Notes', '', '## Found queue', 'Prose that is not a findi
  * @param {string} projectDir  the launch directory: the repository the plan's Files label names, found from it.
  * @returns {object} the spawnSync result: status 0 to allow, 2 with the reason in stdout.
  */
-function exitFor(dir, planText, projectDir) {
+function exitFor(dir, planText, projectDir, extra = []) {
   const home = tmp('sg-home-');
   mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
   const file = join(home, '.claude', 'plans', 'queue-test.md');
   writeFileSync(file, planText);
   const t = (Date.now() - 1000 * 1000) / 1000;
   utimesSync(file, t, t);
+  // `extra`: transcript entries (or a function of the plan file's path that gives them) placed after plan mode was entered and
+  // before the talk, such as the plan file's first write and a git log the session read.
+  const more = typeof extra === 'function' ? extra(file) : extra;
   return spawnSync('node', [join(dir, 'plan-guard.mjs')], {
     input: JSON.stringify({ session_id: sid('pq'), permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { planFilePath: file },
-      transcript_path: transcript([turn(0, OWNER), ...enterPlan(-900), at(reply(0, PLAN_TALK), later(-500)), owner(later(-400), 'ok')]), cwd: '/' }),
+      transcript_path: transcript([turn(0, OWNER), ...enterPlan(-900), ...more, at(reply(0, PLAN_TALK), later(-500)), owner(later(-400), 'ok')]), cwd: '/' }),
     encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: projectDir },
   });
 }
 /**
  * A plan that sends agents and passes every check of the plan guard but the ones a case varies.
  * @param {string} dir  the hub copy under test.
- * @param {{rules?: string|null, files?: string|null, answered?: string|null, what?: string|null, roadmap?: string|null}} [o]  the body
+ * @param {{rules?: string|null, files?: string|null, answered?: string|null, what?: string|null, roadmap?: string|null, shipped?: string|null}} [o]  the body
  *   of the Rules section (null for none), the body of the Files section (null for none), the body of a Found answered section
- *   (null for none), and the bodies of a What is section and a Roadmap section (null for none).
+ *   (null for none), the bodies of a What is section and a Roadmap section (null for none), and the body of a Shipped check
+ *   section (null for none).
  * @returns {string} the plan.
  */
-function sendingPlan(dir, { rules = rulesLine(dir), files = null, answered = null, what = null, roadmap = null } = {}) {
+function sendingPlan(dir, { rules = rulesLine(dir), files = null, answered = null, what = null, roadmap = null, shipped = null } = {}) {
   return ['# Sending plan', '',
     '## Goals', '1. The toolbar shows the export button on its left side.', GOALS_BLOCK, 'Served by: steps 1 and 2 serve goal 1.', '',
     '## Asked', OWN_WORDS, '',
@@ -498,6 +502,7 @@ function sendingPlan(dir, { rules = rulesLine(dir), files = null, answered = nul
     ...(answered === null ? [] : ['## Found answered', answered, '']),
     ...(what === null ? [] : ['## What is', what, '']),
     ...(roadmap === null ? [] : ['## Roadmap', roadmap, '']),
+    ...(shipped === null ? [] : ['## Shipped check', shipped, '']),
     '## Looked up', 'Nothing outside the repository bears on this change at all.', '',
     '## Branches', 'One branch only, because the request names a single control to move.', '',
     '## Call chain', 'The toolbar builder places the button; nothing else reads its position.', '',
@@ -1944,6 +1949,91 @@ const CASES = [
         && fenced(w(join(abg.dir, 'free.mjs')))
         && /live gate copy/.test(w(join(live, 'hook-dispatch.mjs')) ?? '') && fenced(w(join(live, 'x', 'y.mjs')))
         && fenced(b(`cat keep.mjs > ${live}/hook-dispatch.mjs`)) && b(`cat keep.mjs > ${abg.dir}/keep.mjs`) === null;
+    },
+  },
+  // ---- the review step changes nothing outside the scratchpad (step 186, LESSONS §423) ----
+  {
+    name: 'an agent whose prompt names the plan\'s review step, which the approval marker records, is refused every write outside the session scratchpad whatever the Files list allows: a Write, an Edit, a NotebookEdit, a Bash line with an output redirect and a git command that writes, each with a refusal naming the review step; its writes in the scratchpad, its readers and its reads pass',
+    guards: ['review_fence_wired', 'review_fence_record', 'review_fence_step', 'review_fence_files', 'review_fence_notebook', 'review_fence_redirect', 'review_fence_git', 'review_fence_pad', 'review_fence_named', 'review_fence_transcript'],
+    run(m, dir) {
+      const r = repo({ 'keep.mjs': 'x\n' });
+      mkdirSync(join(r.dir, 'tools'));
+      // Step 2 is the review step, as the marker recorded it; the Files list allows keep.mjs, src/ and docs/notes.md, and Commands allows git commit, git push and node tools/.
+      const plan = { ...fencePlan(basename(r.dir)), review: [2] };
+      const s = sid('rv');
+      const pad = `/tmp/claude-0/-home-user/${s}/scratchpad`;
+      const call = (tool_name, tool_input, step = 2, p = plan) => decideFence(m, { session_id: s, agent_id: 'a1', tool_name, tool_input, cwd: r.dir }, { plan: p, step });
+      const named = (x) => /^PLAN FENCE/.test(x ?? '') && /review step/.test(x) && /step 2/.test(x);
+      const write = (file_path, step, p) => call('Write', { file_path }, step, p);
+      const bash = (command, step, p) => call('Bash', { command }, step, p);
+      const refusedForReview = [
+        write(join(r.dir, 'keep.mjs')), write(join(r.dir, 'src', 'x.ts')), write(join(r.dir, 'docs', 'notes.md')), write(join(r.dir, 'other.mjs')),
+        call('Edit', { file_path: join(r.dir, 'keep.mjs') }), call('MultiEdit', { file_path: join(r.dir, 'src', 'x.ts') }), call('NotebookEdit', { notebook_path: join(r.dir, 'docs', 'notes.md') }),
+        bash('node tools/a.mjs > src/out.txt'), bash(`node tools/a.mjs > ${r.dir}/keep.mjs`), bash('node tools/a.mjs >> docs/notes.md 2>&1'),
+        bash(`git -C ${r.dir} commit -m x`), bash('git push origin staging'), bash('git commit -m x'), bash('git -c core.hooksPath=/dev/null commit -m x'),
+        bash('git status; git push origin staging'), bash('git log | git commit -F -'),
+      ];
+      const passForReview = [
+        write(`${pad}/progress/step-2-report.txt`), write(`${pad}/scratch/owner-messages.mjs`), call('Edit', { file_path: `${pad}/scratch/owner-messages.mjs` }),
+        call('NotebookEdit', { notebook_path: `${pad}/scratch/n.ipynb` }),
+        bash(`node tools/a.mjs > ${pad}/out.txt`), bash('cat keep.mjs 2>/dev/null'), bash(`git -C ${r.dir} log --oneline`), bash('git status'), bash('git diff'), bash('git log --format=%s -n 5'),
+        call('Read', { file_path: join(r.dir, 'keep.mjs') }),
+      ];
+      const badNamed = refusedForReview.filter((x) => !named(x)).length;
+      const badPass = passForReview.filter((x) => x !== null).length;
+      // Through the hook, the plan fence finds the review agent by its own transcript: the prompt it was sent names step 3, which the marker recorded as the review step.
+      // The Files list allows everything below an absolute folder, so only the review rule can refuse the write.
+      const target = tmp('sg-rvt-');
+      const planText = reviewPlan(dir).replace('`keep.mjs`, `src/`, `docs/notes.md`', `\`${target}/\``);
+      const w = reviewWorld(dir, [turn(0, GO)]);
+      writeFileSync(w.plan, planText);
+      writeFileSync(join(w.subs, 'agent-rv3.jsonl'), jsonl([at({ type: 'user', message: { role: 'user', content: `${w.plan} step 3` } }, later(-300)),
+        at(tool(0, 'rv3-rules', 'Read', { file_path: join(dir, 'agent-rules.md') }), later(-299)), at(result(0, 'rv3-rules', '1\tRules version: 1'), later(-298))]));
+      writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha256(planText), review: [3] }));
+      const hooked = (tool_name, tool_input) => w.call('PreToolUse', { session_id: sid('rt'), agent_id: 'rv3', tool_name, tool_input });
+      const hookWrite = hooked('Write', { file_path: join(target, 'x.txt'), content: 'x' });
+      const hookRedirect = hooked('Bash', { command: `git status > ${target}/out.txt` });
+      return badNamed === 0 && badPass === 0
+        && hookWrite.status === 2 && /PLAN FENCE/.test(hookWrite.stderr) && /review step/.test(hookWrite.stderr) && /step 3/.test(hookWrite.stderr)
+        && hookRedirect.status === 2 && /review step/.test(hookRedirect.stderr);
+    },
+  },
+  {
+    name: 'the plan fence is as it was for every agent that is not the review: an agent sent for another step, or any agent when the approval recorded no review step or an empty one, may write under the Files list and run a Commands entry, a write outside the Files list is still refused with the Files wording, and the review agent\'s own reads pass',
+    guards: ['review_fence_step', 'review_fence_record'],
+    run(m, dir) {
+      const r = repo({ 'keep.mjs': 'x\n' });
+      mkdirSync(join(r.dir, 'tools'));
+      const plan = { ...fencePlan(basename(r.dir)), review: [2] };
+      const s = sid('rn');
+      const call = (tool_name, tool_input, step, p = plan) => decideFence(m, { session_id: s, agent_id: 'a1', tool_name, tool_input, cwd: r.dir }, { plan: p, step });
+      const write = (file_path, step, p) => call('Write', { file_path }, step, p);
+      const bash = (command, step, p) => call('Bash', { command }, step, p);
+      const asStepOne = [write(join(r.dir, 'keep.mjs'), 1), write(join(r.dir, 'src', 'x.ts'), 1), bash('node tools/a.mjs > src/out.txt', 1), bash('git commit -m x', 1), bash('git push origin staging', 1)];
+      const noRecord = [write(join(r.dir, 'keep.mjs'), 2, { ...plan, review: [] }), write(join(r.dir, 'keep.mjs'), 2, { ...plan, review: null }), bash('git commit -m x', 2, fencePlan(basename(r.dir)))];
+      const unknownStep = [write(join(r.dir, 'keep.mjs'), null)];
+      const reads = [call('Read', { file_path: join(r.dir, 'keep.mjs') }, 2), bash('git status', 2), bash('git diff', 2)];
+      // Through the hook: an agent sent for step 1 writes below the folder the Files list names, and with a marker that recorded no review step the agent sent for step 3 does too.
+      const target = tmp('sg-rvt-');
+      const planText = reviewPlan(dir).replace('`keep.mjs`, `src/`, `docs/notes.md`', `\`${target}/\``);
+      const w = reviewWorld(dir, [turn(0, GO)]);
+      writeFileSync(w.plan, planText);
+      const agentFor = (id, n) => writeFileSync(join(w.subs, `agent-${id}.jsonl`), jsonl([at({ type: 'user', message: { role: 'user', content: `${w.plan} step ${n}` } }, later(-300)),
+        at(tool(0, `${id}-rules`, 'Read', { file_path: join(dir, 'agent-rules.md') }), later(-299)), at(result(0, `${id}-rules`, '1\tRules version: 1'), later(-298))]));
+      const marker = (extra) => writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha256(planText), ...extra }));
+      const hookWrite = (id) => w.call('PreToolUse', { session_id: sid('rt'), agent_id: id, tool_name: 'Write', tool_input: { file_path: join(target, 'x.txt'), content: 'x' } });
+      agentFor('rv3', 3);
+      agentFor('bd1', 1);
+      marker({ review: [3] });
+      const builder = hookWrite('bd1');
+      marker({ review: [] });
+      const emptyRecord = hookWrite('rv3');
+      marker({});
+      const oldMarker = hookWrite('rv3');
+      return asStepOne.every((x) => x === null) && noRecord.every((x) => x === null) && unknownStep.every((x) => x === null) && reads.every((x) => x === null)
+        // A write outside the Files list is still the Files list's refusal for an agent that is not the review.
+        && /outside the Files list/.test(write(join(r.dir, 'other.mjs'), 1) ?? '') && /outside the Files list/.test(write(join(r.dir, 'other.mjs'), 2, { ...plan, review: [] }) ?? '')
+        && builder.status === 0 && emptyRecord.status === 0 && oldMarker.status === 0;
     },
   },
   {
@@ -5228,15 +5318,66 @@ const CASES = [
       const emotion = [say('I understand your frustration with the status page. The list now reads from the notes file.'),
         say('You are clearly annoyed about this, and the record shows why.'), say('The owner is upset by the stale page.')];
       const promise = [say('The fence refused the read. From now on I will read the record first.'), say('This will not happen again.'), say('I promise the record is read.')];
-      const goAsk = say('Reply go when you want the step sent.', correction);
-      const goAskTwo = say('The go-word is yours to give.', correction);
-      const goLater = say('The page lists the open steps.\n\nReply go to continue.', correction);
-      const goNoCorrection = say('Reply go when you want the step sent.');
+      const goAsk = say('Say go when you want the step sent.', correction);
+      const goAskTwo = say('You can type go to continue.', correction);
+      const goLater = say('The page lists the open steps.\n\nSay go to continue.', correction);
+      const goNoCorrection = say('Say go when you want the step sent.');
       const fenced = say('The refusal said:\n\n```\nFrom now on I will read the record. I understand your frustration.\n```\nThat is all it said.');
       const honest = say('The fence passes the plan read now, and the suite reports its cases.');
       return emotion.every((r) => refusedAs(r, /names the owner's emotion/)) && promise.every((r) => refusedAs(r, /promises future conduct/))
         && refusedAs(goAsk, /opens by asking for a go-word while the owner's newest message is a correction/) && refusedAs(goAskTwo, /go-word/)
         && goLater.status === 0 && goNoCorrection.status === 0 && fenced.status === 0 && honest.status === 0;
+    },
+  },
+
+  // ---- the stop guard's go-word refusal fires only on an instruction to the owner (step 186, LESSONS §423) ----
+  {
+    name: 'the stop guard\'s refusal of a reply that asks for a go-word fires only on a sentence that instructs the owner, one whose subject is the owner (you, the owner, or an imperative) and whose verb is say, send, press, type, write or give with a go-word or the word approval as its object: a line opening Stopping here, a sentence stating that a gate holds something until a message carries a word, and a sentence that only describes a go-word or names another verb no longer refuse',
+    guards: ['go_instruction', 'go_stopping_here', 'go_gate_hold', 'go_imperative_start', 'go_subject', 'go_verbs', 'go_object'],
+    run(m, dir) {
+      const correction = 'The page shows the wrong step and the list is out of date';
+      const say = (text, ownerText = correction) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('go'), transcript_path: transcript([turn(0, ownerText), reply(5, text)]) }), encoding: 'utf8' });
+      // Under a correction these were refused before, on the word go-word or on a verb and a go within fifty characters. None instructs the owner.
+      const passes = [
+        'Stopping here: open for you is nothing; the review gate holds step 190 until a message ends with a go-word.',
+        'Stopping here: open for you is the choice below. You say go and the gate sends the step.',
+        'The review gate holds the next step until a message carries a go-word.',
+        'The next step stays held by the gate until a message ends with a go-word.',
+        'The go-word is a thing the owner gives.', 'A go-word lifts the correction.', 'The step went after the owner gave a go-word.',
+        'Reply go when you want the step sent.', 'Answer yes when the choice is clear.', 'Send the report so the step can go.', 'Write the notes, and the step will go on.',
+        'The agent will say go in its report.', 'I will send the next step.',
+        // A clause stating what a gate holds until, though the clause names the owner and a verb of the list, is not an instruction.
+        'The review gate holds step 190 until you send a go-word.', 'The next step is held by the gate until the owner types go.',
+      ].map((t) => [t, say(t)]);
+      const wrong = passes.filter(([, r]) => r.status !== 0).map(([t, r]) => `${JSON.stringify(t)} exit ${r.status}: ${r.stderr.split('\n')[0].slice(0, 80)}`);
+      if (wrong.length) throw new Error(`refused, and should pass: ${wrong.join('; ')}`);
+      // An instruction to the owner, in the imperative or with the owner as the subject, still refuses; a hold clause beside it does not excuse it.
+      const refuses = [
+        'Say go to continue.', 'You can type go when the step should be sent.', 'Please give approval so the plan can run.', 'Send a go-word and the step goes.',
+        'The owner can press go to continue.', 'Say go and the gate sends the step; the gate holds nothing until then.', 'The page lists the open steps. Send ok to continue.',
+        'Write approved below and the step goes.', 'Give me a yes.', 'Press continue when ready.', 'When you are ready, say go.',
+      ].map((t) => [t, say(t)]);
+      const unrefused = refuses.filter(([, r]) => !(r.status === 2 && /LESSONS §406/.test(r.stderr) && /opens by asking for a go-word/.test(r.stderr))).map(([t]) => JSON.stringify(t));
+      if (unrefused.length) throw new Error(`not refused as a go-word ask: ${unrefused.join('; ')}`);
+      return true;
+    },
+  },
+  {
+    name: 'the go-word refusal still fires on an instruction to the owner that it refused before (say, send, type and write with a go-word, an ok, an approved or a yes, as an imperative or with you as the subject), on the open line only and under a correction only: the same instruction on a later line, or with no correction standing, passes, and the other two managing shapes are as they were',
+    guards: ['managing_go', 'managing_first_line', 'managing_correction'],
+    run(m, dir) {
+      const correction = 'The page shows the wrong step and the list is out of date';
+      const say = (text, ownerText = correction) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('gp'), transcript_path: transcript([turn(0, ownerText), reply(5, text)]) }), encoding: 'utf8' });
+      const goRefused = (r) => r.status === 2 && /LESSONS §406/.test(r.stderr) && /opens by asking for a go-word/.test(r.stderr);
+      const verbs = ['Say go.', 'Send ok.', 'Type approved.', 'Write yes.', 'Say okay.', 'Send the go-word.', 'You may write go.', 'Give me a yes.', 'You can say continue.'].map((t) => [t, goRefused(say(t))]);
+      const missed = verbs.filter(([, ok]) => !ok).map(([t]) => JSON.stringify(t));
+      if (missed.length) throw new Error(`not refused: ${missed.join('; ')}`);
+      const later = say('The page lists the open steps.\n\nSay go to continue.');
+      const noCorrection = say('Say go to continue.', GO);
+      const emotion = say('I understand your frustration with the status page. The list now reads from the notes file.');
+      const promise = say('This will not happen again.');
+      return later.status === 0 && noCorrection.status === 0
+        && emotion.status === 2 && /names the owner's emotion/.test(emotion.stderr) && promise.status === 2 && /promises future conduct/.test(promise.stderr);
     },
   },
 
@@ -5290,8 +5431,9 @@ const CASES = [
       const oneOfTwo = wi('- "the toolbar builder" and "an absent phrase here that is long" (NOTES.md).');
       const shortQuote = wi('- "the button" (NOTES.md).');
       const several = wi(`${good}\n- the second bullet quotes nothing (NOTES.md).\n- "an absent sentence of some length" (NOTES.md).`);
-      // The plan guard refuses ExitPlanMode for it, and passes the same plan once its bullets quote.
-      const roadmap = '- 012 in: the plan builds the first feature';
+      // The plan guard refuses ExitPlanMode for it, and passes the same plan once its bullets quote. The item is marked out: this case is
+      // about the quotes, and an item marked in is also asked for a read of the commit log and a Shipped check line (LESSONS §423).
+      const roadmap = '- 012 out: the plan leaves the first feature alone';
       const exits = (what) => exitFor(dir, sendingPlan(dir, { files, what, roadmap }), R.dir);
       const bad = exits('- the button should move (NOTES.md).');
       const okExit = exits(good);
@@ -5331,7 +5473,8 @@ const CASES = [
       const prefix = rd('- 0123 in: a different number entirely, with a reason\n- 013 in: the plan builds it this time\n- Gamma without a number in: because it is here');
       const exits = (roadmap) => exitFor(dir, sendingPlan(dir, { files, what, roadmap }), R.dir);
       const refused = exits(null);
-      const passed = exits(all);
+      // The same account with the item marked out: an item marked in is also asked for a read of the commit log (LESSONS §423), which a later case covers.
+      const passed = exits(all.replace('- 012 in: the plan builds it this time', '- 012 out: the plan leaves it for a later plan'));
       const quietExit = exitFor(dir, sendingPlan(dir, { files: '- plain-repo: `a.txt`', what: '- "No roadmap here." (NOTES.md).', roadmap: null }), quiet.dir);
       const said = (r) => `${r.stdout}${r.stderr}`;
       return itemsRead === '012|013|Gamma without a number'
@@ -5340,6 +5483,110 @@ const CASES = [
         && lists(weak, /3 have no line/) && dressed === null && lists(prefix, /1 has no line/, /- 012 \(/) && !/- 013 \(/.test(prefix)
         && refused.status === 2 && /ROADMAP/.test(said(refused)) && passed.status === 0 && quietExit.status === 0
         && m.dispatch.roadmapProblem(PLAN(OWN_WORDS), { roots: [R.dir] }) === null;
+    },
+  },
+  // ---- a plan that marks a roadmap item in has read the app's commit log first (step 186, LESSONS §423) ----
+  {
+    name: 'a plan whose "## Roadmap" marks an open item in, for a repository whose NOTES.md keeps a roadmap, is refused at ExitPlanMode unless the session read a git log on that repository naming its production and its staging branch after the plan file was first written, and the plan\'s "## Shipped check" has a line for the item saying it is not shipped, read against those branches on a date; a line saying it shipped is refused as work already done, the refusal names the missing read or the missing line, and a plan with no steps is not judged',
+    guards: ['ship_wired', 'ship_marked_in', 'ship_read_log', 'ship_read_after_plan', 'ship_read_repo', 'ship_read_both', 'ship_read_result', 'ship_branch_guard',
+      'ship_line', 'ship_line_branches', 'ship_shipped_refused', 'ship_no_steps', 'ship_key_exact'],
+    run(m, dir) {
+      const NOTES_S = ['# Notes', '', 'The export control lives in the toolbar builder.', '', '## Next capability release',
+        '- [ ] **Alpha feature moves the button** <!-- decision: 012 -->', '- [ ] **Beta feature** <!-- decision: 013 -->', '- [ ] **Gamma without a number**', '',
+        '## Something else', 'Prose.', ''].join('\n');
+      const R = repo({ 'NOTES.md': NOTES_S, 'a.txt': 'x\n' }, 'ship-repo');
+      // A repository that ships on `prod` and stages on `beta`, as its .branch-guard says.
+      const ALT = repo({ 'NOTES.md': NOTES_S, 'a.txt': 'x\n', '.branch-guard': '# where work commits\nwork=beta\npromote=prod\n' }, 'alt-ship');
+      const what = '- "The export control lives in the toolbar builder" (NOTES.md).';
+      const road = '- 012 in: the plan builds it this time\n- 013 out: the owner has not asked for it\n- Gamma without a number out: left for the next plan';
+      const plan = (shipped, files = '- ship-repo: `a.txt`', roadmap = road) => sendingPlan(dir, { files, what, roadmap, shipped });
+      const PLAN_FILE = '/plans/ship-test.md';
+      const wrote = [tool(0, 'w1', 'Write', { file_path: PLAN_FILE, content: '# plan' }), result(0, 'w1', 'File created')];
+      const logged = (id, root, tail, err = false) => [tool(0, id, 'Bash', { command: `git -C ${root} log ${tail}` }), result(0, id, 'Fixed: a thing\nNew: another thing', err)];
+      const line = '012: not shipped, read against main and staging on 24 October 2026';
+      const altLine = '012: not shipped, read against prod and beta on 24 October 2026';
+      const check = (shipped, entries, o = {}) => m.dispatch.shippedCheckProblem(plan(shipped, o.files, o.roadmap), { roots: [o.root ?? R.dir], entries, planFile: PLAN_FILE });
+      const says = (x, ...re) => typeof x === 'string' && /^SHIPPED CHECK/.test(x) && re.every((r) => r.test(x));
+      const read = [...wrote, ...logged('g1', R.dir, '--format=%s -n 300 origin/main origin/staging')];
+      // The read: it has to be a git log on the repository, after the plan file's first write, naming both branches, and not an error.
+      const good = check(line, read);
+      const noRead = check(line, wrote);
+      const readBefore = check(line, [...logged('g2', R.dir, '--format=%s origin/main origin/staging'), ...wrote]);
+      const otherRepo = check(line, [...wrote, ...logged('g3', ALT.dir, '--format=%s origin/main origin/staging')]);
+      const onlyMain = check(line, [...wrote, ...logged('g4', R.dir, '--format=%s origin/main')]);
+      const onlyStaging = check(line, [...wrote, ...logged('g5', R.dir, '--oneline staging')]);
+      const failed = check(line, [...wrote, ...logged('g6', R.dir, '--format=%s origin/main origin/staging', true)]);
+      const ranges = ['origin/main..origin/staging', 'main...staging', 'refs/remotes/origin/main refs/remotes/origin/staging'].map((t, k) => check(line, [...wrote, ...logged(`r${k}`, R.dir, `--format=%s ${t}`)]));
+      const notALog = check(line, [...wrote, tool(0, 'g7', 'Bash', { command: `git -C ${R.dir} show origin/main origin/staging` }), result(0, 'g7', 'x')]);
+      // No plan file known to the check: any such read in the transcript counts.
+      const noPlanFile = m.dispatch.shippedCheckProblem(plan(line), { roots: [R.dir], entries: logged('g8', R.dir, 'origin/main origin/staging'), planFile: '' });
+      // The branches are the repository's own, read from its .branch-guard.
+      const altOk = check(altLine, [...wrote, ...logged('a1', ALT.dir, '--format=%s origin/prod origin/beta')], { files: '- alt-ship: `a.txt`', root: ALT.dir });
+      const altWrongRead = check(altLine, [...wrote, ...logged('a2', ALT.dir, '--format=%s origin/main origin/staging')], { files: '- alt-ship: `a.txt`', root: ALT.dir });
+      const altWrongLine = check(line, [...wrote, ...logged('a3', ALT.dir, '--format=%s origin/prod origin/beta')], { files: '- alt-ship: `a.txt`', root: ALT.dir });
+      // The line: one for each item marked in, saying not shipped with the branches read and a date; a line saying shipped is work already done.
+      const dressed = check('- **012**: not shipped, read against main and staging on 24 October 2026', read);
+      const noLine = check(null, read);
+      const noDate = check('012: not shipped, read against main and staging on', read);
+      const wrongNames = check('012: not shipped, read against master and develop on 24 October 2026', read);
+      const shipped = check('012: shipped on main by "Fixed: a look can be taken off"', read);
+      const shippedOnStaging = check('012: shipped on staging by "New: a None button takes a look off"', read);
+      const otherKey = check('013: not shipped, read against main and staging on 24 October 2026', read);
+      const longerKey = check('0123: not shipped, read against main and staging on 24 October 2026', read);
+      const noColon = check('012 not shipped, read against main and staging on 24 October 2026', read);
+      const titled = check('Gamma without a number: not shipped, read against main and staging on 24 October 2026', read,
+        { roadmap: '- 012 out: the owner has not asked for it\n- 013 out: the owner has not asked for it\n- Gamma without a number in: the plan builds it this time' });
+      const twoIn = check(line, read, { roadmap: '- 012 in: the plan builds it this time\n- 013 in: the plan builds this one too\n- Gamma without a number out: left for the next plan' });
+      // A plan with no Steps sends no agent and is not judged, though it marks an item in and no log was read.
+      const noSteps = m.dispatch.shippedCheckProblem(plan(line).replace('## Steps', '## Notes'), { roots: [R.dir], entries: [] });
+      // Through the plan guard at ExitPlanMode: the same plan, with the transcript shaped as the guard reads it.
+      const exit = (shipped, extra, o = {}) => exitFor(dir, plan(shipped, o.files, o.roadmap), o.root ?? R.dir, extra);
+      const planWrite = (file) => [at(tool(0, 'pw', 'Write', { file_path: file, content: '# plan' }), later(-800)), at(result(0, 'pw', 'File created'), later(-799))];
+      const planLog = (id, root, tail) => [at(tool(0, id, 'Bash', { command: `git -C ${root} log ${tail}` }), later(-700)), at(result(0, id, 'Fixed: a thing'), later(-699))];
+      const said = (r) => `${r.stdout}${r.stderr}`;
+      const exitGood = exit(line, (f) => [...planWrite(f), ...planLog('xl', R.dir, '--format=%s origin/main origin/staging')]);
+      const exitNoRead = exit(line, (f) => planWrite(f));
+      const exitNoLine = exit(null, (f) => [...planWrite(f), ...planLog('xl', R.dir, '--format=%s origin/main origin/staging')]);
+      const exitShipped = exit('012: shipped on main by "Fixed: a look can be taken off"', (f) => [...planWrite(f), ...planLog('xl', R.dir, '--format=%s origin/main origin/staging')]);
+      return good === null && says(noRead, /no result of a git log on ship-repo/, /naming main and staging/, /012/) && !/has no line/.test(noRead)
+        && says(readBefore, /no result of a git log on ship-repo/) && says(otherRepo, /no result of a git log on ship-repo/)
+        && says(onlyMain, /naming main and staging/) && says(onlyStaging, /naming main and staging/) && says(failed, /no result of a git log on ship-repo/)
+        && ranges.every((x) => x === null) && says(notALog, /no result of a git log/) && noPlanFile === null
+        && altOk === null && says(altWrongRead, /naming prod and beta/) && says(altWrongLine, /reads against main and staging/, /ships on prod and stages on beta/)
+        && dressed === null && says(noLine, /has no line for 012/, /not shipped, read against main and staging on/) && !/no result of a git log/.test(noLine)
+        && says(noDate, /has no line for 012/) && says(wrongNames, /reads against master and develop/, /ships on main and stages on staging/)
+        && says(shipped, /012/, /shipped on main by "Fixed: a look can be taken off"/, /work already done/) && says(shippedOnStaging, /work already done/)
+        && says(otherKey, /has no line for 012/) && says(longerKey, /has no line for 012/) && says(noColon, /has no line for 012/)
+        && titled === null && says(twoIn, /has no line for 013/) && !/has no line for 012/.test(twoIn)
+        && noSteps === null
+        && exitGood.status === 0 && exitNoRead.status === 2 && /SHIPPED CHECK/.test(said(exitNoRead)) && /no result of a git log/.test(said(exitNoRead))
+        && exitNoLine.status === 2 && /SHIPPED CHECK/.test(said(exitNoLine)) && /has no line for 012/.test(said(exitNoLine))
+        && exitShipped.status === 2 && /work already done/.test(said(exitShipped));
+    },
+  },
+  {
+    name: 'the roadmap check is unchanged by the shipped check: a plan with an open item that has no Roadmap line is refused for the roadmap, naming the item, whatever the log shows; a plan whose items are all marked out, a plan with every item marked in that has its read and its lines, and a repository that keeps no roadmap are not refused',
+    guards: ['ship_after_roadmap', 'ship_out_not_asked'],
+    run(m, dir) {
+      const NOTES_S = ['# Notes', '', 'The export control lives in the toolbar builder.', '', '## Next capability release',
+        '- [ ] **Alpha feature moves the button** <!-- decision: 012 -->', '- [ ] **Beta feature** <!-- decision: 013 -->', '', '## Something else', 'Prose.', ''].join('\n');
+      const R = repo({ 'NOTES.md': NOTES_S, 'a.txt': 'x\n' }, 'ship-two');
+      const quiet = repo({ 'NOTES.md': '# Notes\n\nNo roadmap here.\n', 'a.txt': 'x\n' }, 'plain-ship');
+      const what = '- "The export control lives in the toolbar builder" (NOTES.md).';
+      const line = '012: not shipped, read against main and staging on 24 October 2026';
+      const planWrite = (file) => [at(tool(0, 'pw', 'Write', { file_path: file, content: '# plan' }), later(-800)), at(result(0, 'pw', 'File created'), later(-799))];
+      const planLog = (id, root, tail) => [at(tool(0, id, 'Bash', { command: `git -C ${root} log ${tail}` }), later(-700)), at(result(0, id, 'Fixed: a thing'), later(-699))];
+      const withRead = (f) => [...planWrite(f), ...planLog('xl', R.dir, '--format=%s origin/main origin/staging')];
+      const said = (r) => `${r.stdout}${r.stderr}`;
+      // The old refusal first: 013 has no line in the Roadmap, and 012 is marked in with no log read, which the shipped check would also refuse.
+      const missing = exitFor(dir, sendingPlan(dir, { files: '- ship-two: `a.txt`', what, roadmap: '- 012 in: the plan builds it this time', shipped: line }), R.dir, []);
+      // Every item out: no read is asked, and none was made.
+      const allOut = exitFor(dir, sendingPlan(dir, { files: '- ship-two: `a.txt`', what, roadmap: '- 012 out: the owner has not asked for it\n- 013 out: the owner has not asked for it' }), R.dir, []);
+      // Both marked in, with the read and a line each, passes.
+      const bothIn = exitFor(dir, sendingPlan(dir, { files: '- ship-two: `a.txt`', what, roadmap: '- 012 in: the plan builds it this time\n- 013 in: the plan builds this one too', shipped: `${line}\n013: not shipped, read against main and staging on 24 October 2026` }), R.dir, withRead);
+      const quietExit = exitFor(dir, sendingPlan(dir, { files: '- plain-ship: `a.txt`', what: '- "No roadmap here." (NOTES.md).', roadmap: null }), quiet.dir, []);
+      return missing.status === 2 && /ROADMAP/.test(said(missing)) && /- 013 \(ship-two\)/.test(said(missing)) && !/SHIPPED CHECK/.test(said(missing))
+        && allOut.status === 0 && bothIn.status === 0 && quietExit.status === 0;
     },
   },
   {
@@ -5681,6 +5928,100 @@ const CASES = [
       const isCan = m.dispatch.isCanCommand(line('Read', 'x')) && !m.dispatch.isCanCommand(`${line('Read', 'x')} ; touch y`) && !m.dispatch.isCanCommand('node report.mjs --can Read x');
       return noLatch && refusal && bashMiss && sendOk && dispatchWords && unknown && usage && wrote && standing && kept && removed
         && latchedAgain && passesLatch && chainedLatched && freshPass && chainedRefused && agentRefused && fenceLine && fenceOthers && isCan;
+    },
+  },
+  // ---- the main thread reads a repository's history, and nothing else of git (step 186, LESSONS §423) ----
+  {
+    name: 'the manager fence passes a Bash line that is exactly git log, git ls-remote, git branch in list mode or git show-ref on a repository named with -C and a full path, when that repository is one of the session\'s or the hub worktree in the session scratchpad, with arguments only from the subject format, the one-line flag, a count, the double dash, branch names and revision ranges; hook-dispatch.mjs --can prints the same answer, and the hook passes the line without a latch',
+    guards: ['hist_branch', 'hist_words', 'hist_trim', 'hist_membership', 'hist_session_repos', 'hist_worktree', 'hist_log_args', 'hist_dash', 'hist_up', 'hist_lsremote', 'hist_branch_list', 'hist_showref', 'hist_subcommands', 'can_fence'],
+    run(m, dir) {
+      const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
+      const s = sid('gh');
+      // A folder with two repositories and a folder that is none, as the session's launch directory holds them.
+      const parent = tmp('sg-hist-');
+      for (const n of ['appone', 'apptwo']) mkdirSync(join(parent, n, '.git'), { recursive: true });
+      mkdirSync(join(parent, 'plainone'));
+      const one = join(parent, 'appone');
+      const two = join(parent, 'apptwo');
+      // Repositories whose folder names carry shell characters: a line naming one is refused for its words, though the folder is the session's.
+      const semi = join(parent, 'semi;touch');
+      const dollar = join(parent, 'dollar$HOME');
+      for (const d of [semi, dollar]) mkdirSync(join(d, '.git'), { recursive: true });
+      // The hub worktree: a repository directly below worktree/ in this session's scratchpad.
+      const wt = join(tmpdir(), 'claude-0', '-home-user', s, 'scratchpad', 'worktree', 'hub');
+      mkdirSync(join(wt, '.git'), { recursive: true });
+      const elsewhere = join(tmp('sg-hist-else-'), 'otherapp');
+      mkdirSync(join(elsewhere, '.git'), { recursive: true });
+      // Not a read for the classifier, so a line passes only by the rule under test.
+      const f = (command, extra = {}) => m.dispatch.managerFence({ session_id: s, cwd: parent, tool_name: 'Bash', tool_input: { command }, ...extra }, { plan, classify: () => false });
+      const fenced = (x) => /^MANAGER FENCE/.test(x ?? '');
+      const passes = [
+        `git -C ${one} log --format=%s -n 100 origin/main origin/staging`, `git -C ${one} log --oneline -20 main..staging`, `git -C ${two} log --pretty=format:%s --max-count=50 origin/main...origin/staging --`,
+        `git -C ${one} log --oneline -n 5`, `git -C ${one} log`, `  git -C ${one} log --oneline  `, `git -C ${wt} log --format=%s -n 3 origin/main`,
+        `git -C ${one} ls-remote --heads origin main staging`, `git -C ${one} ls-remote origin`, `git -C ${one} ls-remote`,
+        `git -C ${one} branch`, `git -C ${one} branch -a`, `git -C ${one} branch -r`, `git -C ${one} branch --list -v`, `git -C ${wt} branch -vv`,
+        `git -C ${one} show-ref --heads`, `git -C ${one} show-ref --verify refs/heads/main`, `git -C ${two} show-ref -s main`];
+      const refused = [
+        // Chained, redirected, expanded or quoted: never the exact line.
+        `git -C ${one} log --oneline ; touch x`, `git -C ${one} log --oneline && touch x`, `git -C ${one} log --oneline | cat`, `git -C ${one} log --oneline > out.txt`,
+        `git -C ${one} log --oneline &`, `git -C ${one} log --oneline 2>&1`, `git -C ${one} log --oneline\ntouch x`, `git -C ${one} log $(date)`, `git -C ${one} log \`date\``,
+        `git -C ${semi} log --oneline`, `git -C ${dollar} log --oneline`, `git -C ${semi} branch -a`,
+        `git -C ${one} log "origin/main"`, `git -C ${one} log origin/main\tstaging`, `git -C ${one} log --oneline < in.txt`, `git -C ${one} log origin/*`, `git -C ${one} log main:NOTES.md`,
+        // Another program, another shape of the line.
+        `env git -C ${one} log`, `/usr/bin/git -C ${one} log`, `git log`, `git -C ${one}`, `git -C ${one} -C ${two} log`, `git -c core.pager=cat -C ${one} log`, `git --git-dir=${one}/.git log`,
+        `git -C ${one} -c core.pager=x log`, `node -e 1 -C ${one} log`,
+        // Another thing of git, the ones that show a file or write.
+        `git -C ${one} diff`, `git -C ${one} show origin/main`, `git -C ${one} status`, `git -C ${one} fetch origin`, `git -C ${one} commit -m x`, `git -C ${one} push origin staging`,
+        `git -C ${one} checkout main`, `git -C ${one} reset --hard`, `git -C ${one} config user.name x`, `git -C ${one} tag`, `git -C ${one} remote -v`, `git -C ${one} cat-file -p main`,
+        `git -C ${one} rev-parse HEAD`, `git -C ${one} ls-files`, `git -C ${one} blame NOTES.md`, `git -C ${one} grep x`, `git -C ${one} branch newbranch`, `git -C ${one} branch -d main`,
+        `git -C ${one} branch -D main`, `git -C ${one} branch --list main`, `git -C ${one} branch -m old new`, `git -C ${one} show-ref --head x`, `git -C ${one} ls-remote origin ../x`,
+        `git -C ${one} ls-remote https://example.invalid/x`, `git -C ${one} ls-remote --get-url`,
+        // Arguments outside the list.
+        `git -C ${one} log -p`, `git -C ${one} log --stat`, `git -C ${one} log --all`, `git -C ${one} log --format=%B`, `git -C ${one} log --format=%an`, `git -C ${one} log --name-only`,
+        `git -C ${one} log --output=x.txt`, `git -C ${one} log -S foo`, `git -C ${one} log --grep=foo`, `git -C ${one} log -- NOTES.md`, `git -C ${one} log --oneline -- NOTES.md`,
+        `git -C ${one} log -n`, `git -C ${one} log -n x`, `git -C ${one} log --max-count=x`, `git -C ${one} log --since=yesterday`, `git -C ${one} log ../x`, `git -C ${one} log /etc/passwd`, `git -C ${one} log main/../x`,
+        // The repository: not a session repository, not a full path, not a repository at all, not the path as it resolves.
+        `git -C ${elsewhere} log`, `git -C ${parent} log`, `git -C ${join(parent, 'plainone')} log`, `git -C appone log`, `git -C ./appone log`, `git -C ${one}/ log`, `git -C ${one}/../apptwo log`,
+        `git -C ${join(one, 'src')} log`, `git -C /home/other log`, `git -C ${wt}/../.. log`, `git -C ~/appone log`];
+      const passedAll = passes.filter((c) => f(c) !== null);
+      const refusedAll = refused.filter((c) => !fenced(f(c)));
+      if (passedAll.length || refusedAll.length) throw new Error(`wrong on: ${[...passedAll.map((c) => `passes? ${JSON.stringify(c)}`), ...refusedAll.map((c) => `refuses? ${JSON.stringify(c)}`)].join(', ')}`);
+      // The check prints the same answer, from a shell whose directory is the launch directory.
+      const hookFile = join(dir, 'hook-dispatch.mjs');
+      const can = (cmd) => spawnSync('node', [hookFile, '--can', 'Bash', cmd], { encoding: 'utf8', cwd: parent, env: { ...process.env, HOME: tmp('sg-home-'), CLAUDE_CODE_SESSION_ID: s } }).stdout;
+      const canPasses = /MANAGER FENCE: would pass/.test(can(`git -C ${one} log --format=%s -n 100 origin/main origin/staging`)) && /MANAGER FENCE: would pass/.test(can(`git -C ${wt} show-ref --heads`));
+      const canRefuses = /MANAGER FENCE: would refuse/.test(can(`git -C ${one} log --oneline ; touch x`)) && /MANAGER FENCE: would refuse/.test(can(`git -C ${one} diff`)) && /MANAGER FENCE: would refuse/.test(can(`git -C ${elsewhere} log`));
+      // Through the hook, on the main thread: the line passes and sets no latch; a chained line is refused by the fence.
+      const w = world(dir);
+      const sPass = sid('gh');
+      const okLine = w.call('PreToolUse', { session_id: sPass, cwd: parent, tool_name: 'Bash', tool_input: { command: `git -C ${one} log --format=%s -n 100 origin/main origin/staging` } });
+      const sBad = sid('gh');
+      const badLine = w.call('PreToolUse', { session_id: sBad, cwd: parent, tool_name: 'Bash', tool_input: { command: `git -C ${one} log --oneline ; touch x` } });
+      return canPasses && canRefuses && okLine.status === 0 && !latched(sPass) && badLine.status === 2 && /MANAGER FENCE/.test(badLine.stderr) && !latched(sBad);
+    },
+  },
+  {
+    name: 'the manager fence keeps its other refusals beside the history reads: git diff, show and status on a repository, a cat of its source, a history read with an argument outside the list, one chained to a read of source, and one on a repository that is not the session\'s are refused with the reason to send an agent, a call by an agent is the plan fence\'s as before, and the check command still passes',
+    guards: ['hist_membership', 'hist_log_args'],
+    run(m, dir) {
+      const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
+      const s = sid('gk');
+      const parent = tmp('sg-hist-');
+      mkdirSync(join(parent, 'appone', '.git'), { recursive: true });
+      writeFileSync(join(parent, 'appone', 'app.ts'), 'x\n');
+      const one = join(parent, 'appone');
+      const elsewhere = join(tmp('sg-hist-else-'), 'otherapp');
+      mkdirSync(join(elsewhere, '.git'), { recursive: true });
+      // Every call counts as a read for the classifier, so what refuses these is the record: a repository's files are not of it.
+      const f = (command, extra = {}) => m.dispatch.managerFence({ session_id: s, cwd: parent, tool_name: 'Bash', tool_input: { command }, ...extra }, { plan, classify: () => true });
+      const sendAgent = (x) => /^MANAGER FENCE/.test(x ?? '') && /Send an agent/.test(x);
+      const hookFile = join(dir, 'hook-dispatch.mjs');
+      return sendAgent(f(`git -C ${one} diff`)) && sendAgent(f(`git -C ${one} show origin/main`)) && sendAgent(f(`git -C ${one} status`)) && sendAgent(f(`cat ${one}/app.ts`))
+        && sendAgent(f(`git -C ${one} log --stat`)) && sendAgent(f(`git -C ${one} log -p origin/main`)) && sendAgent(f(`git -C ${one} log --oneline ; cat ${one}/app.ts`))
+        && sendAgent(f(`git -C ${elsewhere} log --oneline`)) && sendAgent(f(`git -C ${elsewhere} show-ref --heads`))
+        // A call by an agent is not the fence's: the manager fence returns null for a subagent, as before.
+        && f(`git -C ${one} diff`, { agent_id: 'a1' }) === null
+        && f(`node ${hookFile} --can Read /plans/gate-test.md`) === null;
     },
   },
   {
@@ -6458,7 +6799,7 @@ const PLANTS = {
   managing_wired: ['if (managing) {\n  const why = {', 'if (false) {\n  const why = {', 'stop-guard.mjs'],
   managing_emotion: ["  for (const re of EMOTION) { const m = re.exec(prose); if (m) return { kind: 'emotion', said: m[0].trim().slice(0, 80) }; }\n", '\n', 'stop-guard.mjs'],
   managing_promise: ["  for (const re of PROMISE) { const m = re.exec(prose); if (m) return { kind: 'promise', said: m[0].trim().slice(0, 80) }; }\n", '\n', 'stop-guard.mjs'],
-  managing_go: ["    for (const re of GO_ASK) { const m = re.exec(open); if (m) return { kind: 'go-word', said: m[0].trim().slice(0, 80) }; }\n", '\n', 'stop-guard.mjs'],
+  managing_go: ["    const m = goInstruction(open);\n    if (m) return { kind: 'go-word', said: m[0].trim().slice(0, 80) };\n", '\n', 'stop-guard.mjs'],
   managing_correction: ['  if (correction) {\n    const open = prose', '  if (true) {\n    const open = prose', 'stop-guard.mjs'],
   managing_correction_read: ['try { correctionNow = correctionStanding({ session_id: hook.session_id, transcript_path: path }); }', 'try { correctionNow = null; }', 'stop-guard.mjs'],
   managing_fenced: ["const prose = String(text).replace(/```[\\s\\S]*?```/g, ' ');", 'const prose = String(text);', 'stop-guard.mjs'],
@@ -6601,6 +6942,60 @@ const PLANTS = {
   page_key_content: ["    if (tool === 'Artifact' && typeof input?.file_path === 'string' && input.file_path) body.pageContent = pageDigest(input.file_path, cwd, asOf);", '    void 0;', 'reply-guard.mjs'],
   page_key_since: ["    if (asOf && statSync(abs).mtimeMs > asOf) return 'changed-since';", '', 'reply-guard.mjs'],
   page_key_catchup_asof: ['        const h = callHash(u.name, u.input, p.cwd, t);', '        const h = callHash(u.name, u.input, p.cwd);', 'reply-guard.mjs'],
+
+  // A plan that marks a roadmap item in has read the app's commit log first, and says what it showed (step 186, LESSONS §423).
+  ship_wired: ['    if (shipped) deny(shipped);\n', '\n', 'plan-guard.mjs'],
+  ship_after_roadmap: ['    const road = roadmapProblem(top);\n', "    const early = shippedCheckProblem(top, { entries: tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024), planFile });\n    if (early) deny(early);\n    const road = roadmapProblem(top);\n", 'plan-guard.mjs'],
+  ship_marked_in: ["  return items.filter((i) => said.some((l) => {\n    const k = String(i.key).toLowerCase();\n    const low = l.toLowerCase().replace(/^decision\\s+/, '');\n    return low.startsWith(k) && /^[\\s:,;.-]*in\\b/.test(low.slice(k.length));",
+    "  return items.filter((i) => said.some((l) => {\n    const k = String(i.key).toLowerCase();\n    const low = l.toLowerCase().replace(/^decision\\s+/, '');\n    return false && low.startsWith(k) && /^[\\s:,;.-]*in\\b/.test(low.slice(k.length));", 'hook-dispatch.mjs'],
+  ship_out_not_asked: ['/^[\\s:,;.-]*in\\b/.test(low.slice(k.length));', '/^[\\s:,;.-]*(?:in|out)\\b/.test(low.slice(k.length));', 'hook-dispatch.mjs'],
+  ship_read_log: ["resolve(dir) !== rootAbs || w[k] !== 'log') return false;", 'resolve(dir) !== rootAbs) return false;', 'hook-dispatch.mjs'],
+  ship_read_repo: ["resolve(dir) !== rootAbs || w[k] !== 'log') return false;", "w[k] !== 'log') return false;", 'hook-dispatch.mjs'],
+  ship_read_after_plan: ['return calls.some((u) => u.at > planAt && answered.has(u.id) && logNames(u.command));', 'return calls.some((u) => answered.has(u.id) && logNames(u.command));', 'hook-dispatch.mjs'],
+  ship_read_result: ['return calls.some((u) => u.at > planAt && answered.has(u.id) && logNames(u.command));', 'return calls.some((u) => u.at > planAt && logNames(u.command));', 'hook-dispatch.mjs'],
+  ship_read_both: ['    return want.every((b) => parts.some((x) => x === b || x.endsWith(`/${b}`)));', '    return want.some((b) => parts.some((x) => x === b || x.endsWith(`/${b}`)));', 'hook-dispatch.mjs'],
+  ship_branch_guard: ["  return { production: plain(key('promote')) ?? 'main', staging: plain(key('work')) ?? 'staging' };", "  return { production: 'main', staging: 'staging' };", 'hook-dispatch.mjs'],
+  ship_line: ['    problems.push(`the plan\'s "## Shipped check" has no line for', '    void (`the plan\'s "## Shipped check" has no line for', 'hook-dispatch.mjs'],
+  ship_line_branches: ['    if (notShipped.some((x) => x[1].toLowerCase() === production.toLowerCase() && x[2].toLowerCase() === staging.toLowerCase())) continue;', '    if (notShipped.length) continue;', 'hook-dispatch.mjs'],
+  ship_shipped_refused: ['    if (shipped) {\n      problems.push(`${i.key} (${i.repo}): the plan marks it in, and its line', '    if (false) {\n      problems.push(`${i.key} (${i.repo}): the plan marks it in, and its line', 'hook-dispatch.mjs'],
+  ship_no_steps: ["export function shippedCheckProblem(text, opts = {}) {\n  if (!planSection(text, 'Steps').trim()) return null;\n", 'export function shippedCheckProblem(text, opts = {}) {\n', 'hook-dispatch.mjs'],
+  ship_key_exact: [' && /^\\s*:/.test(l.slice(key.length))', '', 'hook-dispatch.mjs'],
+
+  // The main thread reads a repository's history, and nothing else of git (step 186, LESSONS §423).
+  hist_branch: ["  if (tool === 'Bash' && gitHistoryRead(String(input.command ?? ''), p, opts)) return null;\n", '\n', 'hook-dispatch.mjs'],
+  hist_words: ['  if (!words.every((w) => GIT_WORD.test(w))) return false;\n', '\n', 'hook-dispatch.mjs'],
+  hist_trim: ["  const line = String(command ?? '').trim();", "  const line = String(command ?? '');", 'hook-dispatch.mjs'],
+  hist_membership: ['  return gitHistoryRepos(p, opts).includes(path);', '  return true;', 'hook-dispatch.mjs'],
+  hist_session_repos: ["  const cands = [at, ...kids(at), ...(existsSync(join(at, '.git')) ? kids(dirname(at)) : [])];", "  const cands = [at, ...(existsSync(join(at, '.git')) ? kids(dirname(at)) : [])];", 'hook-dispatch.mjs'],
+  hist_worktree: ["  if (pad) cands.push(...kids(join(pad, 'worktree')));\n", '\n', 'hook-dispatch.mjs'],
+  hist_log_args: ["    if (a.startsWith('-') || !GIT_RANGE.test(a) || GIT_UP.test(a)) return false;", '    if (false) return false;', 'hook-dispatch.mjs'],
+  hist_up: ["    if (a.startsWith('-') || !GIT_RANGE.test(a) || GIT_UP.test(a)) return false;", "    if (a.startsWith('-') || !GIT_RANGE.test(a)) return false;", 'hook-dispatch.mjs'],
+  hist_dash: ["    if (ended) return false;\n    if (a === '--') { ended = true; continue; }", "    if (a === '--') { ended = true; continue; }", 'hook-dispatch.mjs'],
+  hist_lsremote: ['      if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(a)) return false;', '      if (false) return false;', 'hook-dispatch.mjs'],
+  hist_branch_list: ["const gitBranchArgs = (args) => args.every((a) => ['-a', '-r', '-v', '-vv', '-l', '--list', '--all', '--remotes'].includes(a));", 'const gitBranchArgs = (args) => true;', 'hook-dispatch.mjs'],
+  hist_showref: ['|| (GIT_REF.test(a) && !GIT_UP.test(a)));', '|| true);', 'hook-dispatch.mjs'],
+  hist_subcommands: ["['show-ref', gitShowRefArgs]]).get(words[3]);", "['show-ref', gitShowRefArgs], ['diff', gitBranchArgs]]).get(words[3]);", 'hook-dispatch.mjs'],
+
+  // The review step changes nothing outside the session scratchpad (step 186, LESSONS §423).
+  review_fence_wired: ['  if (review) return review;\n', '\n', 'plan-fence.mjs'],
+  review_fence_record: ['if (!p.agent_id || !plan || !Array.isArray(plan.review) || !plan.review.length) return null;', 'if (!p.agent_id || !plan) return null;', 'plan-fence.mjs'],
+  review_fence_step: ['if (!Number.isInteger(step) || !plan.review.includes(step)) return null;', 'if (!Number.isInteger(step)) return null;', 'plan-fence.mjs'],
+  review_fence_files: ["    return f && inside(resolve(cwd, f)) ? null : `${why} ${tool} to ${f || '(no path)'} is a write outside it.`;", "    return f && (inside(resolve(cwd, f)) || underFiles(resolve(cwd, f), planFiles(plan.text))) ? null : `${why} ${tool} to ${f || '(no path)'} is a write outside it.`;", 'plan-fence.mjs'],
+  review_fence_notebook: ["const f = String(p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '');", "const f = String(p.tool_input?.file_path ?? '');", 'plan-fence.mjs'],
+  review_fence_redirect: ['  return out ? `${why} a redirect writes ${out}, outside it.` : null;', '  return null;', 'plan-fence.mjs'],
+  review_fence_git: ["    if (w[0] === 'git' && !classify(w.map(quote).join(' '), at)) return `${why}", "    if (false && w[0] === 'git' && !classify(w.map(quote).join(' '), at)) return `${why}", 'plan-fence.mjs'],
+  review_fence_pad: ['  const inside = (abs) => HARMLESS.has(abs) || inScratchpad(abs, p.session_id);', '  const inside = (abs) => HARMLESS.has(abs);', 'plan-fence.mjs'],
+  review_fence_named: ["which the approval recorded as the plan's review step, and a review changes nothing outside the session scratchpad, whatever the plan's Files list allows;", 'which changes nothing outside the session scratchpad;', 'plan-fence.mjs'],
+  review_fence_transcript: ['  try { const f = agentTranscript(p); return f ? agentStep(f) : null; } catch { return null; }', '  return null;', 'plan-fence.mjs'],
+
+  // The go-word refusal fires only on an instruction to the owner (step 186, LESSONS §423).
+  go_instruction: ['    for (const re of GO_ASK) { const m = re.exec(said); if (m) return m; }', '    for (const re of GO_ASK) { const m = re.exec(said); if (m) return m; }\n    if (/go-word/i.test(said)) return /go-word/i.exec(said);', 'stop-guard.mjs'],
+  go_stopping_here: ['  if (STOPPING_HERE.test(open)) return null;\n', '\n', 'stop-guard.mjs'],
+  go_gate_hold: ["    const said = s.replace(GATE_HOLD, ' ').trim();", '    const said = s.trim();', 'stop-guard.mjs'],
+  go_imperative_start: ['(?:^|[:;,—]\\s*|\\s-\\s)', '', 'stop-guard.mjs'],
+  go_subject: ['\\b(?:you|the owner)\\s+(?:(?:can', '\\b(?:you|the owner|the agent)\\s+(?:(?:can', 'stop-guard.mjs'],
+  go_verbs: ['const GO_VERB = String.raw`(?:say|send|press|type|write|give)`;', 'const GO_VERB = String.raw`(?:say|send|press|type|write|give|reply|answer)`;', 'stop-guard.mjs'],
+  go_object: ['continue|approved?|approval|yes)', 'continue|approved?|yes)', 'stop-guard.mjs'],
 };
 
 async function runAll(dir, only, filter) {

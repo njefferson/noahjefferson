@@ -338,6 +338,13 @@ if (tool === 'Bash') {
  * those repositories (the `- [ ] **Title**` bullets of NOTES.md's `## Next
  * capability release`) has a bullet in its `## Roadmap`, opening with the item's
  * key and then `in` or `out` and why. Both are read from hook-dispatch.mjs.
+ *
+ * AND A PLAN THAT MARKS A ROADMAP ITEM `in` RESTS ON A READ OF THE APP'S COMMIT LOG (LESSONS §423).
+ * `shippedCheckProblem`: for a repository whose NOTES.md keeps a roadmap, the session's transcript must hold, after
+ * the plan file was first written, the result of a git log on that repository naming its production and its staging
+ * branch, and the plan's `## Shipped check` has a line for each item marked `in`, `NNN: not shipped, read against
+ * main and staging on <date>`; a line saying the item shipped is refused as work already done. Asked after
+ * `roadmapProblem`, so an item with no Roadmap line is refused for that first.
  */
 /**
  * DO WHAT THE OWNER ASKED, AND NOTHING MORE (Doctrine §0f, LESSONS §379).
@@ -552,6 +559,9 @@ if (tool === 'ExitPlanMode') {
   // When the plan FILE was last written, for the talk check; 0 when the plan is
   // only text the harness passed and no file is known.
   let planWrittenAt = 0;
+  // The plan file's path, for the shipped check, which counts only a read made after the file was first written; '' when the
+  // plan is only text the harness passed.
+  let planFile = '';
   // The plan checked is the plan the harness is about to show: the file it
   // names, or the text it passes. Only without either is the newest file in the
   // directory used, and never one of the harness's side files (a workshop
@@ -560,11 +570,12 @@ if (tool === 'ExitPlanMode') {
     if (typeof input.planFilePath === 'string' && existsSync(input.planFilePath)) {
       plan = readFileSync(input.planFilePath, 'utf8');
       planWrittenAt = statSync(input.planFilePath).mtimeMs;
+      planFile = input.planFilePath;
     } else if (typeof input.plan === 'string' && input.plan.trim()) plan = input.plan;
     else {
       const newest = readdirSync(dir).filter((f) => f.endsWith('.md') && !/\.workshop\.md$|\.steps\.md$|-agent-[^/]*\.md$|ultraplan\.md$/.test(f))
         .map((f) => ({ f, t: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.t - a.t)[0];
-      if (newest) { plan = readFileSync(join(dir, newest.f), 'utf8'); planWrittenAt = newest.t; }
+      if (newest) { plan = readFileSync(join(dir, newest.f), 'utf8'); planWrittenAt = newest.t; planFile = join(dir, newest.f); }
     }
   } catch { /* no plans dir: fall through with an empty plan, which is refused */ }
   const top = plan.split(/^(?:---\s*|# .*)$/m).find((b) => b.trim()) ?? plan;
@@ -579,7 +590,7 @@ if (tool === 'ExitPlanMode') {
     // carries the hub CLAUDE.md's standing goals block word for word and names,
     // for every step, the goal it serves. Loaded here only, because this file
     // runs on every tool call and the plan parsing lives in hook-dispatch.mjs.
-    const { goalsProblem, aimStandingProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem } = await import('./hook-dispatch.mjs');
+    const { goalsProblem, aimStandingProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem, shippedCheckProblem } = await import('./hook-dispatch.mjs');
     const goals = goalsProblem(top);
     if (goals) deny(goals);
     // EVERY PLAN WITH AN ORDER CARRIES THE AIM REVIEW (Doctrine §0e rule 2): a
@@ -605,6 +616,12 @@ if (tool === 'ExitPlanMode') {
     if (what) deny(what);
     const road = roadmapProblem(top);
     if (road) deny(road);
+    // A PLAN THAT MARKS A ROADMAP ITEM IN RESTS ON A READ OF THE APP'S COMMIT LOG (Doctrine §0e rule 2, LESSONS §423): a line in
+    // the notes is not the state of the app. The session's transcript has to hold a git log of the repository's production and
+    // staging branches read after this plan file was first written, and the plan's "## Shipped check" says what it showed, item by
+    // item. Asked after the roadmap, so an item with no Roadmap line is still refused for that first.
+    const shipped = shippedCheckProblem(top, { entries: tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024), planFile });
+    if (shipped) deny(shipped);
     const asked = askedProblem(top, p.transcript_path);
     if (asked) deny(asked);
     const talk = talkedThrough(p.transcript_path, planWrittenAt);

@@ -43,6 +43,12 @@
  * (hook-dispatch.mjs `approvedPlan`); without one, only reads, the return and
  * the scratchpad pass.
  *
+ * AN AGENT SENT FOR THE PLAN'S REVIEW STEP WRITES IN THE SCRATCHPAD AND NOWHERE ELSE (`reviewWriteProblem`, LESSONS §423).
+ * The approval marker records which steps are the plan's review steps; the agent's own transcript says which step it was sent
+ * for. For that agent a Write, Edit, MultiEdit or NotebookEdit outside the session scratchpad, a Bash line that redirects output
+ * outside it, and a Bash line with a git segment that is not a reader are refused with a refusal naming the review step,
+ * whatever the Files list and the Commands list allow.
+ *
  *   node plan-fence.mjs     (payload on stdin; exit 2 refuses, reason on stderr)
  */
 import { readFileSync, existsSync, openSync, readSync, closeSync, statSync } from 'node:fs';
@@ -51,7 +57,7 @@ import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { approvedPlan, planFiles, planCommands, inScratchpad, planGuardReads, isRead, labelNames, AGENT_RETURN, agentReportWrite } from './hook-dispatch.mjs';
 import { commandsIn, heredocs } from './reply-guard.mjs';
-import { agentTranscriptPath, stepsFilePath, RULES_FILE } from './report.mjs';
+import { agentTranscriptPath, agentStep, stepsFilePath, RULES_FILE } from './report.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
 const WRITES = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
@@ -355,6 +361,66 @@ export function rulesFirst(p, plan = approvedPlan()) {
 }
 
 /**
+ * The plan step an agent was sent for.
+ * @param {object} p  a subagent's PreToolUse payload.
+ * @returns {number|null} the step number in the first prompt of the agent's own transcript (`agentStep` in report.mjs: the plan's
+ *   path, or its steps file's, and a step number, the only prompt the dispatch gate lets through); null when the transcript is not
+ *   found or the prompt is anything else.
+ */
+export function agentSentStep(p) {
+  try { const f = agentTranscript(p); return f ? agentStep(f) : null; } catch { return null; }
+}
+
+/**
+ * THE REVIEW STEP CHANGES NOTHING OUTSIDE THE SESSION SCRATCHPAD (Doctrine §0e rule 2, LESSONS §423).
+ * The review follows aim-review.md and "changes nothing": its hand-back is the verdict and the one script it runs prints the
+ * owner's messages. An agent's reach is the plan's Files and Commands, so nothing stopped a review agent whose step the Files list
+ * happened to cover from writing in a repository; the sentence in the file was the only fence. The approval marker records which
+ * steps are the plan's review steps (`review`, from `aimReviewSteps` at approval), and this reads which step an agent was sent for.
+ * @param {object} p  a subagent's PreToolUse payload.
+ * @param {{review?: number[]|null}|null} plan  the plan in force, with the review step numbers its approval recorded.
+ * @param {{step?: number|null, classify?: (cmd: string, cwd: string) => boolean}} [opts]  the step the agent was sent for in place of
+ *   reading it from the agent's transcript, and the Bash reader classifier, for the test.
+ * @returns {string|null} null for a main-thread call, for a plan whose approval recorded no review step, for an agent not sent for
+ *   a recorded review step (or whose step cannot be read), and for a call that is not a write or a Bash line. Otherwise the
+ *   refusal, which names the review step, for: a Write, Edit, MultiEdit or NotebookEdit whose target is not in this session's
+ *   scratchpad; a Bash line that redirects output to a file outside it, or runs process substitution; and a Bash line with a git
+ *   segment plan-guard does not classify as a reader (a commit, a push, an add, a fetch, a checkout: a git command that writes).
+ *   The Files list and the Commands list are not consulted: whatever the plan allows, the review writes in the scratchpad only. THE
+ *   INVARIANT `decide` relies on: a review agent's reads, its scratchpad writes (its progress note, its report, its owner-messages
+ *   script) and its readers pass, so the review can do the one job its file gives it.
+ */
+export function reviewWriteProblem(p, plan, opts = {}) {
+  if (!p.agent_id || !plan || !Array.isArray(plan.review) || !plan.review.length) return null;
+  const tool = String(p.tool_name ?? '');
+  if (!WRITES.has(tool) && tool !== 'Bash') return null;
+  const step = 'step' in opts ? opts.step : agentSentStep(p);
+  if (!Number.isInteger(step) || !plan.review.includes(step)) return null;
+  const why = `${HEAD} REVIEW STEP: this agent was sent for step ${step}, which the approval recorded as the plan's review step, and a review changes nothing outside the session scratchpad, whatever the plan's Files list allows;`;
+  const cwd = resolve(p.cwd || process.cwd());
+  const inside = (abs) => HARMLESS.has(abs) || inScratchpad(abs, p.session_id);
+  if (WRITES.has(tool)) {
+    const f = String(p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '');
+    return f && inside(resolve(cwd, f)) ? null : `${why} ${tool} to ${f || '(no path)'} is a write outside it.`;
+  }
+  const shell = heredocs(String(p.tool_input?.command ?? '')).shell;
+  const red = redirectTargets(shell);
+  if (red.proc === true) return `${why} process substitution runs a command nothing here can classify.`;
+  const classify = opts.classify ?? ((cmd, at) => planGuardReads({ ...p, tool_name: 'Bash', tool_input: { command: cmd }, cwd: at }));
+  const targets = [...red.targets];
+  for (const s of commandsIn(shell)) {
+    const { words, targets: t } = stripRedirects(s.words);
+    targets.push(...t);
+    let w = words;
+    let at = cwd;
+    while (w[0] === 'git' && w[1] === '-C' && w[2] != null) { at = resolve(at, w[2]); w = [w[0], ...w.slice(3)]; }
+    if (w[0] === 'git' && !classify(w.map(quote).join(' '), at)) return `${why} "${w.join(' ').slice(0, 160)}" is a git command that writes.`;
+  }
+  const out = targets.map((t) => resolve(cwd, t)).find((abs) => !inside(abs));
+  return out ? `${why} a redirect writes ${out}, outside it.` : null;
+}
+
+/**
  * Decide one subagent call.
  * @param {object} p  the PreToolUse payload.
  * @param {{plan?: {path: string, text: string}|null, classify?: (cmd: string, cwd: string) => boolean, reads?: (p: object) => boolean}} [opts]
@@ -380,6 +446,9 @@ export function decide(p, opts = {}) {
   const plan = 'plan' in opts ? opts.plan : approvedPlan();
   const first = 'rules' in opts ? opts.rules(p) : rulesFirst(p, plan);
   if (first) return first;
+  // THE REVIEW STEP WRITES IN THE SCRATCHPAD AND NOWHERE ELSE, whatever the Files list allows (`reviewWriteProblem`; LESSONS §423).
+  const review = reviewWriteProblem(p, plan, { ...('step' in opts ? { step: opts.step } : {}), ...(opts.classify ? { classify: opts.classify } : {}) });
+  if (review) return review;
   const where = plan ? `the plan at ${plan.path}` : 'no approved plan (so only readers and the scratchpad)';
   if (!WRITES.has(tool) && tool !== 'Bash') {
     if (isRead(p, opts.reads)) return null;

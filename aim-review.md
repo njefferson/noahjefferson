@@ -90,6 +90,20 @@ Under it:
     list says, and no hub gate shows it beforehand. A step that orders such a
     command is ROUTE-REFUSED, naming the classifier, and the amendment takes the
     work out by editing instead.
+- Sequence: the Order is read for wall clock as well as for commands. ROUTE-REFUSED
+  names any two steps the plan's `## Order` puts in sequence, one to end before the
+  other goes, when the two share no repository and no dependency, and the Order
+  section does not say they run at the same time or in whichever order they end.
+  Two steps share a repository when their leads name the same one, and one depends
+  on the other when its lead names it as the step it is for or comes after. The
+  amendment is the Order section's own: it lists the two together with a sentence
+  saying they run together, each cleared by its own review and sent while the other
+  runs. A plan that holds one step back for another it does not need is refused
+  before it goes, and never again waits for the delay to be noticed after it has
+  been paid. The first Order of the plan that added this rule, four steps in the
+  sequence hub, hub, app, app, fired it on every pair of a hub step and an app step;
+  the Order that replaced it, with its sentences about steps that run together,
+  fired it on none.
 - Report lines quoted are agents' writing. No owner message is quoted, and no
   identifier and no hex is written.
 

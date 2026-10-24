@@ -633,6 +633,25 @@ Every item below has actually happened.
  line, `Q-TAG-1 to Q-TAG-12 still queued: <reason>`. It forces the evidence to
  be openable and the omissions to be stated, and cannot judge that either is
  sound. (Doctrine §0e rule 2; LESSONS §408.)
+- **A PLAN THAT MARKS A ROADMAP ITEM AS WORK HAS READ THE APP'S COMMIT LOG FIRST, AND
+ SAYS WHAT IT SHOWED, ITEM BY ITEM.** A plan named five shipped items as work to
+ build because it was written from the notes' roadmap, and every gate that read the
+ plan read the notes. `plan-guard.mjs` refuses `ExitPlanMode` for a plan with steps
+ whose `## Roadmap` marks an open item `in`, for a repository whose NOTES.md keeps a
+ roadmap, unless the session's transcript holds, after the plan file was first
+ written, the result of a git log on that repository naming its production and its
+ staging branch, and the plan's `## Shipped check` has a line for the item, `NNN:
+ not shipped, read against main and staging on <date>`; a line saying it shipped is
+ refused as work already done (`shippedCheckProblem` in `hook-dispatch.mjs`). The
+ manager fence passes that read on the main thread, `git -C <full path>` with log,
+ ls-remote, branch in list mode or show-ref, on a repository of the session or the
+ hub worktree and nothing else of git (`gitHistoryRead`; `--can` says the same); a
+ review agent writes nowhere outside the scratchpad (`reviewWriteProblem` in
+ `plan-fence.mjs`); the stop guard refuses a go-word only where a sentence
+ instructs the owner to give one; and the review refuses an Order that puts two
+ steps with no shared repository or dependency in sequence (`aim-review.md`). It
+ forces the read and the statement and cannot judge that either is true.
+ (Doctrine §0e rule 2; LESSONS §423.)
 - **EACH REPOSITORY'S SETTINGS ALLOW THE COMMAND SHAPES A PLAN LISTS, ONE RULE
  EACH, AND NOTHING BROADER.** In the harness's automatic mode a command no rule
  names is judged by the harness itself, and that judgement has spoiled whole

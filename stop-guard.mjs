@@ -482,10 +482,13 @@ is ready, call ExitPlanMode.
  *    (b) it PROMISES FUTURE CONDUCT: "from now on I will", "next time I will", "this will not
  *        happen again", "I promise". A promise is words about a later turn, and the gates
  *        are what hold a later turn; the reply says what was wrong and what was done.
- *    (c) its OPEN LINE (the first line) ASKS FOR A GO-WORD while the owner's newest message
- *        is a correction: "say go to continue". A go-word is the owner's to give or not;
- *        asking for one under a correction parks the turn for a nod, and the work the
- *        correction does not touch goes on without one.
+ *    (c) its OPEN LINE (the first line) INSTRUCTS THE OWNER TO GIVE A GO-WORD while the owner's
+ *        newest message is a correction: "say go to continue" (`GO_ASK`: the owner as the subject
+ *        or the imperative, a verb of say, send, press, type, write or give, a go-word or
+ *        approval as its object; a line opening Stopping here and a statement that a gate holds
+ *        something until a message carries a word are not it, LESSONS §423). A go-word is the
+ *        owner's to give or not; asking for one under a correction parks the turn for a nod,
+ *        and the work the correction does not touch goes on without one.
  *  Judged before the declaration, because a declared stop excuses stopping and never the
  *  shape of the reply. Fenced code is set aside, so a reply that QUOTES a pattern in a code
  *  block (this guard's own lessons do) is not refused for it. The patterns sit between the
@@ -509,19 +512,48 @@ const PROMISE = [
   /\bI(?:'ll|\s+will)\s+not\s+(?:do|make|repeat) (?:that|this|it|the same mistake)\s+again\b/i,
   /\bI won't\s+(?:do|make|repeat) (?:that|this|it|the same mistake)\s+again\b/i,
 ];
+// THE GO-WORD SHAPE FIRES ONLY ON A SENTENCE THAT INSTRUCTS THE OWNER (LESSONS §423). It used to fire on the word go-word anywhere on the open line
+// and on a verb and a go within fifty characters, so a stop declaration saying what a gate holds ("the review gate holds step 190 until a
+// message ends with a go-word") was refused as though it asked for one. An instruction is a sentence whose subject is the owner (you, the owner,
+// or the imperative, which has none written) and whose verb is say, send, press, type, write or give, with a go-word or the word approval as its
+// object a few words after the verb. A line that opens with Stopping here is not judged for it, and neither is a clause stating that a gate holds
+// something until a message carries a word.
+const GO_VERB = String.raw`(?:say|send|press|type|write|give)`;
+const GO_OBJECT = String.raw`(?:(?:me|us|back|with|the word|a|an|the|one|your|any)\s+){0,4}(?:go[- ]?word|go|okay|ok|continue|approved?|approval|yes)\b`;
 const GO_ASK = [
-  /\b(?:say|reply|answer|respond|type|send|write|give me|tell me)\b[^.!?\n]{0,50}\b(?:go|ok|okay|continue|approved|yes)\b/i,
-  /\bgo-word\b/i,
-  /\b(?:a|the)\s+(?:go|ok|yes)\s+(?:from you|to continue|and I)\b/i,
+  // The imperative, at the start of a sentence or after a colon, semicolon, comma, dash or "and".
+  new RegExp(String.raw`(?:^|[:;,—]\s*|\s-\s)(?:(?:please|just|then|and|simply|now)\s+)*${GO_VERB}\s+${GO_OBJECT}`, 'i'),
+  // The owner as the subject.
+  new RegExp(String.raw`\b(?:you|the owner)\s+(?:(?:can|may|could|should|must|will|just|then|please|only|simply|now)\s+|(?:need|have)\s+to\s+)*${GO_VERB}\s+${GO_OBJECT}`, 'i'),
 ];
+const STOPPING_HERE = /^[#*_>\s-]*stopping here\b/i;
+const GATE_HOLD = /\b(?:holds?|held|holding|refus\w+|blocks?|blocked)\b[^.!?\n]*\buntil\b[^.!?\n]*/gi;
+/**
+ * The instruction to the owner on a reply's open line, if there is one.
+ * @param {string} open  the reply's first non-blank line, with fenced code removed.
+ * @returns {RegExpExecArray|null} null for a line that opens with Stopping here (the declaration says what is open and is not judged
+ *   for this shape), and for a line none of whose sentences instructs the owner; otherwise the match in the first sentence that does
+ *   (`GO_ASK`: the owner as the subject, or the imperative, and a verb of say, send, press, type, write or give with a go-word or the
+ *   word approval as its object). A clause stating that a gate holds something until a message carries a word is taken out of its
+ *   sentence first (`GATE_HOLD`), so a statement of what a gate does is not an instruction, and an instruction beside it still is.
+ */
+function goInstruction(open) {
+  if (STOPPING_HERE.test(open)) return null;
+  for (const s of open.split(/(?<=[.!?])\s+/)) {
+    const said = s.replace(GATE_HOLD, ' ').trim();
+    for (const re of GO_ASK) { const m = re.exec(said); if (m) return m; }
+  }
+  return null;
+}
 /**
  * Which of the three shapes a reply takes.
  * @param {string} text  the reply.
  * @param {boolean} correction  whether the owner's newest message is a correction.
  * @returns {{kind: string, said: string}|null} the first shape found, with the words that
  *   matched, judged on the reply with fenced code removed: 'emotion', 'promise', or
- *   'go-word' (only when `correction` is true, and only on the reply's first non-blank
- *   line); null when none. The words are the session's own and never the owner's.
+ *   'go-word' (only when `correction` is true, and only on an instruction to the owner
+ *   (`goInstruction`) in the reply's first non-blank line); null when none. The words
+ *   are the session's own and never the owner's.
  */
 function managingShape(text, correction) {
   const prose = String(text).replace(/```[\s\S]*?```/g, ' ');
@@ -529,7 +561,8 @@ function managingShape(text, correction) {
   for (const re of PROMISE) { const m = re.exec(prose); if (m) return { kind: 'promise', said: m[0].trim().slice(0, 80) }; }
   if (correction) {
     const open = prose.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
-    for (const re of GO_ASK) { const m = re.exec(open); if (m) return { kind: 'go-word', said: m[0].trim().slice(0, 80) }; }
+    const m = goInstruction(open);
+    if (m) return { kind: 'go-word', said: m[0].trim().slice(0, 80) };
   }
   return null;
 }
