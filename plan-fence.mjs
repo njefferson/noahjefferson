@@ -30,7 +30,11 @@
  *   Bash
  *       the line is split where a new command starts — `&&`, `||`, `;`, `|`,
  *       `&` and newlines, as reply-guard.mjs's `commandsIn` splits it, which
- *       also opens `$( )`, backticks, `sh -c` and `eval`. A segment that is a
+ *       also opens `$( )`, backticks, `sh -c` and `eval`, as a shell opens them:
+ *       single quotes never open a command, double quotes only at a dollar sign
+ *       with a parenthesis and at a backtick (LESSONS §424; the whole-line scan
+ *       before it refused a commit message holding a backtick pair, Q-HUB-51), and
+ *       a refusal names the character the line opened the command at. A segment that is a
  *       `cd` (or `pushd`, `popd`), at any depth, is refused before anything
  *       else is judged: every path is written in full.
  *       `git -C <dir>` in a segment is set aside before matching. Every
@@ -56,7 +60,7 @@ import { resolve, dirname, join, relative, normalize, isAbsolute } from 'node:pa
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { approvedPlan, planFiles, planCommands, inScratchpad, planGuardReads, isRead, labelNames, AGENT_RETURN, agentReportWrite } from './hook-dispatch.mjs';
-import { commandsIn, heredocs } from './reply-guard.mjs';
+import { commandsIn, heredocs, openerName } from './reply-guard.mjs';
 import { agentTranscriptPath, agentStep, stepsFilePath, RULES_FILE } from './report.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
@@ -190,6 +194,20 @@ export function stripRedirects(words) {
 
 const quote = (w) => (/^[A-Za-z0-9_./:=@%+,-]+$/.test(w) ? w : `'${String(w).replace(/'/g, `'\\''`)}'`);
 const nw = (x) => (x.startsWith('-') ? x : normalize(x));
+
+/**
+ * The sentence a refusal adds when a command was opened by a character of the line.
+ * @param {{opener?: string}} s  a segment of `commandsIn`.
+ * @returns {string} '' for the first command of a line; otherwise a sentence, with a leading space, that names the character the line
+ *   opened this command at (`openerName`: a vertical bar, a semicolon, an ampersand, a new line, a dollar sign with an opening
+ *   parenthesis, a backtick) and says the remedy: text that holds such a character is written into a file in the scratchpad that the
+ *   script reads, and is never put on the line. Text in single quotes opens no command, and text in double quotes opens one only at
+ *   a dollar sign with an opening parenthesis and at a backtick (`commandsIn`), so the character named is one the shell would act on.
+ */
+function openedNote(s) {
+  const at = openerName(s?.opener);
+  return at ? ` The line opened this command at ${at}: text that holds a vertical bar, a semicolon, an ampersand, an angle bracket, a backtick or a dollar sign with a parenthesis after it is written into a file in the scratchpad that the script reads, and is never put on the line.` : '';
+}
 
 /**
  * Does a command begin with an entry of the plan's Commands section?
@@ -479,7 +497,7 @@ export function decide(p, opts = {}) {
     const words = stripRedirects(s.words).words;
     const prog = String(words[0] ?? '').replace(/^\(+/, '');
     if (prog === 'cd' || prog === 'pushd' || prog === 'popd') {
-      return `${HEAD} "${words.join(' ').slice(0, 160)}" is a ${prog}, and a ${prog} is refused: write every path in full.`;
+      return `${HEAD} "${words.join(' ').slice(0, 160)}" is a ${prog}, and a ${prog} is refused: write every path in full.${openedNote(s)}`;
     }
   }
   const red = redirectTargets(shell);
@@ -494,7 +512,7 @@ export function decide(p, opts = {}) {
     if (w[0] === 'git') while (w[1] === '-C' && w[2] != null) { segCwd = resolve(segCwd, w[2]); w = [w[0], ...w.slice(3)]; }
     if (beginsWithEntry(w, cmds, segCwd)) continue;
     if (classify(w.map(quote).join(' '), segCwd)) continue;
-    return `${HEAD} "${w.join(' ').slice(0, 160)}" is neither a reader nor an entry of the Commands in ${where}.`;
+    return `${HEAD} "${w.join(' ').slice(0, 160)}" is neither a reader nor an entry of the Commands in ${where}.${openedNote(s)}`;
   }
   for (const t of targets) {
     const abs = resolve(cwd, t);

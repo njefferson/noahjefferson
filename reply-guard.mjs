@@ -136,16 +136,18 @@ function append(p, ev) {
 /**
  * Split a shell command into its simple commands.
  * @param {string} cmd  a Bash command line.
- * @returns {{words: string[], op: string}[]} each simple command's words with
- *   quoting removed, and the operator that ends it (`|`, `&&`, `||`, `;`, `&`,
- *   a newline, or '' at the end). Redirections stay words (`>`, `2>&1`). It is
+ * @returns {{words: string[], op: string, opener: string}[]} each simple command's words with
+ *   quoting removed, the operator that ends it (`|`, `&&`, `||`, `;`, `&`,
+ *   a newline, or '' at the end), and `opener`: the operator that ended the command before it,
+ *   which is the character the line opened this command at ('' for the first). Text in single or
+ *   double quotes never opens one, whatever it holds. Redirections stay words (`>`, `2>&1`). It is
  *   approximate — no expansion, no nesting — and callers use it only to read a
  *   request's flags, never to decide that a command is harmless.
  */
 export function splitShell(cmd) {
-  const out = []; let words = []; let w = ''; let inWord = false;
+  const out = []; let words = []; let w = ''; let inWord = false; let opener = '';
   const push = () => { if (inWord) { words.push(w); w = ''; inWord = false; } };
-  const end = (op) => { push(); out.push({ words, op }); words = []; };
+  const end = (op) => { push(); out.push({ words, op, opener }); words = []; if (op) opener = op; };
   const s = String(cmd ?? '');
   for (let i = 0; i < s.length; i++) {
     const c = s[i];
@@ -285,6 +287,86 @@ export function heredocs(cmd) {
 }
 
 /**
+ * The index of the parenthesis that closes a `$(` group.
+ * @param {string} s  a command line.
+ * @param {number} from  the index just after the `$(`.
+ * @returns {number} the index of the matching `)`, counting nested parentheses and leaving the ones inside quotes alone; -1 when the
+ *   group is never closed, which a shell would refuse as a syntax error and which therefore opens nothing here.
+ */
+function closeParen(s, from) {
+  let depth = 1;
+  let q = '';
+  for (let i = from; i < s.length; i++) {
+    const c = s[i];
+    if (c === '\\') { i++; continue; }
+    if (q) { if (c === q) q = ''; continue; }
+    if (c === "'" || c === '"') { q = c; continue; }
+    if (c === '(') depth++;
+    else if (c === ')' && --depth === 0) return i;
+  }
+  return -1;
+}
+
+/**
+ * The command substitutions a shell runs for a command line.
+ * @param {string} cmd  a Bash command line (heredoc bodies already sorted).
+ * @returns {{body: string, opener: string}[]} each `$( … )` group and each backtick pair that the line opens, in the order they begin,
+ *   `opener` being `$(` or the backtick, and `body` the text inside, which the caller opens as a command line of its own (a
+ *   substitution inside a body is found when that is done). THE SHELL'S QUOTE RULE: text inside single quotes is one word and
+ *   opens nothing; text inside double quotes opens a command only at a dollar sign followed by an opening parenthesis and at a
+ *   backtick, as a shell does; unquoted text opens one at each. A single quote that is never closed is an ordinary character, so a
+ *   stray apostrophe in prose cannot hide a substitution after it, and `$'…'` is read as the shell reads it, up to the closing
+ *   quote that no backslash escapes. A group or a pair that is never closed opens nothing. The line `git commit -m 'a $(rm x) b'`
+ *   opens nothing, where the whole-line scan this replaced opened `rm x` and the plan fence refused the commit message (Q-HUB-51).
+ */
+export function substitutionsIn(cmd) {
+  const s = String(cmd ?? '');
+  const out = [];
+  let q = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === '\\') { i++; continue; }
+    if (c === '$' && s[i + 1] === "'" && !q) {
+      let j = i + 2;
+      while (j < s.length && s[j] !== "'") { if (s[j] === '\\') j++; j++; }
+      if (j < s.length) i = j;
+      continue;
+    }
+    if (c === "'" && !q) {
+      const j = s.indexOf("'", i + 1);
+      if (j >= 0) i = j;
+      continue;
+    }
+    if (c === '"') { q = !q; continue; }
+    if (c === '$' && s[i + 1] === '(') {
+      const end = closeParen(s, i + 2);
+      if (end >= 0) { out.push({ body: s.slice(i + 2, end), opener: '$(' }); i = end; }
+      continue;
+    }
+    if (c === '`') {
+      let j = i + 1;
+      while (j < s.length && s[j] !== '`') { if (s[j] === '\\') j++; j++; }
+      if (j < s.length) { out.push({ body: s.slice(i + 1, j), opener: '`' }); i = j; }
+    }
+  }
+  return out;
+}
+
+// The words a refusal uses for the character a command was opened at (`opener` of a segment of `commandsIn`).
+const OPENER_WORDS = { '|': 'a vertical bar', '||': 'a double vertical bar', '&&': 'a double ampersand', ';': 'a semicolon', '&': 'an ampersand',
+  '\n': 'a new line', '$(': 'a dollar sign and an opening parenthesis', '`': 'a backtick' };
+
+/**
+ * The words for the character a command was opened at.
+ * @param {string|undefined} opener  `opener` of a segment `commandsIn` gave: an operator, `$(` or a backtick.
+ * @returns {string} a phrase such as "a vertical bar" or "a dollar sign and an opening parenthesis"; '' for the first command of a
+ *   line, which no character opened, and for an opener this table does not know.
+ */
+export function openerName(opener) {
+  return OPENER_WORDS[String(opener ?? '')] ?? '';
+}
+
+/**
  * Every simple command a command line runs, wrappers opened.
  * @param {string} cmd      a Bash command line (heredoc bodies already sorted).
  * @param {number} [depth]  how many strings deep this call is.
@@ -293,8 +375,10 @@ export function heredocs(cmd) {
  *   opened; true for what a call runs (`os.system('curl …')`), where a client
  *   may stand anywhere in a word.
  * @param {{code: string[]}} [sink]  collects the program code strings opened.
- * @returns {{words: string[], op: string, depth: number, any: boolean}[]} as
- *   `splitShell`, plus the commands inside `$( … )` and backticks, and every
+ * @returns {{words: string[], op: string, opener: string, depth: number, any: boolean}[]} as
+ *   `splitShell` (`opener` is the character the command was opened at: an operator, `$(` or a backtick; `openerName` says it in
+ *   words), plus the commands inside `$( … )` and backticks as a shell opens them (`substitutionsIn`: never inside single
+ *   quotes, inside double quotes at a dollar-parenthesis and a backtick only), and every
  *   string another program RUNS, opened as a command line of its own, four
  *   levels deep: what a shell is given with `-c`, `<<<` or a pipe; what `eval`
  *   runs; a command waiting in a variable (`CURL="curl -A bot"`); an
@@ -307,14 +391,15 @@ export function commandsIn(cmd, depth = 0, any = false, sink = { code: [] }) {
   const segs = splitShell(cmd).map((s) => ({ ...s, depth, any }));
   const out = [...segs];
   if (depth >= 4) return out;
-  const openShell = (str) => out.push(...commandsIn(str, depth + 1, any, sink));
+  // `opener`: the character a substitution was opened at, put on the first command of what it opened (the rest carry their own).
+  const openShell = (str, opener = '') => out.push(...commandsIn(str, depth + 1, any, sink).map((x) => (x.opener ? x : { ...x, opener })));
   // A program's text is opened as code, where only its calls are followed; what
   // a call runs is opened as a command line in which a client may stand
   // anywhere. Opening a whole program that way refused the guard's own tests,
   // which only hand `curl …` to decide() as a string.
   const openCode = (str) => { sink.code.push(str); out.push(...commandsIn(str, depth + 1, 'code', sink)); };
   const openArg = (str) => { sink.code.push(str); out.push(...commandsIn(str, depth + 1, true, sink)); };
-  for (const m of String(cmd).matchAll(/\$\(((?:[^()]|\([^()]*\))*)\)|`([^`]*)`/g)) openShell(m[1] ?? m[2] ?? '');
+  for (const sub of substitutionsIn(cmd)) openShell(sub.body, sub.opener);
   segs.forEach((s, k) => {
     const w = s.words;
     const at = commandWordIndex(w);

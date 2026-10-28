@@ -249,7 +249,15 @@ every rule below while none of the hooks that enforce them was running
    marker also records the review step's number, and both gates refuse every
    step, a Standing one included, while no Standing step of the plan names
    `aim-review.md` by its full path any more, with a refusal that says the plan
-   goes back through plan mode and does not latch.
+   goes back through plan mode and does not latch. Where the plan's `## Order`
+   carries an `After:` line, groups of the form `N after M M` separated by
+   semicolons, a review is stale only when the plan file was written after it
+   began, a correction is newer, or the step it judged, the step it clears or a
+   step the cleared step follows ended after it began, so the end of a sibling
+   step leaves it current; with no After line any end of a step in Order stales
+   it, and `plan-guard.mjs` refuses an After line that names a step outside the
+   Order (`reviewState` in `report.mjs`, read by the gate and the status alike;
+   `afterProblem`; LESSONS §424).
    **The state of the work is one page, and the manager's part of it is kept
    where a status cannot rewrite it.** The status page's source,
    `status/fix-run.html` in the session scratchpad, is written whole at every
@@ -489,7 +497,13 @@ every rule below while none of the hooks that enforce them was running
     owner writes again, so a later amendment stays possible. Measured 2026-10-03: the owner's exit in the app ended plan mode
     before the session's `ExitPlanMode` call was answered, the call came back
     "not in plan mode", no approval was recorded, the session entered plan mode
-    again, and the owner approved the same plan twice.
+    again, and the owner approved the same plan twice. Three more refusals set
+    no latch, each because a read answers it: the doctrine gate's, answered by
+    the Read of the doctrine it names; the plan gate's refusal of the approval
+    call for a name the session has not seen, answered by a read that shows the
+    name or by the file existing; and the app's identifier guard's refusal of
+    that call, which still refuses and whose guard is untouched
+    (`hook-dispatch.mjs`, LESSONS §424).
     Added 2026-10-02.
     *Enforced whole by:* `hook-dispatch.mjs` and `approved-plan-guard.mjs`.
     A Stop refusal never latches. While the main thread's latch stands, every

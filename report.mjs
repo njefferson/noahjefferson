@@ -1322,6 +1322,49 @@ export function planOrder(text) {
 }
 
 /**
+ * The After line of a plan's Order section.
+ * @param {string} text  the plan.
+ * @returns {{follows: Map<number, number[]>, bad: string[]} | null} null when the plan has no `## Order` or no line beginning
+ *   `After:` under it (only a line that BEGINS so is read, as `planOrder` reads `Order:`). Otherwise `follows`: step number to the
+ *   step numbers it follows, from groups of the form `N after M M` (one number, the word after, then one or more numbers) separated
+ *   by semicolons, in the order written, a step written in two groups holding both lists; and `bad`: each group, trimmed, that is not
+ *   of that form, which the plan gate refuses (`afterProblem`) and `reviewFollows` reads as a reason to use no line at all.
+ *   `reviewState` and the plan gate read the line here, so the review gate, the status and the plan gate cannot read two lines.
+ */
+export function planAfter(text) {
+  const m = /^## Order\b[^\n]*\n([\s\S]*?)(?=^## |^# |$(?![\s\S]))/mi.exec(String(text ?? ''));
+  if (!m) return null;
+  const line = m[1].split('\n').find((l) => /^\s*After:/i.test(l));
+  if (line === undefined) return null;
+  const follows = new Map();
+  const bad = [];
+  for (const group of line.replace(/^[^:]*:/, '').split(';')) {
+    if (!group.trim()) continue;
+    const g = /^\s*(\d+)\s+after\s+(\d+(?:\s+\d+)*)\s*\.?\s*$/i.exec(group);
+    if (!g) { bad.push(group.trim()); continue; }
+    const to = Number(g[1]);
+    follows.set(to, [...new Set([...(follows.get(to) ?? []), ...g[2].split(/\s+/).map(Number)])]);
+  }
+  return { follows, bad };
+}
+
+/**
+ * The After line a review's staleness is read by.
+ * @param {string} text  the plan.
+ * @returns {Map<number, number[]> | null} `planAfter`'s `follows` when the plan has an Order and an After line whose every group is of
+ *   the form and names only steps of that Order; null otherwise, which every caller reads as "no After line": any end of a step in
+ *   Order stales a review. A line the plan gate would refuse (`afterProblem`) is therefore the strict reading, never a loose one:
+ *   an amendment of the Order can put one there after the approval.
+ */
+export function reviewFollows(text) {
+  const o = planOrder(text);
+  const a = planAfter(text);
+  if (!o || !a || a.bad.length || !a.follows.size) return null;
+  const named = [...a.follows.keys(), ...[...a.follows.values()].flat()];
+  return named.every((n) => o.order.includes(n)) ? a.follows : null;
+}
+
+/**
  * The step titles of a plan.
  * @param {string} text  the plan.
  * @returns {Map<number, string>} step number to the bold lead of its `## Steps`
@@ -1534,10 +1577,36 @@ export function parseVerdict(first) {
 }
 
 /**
+ * The ends a review does not have to have seen, under the plan's After line.
+ * @param {object[]} ends  `stepEnds`' list: `step`, `at`.
+ * @param {number[]} order  the plan's Order.
+ * @param {{startAt: number, last: string}} review  the newest review hand-back: when it began and what it said.
+ * @param {Map<number, number[]>} follows  `reviewFollows`' answer.
+ * @returns {object[]} each end of a step in Order that came at or after the review began and whose step the verdict does not tie to the
+ *   step it clears. A step is tied when it is the step the verdict judged (`step N`), the step it clears (`next M`), or a step the cleared
+ *   step follows by the After line. The ends of tied steps are never left out: such an end after the review began is what stales it. An
+ *   end that came before the review began is never left out either, since the review had it to see, and a start that cannot be read
+ *   leaves out every end of an untied step, which `reviewState` then reads as stale all the same, by the start. A verdict that cannot
+ *   be read ties nothing.
+ */
+function unrelatedEnds(ends, order, review, follows) {
+  const v = parseVerdict(firstLineOf(review.last));
+  const tied = new Set();
+  if (v && Number.isInteger(v.step)) tied.add(v.step);
+  if (v && v.next !== null) { tied.add(v.next); for (const n of follows.get(v.next) ?? []) tied.add(n); }
+  return ends.filter((e) => e.step !== null && order.includes(e.step) && !tied.has(e.step) && !(e.at < review.startAt));
+}
+
+/**
  * Where the review of the plan in force stands: the one reader the review gate
  * (hook-dispatch.mjs `reviewGate`) and the status (`reviewBlock`) share, so they
  * cannot disagree. Every move of the plan is cleared by a fresh agent that wrote
  * none of the work, whose hand-back is the verdict, read from its transcript.
+ * THE AFTER LINE (LESSONS §424): where the plan's Order section carries an `After:` line (`planAfter`, `reviewFollows`), a review is
+ * stale when the plan file was written after it began, when a correction stands and the owner's newest message is newer, when the
+ * step it judged or the step it clears has an end that came after it began, or when a step the cleared step follows by that line
+ * has one; the end of any other step in Order, a sibling's, leaves it current. With no After line, any end of a step in Order
+ * stales it. `ignored` lists the steps whose ends were left out, so a status can say why a review stands though a step ended.
  * @param {object} p  a PreToolUse payload or `{session_id}`, as `stepEnds` reads it.
  * @param {{path: string, text: string} | null} plan  the plan in force.
  * @param {{ends?: object[]|null, runningSteps?: Set<number>, planAt?: number, after?: number}} [opts]
@@ -1569,7 +1638,7 @@ export function parseVerdict(first) {
  *   everything it judges, so nothing it never saw can be cleared by it.
  */
 export function reviewState(p, plan, opts = {}) {
-  const base = { kind: 'not-enforced', reviewers: [], order: [], step: null, refAt: 0, review: null, first: '', aim: '', route: '', cleared: null };
+  const base = { kind: 'not-enforced', reviewers: [], order: [], step: null, refAt: 0, review: null, first: '', aim: '', route: '', cleared: null, ignored: [] };
   if (!plan) return base;
   const reviewers = aimReviewSteps(plan.text);
   if (!reviewers.length) return base;
@@ -1577,8 +1646,19 @@ export function reviewState(p, plan, opts = {}) {
   const read = 'ends' in opts ? { ends: opts.ends, runningSteps: opts.runningSteps ?? new Set() } : stepEnds(p);
   const hand = { ...base, reviewers, order };
   if (!read?.ends) return { ...hand, kind: 'not-read' };
+  let review = null;
+  for (const e of read.ends) {
+    if (!reviewers.includes(e.step) || e.how !== 'a report') continue;
+    if (!review || e.at > review.at) review = e;
+  }
+  // THE AFTER LINE (LESSONS §424): under a plan's After line, the end of a step in Order that the review's verdict does not tie
+  // to the step it clears is not something the review had to see, so it is left out of what is judged below. With no usable After
+  // line, and with no review yet, nothing is left out and every end of a step in Order counts, as it always did.
+  const follows = review ? reviewFollows(plan.text) : null;
+  const ignored = follows ? unrelatedEnds(read.ends, order, review, follows) : [];
   let judged = null;
   for (const e of read.ends) {
+    if (ignored.includes(e)) continue;
     if (e.step === null || !order.includes(e.step)) continue;
     if (!judged || e.at > judged.at) judged = e;
   }
@@ -1586,12 +1666,7 @@ export function reviewState(p, plan, opts = {}) {
   if ('planAt' in opts) planAt = Number(opts.planAt) || 0;
   else { try { planAt = statSync(plan.path).mtimeMs; } catch { planAt = 0; } }
   const refAt = Math.max(judged?.at ?? 0, planAt, Number(opts.after) || 0);
-  const seen = { ...hand, step: judged?.step ?? null, refAt };
-  let review = null;
-  for (const e of read.ends) {
-    if (!reviewers.includes(e.step) || e.how !== 'a report') continue;
-    if (!review || e.at > review.at) review = e;
-  }
+  const seen = { ...hand, step: judged?.step ?? null, refAt, ignored: [...new Set(ignored.map((e) => e.step))] };
   const waiting = reviewers.some((n) => read.runningSteps?.has(n));
   if (!review) return { ...seen, kind: waiting ? 'running' : 'missing' };
   const first = firstLineOf(review.last);
@@ -1624,13 +1699,14 @@ export function reviewBlock(st) {
     case 'not-read': return 'Review: not read (the session\'s agents cannot be read), so no step of the plan is cleared.';
     case 'missing': return `Review: none has handed back; ${judged}.${send}`;
     case 'running': return `Review: a review is running and none current clears a move; ${judged}. Its completion brings the session back.`;
-    case 'stale': return `Review: ${when} began before something it did not judge (${judged}, or the plan's last write, or the owner's newest message), so it clears nothing.${send}`;
+    case 'stale': return `Review: ${when} began before something it did not judge (${judged}, or the plan's last write, or the owner's newest message; where the plan's Order has an After line, an end of the step it judged, the step it clears or a step the cleared step follows), so it clears nothing.${send}`;
     case 'unreadable': return `Review: ${when} handed back "${st.first}", which is not a verdict; the first line is ON-AIM or OFF-AIM, then ROUTE-CLEAR or ROUTE-REFUSED, then "step N" and "next M".${send}`;
     case 'off-aim': return `Review: ${when} reads "${st.first}". The plan is off aim; it goes back to plan mode.`;
     case 'route-refused': return `Review: ${when} reads "${st.first}". The route is refused; the step is amended in the plan's Steps or Order, then reviewed again.${send}`;
     case 'wrong-step': return `Review: ${when} reads "${st.first}", and judged another step than the newest end in Order (${judged}).${send}`;
     case 'no-next': return `Review: ${when} reads "${st.first}", and names no step to send.${send}`;
-    default: return `Review: ${when} reads "${st.first}"; it clears step ${st.cleared} and no other.`;
+    default: return `Review: ${when} reads "${st.first}"; it clears step ${st.cleared} and no other.${st.ignored?.length
+      ? ` The plan's After line does not tie step${st.ignored.length === 1 ? '' : 's'} ${st.ignored.join(', ')} to it, so an end of ${st.ignored.length === 1 ? 'that step' : 'those steps'} after it began leaves it current.` : ''}`;
   }
 }
 

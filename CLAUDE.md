@@ -295,6 +295,11 @@ Every item below has actually happened.
  owner holds. Bash is an ALLOW-LIST of readers; everything unrecognised is
  refused; the plan file stays writable. Its shim FAILS CLOSED where
  `stop-guard.sh` beside it fails open, and the difference is deliberate.
+ **THE NAME CHECK AT `ExitPlanMode` READS THE WHOLE SESSION AND THE DISK** — a
+ code-formatted name in a plan is found in a repository, in any tool result of the
+ session through a tail that widens to 64 MB, or on disk as a path in the session
+ scratchpad or in a repository the plan's Files names, and its refusal sets no
+ latch (`inventedNames` and `heldNames`, LESSONS §424).
  **AND A PLAN-MODE TURN ENDS WITH `ExitPlanMode`, NEVER WITH PROSE** — said
  twice in one session. The approve control only appears when the tool is
  called; a turn ending in a written-out summary leaves the owner NOTHING TO
@@ -458,7 +463,12 @@ Every item below has actually happened.
  button: a step the approval did not record, a Standing step that was not on
  the line at approval or is neither the review nor a route check, and any send
  while no Standing step names the review file by its full path any more
- (`approvalSetProblem` and `reviewRecordProblem` in `hook-dispatch.mjs`). Give the status, send the held
+ (`approvalSetProblem` and `reviewRecordProblem` in `hook-dispatch.mjs`). Three others
+ set none, because a read answers each: the doctrine gate's refusal, the plan gate's
+ refusal of the approval call for a name the session has not seen, and the app's
+ identifier guard's refusal of that call, which still refuses and whose guard is
+ untouched (`NAMES_NO_LATCH` and `noLatchRepoRefusal` in `hook-dispatch.mjs`, LESSONS
+ §424). Give the status, send the held
  call again, answer the correction, read the filed messages and the page, send the
  review or amend the
  plan or enter plan mode as the review gate's refusal says, amend the Rules line

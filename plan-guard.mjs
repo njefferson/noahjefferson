@@ -49,7 +49,7 @@
  * releases and could not fail.
  */
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join, dirname, resolve } from 'node:path';
+import { join, dirname, resolve, relative, isAbsolute } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { tailEntries, isOwnerMessage, seenInResults, textOf, copiesOwner } from './transcript-tail.mjs';
 import { parseRead } from './reply-guard.mjs';
@@ -345,6 +345,11 @@ if (tool === 'Bash') {
  * branch, and the plan's `## Shipped check` has a line for each item marked `in`, `NNN: not shipped, read against
  * main and staging on <date>`; a line saying the item shipped is refused as work already done. Asked after
  * `roadmapProblem`, so an item with no Roadmap line is refused for that first.
+ *
+ * AND A PLAN'S AFTER LINE NAMES ONLY STEPS OF ITS ORDER (LESSONS §424). `afterProblem`, asked right after the aim review: the
+ * `After:` line under `## Order`, groups of the form `N after M M` separated by semicolons, narrows what stales a review
+ * (`reviewState` in report.mjs), and a group that names a step outside the Order, or is not of that form, is refused here, since
+ * the review state would otherwise read the whole line as no line and stale every review on any step's end.
  */
 /**
  * DO WHAT THE OWNER ASKED, AND NOTHING MORE (Doctrine §0f, LESSONS §379).
@@ -464,22 +469,93 @@ function asksNothing(text) {
   return !/\?(?=\s|$)/.test(prose);
 }
 
+// THE WIDENING TAIL (LESSONS §424). A name a tool result printed once stays seen for the whole session: the transcript is read from
+// its end through 2, 8, 32 and then 64 MB, and the old single tail of sixteen megabytes lost a scratchpad file's name that a result
+// had printed the day before, and refused the approval call for it. `tailEntries` takes the byte count and is not changed.
+const TAILS = [2, 8, 32, 64].map((mb) => mb * 1024 * 1024);
+
+/**
+ * Has any tool result of this session printed a name?
+ * @param {string|undefined} path  the transcript (`transcript_path` in the payload).
+ * @returns {(name: string) => boolean} true when the text of the tool results in the end of the transcript holds the name. The end
+ *   is widened through TAILS only as far as a name asked about needs: a name already in a narrower tail costs no wider read, the text
+ *   of each tail is kept for the next name, and no tail is read twice. A refusal or an error is not a result (`seenInResults`).
+ *   False once the widest tail, or the whole file when it is shorter, has been read without the name; a transcript that cannot be
+ *   read prints nothing, so no name is found there.
+ */
+function printedReader(path) {
+  let size = 0;
+  try { size = statSync(path ?? '').size; } catch { size = 0; }
+  let level = -1;
+  let text = '';
+  return (name) => {
+    for (;;) {
+      if (text.includes(name)) return true;
+      if (level + 1 >= TAILS.length || (level >= 0 && TAILS[level] >= size)) return false;
+      level++;
+      text = seenInResults(tailEntries(path ?? '', TAILS[level]));
+    }
+  };
+}
+
+/**
+ * The transcript's entries from a time on.
+ * @param {string|undefined} path  the transcript.
+ * @param {number} since  a time in ms.
+ * @returns {object[]} the entries of the narrowest tail in TAILS whose first timed entry is no later than `since`, or of the widest
+ *   tail, or of the whole file when it is shorter; so every entry after `since` is among them. [] when the transcript cannot be read.
+ */
+function entriesSince(path, since) {
+  let size = 0;
+  try { size = statSync(path ?? '').size; } catch { size = 0; }
+  let entries = [];
+  for (const bytes of TAILS) {
+    entries = tailEntries(path ?? '', bytes);
+    const first = entries.find((e) => Number.isFinite(Date.parse(e?.timestamp ?? '')));
+    if ((first && Date.parse(first.timestamp) <= since) || bytes >= size) break;
+  }
+  return entries;
+}
+
+/**
+ * Does a name exist on disk, where the session can read it?
+ * @param {string} name  a code-formatted name of the plan.
+ * @param {{sid: string, pad: string|null, roots: string[], inScratchpad: (path: string, sid: string) => boolean}} ctx  the session id,
+ *   the session scratchpad folder (`scratchpadOf`, found the way plan-fence.mjs finds its allowance, `inScratchpad`), and the
+ *   repository roots the plan's Files names (`queueRoots`).
+ * @returns {boolean} true when the name, resolved against the scratchpad folder or against one of the roots, is a path that exists
+ *   and lies inside that folder or root. A bare name that exists passes with no tool result at all: the name the gate refused on 26
+ *   October was a bare scratchpad file name, and a file that exists is not a name that was made up.
+ */
+function onDisk(name, ctx) {
+  const inside = (base, abs) => { const rel = relative(base, abs); return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel); };
+  if (ctx.pad) {
+    const abs = resolve(ctx.pad, name);
+    if (inside(ctx.pad, abs) && ctx.inScratchpad(abs, ctx.sid) && existsSync(abs)) return true;
+  }
+  return ctx.roots.some((root) => { const abs = resolve(root, name); return inside(root, abs) && existsSync(abs); });
+}
+
 /**
  * A PLAN NAMES ONLY THINGS THAT EXIST (LESSONS §370).
  * A function that exists nowhere in the code reached a plan after a context
  * compaction. Every code-formatted name in the plan must be found in a repo
- * beside this session, or in a tool RESULT this session read, or be marked
- * "(new)" on its line. Paths outside the repos, and spans with spaces, are
- * skipped: they are commands and environment, not names.
+ * beside this session, or in a tool RESULT this session read (through the widening
+ * tail, LESSONS §424), or exist on disk as a path in the session scratchpad or in a
+ * repository the plan's Files names, or be marked "(new)" on its line. Paths outside
+ * the repos, and spans with spaces, are skipped: they are commands and environment,
+ * not names.
  * @param {string} plan  the whole plan file.
  * @param {string} top   its top block (unused; the whole plan is checked).
+ * @param {object} ctx   `onDisk`'s context, with `mark`: the words the refusal opens with, which the dispatcher reads as
+ *   "this refusal sets no latch" (`NAMES_NO_LATCH` in hook-dispatch.mjs).
  * @returns {string|null} the refusal naming each missing name, or null.
  */
-function inventedNames(plan, top) {
+function inventedNames(plan, top, ctx) {
   const dir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
   let repos = [dir];
   try { repos = [dir, ...readdirSync(dirname(dir)).map((d) => join(dirname(dir), d))].filter((d) => existsSync(join(d, '.git'))); } catch { /* one repo */ }
-  const seen = seenInResults(tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024));
+  const printed = printedReader(p.transcript_path);
   const missing = new Set();
   for (const line of plan.split('\n')) {
     for (const m of line.matchAll(/`([^`\n]+)`/g)) {
@@ -489,7 +565,8 @@ function inventedNames(plan, top) {
       const t = span.replace(/\([^()]*\)$/, '');
       if (t.length < 3 || /\s|^[\/~$<"]|^[\d.,:%x-]+$/.test(t)) continue;
       if (new RegExp(`\`${span.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\`[^\`]*\\(new\\)`).test(line)) continue;
-      if (seen.includes(t)) continue;
+      if (printed(t)) continue;
+      if (onDisk(t, ctx)) continue;
       // Code only: a name the docs merely MENTION is not a name that exists —
       // a first version passed a name only because a lesson quoted it.
       const found = repos.some((r) => spawnSync('git', ['-C', r, 'grep', '-qF', '--', t, '--', ':!*.md'], { encoding: 'utf8' }).status === 0
@@ -499,8 +576,8 @@ function inventedNames(plan, top) {
   }
   if (!missing.size) return null;
   recordRefused([...missing]);
-  return `the plan names ${[...missing].map((x) => `\`${x}\``).join(', ')}, which exist in no repo and in no tool result this session read. `
-    + 'Correct the name, or mark it "(new)" on its line if the plan creates it (LESSONS §370).';
+  return `${ctx.mark} the plan names ${[...missing].map((x) => `\`${x}\``).join(', ')}, which exist in no repo, in no tool result this session read and on no path of the session scratchpad or of a repository the plan's Files names. `
+    + 'Correct the name, or mark it "(new)" on its line if the plan creates it (LESSONS §370). A Read of it, or a command that prints it, shows it.';
 }
 
 /**
@@ -535,21 +612,25 @@ function recordRefused(names) {
 /**
  * The recorded names that still hold ExitPlanMode.
  * @param {string} plan  the whole plan file.
+ * @param {object} ctx   `onDisk`'s context, with `mark` as `inventedNames` takes it.
  * @returns {string|null} the refusal naming each name still held, or null.
- *   A name is released, and removed from the record, only when a tool result
+ *   A name is released, and removed from the record, when a tool result
  *   timed after its refusal carries it (refusals and errors are not results;
- *   `seenInResults` skips them) or a plan line marks it "(new)".
+ *   `seenInResults` skips them), when it now exists on disk (`onDisk`: the
+ *   file a name stands for being written between two approval calls is the
+ *   shape of the refusal of 26 October), or when a plan line marks it "(new)".
+ *   The results are read through the widening tail back past the oldest refusal.
  */
-function heldNames(plan) {
+function heldNames(plan, ctx) {
   const list = loadRefused();
   if (!list.length) return null;
-  const entries = tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024);
+  const entries = entriesSince(p.transcript_path, Math.min(...list.map((x) => Number(x.at) || 0)));
   const marked = (n) => plan.split('\n').some((line) => new RegExp(`\`${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\([^()]*\\))?\`[^\`]*\\(new\\)`).test(line));
-  const still = list.filter((x) => !seenInResults(entries.filter((e) => Date.parse(e?.timestamp ?? '') > Number(x.at))).includes(x.name) && !marked(x.name));
+  const still = list.filter((x) => !seenInResults(entries.filter((e) => Date.parse(e?.timestamp ?? '') > Number(x.at))).includes(x.name) && !onDisk(x.name, ctx) && !marked(x.name));
   if (still.length !== list.length) writeFileSync(namesFile(), JSON.stringify(still, null, 1));
   if (!still.length) return null;
-  return `this session's plan was refused for naming ${still.map((x) => `\`${x.name}\``).join(', ')}, which existed nowhere it could be found. `
-    + 'ExitPlanMode stays refused until each appears in a tool result read after that refusal, or the plan line carrying it marks it "(new)". '
+  return `${ctx.mark} this session's plan was refused for naming ${still.map((x) => `\`${x.name}\``).join(', ')}, which existed nowhere it could be found. `
+    + 'ExitPlanMode stays refused until each appears in a tool result read after that refusal, or exists on disk, or the plan line carrying it marks it "(new)". '
     + 'Rewording the plan or dropping the name does not clear it (Doctrine §0d).';
 }
 
@@ -590,7 +671,9 @@ if (tool === 'ExitPlanMode') {
     // carries the hub CLAUDE.md's standing goals block word for word and names,
     // for every step, the goal it serves. Loaded here only, because this file
     // runs on every tool call and the plan parsing lives in hook-dispatch.mjs.
-    const { goalsProblem, aimStandingProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem, shippedCheckProblem } = await import('./hook-dispatch.mjs');
+    const { goalsProblem, aimStandingProblem, afterProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem, shippedCheckProblem,
+      queueRoots, inScratchpad, NAMES_NO_LATCH } = await import('./hook-dispatch.mjs');
+    const { scratchpadOf } = await import('./report.mjs');
     const goals = goalsProblem(top);
     if (goals) deny(goals);
     // EVERY PLAN WITH AN ORDER CARRIES THE AIM REVIEW (Doctrine §0e rule 2): a
@@ -598,6 +681,11 @@ if (tool === 'ExitPlanMode') {
     // dispatcher's aim gate sends after each DONE hand-back and refuses on.
     const aim = aimStandingProblem(top);
     if (aim) deny(aim);
+    // AN AFTER LINE NAMES STEPS OF THE ORDER AND NOTHING ELSE (Doctrine §0e rule 2, LESSONS §424): the line under `## Order` that
+    // narrows what stales a review is read by the review's state and the review gate alike, and a group naming a step the Order
+    // does not hold, or not of the form `N after M M`, would be read as no group at all.
+    const after = afterProblem(top);
+    if (after) deny(after);
     // A PLAN THAT SENDS AGENTS CARRIES THE RULES, OR POINTS AT THEM (Doctrine §0e
     // rule 13): a "## Rules" section that is the line naming the hub's
     // agent-rules.md and its version, or every rule line of that file. A plan
@@ -626,9 +714,15 @@ if (tool === 'ExitPlanMode') {
     if (asked) deny(asked);
     const talk = talkedThrough(p.transcript_path, planWrittenAt);
     if (talk) deny(talk);
-    const names = inventedNames(plan, top);
+    // THE NAME CHECK (LESSONS §370, §424): what a name has to be found in is the repositories beside the session, the whole of
+    // the session's tool results (the widening tail), and the disk, where a bare name is resolved against the session scratchpad
+    // folder and against each repository the plan's Files names. Its refusals open with the mark the dispatcher reads as "no latch":
+    // the remedy is a read, and a latch would refuse the read.
+    const sid = String(p.session_id ?? '');
+    const ctx = { sid, pad: scratchpadOf(sid), roots: queueRoots(top), inScratchpad, mark: NAMES_NO_LATCH };
+    const names = inventedNames(plan, top, ctx);
     if (names) deny(names);
-    const held = heldNames(plan);
+    const held = heldNames(plan, ctx);
     if (held) deny(held);
     process.exit(0);
   }

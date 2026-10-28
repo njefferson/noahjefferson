@@ -72,6 +72,12 @@
  * step of the plan names the review file by its full path any more, with a refusal that sends
  * the plan back through plan mode and sets no latch; and the stop guard counting as a step left
  * only a step whose number the marker recorded (`stepsLeft`).
+ * And the four changes of LESSONS §424: the plan gate's name check reading the whole transcript through a widening tail and
+ * passing a name that exists on disk (a bare name in the session scratchpad or in a repository the plan's Files names, a held
+ * name once its file exists); a command line opened as a shell opens it, single quotes never opening a command and the refusal
+ * naming the character a command was opened at (`commandsIn`, `plan-fence.mjs`); the doctrine gate's refusal, the plan gate's
+ * refusal of a name and the identifier guard's refusal of the approval call setting no latch (`noLatchRepoRefusal`); and the
+ * review's staleness narrowed by the After line of a plan's Order (`planAfter`, `reviewState`, `afterProblem`).
  * The whole suite runs under an empty home, so no real approval marker is read.
  *
  * In --plants mode a guard name a case cites with no plant behind it is a
@@ -524,6 +530,63 @@ const SCRIPT = ["export const meta = { name: 'two-steps', description: 'Run the 
 // STEPS_PLAN with a `## Script` section holding `script` in a fenced block.
 const scriptPlan = (script = SCRIPT) => STEPS_PLAN.replace('## Commands', `## Script\n\`\`\`js\n${script}\n\`\`\`\n\n## Commands`);
 const sha256 = (t) => createHash('sha256').update(t).digest('hex');
+
+// ---- fixtures for the plan gate's name check, the plan fence's opener, the latch and the review's staleness ----
+/** The backtick, so a fixture's quoted text can hold a pair of them without a template literal ending. */
+const BT = '`';
+/**
+ * The review plan with an Order of steps 1, 2 and 4, a Standing review step 3 and the After line it is given.
+ * @param {string} dir  the hub copy under test.
+ * @param {string} [line]  the After line, such as `After: 4 after 1`; none by default.
+ * @returns {string} the plan text; `planOrder` reads Order 1 2 4 and Standing 3 from it, and `aimReviewSteps` reads [3].
+ */
+function afterPlanText(dir, line = '') {
+  return reviewPlan(dir).replace('Order: 1 2\nStanding: 3\n', `Order: 1 2 4\nStanding: 3\n${line ? `${line}\n` : ''}`)
+    .replace(/(3\. \*\*Review\.\*\*[^\n]*)/, '$1\n4. **Other.** Do another thing.');
+}
+/**
+ * A plan that passes every check of the plan guard, with an Order of steps 1 and 2, a Standing review step 3 and the After line it is given.
+ * @param {string} dir  the hub copy under test.
+ * @param {string} [line]  the After line; none by default.
+ * @returns {string} the plan text.
+ */
+function afterGatePlan(dir, line = '') {
+  return ['# After plan', '',
+    '## Goals', '1. The toolbar shows the export button on its left side.', GOALS_BLOCK, 'Served by: steps 1, 2 and 3 serve goal 1.', '',
+    '## Asked', OWN_WORDS, '',
+    '## Order', 'Order: 1 2', 'Standing: 3', ...(line ? [line] : []), '',
+    '## Rules', rulesLine(dir), '',
+    '## Steps', '1. **Build.** Make the toolbar change.', '2. **Check.** Read the toolbar change.',
+    `3. **Review.** Follow ${join(dir, 'aim-review.md')} for the move named on the status page.`, '',
+    '## Looked up', 'Nothing outside the repository bears on this change at all.', '',
+    '## Branches', 'One branch only, because the request names a single control to move.', '',
+    '## Call chain', 'The toolbar builder places the button; nothing else reads its position.', '',
+    '## Whole app', 'It belongs because it was asked for, and nothing else would change.', '',
+    '## Leaves open', 'Nothing is left open by this change, as far as can be seen here.', ''].join('\n');
+}
+/**
+ * Put a repository under a world's launch directory whose one PreToolUse hook is the named shim.
+ * @param {{cwd: string}} w  a world (`world`).
+ * @param {string} shim  the hook's file name under .claude/hooks, such as ident-guard.sh.
+ * @param {string|null|false} [refuses]  false to leave the shim unwritten, for plan-guard.sh, which the dispatcher replaces with
+ *   the hub's own script; null to write a script that refuses every call; a tool name to write one that refuses that tool's calls only.
+ * @param {string} [name]  the repository's folder name under the launch directory.
+ * @returns {string} the repository's root. A refusing script prints a fixed sentence naming the shim and exits 2.
+ */
+function hookRepo(w, shim, refuses = null, name = 'repo') {
+  const r = join(w.cwd, name);
+  mkdirSync(join(r, '.claude', 'hooks'), { recursive: true });
+  spawnSync('git', ['init', '-q', r]);
+  writeFileSync(join(r, '.claude', 'settings.json'), JSON.stringify({ hooks: {
+    PreToolUse: [{ matcher: '.*', hooks: [{ type: 'command', command: `$CLAUDE_PROJECT_DIR/.claude/hooks/${shim}` }] }],
+  } }));
+  if (refuses !== false) {
+    const say = `echo "planted refusal from ${shim}" >&2\nexit 2\n`;
+    const body = refuses === null ? say : `input=$(cat)\ncase "$input" in\n  *'"tool_name":"${refuses}"'*)\n${say};;\nesac\nexit 0\n`;
+    writeFileSync(join(r, '.claude', 'hooks', shim), `#!/bin/sh\n${body}`, { mode: 0o755 });
+  }
+  return r;
+}
 
 /** Each case: (m, dir) → true when the guards behaved. `guards` names the plants it must catch. */
 const CASES = [
@@ -6105,6 +6168,275 @@ const CASES = [
       }
     },
   },
+
+  // ---- the plan gate's name check, the plan fence's opener, the latch and the review's staleness (step 199) ----
+  {
+    name: 'the plan gate passes a name it can find: one a tool result printed beyond the old tail of sixteen megabytes, a bare file name that exists in the session scratchpad with no result printing it, a held name whose file now exists, and a bare file name that exists in a repository the plan\'s Files names',
+    guards: ['names_wide_tail', 'names_exists_pad', 'names_exists_repo', 'names_held_exists'],
+    run(m, dir) {
+      const r = repo({ 'a.txt': 'x\n' });
+      const demo = repo({ 'a.txt': 'x\n' }, 'Demo-Files');
+      const padOf = (s) => join(process.env.TMPDIR, 'claude-0', '-home-user', s, 'scratchpad');
+      const put = (s, name) => { mkdirSync(padOf(s), { recursive: true }); writeFileSync(join(padOf(s), name), 'x\n'); };
+      const exit = (s, planText, entries, project = r.dir) => spawnSync('node', [join(dir, 'plan-guard.mjs')], {
+        input: JSON.stringify({ session_id: s, permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { plan: planText }, transcript_path: transcript([turn(0, OWNER), ...entries]), cwd: '/' }),
+        encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: project },
+      });
+      const naming = (name) => `${PLAN(OWN_WORDS)}\n- The builder calls \`${name}\` once.\n`;
+      // A name a result printed, then more other entries than the old tail of sixteen megabytes reads.
+      const early = ['zzqx', 'Early', 'Gadget'].join('');
+      const fill = Array.from({ length: 17 }, () => ({ type: 'system', subtype: 'padding', content: 'x'.repeat(1024 * 1024) }));
+      const wide = exit(sid('nm'), naming(early), [tool(0, 'g1', 'Grep', {}), at(result(0, 'g1', `src/builder.mjs:12: export function ${early}()`), later(-30)), ...fill]);
+      // A bare file name that exists in this session's scratchpad and that no result printed.
+      const padName = 'zzqx-pad-note.txt';
+      const s2 = sid('nm');
+      put(s2, padName);
+      const onPad = exit(s2, naming(padName), []);
+      // A name the held record holds, whose file now exists.
+      const heldName = 'zzqx-held-note.txt';
+      const s3 = sid('nm');
+      put(s3, heldName);
+      mkdirSync(process.env.PLAN_GUARD_NAMES_DIR, { recursive: true });
+      writeFileSync(join(process.env.PLAN_GUARD_NAMES_DIR, `${s3}.json`), JSON.stringify([{ name: heldName, at: Date.now() - 60000 }]));
+      const released = exit(s3, PLAN(OWN_WORDS), []);
+      const left = JSON.parse(readFileSync(join(process.env.PLAN_GUARD_NAMES_DIR, `${s3}.json`), 'utf8'));
+      // A bare file name that exists, untracked, in the repository the plan's Files names.
+      const repoName = 'zzqx-untracked-notes.txt';
+      writeFileSync(join(demo.dir, repoName), 'x\n');
+      const onRepo = exit(sid('nm'), `${PLAN(OWN_WORDS)}\n## Files touched\n- Demo-Files: \`${repoName}\`\n`, [], demo.dir);
+      const got = [wide, onPad, released, onRepo].map((x) => x.status);
+      if (!(got.every((x) => x === 0) && left.length === 0)) {
+        const first = [wide, onPad, released, onRepo].find((x) => x.status !== 0);
+        throw new Error(`statuses ${got.join(', ')} (wide tail, scratchpad, held record, repository), held record keeps ${left.length}; first refusal: ${String(first?.stdout ?? '').slice(0, 220)}`);
+      }
+      return true;
+    },
+  },
+  {
+    name: 'the plan gate still refuses a name nothing can find: a made-up name, a path-shaped name that is not on disk, a held name whose file does not exist, and a bare file name that exists only in another session\'s scratchpad',
+    guards: ['names_exists_real'],
+    run(m, dir) {
+      const r = repo({ 'a.txt': 'x\n' });
+      const padOf = (s) => join(process.env.TMPDIR, 'claude-0', '-home-user', s, 'scratchpad');
+      const exit = (s, planText, entries) => spawnSync('node', [join(dir, 'plan-guard.mjs')], {
+        input: JSON.stringify({ session_id: s, permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { plan: planText }, transcript_path: transcript([turn(0, OWNER), ...entries]), cwd: '/' }),
+        encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: r.dir },
+      });
+      const naming = (name) => `${PLAN(OWN_WORDS)}\n- The builder calls \`${name}\` once.\n`;
+      const made = exit(sid('nm'), naming(['zzqx', 'Made', 'Gadget'].join('')), []);
+      const pathy = exit(sid('nm'), naming('src/zzqx/nothing-here.mjs'), []);
+      const s3 = sid('nm');
+      mkdirSync(process.env.PLAN_GUARD_NAMES_DIR, { recursive: true });
+      writeFileSync(join(process.env.PLAN_GUARD_NAMES_DIR, `${s3}.json`), JSON.stringify([{ name: 'zzqx-nowhere-note.txt', at: Date.now() - 60000 }]));
+      const held = exit(s3, PLAN(OWN_WORDS), []);
+      const other = sid('nm');
+      mkdirSync(padOf(other), { recursive: true });
+      writeFileSync(join(padOf(other), 'zzqx-elsewhere-note.txt'), 'x\n');
+      const elsewhere = exit(sid('nm'), naming('zzqx-elsewhere-note.txt'), []);
+      const all = [made, pathy, held, elsewhere];
+      if (!all.every((x) => x.status === 2)) throw new Error(`statuses ${all.map((x) => x.status).join(', ')} (made up, path-shaped, held, another session's scratchpad), every one is 2`);
+      return /exist in no repo/.test(made.stdout) && pathy.stdout.includes('src/zzqx/nothing-here.mjs') && /stays refused/.test(held.stdout) && elsewhere.stdout.includes('zzqx-elsewhere-note.txt');
+    },
+  },
+  {
+    name: 'a command line is opened as a shell opens it: text in single quotes never opens a command, so a commit message holding a backtick pair or a dollar-parenthesis group and a pattern holding a vertical bar pass the plan fence, and the host check does not read a quoted backtick span as a request; the refusal of a line that does open a command names the character it opened at and says to write the text into a file the script reads',
+    guards: ['opener_single_quote', 'opener_named', 'opener_named_cd', 'opener_op', 'opener_sub'],
+    run(m) {
+      const r = repo({ 'keep.mjs': 'x\n' });
+      mkdirSync(join(r.dir, 'tools'));
+      const plan = fencePlan(basename(r.dir));
+      const s = sid('op');
+      const b = (command) => decideFence(m, { session_id: s, agent_id: 'a1', tool_name: 'Bash', tool_input: { command }, cwd: r.dir }, { plan });
+      const quoted = [`git commit -m 'Notes: the line holds ${BT}rm x${BT} and more'`, "git commit -m 'Notes: the line holds $(rm x) and more'",
+        "git grep -n 'a|b' keep.mjs", "git commit -m 'a; b & c > d'"].map((c) => [c, b(c)]);
+      const said = (command, ...res) => { const x = b(command) ?? ''; return /^PLAN FENCE/.test(x) && res.every((re) => re.test(x)); };
+      const file = /written into a file in the scratchpad that the script reads/;
+      const bad = [...quoted.filter(([, x]) => x !== null).map(([c]) => c)];
+      for (const [c, ...res] of [['git log; rm x', /opened this command at a semicolon/], ['git status | tee out', /opened this command at a vertical bar/],
+        ['git status & rm -rf x', /opened this command at an ampersand/], ['git status && rm x', /opened this command at a double ampersand/],
+        ['git commit -m "$(rm -rf x)"', /opened this command at a dollar sign and an opening parenthesis/],
+        [`git commit -m "a ${BT}rm x${BT} b"`, /opened this command at a backtick/], ['git status\nrm x', /opened this command at a new line/],
+        ['git status; cd /tmp', /opened this command at a semicolon/]]) if (!said(c, ...res, file)) bad.push(c);
+      if (bad.length) throw new Error(`wrong on: ${bad.map((c) => JSON.stringify(c)).join(', ')}`);
+      const hosts = (cmd) => [...m.reply.hostsIn(cmd)];
+      return hosts(`git commit -m 'see ${BT}curl pixinsight.com/x${BT} now'`).length === 0 && hosts("git commit -m 'see $(curl pixinsight.com/x) now'").length === 0
+        && m.reply.commandsIn(`git commit -m 'x ${BT}curl y${BT} z'`).every((x) => x.words[0] !== 'curl');
+    },
+  },
+  {
+    name: 'a line that does open a command is still refused: an unquoted vertical bar, semicolon, ampersand or backtick, a dollar-parenthesis group and a backtick pair inside double quotes, a process substitution and a new line each open one, and the host check still reads such a span as a request',
+    guards: ['opener_double_quote', 'opener_backtick', 'opener_dollar', 'fence_split'],
+    run(m) {
+      const r = repo({ 'keep.mjs': 'x\n' });
+      mkdirSync(join(r.dir, 'tools'));
+      const plan = fencePlan(basename(r.dir));
+      const s = sid('oq');
+      const b = (command) => decideFence(m, { session_id: s, agent_id: 'a1', tool_name: 'Bash', tool_input: { command }, cwd: r.dir }, { plan });
+      const refuse = ['git status | tee out', 'git log; rm x', 'git status & rm -rf x', 'git status && rm x', 'git commit -m "$(rm -rf x)"',
+        `git commit -m "a ${BT}rm x${BT} b"`, `echo ${BT}rm x${BT}`, 'echo $(rm x)', 'cat <(rm x)', 'git status\nrm x', 'git status; cd /tmp'].map((c) => [c, b(c)]);
+      const bad = refuse.filter(([, x]) => !/^PLAN FENCE/.test(x ?? '')).map(([c]) => c);
+      if (bad.length) throw new Error(`not refused: ${bad.map((c) => JSON.stringify(c)).join(', ')}`);
+      const hosts = (cmd) => m.reply.hostsIn(cmd).has('pixinsight.com');
+      return hosts('curl pixinsight.com/x') && hosts(`echo "see ${BT}curl pixinsight.com/x${BT}"`) && hosts('echo "see $(curl pixinsight.com/x)"') && hosts(`echo ${BT}curl pixinsight.com/x${BT}`);
+    },
+  },
+  {
+    name: 'the doctrine gate\'s refusal sets no latch: the Read it asks for passes at once',
+    guards: ['latch_doctrine_free'],
+    run(m, dir) {
+      const w = world(dir);
+      const s = sid('ld');
+      w.call('SessionStart', { session_id: s, source: 'startup' });
+      const first = w.call('PreToolUse', { session_id: s, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } });
+      const standing = latched(s);
+      const read = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan } });
+      if (!(first.status === 2 && /DOCTRINE GATE/.test(first.stderr) && !standing && read.status === 0)) {
+        throw new Error(`first ${first.status} (${String(first.stderr).slice(0, 80)}), latch standing ${standing}, read ${read.status} (${String(read.stderr).slice(0, 120)})`);
+      }
+      return true;
+    },
+  },
+  {
+    name: 'the plan gate\'s refusal of the approval call on a name it has not seen sets no latch, so the Read that shows the name passes at once, and the call stays refused until the name is shown or its file exists',
+    guards: ['latch_names_free', 'names_marked'],
+    run(m, dir) {
+      const w = world(dir);
+      const s = sid('ln');
+      hookRepo(w, 'plan-guard.sh', false);
+      const name = ['zzqx', 'Latch', 'Gadget'].join('');
+      const planText = `${PLAN(OWN_WORDS)}\n- The builder calls \`${name}\` once.\n`;
+      const exit = () => w.call('PreToolUse', { session_id: s, permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { plan: planText } });
+      const first = exit();
+      const standing = latched(s);
+      const read = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan } });
+      const again = exit();
+      if (!(first.status === 2 && /exist in no repo/.test(first.stderr) && !standing && read.status === 0 && again.status === 2 && /exist in no repo/.test(again.stderr) && !/REFUSAL LATCH/.test(again.stderr))) {
+        throw new Error(`first ${first.status} (${String(first.stderr).slice(0, 100)}), latch standing ${standing}, read ${read.status} (${String(read.stderr).slice(0, 120)}), again ${again.status} (${String(again.stderr).slice(0, 100)})`);
+      }
+      return true;
+    },
+  },
+  {
+    name: 'a refusal of the approval call by the app\'s identifier guard sets no latch and still refuses, so the Read that shows the identifier passes at once',
+    guards: ['latch_ident_free'],
+    run(m, dir) {
+      const w = world(dir);
+      const s = sid('li');
+      hookRepo(w, 'ident-guard.sh', 'ExitPlanMode');
+      const first = w.call('PreToolUse', { session_id: s, permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { plan: PLAN(OWN_WORDS) } });
+      const standing = latched(s);
+      const read = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan } });
+      if (!(first.status === 2 && /planted refusal from ident-guard\.sh/.test(first.stderr) && !standing && read.status === 0)) {
+        throw new Error(`first ${first.status} (${String(first.stderr).slice(0, 100)}), latch standing ${standing}, read ${read.status} (${String(read.stderr).slice(0, 120)})`);
+      }
+      return true;
+    },
+  },
+  {
+    name: 'the refusals that latch still latch: after the doctrine gate\'s refusal a call that is not a read is refused again, and the plan gate\'s refusal of a plan that is missing its sections, the identifier guard\'s refusal of a call that is not the approval call and another hook\'s refusal of the approval call each set the latch and hold the next call',
+    guards: ['doctrine_refuse', 'latch_other_plan', 'latch_ident_exit_only', 'latch_other_shim'],
+    run(m, dir) {
+      const read = (w, s) => w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan } });
+      const held = (r) => r.status === 2 && /REFUSAL LATCH/.test(r.stderr);
+      // The doctrine gate: a second call that is not a read is refused by the gate itself, and no latch is behind it.
+      const w1 = world(dir);
+      const s1 = sid('lk');
+      w1.call('SessionStart', { session_id: s1, source: 'startup' });
+      const send = () => w1.call('PreToolUse', { session_id: s1, tool_name: 'Agent', tool_input: { prompt: `${w1.plan} step 1`, subagent_type: 'general-purpose' } });
+      send();
+      const again = send();
+      // The plan gate refusing something other than a name.
+      const w2 = world(dir);
+      const s2 = sid('lk');
+      hookRepo(w2, 'plan-guard.sh', false);
+      const missing = w2.call('PreToolUse', { session_id: s2, permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { plan: '# A plan with no sections at all.' } });
+      const afterMissing = read(w2, s2);
+      // The identifier guard refusing a call that is not the approval call.
+      const w3 = world(dir);
+      const s3 = sid('lk');
+      hookRepo(w3, 'ident-guard.sh', 'Read');
+      const identRead = read(w3, s3);
+      const afterIdent = read(w3, s3);
+      // Another hook refusing the approval call.
+      const w4 = world(dir);
+      const s4 = sid('lk');
+      hookRepo(w4, 'other-guard.sh', 'ExitPlanMode');
+      const other = w4.call('PreToolUse', { session_id: s4, permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { plan: PLAN(OWN_WORDS) } });
+      const afterOther = read(w4, s4);
+      if (!(again.status === 2 && missing.status === 2 && /the plan is missing/.test(missing.stderr) && held(afterMissing)
+        && identRead.status === 2 && held(afterIdent) && other.status === 2 && held(afterOther))) {
+        throw new Error(`doctrine again ${again.status}, missing ${missing.status} then ${afterMissing.status}, ident ${identRead.status} then ${afterIdent.status}, other ${other.status} then ${afterOther.status}`);
+      }
+      return true;
+    },
+  },
+  {
+    name: 'a plan\'s After line, in its Order section, as groups of the form N after M M separated by semicolons: reviewState leaves a review current when a step the cleared step does not follow ended after the review began, and the plan gate refuses an After line that names a step outside Order or is not of that form',
+    guards: ['after_parse', 'after_sibling', 'after_wired', 'after_block_text', 'after_plan_guard', 'after_outside_order', 'after_malformed'],
+    run(m, dir) {
+      const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const st = (line, ends, o = {}) => m.report.reviewState({ session_id: 'rs' }, { path: '/plans/gate-test.md', text: afterPlanText(dir, line) }, { ends, planAt: 10, ...o });
+      const one = endFor(1, 100, 50, 'DONE');
+      const review = endFor(3, 200, 150, 'ON-AIM ROUTE-CLEAR step 1 next 4');
+      // Step 2 ends at 300, after the review began at 150, and step 4 does not follow it.
+      const sibling = endFor(2, 300, 250, 'DONE');
+      const parsed = m.report.planAfter(afterPlanText(dir, 'After: 4 after 1 2; 2 after 1'));
+      const shown = m.report.planAfter('## Order\nOrder: 199, 200, 201, 202, 203, 204\nStanding: 205\nAfter: 202 after 200 201; 203 after 199 202; 204 after 203\n');
+      const current = st('After: 4 after 1', [one, review, sibling]);
+      const unrelated = st('After: 4 after 1; 2 after 1', [one, review, sibling]);
+      // The plan gate.
+      const r = repo({ 'a.txt': 'x\n' });
+      const gate = (line) => exitFor(dir, afterGatePlan(dir, line), r.dir);
+      const good = gate('After: 2 after 1');
+      const outside = gate('After: 2 after 9');
+      const standing = gate('After: 3 after 1');
+      const malformed = gate('After: two after one');
+      const none = gate('');
+      return m.report.planAfter(afterPlanText(dir)) === null && parsed?.bad.length === 0 && eq([...parsed.follows], [[4, [1, 2]], [2, [1]]])
+        && eq([...shown.follows], [[202, [200, 201]], [203, [199, 202]], [204, [203]]])
+        && current.kind === 'cleared' && current.cleared === 4 && current.step === 1 && unrelated.kind === 'cleared' && eq(current.ignored, [2])
+        && m.report.reviewBlock(current).includes('The plan\'s After line does not tie step 2 to it, so an end of that step after it began leaves it current.')
+        && good.status === 0 && none.status === 0
+        && [outside, standing, malformed].every((x) => x.status === 2 && /AFTER LINE/.test(x.stdout));
+    },
+  },
+  {
+    name: 'a review is still stale when the plan was written after it began, when a correction is newer, when the step it judged or the step it clears ended after it began, or when a step the cleared step follows by the After line did; with no After line any end of a step in Order stales it, and a verdict naming another step than the newest end before the review is the wrong step either way',
+    guards: ['review_ref_order', 'review_ref_plan', 'review_ref_after', 'review_wrong_step', 'after_tied', 'after_judged_end', 'after_cleared_end', 'after_follows_end', 'after_follows_valid', 'after_follows_bad'],
+    run(m, dir) {
+      const st = (line, ends, o = {}) => m.report.reviewState({ session_id: 'rs' }, { path: '/plans/gate-test.md', text: afterPlanText(dir, line) }, { ends, planAt: 10, ...o });
+      const kind = (line, ends, o) => st(line, ends, o).kind;
+      const one = endFor(1, 100, 50, 'DONE');
+      const review = endFor(3, 200, 150, 'ON-AIM ROUTE-CLEAR step 1 next 4');
+      const sibling = endFor(2, 300, 250, 'DONE');
+      const both = [['no After line', ''], ['an After line that ties step 4 to step 2 only', 'After: 4 after 2']];
+      const out = [];
+      for (const [label, line] of both) {
+        // The step the review judged ended again after it began.
+        if (kind(line, [one, review, endFor(1, 400, 350, 'DONE')]) !== 'stale') out.push(`${label}: the judged step's end`);
+        // The step it clears ended after it began.
+        if (kind(line, [one, review, endFor(4, 500, 450, 'DONE')]) !== 'stale') out.push(`${label}: the cleared step's end`);
+        // The plan's last write and the owner's newest message.
+        if (kind(line, [one, review], { planAt: 160 }) !== 'stale') out.push(`${label}: the plan's write`);
+        if (kind(line, [one, review], { after: 170 }) !== 'stale') out.push(`${label}: the correction's time`);
+        // A verdict naming another step than the newest end before the review began.
+        if (kind(line, [one, endFor(3, 200, 150, 'ON-AIM ROUTE-CLEAR step 2 next 4')]) !== 'wrong-step') out.push(`${label}: the wrong step`);
+        if (kind(line, [one, review]) !== 'cleared') out.push(`${label}: control`);
+      }
+      // With no After line, a sibling's end stales the review.
+      if (kind('', [one, review, sibling]) !== 'stale') out.push('no After line: a sibling\'s end');
+      // Under an After line, a step the cleared step follows does.
+      if (kind('After: 4 after 2', [one, review, sibling]) !== 'stale') out.push('the After line: an end of a step the cleared step follows');
+      if (kind('After: 4 after 2 1', [one, review, endFor(1, 310, 260, 'DONE')]) !== 'stale') out.push('the After line: a second followed step');
+      // A line that names a step outside Order, or has a group that is not of the form, is read as no line: a sibling's end stales.
+      if (kind('After: 4 after 9', [one, review, sibling]) !== 'stale') out.push('a line that names a step outside Order');
+      if (kind('After: 4 after 1; nonsense', [one, review, sibling]) !== 'stale') out.push('a line with a group that is not of the form');
+      // A followed step that ended before the review began leaves it current.
+      if (kind('After: 4 after 2', [one, endFor(2, 120, 60, 'DONE'), endFor(3, 200, 150, 'ON-AIM ROUTE-CLEAR step 2 next 4')]) !== 'cleared') out.push('the After line: a followed step that ended before it began');
+      if (out.length) throw new Error(`wrong on: ${out.join('; ')}`);
+      return true;
+    },
+  },
 ];
 
 const PLANTS = {
@@ -6253,7 +6585,7 @@ const PLANTS = {
   latch_refuse: ['    if (latch && !status && !mainStop && !reportWrite) return refuse(latchMessage(latch), false);\n', '\n', 'hook-dispatch.mjs'],
   latch_return: ["    if (p.agent_id && AGENT_RETURN.has(String(p.tool_name ?? ''))) return 0;\n", '\n', 'hook-dispatch.mjs'],
   latch_status: ['    if (latch && !status && !mainStop && !reportWrite) return', '    if (latch && !mainStop && !reportWrite) return', 'hook-dispatch.mjs'],
-  latch_repo: ['        if (o.deny) return refuse(o.reason);\n', "        if (o.deny) { process.stderr.write(o.reason + '\\n'); return 2; }\n", 'hook-dispatch.mjs'],
+  latch_repo: ['        if (o.deny) return refuse(o.reason, !noLatchRepoRefusal(shim, p, o.reason));\n', "        if (o.deny) { process.stderr.write(o.reason + '\\n'); return 2; }\n", 'hook-dispatch.mjs'],
   latch_clear: ['if (list.some((e, i) => isOwnerMessage(e) && typedAt(list, i) > at)) {', 'if (list.some((e, i) => typedAt(list, i) > at)) {', 'hook-dispatch.mjs'],
   latch_after: ['isOwnerMessage(e) && typedAt(list, i) > at)', 'isOwnerMessage(e))', 'hook-dispatch.mjs'],
   latch_typed: ['  for (let j = i - 1; t && j >= 0; j--) {', '  for (let j = i - 1; false && j >= 0; j--) {', 'hook-dispatch.mjs'],
@@ -6769,7 +7101,7 @@ const PLANTS = {
   // The first refusal sets no latch (lesson 415): the fence marks only the first refusal, and only the second latches.
   rules_first_mark: ['  const first = !!f && !rulesRefusedBefore(entries);', '  const first = !!f;', 'plan-fence.mjs'],
   rules_first_second: ['  const first = !!f && !rulesRefusedBefore(entries);', '  const first = !!f || true;', 'plan-fence.mjs'],
-  rules_first_skip_latch: ["refuse(o.reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')));", 'refuse(o.reason);', 'hook-dispatch.mjs'],
+  rules_first_skip_latch: ["refuse(o.reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));", "refuse(o.reason, !g.includes('doctrine-read-guard.mjs'));", 'hook-dispatch.mjs'],
 
   // The manager's written judgement of each hand-back (step 119).
   judged_gate_wired: ['      if (jg) return refuse(jg, false);\n', '\n', 'hook-dispatch.mjs'],
@@ -6996,6 +7328,47 @@ const PLANTS = {
   go_subject: ['\\b(?:you|the owner)\\s+(?:(?:can', '\\b(?:you|the owner|the agent)\\s+(?:(?:can', 'stop-guard.mjs'],
   go_verbs: ['const GO_VERB = String.raw`(?:say|send|press|type|write|give)`;', 'const GO_VERB = String.raw`(?:say|send|press|type|write|give|reply|answer)`;', 'stop-guard.mjs'],
   go_object: ['continue|approved?|approval|yes)', 'continue|approved?|yes)', 'stop-guard.mjs'],
+
+  // The plan gate's name check reads the whole session and the disk (step 199, LESSONS §424).
+  names_wide_tail: ['const TAILS = [2, 8, 32, 64].map((mb) => mb * 1024 * 1024);', 'const TAILS = [16].map((mb) => mb * 1024 * 1024);', 'plan-guard.mjs'],
+  names_exists_pad: ['    if (inside(ctx.pad, abs) && ctx.inScratchpad(abs, ctx.sid) && existsSync(abs)) return true;', '    if (false) return true;', 'plan-guard.mjs'],
+  names_exists_repo: ['  return ctx.roots.some((root) => { const abs = resolve(root, name); return inside(root, abs) && existsSync(abs); });', '  return false;', 'plan-guard.mjs'],
+  names_held_exists: ['.includes(x.name) && !onDisk(x.name, ctx) && !marked(x.name));', '.includes(x.name) && !marked(x.name));', 'plan-guard.mjs'],
+  names_exists_real: ['function onDisk(name, ctx) {\n', 'function onDisk(name, ctx) {\n  if (name) return true;\n', 'plan-guard.mjs'],
+  names_marked: ['  return `${ctx.mark} the plan names ', '  return `the plan names ', 'plan-guard.mjs'],
+
+  // A command line is opened as a shell opens it, and a refusal names the character (step 199, LESSONS §424).
+  opener_single_quote: ['    if (c === "\'" && !q) {\n      const j = s.indexOf("\'", i + 1);\n      if (j >= 0) i = j;\n      continue;\n    }\n', '', 'reply-guard.mjs'],
+  opener_double_quote: ["    if (c === '\"') { q = !q; continue; }\n", "    if (c === '\"') { const j = s.indexOf('\"', i + 1); if (j >= 0) i = j; continue; }\n", 'reply-guard.mjs'],
+  opener_backtick: ["    if (c === '`') {\n      let j = i + 1;", "    if (false) {\n      let j = i + 1;", 'reply-guard.mjs'],
+  opener_dollar: ["    if (c === '$' && s[i + 1] === '(') {\n      const end = closeParen(s, i + 2);", "    if (false) {\n      const end = closeParen(s, i + 2);", 'reply-guard.mjs'],
+  opener_op: ['out.push({ words, op, opener }); words = []; if (op) opener = op; };', 'out.push({ words, op, opener }); words = []; };', 'reply-guard.mjs'],
+  opener_sub: ['commandsIn(str, depth + 1, any, sink).map((x) => (x.opener ? x : { ...x, opener })));', 'commandsIn(str, depth + 1, any, sink));', 'reply-guard.mjs'],
+  opener_named: ['  return at ? ` The line opened this command at ${at}:', '  return false ? ` The line opened this command at ${at}:', 'plan-fence.mjs'],
+  opener_named_cd: ['is refused: write every path in full.${openedNote(s)}', 'is refused: write every path in full.', 'plan-fence.mjs'],
+
+  // The doctrine gate's refusal, the plan gate's refusal of a name and the identifier guard's refusal of the approval call set no latch (step 199, LESSONS §424).
+  latch_doctrine_free: ["      if (o.deny) return refuse(o.reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));", "      if (o.deny) return refuse(o.reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')));", 'hook-dispatch.mjs'],
+  latch_names_free: ["  return shim === 'plan-guard.sh' && String(reason ?? '').includes(NAMES_NO_LATCH);", '  return false;', 'hook-dispatch.mjs'],
+  latch_ident_free: ['  if (IDENT_SHIMS.has(shim)) return true;\n', '\n', 'hook-dispatch.mjs'],
+  latch_other_plan: ["  return shim === 'plan-guard.sh' && String(reason ?? '').includes(NAMES_NO_LATCH);", "  return shim === 'plan-guard.sh';", 'hook-dispatch.mjs'],
+  latch_ident_exit_only: ["  if (String(p?.tool_name ?? '') !== 'ExitPlanMode') return false;\n", '\n', 'hook-dispatch.mjs'],
+  latch_other_shim: ['  if (IDENT_SHIMS.has(shim)) return true;\n', '  return true;\n', 'hook-dispatch.mjs'],
+
+  // The review's staleness is narrowed by the After line of the plan's Order (step 199, LESSONS §424).
+  after_parse: ['const g = /^\\s*(\\d+)\\s+after\\s+(\\d+(?:\\s+\\d+)*)\\s*\\.?\\s*$/i.exec(group);', 'const g = /^\\s*(\\d+)\\s+after\\s+(\\d+)\\s*\\.?\\s*$/i.exec(group);', 'report.mjs'],
+  after_wired: ['  const follows = review ? reviewFollows(plan.text) : null;', '  const follows = null;', 'report.mjs'],
+  after_sibling: ['  return ends.filter((e) => e.step !== null && order.includes(e.step) && !tied.has(e.step) && !(e.at < review.startAt));', '  return [];', 'report.mjs'],
+  after_tied: ['!tied.has(e.step) && !(e.at < review.startAt));', '!(e.at < review.startAt));', 'report.mjs'],
+  after_judged_end: ['  if (v && Number.isInteger(v.step)) tied.add(v.step);\n', '\n', 'report.mjs'],
+  after_cleared_end: ['tied.add(v.next); for (const n of', 'for (const n of', 'report.mjs'],
+  after_follows_end: [' for (const n of follows.get(v.next) ?? []) tied.add(n); }', ' }', 'report.mjs'],
+  after_follows_valid: ['  return named.every((n) => o.order.includes(n)) ? a.follows : null;', '  return a.follows;', 'report.mjs'],
+  after_follows_bad: ['if (!o || !a || a.bad.length || !a.follows.size) return null;', 'if (!o || !a || !a.follows.size) return null;', 'report.mjs'],
+  after_block_text: ["The plan's After line does not tie step", "The plan's After line ties step", 'report.mjs'],
+  after_plan_guard: ['    if (after) deny(after);\n', '\n', 'plan-guard.mjs'],
+  after_outside_order: ['  if (!a.bad.length && !outside.length) return null;\n', '  if (!a.bad.length) return null;\n', 'hook-dispatch.mjs'],
+  after_malformed: ['  if (!a.bad.length && !outside.length) return null;\n', '  if (!outside.length) return null;\n', 'hook-dispatch.mjs'],
 };
 
 async function runAll(dir, only, filter) {

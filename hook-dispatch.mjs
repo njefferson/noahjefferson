@@ -84,8 +84,11 @@
  * doctrine-read-guard (main thread only); then each repo's hooks. EVERY
  * PreToolUse refusal, family or repo, sets a latch, except the
  * report gate's, pending-guard's, the stop hold's, the correction check's, the
- * recall gate's, the state page gate's, the in-app approval check's, the review
- * gate's, the rules gate's, the reads gate's, the judgement gate's and the manager
+ * recall gate's, the state page gate's, the doctrine gate's (the Read it names is its
+ * remedy), the in-app approval check's, the review
+ * gate's, the rules gate's, the reads gate's, the judgement gate's, the refusal of the
+ * ExitPlanMode call on a name the plan gate has not seen (`NAMES_NO_LATCH`) and the
+ * app's identifier guard's refusal of that call (`noLatchRepoRefusal`, LESSONS §424), and the manager
  * fence's refusal of a call that is not of the record (`FENCE_NO_LATCH`: it names
  * what the main thread may use and the check, `--can`, which says beforehand whether
  * the fence and the latch would pass a call): a status falling due (an agent has
@@ -137,7 +140,8 @@ import { createHash } from 'node:crypto';
 import { recallParts } from './compact-recall.mjs';
 import { tailEntries, isOwnerMessage, textOf } from './transcript-tail.mjs';
 import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
-  planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, judgedState, stepNumbers, stepBody, markCompacted, sessionFiles, JUDGED_PARTS, WHY_PARTS } from './report.mjs';
+  planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, judgedState, stepNumbers, stepBody, markCompacted, sessionFiles, JUDGED_PARTS, WHY_PARTS,
+  planAfter } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
 import { HARNESS_TAG } from './pending-guard.mjs';
@@ -642,6 +646,33 @@ export function latchMessage(l) {
 }
 
 /**
+ * The words the plan gate's refusal of a name opens with (`inventedNames`, `heldNames` in plan-guard.mjs). `noLatchRepoRefusal` reads
+ * them as "this refusal sets no latch": the remedy of a refusal for a name the session has not seen is a read that shows it, and a
+ * latch refused that read until the owner wrote (LESSONS §424).
+ */
+export const NAMES_NO_LATCH = 'NAME CHECK, NO LATCH:';
+// The hook shims of the app's identifier guard, `.claude/hooks/ident-guard.sh` and the script it runs. The guard is a hook of the app
+// and not a hub gate, and is not changed here; only the dispatcher's own decision about its refusal is.
+const IDENT_SHIMS = new Set(['ident-guard.sh', 'ident-guard.mjs']);
+
+/**
+ * Does a refusal by a repository's own hook leave the latch unset?
+ * @param {string} shim  the hook command's file name, such as `plan-guard.sh` or `ident-guard.sh`.
+ * @param {object} p  the PreToolUse payload of the refused call.
+ * @param {string} reason  the refusal's text.
+ * @returns {boolean} true only for a refusal of the ExitPlanMode call, and for one of two kinds: any refusal by the app's identifier
+ *   guard (an identifier the session has not read, whose remedy is a read of it), and the plan gate's refusal of a name it has not
+ *   seen (its text opens with `NAMES_NO_LATCH`). The refusal still refuses, with exit 2; only the latch is not written. Every other
+ *   refusal of the approval call, the plan gate's missing sections among them, and every refusal of any other call by any hook, latches
+ *   as before. `main` asks this at each repository hook that denied.
+ */
+export function noLatchRepoRefusal(shim, p, reason) {
+  if (String(p?.tool_name ?? '') !== 'ExitPlanMode') return false;
+  if (IDENT_SHIMS.has(shim)) return true;
+  return shim === 'plan-guard.sh' && String(reason ?? '').includes(NAMES_NO_LATCH);
+}
+
+/**
  * Is this call a latched agent writing its own report?
  * @param {object} p  a PreToolUse payload.
  * @returns {boolean} true only for a subagent's Write, Edit or MultiEdit of a file
@@ -1134,7 +1165,7 @@ export function reviewGate(p, plan = approvedPlan(), state = undefined) {
     'not-read': 'the session\'s agents cannot be read, so no review can be read and no step is cleared',
     missing: 'no review of this plan has handed back',
     running: 'a review is running and no current one clears a move; its completion brings the session back',
-    stale: 'the newest review began before the newest end of an agent for a step in Order, before the plan\'s last write, or before the owner\'s newest message, so it did not see what it would clear',
+    stale: 'the newest review began before the newest end of an agent for a step in Order (where the plan\'s Order has an After line, before an end of the step it judged, the step it clears or a step the cleared step follows), before the plan\'s last write, or before the owner\'s newest message, so it did not see what it would clear',
     unreadable: 'the newest review\'s hand-back does not open as a verdict (ON-AIM or OFF-AIM, then ROUTE-CLEAR or ROUTE-REFUSED, then "step N" and "next M")',
     'wrong-step': 'the newest review judged another step than the newest end of an agent for a step in Order',
     'no-next': 'the newest review names no step to send ("next M")',
@@ -1169,6 +1200,31 @@ export function correctionLifts(p, correction, plan = approvedPlan(), state = un
   let st = state;
   if (st === undefined) { try { st = reviewState(p, plan, { after: correction?.typed }); } catch { st = null; } }
   return !!st && st.kind === 'cleared' && st.cleared === n;
+}
+
+/**
+ * Does a plan's After line name only steps of its Order?
+ * @param {string} text  the plan (its current block).
+ * @returns {string|null} the refusal, or null when the plan has no `## Order` or no `After:` line under it, or when every group of
+ *   the line (`planAfter`) is of the form `N after M M` and names only steps on the Order line: a Standing step is outside it,
+ *   and so is a step the plan does not number. The refusal lists each group that is not of the form and each number outside the
+ *   Order. plan-guard.mjs refuses ExitPlanMode on it, because `reviewState` reads such a line as no After line, which is the strict
+ *   reading and costs a review for every end of a sibling step; naming the fault at the approval is cheaper than finding it there.
+ */
+export function afterProblem(text) {
+  const o = planOrder(text);
+  const a = planAfter(text);
+  if (!o || !a) return null;
+  const outside = [...new Set([...a.follows.keys(), ...[...a.follows.values()].flat()].filter((n) => !o.order.includes(n)))];
+  if (!a.bad.length && !outside.length) return null;
+  const faults = [
+    ...(a.bad.length ? [`${a.bad.length === 1 ? 'a group is' : 'groups are'} not of the form "N after M M" (${a.bad.map((g) => `"${g}"`).join(', ')})`] : []),
+    ...(outside.length ? [`${outside.length === 1 ? 'step' : 'steps'} ${outside.join(', ')} ${outside.length === 1 ? 'is' : 'are'} not on the Order line (${o.order.join(', ')}); a Standing step is not on it`] : []),
+  ];
+  return `AFTER LINE (Doctrine §0e rule 2): the plan's "After:" line under "## Order" is refused: ${faults.join('; ')}. `
+    + 'The line is groups of the form "N after M M" separated by semicolons, each number a step of the Order line, and it narrows what stales a review: '
+    + 'a review that cleared step N stays current while a step that N does not follow ends, and is stale when the step it judged, the step it clears or a step N follows ends. '
+    + 'A line the review state cannot read is read as no line, and then every end of a step in Order stales every review.';
 }
 
 /**
@@ -2788,7 +2844,9 @@ async function main(event, raw, p) {
   const root = resolve(process.env.CLAUDE_PROJECT_DIR || p.cwd || process.cwd());
   const printed = [];
   // EVERY PreToolUse refusal, by any guard, family or repo, sets the latch
-  // (Doctrine §0d, §0e). Only ten do not, each passing latch = false below: the manager
+  // (Doctrine §0d, §0e). Only these do not, each passing latch = false below, and the doctrine
+  // gate's, the plan gate's refusal of a name and the app's identifier guard's refusal of the
+  // approval call among them since LESSONS §424: the manager
   // fence's refusal of a call that is not of the record (`FENCE_NO_LATCH`); the
   // latch's own, so it can never move the time an owner message has to come
   // after; pending-guard's; the stop hold's; the correction check's; the state
@@ -2994,7 +3052,9 @@ async function main(event, raw, p) {
       const o = run(g, raw, root);
       // A RULES FIRST refusal of an agent's first call sets no latch (lesson 415): only the plan
       // fence writes the mark (FIRST_REFUSAL in plan-fence.mjs), and every other refusal latches.
-      if (o.deny) return refuse(o.reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')));
+      // THE DOCTRINE GATE'S REFUSAL SETS NO LATCH either (LESSONS §424): the Read it names is its remedy, the recall gate's and the
+      // page gate's refusals are free for the same reason, and a latch refused that Read until the owner wrote.
+      if (o.deny) return refuse(o.reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));
       // A family guard that crashed or timed out has not said yes. The header's
       // promise — a crash refuses everything but reads — held only for a crash
       // of THIS file; a guard exiting 1 was read as a pass.
@@ -3140,7 +3200,8 @@ async function main(event, raw, p) {
         }
         const input = locked && shim === 'plan-guard.sh' ? JSON.stringify({ ...p, permission_mode: 'plan' }) : raw;
         const o = run(command, input, repo, h.timeout ?? 60);
-        if (o.deny) return refuse(o.reason);
+        // A REFUSAL OF THE APPROVAL CALL THAT ONLY A READ ANSWERS SETS NO LATCH (`noLatchRepoRefusal`, LESSONS §424).
+        if (o.deny) return refuse(o.reason, !noLatchRepoRefusal(shim, p, o.reason));
         if (o.out.trim() && (event === 'SessionStart' || event === 'UserPromptSubmit')) printed.push(o.out.trim());
       }
     }
