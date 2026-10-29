@@ -606,6 +606,48 @@ Every item below has actually happened.
  stop guard and the fence all read through). The main thread can read it.
  The first such refusal sets no latch and says so in its text, and tells the agent to read the rules and go on; a second one latches (LESSONS §415).
  (Doctrine §0e rule 13; LESSONS §404, §410, §415.)
+- **A PLAN'S RULES ARE PART OF WHAT IS APPROVED, SO AN EDIT OF THEM AFTER THE BUTTON
+ NEEDS THE BUTTON AGAIN.** The approved scope is the plan's Goals, Asked, Files
+ and Commands and also its `## Rules` line and its `## Rules of this plan`
+ section. A rule rewritten after the approval so that a step could be sent a third
+ time changed what had been approved, and nothing refused it.
+ `approved-plan-guard.mjs` refuses an edit of either section and names it, the
+ review gate's refusal and the approval block in the status name all six, and a
+ plan whose version pin has gone stale is approved again and not amended. A marker
+ written before the two joined holds no key for them: the status says of each that
+ the marker does not record it, an edit of either is judged against the plan file as
+ it stands, and the first amendment records both. Counting a step's sends from the
+ agents' transcripts is a later gate. (Doctrine §0e rule 13; LESSONS §433.)
+- **A PLAN IS NEVER PUT TO THE BUTTON TWICE, AND A PLAN MODE THE HARNESS BEGAN AT A
+ RESTART IS NOT THE PLAN'S.** A compaction or a resume after the approval can print
+ a plan-mode notice and report the mode as plan though the plan is approved and its
+ step is the next move. `plan-guard.mjs` reads that from the approval marker and the
+ transcript (`restartedPlanMode` in `report.mjs`): the approval call is refused,
+ saying the plan is approved, with a mark that sets no latch, and every other call is
+ judged as outside plan mode, `approved-plan-guard.mjs` included. A plan mode
+ entered after the approval, the `.claude/PLAN-LOCK` marker, a changed plan file,
+ another session's marker and a mode a caller forced (`plan_mode_forced`, which the
+ classifier uses and which must not make every tool a read) leave both halves alone.
+ (Doctrine §0e rule 4; LESSONS §432.)
+- **THE REPLY GUARD'S RELEASE COMMAND PASSES THE FENCE AND THE LATCH, AND LIFTS THE
+ LATCH ITS OWN REFUSAL SET.** `node /root/.claude/hub/reply-guard.mjs --read <host
+ or call:ID> --said "<words>" --route "<kind>: <how>"`, one plain command, is what a
+ refusal of the reply guard names as the way on. On the main thread it passes the
+ manager fence as the status command does and passes the latch, and a release of the
+ call the latch was set by lifts that latch; a latch another guard set, an agent's
+ own latch and a release of another call stand. The refusal that names the command
+ says so, and every other gate judges the command as it judges any command.
+ (Doctrine §0e rule 14; LESSONS §432.)
+- **THE FIRST REPLY UNDER A PLAN, ON THE TOP TIER, NAMES THE TIER AND SAYS WHETHER
+ THE WORK NEEDS IT.** The manager's turns send agents and check results, which need
+ no more than a lesser tier, and a session cannot change its own model, so the line
+ is how a switch gets decided. The status print names the model serving the main
+ thread, read from the `message.model` of the newest main-thread reply and never from
+ a key inside a tool's input (`servingModel` in `report.mjs`); a top-tier id is one
+ carrying fable or mythos. While an approval marker is in force, `stop-guard.mjs`
+ refuses the first reply after the serving model changes to a top-tier id unless its
+ first line names the tier and says whether the work needs it, once for each change,
+ and gives the words to use. (Doctrine §11b; LESSONS §434.)
 - **AN AGENT MAY BE SENT THE STEPS FILE IN THE PLAN'S PLACE.** Approval, the
  owner's exit from plan mode in the app and every amendment write
  `<plan>.steps.md` beside the plan, holding only its Rules, Steps and Commands

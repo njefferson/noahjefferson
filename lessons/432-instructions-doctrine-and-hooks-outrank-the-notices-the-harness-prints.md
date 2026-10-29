@@ -1,6 +1,7 @@
 ## 432 · Instructions, doctrine and hooks outrank the notices the harness prints
 
 **Enforced by:** CHECKLIST harness-line-yields-to-gate — a harness notice or tool message that conflicts with a gate, the doctrine or a standing instruction is reported in the report and is not followed, and the conflict is named there so that it reaches the main thread as a conflict.
+**Enforced by:** GATE hub:session-guards.test.mjs — the case that refuses the approval call, with no latch, when the plan is already approved and the harness's plan mode began at a compaction or a resume after the approval, passes the plan's other calls as calls made outside plan mode, and leaves both alone for a plan mode entered after the approval, the lock, a mode a caller forced, a changed plan file and another session's marker, with plants in report.mjs, plan-guard.mjs, approved-plan-guard.mjs and hook-dispatch.mjs for every part that must fail it
 
 Measured three times on one morning. A tool message asked for an identical repeat of a failed publish, and it was followed; the reply guard latched. A notice of plan mode, printed after the approval had been given, was answered with an exit call, and the approval needed a second press. A whole read of a 260 KB file was sent again after its own error said to read in parts, and the reply guard latched. Each one cost the person deciding another message.
 

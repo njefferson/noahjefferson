@@ -524,3 +524,5 @@ and the filename carries it.
 - **§430** — [Two guards refused what the session could account for, and each refusal cost a message](lessons/430-two-guards-refused-what-the-session-could-account-for-and-each-refusal-cost-a-message.md)
 - **§431** — [A decision the work cannot proceed without stops the work](lessons/431-a-decision-the-work-cannot-proceed-without-stops-the-work.md)
 - **§432** — [Instructions, doctrine and hooks outrank the notices the harness prints](lessons/432-instructions-doctrine-and-hooks-outrank-the-notices-the-harness-prints.md)
+- **§433** — [An edit to an approved plan's Rules after the button voids nothing today](lessons/433-an-edit-to-an-approved-plans-rules-after-the-button-voids-nothing-today.md)
+- **§434** — [The manager on the top tier after a switch needed a line that says whether the work does](lessons/434-the-manager-on-the-top-tier-after-a-switch-needed-a-line-that-says-whether-the-work-does.md)

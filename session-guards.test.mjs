@@ -130,6 +130,7 @@ process.env.COMPACTED_DIR = join(STATE, 'compacted');
 process.env.STOP_REFUSED_DIR = join(STATE, 'stop-refused');
 process.env.SKIPPED_PRINTED_DIR = join(STATE, 'skipped-printed');
 process.env.REFUSED_READS_DIR = join(STATE, 'refused-reads');
+process.env.MODEL_TIER_DIR = join(STATE, 'model-tier');
 // The stop guard reads the approval marker under the home directory, and a real
 // session's marker (a plan in force, steps left, no agent of the test's running)
 // would refuse every case that ends a turn with no declaration. The whole suite
@@ -258,7 +259,7 @@ const reply = (s, text) => ({ type: 'assistant', timestamp: ts(s), message: { ro
 // The same plan with a Standing review step: step 3 tells its agent to follow the hub copy's aim-review.md by its
 // full path, which is what makes the plan one the review gate enforces (Doctrine §0e rule 2). `dir` is the hub copy under test.
 const reviewPlan = (dir) => ORDER_PLAN.replace('3. **Timer.** Wait on the thing.', `3. **Review.** Follow ${join(dir, 'aim-review.md')} for the move named on the status page.`);
-// A plan whose four approved sections all exist: the review plan with an Asked section added.
+// A plan whose first four approved sections all exist: the review plan with an Asked section added (`rulesScopedPlan` adds the last two).
 const scopedPlan = (dir) => reviewPlan(dir).replace('## Order', `## Asked\n${OWN_WORDS}\n\n## Order`);
 // One end of an agent in the shape stepEnds returns it. Times are small numbers: only their order matters.
 const endFor = (step, endAt, startAt, first, how = 'a report') => ({ step, how, at: endAt, startAt, last: `${first}\nThe second line says what happened.` });
@@ -589,6 +590,31 @@ function hookRepo(w, shim, refuses = null, name = 'repo') {
 }
 
 /** Each case: (m, dir) → true when the guards behaved. `guards` names the plants it must catch. */
+// ---- fixtures for step 220: the Rules in the approval's scope, the second press, the release command and the tier line ----
+const RULE_OWN = 'No step is sent more than twice.';
+// A plan whose six approved sections all exist: the scoped plan with a Rules line and a Rules of this plan section added.
+const rulesScopedPlan = (dir) => scopedPlan(dir).replace('## Order', `## Rules\n${rulesLine(dir)}\n\n## Rules of this plan\n- THE METHOD. Every step runs once.\n- ${RULE_OWN}\n\n## Order`);
+// The SessionStart entry the harness writes at a resume or after a compaction.
+const hookAt = (secs, name) => ({ type: 'attachment', timestamp: later(secs), attachment: { type: 'hook_success', hookName: name, hookEvent: 'SessionStart' } });
+// The approval as the tool and the harness leave it in the transcript: the plan mode the planning ran in, the approved call, and the exit entry.
+const approvedEntries = (plan) => [turn(0, GO), planOn(-900, plan), ...exitPlan(-700, true), exitEntry(-699, plan, uid())];
+const workEntries = (secs, id) => [at(tool(0, id, 'Bash', { command: 'git status' }), later(secs)), at(result(0, id, 'clean'), later(secs + 1))];
+// One restart after the approval, then the plan mode the harness began with it: `compaction` (the system boundary and the summary only),
+// `hook-compact` (the SessionStart hook entry only) and `resume` (the hook entry, then the message that resumed the session).
+const restartOf = (kind, plan, secs = -300) => {
+  if (kind === 'compaction') return [at(boundary(0), later(secs)), at(summary(0), later(secs + 1)), planOn(secs + 5, plan)];
+  if (kind === 'hook-compact') return [hookAt(secs, 'SessionStart:compact'), planOn(secs + 5, plan)];
+  return [hookAt(secs, 'SessionStart:resume'), at(turn(0, 'Go.'), later(secs + 1)), planOn(secs + 5, plan)];
+};
+// The approval marker as the tool's approval writes it, 698 seconds old.
+const approvalMarker = (home, plan, text, extra = {}) => {
+  const f = join(home, '.claude', 'APPROVED-PLAN.json');
+  writeFileSync(f, JSON.stringify({ plan, hash: createHash('sha256').update(text).digest('hex'), at: new Date(Date.now() - 698 * 1000).toISOString(), ...extra }));
+  return f;
+};
+// A reply of the main thread, with the model that wrote it in the entry's own message.
+const modelReply = (secs, text, model) => ({ type: 'assistant', timestamp: later(secs), message: { role: 'assistant', model, content: [{ type: 'text', text }] } });
+
 const CASES = [
   // ---- pending-guard ----
   {
@@ -3290,14 +3316,14 @@ const CASES = [
     },
   },
   {
-    name: 'the approval\'s scope is the hashes of Goals, Asked, Files and Commands: an edit to Steps, Order or any other section moves none, an edit to one of the four names it, a section added where there was none is a change, and a record that is not an object changes all four',
+    name: 'the approval\'s scope is the hashes of Goals, Asked, Files, Commands, Rules and Rules of this plan: an edit to Steps, Order or any other section moves none, an edit to one of the six names it, a section added where there was none is a change, and a record that is not an object changes all six',
     guards: ['scope_sections', 'scope_unknown', 'scope_hashes'],
     run(m, dir) {
       const base = scopedPlan(dir);
       const hashes = m.report.scopeHashes(base);
       const moved = (edit) => m.report.scopeChanged(hashes, edit(base));
       const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-      const all = ['Goals', 'Asked', 'Files', 'Commands'];
+      const all = ['Goals', 'Asked', 'Files', 'Commands', 'Rules', 'Rules of this plan'];
       return eq(Object.keys(hashes), all) && Object.values(hashes).every((h) => /^[0-9a-f]{64}$/.test(h))
         && eq(moved((t) => t), [])
         && eq(moved((t) => t.replace('1. **Build.** Make the thing.', '1. **Build.** Make the thing, and say what it did.')), [])
@@ -3383,9 +3409,9 @@ const CASES = [
       call(B, trB, STEP, '--amend');
       const mkB = B.mk();
       const addAfter = call(B, trB, ADD);
-      return same(Object.keys(scopeA ?? {}), ['Goals', 'Asked', 'Files', 'Commands'])
+      return same(Object.keys(scopeA ?? {}), ['Goals', 'Asked', 'Files', 'Commands', 'Rules', 'Rules of this plan'])
         && addPre.status === 0 && addPost.status === 0 && mkA?.hash === sha(text.replace(ADD.old_string, ADD.new_string)) && same(mkA.scope, scopeA) && mkA.amendments === 1
-        && refused(goalA, /Goals/) && /Scope: Goals, Asked, Files, Commands are as approved\./.test(statusA) && /Match: yes/.test(statusA)
+        && refused(goalA, /Goals/) && /Scope: Goals, Asked, Files, Commands, Rules, Rules of this plan are as approved\./.test(statusA) && /Match: yes/.test(statusA)
         && refused(addOld, /Goals/) && refused(goalOld, /Goals/) && stepOld.status === 0
         && mkB?.hash === sha(text.replace(STEP.old_string, STEP.new_string)) && same(mkB.scope, m.report.scopeHashes(text)) && addAfter.status === 0;
     },
@@ -4043,7 +4069,7 @@ const CASES = [
     },
   },
   {
-    name: 'the main thread may amend the approved plan\'s Steps or Order with no new approval: the write goes only when Goals, Asked, Files and Commands are unchanged in the text it would leave, and the marker\'s hash then follows the file; an edit to any of the four, an agent\'s edit, an edit that cannot be applied, one under a marker with no scope, one from another session and one on a plan that changed after approval are refused, and a change that got past the check leaves no plan in force and is named by the status',
+    name: 'the main thread may amend the approved plan\'s Steps or Order with no new approval: the write goes only when Goals, Asked, Files, Commands, Rules and Rules of this plan are unchanged in the text it would leave, and the marker\'s hash then follows the file; an edit to any of the six, an agent\'s edit, an edit that cannot be applied, one under a marker with no scope, one from another session and one on a plan that changed after approval are refused, and a change that got past the check leaves no plan in force and is named by the status',
     guards: ['amend_scope_gate', 'amend_agent', 'amend_no_scope', 'amend_session', 'amend_hash', 'amend_multi', 'amend_ambiguous', 'amend_post', 'amend_rehash', 'amend_post_agent', 'scope_mark', 'scope_app_exit', 'status_scope'],
     run(m, dir) {
       const sha = (t) => createHash('sha256').update(t).digest('hex');
@@ -4116,7 +4142,7 @@ const CASES = [
       const trF = transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, F.plan, uf)]);
       F.guard(trF, { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
       const scopeF = F.mk()?.scope;
-      return same(Object.keys(mk0?.scope ?? {}), ['Goals', 'Asked', 'Files', 'Commands']) && same(mk0.scope, scope) && mk0.hash === sha(text)
+      return same(Object.keys(mk0?.scope ?? {}), ['Goals', 'Asked', 'Files', 'Commands', 'Rules', 'Rules of this plan']) && same(mk0.scope, scope) && mk0.hash === sha(text)
         && steps.status === 0 && amended.status === 0 && mk1?.hash === sha(text.replace(STEP.old_string, STEP.new_string)) && same(mk1.scope, scope) && mk1.amendments === 1
         && order.status === 0 && whole.status === 0
         && refused(files, /Files/, /voids the approval/) && !/Commands/.test(files.stdout) && refused(commands, /Commands/) && refused(goals, /Goals/) && refused(asked, /Asked/)
@@ -4126,7 +4152,7 @@ const CASES = [
         && refused(moved, /has changed since it was approved/) && refused(noScope, /every write after it would be refused/)
         && notCarried.status === 2 && /Files/.test(notCarried.stderr) && /NOT carried/.test(notCarried.stderr) && D.mk()?.hash === sha(text)
         && /Scope: CHANGED in Files\./.test(stuck) && /Match: NO/.test(stuck)
-        && agentLeft && mainMoved && /Scope: Goals, Asked, Files, Commands are as approved\./.test(carried) && /Match: yes/.test(carried) && !/Scope: CHANGED/.test(carried)
+        && agentLeft && mainMoved && /Scope: Goals, Asked, Files, Commands, Rules, Rules of this plan are as approved\./.test(carried) && /Match: yes/.test(carried) && !/Scope: CHANGED/.test(carried)
         && same(scopeF, m.report.scopeHashes(STEPS_PLAN));
     },
   },
@@ -6437,6 +6463,370 @@ const CASES = [
       return true;
     },
   },
+
+  // ---- step 220, change 1: the Rules line and the Rules of this plan section are part of the approval's scope (LESSONS §433) ----
+  {
+    name: 'step220a: the Rules line and the Rules of this plan section are part of the approval\'s scope: both are hashed, an edit of either is named by scopeChanged and refused by approved-plan-guard (naming it), a change that got past the check leaves no plan in force, the Steps still amend, and the review gate and the rules gate say which sections an edit voids; a marker written before the two joined holds no key for them, does not read them as changed, judges an edit of either against the plan file as it stands, records both at its first amendment, and has the approval block say of each that the marker does not record it',
+    guards: ['rules_scope_sections', 'rules_scope_old_marker', 'rules_scope_unrecorded', 'rules_block_unrecorded', 'rules_block_recorded', 'rules_amend_before', 'rules_review_text', 'rules_pin_text'],
+    run(m, dir) {
+      const sha = (t) => createHash('sha256').update(t).digest('hex');
+      const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const six = ['Goals', 'Asked', 'Files', 'Commands', 'Rules', 'Rules of this plan'];
+      const text = rulesScopedPlan(dir);
+      const hashes = m.report.scopeHashes(text);
+      const LINE = { old_string: rulesLine(dir), new_string: rulesLine(dir, RULES_VERSION + 1) };
+      const OWN = { old_string: RULE_OWN, new_string: 'No step is sent more than three times.' };
+      const STEP = { old_string: '1. **Build.** Make the thing.', new_string: '1. **Build.** Make the thing, and say what it did.' };
+      const FILES = { old_string: '`keep.mjs`', new_string: '`keep.mjs`, `more.mjs`' };
+      const edit = (e) => (t) => t.replace(e.old_string, e.new_string);
+      // The instrument: every edit changes the text, or an edit that moves nothing could be one never made.
+      const changes = [LINE, OWN, STEP, FILES].every((e) => edit(e)(text) !== text);
+      // A marker written before the two joined holds no key for either.
+      const old = { ...hashes }; delete old.Rules; delete old['Rules of this plan'];
+      const hashed = same(Object.keys(hashes), six) && Object.values(hashes).every((h) => /^[0-9a-f]{64}$/.test(h))
+        && same(m.report.scopeChanged(hashes, edit(LINE)(text)), ['Rules']) && same(m.report.scopeChanged(hashes, edit(OWN)(text)), ['Rules of this plan'])
+        && same(m.report.scopeChanged(hashes, edit(STEP)(text)), []) && same(m.report.scopeChanged(hashes, text), [])
+        && same(m.report.scopeChanged(m.report.scopeHashes(text.replace(/## Rules of this plan[\s\S]*?(?=## Order)/, '')), text), ['Rules of this plan']);
+      const oldRead = same(m.report.scopeChanged(old, edit(LINE)(text)), []) && same(m.report.scopeChanged(old, edit(OWN)(text)), [])
+        && same(m.report.scopeChanged(old, edit(FILES)(text)), ['Files'])
+        && same(m.report.scopeUnrecorded(old), ['Rules', 'Rules of this plan']) && same(m.report.scopeUnrecorded(hashes), []) && same(m.report.scopeUnrecorded(null), []);
+      // Through approved-plan-guard: the owner's approval through the tool records the six, and each edit is judged against them.
+      const approve = (A, body = text) => {
+        writeFileSync(A.plan, body);
+        const tr = transcript([turn(0, 'start')]);
+        A.guard(tr, { hook_event_name: 'PostToolUse', tool_name: 'ExitPlanMode', tool_response: { plan: body, isAgent: false, filePath: A.plan } }, '--mark');
+        return tr;
+      };
+      const call = (A, tr, input, flag) => A.guard(tr, { tool_name: 'Edit', tool_input: { file_path: A.plan, ...input }, ...(flag ? { hook_event_name: 'PostToolUse' } : {}) }, flag);
+      const refused = (r, ...re) => r.status === 2 && re.every((x) => x.test(r.stdout));
+      const statusOf = (Z) => spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the rules scope test'], { encoding: 'utf8', env: { ...process.env, HOME: Z.home, CLAUDE_CODE_SESSION_ID: '' } }).stdout ?? '';
+      const A = appHome(dir);
+      const trA = approve(A);
+      const mkA = A.mk();
+      const lineA = call(A, trA, LINE);
+      const ownA = call(A, trA, OWN);
+      const stepA = call(A, trA, STEP);
+      writeFileSync(A.plan, edit(STEP)(text));
+      call(A, trA, STEP, '--amend');
+      const amendedA = A.mk();
+      // A change that got past the check: the real file's Rules line differs, so the marker keeps its hash and no plan is in force.
+      const D = appHome(dir);
+      const trD = approve(D);
+      writeFileSync(D.plan, edit(LINE)(text));
+      const notCarried = call(D, trD, LINE, '--amend');
+      const stuck = statusOf(D);
+      const newShape = same(Object.keys(mkA?.scope ?? {}), six) && same(mkA.scope, hashes)
+        && refused(lineA, /Rules/, /voids the approval/) && !/Rules of this plan/.test(lineA.stdout) && refused(ownA, /Rules of this plan/, /voids the approval/)
+        && stepA.status === 0 && amendedA?.hash === sha(edit(STEP)(text)) && same(amendedA.scope, hashes)
+        && notCarried.status === 2 && /Rules/.test(notCarried.stderr) && /NOT carried/.test(notCarried.stderr) && D.mk()?.hash === sha(text)
+        && /Scope: CHANGED in Rules\./.test(stuck) && /Match: NO/.test(stuck);
+      // A marker of the older shape: the Rules edits are judged against the plan file as it stands, and both sections are recorded by the first amendment.
+      const B = appHome(dir);
+      const trB = approve(B);
+      writeFileSync(B.marker, JSON.stringify({ ...B.mk(), scope: old }));
+      const lineB = call(B, trB, LINE);
+      const ownB = call(B, trB, OWN);
+      const stepB = call(B, trB, STEP);
+      writeFileSync(B.plan, edit(STEP)(text));
+      call(B, trB, STEP, '--amend');
+      const amendedB = B.mk();
+      const statusB = statusOf(B);
+      const C = appHome(dir);
+      approve(C);
+      writeFileSync(C.marker, JSON.stringify({ ...C.mk(), scope: old }));
+      writeFileSync(C.plan, edit(LINE)(text));
+      const statusC = statusOf(C);
+      const olderShape = refused(lineB, /Rules/, /voids the approval/) && refused(ownB, /Rules of this plan/) && stepB.status === 0
+        && same(Object.keys(amendedB?.scope ?? {}), six) && same(amendedB.scope, m.report.scopeHashes(edit(STEP)(text)))
+        && /Scope: Goals, Asked, Files, Commands, Rules, Rules of this plan are as approved\./.test(statusB) && !/is not recorded in this marker/.test(statusB)
+        && /Scope: Goals, Asked, Files, Commands are as approved\./.test(statusC) && /Scope: Rules is not recorded in this marker/.test(statusC)
+        && /Scope: Rules of this plan is not recorded in this marker/.test(statusC) && !/Scope: CHANGED/.test(statusC) && /Match: NO/.test(statusC);
+      // The words of the two gates that name what an edit voids.
+      const plan = { path: '/plans/gate-test.md', text: reviewPlan(dir) };
+      const route = m.dispatch.reviewGate({ tool_name: 'Agent', tool_input: { prompt: `${plan.path} step 2` } }, plan,
+        { kind: 'route-refused', reviewers: [3], step: 1, first: 'ON-AIM ROUTE-REFUSED step 1 next 2', review: { path: '/agents/agent-r1.jsonl' }, cleared: null });
+      const pin = m.dispatch.rulesPinProblem(`## Rules\n${rulesLine(dir, RULES_VERSION + 1)}\n`);
+      const words = typeof route === 'string' && /Goals, Asked, Files, Commands, Rules, Rules of this plan do not/.test(route)
+        && typeof pin === 'string' && /pins version \d+/.test(pin) && /amend the Rules line/.test(pin) && /voids the approval/.test(pin) && /plan-mode button/.test(pin) && /does not latch/.test(pin);
+      return changes && hashed && oldRead && newShape && olderShape && words;
+    },
+  },
+
+  // ---- step 220, change 2: a plan mode the harness began at a restart after the approval is not the plan's (LESSONS §432) ----
+  {
+    name: 'step220b: a plan mode the harness began at a compaction or a resume after the plan was approved is not the plan\'s: plan-guard refuses the approval call, saying the plan is already approved, with the mark that sets no latch, and judges every other call as outside plan mode (approved-plan-guard does the same); where the owner entered plan mode after the approval or the plan mode ended, where the PLAN-LOCK marker exists, the mode is one a caller forced (the classifier\'s own, which must not make every tool a read), the plan file changed or the marker is another session\'s, neither half applies',
+    guards: ['restart_compact_boundary', 'restart_hook_resume', 'restart_hook_compact', 'restart_exit_resets', 'restart_no_assistant', 'restart_boundary_after', 'restart_marker_hash', 'restart_session', 'restart_via',
+      'restart_exit_refused', 'restart_other_pass', 'restart_lock', 'restart_forced', 'restart_no_latch_mark', 'restart_no_latch_dispatch', 'restart_classifier_dispatch', 'restart_lock_dispatch',
+      'restart_apg_standdown', 'restart_apg_forced', 'restart_classifier_apg'],
+    run(m, dir) {
+      const sha = (t) => createHash('sha256').update(t).digest('hex');
+      const A = appHome(dir);
+      const text = STEPS_PLAN;
+      const base = [...approvedEntries(A.plan), ...workEntries(-650, 'w1')];
+      const T = {
+        compaction: transcript([...base, ...restartOf('compaction', A.plan)]),
+        hookCompact: transcript([...base, ...restartOf('hook-compact', A.plan)]),
+        resume: transcript([...base, ...restartOf('resume', A.plan)]),
+        // The session worked after the restart, and the owner entered plan mode later: the restart did not begin it.
+        ownerAfterWork: transcript([...base, ...restartOf('compaction', A.plan).slice(0, 2), ...workEntries(-280, 'w3'), at(turn(0, 'Go.'), later(-200)), planOn(-199, A.plan)]),
+        ownerNoRestart: transcript([...base, at(turn(0, 'Go.'), later(-200)), planOn(-199, A.plan)]),
+        // The plan mode began before the approval and no exit entry follows it: the approval was given inside it.
+        beganBefore: transcript([turn(0, 'start'), at(boundary(0), later(-1000)), planOn(-999, A.plan), ...exitPlan(-700, true)]),
+        ended: transcript([...base, ...restartOf('compaction', A.plan), exitEntry(-200, A.plan, uid())]),
+      };
+      const marker = approvalMarker(A.home, A.plan, text);
+      const rm = (tr, mk = marker) => m.report.restartedPlanMode({ transcript_path: tr, session_id: 'rm' }, mk);
+      // The reading of the transcript itself.
+      const stales = ['compaction', 'hookCompact', 'resume'].every((k) => rm(T[k]) === A.plan);
+      const owners = ['ownerAfterWork', 'ownerNoRestart', 'beganBefore', 'ended'].every((k) => rm(T[k]) === '');
+      writeFileSync(A.plan, `${text}\nChanged behind the approval.\n`);
+      const changedFile = rm(T.compaction) === '';
+      writeFileSync(A.plan, text);
+      const otherSession = rm(T.compaction, approvalMarker(A.home, A.plan, text, { session: 'another' })) === '' && rm(T.compaction, approvalMarker(A.home, A.plan, text, { session: 'rm' })) === A.plan;
+      // A marker recorded from the owner's exit in the app is dated when the exit was judged, which can be after the restart; the exit's own time is read from it.
+      const viaMarker = approvalMarker(A.home, A.plan, text, { at: new Date(Date.now() - 100 * 1000).toISOString(), appExit: 'ex1', via: `the exit from plan mode in the app: entry ex1 at ${new Date(Date.now() - 699 * 1000).toISOString()}` });
+      const viaRead = rm(T.compaction, viaMarker) === A.plan && rm(T.compaction, approvalMarker(A.home, A.plan, text, { at: new Date(Date.now() - 100 * 1000).toISOString() })) === '';
+      approvalMarker(A.home, A.plan, text);
+      // plan-guard itself, with the home that holds the marker.
+      const pg = (tr, payload, env = {}) => spawnSync('node', [join(dir, 'plan-guard.mjs')], {
+        input: JSON.stringify({ session_id: 'rm', transcript_path: tr, cwd: A.home, permission_mode: 'plan', ...payload }), encoding: 'utf8', env: { ...process.env, HOME: A.home, ...env } });
+      const WRITE = { tool_name: 'Write', tool_input: { file_path: join(A.home, 'src.txt'), content: 'x' } };
+      const SEND = { tool_name: 'Agent', tool_input: { prompt: `${A.plan} step 1`, subagent_type: 'general-purpose' } };
+      const EXIT = { tool_name: 'ExitPlanMode', tool_input: { plan: '# x' } };
+      const BASH = { tool_name: 'Bash', tool_input: { command: 'git push origin main' } };
+      const approvedText = (r) => r.status === 2 && /PLAN ALREADY APPROVED, NO LATCH:/.test(r.stdout) && /already approved/.test(r.stdout) && !/Say so in plain text/.test(r.stdout);
+      const refusedAsPlanMode = (r) => r.status === 2 && /PLAN MODE/.test(r.stdout);
+      const halves = ['compaction', 'hookCompact', 'resume'].every((k) => approvedText(pg(T[k], EXIT)) && [WRITE, SEND, BASH].every((c) => pg(T[k], c).status === 0));
+      const notHalves = ['ownerAfterWork', 'ownerNoRestart', 'beganBefore', 'ended'].every((k) => {
+        const e = pg(T[k], EXIT);
+        return e.status === 2 && !/PLAN ALREADY APPROVED/.test(e.stdout) && refusedAsPlanMode(pg(T[k], WRITE)) && pg(T[k], SEND).status === 2;
+      });
+      // The lock, a forced mode, a changed plan file, another session's marker and no marker at all: neither half applies to the restart's plan mode.
+      writeFileSync(join(A.home, '.claude', 'PLAN-LOCK'), 'locked\n');
+      const lockedOut = refusedAsPlanMode(pg(T.compaction, WRITE)) && pg(T.compaction, EXIT).status === 2 && !/PLAN ALREADY APPROVED/.test(pg(T.compaction, EXIT).stdout);
+      rmSync(join(A.home, '.claude', 'PLAN-LOCK'), { force: true });
+      const forcedOut = refusedAsPlanMode(pg(T.compaction, { ...WRITE, plan_mode_forced: true })) && !/PLAN ALREADY APPROVED/.test(pg(T.compaction, { ...EXIT, plan_mode_forced: true }).stdout);
+      writeFileSync(A.plan, `${text}\nChanged behind the approval.\n`);
+      const fileOut = refusedAsPlanMode(pg(T.compaction, WRITE));
+      writeFileSync(A.plan, text);
+      approvalMarker(A.home, A.plan, text, { session: 'another' });
+      const sessionOut = refusedAsPlanMode(pg(T.compaction, WRITE));
+      rmSync(marker, { force: true });
+      const noneOut = refusedAsPlanMode(pg(T.compaction, WRITE));
+      approvalMarker(A.home, A.plan, text);
+      // approved-plan-guard: the restart's plan mode is judged as outside plan mode (a command naming the marker is refused), the owner's is stood down for.
+      const NAMES = { tool_name: 'Bash', tool_input: { command: 'echo x > ~/.claude/APPROVED-PLAN.json' } };
+      const apgJudges = A.guard(T.compaction, { permission_mode: 'plan', ...NAMES }).status === 2
+        && A.guard(T.ownerAfterWork, { permission_mode: 'plan', ...NAMES }).status === 0
+        && A.guard(T.compaction, { permission_mode: 'plan', plan_mode_forced: true, ...NAMES }).status === 0;
+      // The classifier: a mode the caller forced is never the restart's, so a command that writes stays a write for every gate that asks plan-guard what a read is.
+      const apgClassifies = A.guard(T.compaction, { permission_mode: 'default', ...NAMES }).status === 2;
+      const home0 = process.env.HOME;
+      let classified;
+      try {
+        process.env.HOME = A.home;
+        const at0 = { session_id: 'rm', transcript_path: T.compaction, cwd: A.home };
+        classified = m.dispatch.planGuardReads({ ...at0, ...BASH }) === false && m.dispatch.planGuardReads({ ...at0, tool_name: 'Read', tool_input: { file_path: A.plan } }) === true;
+      } finally { process.env.HOME = home0; }
+      // Through hook-dispatch, with a repository wired the way each session repository is: the refusal sets no latch, a write the manager may make goes, and the lock keeps refusing.
+      const planText = PLAN(OWN_WORDS);
+      const w = world(dir, [], planText);
+      writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha(planText), at: new Date(Date.now() - 698 * 1000).toISOString() }));
+      const r = join(w.cwd, 'repo');
+      mkdirSync(join(r, '.claude'), { recursive: true });
+      spawnSync('git', ['init', '-q', r]);
+      writeFileSync(join(r, '.claude', 'settings.json'), JSON.stringify({ hooks: { PreToolUse: [{ matcher: '', hooks: [{ type: 'command', command: '$CLAUDE_PROJECT_DIR/.claude/hooks/plan-guard.sh' }] }] } }));
+      const shape = (kind) => [...approvedEntries(w.plan), ...workEntries(-650, 'w1'), ...(kind === 'restart' ? restartOf('compaction', w.plan) : [at(turn(0, 'Go.'), later(-200)), planOn(-199, w.plan)])];
+      const notesOf = (s) => join(tmpdir(), 'claude-0', '-home-user', s, 'scratchpad', 'status', 'manager.txt');
+      const through = (kind) => {
+        writeFileSync(w.tr, jsonl(shape(kind)));
+        const s = sid('rs');
+        const exit = w.call('PreToolUse', { session_id: s, permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { plan: '# x' } });
+        const read = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan } });
+        const s2 = sid('rs');
+        const notes = w.call('PreToolUse', { session_id: s2, permission_mode: 'plan', tool_name: 'Write', tool_input: { file_path: notesOf(s2), content: 'Outcome: x\n' } });
+        return { exit, read, notes, latched: latched(s) };
+      };
+      const restart = through('restart');
+      const owner = through('owner');
+      writeFileSync(join(r, '.claude', 'PLAN-LOCK'), 'locked\n');
+      const lockedThrough = through('restart');
+      rmSync(join(r, '.claude', 'PLAN-LOCK'), { force: true });
+      const dispatched = restart.exit.status === 2 && /PLAN ALREADY APPROVED/.test(restart.exit.stderr) && !restart.latched && restart.read.status === 0 && restart.notes.status === 0
+        && owner.exit.status === 2 && !/PLAN ALREADY APPROVED/.test(owner.exit.stderr) && owner.notes.status === 2 && /PLAN MODE/.test(owner.notes.stderr)
+        && lockedThrough.notes.status === 2 && /PLAN MODE/.test(lockedThrough.notes.stderr) && !/PLAN ALREADY APPROVED/.test(lockedThrough.exit.stderr);
+      return stales && owners && changedFile && otherSession && viaRead && halves && notHalves && lockedOut && forcedOut && fileOut && sessionOut && noneOut
+        && apgJudges && apgClassifies && classified && dispatched;
+    },
+  },
+
+  // ---- step 220, change 3: the reply guard's release command passes the manager fence and the latch, and lifts the latch it set (LESSONS §432) ----
+  {
+    name: 'step220c: the reply guard\'s release command, node reply-guard.mjs --read as one plain command, passes the manager fence and the latch on the main thread as the status command does, and a release of the call the latch was set by lifts that latch, whose refusal says so: a release of another call, a latch another guard set, an agent\'s own latch and a reading the reply guard refuses lift nothing',
+    guards: ['release_parse_bad', 'release_fence', 'release_can', 'release_latch', 'release_lift', 'release_lifts_target', 'release_lifts_origin', 'release_lifts_agent', 'release_note', 'release_message'],
+    run(m, dir) {
+      const self = join(dir, 'reply-guard.mjs');
+      const SAID1 = 'the widget stopped answering today';
+      const SAID2 = 'the gadget refused the request today';
+      const ROUTE = 'the file is readable again after a restart';
+      const rel = (target, said = SAID1, route = ROUTE) => `node ${self} --read ${target} --said "${said}" --route "${route}"`;
+      // The command itself: one plain reading and nothing else.
+      const parsed = m.dispatch.releaseCommand(rel('call:xray0001'));
+      const parse = parsed?.target === 'call:xray0001'
+        && m.dispatch.releaseCommand(`${rel('call:xray0001')} && touch /tmp/x`) === null
+        && m.dispatch.releaseCommand(rel('call:xray0001', 'the $(whoami) words here')) === null
+        && m.dispatch.releaseCommand(`${rel('call:xray0001')} extra`) === null
+        && m.dispatch.releaseCommand(rel('call:xray0001').replace(self, '/tmp/reply-guard.mjs')) === null
+        && m.dispatch.releaseCommand('git status') === null && m.dispatch.releaseCommand('') === null;
+      // The manager fence and the check pass it; the same line with anything chained to it is judged as any command.
+      const bash = (command) => ({ tool_name: 'Bash', tool_input: { command }, session_id: 'rl', cwd: '/' });
+      const fence = (command) => m.dispatch.managerFence(bash(command), { plan: null, classify: () => false });
+      const can = (command) => m.dispatch.canCall(bash(command), { plan: null, classify: () => false });
+      const passes = fence(rel('call:xray0001')) === null && typeof fence(`${rel('call:xray0001')} && touch /tmp/x`) === 'string'
+        && can(rel('call:xray0001')).passesLatch === true && can(rel('call:xray0001')).fence === null && can('git status').passesLatch === false;
+      // What lifts a latch: the main thread's, set by the reply guard, and a release of the call its refusal named.
+      const R = 'reply-guard (LESSONS §374): this is the Read call that failed, unchanged, and its error has not been read.';
+      const named = (t) => `${R}\n  node ${self} --read ${t} --said "<words>" --route "<what is different now>"`;
+      const latchOf = (reason, extra = {}) => ({ at: Date.now(), tool: 'Read', agent: null, reason, ...extra });
+      const lifts = (latch, target) => m.dispatch.releaseLifts(latch, { target });
+      const table = lifts(latchOf(named('call:xray0001')), 'call:xray0001') === true && lifts(latchOf(named('call:xray0001')), 'call:xray0002') === false
+        && lifts(latchOf(named('Example.ORG')), 'www.example.org') === true && lifts(latchOf(named('example.org')), 'other.org') === false
+        && lifts(latchOf(R), 'call:xray0009') === true
+        && lifts(latchOf('MANAGER FENCE (Doctrine §0e): the main thread does not do that.'), 'call:xray0001') === false
+        && lifts(latchOf(named('call:xray0001'), { own: true }), 'call:xray0001') === false
+        && lifts(null, 'call:xray0001') === false && m.dispatch.releaseLifts(latchOf(named('call:xray0001')), null) === false;
+      const message = m.dispatch.latchMessage(latchOf(named('call:xray0001')));
+      const says = /release command/.test(message) && /lifts a latch the reply guard set/.test(message);
+      // Through the dispatcher, with a failed Read recorded in the reply ledger as the post-tool hook records one.
+      process.env.REPLY_LEDGER_DIR = tmp('sg-ledger-');
+      try {
+        const w = world(dir, [turn(0, GO)], STEPS_PLAN);
+        const first = { tool_name: 'Read', tool_input: { file_path: w.plan } };
+        const second = { tool_name: 'Read', tool_input: { file_path: join(dirname(w.plan), 'second.md') } };
+        const fail = (s, call, n, error) => m.reply.record({ session_id: s, cwd: w.cwd, ...call, tool_use_id: `u-${s}-${n}`, error }, 'PostToolUseFailure');
+        const idOf = (call) => m.reply.callHash('Read', call.tool_input, w.cwd).slice(0, 8);
+        const ERR1 = `File content could not be returned because ${SAID1}`;
+        const ERR2 = `File content could not be returned because ${SAID2}`;
+        const go = (s, call) => w.call('PreToolUse', { session_id: s, ...call });
+        const send = (s, command) => go(s, { tool_name: 'Bash', tool_input: { command } });
+        // The repeat is refused by the reply guard, which sets the latch; the refusal names the release; the latch holds the next call; the release passes and lifts it.
+        const sA = sid('rl');
+        fail(sA, first, 1, ERR1);
+        const repeat = go(sA, first);
+        const setA = latched(sA);
+        const held = go(sA, first);
+        const released = send(sA, rel(`call:${idOf(first)}`));
+        const liftedA = !latched(sA);
+        const again = go(sA, first);
+        const flowA = repeat.status === 2 && /this is the Read call that failed, unchanged/.test(repeat.stderr) && /passes the manager fence and the refusal latch/.test(repeat.stderr)
+          && setA && held.status === 2 && /REFUSAL LATCH/.test(held.stderr) && released.status === 0 && liftedA && again.status === 0;
+        // A release of another call passes the latch and lifts nothing; the release of the call its refusal named does.
+        const sB = sid('rl');
+        fail(sB, first, 1, ERR1);
+        fail(sB, second, 2, ERR2);
+        go(sB, first);
+        const wrong = send(sB, rel(`call:${idOf(second)}`, SAID2));
+        const keptB = latched(sB);
+        const right = send(sB, rel(`call:${idOf(first)}`));
+        const flowB = wrong.status === 0 && keptB && right.status === 0 && !latched(sB);
+        // A latch another guard set stands under a release the reply guard accepts.
+        const sC = sid('rl');
+        fail(sC, first, 1, ERR1);
+        mkdirSync(process.env.REFUSAL_LATCH_DIR, { recursive: true });
+        writeFileSync(join(process.env.REFUSAL_LATCH_DIR, `${sC}.json`), JSON.stringify({ at: Date.now(), tool: 'Bash', agent: null, reason: 'MANAGER FENCE (Doctrine §0e): the main thread does not do that.' }));
+        const other = send(sC, rel(`call:${idOf(first)}`));
+        const flowC = other.status === 0 && latched(sC);
+        // A reading the reply guard refuses (no failed call is on record under that id) lifts nothing, and its refusal does not pass the latch.
+        const sD = sid('rl');
+        fail(sD, first, 1, ERR1);
+        go(sD, first);
+        const refusedReading = send(sD, rel('call:xray0001'));
+        const flowD = refusedReading.status === 2 && /no failed call/.test(refusedReading.stderr) && latched(sD);
+        return parse && passes && table && says && flowA && flowB && flowC && flowD;
+      } finally {
+        delete process.env.REPLY_LEDGER_DIR;
+      }
+    },
+  },
+
+  // ---- step 220, change 4: the model serving the main thread, and the line a top tier owes under a plan (LESSONS §434) ----
+  {
+    name: 'step220d: the model serving the main thread is the model field of the newest main-thread reply, never a key inside a tool\'s input, and a top-tier id is one carrying fable or mythos; the status print names it, and the stop guard refuses the first reply under an approval marker after the serving model changes to a top-tier id unless its first line names the tier and says whether the work needs it, with the words to use, once for each change',
+    guards: ['tier_top_ids', 'tier_serving_main', 'tier_serving_field', 'tier_serving_synthetic', 'tier_status_line', 'tier_line_top', 'tier_stop_refuse', 'tier_stop_marker', 'tier_stop_once', 'tier_stop_change',
+      'tier_stop_names', 'tier_stop_needs', 'tier_stop_words', 'tier_stop_follow', 'tier_stop_top_only'],
+    run(m, dir) {
+      const FABLE = 'claude-fable-5-1';
+      const OPUS = 'claude-opus-5-5';
+      // The id shapes the transcript holds, and the top-tier test on each.
+      const tiers = [[FABLE, true], ['claude-mythos-6', true], ['Claude-Fable', true], ['fable', true], [OPUS, false], ['claude-sonnet-5-5', false], ['claude-haiku-5-5', false], ['opus', false], ['sonnet', false], ['haiku', false], ['', false], [null, false], ['<synthetic>', false]];
+      const topIds = tiers.every(([id, top]) => m.report.isTopTier(id) === top);
+      // The model serving the main thread: the newest main-thread entry's own model field and nothing else.
+      const asst = (secs, model, extra = {}) => ({ type: 'assistant', timestamp: later(secs), ...extra, message: { role: 'assistant', ...(model ? { model } : {}), content: [{ type: 'text', text: 'x' }] } });
+      const viaInput = { type: 'assistant', timestamp: later(-20), message: { role: 'assistant', content: [{ type: 'tool_use', id: 'ti1', name: 'Agent', input: { model: FABLE, prompt: 'x' } }] } };
+      const serving = m.report.servingModel([asst(-30, OPUS), asst(-20, FABLE)]) === FABLE && m.report.servingModel([asst(-30, FABLE), asst(-20, OPUS)]) === OPUS
+        && m.report.servingModel([asst(-30, OPUS), viaInput]) === OPUS
+        && m.report.servingModel([asst(-30, OPUS), asst(-20, FABLE, { isSidechain: true })]) === OPUS && m.report.servingModel([asst(-30, OPUS), asst(-20, FABLE, { agentId: 'a1' })]) === OPUS
+        && m.report.servingModel([asst(-30, OPUS), asst(-20, '<synthetic>')]) === OPUS
+        && m.report.servingModel([turn(0, 'x')]) === null && m.report.servingModel([]) === null;
+      // The status print names it.
+      const statusFor = (entries) => {
+        const home = tmp('sg-home-');
+        const s = sid('st');
+        mkdirSync(join(home, '.claude', 'projects', 'p'), { recursive: true });
+        writeFileSync(join(home, '.claude', 'projects', 'p', `${s}.jsonl`), jsonl(entries));
+        return spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the tier test'], { encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: s } }).stdout ?? '';
+      };
+      const top = statusFor([asst(-30, OPUS), asst(-20, FABLE)]);
+      const lesser = statusFor([asst(-30, FABLE), asst(-20, OPUS), viaInput]);
+      const status = new RegExp(`Serving model: ${FABLE}, the top tier\\.`).test(top) && /need no more than Opus/.test(top)
+        && new RegExp(`Serving model: ${OPUS}, not the top tier\\.`).test(lesser) && !new RegExp(`Serving model: ${FABLE}`).test(lesser)
+        && /Serving model: not read/.test(statusFor([turn(0, 'x')]));
+      // The stop guard, under an approval marker (a plan with no steps, so nothing else holds the turn).
+      const w = world(dir, [], PLAN(OWN_WORDS));
+      const marker = join(w.home, '.claude', 'APPROVED-PLAN.json');
+      const markerText = readFileSync(marker, 'utf8');
+      const PLAINLY = 'A short note about the toolbar change, written plainly.';
+      const stop = (s, entries, extra = {}) => {
+        writeFileSync(w.tr, jsonl(entries));
+        return spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: s, transcript_path: w.tr, hook_event_name: 'Stop', ...extra }), encoding: 'utf8', env: { ...process.env, HOME: w.home } });
+      };
+      const WORDS = m.report.tierWords(FABLE);
+      const refused = (r) => r.status === 2 && /STOP REFUSED/.test(r.stderr) && r.stderr.includes(FABLE) && r.stderr.includes(WORDS);
+      // 1. The first reply on the top tier, without the line, is refused with the words to use, and the line is owed.
+      const s1 = sid('tr');
+      const r1 = stop(s1, [modelReply(-10, PLAINLY, FABLE)]);
+      const owed = refused(r1) && m.report.readTier(s1)?.model === FABLE && m.report.readTier(s1)?.told === false;
+      // 2. A reply whose first line has the words passes and discharges it; a later reply without them is not held again.
+      const r2 = stop(s1, [modelReply(-10, PLAINLY, FABLE), modelReply(-5, `${WORDS}\n${PLAINLY}`, FABLE)]);
+      const r3 = stop(s1, [modelReply(-10, PLAINLY, FABLE), modelReply(-5, `${WORDS}\n${PLAINLY}`, FABLE), modelReply(-2, PLAINLY, FABLE)]);
+      const once = r2.status === 0 && m.report.readTier(s1)?.told === true && r3.status === 0;
+      // 3. A change to a lesser tier owes nothing, and a change back to the top tier owes the line again.
+      const s3 = sid('tr');
+      const r4 = stop(s3, [modelReply(-10, PLAINLY, OPUS)]);
+      const lessOwes = r4.status === 0 && m.report.readTier(s3)?.model === OPUS && m.report.readTier(s3)?.told === true;
+      const r5 = stop(s3, [modelReply(-10, PLAINLY, OPUS), modelReply(-5, PLAINLY, FABLE)]);
+      const changed = refused(r5) && m.report.readTier(s3)?.model === FABLE && m.report.readTier(s3)?.told === false;
+      // 4. With no approval marker nothing is owed, though the top tier serves; the first reply once a plan is approved owes it.
+      const s4 = sid('tr');
+      rmSync(marker, { force: true });
+      const r6 = stop(s4, [modelReply(-10, PLAINLY, FABLE)]);
+      const noMarker = r6.status === 0 && m.report.readTier(s4)?.told === false;
+      writeFileSync(marker, markerText);
+      const r7 = stop(s4, [modelReply(-10, PLAINLY, FABLE), modelReply(-5, PLAINLY, FABLE)]);
+      const afterButton = refused(r7);
+      // 5. The line has to name the tier and say whether the work needs it: naming alone, or needing alone, is not the line; a line that does both, either way, is.
+      const tries = (text) => stop(sid('tr'), [modelReply(-10, text, FABLE)]).status;
+      const naming = tries(`Serving model: ${FABLE}.\n${PLAINLY}`) === 2 && tries(`The work does not need anything special here.\n${PLAINLY}`) === 2
+        && tries(`Serving model: ${FABLE}, the top tier, and the work needs it because the review is a judgement.\n${PLAINLY}`) === 0
+        && tries(`Stopping here: open for you is the choice below. The top tier is serving and this work does not need it.\n${PLAINLY}`) === 0;
+      // 6. A follow-up that carries the line discharges the record, so the next stop is not held for it again.
+      const s6 = sid('tr');
+      stop(s6, [modelReply(-10, PLAINLY, FABLE)]);
+      const f1 = stop(s6, [modelReply(-10, PLAINLY, FABLE), modelReply(-5, WORDS, FABLE)], { stop_hook_active: true });
+      const followUp = f1.status === 0 && m.report.readTier(s6)?.told === true;
+      return topIds && serving && status && owed && once && lessOwes && changed && noMarker && afterButton && naming && followUp;
+    },
+  },
 ];
 
 const PLANTS = {
@@ -6582,9 +6972,9 @@ const PLANTS = {
   // The refusal latch.
   latch_write: ["    if (latch && event === 'PreToolUse') { try { setLatch(p, why); }", '    if (false) { try { setLatch(p, why); }', 'hook-dispatch.mjs'],
   latch_stop_event: ["    if (latch && event === 'PreToolUse') { try {", '    if (latch) { try {', 'hook-dispatch.mjs'],
-  latch_refuse: ['    if (latch && !status && !mainStop && !reportWrite) return refuse(latchMessage(latch), false);\n', '\n', 'hook-dispatch.mjs'],
+  latch_refuse: ['    if (latch && !status && !mainStop && !release && !reportWrite) return refuse(latchMessage(latch), false);\n', '\n', 'hook-dispatch.mjs'],
   latch_return: ["    if (p.agent_id && AGENT_RETURN.has(String(p.tool_name ?? ''))) return 0;\n", '\n', 'hook-dispatch.mjs'],
-  latch_status: ['    if (latch && !status && !mainStop && !reportWrite) return', '    if (latch && !mainStop && !reportWrite) return', 'hook-dispatch.mjs'],
+  latch_status: ['    if (latch && !status && !mainStop && !release && !reportWrite) return', '    if (latch && !mainStop && !release && !reportWrite) return', 'hook-dispatch.mjs'],
   latch_repo: ['        if (o.deny) return refuse(o.reason, !noLatchRepoRefusal(shim, p, o.reason));\n', "        if (o.deny) { process.stderr.write(o.reason + '\\n'); return 2; }\n", 'hook-dispatch.mjs'],
   latch_clear: ['if (list.some((e, i) => isOwnerMessage(e) && typedAt(list, i) > at)) {', 'if (list.some((e, i) => typedAt(list, i) > at)) {', 'hook-dispatch.mjs'],
   latch_after: ['isOwnerMessage(e) && typedAt(list, i) > at)', 'isOwnerMessage(e))', 'hook-dispatch.mjs'],
@@ -6918,8 +7308,8 @@ const PLANTS = {
   stop_guard_review_corr: ['(reviewed || !correctionStanding(probe))', '(!correctionStanding(probe))', 'stop-guard.mjs'],
   stop_guard_names_cleared: ["? `The plan's review cleared step ${rv.cleared} and no other: send", "? `The plan's review cleared a step: send", 'stop-guard.mjs'],
   stop_guard_names_review: ['send the Standing review step, ${reviewed.path} step ${aimReviewSteps(reviewed.text)[0]}, which', 'send the Standing review step, which', 'stop-guard.mjs'],
-  // The approval holds the plan's Goals, Asked, Files and Commands; the Steps and the Order may be amended without coming back.
-  scope_sections: ["export const SCOPE_SECTIONS = ['Goals', 'Asked', 'Files', 'Commands'];", "export const SCOPE_SECTIONS = ['Goals', 'Files', 'Commands'];", 'report.mjs'],
+  // The approval holds the plan's Goals, Asked, Files, Commands, Rules and Rules of this plan; the Steps and the Order may be amended without coming back.
+  scope_sections: ["export const SCOPE_SECTIONS = ['Goals', 'Asked', 'Files', 'Commands', 'Rules', 'Rules of this plan'];", "export const SCOPE_SECTIONS = ['Goals', 'Files', 'Commands', 'Rules', 'Rules of this plan'];", 'report.mjs'],
   scope_unknown: ["const known = then && typeof then === 'object' && !Array.isArray(then);", 'const known = true;', 'report.mjs'],
   scope_hashes: ["out[name] = sha256(name === 'Goals' ? goalsWithoutServedBy(body) : body);", 'out[name] = sha256(String(text));', 'report.mjs'],
   // The Goals the owner approves leave out the Served by line; every other line of them is still hashed.
@@ -6933,7 +7323,7 @@ const PLANTS = {
   status_scope: ["const moved = scoped ? scopeChanged(mk.scope, bytes.toString('utf8')) : [];", 'const moved = [];', 'report.mjs'],
   scope_mark: ['    plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at:', '    plan, hash: snap.hash, scriptHash: snap.script, at:', 'approved-plan-guard.mjs'],
   scope_app_exit: ['plan: x.plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at:', 'plan: x.plan, hash: snap.hash, scriptHash: snap.script, at:', 'approved-plan-guard.mjs'],
-  amend_scope_gate: ['  const moved = scopeChanged(mk.scope, after);\n  if (moved.length) {', '  const moved = scopeChanged(mk.scope, after);\n  if (false) {', 'approved-plan-guard.mjs'],
+  amend_scope_gate: ['  if (moved.length) {\n    return `This edit would change', '  if (false) {\n    return `This edit would change', 'approved-plan-guard.mjs'],
   amend_agent: ["if (p.agent_id || !mk.scope || typeof mk.scope !== 'object'", "if (!mk.scope || typeof mk.scope !== 'object'", 'approved-plan-guard.mjs'],
   amend_no_scope: ["!mk.scope || typeof mk.scope !== 'object' || Array.isArray(mk.scope) || ", '', 'approved-plan-guard.mjs'],
   amend_session: ["if (mk.session && p.session_id && mk.session !== p.session_id) return 'The plan in force was approved in another session.';", "if (false) return 'The plan in force was approved in another session.';", 'approved-plan-guard.mjs'],
@@ -7075,7 +7465,7 @@ const PLANTS = {
   script_app_exit: ['plan: x.plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at:', 'plan: x.plan, hash: snap.hash, scope: snap.scope, at:', 'approved-plan-guard.mjs'],
   script_amend_keeps: ['{ ...mk, hash: snap.hash, scope: snap.scope, amendedAt:', '{ ...mk, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, amendedAt:', 'approved-plan-guard.mjs'],
   // A latched agent writes its own report; an agent reads the rules first.
-  report_write_latch: ['if (latch && !status && !mainStop && !reportWrite) return refuse(', 'if (latch && !status && !mainStop) return refuse(', 'hook-dispatch.mjs'],
+  report_write_latch: ['if (latch && !status && !mainStop && !release && !reportWrite) return refuse(', 'if (latch && !status && !mainStop && !release) return refuse(', 'hook-dispatch.mjs'],
   report_write_tool: ["if (!p.agent_id || !/^(?:Write|Edit|MultiEdit)$/.test(String(p.tool_name ?? ''))) return false;", 'if (!p.agent_id) return false;', 'hook-dispatch.mjs'],
   report_write_dir: ["basename(dirname(abs)) !== 'progress' || ", '', 'hook-dispatch.mjs'],
   report_write_scratchpad: ['if (!inScratchpad(abs, p.session_id) || ', 'if (', 'hook-dispatch.mjs'],
@@ -7101,7 +7491,7 @@ const PLANTS = {
   // The first refusal sets no latch (lesson 415): the fence marks only the first refusal, and only the second latches.
   rules_first_mark: ['  const first = !!f && !rulesRefusedBefore(entries);', '  const first = !!f;', 'plan-fence.mjs'],
   rules_first_second: ['  const first = !!f && !rulesRefusedBefore(entries);', '  const first = !!f || true;', 'plan-fence.mjs'],
-  rules_first_skip_latch: ["refuse(o.reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));", "refuse(o.reason, !g.includes('doctrine-read-guard.mjs'));", 'hook-dispatch.mjs'],
+  rules_first_skip_latch: ["refuse(reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));", "refuse(reason, !g.includes('doctrine-read-guard.mjs'));", 'hook-dispatch.mjs'],
 
   // The manager's written judgement of each hand-back (step 119).
   judged_gate_wired: ['      if (jg) return refuse(jg, false);\n', '\n', 'hook-dispatch.mjs'],
@@ -7348,10 +7738,10 @@ const PLANTS = {
   opener_named_cd: ['is refused: write every path in full.${openedNote(s)}', 'is refused: write every path in full.', 'plan-fence.mjs'],
 
   // The doctrine gate's refusal, the plan gate's refusal of a name and the identifier guard's refusal of the approval call set no latch (step 199, LESSONS §424).
-  latch_doctrine_free: ["      if (o.deny) return refuse(o.reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));", "      if (o.deny) return refuse(o.reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')));", 'hook-dispatch.mjs'],
-  latch_names_free: ["  return shim === 'plan-guard.sh' && String(reason ?? '').includes(NAMES_NO_LATCH);", '  return false;', 'hook-dispatch.mjs'],
+  latch_doctrine_free: ["      if (o.deny) return refuse(reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));", "      if (o.deny) return refuse(reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')));", 'hook-dispatch.mjs'],
+  latch_names_free: ["  return shim === 'plan-guard.sh' && (String(reason ?? '').includes(NAMES_NO_LATCH) || String(reason ?? '').includes(APPROVED_NO_LATCH));", '  return false;', 'hook-dispatch.mjs'],
   latch_ident_free: ['  if (IDENT_SHIMS.has(shim)) return true;\n', '\n', 'hook-dispatch.mjs'],
-  latch_other_plan: ["  return shim === 'plan-guard.sh' && String(reason ?? '').includes(NAMES_NO_LATCH);", "  return shim === 'plan-guard.sh';", 'hook-dispatch.mjs'],
+  latch_other_plan: ["  return shim === 'plan-guard.sh' && (String(reason ?? '').includes(NAMES_NO_LATCH) || String(reason ?? '').includes(APPROVED_NO_LATCH));", "  return shim === 'plan-guard.sh';", 'hook-dispatch.mjs'],
   latch_ident_exit_only: ["  if (String(p?.tool_name ?? '') !== 'ExitPlanMode') return false;\n", '\n', 'hook-dispatch.mjs'],
   latch_other_shim: ['  if (IDENT_SHIMS.has(shim)) return true;\n', '  return true;\n', 'hook-dispatch.mjs'],
 
@@ -7369,6 +7759,67 @@ const PLANTS = {
   after_plan_guard: ['    if (after) deny(after);\n', '\n', 'plan-guard.mjs'],
   after_outside_order: ['  if (!a.bad.length && !outside.length) return null;\n', '  if (!a.bad.length) return null;\n', 'hook-dispatch.mjs'],
   after_malformed: ['  if (!a.bad.length && !outside.length) return null;\n', '  if (!outside.length) return null;\n', 'hook-dispatch.mjs'],
+
+  // Step 220, change 1: the Rules line and the Rules of this plan section are part of the approval's scope (LESSONS §433).
+  rules_scope_sections: ["export const SCOPE_SECTIONS = ['Goals', 'Asked', 'Files', 'Commands', 'Rules', 'Rules of this plan'];", "export const SCOPE_SECTIONS = ['Goals', 'Asked', 'Files', 'Commands'];", 'report.mjs'],
+  rules_scope_old_marker: [' && !(LATER_SCOPE.includes(n) && !Object.hasOwn(then, n))', '', 'report.mjs'],
+  rules_scope_unrecorded: ['return known ? LATER_SCOPE.filter((n) => !Object.hasOwn(then, n)) : [];', 'return [];', 'report.mjs'],
+  rules_block_unrecorded: ['for (const n of unrecorded) lines.push(', 'for (const n of []) lines.push(', 'report.mjs'],
+  rules_block_recorded: ['const recorded = SCOPE_SECTIONS.filter((n) => !unrecorded.includes(n));', 'const recorded = SCOPE_SECTIONS;', 'report.mjs'],
+  rules_amend_before: ['for (const n of scopeUnrecorded(mk.scope)) if (was[n] !== now[n]) moved.push(n);', 'void 0;', 'approved-plan-guard.mjs'],
+  rules_review_text: ["${SCOPE_SECTIONS.join(', ')} do not), then send the review again.", 'Goals, Asked, Files and Commands do not), then send the review again.', 'hook-dispatch.mjs'],
+  rules_pin_text: ['(the Rules line is part of the approved scope, so that edit voids the approval and the plan goes back through plan mode and the plan-mode button). ', '(an edit to it keeps the approval). ', 'hook-dispatch.mjs'],
+
+  // Step 220, change 2: a plan mode the harness began at a compaction or a resume after the approval is not the plan's (LESSONS §432).
+  restart_compact_boundary: ["if (e?.type === 'system' && e.subtype === 'compact_boundary') return true;", 'if (false) return true;', 'report.mjs'],
+  restart_hook_resume: ['/^SessionStart:(?:resume|compact)$/.test(', '/^SessionStart:compact$/.test(', 'report.mjs'],
+  restart_hook_compact: ['/^SessionStart:(?:resume|compact)$/.test(', '/^SessionStart:resume$/.test(', 'report.mjs'],
+  restart_exit_resets: ["else if (e.attachment?.type === 'plan_mode_exit') start = -1;", 'else if (false) start = -1;', 'report.mjs'],
+  restart_no_assistant: ["if (e?.type === 'assistant') return '';\n    }\n    return '';", "void 0;\n    }\n    return '';", 'report.mjs'],
+  restart_boundary_after: ["if (isRestartBoundary(e)) return stamp(e) > since ? String(mk.plan) : '';", 'if (isRestartBoundary(e)) return String(mk.plan);', 'report.mjs'],
+  restart_marker_hash: ["if (createHash('sha256').update(readFileSync(mk.plan)).digest('hex') !== String(mk.hash)) return '';", 'void 0;', 'report.mjs'],
+  restart_session: ["if (mk.session && p.session_id && mk.session !== p.session_id) return '';", 'void 0;', 'report.mjs'],
+  restart_via: ["const since = Date.parse(viaAt ?? mk.at ?? '');", "const since = Date.parse(mk.at ?? '');", 'report.mjs'],
+  restart_exit_refused: ["if (tool !== 'ExitPlanMode') process.exit(0);\n    const { APPROVED_NO_LATCH }", 'process.exit(0);\n    const { APPROVED_NO_LATCH }', 'plan-guard.mjs'],
+  restart_other_pass: ["if (tool !== 'ExitPlanMode') process.exit(0);\n    const { APPROVED_NO_LATCH }", "if (tool !== 'ExitPlanMode') void 0;\n    const { APPROVED_NO_LATCH }", 'plan-guard.mjs'],
+  restart_lock: ['&& !locked && !p.plan_mode_forced', '&& !p.plan_mode_forced', 'plan-guard.mjs'],
+  restart_forced: ['&& !locked && !p.plan_mode_forced', '&& !locked', 'plan-guard.mjs'],
+  restart_no_latch_mark: ['${APPROVED_NO_LATCH} the plan is already approved', 'the plan is already approved', 'plan-guard.mjs'],
+  restart_no_latch_dispatch: [" || String(reason ?? '').includes(APPROVED_NO_LATCH));", ');', 'hook-dispatch.mjs'],
+  restart_classifier_dispatch: ["JSON.stringify({ ...p, permission_mode: 'plan', plan_mode_forced: true }), encoding: 'utf8',", "JSON.stringify({ ...p, permission_mode: 'plan' }), encoding: 'utf8',", 'hook-dispatch.mjs'],
+  restart_lock_dispatch: ["JSON.stringify({ ...p, permission_mode: 'plan', plan_mode_forced: true }) : raw;", "JSON.stringify({ ...p, permission_mode: 'plan' }) : raw;", 'hook-dispatch.mjs'],
+  restart_apg_standdown: ["if (p.permission_mode === 'plan' && !(!p.plan_mode_forced && restartedPlanMode(p))) process.exit(0);", "if (p.permission_mode === 'plan') process.exit(0);", 'approved-plan-guard.mjs'],
+  restart_apg_forced: ["if (p.permission_mode === 'plan' && !(!p.plan_mode_forced && restartedPlanMode(p))) process.exit(0);", "if (p.permission_mode === 'plan' && !restartedPlanMode(p)) process.exit(0);", 'approved-plan-guard.mjs'],
+  restart_classifier_apg: ["JSON.stringify({ ...p, permission_mode: 'plan', plan_mode_forced: true }), encoding: 'utf8', cwd: p.cwd || process.cwd() });", "JSON.stringify({ ...p, permission_mode: 'plan' }), encoding: 'utf8', cwd: p.cwd || process.cwd() });", 'approved-plan-guard.mjs'],
+
+  // Step 220, change 3: the reply guard's release command passes the manager fence and the latch, and lifts the latch the reply guard set (LESSONS §432).
+  release_parse_bad: ['return r && !r.bad ? r : null;', 'return r;', 'hook-dispatch.mjs'],
+  release_fence: ["if (tool === 'Bash' && releaseCommand(input.command)) return null;", 'void 0;', 'hook-dispatch.mjs'],
+  release_can: [" || (tool === 'Bash' && !!releaseCommand(cmd));", ';', 'hook-dispatch.mjs'],
+  release_latch: ['if (latch && !status && !mainStop && !release && !reportWrite) return refuse(latchMessage(latch), false);', 'if (latch && !status && !mainStop && !reportWrite) return refuse(latchMessage(latch), false);', 'hook-dispatch.mjs'],
+  release_lift: ['if (release && latch && releaseLifts(latch, release)) {', 'if (false) {', 'hook-dispatch.mjs'],
+  release_lifts_target: ["return named.some((t) => (t.startsWith('call:') || want.startsWith('call:') ? t === want : site(t) === site(want)));", 'return true;', 'hook-dispatch.mjs'],
+  release_lifts_origin: ["if (!latch || latch.own || !release || !REPLY_GUARD_REFUSAL.test(String(latch.reason ?? ''))) return false;", 'if (!latch || latch.own || !release) return false;', 'hook-dispatch.mjs'],
+  release_lifts_agent: ["if (!latch || latch.own || !release || !REPLY_GUARD_REFUSAL.test(String(latch.reason ?? ''))) return false;", "if (!latch || !release || !REPLY_GUARD_REFUSAL.test(String(latch.reason ?? ''))) return false;", 'hook-dispatch.mjs'],
+  release_note: ['? o.reason + RELEASE_NOTE : o.reason;', '? o.reason : o.reason;', 'hook-dispatch.mjs'],
+  release_message: ["+ 'and the reply guard\\'s release command (node reply-guard.mjs --read, one plain command), which lifts a latch the reply guard set once the reading is recorded. '", "+ ''", 'hook-dispatch.mjs'],
+
+  // Step 220, change 4: the model serving the main thread, and the line a top tier owes under a plan (LESSONS §434).
+  tier_top_ids: ["return /fable|mythos/i.test(String(id ?? ''));", "return /fable/i.test(String(id ?? ''));", 'report.mjs'],
+  tier_serving_main: ["if (e?.type !== 'assistant' || e.isSidechain || e.agentId) continue;", "if (e?.type !== 'assistant') continue;", 'report.mjs'],
+  tier_serving_field: ['const m = e.message?.model;', 'const m = e.message?.model ?? e.message?.content?.find?.((b) => b?.input?.model)?.input?.model;', 'report.mjs'],
+  tier_serving_synthetic: [' && !/^<.*>$/.test(m.trim())) return m.trim();', ') return m.trim();', 'report.mjs'],
+  tier_status_line: ["  console.log(model);\n  console.log('');\n  console.log(status);", "  console.log('');\n  console.log(status);", 'report.mjs'],
+  tier_line_top: ['  return isTopTier(id)\n    ? `Serving model: ${id}, the top tier.', '  return false\n    ? `Serving model: ${id}, the top tier.', 'report.mjs'],
+  tier_stop_refuse: ['if (isTopTier(serving) && !tier.told && planInForce) {', 'if (false) {', 'stop-guard.mjs'],
+  tier_stop_marker: ['if (isTopTier(serving) && !tier.told && planInForce) {', 'if (isTopTier(serving) && !tier.told) {', 'stop-guard.mjs'],
+  tier_stop_once: ['try { setTier(payloadSession, { model: serving, told: true }); } catch { /* held again at the next stop */ }', 'void 0;', 'stop-guard.mjs'],
+  tier_stop_change: ['if (!tier || tier.model !== serving) {', 'if (!tier) {', 'stop-guard.mjs'],
+  tier_stop_names: ['return names && NEEDS_WORD.test(open);', 'return names;', 'stop-guard.mjs'],
+  tier_stop_needs: ['return names && NEEDS_WORD.test(open);', 'return NEEDS_WORD.test(open);', 'stop-guard.mjs'],
+  tier_stop_words: ['Open the follow-up with a line in these words: "${tierWords(serving)}" Where the work does need', 'Open the follow-up with a line in these words: "" Where the work does need', 'stop-guard.mjs'],
+  tier_stop_follow: ['if (namesTier(said, t.model)) setTier(payloadSession, { model: t.model, told: true });', 'void 0;', 'stop-guard.mjs'],
+  tier_stop_top_only: ['tier = { model: serving, told: !isTopTier(serving) };', 'tier = { model: serving, told: false };', 'stop-guard.mjs'],
 };
 
 async function runAll(dir, only, filter) {

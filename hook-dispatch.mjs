@@ -87,7 +87,9 @@
  * recall gate's, the state page gate's, the doctrine gate's (the Read it names is its
  * remedy), the in-app approval check's, the review
  * gate's, the rules gate's, the reads gate's, the judgement gate's, the refusal of the
- * ExitPlanMode call on a name the plan gate has not seen (`NAMES_NO_LATCH`) and the
+ * ExitPlanMode call on a name the plan gate has not seen (`NAMES_NO_LATCH`), its refusal of
+ * that call for a plan already approved, when the harness's plan mode began at a compaction or a
+ * resume after the approval (`APPROVED_NO_LATCH`, LESSONS §432) and the
  * app's identifier guard's refusal of that call (`noLatchRepoRefusal`, LESSONS §424), and the manager
  * fence's refusal of a call that is not of the record (`FENCE_NO_LATCH`: it names
  * what the main thread may use and the check, `--can`, which says beforehand whether
@@ -105,7 +107,8 @@
  * line, and the state page is read to clear its gate, none of which a latch would
  * let through. A refusal on the main
  * thread writes the SESSION's latch: while it stands only the status command,
- * the main thread's TaskStop and a subagent's own return run, until the owner
+ * the main thread's TaskStop, the reply guard's release command (`releaseCommand`, which
+ * also lifts a latch the reply guard set, `releaseLifts`) and a subagent's own return run, until the owner
  * types a message after it, by the time it was typed (Doctrine §0d, §0e). A
  * refusal INSIDE an agent writes that agent's own latch and the session's is
  * left alone: every later call of that agent is refused but its own return,
@@ -141,10 +144,11 @@ import { recallParts } from './compact-recall.mjs';
 import { tailEntries, isOwnerMessage, textOf } from './transcript-tail.mjs';
 import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
   planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, judgedState, stepNumbers, stepBody, markCompacted, sessionFiles, JUDGED_PARTS, WHY_PARTS,
-  planAfter } from './report.mjs';
+  planAfter, SCOPE_SECTIONS } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
 import { HARNESS_TAG } from './pending-guard.mjs';
+import { parseRead, site } from './reply-guard.mjs';
 
 const HUB = dirname(fileURLToPath(import.meta.url));
 const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'Stop'];
@@ -199,6 +203,46 @@ const CAN = new RegExp('^\\s*node\\s+"?' + join(HUB, 'hook-dispatch.mjs').replac
  */
 export const isCanCommand = (cmd) => CAN.test(String(cmd ?? ''));
 
+/**
+ * The reply guard's release command, when a Bash line is exactly that.
+ * @param {string} cmd  a command line.
+ * @returns {{target: string, said: string, route: string} | null} what `parseRead` in reply-guard.mjs makes of the line when it is
+ *   `node <this hub's reply-guard.mjs> --read <host or call:ID> --said "<words>" --route "<kind>: <how>"` as ONE plain command, with
+ *   nothing chained, no `$` and no backtick; null for any other line, and for a line that names the file and is not a reading
+ *   (`bad`). It is the command a refusal of the reply guard names as the way on. On the main thread it passes the manager fence
+ *   and the refusal latch as the status command does (the other gates judge it as any command), and it lifts the latch the
+ *   reply guard set (`releaseLifts`). It writes only the reply guard's own ledger, after the guard has checked the words
+ *   against what the server said, so it changes none of the work a latch is there to hold.
+ */
+export function releaseCommand(cmd) {
+  const r = parseRead(String(cmd ?? ''));
+  return r && !r.bad ? r : null;
+}
+
+// How every refusal of the reply guard opens, and so how a latch it set is told from any other.
+const REPLY_GUARD_REFUSAL = /^reply-guard \(LESSONS §374\)/;
+
+/**
+ * Does a release lift the latch standing?
+ * @param {{reason: string, own?: boolean} | null} latch  the session's latch as `latchStanding` reads it.
+ * @param {{target: string} | null} release  `releaseCommand` of the call.
+ * @returns {boolean} true only when the latch is the main thread's (never an agent's own), was set by a refusal of the reply guard
+ *   (its text opens as every reply-guard refusal does), and the release is of the call that refusal named: the target after
+ *   `--read` in the refusal's text, a call id compared as written and a host compared by its site (`site` in reply-guard.mjs).
+ *   Where the stored text holds no target (the latch keeps the first 1200 characters of a refusal, and an error excerpt can fill
+ *   them), the release is taken as of the call, because the reply guard has already checked the reading it records.
+ */
+export function releaseLifts(latch, release) {
+  if (!latch || latch.own || !release || !REPLY_GUARD_REFUSAL.test(String(latch.reason ?? ''))) return false;
+  const named = [...String(latch.reason).matchAll(/ --read (\S+)/g)].map((m) => m[1].toLowerCase());
+  if (!named.length) return true;
+  const want = String(release.target ?? '').toLowerCase();
+  return named.some((t) => (t.startsWith('call:') || want.startsWith('call:') ? t === want : site(t) === site(want)));
+}
+
+// What a refusal of the reply guard that names its release command ends with, in the refusal itself and in the latch it sets.
+const RELEASE_NOTE = ' On the main thread this command passes the manager fence and the refusal latch as the status command does, and it lifts the latch this refusal set once the reading is recorded.';
+
 // The tools an agent hands its result back with. `StructuredOutput` is the
 // plan's name for it; `SubagentHandback` is the name this harness gives the
 // same act. Either passes every guard: it writes nothing, and a guard refusing
@@ -229,8 +273,10 @@ const safeId = (p) => String(p?.session_id || 'no-session').replace(/[^A-Za-z0-9
  *   all ask this, and approved-plan-guard.mjs asks plan-guard the same way.
  */
 export function planGuardReads(p) {
+  // `plan_mode_forced` tells plan-guard this mode is the classifier's, never the harness's: its stand-down for a plan mode the
+  // harness began at a compaction or a resume after the approval would otherwise make every tool a read here (LESSONS §432).
   const r = spawnSync('node', [join(HUB, 'plan-guard.mjs')], {
-    input: JSON.stringify({ ...p, permission_mode: 'plan' }), encoding: 'utf8',
+    input: JSON.stringify({ ...p, permission_mode: 'plan', plan_mode_forced: true }), encoding: 'utf8',
     cwd: p.cwd && existsSync(p.cwd) ? p.cwd : HUB, timeout: 30000,
   });
   return r.status === 0;
@@ -640,7 +686,8 @@ export function latchMessage(l) {
   return `REFUSAL LATCH (Doctrine §0d, §0e): a call was refused at ${californiaTime(new Date(l.at))} (California)`
     + `${l.agent ? ` in subagent ${l.agent}` : ''}, and that route stays closed until the owner's next message.\n`
     + `The original refusal, of ${l.tool || 'a call'}:\n${l.reason}\n`
-    + 'Until the owner writes again every call is refused except the status command, the main thread\'s TaskStop (so it can stop what it started) and a subagent\'s own return. '
+    + 'Until the owner writes again every call is refused except the status command, the main thread\'s TaskStop (so it can stop what it started), a subagent\'s own return '
+    + 'and the reply guard\'s release command (node reply-guard.mjs --read, one plain command), which lifts a latch the reply guard set once the reading is recorded. '
     + 'Say in plain text what was refused, and stop. A subagent returns what it has, with the refusal\'s text. '
     + 'Another command, tool or wording for the same end is a second route, not a fresh start.';
 }
@@ -651,6 +698,12 @@ export function latchMessage(l) {
  * latch refused that read until the owner wrote (LESSONS §424).
  */
 export const NAMES_NO_LATCH = 'NAME CHECK, NO LATCH:';
+/**
+ * The words plan-guard.mjs's refusal of the approval call opens with when the plan is already approved and the harness's plan mode
+ * began at a compaction or a resume after it (`restartedPlanMode`, LESSONS §432). `noLatchRepoRefusal` reads them as "this refusal
+ * sets no latch": the remedy is to send the plan's next step, and a latch would refuse the send.
+ */
+export const APPROVED_NO_LATCH = 'PLAN ALREADY APPROVED, NO LATCH:';
 // The hook shims of the app's identifier guard, `.claude/hooks/ident-guard.sh` and the script it runs. The guard is a hook of the app
 // and not a hub gate, and is not changed here; only the dispatcher's own decision about its refusal is.
 const IDENT_SHIMS = new Set(['ident-guard.sh', 'ident-guard.mjs']);
@@ -662,14 +715,16 @@ const IDENT_SHIMS = new Set(['ident-guard.sh', 'ident-guard.mjs']);
  * @param {string} reason  the refusal's text.
  * @returns {boolean} true only for a refusal of the ExitPlanMode call, and for one of two kinds: any refusal by the app's identifier
  *   guard (an identifier the session has not read, whose remedy is a read of it), and the plan gate's refusal of a name it has not
- *   seen (its text opens with `NAMES_NO_LATCH`). The refusal still refuses, with exit 2; only the latch is not written. Every other
+ *   seen (its text opens with `NAMES_NO_LATCH`), and the plan gate's refusal of the approval call for a plan that is already approved
+ *   (`APPROVED_NO_LATCH`: the harness's plan mode began at a compaction or a resume after the approval). The refusal still refuses,
+ *   with exit 2; only the latch is not written. Every other
  *   refusal of the approval call, the plan gate's missing sections among them, and every refusal of any other call by any hook, latches
  *   as before. `main` asks this at each repository hook that denied.
  */
 export function noLatchRepoRefusal(shim, p, reason) {
   if (String(p?.tool_name ?? '') !== 'ExitPlanMode') return false;
   if (IDENT_SHIMS.has(shim)) return true;
-  return shim === 'plan-guard.sh' && String(reason ?? '').includes(NAMES_NO_LATCH);
+  return shim === 'plan-guard.sh' && (String(reason ?? '').includes(NAMES_NO_LATCH) || String(reason ?? '').includes(APPROVED_NO_LATCH));
 }
 
 /**
@@ -1155,7 +1210,7 @@ export function reviewGate(p, plan = approvedPlan(), state = undefined) {
   }
   if (st.kind === 'route-refused') {
     return `${head} the current review reads ROUTE-REFUSED ("${st.first}"): a command or write of the step it read would be refused by a guard. Step ${n} is not sent. `
-      + 'Amend the plan\'s Steps or Order from the commands the review names (an edit to those keeps the approval; Goals, Asked, Files and Commands do not), then send the review again. '
+      + `Amend the plan's Steps or Order from the commands the review names (an edit to those keeps the approval; ${SCOPE_SECTIONS.join(', ')} do not), then send the review again. `
       + 'This refusal does not latch: the amendment and a fresh review are the way on.';
   }
   if (st.kind === 'cleared') {
@@ -1319,8 +1374,10 @@ export function rulesProblem(text, file = join(HUB, RULES_FILE)) {
  *   refusal: the file cannot be read, the pointer names another file, or the file
  *   has moved on to another version since the plan was approved. The rules the
  *   agents follow are then not the rules the plan was read with, so no step is sent
- *   until the Rules line is amended after the file has been read (an edit to it
- *   keeps the approval, because Rules is not one of the four approved sections).
+ *   until the Rules line is amended after the file has been read. THE RULES LINE IS
+ *   PART OF THE APPROVED SCOPE (`SCOPE_SECTIONS` in report.mjs, LESSONS §433): an edit
+ *   to it voids the approval, so the plan goes back through plan mode and the
+ *   plan-mode button with the current version pinned.
  */
 export function rulesPinProblem(text, file = join(HUB, RULES_FILE)) {
   const pointer = rulesPointer(planSection(text, 'Rules'));
@@ -1331,7 +1388,8 @@ export function rulesPinProblem(text, file = join(HUB, RULES_FILE)) {
   if (!rulesPaths().has(pointer.path)) return `${head} the plan's Rules line points at ${pointer.path}, which is not this hub's rules file, so no step is sent. This refusal does not latch: amend the Rules line to ${join(homedir(), '.claude', 'hub', RULES_FILE)}, version ${rules.version}.`;
   if (pointer.version !== rules.version) {
     return `${head} the plan's Rules line pins version ${pointer.version} and ${join(homedir(), '.claude', 'hub', RULES_FILE)} now says version ${rules.version}, so the agents would follow rules the plan was not read with, and no step is sent. `
-      + 'Read the file, then amend the Rules line to the current version (an edit to it keeps the approval). This refusal does not latch: the amendment clears it.';
+      + 'Read the file, then amend the Rules line to the current version (the Rules line is part of the approved scope, so that edit voids the approval and the plan goes back through plan mode and the plan-mode button). '
+      + 'This refusal does not latch: the plan approved again with the current version clears it.';
   }
   return null;
 }
@@ -2557,6 +2615,9 @@ export function managerFence(p, opts = {}) {
   if (tool === 'Bash' && WAIT.test(String(input.command ?? ''))) return null;
   // The check of a call changes nothing and is how the main thread learns what passes (`canCall`).
   if (tool === 'Bash' && CAN.test(String(input.command ?? ''))) return null;
+  // THE REPLY GUARD'S RELEASE COMMAND PASSES AS THE STATUS COMMAND DOES (`releaseCommand`, LESSONS §432): a refusal of the reply guard
+  // names it as the way on, and a fence that refused it left that refusal with no way out. The other gates still judge it.
+  if (tool === 'Bash' && releaseCommand(input.command)) return null;
   // THE MAIN THREAD READS A REPOSITORY'S HISTORY (LESSONS §423): `git -C <full path> log`, `ls-remote`, `branch` in list mode or
   // `show-ref` on a repository of the session or the hub worktree, with the arguments `gitHistoryRead` lists, and nothing else of git.
   // It is asked before the read check because it is not a read of the record, and plan-guard's own list of readers carries neither
@@ -2619,7 +2680,7 @@ export function canCall(p, opts = {}) {
   const tool = String(p.tool_name ?? '');
   const cmd = String(p.tool_input?.command ?? '');
   const free = tool === 'Bash' && (REPORT.test(cmd) || CAN.test(cmd));
-  const passesLatch = free || tool === 'TaskStop';
+  const passesLatch = free || tool === 'TaskStop' || (tool === 'Bash' && !!releaseCommand(cmd));
   const fence = free ? null : managerFence(p, opts);
   const latchKnown = !!p.session_id;
   let latch = null;
@@ -2643,8 +2704,8 @@ export function canText(p, r, shown = '') {
   if (!r.latchKnown) lines.push('LATCH: not read, because this shell holds no CLAUDE_CODE_SESSION_ID; the session is unknown, so the latch is not judged and a path in the session scratchpad cannot be told from one outside it.');
   else if (!r.latch) lines.push('LATCH: none stands.');
   else lines.push(`LATCH: stands (set at ${californiaTime(new Date(r.latch.at))} California by a refusal of ${r.latch.tool || 'a call'}). `
-    + (r.passesLatch ? 'This call passes it: the status command, this check and the main thread\'s TaskStop pass a latch.'
-      : 'Every call but the status command, this check, the main thread\'s TaskStop and an agent\'s own return is refused until the owner writes again.'));
+    + (r.passesLatch ? 'This call passes it: the status command, this check, the main thread\'s TaskStop and the reply guard\'s release command pass a latch.'
+      : 'Every call but the status command, this check, the main thread\'s TaskStop, the reply guard\'s release command and an agent\'s own return is refused until the owner writes again.'));
   if (r.passes) lines.push('RESULT: the manager fence and the latch would pass this call.');
   else {
     const by = [];
@@ -2902,13 +2963,17 @@ async function main(event, raw, p) {
     // is not exempt; the plan fence judges it.
     const status = p.tool_name === 'Bash' && (REPORT.test(String(p.tool_input?.command ?? '')) || (!p.agent_id && CAN.test(String(p.tool_input?.command ?? ''))));
     const mainStop = p.tool_name === 'TaskStop' && !p.agent_id;
+    // THE REPLY GUARD'S RELEASE COMMAND PASSES THE LATCH ON THE MAIN THREAD (`releaseCommand`, LESSONS §432): a refusal of the reply
+    // guard names it as the way on, and the latch that refusal set refused the way on with it. Only the latch is passed here: the
+    // stop hold, the correction check and every later gate judge it as any command, and it lifts the latch after the guards pass it.
+    const release = !p.agent_id && p.tool_name === 'Bash' ? releaseCommand(p.tool_input?.command) : null;
     const latch = latchStanding(p);
     // A LATCHED AGENT WRITES ITS OWN REPORT: its progress note and report file in the
     // scratchpad pass the latch, so a refusal does not cost its step the record of what
     // it did. Every other call of it is still refused but its own return.
     let reportWrite = false;
     try { reportWrite = !!latch && agentReportWrite(p); } catch { reportWrite = false; }
-    if (latch && !status && !mainStop && !reportWrite) return refuse(latchMessage(latch), false);
+    if (latch && !status && !mainStop && !release && !reportWrite) return refuse(latchMessage(latch), false);
     if (status) {
       // A subagent cannot tell the owner anything, so its stamp would unlock
       // the main thread with no status given.
@@ -3010,7 +3075,7 @@ async function main(event, raw, p) {
       if (rv) return refuse(rv, false);
       // THE RULES THE PLAN POINTS AT ARE THE RULES THE PLAN WAS READ WITH (Doctrine
       // §0e rule 13): while its pinned version is not the file's, no step is sent.
-      // Its own call and not latched: the remedy is an amendment of the Rules line.
+      // Its own call and not latched: the remedy is the Rules line pinned again, which is part of the approved scope and so goes back through plan mode (LESSONS §433).
       let rl = null;
       try { rl = rulesGate(p); } catch (e) {
         rl = `RULES GATE (Doctrine §0e rule 13): the rules file could not be read (${e?.message ?? e}); the gate refuses rather than stop gating.`;
@@ -3054,13 +3119,21 @@ async function main(event, raw, p) {
       // fence writes the mark (FIRST_REFUSAL in plan-fence.mjs), and every other refusal latches.
       // THE DOCTRINE GATE'S REFUSAL SETS NO LATCH either (LESSONS §424): the Read it names is its remedy, the recall gate's and the
       // page gate's refusals are free for the same reason, and a latch refused that Read until the owner wrote.
-      if (o.deny) return refuse(o.reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));
+      // A REFUSAL OF THE REPLY GUARD THAT NAMES ITS RELEASE COMMAND SAYS WHAT THAT COMMAND DOES (`RELEASE_NOTE`, LESSONS §432).
+      const reason = g.includes('reply-guard.mjs') && / --read /.test(o.reason) ? o.reason + RELEASE_NOTE : o.reason;
+      if (o.deny) return refuse(reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));
       // A family guard that crashed or timed out has not said yes. The header's
       // promise — a crash refuses everything but reads — held only for a crash
       // of THIS file; a guard exiting 1 was read as a pass.
       if (o.status !== 0 && !READS.has(p.tool_name ?? '')) {
         return refuse(`${g.split('"')[1] ?? g} did not run cleanly (${o.error ?? `exit ${o.status}`}${o.err ? `: ${o.err.trim().split('\n')[0]}` : ''}); only reads run until it is fixed.`);
       }
+    }
+    // A RELEASE OF THE CALL THE LATCH WAS SET BY LIFTS THE LATCH (`releaseLifts`, LESSONS §432): the reply guard has just checked the
+    // reading and recorded it, so the repeat of the call it refused is no longer a repeat. Only a latch the reply guard set is lifted,
+    // and only by a release naming the call its refusal named; any other latch stands for the owner's next message.
+    if (release && latch && releaseLifts(latch, release)) {
+      try { rmSync(latchFile(p), { force: true }); } catch { /* the latch stands */ }
     }
   }
   // --mark's outcome is carried, never discarded: a missed mark went unnoticed
@@ -3073,10 +3146,10 @@ async function main(event, raw, p) {
   }
   // AN AMENDMENT OF THE APPROVED PLAN'S STEPS OR ORDER KEEPS THE APPROVAL
   // (Doctrine §0e rule 13). The write itself was let through only because the
-  // four approved sections (Goals without its Served by line, Asked, Files,
-  // Commands) stood unchanged in the
-  // text it would produce; this re-reads the REAL file, checks the four again,
-  // and only then moves the marker's hash to the file's. If the real file's four
+  // six approved sections (Goals without its Served by line, Asked, Files,
+  // Commands, Rules, Rules of this plan) stood unchanged in the
+  // text it would produce; this re-reads the REAL file, checks the six again,
+  // and only then moves the marker's hash to the file's. If the real file's six
   // sections differ from what was simulated, or this does not run, the marker
   // keeps the old hash and the plan is out of force, which every gate refuses on:
   // it fails closed. Main thread only; an agent never amends the plan.
@@ -3198,7 +3271,8 @@ async function main(event, raw, p) {
           ran.add(shim);
           command = `node "${join(HUB, shim.replace(/\.sh$/, '.mjs'))}"`;
         }
-        const input = locked && shim === 'plan-guard.sh' ? JSON.stringify({ ...p, permission_mode: 'plan' }) : raw;
+        // The lock's forced mode is never a plan mode the harness began at a restart: the lock keeps refusing on its own (LESSONS §432).
+        const input = locked && shim === 'plan-guard.sh' ? JSON.stringify({ ...p, permission_mode: 'plan', plan_mode_forced: true }) : raw;
         const o = run(command, input, repo, h.timeout ?? 60);
         // A REFUSAL OF THE APPROVAL CALL THAT ONLY A READ ANSWERS SETS NO LATCH (`noLatchRepoRefusal`, LESSONS §424).
         if (o.deny) return refuse(o.reason, !noLatchRepoRefusal(shim, p, o.reason));

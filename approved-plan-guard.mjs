@@ -23,14 +23,19 @@
  *   are refused, and content that merely names the marker is not a write to it.
  *   THE ONE EXCEPTION is the main thread amending the plan: a Write, Edit or
  *   MultiEdit on the approved plan passes when the text it would leave has the
- *   Goals, Asked, Files and Commands the marker recorded at approval (`scope`),
- *   so only the Steps and the Order, or sections outside the four, move. The
+ *   Goals, Asked, Files, Commands, Rules and Rules of this plan the marker
+ *   recorded at approval (`scope`), so only the Steps and the Order, or sections
+ *   outside the six, move. The
  *   Goals are taken without their `Served by:` line (`goalsWithoutServedBy` in
  *   report.mjs), which maps steps to goals, so a step added or renumbered keeps
  *   the approval; a marker recorded before that, holding the whole section's
  *   hash, still matches while the whole section stands, and `--amend` records
- *   the new kind at the first amendment. An
- *   edit to any of the four is refused naming them, and goes back through plan
+ *   the new kind at the first amendment. A marker recorded before Rules and
+ *   Rules of this plan joined the scope holds no key for them (`scopeUnrecorded`):
+ *   an edit of either is then judged against the plan file as it stands, which
+ *   the marker's hash still pins, and `--amend` records both at the first
+ *   amendment. An
+ *   edit to any of the six is refused naming them, and goes back through plan
  *   mode and the owner's button; an agent's edit, a marker with no `scope`, and
  *   an edit that cannot be simulated keep the old rule, a refusal.
  *
@@ -45,7 +50,7 @@
  *   that names it is refused with no exception, since `--done` never names it.
  *
  *   PostToolUse (--amend): after a main-thread Write, Edit or MultiEdit whose
- *   target is the approved plan, re-read the real file; if its four approved
+ *   target is the approved plan, re-read the real file; if its six approved
  *   sections are still the recorded ones, move the marker's hash to the file's
  *   (so the plan stays in force through an amendment of Steps or Order); if not,
  *   leave the marker alone and say so with exit 2, which leaves no plan in force.
@@ -75,6 +80,13 @@
  *   hook-dispatch.mjs on the main thread's EnterPlanMode, refuses it while the
  *   marker recorded from that exit stands and nothing has happened since but
  *   reads, until an agent is sent under the plan or the owner writes again.
+ *
+ *   A PLAN MODE THE HARNESS BEGAN AFTER THE APPROVAL IS NOT THE PLAN'S (LESSONS §432). A compaction or a
+ *   resume after the approval can print a plan-mode notice and report the mode as plan though the plan is
+ *   approved and its step is the next move. `restartedPlanMode` in report.mjs reads that from the marker
+ *   and the transcript; while it holds, this guard does not stand down for plan mode (plan-guard.mjs stands
+ *   down for it instead), so the call is judged as one made outside plan mode. A mode a caller forced
+ *   (`plan_mode_forced`, the classifier's own) is never that one.
  *
  *   THE MARKER ALSO HOLDS THE HASH OF THE PLAN'S SCRIPT (`scriptHash`), taken from
  *   its `## Script` section at approval (`scriptHashOf` in report.mjs), by the tool
@@ -121,7 +133,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { tailEntries, isOwnerMessage } from './transcript-tail.mjs';
-import { californiaTime, scopeHashes, scopeChanged, SCOPE_SECTIONS, scriptHashOf, stepsFilePath, stepsFileText, approvedStepSet } from './report.mjs';
+import { californiaTime, scopeHashes, scopeChanged, scopeUnrecorded, SCOPE_SECTIONS, scriptHashOf, stepsFilePath, stepsFileText, approvedStepSet, restartedPlanMode } from './report.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MARKER = join(homedir(), '.claude', 'APPROVED-PLAN.json');
@@ -136,7 +148,7 @@ const hashOf = (p) => createHash('sha256').update(readFileSync(p)).digest('hex')
  * @param {string} p  the plan file.
  * @returns {{hash: string, scope: Record<string, string>, script: string, steps: number[], standing: number[], review: number[]}}
  *   the sha256 of the file, the hashes of its approved scope (`scopeHashes`: Goals, Asked, Files,
- *   Commands), the hash of its script (`scriptHashOf`, '' when it has none), and the step
+ *   Commands, Rules, Rules of this plan), the hash of its script (`scriptHashOf`, '' when it has none), and the step
  *   numbers it holds now (`approvedStepSet`): those of its Steps section, those on its
  *   Standing line and those of its review steps. The marker holds all of them at approval: the
  *   whole-file hash is what every other gate compares, the scope is what an amendment of the
@@ -476,12 +488,14 @@ function afterEdit(name, input, before) {
  * @returns {string|null} null when the write may go: the main thread's Write,
  *   Edit or MultiEdit, in the session that approved the plan, on a plan file that
  *   still matches the marker's hash, whose marker records the approval's scope,
- *   and whose text after the edit has the same Goals, Asked, Files and Commands
- *   (`scopeChanged`), so only the Steps, the Order or other sections move.
+ *   and whose text after the edit has the same Goals, Asked, Files, Commands, Rules
+ *   and Rules of this plan (`scopeChanged`, and for a marker that holds no key for
+ *   the last two, the plan file as it stands now), so only the Steps, the Order or
+ *   other sections move.
  *   Otherwise the refusal. An agent never amends the plan; a marker from before
  *   the scope was recorded keeps the whole-file rule; an edit that cannot be
  *   simulated is refused. THE INVARIANT the PostToolUse `--amend` relies on: a
- *   write let through here changes none of the four approved sections as far as
+ *   write let through here changes none of the six approved sections as far as
  *   this simulation can tell, and `--amend` checks the real file again.
  */
 function amendProblem(mk) {
@@ -493,6 +507,10 @@ function amendProblem(mk) {
   const after = afterEdit(tool, p.tool_input ?? {}, before);
   if (after === null) return `${voids} (This edit could not be applied to the plan as it stands, so whether it leaves ${SCOPE_SECTIONS.join(', ')} as approved cannot be told, and nothing is written.)`;
   const moved = scopeChanged(mk.scope, after);
+  // A marker written before Rules and Rules of this plan joined the scope holds no hash for them, but the plan file still stands as it
+  // was approved (its hash was checked above), so an edit of either is judged against the file as it is now.
+  const was = scopeHashes(before), now = scopeHashes(after);
+  for (const n of scopeUnrecorded(mk.scope)) if (was[n] !== now[n]) moved.push(n);
   if (moved.length) {
     return `This edit would change ${moved.join(', ')} in ${mk.plan}. ${moved.length === 1 ? 'That section is' : 'Those sections are'} what the owner approved, and an edit to ${moved.length === 1 ? 'it' : 'them'} voids the approval: `
       + 'the plan goes back through plan mode and the owner\'s button. An edit to the Steps or the Order keeps the approval.';
@@ -503,8 +521,8 @@ function amendProblem(mk) {
 if (process.argv.includes('--amend')) {
   // hook-dispatch.mjs runs this at PostToolUse of a Write, Edit or MultiEdit on
   // the main thread. If the file just written is the approved plan, the real
-  // text is read again; when its Goals, Asked, Files and Commands are still the
-  // approved ones, the marker's hash moves to the file's, which keeps the plan in
+  // text is read again; when its Goals, Asked, Files, Commands, Rules and Rules of
+  // this plan are still the approved ones, the marker's hash moves to the file's, which keeps the plan in
   // force through an amendment of the Steps or the Order. When they are not, or
   // this does not run, the marker keeps its old hash and the plan is out of
   // force, so every gate refuses: it fails closed.
@@ -534,7 +552,9 @@ const deny = (why) => {
   process.exit(2);
 };
 
-if (p.permission_mode === 'plan') process.exit(0);           // plan-guard.mjs owns plan mode
+// plan-guard.mjs owns plan mode, except a plan mode the harness began at a compaction or a resume after the plan in force was approved
+// (`restartedPlanMode` in report.mjs): plan-guard stands down for that one, so this guard judges its calls as it judges any outside plan mode.
+if (p.permission_mode === 'plan' && !(!p.plan_mode_forced && restartedPlanMode(p))) process.exit(0);
 // The owner's exit from plan mode in the app, recorded by the first call to see
 // it — a read included, so the marker is written before anything can change
 // the plan file. Never fatal: a failure here records nothing, and the checks
@@ -545,8 +565,8 @@ if (tool === 'EnterPlanMode' || tool === 'ExitPlanMode') process.exit(0);
 
 // A FILE TOOL IS JUDGED BY ITS TARGET. Aimed at the marker, refused. Aimed at
 // the approved plan, refused unless it is the main thread amending the plan and
-// the text it would leave has the approved Goals, Asked, Files and Commands
-// (`amendProblem`): an edit to those voids the approval, and every write after
+// the text it would leave has the approved Goals, Asked, Files, Commands, Rules and
+// Rules of this plan (`amendProblem`): an edit to those voids the approval, and every write after
 // it would be refused with nobody told why. An edit to the Steps or the Order
 // keeps the approval, and the PostToolUse `--amend` moves the marker's hash to
 // the file's. A file whose content merely NAMES the marker is not a write to
@@ -571,7 +591,9 @@ let write = tool === 'Workflow';
 let why = write ? 'a Workflow launches agents that can write.' : '';
 if (!write) {
   const pg = join(HERE, 'plan-guard.mjs');
-  const r = spawnSync('node', [pg], { input: JSON.stringify({ ...p, permission_mode: 'plan' }), encoding: 'utf8', cwd: p.cwd || process.cwd() });
+  // `plan_mode_forced` tells plan-guard this mode is the classifier's, never the harness's, so its stand-down for a restarted plan mode
+  // cannot make every tool a read here.
+  const r = spawnSync('node', [pg], { input: JSON.stringify({ ...p, permission_mode: 'plan', plan_mode_forced: true }), encoding: 'utf8', cwd: p.cwd || process.cwd() });
   // Only a clean 0 is a read. A crash, a signal or a spawn failure is a write:
   // the first version passed a classifier that exited 1 as a read.
   write = r.status !== 0;

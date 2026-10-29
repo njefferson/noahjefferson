@@ -39,7 +39,12 @@
  *       current review's hand-back and the step it cleared, or why no review is
  *       current, read by the same function the dispatcher's review gate refuses on;
  *       the reviewer's own hand-back is the verdict, read from its transcript and
- *       never from a file. The same
+ *       never from a file. UNDER THE JUDGEMENT, ONE LINE NAMING THE MODEL SERVING THE
+ *       MAIN THREAD (`modelLine`, `servingModel`): the `message.model` of the newest
+ *       main-thread reply, never a model key inside a tool's input, and whether it is
+ *       the top tier (`isTopTier`: an id carrying fable or mythos), so the first reply
+ *       under an approved plan can say what stop-guard.mjs holds its first line to.
+ *       The same
  *       status is written in chat; this command is the proof it was given.
  *       It then prints EVERY AGENT THE SESSION LAUNCHED THAT HAS ENDED SINCE
  *       THE LAST STATUS — how it ended (a report, a refusal or an
@@ -60,8 +65,10 @@
  *       And last THE APPROVAL STATE, read from disk now (`approvalBlock`): the
  *       marker or none, the plan it names with the hash and time it holds, the
  *       plan file's hash and last write time, whether they match, and, for a
- *       marker that records the approval's scope, which of Goals, Asked, Files
- *       and Commands changed since (`scopeChanged`). Before
+ *       marker that records the approval's scope, which of Goals, Asked, Files,
+ *       Commands, Rules and Rules of this plan changed since (`scopeChanged`; a
+ *       marker written before the last two joined says of each that it does not
+ *       record it, `scopeUnrecorded`). Before
  *       sending the first agent under any approval, the manager gives a status
  *       and reads it; the dispatch gate's refusals print the same lines.
  *       A STATUS SHOWS WHAT CHANGED AND NOTHING TWICE. What the session's
@@ -231,14 +238,26 @@ export function planSection(text, name) {
 
 /**
  * The sections of a plan whose edit voids its approval (Doctrine §0e rule 13).
- * The owner approves what the work is for (Goals), what was asked (Asked), what
- * may be touched (Files) and what may be run (Commands); the Steps and the
- * Order are how the approved work is done, and an amendment to them keeps the
- * approval. The Goals the owner approves are the goals themselves and not the
- * `Served by:` line under them (`goalsWithoutServedBy`): that line maps steps to
- * goals, so it moves whenever a step is added or renumbered.
+ * The approval covers what the work is for (Goals), what was asked (Asked), what
+ * may be touched (Files), what may be run (Commands), the rules the agents are
+ * held to (Rules, the pointer line) and the plan's own rules (Rules of this
+ * plan); the Steps and the Order are how the approved work is done, and an
+ * amendment to them keeps the approval. The Goals approved are the goals
+ * themselves and not the `Served by:` line under them (`goalsWithoutServedBy`):
+ * that line maps steps to goals, so it moves whenever a step is added or renumbered.
+ * The last two joined the scope after markers were already being written: a plan's
+ * rules govern the work as much as its Files do, and a rule edited after the button
+ * changed what had been approved with nothing to refuse it (LESSONS §433).
  */
-export const SCOPE_SECTIONS = ['Goals', 'Asked', 'Files', 'Commands'];
+export const SCOPE_SECTIONS = ['Goals', 'Asked', 'Files', 'Commands', 'Rules', 'Rules of this plan'];
+
+/**
+ * The scope sections that joined after the first markers were written.
+ * A marker recorded before they joined holds no key for them, and says nothing
+ * about them: `scopeChanged` does not read their absence as a change, and the
+ * approval block says of each that the marker does not record it.
+ */
+export const LATER_SCOPE = ['Rules', 'Rules of this plan'];
 
 /**
  * A plan's Goals section without its `Served by:` line.
@@ -291,13 +310,31 @@ export function scopeHashes(text) {
  *   Goals hash holds the hash of the whole Goals section, and its Goals still
  *   match while that whole section is unchanged, so a plan approved before this
  *   change keeps its approval; such a marker is made over by the first amendment
- *   (`--amend` in approved-plan-guard.mjs records `scopeHashes` again).
+ *   (`--amend` in approved-plan-guard.mjs records `scopeHashes` again). A marker
+ *   recorded before Rules and Rules of this plan joined the scope (`LATER_SCOPE`)
+ *   holds no key for them: such a section is not named as changed, because the
+ *   marker says nothing about it (`scopeUnrecorded` names them, and the approval
+ *   block says of each that the marker does not record it).
  */
 export function scopeChanged(then, text) {
   const now = scopeHashes(text);
   const known = then && typeof then === 'object' && !Array.isArray(then);
   const wholeGoals = sha256(planSection(text, 'Goals'));
-  return SCOPE_SECTIONS.filter((n) => !known || (then[n] !== now[n] && !(n === 'Goals' && then[n] === wholeGoals)));
+  return SCOPE_SECTIONS.filter((n) => !known || (then[n] !== now[n] && !(n === 'Goals' && then[n] === wholeGoals) && !(LATER_SCOPE.includes(n) && !Object.hasOwn(then, n))));
+}
+
+/**
+ * The scope sections a marker's record does not hold.
+ * @param {Record<string, string>|null|undefined} then  the hashes the marker holds.
+ * @returns {string[]} the names from LATER_SCOPE that `then` has no key for, in that
+ *   order; [] when `then` is not an object (every section is then read as changed
+ *   by `scopeChanged`, so none is merely unrecorded). The approval block names
+ *   each one, and the amendment gate judges an edit of it against the plan file
+ *   as it stood, which the marker's hash still pins.
+ */
+export function scopeUnrecorded(then) {
+  const known = then && typeof then === 'object' && !Array.isArray(then);
+  return known ? LATER_SCOPE.filter((n) => !Object.hasOwn(then, n)) : [];
 }
 
 /**
@@ -413,11 +450,95 @@ export function approvalBlock(marker = join(homedir(), '.claude', 'APPROVED-PLAN
     match ? '- Match: yes. The file is the plan that was approved, so the plan is in force.'
       : '- Match: NO. The file changed after it was approved, so no plan is in force; a changed plan goes back through plan mode.');
   if (scoped) {
+    // A marker written before Rules and Rules of this plan joined the scope holds no key for them: the print says of each that the
+    // marker does not record it, and never that it changed, because nothing here can tell.
+    const unrecorded = scopeUnrecorded(mk.scope);
+    const recorded = SCOPE_SECTIONS.filter((n) => !unrecorded.includes(n));
     lines.push(moved.length
       ? `- Scope: CHANGED in ${moved.join(', ')}. Those sections are what the owner approved, so an edit to ${moved.length === 1 ? 'it' : 'them'} voids the approval; the plan goes back through plan mode.`
-      : `- Scope: ${SCOPE_SECTIONS.join(', ')} are as approved.${match ? '' : ' Only Steps or Order differ, an edit the approval survives but that was not recorded in the marker, so the plan stays out of force until it goes back through plan mode.'}`);
+      : `- Scope: ${recorded.join(', ')} are as approved.${match ? '' : ' Only Steps or Order differ, an edit the approval survives but that was not recorded in the marker, so the plan stays out of force until it goes back through plan mode.'}`);
+    for (const n of unrecorded) lines.push(`- Scope: ${n} is not recorded in this marker (it was written before ${n} joined the approved scope), so this print cannot say whether it changed.`);
   }
   return lines.join('\n');
+}
+
+// ---- a plan mode the harness began after the approval is not the plan's (LESSONS §432) ----
+
+/**
+ * The transcript's entries from a time on.
+ * @param {string} path  the transcript.
+ * @param {number} since  a time in ms.
+ * @returns {object[]} the entries of the narrowest tail of 2, 8, 32 or 64 MB whose first timed entry is no later than `since`, or of
+ *   the widest tail, or of the whole file when it is shorter; so every entry after `since` is among them. [] when the file cannot
+ *   be read.
+ */
+function entriesFrom(path, since) {
+  let size = 0;
+  try { size = statSync(path).size; } catch { return []; }
+  let entries = [];
+  for (const mb of [2, 8, 32, 64]) {
+    const bytes = mb * 1024 * 1024;
+    entries = tailEntries(path, bytes);
+    const first = entries.find((e) => Number.isFinite(Date.parse(e?.timestamp ?? '')));
+    if ((first && Date.parse(first.timestamp) <= since) || bytes >= size) break;
+  }
+  return entries;
+}
+
+/**
+ * Is this transcript entry the boundary of a compaction or of a resume?
+ * @param {object} e  a transcript entry.
+ * @returns {boolean} true for the system entry that records a compaction (`compact_boundary`) and for the SessionStart hook entry
+ *   the harness writes at a resume or after a compaction (`SessionStart:resume`, `SessionStart:compact`). A fresh start is neither.
+ */
+function isRestartBoundary(e) {
+  if (e?.type === 'system' && e.subtype === 'compact_boundary') return true;
+  const a = e?.type === 'attachment' ? e.attachment : null;
+  return a?.type === 'hook_success' && a.hookEvent === 'SessionStart' && /^SessionStart:(?:resume|compact)$/.test(String(a.hookName ?? ''));
+}
+
+/**
+ * Did the harness's plan mode begin at a compaction or a resume, after the plan in force was approved?
+ * @param {object} p  a PreToolUse payload: `transcript_path` and `session_id`.
+ * @param {string} [marker]  the approval marker's path; `~/.claude/APPROVED-PLAN.json` by default.
+ * @returns {string} the approved plan's path when ALL of these hold, else '' (so every doubt reads as no): the marker names a plan whose
+ *   sha256 is the marker's hash, and was written by this session or by none that is named; the transcript's current plan mode (the
+ *   earliest main-thread `plan_mode` attachment since the last `plan_mode_exit`) began after the approval (the marker's time, or the
+ *   time of the owner's exit in the app that the marker was recorded from); and the nearest compaction or resume boundary before it
+ *   (`isRestartBoundary`), itself after the approval, has no main-thread assistant entry between it and that plan mode, so the plan
+ *   mode came with the restart and not with anything the session or the owner did after it. A plan mode the owner entered later
+ *   has an assistant entry between the restart and itself; one the session entered has removed the marker. plan-guard.mjs refuses
+ *   the approval call on a non-empty answer and stands down for the rest; approved-plan-guard.mjs judges the call as outside plan mode.
+ *   THE INVARIANT both rely on: a non-empty answer means the plan in force is the very file approved and the harness's mode is a
+ *   restart's, never a mode that was asked for.
+ */
+export function restartedPlanMode(p, marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) {
+  try {
+    const mk = JSON.parse(readFileSync(marker, 'utf8'));
+    if (!mk?.plan || !mk.hash || !p?.transcript_path) return '';
+    if (mk.session && p.session_id && mk.session !== p.session_id) return '';
+    if (createHash('sha256').update(readFileSync(mk.plan)).digest('hex') !== String(mk.hash)) return '';
+    const viaAt = typeof mk.appExit === 'string' ? /\bat (\d{4}-\d{2}-\d{2}T[0-9:.]+Z)\s*$/.exec(String(mk.via ?? ''))?.[1] : undefined;
+    const since = Date.parse(viaAt ?? mk.at ?? '');
+    if (!Number.isFinite(since)) return '';
+    const entries = entriesFrom(p.transcript_path, since);
+    const main = (e) => !e?.isSidechain && !e?.agentId;
+    const stamp = (e) => Date.parse(e?.timestamp ?? '');
+    let start = -1;
+    entries.forEach((e, i) => {
+      if (!main(e) || e?.type !== 'attachment') return;
+      if (e.attachment?.type === 'plan_mode' && !e.attachment.isSubAgent) { if (start < 0) start = i; }
+      else if (e.attachment?.type === 'plan_mode_exit') start = -1;
+    });
+    if (start < 0) return '';
+    for (let j = start - 1; j >= 0; j--) {
+      const e = entries[j];
+      if (!main(e)) continue;
+      if (isRestartBoundary(e)) return stamp(e) > since ? String(mk.plan) : '';
+      if (e?.type === 'assistant') return '';
+    }
+    return '';
+  } catch { return ''; }
 }
 
 /**
@@ -816,6 +937,96 @@ export function setCompacted(sid, patch) {
 export function compactedWords(c) {
   const d = new Date(c.at);
   return `Compacted at ${californiaTime(d)} California time on ${d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })}.`;
+}
+
+// ---- the model serving the main thread, and the line a switch to the top tier owes (Doctrine §11b, LESSONS §434) ----
+
+/**
+ * Is a model id the top tier?
+ * @param {unknown} id  a model id as the transcript's assistant entries carry it, such as `claude-fable-5-1`, or an alias.
+ * @returns {boolean} true only for an id that carries `fable` or `mythos`, in any case. An Opus, Sonnet or Haiku id is not, and an
+ *   empty or missing one is not.
+ */
+export function isTopTier(id) {
+  return /fable|mythos/i.test(String(id ?? ''));
+}
+
+/**
+ * The model serving the main thread.
+ * @param {object[]} entries  the transcript's tail, in file order.
+ * @returns {string|null} the `message.model` of the newest main-thread assistant entry that carries one, and nothing else: a model
+ *   key inside a tool's input (an Agent call names the model of the agent it sends) is the model of a different thread, and an entry of
+ *   a subagent or a placeholder such as `<synthetic>` is not the main thread's. null when no entry qualifies, which a caller reads as
+ *   "not known", never as a lesser tier.
+ */
+export function servingModel(entries) {
+  for (let i = (entries?.length ?? 0) - 1; i >= 0; i--) {
+    const e = entries[i];
+    if (e?.type !== 'assistant' || e.isSidechain || e.agentId) continue;
+    const m = e.message?.model;
+    if (typeof m === 'string' && m.trim() && !/^<.*>$/.test(m.trim())) return m.trim();
+  }
+  return null;
+}
+
+const tierFile = (sid) => join(process.env.MODEL_TIER_DIR || join(homedir(), '.claude', 'model-tier'), `${safeKey(sid)}.json`);
+
+/**
+ * The model the stop guard last saw serving a session, and whether the line a top tier owes has been said.
+ * @param {string} sid  the session id.
+ * @returns {{model: string, told: boolean} | null} the record `setTier` left, null when there is none or it cannot be read.
+ */
+export function readTier(sid) {
+  if (!sid) return null;
+  try {
+    const j = JSON.parse(readFileSync(tierFile(sid), 'utf8'));
+    return j && typeof j.model === 'string' && j.model ? { model: j.model, told: !!j.told } : null;
+  } catch { return null; }
+}
+
+/**
+ * Record the model a session is served by.
+ * @param {string} sid  the session id; nothing is written without one.
+ * @param {{model: string, told: boolean}} rec  the model and whether the tier line has been said for it.
+ * @returns {boolean} true when written. The stop guard writes a record whenever the serving model differs from the recorded one, so
+ *   a change is seen once and the line is owed once for it.
+ */
+export function setTier(sid, rec) {
+  if (!sid || !rec?.model) return false;
+  try {
+    const f = tierFile(sid);
+    mkdirSync(dirname(f), { recursive: true });
+    writeFileSync(f, JSON.stringify({ model: String(rec.model), told: !!rec.told, at: Date.now() }));
+    return true;
+  } catch { return false; }
+}
+
+/**
+ * The words the first reply under a plan uses when the top tier is serving.
+ * @param {string} id  the serving model's id.
+ * @returns {string} a line that names the model and the tier and says the work does not need the top tier. The stop guard holds the
+ *   first line of the reply to naming the tier and saying whether the work needs it; these are the words it offers. Where the work does
+ *   need the top tier, the line says that instead, and why.
+ */
+export function tierWords(id) {
+  return `Serving model: ${id}, the top tier. The manager's turns need no more than Opus, so this work does not need the top tier (Doctrine §11b).`;
+}
+
+/**
+ * The status print's line for the model serving the main thread.
+ * @param {string} sid  the session id.
+ * @returns {string} one line naming the model (`servingModel` of the main transcript's tail, never a key inside a tool's input) and
+ *   whether it is the top tier, with the sentence the first reply under a plan owes when it is; "not read" with the reason when the
+ *   session's transcript cannot be found or holds no main-thread reply.
+ */
+export function modelLine(sid) {
+  const f = sid ? sessionFiles(sid) : null;
+  if (!f) return `Serving model: not read (${sid ? `no transcript found for session ${sid}` : 'no CLAUDE_CODE_SESSION_ID in this shell'}).`;
+  const id = servingModel(tailEntries(f.main, 16 * 1024 * 1024));
+  if (!id) return 'Serving model: not read (the transcript holds no main-thread reply that names one).';
+  return isTopTier(id)
+    ? `Serving model: ${id}, the top tier. The manager's turns need no more than Opus (Doctrine §11b); the first reply under an approved plan says so in its first line (${tierWords(id)}).`
+    : `Serving model: ${id}, not the top tier. Read from the newest main-thread reply in the session's transcript.`;
 }
 
 const refusedFile = (sid) => join(process.env.REFUSED_READS_DIR || join(homedir(), '.claude', 'refused-reads'), `${safeKey(sid)}.json`);
@@ -2665,6 +2876,12 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   let judged = '';
   try { judged = judgedBlock(judgedState({ session_id: sid }, planInForce())); } catch (e) { judged = `Judgement: not read (${e?.message ?? e}).`; }
   console.log(judged);
+  // THE MODEL SERVING THE MAIN THREAD, under the judgement (Doctrine §11b, LESSONS §434): read from the transcript's newest main-thread
+  // reply (`modelLine`), so the first reply under an approved plan can name the tier and say whether the work needs it. A failure
+  // reading it is printed, never skipped.
+  let model = '';
+  try { model = modelLine(sid); } catch (e) { model = `Serving model: not read (${e?.message ?? e}).`; }
+  console.log(model);
   console.log('');
   console.log(status);
   if (m && m[1].padStart(5, '0') !== hhmm) console.log(`(the status said ${m[1]}; the clock says ${hhmm}, and that is what was stamped)`);

@@ -64,9 +64,42 @@ const tool = p.tool_name ?? '';
 const input = p.tool_input ?? {};
 const cwd = p.cwd ?? process.cwd();
 
-const planning = p.permission_mode === 'plan'
-  || existsSync(join(cwd, '.claude', 'PLAN-LOCK'));
+const locked = existsSync(join(cwd, '.claude', 'PLAN-LOCK'));
+const planning = p.permission_mode === 'plan' || locked;
 if (!planning) process.exit(0);
+
+// A PLAN MODE THE HARNESS BEGAN AFTER THE PLAN WAS APPROVED IS NOT THE PLAN'S (LESSONS §432).
+// A compaction or a resume after the approval can print a plan-mode notice and report the mode as plan
+// though the plan is approved and its step is the next move. `restartedPlanMode` in report.mjs reads that
+// from the approval marker (the plan file still the one approved) and the transcript (the plan mode came
+// with the restart, and nothing the session or the owner did after it). While it holds, TWO HALVES:
+//   1. an ExitPlanMode call is refused, saying the plan is approved and its step is the next move, so a
+//      plan is never put to the button twice; the refusal opens with APPROVED_NO_LATCH, which the
+//      dispatcher reads as "this refusal sets no latch";
+//   2. every other call is judged as outside plan mode: this guard passes it, and the guards that judge
+//      calls outside plan mode (approved-plan-guard.mjs, the manager fence, the plan fence) decide it.
+// Neither half applies when the owner's PLAN-LOCK marker exists (the lock refuses on its own), when the
+// mode is one a caller forced (`plan_mode_forced`: the classifier's own, which would otherwise make every
+// tool a read for the manager fence and the plan fence), or when the owner entered plan mode after the
+// approval (the restart is not what began it).
+if (p.permission_mode === 'plan' && !locked && !p.plan_mode_forced && existsSync(join(homedir(), '.claude', 'APPROVED-PLAN.json'))) {
+  const { restartedPlanMode } = await import('./report.mjs');
+  const approved = restartedPlanMode(p);
+  if (approved) {
+    if (tool !== 'ExitPlanMode') process.exit(0);
+    const { APPROVED_NO_LATCH } = await import('./hook-dispatch.mjs');
+    process.stdout.write(JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason: `${APPROVED_NO_LATCH} the plan is already approved: ${approved} is the file the approval holds, and this plan mode began at a compaction or a resume after `
+          + 'the approval, so it is not a plan mode anyone asked for. A plan is never put to the button twice. Send the plan\'s next step and carry on with it (the status print names it). '
+          + 'This refusal sets no latch.',
+      },
+    }));
+    process.exit(2);
+  }
+}
 
 /**
  * The refusal SAYS WHY, and says what to do instead.

@@ -377,6 +377,16 @@ every rule below while none of the hooks that enforce them was running
    owner message, so a line written just before the call read as the newest
    talk with no owner message after it, and two approvals were refused for it
    on 2026-10-06.
+   *Enforced by:* `plan-guard.mjs`, with `restartedPlanMode` in `report.mjs`, so a
+   plan is never put to the button twice: an `ExitPlanMode` call is refused when
+   the approval marker's hash matches the plan file and the harness's plan mode
+   began at a compaction or a resume after that approval. The refusal says the plan
+   is approved and its step is the next move, opens `PLAN ALREADY APPROVED, NO
+   LATCH:` and sets no latch. While it holds, `plan-guard.mjs` passes the plan's
+   other calls and `approved-plan-guard.mjs` judges them as calls made outside plan
+   mode. A plan mode entered after the approval, the `.claude/PLAN-LOCK` marker,
+   and a mode a caller forced (`plan_mode_forced`) leave both halves alone
+   (LESSONS §432).
 5. **A line before each tool call and a line after each result.**
 6. **Never "waiting on you", never "you owe".** Say "open for you:". A stop is
    declared in the first line as "Stopping here: open for you is X".
@@ -460,6 +470,13 @@ every rule below while none of the hooks that enforce them was running
     *Enforced whole by:* `hook-dispatch.mjs` and `plan-guard.mjs`.
     *Enforced whole by:* `plan-fence.mjs`.
     *Enforced whole by:* `hook-dispatch.mjs` and `plan-guard.mjs`.
+    *Enforced by:* `approved-plan-guard.mjs` and `report.mjs` (`SCOPE_SECTIONS`,
+    `scopeChanged`): the plan's `## Rules` line and its `## Rules of this plan`
+    section are part of the approved scope with Goals, Asked, Files and Commands,
+    so an edit of either after the button voids the approval and the plan goes back
+    through plan mode. A marker written before the two joined holds no key for
+    them: the approval block says of each that the marker does not record it, and
+    an edit of either is judged against the plan file as it stands (LESSONS §433).
 14. **A refusal latches until the owner's next message.** A refusal by any
     guard, family or repo, ends that route for the thread that was refused: the
     session when it was the main thread, and that agent alone when it was
@@ -506,6 +523,13 @@ every rule below while none of the hooks that enforce them was running
     (`hook-dispatch.mjs`, LESSONS §424).
     Added 2026-10-02.
     *Enforced whole by:* `hook-dispatch.mjs` and `approved-plan-guard.mjs`.
+    *Enforced by:* `hook-dispatch.mjs` (`releaseCommand`, `releaseLifts`): the
+    reply guard's release command, `node reply-guard.mjs --read` with its arguments
+    as one plain command, passes the manager fence as the status command does and
+    passes the latch on the main thread, and a release of the call the latch was
+    set by lifts that latch. A latch another guard set, an agent's own latch and a
+    release of another call stand. The refusal of the reply guard that names the
+    command says so (LESSONS §432).
     A Stop refusal never latches. While the main thread's latch stands, every
     PreToolUse call on the main thread and in agents is refused except three:
     the status command and `TaskStop`, both on the main thread only, and an
@@ -1394,6 +1418,16 @@ nothing. Never say "I'll keep an eye on it"; there is nothing to keep an eye on.
 - **A hard cap is the only real stop, and it is the owner's to set** — Anthropic
  Console, billing, spending limits. `/cost` shows what a session has spent so
  far. Say so when it matters; never imply a session can enforce a limit.
+
+*Enforced by:* `report.mjs` (`servingModel`, `modelLine`) and `stop-guard.mjs`,
+for the first of the two things under "Push work DOWN a tier". The status print
+names the model serving the main thread, read from the `message.model` of the
+newest main-thread reply in the transcript and never from a model key inside a
+tool's input, and a top-tier id is one carrying fable or mythos. While an
+approval marker is in force, the stop guard refuses the first reply after the
+serving model changes to a top-tier id unless its first line names the tier and
+says whether the work needs it, once for each change, with the words to use
+(LESSONS §434).
 
 ## 11c. An approved plan is standing authority. Do not stop at its seams.
 

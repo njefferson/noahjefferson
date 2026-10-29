@@ -76,6 +76,18 @@
 // California time, read from the record: it may share that line with a stop
 // declaration. The record's `told` flag is then set, so only that one reply is held.
 //
+// ## THE FIRST REPLY UNDER A PLAN, ON THE TOP TIER, NAMES THE TIER (Doctrine §11b, LESSONS §434)
+//
+// The manager's turns sent agents and checked results for four hours on the top tier after a switch,
+// and the session never said that the work needed no more. The model serving the main thread is the
+// `message.model` of the newest main-thread reply in the transcript (`servingModel` in report.mjs;
+// never a model key inside a tool's input), and a top-tier id is one carrying fable or mythos
+// (`isTopTier`). While an approval marker is in force and the top tier serves, the first reply after
+// the serving model changes is refused unless its FIRST line names the tier and says whether the work
+// needs it; the refusal gives the words to use (`tierWords`). The record (`readTier`, `setTier`) is
+// kept per session: written when the serving model differs from the recorded one, and its `told`
+// flag set when a reply carries the line, so the line is owed once for each change.
+//
 //   node stop-guard.mjs        (reads the hook payload on stdin)
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -84,7 +96,8 @@ import { join, dirname } from 'node:path';
 import { pendingMessages, startedAt } from './pending-guard.mjs';
 import { tailEntries, lastOwnerMessage } from './transcript-tail.mjs';
 import { latchStanding, approvedPlan, planSteps, correctionStanding, stopStanding } from './hook-dispatch.mjs';
-import { runningWork, stepsReturned, planOrder, pointerOf, reviewState, aimReviewSteps, readCompacted, setCompacted, compactedWords, californiaTime } from './report.mjs';
+import { runningWork, stepsReturned, planOrder, pointerOf, reviewState, aimReviewSteps, readCompacted, setCompacted, compactedWords, californiaTime,
+  servingModel, isTopTier, readTier, setTier, tierWords } from './report.mjs';
 
 /** The transcript is JSONL; the last assistant text is the reply just written. */
 const lastAssistantText = (path) => {
@@ -214,6 +227,22 @@ const OWING = [
   /\b(?:I'?m|I am|we'?re) waiting\b/i,
 ];
 
+/** A word saying whether work needs a tier: need, needs, needed, requires, or "no more than". */
+const NEEDS_WORD = /\bneed(?:s|ed)?\b|\bno more than\b|\brequires?\b/i;
+
+/**
+ * Does a reply's first line name the tier serving and say whether the work needs it? (Doctrine §11b, LESSONS §434)
+ * @param {string} open  the reply's first non-blank line.
+ * @param {string} model  the serving model's id.
+ * @returns {boolean} true only when the line names the tier (the model's id, a word that makes an id top-tier, or "top tier") and
+ *   carries a word saying whether the work needs it (`NEEDS_WORD`). Both are asked, so a line that only names the model, or only
+ *   says the work needs nothing, is not the line.
+ */
+function namesTier(open, model) {
+  const names = String(open).toLowerCase().includes(String(model).toLowerCase()) || isTopTier(open) || /\btop[- ]tier\b/i.test(open);
+  return names && NEEDS_WORD.test(open);
+}
+
 let payload = '';
 try { payload = readFileSync(0, 'utf8'); } catch { /* no stdin */ }
 
@@ -239,6 +268,14 @@ if (hook.stop_hook_active) {
     if (c && !c.told && path) {
       const said = lastAssistantText(path);
       if (/compact/i.test(said) && said.includes(californiaTime(new Date(c.at)))) setCompacted(payloadSession, { told: true });
+    }
+  } catch { /* judged again at the next stop */ }
+  // The same for the tier line: the follow-up the refusal asked for carries it, and the next stop is not held for it again.
+  try {
+    const t = readTier(payloadSession);
+    if (t && !t.told && path) {
+      const said = lastAssistantText(path).split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+      if (namesTier(said, t.model)) setTier(payloadSession, { model: t.model, told: true });
     }
   } catch { /* judged again at the next stop */ }
   try {
@@ -293,6 +330,39 @@ if (compacted && !compacted.told) {
 
 Doctrine §0e rule 2, LESSONS §416. The owner reads a reply written from a summary without being told it is one. Open the follow-up with a line in these words: "${compactedWords(compacted)}" It may share its line with a stop declaration. The corrected line is all the follow-up needs.
 `, reply);
+  }
+}
+
+/** 000. THE FIRST REPLY UNDER A PLAN, ON THE TOP TIER, NAMES THE TIER AND SAYS WHETHER THE WORK NEEDS IT (Doctrine §11b,
+ *  LESSONS §434). The serving model is the `message.model` of the newest main-thread reply (`servingModel`); the record
+ *  (`readTier`) holds the model last seen and whether the line was said for it. When the serving model differs from the
+ *  recorded one the record is written again, owing the line only for a top-tier id (`isTopTier`); while an approval marker is in
+ *  force (`approvedPlan`) a reply with the line owed is let through when its FIRST line names the tier (the model's id, the word
+ *  fable or mythos, or top tier) and carries a word saying whether the work needs it, and the flag is set; any other is refused
+ *  once with the words to use (`tierWords`). The line may share its line with a stop declaration or the compaction notice. A session
+ *  with no id keeps no record and is not held. (`NEEDS_WORD` and `namesTier` are defined above the payload, because the follow-up
+ *  check at the top of the file reads them.) */
+let serving = null;
+try { serving = payloadSession ? servingModel(tailEntries(path, 16 * 1024 * 1024)) : null; } catch { serving = null; }
+if (serving) {
+  let tier = null;
+  try { tier = readTier(payloadSession); } catch { tier = null; }
+  if (!tier || tier.model !== serving) {
+    tier = { model: serving, told: !isTopTier(serving) };
+    try { setTier(payloadSession, tier); } catch { /* seen as changed again at the next stop */ }
+  }
+  let planInForce = false;
+  try { planInForce = !!approvedPlan(); } catch { planInForce = false; }
+  if (isTopTier(serving) && !tier.told && planInForce) {
+    const open = reply.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+    if (namesTier(open, serving)) {
+      try { setTier(payloadSession, { model: serving, told: true }); } catch { /* held again at the next stop */ }
+    } else {
+      refuse(`STOP REFUSED — the top tier (${serving}) is serving this session under an approved plan, and this reply's first line does not name the tier and say whether the work needs it.
+
+Doctrine §11b, LESSONS §434. The manager's turns send agents and check their results, which need no more than a lesser tier, and a session cannot change its own model, so this line is how the switch gets decided. Open the follow-up with a line in these words: "${tierWords(serving)}" Where the work does need the top tier, say that instead, and why. It may share its line with a stop declaration or the compaction notice. The corrected line is all the follow-up needs.
+`, reply);
+    }
   }
 }
 

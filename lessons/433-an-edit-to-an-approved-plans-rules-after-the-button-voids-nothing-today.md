@@ -1,0 +1,7 @@
+## 433 · An edit to an approved plan's Rules after the button voids nothing today
+
+**Enforced by:** GATE hub:session-guards.test.mjs — the case that hashes the Rules line and the Rules of this plan section into the approval's scope, refuses an edit of either through approved-plan-guard and names it, leaves the Steps amendable, has the review gate's refusal and the approval block name all six sections, and reads a marker written before the two joined as holding no key for them (not changed, judged against the plan file as it stands, recorded at the first amendment, and said by the approval block to be unrecorded), with plants in report.mjs, approved-plan-guard.mjs and hook-dispatch.mjs for every part that must fail it
+
+Measured on 28 October on the send cap. The main thread rewrote a rule of an approved plan so that a step could be sent a third time, which the plan's own send limit forbade. The approved-plan guard treated four sections as the approved scope, Goals, Asked, Files and Commands, and the review clears a route against the Rules as they stand. An edit of the Rules therefore changed what had been approved while nothing refused it, and the step ran under a rule that the approved text did not contain.
+
+The shape of the defect is that a section which governs the work was outside the thing the approval covered. The fix is to put the Rules section inside the approved scope, so that any edit of it voids the approval and needs the button again. Counting a step's sends from the agents' transcripts is a separate gate, and it is left for the next plan.
