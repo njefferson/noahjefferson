@@ -54,11 +54,30 @@ import { spawnSync } from 'node:child_process';
 import { tailEntries, isOwnerMessage, seenInResults, textOf, copiesOwner } from './transcript-tail.mjs';
 import { parseRead } from './reply-guard.mjs';
 import { homedir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+
+// THE CHECK MODE (Doctrine §0e rule 4, LESSONS §435). `node plan-guard.mjs --check <a plan's path>` runs every check the approval call
+// runs on that file and prints every fault it finds, all of them in one run and in the refusal's own words, so a plan is put right
+// BEFORE its talk turn and not one fault at a time at the button. It reads no payload: the plan is the argument, and the session the
+// shell belongs to (CLAUDE_CODE_SESSION_ID) says where the transcript is. It exits 1 with faults and 0 without, and it writes nothing.
+const CHECK = process.argv[2] === '--check';
+if (CHECK && !process.argv[3]) {
+  console.log(`usage: node ${fileURLToPath(import.meta.url)} --check <a plan's path>`);
+  process.exit(1);
+}
 
 // ONCE. See the header — two reads is how this gate would silently never fire.
-const raw = readFileSync(0, 'utf8');
+const raw = CHECK ? '' : readFileSync(0, 'utf8');
 let p = {};
-try { p = JSON.parse(raw); } catch { /* unparsable: fall through to deny */ }
+if (CHECK) {
+  const { sessionFiles } = await import('./report.mjs');
+  const checkSid = String(process.env.CLAUDE_CODE_SESSION_ID ?? '').trim();
+  const checkFiles = checkSid ? sessionFiles(checkSid) : null;
+  p = { tool_name: 'ExitPlanMode', tool_input: { planFilePath: resolve(process.argv[3]) }, session_id: checkSid,
+    transcript_path: checkFiles?.main ?? '', cwd: process.cwd(), permission_mode: 'plan' };
+} else {
+  try { p = JSON.parse(raw); } catch { /* unparsable: fall through to deny */ }
+}
 
 const tool = p.tool_name ?? '';
 const input = p.tool_input ?? {};
@@ -82,7 +101,7 @@ if (!planning) process.exit(0);
 // mode is one a caller forced (`plan_mode_forced`: the classifier's own, which would otherwise make every
 // tool a read for the manager fence and the plan fence), or when the owner entered plan mode after the
 // approval (the restart is not what began it).
-if (p.permission_mode === 'plan' && !locked && !p.plan_mode_forced && existsSync(join(homedir(), '.claude', 'APPROVED-PLAN.json'))) {
+if (!CHECK && p.permission_mode === 'plan' && !locked && !p.plan_mode_forced && existsSync(join(homedir(), '.claude', 'APPROVED-PLAN.json'))) {
   const { restartedPlanMode } = await import('./report.mjs');
   const approved = restartedPlanMode(p);
   if (approved) {
@@ -121,6 +140,28 @@ const deny = (why) => {
   process.exit(2);
 };
 
+/**
+ * Refuse the approval call for a fault of the plan's shape, and set no latch.
+ * @param {string} why  the fault, in the words of the check that found it.
+ * @param {string} mark  `SHAPE_NO_LATCH` from hook-dispatch.mjs, which the dispatcher reads as "this refusal sets no latch"
+ *   (`noLatchRepoRefusal`).
+ * @returns {never} prints the refusal and exits 2. A section that is missing, short or wrongly shaped is answered by a write of the
+ *   plan file, so a latch behind it only stops the reads and writes that answer it (LESSONS §435); the text says so, and names the
+ *   check mode that finds every such fault before the talk turn, so the next approval call is not the one that finds the next.
+ */
+const denyShape = (why, mark) => {
+  const self = fileURLToPath(import.meta.url);
+  process.stdout.write(JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: 'PreToolUse',
+      permissionDecision: 'deny',
+      permissionDecisionReason: `PLAN MODE. ${mark} ${why} A write of the plan file answers this refusal, so it sets no latch: put the plan right, run `
+        + `node ${self} --check <the plan's path> until it prints no fault, and put the plan up again. Prose approval does not lift this — the mode does.`,
+    },
+  }));
+  process.exit(2);
+};
+
 // AN AGENT MAY STOP WHAT IT STARTED, IN PLAN MODE TOO (Doctrine §11d).
 // Stopping a process changes none of the owner's work. Measured: plan mode, put
 // on to amend the plan while an agent ran, refused that agent's TaskStop on its
@@ -134,6 +175,13 @@ const PLANS = resolve(homedir(), '.claude', 'plans');
 if (tool === 'Write' || tool === 'Edit' || tool === 'NotebookEdit') {
   const f = String(input.file_path ?? '');
   if (f && dirname(resolve(f)) === PLANS) process.exit(0);
+  // THE MANAGER'S OWN NOTES ARE THE ONE OTHER WRITE PLAN MODE PASSES (LESSONS §435). `status/manager.txt` in the session scratchpad is the
+  // record the manager keeps beside the plan; it holds no work, and the refusal of a write to it latched the two reads sent beside it. Only
+  // that file in this session's scratchpad (`isManagerNotes`, the manager fence's own test); nothing else joins this list.
+  if (f && (tool === 'Write' || tool === 'Edit')) {
+    const { isManagerNotes } = await import('./hook-dispatch.mjs');
+    if (isManagerNotes(f, p.session_id)) process.exit(0);
+  }
   deny(`${tool} to ${f || '(no path given)'} is a write.`);
 }
 
@@ -383,6 +431,17 @@ if (tool === 'Bash') {
  * `After:` line under `## Order`, groups of the form `N after M M` separated by semicolons, narrows what stales a review
  * (`reviewState` in report.mjs), and a group that names a step outside the Order, or is not of that form, is refused here, since
  * the review state would otherwise read the whole line as no line and stale every review on any step's end.
+ *
+ * AND A FAULT OF THE PLAN'S SHAPE SETS NO LATCH, AND `--check` FINDS EVERY ONE BEFORE THE TALK (LESSONS §435). A section that is missing,
+ * short or wrongly shaped (the five of §11f, the goals and their Served by line, the Order, Standing and After lines, the Rules,
+ * Found answered, What is, Roadmap and Shipped check sections, Asked) is answered by a write of the plan file, so its refusal opens with
+ * `SHAPE_NO_LATCH` (hook-dispatch.mjs), which the dispatcher reads as "this refusal sets no latch" (`noLatchRepoRefusal`); on 28 October
+ * a latch behind two such refusals cost the owner a message each. The talk, the name check and the held names keep the marks they had.
+ * `node plan-guard.mjs --check <a plan's path>` runs every one of these checks on that file and prints every fault, all of them in one
+ * run and in the refusal's own words, exits 1 with faults and 0 without, and writes nothing (no name is recorded as refused). It does
+ * not judge the talk, which can only come after a plan that is right, and it says what it did not judge. The manager fence passes
+ * the command on the main thread as it passes the status command (`isPlanCheckCommand`), in plan mode too. DOCTRINE.md §0e rule 4
+ * says it runs green before the talk turn, and that a talk turn written after a red check is a defect of the session.
  */
 /**
  * DO WHAT THE OWNER ASKED, AND NOTHING MORE (Doctrine §0f, LESSONS §379).
@@ -581,7 +640,8 @@ function onDisk(name, ctx) {
  * @param {string} plan  the whole plan file.
  * @param {string} top   its top block (unused; the whole plan is checked).
  * @param {object} ctx   `onDisk`'s context, with `mark`: the words the refusal opens with, which the dispatcher reads as
- *   "this refusal sets no latch" (`NAMES_NO_LATCH` in hook-dispatch.mjs).
+ *   "this refusal sets no latch" (`NAMES_NO_LATCH` in hook-dispatch.mjs), and `readOnly`: true in the check mode, which records no
+ *   refused name.
  * @returns {string|null} the refusal naming each missing name, or null.
  */
 function inventedNames(plan, top, ctx) {
@@ -608,7 +668,7 @@ function inventedNames(plan, top, ctx) {
     }
   }
   if (!missing.size) return null;
-  recordRefused([...missing]);
+  if (!ctx.readOnly) recordRefused([...missing]);
   return `${ctx.mark} the plan names ${[...missing].map((x) => `\`${x}\``).join(', ')}, which exist in no repo, in no tool result this session read and on no path of the session scratchpad or of a repository the plan's Files names. `
     + 'Correct the name, or mark it "(new)" on its line if the plan creates it (LESSONS §370). A Read of it, or a command that prints it, shows it.';
 }
@@ -645,7 +705,7 @@ function recordRefused(names) {
 /**
  * The recorded names that still hold ExitPlanMode.
  * @param {string} plan  the whole plan file.
- * @param {object} ctx   `onDisk`'s context, with `mark` as `inventedNames` takes it.
+ * @param {object} ctx   `onDisk`'s context, with `mark` and `readOnly` as `inventedNames` takes them (a read-only call prunes no record).
  * @returns {string|null} the refusal naming each name still held, or null.
  *   A name is released, and removed from the record, when a tool result
  *   timed after its refusal carries it (refusals and errors are not results;
@@ -660,7 +720,7 @@ function heldNames(plan, ctx) {
   const entries = entriesSince(p.transcript_path, Math.min(...list.map((x) => Number(x.at) || 0)));
   const marked = (n) => plan.split('\n').some((line) => new RegExp(`\`${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\([^()]*\\))?\`[^\`]*\\(new\\)`).test(line));
   const still = list.filter((x) => !seenInResults(entries.filter((e) => Date.parse(e?.timestamp ?? '') > Number(x.at))).includes(x.name) && !onDisk(x.name, ctx) && !marked(x.name));
-  if (still.length !== list.length) writeFileSync(namesFile(), JSON.stringify(still, null, 1));
+  if (still.length !== list.length && !ctx.readOnly) writeFileSync(namesFile(), JSON.stringify(still, null, 1));
   if (!still.length) return null;
   return `${ctx.mark} this session's plan was refused for naming ${still.map((x) => `\`${x.name}\``).join(', ')}, which existed nowhere it could be found. `
     + 'ExitPlanMode stays refused until each appears in a tool result read after that refusal, or exists on disk, or the plan line carrying it marks it "(new)". '
@@ -669,6 +729,13 @@ function heldNames(plan, ctx) {
 
 if (tool === 'ExitPlanMode') {
   const dir = join(homedir(), '.claude', 'plans');
+  // The check mode checks the file it is given and no other: a path that is not a file is a fault of the call, never a reason to check
+  // the newest plan in the plans folder, which is what the approval call does when the harness names no file.
+  if (CHECK) {
+    let readable = false;
+    try { readable = statSync(input.planFilePath).isFile(); } catch { readable = false; }
+    if (!readable) { console.log(`PLAN CHECK (Doctrine §0e rule 4, LESSONS §435): ${input.planFilePath} is not a file that can be read, so nothing was checked.`); process.exit(1); }
+  }
   let plan = '';
   // When the plan FILE was last written, for the talk check; 0 when the plan is
   // only text the harness passed and no file is known.
@@ -698,74 +765,104 @@ if (tool === 'ExitPlanMode') {
     const m = top.match(new RegExp(`^## ${h}\\b[^\\n]*\\n([\\s\\S]*?)(?=^## |^# |$(?![\\s\\S]))`, 'mi'));
     return !m || !m[1].split('\n').some((l) => l.trim().length > 20);
   });
-  if (missing.length === 0) {
-    // THE GOALS COME BEFORE ANY OTHER CHECK (the standing goals in the hub
-    // CLAUDE.md): a plan
-    // carries the hub CLAUDE.md's standing goals block word for word and names,
-    // for every step, the goal it serves. Loaded here only, because this file
-    // runs on every tool call and the plan parsing lives in hook-dispatch.mjs.
-    const { goalsProblem, aimStandingProblem, afterProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem, shippedCheckProblem,
-      queueRoots, inScratchpad, NAMES_NO_LATCH } = await import('./hook-dispatch.mjs');
-    const { scratchpadOf } = await import('./report.mjs');
-    const goals = goalsProblem(top);
-    if (goals) deny(goals);
-    // EVERY PLAN WITH AN ORDER CARRIES THE AIM REVIEW (Doctrine §0e rule 2): a
-    // Standing step that tells its agent to follow aim-review.md, which the
-    // dispatcher's aim gate sends after each DONE hand-back and refuses on.
-    const aim = aimStandingProblem(top);
-    if (aim) deny(aim);
-    // AN AFTER LINE NAMES STEPS OF THE ORDER AND NOTHING ELSE (Doctrine §0e rule 2, LESSONS §424): the line under `## Order` that
-    // narrows what stales a review is read by the review's state and the review gate alike, and a group naming a step the Order
-    // does not hold, or not of the form `N after M M`, would be read as no group at all.
-    const after = afterProblem(top);
-    if (after) deny(after);
-    // A PLAN THAT SENDS AGENTS CARRIES THE RULES, OR POINTS AT THEM (Doctrine §0e
-    // rule 13): a "## Rules" section that is the line naming the hub's
-    // agent-rules.md and its version, or every rule line of that file. A plan
-    // copies the rules only to let them drift, so the pointer is what is asked for.
-    const rules = rulesProblem(top);
-    if (rules) deny(rules);
-    // A PLAN ANSWERS WHAT THE LAST ONE LEFT (Doctrine §0e rule 2): every finding
-    // queued in the NOTES.md of a repository its Files names has a line in a
-    // "## Found answered" section, with its key and a verdict.
-    const queued = foundAnsweredProblem(top);
-    if (queued) deny(queued);
-    // A PLAN RESTS ON QUOTED EVIDENCE AND SAYS WHAT BECOMES OF THE ROADMAP (Doctrine §0e rule 2):
-    // each "## What is" bullet quotes a line present in a file it names, and each open roadmap
-    // item of a repository the Files names has a line in "## Roadmap", in or out and why.
-    const what = whatIsProblem(top);
-    if (what) deny(what);
-    const road = roadmapProblem(top);
-    if (road) deny(road);
-    // A PLAN THAT MARKS A ROADMAP ITEM IN RESTS ON A READ OF THE APP'S COMMIT LOG (Doctrine §0e rule 2, LESSONS §423): a line in
-    // the notes is not the state of the app. The session's transcript has to hold a git log of the repository's production and
-    // staging branches read after this plan file was first written, and the plan's "## Shipped check" says what it showed, item by
-    // item. Asked after the roadmap, so an item with no Roadmap line is still refused for that first.
-    const shipped = shippedCheckProblem(top, { entries: tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024), planFile });
-    if (shipped) deny(shipped);
-    const asked = askedProblem(top, p.transcript_path);
-    if (asked) deny(asked);
-    const talk = talkedThrough(p.transcript_path, planWrittenAt);
-    if (talk) deny(talk);
-    // THE NAME CHECK (LESSONS §370, §424): what a name has to be found in is the repositories beside the session, the whole of
-    // the session's tool results (the widening tail), and the disk, where a bare name is resolved against the session scratchpad
-    // folder and against each repository the plan's Files names. Its refusals open with the mark the dispatcher reads as "no latch":
-    // the remedy is a read, and a latch would refuse the read.
-    const sid = String(p.session_id ?? '');
-    const ctx = { sid, pad: scratchpadOf(sid), roots: queueRoots(top), inScratchpad, mark: NAMES_NO_LATCH };
-    const names = inventedNames(plan, top, ctx);
-    if (names) deny(names);
-    const held = heldNames(plan, ctx);
-    if (held) deny(held);
-    process.exit(0);
+  // Loaded here only, because this file runs on every tool call and the plan parsing lives in hook-dispatch.mjs. They are loaded
+  // before the sections are looked at, so that the refusal for a missing one carries the mark that sets no latch as well.
+  const { goalsProblem, aimStandingProblem, afterProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem, shippedCheckProblem,
+    queueRoots, inScratchpad, NAMES_NO_LATCH, SHAPE_NO_LATCH } = await import('./hook-dispatch.mjs');
+  const { scratchpadOf } = await import('./report.mjs');
+  // EVERY FAULT IS COLLECTED, AND THE APPROVAL CALL STOPS AT THE FIRST (LESSONS §435). `fault` is where a check's finding lands. At the
+  // approval call it refuses at once, as each check did, so nothing a check does is run for a plan an earlier check has refused. In the
+  // check mode (`--check`) it only records the finding, so the run goes through every check and prints them all: a plan with several faults
+  // cost one approval message per fault until then. A fault of the plan's SHAPE (a section missing, short or wrongly shaped, a line
+  // that is not of its form) is answered by a write of the plan file and sets no latch (`SHAPE_NO_LATCH`); the talk, the name check and
+  // the held names are refused as they were, the last two with the mark of their own.
+  const faults = [];
+  const notJudged = [];
+  const fault = (why, shape = true) => {
+    faults.push(why);
+    if (CHECK) return;
+    if (shape) denyShape(why, SHAPE_NO_LATCH);
+    deny(why);
+  };
+  if (missing.length) {
+    fault(`the plan is missing ${missing.map((m) => `"## ${m}"`).join(', ')} with a real body under each. `
+      + 'Looked up: what was researched and what it said, or why nothing outside this repo bears on it. '
+      + 'Branches: the ways this could go and why this one. '
+      + 'Call chain: the actual functions on the path, traced. '
+      + 'Whole app: why this belongs in the app and what would make it the wrong thing. '
+      + 'Leaves open: every branch not taken to completion and where it now lives. '
+      + 'Doctrine §11e/§11f; the RFC template is the shape.');
   }
-  deny(`the plan is missing ${missing.map((m) => `"## ${m}"`).join(', ')} with a real body under each. `
-    + 'Looked up: what was researched and what it said, or why nothing outside this repo bears on it. '
-    + 'Branches: the ways this could go and why this one. '
-    + 'Call chain: the actual functions on the path, traced. '
-    + 'Whole app: why this belongs in the app and what would make it the wrong thing. '
-    + 'Leaves open: every branch not taken to completion and where it now lives. '
-    + 'Doctrine §11e/§11f; the RFC template is the shape.');
+  // THE GOALS COME BEFORE ANY OTHER CHECK (the standing goals in the hub CLAUDE.md): a plan carries the hub CLAUDE.md's standing goals
+  // block word for word and names, for every step, the goal it serves.
+  const goals = goalsProblem(top);
+  if (goals) fault(goals);
+  // EVERY PLAN WITH AN ORDER CARRIES THE AIM REVIEW (Doctrine §0e rule 2): a
+  // Standing step that tells its agent to follow aim-review.md, which the
+  // dispatcher's aim gate sends after each DONE hand-back and refuses on.
+  const aim = aimStandingProblem(top);
+  if (aim) fault(aim);
+  // AN AFTER LINE NAMES STEPS OF THE ORDER AND NOTHING ELSE (Doctrine §0e rule 2, LESSONS §424): the line under `## Order` that
+  // narrows what stales a review is read by the review's state and the review gate alike, and a group naming a step the Order
+  // does not hold, or not of the form `N after M M`, would be read as no group at all.
+  const after = afterProblem(top);
+  if (after) fault(after);
+  // A PLAN THAT SENDS AGENTS CARRIES THE RULES, OR POINTS AT THEM (Doctrine §0e
+  // rule 13): a "## Rules" section that is the line naming the hub's
+  // agent-rules.md and its version, or every rule line of that file. A plan
+  // copies the rules only to let them drift, so the pointer is what is asked for.
+  const rules = rulesProblem(top);
+  if (rules) fault(rules);
+  // A PLAN ANSWERS WHAT THE LAST ONE LEFT (Doctrine §0e rule 2): every finding
+  // queued in the NOTES.md of a repository its Files names has a line in a
+  // "## Found answered" section, with its key and a verdict.
+  const queued = foundAnsweredProblem(top);
+  if (queued) fault(queued);
+  // A PLAN RESTS ON QUOTED EVIDENCE AND SAYS WHAT BECOMES OF THE ROADMAP (Doctrine §0e rule 2):
+  // each "## What is" bullet quotes a line present in a file it names, and each open roadmap
+  // item of a repository the Files names has a line in "## Roadmap", in or out and why.
+  const what = whatIsProblem(top);
+  if (what) fault(what);
+  const road = roadmapProblem(top);
+  if (road) fault(road);
+  // A PLAN THAT MARKS A ROADMAP ITEM IN RESTS ON A READ OF THE APP'S COMMIT LOG (Doctrine §0e rule 2, LESSONS §423): a line in
+  // the notes is not the state of the app. The session's transcript has to hold a git log of the repository's production and
+  // staging branches read after this plan file was first written, and the plan's "## Shipped check" says what it showed, item by
+  // item. Asked after the roadmap, so an item with no Roadmap line is still refused for that first. The check mode of a shell that
+  // belongs to no session has no transcript to look for that read in, and says so instead of refusing for it.
+  if (CHECK && !p.transcript_path) {
+    notJudged.push('the Shipped check, which needs the git log read to be in this session\'s transcript (CLAUDE_CODE_SESSION_ID names no session here)');
+    notJudged.push('the Asked section\'s test against the owner\'s messages, which are in the same transcript');
+  } else {
+    const shipped = shippedCheckProblem(top, { entries: tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024), planFile });
+    if (shipped) fault(shipped);
+  }
+  const asked = askedProblem(top, p.transcript_path);
+  if (asked) fault(asked);
+  // THE TALK IS NOT A FAULT OF THE PLAN (LESSONS §370, §435). It needs a chat turn written after the plan's last edit and an owner message
+  // after that turn, so it can only come after the plan is right, and the check mode that runs before it must not fail for its absence.
+  if (CHECK) notJudged.push('the talk before the plan (LESSONS §370), which needs a turn of chat written after the plan\'s last edit and an owner message after that turn');
+  else {
+    const talk = talkedThrough(p.transcript_path, planWrittenAt);
+    if (talk) fault(talk, false);
+  }
+  // THE NAME CHECK (LESSONS §370, §424): what a name has to be found in is the repositories beside the session, the whole of
+  // the session's tool results (the widening tail), and the disk, where a bare name is resolved against the session scratchpad
+  // folder and against each repository the plan's Files names. Its refusals open with the mark the dispatcher reads as "no latch":
+  // the remedy is a read, and a latch would refuse the read. The check mode records no refused name.
+  const sid = String(p.session_id ?? '');
+  const ctx = { sid, pad: scratchpadOf(sid), roots: queueRoots(top), inScratchpad, mark: NAMES_NO_LATCH, readOnly: CHECK };
+  const names = inventedNames(plan, top, ctx);
+  if (names) fault(names, false);
+  const held = heldNames(plan, ctx);
+  if (held) fault(held, false);
+  if (CHECK) {
+    console.log(`PLAN CHECK (Doctrine §0e rule 4, LESSONS §435) of ${planFile || input.planFilePath}: ${faults.length ? `${faults.length} fault${faults.length === 1 ? '' : 's'}, each in the words of the refusal the approval call would give` : 'no fault'}.`);
+    faults.forEach((f, i) => console.log(`${i + 1}. ${f}`));
+    for (const n of notJudged) console.log(`NOT JUDGED HERE: ${n}.`);
+    process.exit(faults.length ? 1 : 0);
+  }
+  process.exit(0);
 }
 
 // The readers the harness provides, which never needed the gate but are listed

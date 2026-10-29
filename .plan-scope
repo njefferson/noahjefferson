@@ -1,6 +1,12 @@
 # Written by plan-scope-check.mjs --record. Not hand-edited.
 plan=/root/.claude/plans/read-noahjefferson-handoff-md-and-noahje-purring-raven.md
-planhash=664851f8534adf24
-diffhash=b51dcb7d9b228de8
-verdict=IN-SCOPE
-# IN-SCOPE: The hub worktree's pending change is what steps 219 and 220 of this plan asked for and nothing more. Step 219 added two lesson files, 433 and 434, one row each in LESSONS.md, and nineteen queue lines in NOTES.md keyed Q-HUB-86 to Q-HUB-104. Step 220 changed the four gates: the approval scope in approved-plan-guard.mjs and report.mjs, the second press of the approval call in plan-guard.mjs, the release command of the reply guard in hook-dispatch.mjs, and the status model line in report.mjs with the first-reply tier line in stop-guard.mjs. Each gate has its case and its plants in session-guards.test.mjs. Step 220 also added one Enforced by line under each of doctrine rules 4, 13 and 14 and under section 11b, four bullets to the index in CLAUDE.md, one added declaration on lesson 432, and the declaration changes on lessons 433 and 434. The tracked diff against HEAD was read whole: 13 files, 1051 insertions and 72 deletions. Every hunk is one of the named changes. DOCTRINE.md has additions only and no existing doctrine text moved. No file under any app repository changed, and no file outside the hub worktree's named Files was touched.
+planhash=107d4a6efed015af
+diffhash=15faaf9f46e73337
+verdict=IN-SCOPE: the hub diff matches the plan Files list and the one word changed in lesson 438 is the only change of step 233
+# IN-SCOPE the hub worktree diff matches the plan Files list and the one word changed in lesson 438 is this step's only change
+# 
+# The uncommitted hub diff holds exactly the paths the plan names: CLAUDE.md, DOCTRINE.md, LESSONS.md, NOTES.md, agent-rules.md, hook-dispatch.mjs, plan-guard.mjs, report.mjs, session-guards.test.mjs, lesson 432 (corrected), and the four new lesson files 435, 436, 437 and 438. The content matches what step 229 and step 232 recorded in their reports: the seven gate changes with their cases and plants, the doctrine and rules texts, the four lessons and the queue lines. This verdict rests on the changed file set checked against the plan and on those two reports; the hunks were not each read line by line in this step.
+# 
+# In this step the only change made was the word withdrawn replaced by the word dropped in two places of lesson 438, its Enforced by line and the sentence that opens The question was. Nothing else in that file changed, and the Grep tool finds no withdraw or retract left in it.
+# 
+# The lessons and the notes attribute nothing to the owner by name or by role, and carry no quotation of an owner message.

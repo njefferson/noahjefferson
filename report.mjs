@@ -441,7 +441,7 @@ export function approvalBlock(marker = join(homedir(), '.claude', 'APPROVED-PLAN
   let written = 'an unreadable time';
   try { written = californiaStamp(statSync(mk.plan).mtimeMs); } catch { /* the hash was read; the time is not essential */ }
   const match = now === String(mk.hash);
-  // A marker that records the approval's scope says WHICH of the four sections
+  // A marker that records the approval's scope says WHICH of the six sections
   // changed, and tells an amendment of Steps or Order (the approval holds, and
   // the marker's hash follows the edit) from a change of scope (it does not).
   const scoped = mk.scope && typeof mk.scope === 'object' && !Array.isArray(mk.scope);
@@ -511,8 +511,38 @@ function isRestartBoundary(e) {
  *   the approval call on a non-empty answer and stands down for the rest; approved-plan-guard.mjs judges the call as outside plan mode.
  *   THE INVARIANT both rely on: a non-empty answer means the plan in force is the very file approved and the harness's mode is a
  *   restart's, never a mode that was asked for.
+ *   A FINISHED PLAN HOLDS NOTHING AGAINST THE NEXT (LESSONS §435): the answer is '' when the plan the marker names has a hand-back opening
+ *   DONE for every step in its Order, read the way `pointerOf` reads them (`planFinished`). A plan mode that comes on after that is the
+ *   owner's, and the next plan's write is not the finished plan's to refuse; a plan with a step left, or with no Order, keeps the gate.
  */
 export function restartedPlanMode(p, marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) {
+  const approved = restartBegan(p, marker);
+  return approved && !planFinished(p, approved) ? approved : '';
+}
+
+/**
+ * Has every step of a plan in force its DONE hand-back?
+ * @param {object} p  a PreToolUse payload: `transcript_path` and `session_id`, which say where the session's agents are (`stepEnds`).
+ * @param {string} planPath  the plan file's path.
+ * @returns {boolean} true only when the plan has an Order, the session's agents can be read, and `pointerOf` finds no step of the Order
+ *   without a DONE hand-back (`next` is null). Every doubt reads as false, so a plan that cannot be read as finished keeps the gate.
+ */
+function planFinished(p, planPath) {
+  try {
+    const s = stepEnds(p);
+    const pointer = s ? pointerOf(readFileSync(planPath, 'utf8'), s.ends) : null;
+    return !!pointer && pointer.next === null;
+  } catch { return false; }
+}
+
+/**
+ * Did the harness's plan mode begin at a restart after the approval, whatever became of the plan since?
+ * @param {object} p  as `restartedPlanMode` takes it.
+ * @param {string} marker  the approval marker's path.
+ * @returns {string} the approved plan's path when the marker, the plan file and the transcript say so, else '' (the whole of what
+ *   `restartedPlanMode` documents, before it asks whether the plan has run to its end).
+ */
+function restartBegan(p, marker) {
   try {
     const mk = JSON.parse(readFileSync(marker, 'utf8'));
     if (!mk?.plan || !mk.hash || !p?.transcript_path) return '';
@@ -589,7 +619,7 @@ export function endedSince(p, stampAt) {
     notified ??= notifiedStatuses(f.main);
     const id = a.id;
     const end = agentEnd(tailEntries(a.file, 4 * 1024 * 1024), agentMeta(a), start, notified.get(id) ?? '');
-    if (end && end.at > stampAt) out.push({ id, description: String(agentMeta(a).description ?? ''), how: end.how, at: end.at });
+    if (end && end.at > stampAt) out.push({ id, description: String(agentMeta(a).description ?? ''), how: end.how, at: end.at, ...(end.word ? { word: end.word, refusedBefore: end.refusedBefore } : {}) });
   }
   return out.sort((a, b) => a.at - b.at);
 }
@@ -686,7 +716,7 @@ export function gate(p, now = Date.now()) {
   if (p.agent_id) return null;
   const ended = endedSince(p, readClock(now).at);
   if (!ended || !ended.length) return null;
-  const names = ended.map((a) => `${a.id}${a.description ? ` "${a.description}"` : ''} (${a.how}, ${californiaTime(new Date(a.at))} California)`);
+  const names = ended.map((a) => `${a.id}${a.description ? ` "${a.description}"` : ''} (${endWords(a)}, ${californiaTime(new Date(a.at))} California)`);
   return `${ended.length === 1 ? 'An agent has' : `${ended.length} agents have`} ended since the owner last got a status: ${names.join('; ')}. `
     + `Give one now, in chat AND as node ${join(dirname(new URL(import.meta.url).pathname), 'report.mjs')} "Status HH:MM — what changed and what it means; what was done about it; time remaining". `
     + 'The status prints how each agent ended, its last entry, every refusal it received and its last tool result; read those, and act on what they show. No app notifications.';
@@ -695,6 +725,9 @@ export function gate(p, now = Date.now()) {
 // An agent's own way of handing back (hook-dispatch.mjs AGENT_RETURN; not
 // imported, because hook-dispatch.mjs imports this file).
 const AGENT_RETURN = /^(?:SubagentHandback|StructuredOutput)$/;
+// The words a hand-back's first line opens with when it says how the step went (agent-rules.md: DONE, REFUSED or FAILED). A hand-back that
+// opens with one is a report whatever hook refusal came before it (`agentEnd`, LESSONS §436).
+const HAND_BACK_WORD = /^(?:DONE|FAILED|REFUSED)\b/;
 // A hook's refusal of a call, as a tool result carries it (is_error true): the
 // call never ran. The one pattern `agentEnd` and `agentReads` share.
 export const HOOK_REFUSAL = /^(?:Error: )?PreToolUse:\S+ hook error/;
@@ -742,12 +775,17 @@ function notifiedStatuses(main) {
  * @param {number} [processStart]  when this session's process began, in ms
  *   (pending-guard's start); an agent whose last entry is older is not running.
  * @param {string} [notified]  the status a task notification gave it, if any.
- * @returns {{how: string, at: number, last: string} | null} null while it is
+ * @returns {{how: string, at: number, last: string, word?: string, refusedBefore?: boolean} | null} null while it is
  *   still running. Otherwise how it ended — "a report" (it handed back), "a
  *   refusal" (it handed back, or was ended, straight after a hook refused it),
  *   "an interruption" (stopped, or cut off by a restart), or "a failure" — its
  *   last entry's time, and its last entry: the hand-back's text, or else the
  *   last thing it said, ran or was answered. `agentEnds` prints these.
+ *   A HAND-BACK WHOSE FIRST LINE OPENS DONE, FAILED OR REFUSED IS "a report" WHATEVER HOOK REFUSAL CAME BEFORE IT (LESSONS §436):
+ *   the pointer (`pointerOf`) and the steps-left check (`stepsReturned`) count only a report, so a finished step whose agent made one
+ *   call the fence refused after its work read as a refusal that counted nothing. Such an end carries `word` (the opening word) and
+ *   `refusedBefore` (true when the last tool result before the hand-back was a hook's refusal), which `endWords` puts in a status
+ *   line; the refusal itself is printed beside it by `agentReads`. A hand-back opening any other way keeps "a refusal" after one.
  */
 export function agentEnd(entries, meta = {}, processStart = 0, notified = '') {
   let at = 0, lastAssistant = -1, interruptedAt = -1;
@@ -777,13 +815,31 @@ export function agentEnd(entries, meta = {}, processStart = 0, notified = '') {
     }
   });
   const cut = (s) => (s.length > LAST_CHARS ? `${s.slice(0, LAST_CHARS)} … (${s.length} characters; the rest is in its transcript)` : s);
-  if (handback && !handback.refused) return { how: lastRefusal ? 'a refusal' : 'a report', at, last: cut(handback.text) };
+  if (handback && !handback.refused) {
+    // A HAND-BACK THAT OPENS DONE, FAILED OR REFUSED IS A REPORT WHATEVER CALL WAS REFUSED BEFORE IT (LESSONS §436): an agent whose work was done
+    // called one tool the fence refused after it, and its DONE read as the end of a refusal that counted nothing. The refusal is still
+    // printed beside it (`agentReads`); `word` and `refusedBefore` let the status say both.
+    const word = HAND_BACK_WORD.exec(String(handback.text ?? '').split('\n').map((l) => l.trim()).find(Boolean) ?? '')?.[0];
+    return { how: lastRefusal && !word ? 'a refusal' : 'a report', at, last: cut(handback.text), ...(word ? { word, refusedBefore: lastRefusal } : {}) };
+  }
   if (meta?.stoppedByUser || interruptedAt > lastAssistant) return { how: 'an interruption', at, last: cut(last) };
   if (/^(?:completed)$/.test(notified)) return { how: lastRefusal ? 'a refusal' : 'a report', at, last: cut(last) };
   if (/^(?:killed|stopped|cancelled)$/.test(notified)) return { how: 'an interruption', at, last: cut(last) };
   if (notified === 'failed') return { how: 'a failure', at, last: cut(last) };
   if (processStart && at && at < processStart) return { how: 'an interruption (the session restarted after its last entry)', at, last: cut(last) };
   return null;
+}
+
+/**
+ * How an end reads in a line of a status.
+ * @param {{how: string, word?: string, refusedBefore?: boolean}} e  an end as `agentEnd` returns it (or `stepEnds`, `agentEnds`).
+ * @returns {string} `e.how` ("a report", "a refusal", "an interruption", "a failure") for every end but one: a hand-back that opened DONE,
+ *   FAILED or REFUSED after a call of the agent was refused, which reads "a report that opens DONE, with a call of the agent refused before
+ *   it handed back": the status says the hand-back's word and that a call was refused before it, where it used to say the agent ended
+ *   by a refusal (LESSONS §436). The hook refusal itself is printed beside it, as before.
+ */
+export function endWords(e) {
+  return e?.refusedBefore && e.word ? `a report that opens ${e.word}, with a call of the agent refused before it handed back` : String(e?.how ?? '');
 }
 
 /**
@@ -1176,7 +1232,7 @@ export function agentsBlock(sid, stampAt, ended = undefined, printed = new Map()
   if (!ended) return `Agents ended since the last status: not read (${sid ? `no transcript found for session ${sid}` : 'no CLAUDE_CODE_SESSION_ID in this shell'}).`;
   if (!ended.length) return 'Agents ended since the last status: none.';
   return ['Agents ended since the last status, each read from its own transcript:', ...ended.map((a) =>
-    `- ${a.id}${a.description ? ` "${a.description}"` : ''} ended ${a.at ? `at ${californiaTime(new Date(a.at))} (California) ` : ''}by ${a.how}.\n`
+    `- ${a.id}${a.description ? ` "${a.description}"` : ''} ended ${a.at ? `at ${californiaTime(new Date(a.at))} (California) ` : ''}by ${endWords(a)}.\n`
     + `  Transcript: ${a.path}\n  Last entry: ${printed.has(a.id) ? `its hand-back, printed above under step ${printed.get(a.id)}.` : a.last.replace(/\n/g, '\n    ')}`)].join('\n');
 }
 
@@ -1243,7 +1299,7 @@ export function gateReadsBlock(sid, ended = [], seen = null, mark = null) {
   const running = sid ? runningAgents(sid) : null;
   if (!running) return `Agents' hook refusals and last tool results: not read (${sid ? `no transcript found for session ${sid}` : 'no CLAUDE_CODE_SESSION_ID in this shell'}).`;
   const list = [...running.map((a) => ({ id: a.id, description: a.description, path: a.path, state: 'running' })),
-    ...(ended ?? []).map((a) => ({ id: a.id, description: a.description, path: a.path, state: `ended by ${a.how}` }))];
+    ...(ended ?? []).map((a) => ({ id: a.id, description: a.description, path: a.path, state: `ended by ${endWords(a)}` }))];
   if (!list.length) return 'Agents\' hook refusals and last tool results: no agent is running and none has ended since the last status.';
   const items = [];
   for (const a of list) {
@@ -1477,7 +1533,7 @@ export function stepEnds(p) {
     const head = agentHead(path);
     const step = agentStep(path, head);
     if (!end) { running.push(`agent ${id}`); if (step !== null) runningSteps.add(step); continue; }
-    ends.push({ id, step, how: end.how, at: end.at, startAt: agentStart(path, head), last: end.last, path });
+    ends.push({ id, step, how: end.how, at: end.at, startAt: agentStart(path, head), last: end.last, path, ...(end.word ? { word: end.word, refusedBefore: end.refusedBefore } : {}) });
   }
   return { ends, running, runningSteps };
 }
@@ -1487,8 +1543,10 @@ export function stepEnds(p) {
  * @param {object} p  a Stop or PreToolUse payload, as `stepEnds` reads it.
  * @returns {{returned: Set<number>, running: string[], ends: object[]} | null}
  *   `returned`: the plan step of every agent that ENDED BY A REPORT
- *   (`agentEnd`): it handed back and no hook refusal was the last thing it was
- *   answered. An agent that ended at a refusal, an interruption or a failure
+ *   (`agentEnd`): it handed back and either no hook refusal was the last thing it was
+ *   answered or its hand-back opens DONE, FAILED or REFUSED, which a call refused
+ *   before it does not change (LESSONS §436). An agent that ended at a refusal with
+ *   any other hand-back, an interruption or a failure
  *   returned nothing the plan can count, so its step stays open and the main
  *   thread sends it again. `running`: "agent <id>" for each agent with no end.
  *   `ends`: `stepEnds`' list, for the pointer. null when the session's files
@@ -1664,7 +1722,9 @@ export function missingParts(text, parts) {
  *   null when the plan defines no pointer (`planOrder`). `done`: every step
  *   some agent ENDED BY A REPORT for, whose hand-back's first line opens DONE;
  *   a hand-back opening REFUSED or FAILED, or anything else, counts nothing, and
- *   neither does an agent that ended at a refusal, an interruption or a failure.
+ *   neither does an agent that ended at a refusal (its hand-back opening none of DONE,
+ *   FAILED and REFUSED: one that opens DONE counts whatever call was refused before it,
+ *   `agentEnd`, LESSONS §436), an interruption or a failure.
  *   `next`: the first number in Order that is not in `done`, or null when every
  *   one is. A Standing step is never `next` and never holds it. The invariant:
  *   `next` advances past a step on a DONE hand-back and on nothing else.
@@ -2254,7 +2314,7 @@ function stepRow(step, standing, done, s, pad) {
   const mine = s.ends.filter((e) => e.step === step).sort((a, b) => a.at - b.at);
   const newest = mine.at(-1) ?? null;
   const lines = newest ? String(newest.last ?? '').split('\n').map((l) => l.trim()).filter(Boolean) : [];
-  const back = newest ? { id: newest.id, how: newest.how, at: newest.at, lines, path: newest.path } : null;
+  const back = newest ? { id: newest.id, how: newest.how, at: newest.at, lines, path: newest.path, word: newest.word, refusedBefore: newest.refusedBefore } : null;
   const state = done.has(step) ? 'DONE'
     : s.runningSteps.has(step) ? 'running'
       : !newest ? 'not sent'
@@ -2319,7 +2379,7 @@ export function pointerBlock(st, seen = null, mark = null) {
   else if (!fresh.length) out.push('Hand-backs: none new since the last status; the status page carries each one.');
   else out.push('Hand-backs new since the last status, the newest for each step, each read from the agent\'s own transcript:');
   for (const x of fresh) {
-    out.push(`- step ${x.step}, ended ${x.back.at ? `${californiaTime(new Date(x.back.at))} (California) ` : ''}by ${x.back.how}:`,
+    out.push(`- step ${x.step}, ended ${x.back.at ? `${californiaTime(new Date(x.back.at))} (California) ` : ''}by ${endWords(x.back)}:`,
       ...(x.back.lines.length ? x.back.lines.map((l) => `    ${l}`) : ['    (the agent ended with no text)']),
       `  Report file: ${x.report} (${x.reportWritten ? 'written' : 'not written'})`);
     if (mark) { mark.backs[backKey(x)] = 1; mark.agents.set(x.back.id, x.step); }
@@ -2761,7 +2821,7 @@ export async function waitForChange(sid, opts = {}) {
         for (const a of ended) {
           const e = endOf(sid, f, a.id);
           out.push(`- agent ${a.id}${a.description ? ` "${a.description}"` : ''} ended `
-            + `${e?.at ? `at ${californiaTime(new Date(e.at))} (California) ` : ''}by ${e?.how ?? 'an end its transcript does not show'}.\n`
+            + `${e?.at ? `at ${californiaTime(new Date(e.at))} (California) ` : ''}by ${e ? endWords(e) : 'an end its transcript does not show'}.\n`
             + `  Last entry: ${String(e?.last ?? '').replace(/\n/g, '\n    ')}`);
         }
       }

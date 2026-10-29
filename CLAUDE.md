@@ -359,7 +359,11 @@ Every item below has actually happened.
  unless the newest turn that asked nothing and ended before the owner's newest
  message came after the plan file's last write, so an answer given before an
  edit is not the talk of the edited plan, and a line written in the turn of the
- `ExitPlanMode` call itself is not a turn at all. A status is due when an agent has ended
+ `ExitPlanMode` call itself is not a turn at all. The plan is checked whole before
+ that turn: `node /root/.claude/hub/plan-guard.mjs --check <the plan's path>`
+ prints every fault the approval call would refuse on and exits 1 with any, and a
+ talk turn written after a red check is a defect of the session (rule 4, LESSONS
+ §435). A status is due when an agent has ended
  since the last one, its time read from the clock (`report.mjs`), and at no
  other time.
  **Background work is the work:** while a background command or workflow the
@@ -433,7 +437,9 @@ Every item below has actually happened.
 - **A REFUSAL LATCHES UNTIL THE OWNER'S NEXT MESSAGE.** Another command, tool
  or wording for the same end is a second route, not a fresh start. After a
  PreToolUse refusal on the main thread, `hook-dispatch.mjs` refuses every call
- but the status command and `TaskStop` and an agent's own return: say in
+ but five kinds (the status command with the check of a call and the plan check,
+ the main thread's `TaskStop`, the reply guard's release command, a latched
+ agent's own report and an agent's own return): say in
  plain text what was refused, and stop. A refusal INSIDE an agent latches that
  agent only: every later call of it is refused but its own return, and the
  main thread and the other agents are not held; the main thread reads the
@@ -444,38 +450,22 @@ Every item below has actually happened.
  cost the step its record; every other call of it is still refused but its
  return (LESSONS §404). The main thread's `TaskStop` passes so it can stop
  what it started (§11d). Only a message the owner typed after the refusal
- clears the main thread's latch, by when it was typed. Ten refusals do not
- latch: a status falling due, a call held for a waiting owner message, a stop
- or a correction from the owner standing, a call held until the owner's messages
- and then the state page are read after a compaction, a move the review gate
- refuses, a step the rules gate
- refuses because the plan pins a rules version the file has moved past, a step
- the reads gate refuses because a refused read of the record has not been read,
- a step the judgement gate refuses because the newest hand-back or the step about
- to go has no written judgement in its parts, and entering plan mode again after the
- owner approved the plan by leaving plan mode in the app, which the dispatcher
- judges before any gate reads the approval. An eleventh sets no latch either: a
- main-thread call the manager fence refuses only because it is not of the
- record, whose refusal lists what the main thread may use;
- `node /root/.claude/hub/hook-dispatch.mjs --can <tool> <path or command line>`
- says beforehand whether the fence and the latch would pass a call. Three more
- set none, because the way on is a new plan through plan mode and the owner's
- button: a step the approval did not record, a Standing step that was not on
- the line at approval or is neither the review nor a route check, and any send
- while no Standing step names the review file by its full path any more
- (`approvalSetProblem` and `reviewRecordProblem` in `hook-dispatch.mjs`). Three others
- set none, because a read answers each: the doctrine gate's refusal, the plan gate's
- refusal of the approval call for a name the session has not seen, and the app's
- identifier guard's refusal of that call, which still refuses and whose guard is
- untouched (`NAMES_NO_LATCH` and `noLatchRepoRefusal` in `hook-dispatch.mjs`, LESSONS
- §424). Give the status, send the held
+ clears the main thread's latch, by when it was typed. Nineteen refusals set no
+ latch, each because something other than the owner's next message answers it;
+ the list is in Doctrine §0e rule 14, read from the code, and a case holds its
+ count to it. `node /root/.claude/hub/hook-dispatch.mjs --can <tool> <path or
+ command line>` says beforehand whether the fence and the latch would pass a
+ call. A change to `agent-rules.md` lands only when no plan is in force, as the
+ last step of the plan that makes it, so no plan is moved to a new rules version
+ without the button. Give the status, send the held
  call again, answer the correction, read the filed messages and the page, send the
  review or amend the
- plan or enter plan mode as the review gate's refusal says, amend the Rules line
- as the rules gate's refusal says, write the `Judged` and `Why` lines as the
- judgement gate's refusal says, or carry on with the approved
+ plan or enter plan mode as the review gate's refusal says, send a new plan through
+ plan mode as the rules gate's refusal says, write the `Judged` and `Why` lines as the
+ judgement gate's refusal says, put the plan right as a refusal of its shape says,
+ or carry on with the approved
  plan; that last refusal lifts once an agent is sent under the plan or the
- owner writes again. (Doctrine §0d; §0e rule 14.)
+ owner writes again. (Doctrine §0d; §0e rule 14; LESSONS §435.)
 - **NO `cd`, IN ANY COMMAND, BY THE MAIN THREAD OR AN AGENT.** Every path is
  written in full, so what a command touches can be read off its own words.
  `plan-fence.mjs` refuses a `cd`, `pushd` or `popd` anywhere in an agent's
@@ -522,7 +512,9 @@ Every item below has actually happened.
  `## Order` section has an `Order:` line and an optional `Standing:` line, and
  every status prints `next: step N` after the goals: the first step in Order
  with no hand-back whose first line opens DONE (`next: none` when all have
- one). A REFUSED or FAILED hand-back leaves N where it is. The dispatch gate
+ one). A REFUSED or FAILED hand-back leaves N where it is, and a hand-back
+ opening DONE counts whatever call of the agent was refused before it (`agentEnd`,
+ LESSONS §436). The dispatch gate
  refuses any step but N and a Standing step and prints N in the refusal, and
  `stop-guard.mjs` refuses a stop while N is not none, which replaces the count
  of `## Steps` above for a plan that has an Order. The status also prints each
@@ -626,7 +618,9 @@ Every item below has actually happened.
  saying the plan is approved, with a mark that sets no latch, and every other call is
  judged as outside plan mode, `approved-plan-guard.mjs` included. A plan mode
  entered after the approval, the `.claude/PLAN-LOCK` marker, a changed plan file,
- another session's marker and a mode a caller forced (`plan_mode_forced`, which the
+ another session's marker, a plan whose every step in Order has a DONE hand-back
+ (a finished plan holds nothing against the next, LESSONS §435)
+ and a mode a caller forced (`plan_mode_forced`, which the
  classifier uses and which must not make every tool a read) leave both halves alone.
  (Doctrine §0e rule 4; LESSONS §432.)
 - **THE REPLY GUARD'S RELEASE COMMAND PASSES THE FENCE AND THE LATCH, AND LIFTS THE

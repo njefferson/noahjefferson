@@ -1,10 +1,10 @@
 # Rules for every agent
 
-Rules version: 1
+Rules version: 2
 
 This file is the one copy of the rules every plan used to copy into itself. An agent's prompt is only the plan's path and a step number, so an agent reads this file by its full path, /root/.claude/hub/agent-rules.md, before anything else, and the plan carries only its own work.
 
-A plan with a `## Steps` section has a `## Rules` section holding either the pointer line below or every rule line of this file, and `plan-guard.mjs` refuses a plan whose section is neither (`rulesProblem` in `hook-dispatch.mjs`). The pointer names the version of this file the owner read. While the file's version is not the plan's, the dispatch gate (`rulesGate`) sends no step, so the rules the agents follow are the rules the plan was approved with. A change to the rules below raises the version, and a plan pointing at the old one is amended to the new one after the change has been read.
+A plan with a `## Steps` section has a `## Rules` section holding either the pointer line below or every rule line of this file, and `plan-guard.mjs` refuses a plan whose section is neither (`rulesProblem` in `hook-dispatch.mjs`). The pointer names the version of this file the owner read. While the file's version is not the plan's, the dispatch gate (`rulesGate`) sends no step, so the rules the agents follow are the rules the plan was approved with. A change to the rules below raises the version, and lands only when no plan is in force, as the last step of the plan that makes it; no plan is moved to a new rules version without the button, because the Rules line is part of the approved scope.
 
 The pointer line, as a plan writes it:
 

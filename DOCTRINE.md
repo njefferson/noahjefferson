@@ -202,8 +202,11 @@ every rule below while none of the hooks that enforce them was running
    that may be sent at any time. The first line of the print is `next: step N`,
    N being the first number in Order with no hand-back whose first line opens
    DONE, or `next: none` once every one has one. A hand-back opening REFUSED or
-   FAILED leaves N where it is, as does an agent that ended at a refusal, an
-   interruption or a failure, and a Standing step is never N. Under it the
+   FAILED leaves N where it is, as does an agent that ended at a refusal with a
+   hand-back opening none of the three, an interruption or a failure; a hand-back
+   opening DONE counts whatever call of the agent was refused before it, and the
+   status says the word and that a call was refused (`agentEnd`, LESSONS §436).
+   A Standing step is never N. Under it the
    print gives each step's state, the newest hand-back of each step with every
    line it carries and the path of its report file
    (`progress/step-N-report.txt` in the session scratchpad), and the `Found:`
@@ -300,6 +303,35 @@ every rule below while none of the hooks that enforce them was running
    or a plan whose Files names none, is not judged. The queue is written by an
    agent, in a step of a plan whose Files names the file, because the main
    thread writes no repository file.
+   **A plan accounts for the roadmap, one bullet to an item.** A plan that sends
+   agents into a repository its Files names has a `## Roadmap` section with one
+   bullet for each open roadmap item of every repository the Files names (each
+   `- [ ] **Title**` bullet under `## Next capability release` in that
+   repository's `NOTES.md`). Each bullet opens with the item's key, its decision
+   number or else its title, then the word `in` or `out`, then why, in ten
+   characters or more: `012 out: the plan leaves it for a later plan`. A repository
+   that keeps no roadmap is not asked. The section forces a statement and cannot
+   judge that it is true. *Enforced by:* `roadmapProblem` in `hook-dispatch.mjs`,
+   which `plan-guard.mjs` calls at `ExitPlanMode` and `plan-guard.mjs --check` calls
+   before the talk (rule 4); its refusal lists the items with no bullet and sets
+   no latch (rule 14). Until this paragraph was written the shape was found at the
+   button, one refusal at a time, and a plan that named one item in prose met it on
+   28 October (LESSONS §408, §423, §435).
+   **A plan that marks an item in has read the commit log first.** A line in the
+   notes is not the state of the app, and a plan once named five shipped items as
+   work to build. So the Roadmap is read against the log: a plan that marks an item
+   `in` rests on a read, made by the session after the plan file was first written,
+   of `git -C <the repository> log` naming the repository's production branch and
+   its staging branch (main and staging for an app), and its `## Shipped check`
+   section has one line for each item marked in. The line is the item's key and a
+   colon, then `not shipped, read against main and staging on <the date>`, or,
+   where the log shows the item, `shipped on <branch> by "<the commit's subject>"`
+   quoted from the log, which marks it as work already done: shipped work is marked
+   `out` in the Roadmap and not built. The section forces the read and the
+   statement and cannot judge that either is true. *Enforced by:*
+   `shippedCheckProblem` in `hook-dispatch.mjs` (LESSONS §423), called by
+   `plan-guard.mjs` at `ExitPlanMode` and by `plan-guard.mjs --check`, whose
+   refusal names the missing read and each missing or wrong line and sets no latch.
    **Work running in the background is the work.** While a background command
    or a workflow the session started is still running, the session does not
    end its turn: it stays and acts on each result as it lands. A declared stop
@@ -386,7 +418,26 @@ every rule below while none of the hooks that enforce them was running
    other calls and `approved-plan-guard.mjs` judges them as calls made outside plan
    mode. A plan mode entered after the approval, the `.claude/PLAN-LOCK` marker,
    and a mode a caller forced (`plan_mode_forced`) leave both halves alone
-   (LESSONS §432).
+   (LESSONS §432). A finished plan holds nothing against the next one:
+   `restartedPlanMode` answers nothing once every step in the Order of the
+   marker's plan has a hand-back opening DONE, read the way `pointerOf` reads
+   them, so a plan mode that comes on after it is the owner's and the next
+   plan's write passes (LESSONS §435).
+   **The plan is checked whole before the talk turn.** `node
+   /root/.claude/hub/plan-guard.mjs --check <the plan's path>` runs every check
+   the approval call runs on the plan file and prints every fault it finds, all
+   of them in one run and in the refusal's own words; it exits 1 with faults and
+   0 without, writes nothing, and says what it did not judge, which is the talk,
+   because the talk can only come after a plan that is right. The manager fence
+   passes it for a file of the record as it passes the status command, in plan
+   mode too (rule 13). It runs green BEFORE the talk turn: a talk turn written
+   after a red check is a defect of the session, because the talk explains the
+   plan's last edit and the plan is about to change. The approval call itself
+   still stops at the first fault, and a fault of the plan's shape sets no latch
+   (rule 14), so a plan with several faults cost one approval message per fault
+   until this check existed (LESSONS §435).
+   *Enforced by:* `plan-guard.mjs` (`--check`) and `hook-dispatch.mjs`
+   (`planCheckTarget`, `isPlanCheck`).
 5. **A line before each tool call and a line after each result.**
 6. **Never "waiting on you", never "you owe".** Say "open for you:". A stop is
    declared in the first line as "Stopping here: open for you is X".
@@ -477,6 +528,17 @@ every rule below while none of the hooks that enforce them was running
     through plan mode. A marker written before the two joined holds no key for
     them: the approval block says of each that the marker does not record it, and
     an edit of either is judged against the plan file as it stands (LESSONS §433).
+    **A change to the agent rules file lands only when no plan is in force, as the
+    last step of the plan that makes it, and no plan is moved to a new rules
+    version without the button.** The version a plan pins is its Rules line, which
+    is in the approved scope, so no amendment carries a new one; a send refused
+    because the plan pins a version the file has moved past is answered by a new
+    plan through plan mode with the current version pinned, and the owner's button
+    approves it. The file's own header says the same (`rulesPinProblem` in
+    `hook-dispatch.mjs`, `agent-rules.md`, LESSONS §435).
+    The plan check (`node ~/.claude/hub/plan-guard.mjs --check <a plan of the
+    record>`, rule 4) passes the manager fence and the latch the way the status
+    command does, with nothing chained to it, and `readsGate` counts it as no send.
 14. **A refusal latches until the owner's next message.** A refusal by any
     guard, family or repo, ends that route for the thread that was refused: the
     session when it was the main thread, and that agent alone when it was
@@ -484,43 +546,72 @@ every rule below while none of the hooks that enforce them was running
     second route §0d names, not a fresh start. While the latch stands, the main
     thread says in plain text what was refused and stops; an agent returns what
     it has, with the refusal's text.
-    Eleven refusals are not ends of a route: a status falling due is cleared by
-    giving it (rule 2); a call held while a message from the owner waits is
-    sent again once that message is delivered (LESSONS §376); a stop or a
-    correction from the owner standing is lifted by the owner's next message
-    (a go-word, for a stop), which a latch would only wait on a second time
-    (rule 3); a call held until the status page is read after a compaction is
-    cleared by reading it (rule 2); a move the review gate refuses is answered
-    by sending the review step, by amending the plan's Steps or Order, or by
-    entering plan mode, and a latch would stand in the way of each (rule 2); a
-    step the rules gate refuses, because the plan pins a rules version the file
-    has moved past, is answered by amending the Rules line (rule 13); a step the
-    dispatch gate refuses because the plan's Steps did not hold it when the plan
-    was approved is answered by a new plan through plan mode and the owner's
-    button (rule 13); a Standing step either gate refuses because it was not on
-    the Standing line at approval, or is neither the review nor a route check,
-    is answered the same way (rule 2); a send either gate refuses because the
-    plan's review step has been edited until no Standing step names the review
-    file by its full path is answered the same way (rule 2), and a latch would
-    only add a second wait for the owner to each of those three; a main-thread
-    call the manager fence refuses only because it is not of the record, a read of
-    a path outside it or a tool or command line the fence does not pass, is
-    answered by a call the fence passes, which the refusal lists beside the check
-    command, and a latch would only add a wait for the owner to a miss that
-    changed nothing (rule 13); and once the owner has
-    approved a plan by leaving plan mode in the app, entering plan mode again
-    for it is refused, because that approval is carried on with, never asked for
-    twice. That last refusal lifts once an agent is sent under the plan or the
-    owner writes again, so a later amendment stays possible. Measured 2026-10-03: the owner's exit in the app ended plan mode
-    before the session's `ExitPlanMode` call was answered, the call came back
-    "not in plan mode", no approval was recorded, the session entered plan mode
-    again, and the owner approved the same plan twice. Three more refusals set
-    no latch, each because a read answers it: the doctrine gate's, answered by
-    the Read of the doctrine it names; the plan gate's refusal of the approval
-    call for a name the session has not seen, answered by a read that shows the
-    name or by the file existing; and the app's identifier guard's refusal of
-    that call, which still refuses and whose guard is untouched
-    (`hook-dispatch.mjs`, LESSONS §424).
+    Nineteen refusals are not ends of a route, and set no latch, because
+    something other than the owner's next message answers each and a latch would
+    only add a wait for the owner to a miss that changed nothing. The list is read
+    from the code (`main` in `hook-dispatch.mjs`), each item with the name that
+    sets it, and a case holds its count to the list:
+    - a status falling due, cleared by giving it (rule 2, `report.mjs`);
+    - a call held while a message from the owner waits, sent again once that
+      message is delivered (`pending-guard.mjs`, LESSONS §376);
+    - a stop from the owner standing, lifted by the owner's next message, a
+      go-word (`ownerHolds`, rule 3);
+    - a correction from the owner standing, lifted by the owner's next message,
+      which a latch would only wait on a second time (`ownerHolds`, rule 3);
+    - a call held until the owner's messages filed at a compaction are read
+      (`recallGate`, LESSONS §416);
+    - a call held until the status page is read after a compaction (`pageGate`,
+      rule 2);
+    - a main-thread call the manager fence refuses only because it is not of the
+      record, a read of a path outside it or a tool or command line the fence does
+      not pass, answered by a call the fence passes, which the refusal lists beside
+      the check command; with it the dispatch gate's refusal of a step the plan's
+      Steps did not hold when the plan was approved, of a Standing step that was not
+      on the Standing line then or is neither the review nor a route check, and of
+      any send while no Standing step names the review file by its full path any
+      more, each answered by a new plan through plan mode and the owner's button
+      (`FENCE_NO_LATCH`, `approvalSetProblem`, `reviewRecordProblem`, rule 13);
+    - a move the review gate refuses, answered by sending the review step, by
+      amending the plan's Steps or Order, or by entering plan mode (`reviewGate`,
+      rule 2);
+    - a send the rules gate refuses, because the plan pins a rules version the file
+      has moved past, answered by a new plan through plan mode with the current
+      version pinned and the owner's button (`rulesGate`, rule 13);
+    - a send the reads gate refuses, answered by reading the refused file
+      (`readsGate`, rule 13);
+    - a send the judgement gate refuses, answered by writing the `Judged` and `Why`
+      lines (`judgedGate`, rule 2);
+    - entering plan mode again once the owner has approved a plan by leaving plan
+      mode in the app, because that approval is carried on with, never asked for
+      twice; it lifts once an agent is sent under the plan or the owner writes
+      again, so a later amendment stays possible (`--app-exit` of
+      `approved-plan-guard.mjs`);
+    - an agent's first call, refused by the plan fence because the agent has not
+      yet read the rules (`FIRST_REFUSAL` in `plan-fence.mjs`, whose text opens
+      `RULES FIRST, NO LATCH:`, rule 13, LESSONS §415);
+    - the doctrine gate's refusal, answered by the Read of the doctrine it names
+      (`doctrine-read-guard.mjs`);
+    - the reply guard's refusal of the main thread's Read of a file of the record,
+      because the reads gate already holds every send until a Read of that file has
+      returned; a refusal of any other call keeps its latch, and the text says
+      which (`replyReadOfRecord`, LESSONS §435);
+    - the plan gate's refusal of the approval call for a name the session has not
+      seen, answered by a read that shows the name or by the file existing
+      (`NAMES_NO_LATCH`, LESSONS §424);
+    - the plan gate's refusal of the approval call for a plan already approved,
+      when the harness's plan mode began at a compaction or a resume after the
+      approval (`APPROVED_NO_LATCH`, LESSONS §432);
+    - the plan gate's refusal of the approval call for a fault of the plan's shape,
+      a section missing, short or wrongly shaped, answered by a write of the plan
+      file; the talk before the plan is the one refusal of that call the plan gate
+      still latches (`SHAPE_NO_LATCH`, LESSONS §435);
+    - the app's identifier guard's refusal of the approval call, which still
+      refuses and whose guard is untouched (`noLatchRepoRefusal`, LESSONS §424).
+    The latch's own refusal repeats the original and writes no new latch
+    (`latchMessage`). Measured 2026-10-03: the exit from plan mode in the app ended
+    plan mode before the session's `ExitPlanMode` call was answered, the call came
+    back "not in plan mode", no approval was recorded, the session entered plan
+    mode again, and the same plan was approved twice.
     Added 2026-10-02.
     *Enforced whole by:* `hook-dispatch.mjs` and `approved-plan-guard.mjs`.
     *Enforced by:* `hook-dispatch.mjs` (`releaseCommand`, `releaseLifts`): the
@@ -531,9 +622,15 @@ every rule below while none of the hooks that enforce them was running
     release of another call stand. The refusal of the reply guard that names the
     command says so (LESSONS §432).
     A Stop refusal never latches. While the main thread's latch stands, every
-    PreToolUse call on the main thread and in agents is refused except three:
-    the status command and `TaskStop`, both on the main thread only, and an
-    agent's own return, which passes every guard whatever its text names.
+    PreToolUse call on the main thread and in agents is refused except five
+    kinds, read from `main` in `hook-dispatch.mjs`: the status command, and with
+    it the check of a call (`--can`) and the plan check (rule 4), on the main
+    thread only; `TaskStop`, on the main thread only; the reply guard's release
+    command, on the main thread only, which also lifts a latch the reply guard
+    set; a latched agent's own progress note and report, `step-N.txt` and
+    `step-N-report.txt` directly in `progress/` of the session scratchpad, for the
+    step its prompt names (`agentReportWrite`, LESSONS §404); and an agent's own
+    return, which passes every guard whatever its text names.
     **A refusal INSIDE an agent latches that agent only.** It is written under
     that agent's id: every later call of that agent is refused but its own
     return, and the main thread and the other agents are not held. A refusal on
