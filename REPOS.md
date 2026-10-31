@@ -383,8 +383,22 @@ failing gate off, and two of them are currently open.
   missing** — every check asked whether text stays readable ON the wash, so the
   cheapest way to pass was a fainter wash, and nothing measured the wash itself.
   It now fails one below JND. LESSONS §186.
-- **Quietkeep owes zizmor** — template injection and cache poisoning, three high.
-  Not touched: a session was working in that repo and the owner said to leave it.
+- **Quietkeep's zizmor findings are fixed, 2026-10-31**, and the repo can now
+  carry the flag. Measured both directions at the hub's pinned build (1.29.0,
+  `--offline --strict-collection`): **18 findings — 3 high, 3 medium, 2
+  informational — down to 11, of which 1 high and nothing else.** Four template
+  injections moved to the `env:` route this hub's own `hub-gates.yml` already
+  uses; three `actions/checkout` steps took `persist-credentials: false`, after
+  checking that no step in any of them pushes, commits or reads `GITHUB_TOKEN`
+  and all three jobs already run `contents: read`.
+  **The one left standing is deliberate and is recorded at the site rather than
+  suppressed** — cache-poisoning on `setup-node`, Low confidence, paired by the
+  audit with the wrangler publish: no `cache:` input is set and the workflow
+  triggers only on `staging` and `main`. An ignore rule would outlive the
+  reasoning that justified it, so the reasoning is in the file instead.
+  **Switching the flag on for that repo is still this hub's call**, which is what
+  `quietkeep:spine.yml:70-72` says; the premise that held it off for Quietkeep —
+  findings — no longer holds.
 - **Two doctrine markers are dangling.** `fauxplane` and
   `Intersecting-parallels` name hub commits that no longer exist after the
   history rewrite, so `doctrine-sync.mjs` can tell a session in those repos
