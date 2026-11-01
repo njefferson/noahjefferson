@@ -506,13 +506,14 @@ function exitFor(dir, planText, projectDir, extra = []) {
  *   section (null for none).
  * @returns {string} the plan.
  */
-function sendingPlan(dir, { rules = rulesLine(dir), files = null, answered = null, what = null, roadmap = null, shipped = null } = {}) {
+function sendingPlan(dir, { rules = rulesLine(dir), files = '- Repo: `a.txt`', answered = null, what = null, roadmap = null, shipped = null } = {}) {
   return ['# Sending plan', '',
     '## Goals', '1. The toolbar shows the export button on its left side.', GOALS_BLOCK, 'Served by: steps 1 and 2 serve goal 1.', '',
     '## Asked', OWN_WORDS, '',
     '## Order', 'Order: 1', 'Standing: 2', '',
     ...(rules === null ? [] : ['## Rules', rules, '']),
     '## Steps', '1. **Build.** Make the toolbar change.', `2. **Review.** Follow ${join(dir, 'aim-review.md')} for the move named on the status page.`, '',
+    '## Commands', '- node /tmp/claude-0/', '',
     ...(files === null ? [] : ['## Files', files, '']),
     ...(answered === null ? [] : ['## Found answered', answered, '']),
     ...(what === null ? [] : ['## What is', what, '']),
@@ -567,6 +568,8 @@ function afterGatePlan(dir, line = '') {
     '## Rules', rulesLine(dir), '',
     '## Steps', '1. **Build.** Make the toolbar change.', '2. **Check.** Read the toolbar change.',
     `3. **Review.** Follow ${join(dir, 'aim-review.md')} for the move named on the status page.`, '',
+    '## Commands', '- node /tmp/claude-0/', '',
+    '## Files', '- Repo: `a.txt`', '',
     '## Looked up', 'Nothing outside the repository bears on this change at all.', '',
     '## Branches', 'One branch only, because the request names a single control to move.', '',
     '## Call chain', 'The toolbar builder places the button; nothing else reads its position.', '',
@@ -4188,6 +4191,8 @@ const CASES = [
         '## Order', 'Order: 1', 'Standing: 2', '',
         '## Rules', rulesLine(dir), '',
         '## Steps', '1. **Build.** Make the toolbar change.', `2. **Review.** ${words}`, '',
+        '## Commands', '- node /tmp/claude-0/', '',
+        '## Files', '- Repo: `a.txt`', '',
         '## Looked up', 'Nothing outside the repository bears on this change at all.', '',
         '## Branches', 'One branch only, because the request names a single control to move.', '',
         '## Call chain', 'The toolbar builder places the button; nothing else reads its position.', '',
@@ -4214,6 +4219,51 @@ const CASES = [
       const noOrder = exit(PLAN(OWN_WORDS));
       return good.status === 0 && noOrder.status === 0
         && [timer, bare, elsewhere, noFollow].every((x) => x.status === 2 && /AIM REVIEW/.test(x.stdout) && x.stdout.includes('aim-review.md'));
+    },
+  },
+  {
+    name: 'ExitPlanMode and the check mode read a plan\'s Commands and Files the way the plan fence does: a review step with no Commands entry the fence matches for node under /tmp/claude-0/, a Commands entry spelling git -C, and a plan with Steps whose Files holds no code span are each refused, with the mark that sets no latch, and the passing shapes are not',
+    guards: ['review_cmd_wired', 'review_cmd_match', 'review_cmd_needs_review', 'gitdir_wired', 'gitdir_flag', 'files_wired', 'files_span', 'files_needs_steps'],
+    async run(m, dir) {
+      const r = repo({ 'a.txt': 'x\n' });
+      const good = sendingPlan(dir);
+      const noCmd = good.replace('- node /tmp/claude-0/', '- git status');
+      const withGitDir = good.replace('- node /tmp/claude-0/', '- node /tmp/claude-0/\n- git -C /home/user/some-repo log');
+      const bareGit = good.replace('- node /tmp/claude-0/', '- node /tmp/claude-0/\n- git log\n- git diff -C');
+      const noSpan = sendingPlan(dir, { files: '- Repo: the toolbar file and nothing in backticks' });
+      const noFiles = sendingPlan(dir, { files: null });
+      // A plan with no review step needs no node entry, and one with no Steps names no file.
+      const noReview = good.replace('Order: 1\nStanding: 2\n', '').replace(/## Order\n\n/, '').replace(/2\. \*\*Review\.\*\*[^\n]*\n/, '').replace('Served by: steps 1 and 2', 'Served by: step 1')
+        .replace('- node /tmp/claude-0/', '- git status');
+      const noSteps = PLAN(OWN_WORDS);
+      const exits = [good, noCmd, withGitDir, bareGit, noSpan, noFiles, noReview].map((t) => exitFor(dir, t, r.dir));
+      const [eGood, eNoCmd, eGitDir, eBare, eNoSpan, eNoFiles, eNoReview] = exits;
+      const refused = (x, re) => x.status === 2 && re.test(x.stdout) && /PLAN SHAPE, NO LATCH/.test(x.stdout);
+      // The functions the check mode prints from.
+      const direct = [await m.dispatch.reviewCommandProblem(good), await m.dispatch.reviewCommandProblem(noCmd), await m.dispatch.reviewCommandProblem(noReview),
+        await m.dispatch.reviewCommandProblem(good.replace('- node /tmp/claude-0/', '- node /tmp/claude-0/-home-user-app/some-session/scratchpad/scratch/')),
+        await m.dispatch.reviewCommandProblem(good.replace('- node /tmp/claude-0/', '- node')),
+        await m.dispatch.reviewCommandProblem(good.replace('- node /tmp/claude-0/', '- node /somewhere/else/'))];
+      const files = [m.dispatch.filesSpanProblem(good), m.dispatch.filesSpanProblem(noSpan), m.dispatch.filesSpanProblem(noFiles), m.dispatch.filesSpanProblem(noSteps)];
+      const gitDirs = [m.dispatch.commandsGitDirProblem(good), m.dispatch.commandsGitDirProblem(withGitDir), m.dispatch.commandsGitDirProblem(bareGit)];
+      // The check mode prints the same refusals and exits 1.
+      const planFile = join(tmp('sg-check-'), 'check-test.md');
+      writeFileSync(planFile, withGitDir);
+      const checked = spawnSync('node', [join(dir, 'plan-guard.mjs'), '--check', planFile], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: r.dir } });
+      const out = [];
+      if (eGood.status !== 0) out.push(`the passing plan was refused: ${String(eGood.stdout).slice(0, 300)}`);
+      if (!refused(eNoCmd, /REVIEW COMMAND/)) out.push('a review step with no node entry was not refused');
+      if (!refused(eGitDir, /COMMANDS GIT FLAG/)) out.push('an entry spelling git -C was not refused');
+      if (eBare.status !== 0) out.push('bare git entries, and a -C that does not follow git, were refused');
+      if (!refused(eNoSpan, /FILES \(Doctrine/)) out.push('a Files section with no code span was not refused');
+      if (!refused(eNoFiles, /FILES \(Doctrine/)) out.push('a plan with no Files section was not refused');
+      if (eNoReview.status !== 0) out.push(`a plan with no review step and no node entry was refused: ${String(eNoReview.stdout).slice(0, 300)}`);
+      if (!(direct[0] === null && /REVIEW COMMAND/.test(direct[1] ?? '') && direct[2] === null && direct[3] === null && direct[4] === null && /REVIEW COMMAND/.test(direct[5] ?? ''))) out.push(`the review command check gave ${JSON.stringify(direct.map((x) => x === null ? null : 'refusal'))}`);
+      if (!(files[0] === null && /FILES/.test(files[1] ?? '') && /FILES/.test(files[2] ?? '') && files[3] === null)) out.push(`the Files check gave ${JSON.stringify(files.map((x) => x === null ? null : 'refusal'))}`);
+      if (!(gitDirs[0] === null && /git -C/.test(gitDirs[1] ?? '') && gitDirs[2] === null)) out.push(`the git flag check gave ${JSON.stringify(gitDirs.map((x) => x === null ? null : 'refusal'))}`);
+      if (checked.status !== 1 || !/COMMANDS GIT FLAG/.test(checked.stdout)) out.push(`--check did not print the git flag fault and exit 1 (status ${checked.status})`);
+      if (out.length) throw new Error(out.join('; '));
+      return true;
     },
   },
   {
@@ -5910,7 +5960,7 @@ const CASES = [
       const picked = spawnSync('node', [join(dir, 'plan-guard.mjs')], {
         input: JSON.stringify({ session_id: sid('pq'), permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: {},
           transcript_path: transcript([turn(0, OWNER), ...enterPlan(-3000), at(reply(0, PLAN_TALK), later(-1000)), owner(later(-900), 'ok')]), cwd: '/' }),
-        encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: tmp('sg-cwd-') },
+        encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: repo({ 'a.txt': 'x\n' }).dir },
       });
       return pathOk && sections && marked === m.report.stepsFileText(text, A.plan) && amended === m.report.stepsFileText(amendedText, A.plan) && amended.includes('say what it did')
         && appFile === m.report.stepsFileText(STEPS_PLAN, F.plan)
@@ -7814,6 +7864,15 @@ const PLANTS = {
   review_gate_not_read: ["if (st.kind === 'not-enforced') return null;", "if (st.kind === 'not-enforced' || st.kind === 'not-read') return null;", 'hook-dispatch.mjs'],
   review_gate_texts: ["Go back to plan mode, read the review's hand-back", "Go back, read the review's hand-back", 'hook-dispatch.mjs'],
   aim_standing_wired: ['  if (aim) fault(aim);\n', '\n', 'plan-guard.mjs'],
+  // The plan gate reads Commands and Files the way the plan fence does: the review's node entry, a spelled git -C, a Files section with a code span.
+  review_cmd_wired: ['  if (reviewCmd) fault(reviewCmd);\n', '\n', 'plan-guard.mjs'],
+  review_cmd_match: ["if (probes.some((probe) => beginsWithEntry(['node', probe], entries, '/'))) return null;", "if (true) return null;", 'hook-dispatch.mjs'],
+  review_cmd_needs_review: ['  if (!aimReviewSteps(text).length) return null;\n  const { beginsWithEntry }', '  const { beginsWithEntry }', 'hook-dispatch.mjs'],
+  gitdir_wired: ['  if (gitDir) fault(gitDir);\n', '\n', 'plan-guard.mjs'],
+  gitdir_flag: ["return w.some((x, i) => x === 'git' && w[i + 1] === '-C');", "return w.some((x, i) => x === 'git');", 'hook-dispatch.mjs'],
+  files_wired: ['  if (filesSpan) fault(filesSpan);\n', '\n', 'plan-guard.mjs'],
+  files_span: ['  if (planFiles(text).length) return null;\n  return \'FILES (Doctrine', '  return null;\n  return \'FILES (Doctrine', 'hook-dispatch.mjs'],
+  files_needs_steps: ["  if (!planSection(text, 'Steps').trim()) return null;\n  if (planFiles(text).length) return null;", '  if (planFiles(text).length) return null;', 'hook-dispatch.mjs'],
   // A correction lets the review step and a step cleared by a review begun after the message go; the owner's stop holds everything.
   correction_lifts_review: ['  if (reviewers.includes(n)) return true;\n', '\n', 'hook-dispatch.mjs'],
   correction_lifts_cleared: ["return !!st && st.kind === 'cleared' && st.cleared === n;", "return !!st && st.kind === 'cleared';", 'hook-dispatch.mjs'],

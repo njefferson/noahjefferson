@@ -767,7 +767,7 @@ if (tool === 'ExitPlanMode') {
   });
   // Loaded here only, because this file runs on every tool call and the plan parsing lives in hook-dispatch.mjs. They are loaded
   // before the sections are looked at, so that the refusal for a missing one carries the mark that sets no latch as well.
-  const { goalsProblem, aimStandingProblem, afterProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem, shippedCheckProblem,
+  const { goalsProblem, aimStandingProblem, reviewCommandProblem, commandsGitDirProblem, filesSpanProblem, afterProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem, shippedCheckProblem,
     queueRoots, inScratchpad, NAMES_NO_LATCH, SHAPE_NO_LATCH } = await import('./hook-dispatch.mjs');
   const { scratchpadOf } = await import('./report.mjs');
   // EVERY FAULT IS COLLECTED, AND THE APPROVAL CALL STOPS AT THE FIRST (LESSONS §435). `fault` is where a check's finding lands. At the
@@ -802,6 +802,15 @@ if (tool === 'ExitPlanMode') {
   // dispatcher's aim gate sends after each DONE hand-back and refuses on.
   const aim = aimStandingProblem(top);
   if (aim) fault(aim);
+  // THE PLAN'S COMMANDS AND FILES ARE READ THE WAY THE PLAN FENCE READS THEM (Doctrine §0e rules 2 and 13): the review step's one
+  // command must match a Commands entry, no entry spells the git directory flag the fence strips, and a plan that sends agents names
+  // a file in a code span. Each is a fault of the plan's shape and sets no latch.
+  const reviewCmd = await reviewCommandProblem(top);
+  if (reviewCmd) fault(reviewCmd);
+  const gitDir = commandsGitDirProblem(top);
+  if (gitDir) fault(gitDir);
+  const filesSpan = filesSpanProblem(top);
+  if (filesSpan) fault(filesSpan);
   // AN AFTER LINE NAMES STEPS OF THE ORDER AND NOTHING ELSE (Doctrine §0e rule 2, LESSONS §424): the line under `## Order` that
   // narrows what stales a review is read by the review's state and the review gate alike, and a group naming a step the Order
   // does not hold, or not of the form `N after M M`, would be read as no group at all.

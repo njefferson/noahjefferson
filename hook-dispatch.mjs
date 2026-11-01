@@ -1370,6 +1370,62 @@ export function aimStandingProblem(text) {
     + 'Add the step, name it on the Standing line, and name a goal it serves in the "Served by:" line.';
 }
 
+/**
+ * Can the review step this plan names run its one command?
+ * @param {string} text  the plan (its current block).
+ * @returns {Promise<string|null>} null when the plan has no review step (`aimReviewSteps`, so no `## Order` with a Standing step
+ *   that follows the review file) or when some entry of its `## Commands` is one the plan fence matches for `node` on a script under
+ *   the scratchpad's temp folder (`beginsWithEntry`, the very function the fence uses, so the two cannot judge differently): a
+ *   probe path under `/tmp/claude-0/`, or a script under the directory of an entry that is `node` and an absolute directory there.
+ *   Otherwise the refusal: aim-review.md tells the review to run `node` on its script there and nothing else, a Commands list that
+ *   does not match it leaves the review agent refused at its first command, and the move can then never be cleared. plan-guard.mjs
+ *   refuses ExitPlanMode on it with the mark that sets no latch, and `--check` prints it.
+ */
+export async function reviewCommandProblem(text) {
+  if (!aimReviewSteps(text).length) return null;
+  const { beginsWithEntry } = await import('./plan-fence.mjs');
+  const entries = planCommands(text);
+  const probes = ['/tmp/claude-0/probe-project/probe-session/scratchpad/scratch/review.mjs'];
+  for (const e of entries) {
+    const w = e.split(/\s+/).filter(Boolean);
+    if (w.length === 2 && w[0] === 'node' && w[1].startsWith('/tmp/claude-0/') && w[1].endsWith('/')) probes.push(`${w[1]}scratch/review.mjs`);
+  }
+  if (probes.some((probe) => beginsWithEntry(['node', probe], entries, '/'))) return null;
+  return 'REVIEW COMMAND (Doctrine §0e rule 2): the plan has a review step, and aim-review.md tells its agent to run `node` on its script under /tmp/claude-0/ and nothing else, '
+    + 'but no entry of the plan\'s "## Commands" is one the plan fence matches for that command, so the review agent is refused at its first call and the move can never be cleared. '
+    + 'Add the entry `node /tmp/claude-0/` (a directory ending in a slash takes a file strictly below it) to the Commands.';
+}
+
+/**
+ * Does a plan's Commands list spell a git directory flag?
+ * @param {string} text  the plan (its current block).
+ * @returns {string|null} null when no entry of `## Commands` has the word `-C` directly after the word `git`. Otherwise the
+ *   refusal, naming each entry: the plan fence sets `git -C <directory>` aside from an agent's line before it matches a command
+ *   (`decide`, `beginsWithEntry`), so an entry spelled with the flag never matches any line, and the entry is written bare
+ *   (`git log`) while the agent still writes `-C` on its own line.
+ */
+export function commandsGitDirProblem(text) {
+  const bad = planCommands(text).filter((e) => { const w = e.split(/\s+/).filter(Boolean); return w.some((x, i) => x === 'git' && w[i + 1] === '-C'); });
+  if (!bad.length) return null;
+  return `COMMANDS GIT FLAG (Doctrine §0e rule 13): the plan's "## Commands" ${bad.length === 1 ? 'entry' : 'entries'} ${bad.map((e) => `"${e}"`).join(', ')} spell${bad.length === 1 ? 's' : ''} a git directory flag, and the plan fence strips "git -C" and its directory from an agent's line before it matches a command, so ${bad.length === 1 ? 'the entry matches' : 'no entry matches'} no line. `
+    + 'Write the entry bare ("git log" for "git -C <directory> log"); the agent still writes -C and the directory on its own line.';
+}
+
+/**
+ * Does a plan that sends agents name a file?
+ * @param {string} text  the plan (its current block).
+ * @returns {string|null} null for a plan with no `## Steps` (it sends no agent) and for one whose `## Files` section holds at least one
+ *   code span with no whitespace in it (`planFiles`). Otherwise the refusal: the plan fence lets an agent write only a path a code
+ *   span names, and prose names nothing, so a Files section with no span, or none at all, leaves every step's agent unable to write
+ *   a file and the plan unable to be carried out.
+ */
+export function filesSpanProblem(text) {
+  if (!planSection(text, 'Steps').trim()) return null;
+  if (planFiles(text).length) return null;
+  return 'FILES (Doctrine §0e rule 13): the plan sends agents (it has a "## Steps") and its "## Files" section names no file: the plan fence reads a path only from a code span with no space in it (`approved-plan-guard.mjs`, `src/`, an absolute path), and prose names nothing, '
+    + 'so no agent could write anything the plan asks for. Put each file or directory in backticks, on a line labelled with its repository ("- Hub, changed: `a.mjs`").';
+}
+
 // ---- the shared rules: a plan points at one file instead of copying it (Doctrine §0e rule 13) ----
 
 /** Where the shared rules file may be named from: this hub's, and the live clone's. */
