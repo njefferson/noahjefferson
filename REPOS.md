@@ -463,7 +463,12 @@ One line each, so it is not a memory test:
   a dispatched workflow must be on the default branch. Quietkeep, fauxplane,
   3d-printing-pal, Intersecting-parallels, photo-pointer, MoleBridge, Cv-Thalweg
   and solve-ent each owe that caller, and until one lands that repo's `claude/*`
-  branches cannot be swept. (Doctrine §11; LESSONS §382.)
+  branches cannot be swept. Jefferson-Line owes it too: it is not on the list above
+  and no map of the family named it until now. Its copies of `hub-pin-check.mjs`
+  and of the local gate runner are superseded by the hub's canonical
+  `hub-pin-check.mjs` and `hub-gates-local.mjs`, which take `--repo <path>`; it
+  stops carrying its own and runs the hub's. Its next session reads this line first.
+  (Doctrine §11; LESSONS §382.)
 - **The third-person sweep — owed by THIS REPO and by Quietkeep, and by nothing
   else.** LESSONS 113's scrub covered four siblings and found the sweep for
   references carrying no name at all — a pronoun, or a possessive naming a
