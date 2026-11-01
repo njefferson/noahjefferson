@@ -1062,6 +1062,56 @@ export function callHash(tool, input, cwd, asOf) {
   return createHash('sha256').update(`${tool}\n${what}`).digest('hex');
 }
 
+const WRITE_TOOL = /^(?:Write|Edit|MultiEdit|NotebookEdit)$/;
+
+/**
+ * The transcript entries of the agent whose call this is.
+ * @param {object} p  a hook payload: `transcript_path` is the session's, `agent_id` names a subagent.
+ * @returns {object[]} the main thread's own transcript, or the subagent's `agent-<id>.jsonl` found
+ *   beside the session transcript (directly in `subagents/`, or one level below `workflows/<run>/`);
+ *   [] when neither can be read, so the caller treats "not known" as "no write seen".
+ */
+function ownEntries(p) {
+  const tr = String(p.transcript_path ?? '');
+  if (!tr) return [];
+  if (!p.agent_id) return tailEntries(tr);
+  const id = String(p.agent_id);
+  if (!/^[\w-]+$/.test(id) || !tr.endsWith('.jsonl')) return [];
+  const base = join(tr.slice(0, -'.jsonl'.length), 'subagents');
+  const dirs = [base];
+  try { for (const d of readdirSync(join(base, 'workflows'), { withFileTypes: true })) if (d.isDirectory()) dirs.push(join(base, 'workflows', d.name)); } catch { /* no workflow agents */ }
+  for (const d of dirs) { const f = join(d, `agent-${id}.jsonl`); if (existsSync(f)) return tailEntries(f); }
+  return [];
+}
+
+/**
+ * Has this agent written a file since a call of its own failed?
+ * @param {object} p  the payload of the call now being judged.
+ * @param {string} failedUse  the `tool_use_id` of the failed call, from the ledger's `fail` event.
+ * @returns {boolean} true when, in the agent's own transcript, a Write, Edit, MultiEdit or
+ *   NotebookEdit call that was answered without an error comes after the failed call's result.
+ *   Ordering is the transcript's own, never a clock. A failed call that is not in the tail, an
+ *   unreadable transcript and a write that failed all give false, so the repeat stays refused.
+ *   A re-run after a write is the change the failure rule asks for, not a repeat of it.
+ */
+function wroteSince(p, failedUse) {
+  if (!failedUse) return false;
+  let seen = false;
+  const writes = new Set();
+  const answered = new Map();
+  for (const e of ownEntries(p)) {
+    const c = e?.message?.content;
+    if (!Array.isArray(c)) continue;
+    if (!seen) {
+      if (e.type === 'user' && c.some((b) => b?.type === 'tool_result' && b.tool_use_id === failedUse)) seen = true;
+      continue;
+    }
+    if (e.type === 'assistant') for (const b of c) if (b?.type === 'tool_use' && WRITE_TOOL.test(b.name ?? '')) writes.add(b.id);
+    if (e.type === 'user') for (const b of c) if (b?.type === 'tool_result') answered.set(b.tool_use_id, !!b.is_error);
+  }
+  return [...writes].some((id) => answered.has(id) && answered.get(id) === false);
+}
+
 /**
  * Parse a reading command.
  * @param {string} cmd  a Bash command.
@@ -1271,6 +1321,8 @@ export function decide(p) {
   let fi = -1;
   if (!PLAN_TOOL.test(tool)) for (let i = ev.length - 1; i >= 0; i--) if (ev[i].kind === 'fail' && ev[i].agent === agent && ev[i].h === h) { fi = i; break; }
   if (fi >= 0 && ev[fi].use && ev.some((e) => e.kind === 'decline' && e.use === ev[fi].use)) fi = -1;
+  // A command run again after the same agent wrote a file is not a repeat: the write is the change.
+  if (fi >= 0 && tool === 'Bash' && wroteSince(p, ev[fi].use)) fi = -1;
   if (fi >= 0) {
     const f = ev[fi];
     const read = ev.slice(fi + 1).some((e) => e.kind === 'read' && e.target === `call:${f.id}`);

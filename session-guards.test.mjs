@@ -6392,6 +6392,62 @@ const CASES = [
       }
     },
   },
+  {
+    name: 'the reply guard treats a Bash command run again after the same agent wrote a file as no repeat, read from that agent\'s own transcript: a Write, Edit or MultiEdit answered without an error between the failure and the call lets the same text through, and a re-run with no write between, a write before the failure, a read between, a write that failed, a write in another agent\'s transcript and a failed call of any tool but Bash stay refused',
+    guards: ['write_between_skip', 'write_between_order', 'write_between_error', 'write_between_own', 'write_between_tools', 'write_between_bash_only'],
+    run(m, dir) {
+      process.env.REPLY_LEDGER_DIR = tmp('sg-ledger-');
+      process.env.REPLY_GUARD_NOW = String(Date.parse(ts(-5)));
+      try {
+        const cmd = 'node /scratch/check.mjs';
+        const bad = 'node: Cannot find module /scratch/check.mjs';
+        const repeat = (x) => /call that failed, unchanged/.test(x ?? '');
+        const failed = (id, name = 'Bash', input = { command: cmd }) => [tool(0, id, name, input), result(1, id, bad, true)];
+        const wrote = (id, name = 'Write', error = false) => [tool(2, id, name, { file_path: '/scratch/check.mjs', content: 'x' }), result(3, id, error ? 'File could not be written' : 'File created', error)];
+        // One session for each scenario, so the ledger of one cannot answer for another; the failure is recorded as the hook records it.
+        let n = 0;
+        const judge = (entries, { agent, own, name = 'Bash', input = { command: cmd } } = {}) => {
+          const s = `wb${++n}`;
+          const tr = transcript(entries);
+          const base = { session_id: s, tool_name: name, tool_input: input, transcript_path: tr };
+          if (agent) {
+            const subs = join(tr.slice(0, -'.jsonl'.length), 'subagents');
+            mkdirSync(subs, { recursive: true });
+            writeFileSync(join(subs, `agent-${agent}.jsonl`), jsonl(own ?? []));
+            base.agent_id = agent;
+          }
+          m.reply.record({ ...base, tool_use_id: 'f1', error: bad }, 'PostToolUseFailure');
+          return m.reply.decide(base);
+        };
+        const noWrite = repeat(judge(failed('f1')));
+        const afterWrite = judge([...failed('f1'), ...wrote('w1')]) === null;
+        const afterEdit = judge([...failed('f1'), ...wrote('w1', 'Edit')]) === null;
+        const afterMulti = judge([...failed('f1'), ...wrote('w1', 'MultiEdit')]) === null;
+        const beforeFailure = repeat(judge([...wrote('w0'), ...failed('f1')]));
+        const afterRead = repeat(judge([...failed('f1'), tool(2, 'r1', 'Read', { file_path: '/scratch/check.mjs' }), result(3, 'r1', '1\tx')]));
+        const failedWrite = repeat(judge([...failed('f1'), ...wrote('w1', 'Write', true)]));
+        // Another agent's write does not count: the main thread wrote, the agent that failed did not.
+        const failedByAgent = failed('f1');
+        const otherWrote = repeat(judge([...failedByAgent, ...wrote('w1')], { agent: 'a1', own: failedByAgent }));
+        const ownWrote = judge([], { agent: 'a1', own: [...failedByAgent, ...wrote('w1')] }) === null;
+        // The rule is about a Bash command; a failed Read of the same file after a write is the repeat it was.
+        const readInput = { file_path: '/scratch/check.mjs' };
+        const readRepeat = repeat(judge([...failed('f1', 'Read', readInput), ...wrote('w1')], { name: 'Read', input: readInput }));
+        // The release command still works for the other case: a re-run with no write between is allowed once the error is read.
+        const s = 'wb-read';
+        const tr = transcript(failed('f1'));
+        const payload = { session_id: s, tool_name: 'Bash', tool_input: { command: cmd }, transcript_path: tr };
+        m.reply.record({ ...payload, tool_use_id: 'f1', error: bad }, 'PostToolUseFailure');
+        const id = m.reply.callHash('Bash', { command: cmd }).slice(0, 8);
+        const released = m.reply.decide({ ...payload, tool_input: { command: `node ${join(dir, 'reply-guard.mjs')} --read call:${id} --said "Cannot find module" --route "the file now exists"` } }) === null
+          && m.reply.decide(payload) === null;
+        return noWrite && afterWrite && afterEdit && afterMulti && beforeFailure && afterRead && failedWrite && otherWrote && ownWrote && readRepeat && released;
+      } finally {
+        delete process.env.REPLY_LEDGER_DIR;
+        delete process.env.REPLY_GUARD_NOW;
+      }
+    },
+  },
 
   // ---- the plan gate's name check, the plan fence's opener, the latch and the review's staleness (step 199) ----
   {
@@ -8257,6 +8313,13 @@ const PLANTS = {
   page_key_content: ["    if (tool === 'Artifact' && typeof input?.file_path === 'string' && input.file_path) body.pageContent = pageDigest(input.file_path, cwd, asOf);", '    void 0;', 'reply-guard.mjs'],
   page_key_since: ["    if (asOf && statSync(abs).mtimeMs > asOf) return 'changed-since';", '', 'reply-guard.mjs'],
   page_key_catchup_asof: ['        const h = callHash(u.name, u.input, p.cwd, t);', '        const h = callHash(u.name, u.input, p.cwd);', 'reply-guard.mjs'],
+  // A Bash command run again after the same agent wrote a file is no repeat, read from that agent's own transcript (step 8, finding 11).
+  write_between_skip: ["  if (fi >= 0 && tool === 'Bash' && wroteSince(p, ev[fi].use)) fi = -1;", '  void 0;', 'reply-guard.mjs'],
+  write_between_order: ['  let seen = false;\n  const writes = new Set();', '  let seen = true;\n  const writes = new Set();', 'reply-guard.mjs'],
+  write_between_error: ['answered.has(id) && answered.get(id) === false', 'answered.has(id)', 'reply-guard.mjs'],
+  write_between_own: ['  if (!p.agent_id) return tailEntries(tr);', '  return tailEntries(tr);', 'reply-guard.mjs'],
+  write_between_tools: ['const WRITE_TOOL = /^(?:Write|Edit|MultiEdit|NotebookEdit)$/;', 'const WRITE_TOOL = /./;', 'reply-guard.mjs'],
+  write_between_bash_only: ["tool === 'Bash' && wroteSince(p, ev[fi].use)", 'wroteSince(p, ev[fi].use)', 'reply-guard.mjs'],
 
   // A plan that marks a roadmap item in has read the app's commit log first, and says what it showed (step 186, LESSONS §423).
   ship_wired: ['    if (shipped) fault(shipped);\n', '\n', 'plan-guard.mjs'],
