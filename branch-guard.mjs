@@ -232,6 +232,22 @@ const hook = () => {
     L.push('');
   }
   L.push("branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo '')");
+  // A COMMIT MADE INSIDE A REBASE (a `git rebase --exec "git commit --amend"`, a
+  // reworded or split commit) happens with HEAD detached, so the line above
+  // reads nothing and every such commit was refused whatever branch was being
+  // rebased. Git records the branch under rebase in `head-name`; read it back
+  // and judge THAT branch by the same rules below. A rebase of any other
+  // branch still falls through to the refusal, and a rebase of a detached HEAD
+  // records the words "detached HEAD", which match no declared branch.
+  L.push('if [ -z "$branch" ]; then');
+  L.push('  for d in rebase-merge rebase-apply; do');
+  L.push('    f=$(git rev-parse --git-path "$d/head-name" 2>/dev/null)');
+  L.push('    if [ -n "$f" ] && [ -f "$f" ]; then');
+  L.push("      branch=$(sed -n '1s#^refs/heads/##p' \"$f\")");
+  L.push('      break');
+  L.push('    fi');
+  L.push('  done');
+  L.push('fi');
   L.push('');
   // Exact names keep the exact line they have always generated — see the note
   // on families above. `case` is the only portable shell glob match.
