@@ -2094,6 +2094,36 @@ const CASES = [
     },
   },
   {
+    name: 'the plan fence passes an agent\'s dispatch of branch-sweep.yml through the connector\'s run-trigger tool, and only when the method is run_workflow, the workflow is that file, the repository is one the session holds and the step the agent was sent for names the file in its text; any other workflow, a rerun, a cancel, a log deletion, another repository, a step that does not name it, no plan, and every other connector write are refused, and the main thread and plan mode still refuse the tool',
+    guards: ['fence_sweep_branch', 'fence_sweep_method', 'fence_sweep_workflow', 'fence_sweep_repo', 'fence_sweep_step'],
+    run(m) {
+      const TOOL = 'mcp__github__actions_run_trigger';
+      const r = repo({ 'keep.mjs': 'x\n' }, 'sweepfix');
+      r.g('remote', 'add', 'origin', 'https://github.com/o/r.git');
+      // Step 1 names the workflow in its text; step 2 does not.
+      const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN.replace('1. **Build.** Make the thing.', '1. **Sweep.** Dispatch branch-sweep.yml on the repository.') };
+      const s = sid('sw');
+      const call = (tool_name, tool_input, step, p = plan) => decideFence(m, { session_id: s, agent_id: 'a1', tool_name, tool_input, cwd: r.dir }, { plan: p, step });
+      const sweep = { method: 'run_workflow', owner: 'o', repo: 'r', workflow_id: 'branch-sweep.yml', ref: 'main' };
+      const swept = (x) => /^PLAN FENCE/.test(x ?? '') && /SWEEP DISPATCH/.test(x);
+      const passes = call(TOOL, sweep, 1) === null && call(TOOL, { ...sweep, inputs: { delete: 'true' } }, 1) === null && call(TOOL, { ...sweep, owner: 'O', repo: 'R' }, 1) === null;
+      const refusals = [
+        call(TOOL, sweep, 2), call(TOOL, sweep, null), call(TOOL, sweep, 1, null),
+        call(TOOL, { ...sweep, workflow_id: 'deploy.yml' }, 1), call(TOOL, { ...sweep, workflow_id: '12345' }, 1), call(TOOL, { ...sweep, workflow_id: undefined }, 1),
+        call(TOOL, { ...sweep, method: 'rerun_workflow_run', run_id: 7 }, 1), call(TOOL, { ...sweep, method: 'rerun_failed_jobs', run_id: 7 }, 1),
+        call(TOOL, { ...sweep, method: 'cancel_workflow_run', run_id: 7 }, 1), call(TOOL, { ...sweep, method: 'delete_workflow_run_logs', run_id: 7 }, 1),
+        call(TOOL, { ...sweep, repo: 'x' }, 1), call(TOOL, { ...sweep, owner: 'z' }, 1), call(TOOL, {}, 1),
+      ];
+      const others = ['mcp__github__push_files', 'mcp__github__create_or_update_file', 'mcp__github__create_branch', 'mcp__github__delete_file', 'mcp__github__merge_pull_request', 'mcp__github__issue_write']
+        .map((t) => call(t, { ...sweep, branch: 'main' }, 1));
+      const fenced = (x) => /^PLAN FENCE/.test(x ?? '');
+      // The main thread's manager fence and plan mode's reader list are not changed: both still refuse the tool.
+      const main = m.dispatch.managerFence({ session_id: s, tool_name: TOOL, tool_input: sweep }, { plan });
+      const inPlanMode = m.dispatch.planGuardReads({ session_id: s, tool_name: TOOL, tool_input: sweep, cwd: r.dir });
+      return passes && refusals.every(swept) && others.every(fenced) && /^MANAGER FENCE/.test(main ?? '') && inPlanMode === false;
+    },
+  },
+  {
     name: 'a Files entry allows a write only in the repo its label names, and nothing ever writes the live gate copy',
     guards: ['fence_label', 'fence_live_hub'],
     run(m) {
@@ -7652,6 +7682,11 @@ const PLANTS = {
   fence_dotdot: [".some((r) => !r.startsWith('..') && !isAbsolute(r) && r.startsWith(nd) && r.length > nd.length);", '.some(() => String(word).startsWith(nd));', 'plan-fence.mjs'],
   fence_proc: ['  if (red.proc) return', '  if (false) return', 'plan-fence.mjs'],
   fence_every: ['    return `${HEAD} ${tool} is not a read', '    return null; // ', 'plan-fence.mjs'],
+  fence_sweep_branch: ['  if (tool === SWEEP_TOOL) return sweepDispatchProblem(', '  if (false) return sweepDispatchProblem(', 'plan-fence.mjs'],
+  fence_sweep_method: ["  if (String(input.method ?? '') !== 'run_workflow') return", '  if (false) return', 'plan-fence.mjs'],
+  fence_sweep_workflow: ["  if (String(input.workflow_id ?? '') !== SWEEP_WORKFLOW) return", '  if (false) return', 'plan-fence.mjs'],
+  fence_sweep_repo: ['  if (!heldSlugs(p, opts).has(slug)) return', '  if (false) return', 'plan-fence.mjs'],
+  fence_sweep_step: ["  if (!String(plan ? stepBody(plan.text, step) : '').includes(SWEEP_WORKFLOW)) return", '  if (false) return', 'plan-fence.mjs'],
   fence_return: ['  if (AGENT_RETURN.has(tool)) return null;\n', '\n', 'plan-fence.mjs'],
   fence_taskstop: ["  if (tool === 'TaskStop') return null;\n", '\n', 'plan-fence.mjs'],
   fence_label: [' || !labelNames(repo, root)) return false;', ') return false;', 'plan-fence.mjs'],

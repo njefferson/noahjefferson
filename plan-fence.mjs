@@ -20,6 +20,9 @@
  *
  *   its own return (SubagentHandback, StructuredOutput)
  *   its own TaskStop, so it can stop what it started (Doctrine §11d)
+ *   a dispatch of the hub's `branch-sweep.yml` through `mcp__github__actions_run_trigger` (`sweepDispatchProblem`): method
+ *       run_workflow, that one workflow file, a repository the session holds, and a step whose text names the workflow;
+ *       every other run-trigger call, and every other connector write, is refused
  *   a read, as plan-guard.mjs classifies one (never an Agent, Task,
  *       SendMessage, Workflow or plan-mode call)
  *   Write, Edit, MultiEdit, NotebookEdit
@@ -59,14 +62,63 @@ import { readFileSync, existsSync, openSync, readSync, closeSync, statSync } fro
 import { resolve, dirname, join, relative, normalize, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { approvedPlan, planFiles, planCommands, inScratchpad, planGuardReads, isRead, labelNames, AGENT_RETURN, agentReportWrite } from './hook-dispatch.mjs';
+import { approvedPlan, planFiles, planCommands, inScratchpad, planGuardReads, isRead, labelNames, AGENT_RETURN, agentReportWrite, gitHistoryRepos } from './hook-dispatch.mjs';
 import { commandsIn, heredocs, openerName } from './reply-guard.mjs';
-import { agentTranscriptPath, agentStep, stepsFilePath, RULES_FILE } from './report.mjs';
+import { agentTranscriptPath, agentStep, stepsFilePath, RULES_FILE, stepBody } from './report.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
 const WRITES = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
 const HARMLESS = new Set(['/dev/null', '/dev/stdout', '/dev/stderr']);
 const HEAD = 'PLAN FENCE (Doctrine §0e): an agent works only inside the approved plan — its Files list, its Commands, readers, and the session scratchpad.';
+// The one connector write an agent may make: a dispatch of the hub's branch sweep (LESSONS, the sweep dispatch lesson).
+export const SWEEP_TOOL = 'mcp__github__actions_run_trigger';
+export const SWEEP_WORKFLOW = 'branch-sweep.yml';
+
+/**
+ * The GitHub repositories the session holds, as `owner/name` in lower case.
+ * @param {object} p  a PreToolUse payload (`gitHistoryRepos` reads its `cwd` and `session_id`).
+ * @param {{repos?: string[]}} [opts]  the repository folders themselves, for the test.
+ * @returns {Set<string>} the last two path segments of every `url` in the `.git/config` of each repository `gitHistoryRepos` names,
+ *   with a trailing `.git` and slash taken off; a repository whose config cannot be read (a worktree's `.git` is a file) holds none.
+ */
+export function heldSlugs(p, opts = {}) {
+  const out = new Set();
+  for (const d of gitHistoryRepos(p, opts.repos ? { repos: opts.repos } : {})) {
+    try {
+      const cfg = readFileSync(join(d, '.git', 'config'), 'utf8');
+      for (const m of cfg.matchAll(/^\s*url\s*=\s*(\S+)/gm)) {
+        const parts = m[1].replace(/\/+$/, '').replace(/\.git$/i, '').split(/[/:]/).filter(Boolean);
+        if (parts.length >= 2) out.add(`${parts.at(-2)}/${parts.at(-1)}`.toLowerCase());
+      }
+    } catch { /* a repository whose config cannot be read holds nothing here */ }
+  }
+  return out;
+}
+
+/**
+ * THE ONE DISPATCH THE FENCE PASSES: the hub's branch sweep, from a step whose text names it.
+ * The hub's instructions name a dispatch of `branch-sweep.yml` through the GitHub connector as the one route to removing a session's
+ * branches, while the fence refused the connector's run-trigger tool for every agent. This passes that tool and nothing wider.
+ * @param {object} p  a subagent's PreToolUse payload for `mcp__github__actions_run_trigger`.
+ * @param {{text: string}|null} plan  the plan in force.
+ * @param {{step?: number|null, repos?: string[]}} [opts]  the step the agent was sent for and the repository folders, for the test;
+ *   read from the agent's own transcript and the session's repositories when omitted.
+ * @returns {string|null} null only when all of these hold: the method is `run_workflow` (a rerun, a cancel and a log deletion are
+ *   not), the workflow is the file `branch-sweep.yml`, the repository is one the session holds (`heldSlugs`), and the text of the step
+ *   the agent was sent for (`stepBody`) names `branch-sweep.yml`; otherwise the refusal, which names the first that fails. With no
+ *   plan, or a step that cannot be read, the step text is empty and the call is refused.
+ */
+export function sweepDispatchProblem(p, plan, opts = {}) {
+  const input = p.tool_input ?? {};
+  const why = `${HEAD} SWEEP DISPATCH: ${SWEEP_TOOL} passes only to run ${SWEEP_WORKFLOW} on a repository the session holds, from a step whose text names it;`;
+  if (String(input.method ?? '') !== 'run_workflow') return `${why} the method ${JSON.stringify(input.method ?? null)} is not run_workflow.`;
+  if (String(input.workflow_id ?? '') !== SWEEP_WORKFLOW) return `${why} the workflow ${JSON.stringify(input.workflow_id ?? null)} is not ${SWEEP_WORKFLOW}.`;
+  const slug = `${String(input.owner ?? '')}/${String(input.repo ?? '')}`.toLowerCase();
+  if (!heldSlugs(p, opts).has(slug)) return `${why} ${slug} is not a repository the session holds.`;
+  const step = 'step' in opts ? opts.step : agentSentStep(p);
+  if (!String(plan ? stepBody(plan.text, step) : '').includes(SWEEP_WORKFLOW)) return `${why} the step this agent was sent for (${step ?? 'unreadable'}) does not name ${SWEEP_WORKFLOW} in its text.`;
+  return null;
+}
 
 /**
  * Is a path inside the live gate copy?
@@ -467,6 +519,8 @@ export function decide(p, opts = {}) {
   // THE REVIEW STEP WRITES IN THE SCRATCHPAD AND NOWHERE ELSE, whatever the Files list allows (`reviewWriteProblem`; LESSONS §423).
   const review = reviewWriteProblem(p, plan, { ...('step' in opts ? { step: opts.step } : {}), ...(opts.classify ? { classify: opts.classify } : {}) });
   if (review) return review;
+  // THE SWEEP'S DISPATCH, FOR THAT WORKFLOW ONLY: judged here and not left to the read check, which refuses the tool.
+  if (tool === SWEEP_TOOL) return sweepDispatchProblem(p, plan, { ...('step' in opts ? { step: opts.step } : {}), ...(opts.repos ? { repos: opts.repos } : {}) });
   const where = plan ? `the plan at ${plan.path}` : 'no approved plan (so only readers and the scratchpad)';
   if (!WRITES.has(tool) && tool !== 'Bash') {
     if (isRead(p, opts.reads)) return null;

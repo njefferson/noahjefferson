@@ -121,7 +121,13 @@ Every item below has actually happened.
  branch, with the count of commits main lacks for a kept `claude/*` one. A
  dispatch is a dry run unless `delete` is set. Branch removal is never handed
  to the owner. A repo without its caller cannot be swept yet; REPOS.md lists
- which still owe one. (Doctrine §11; LESSONS §382.)
+ which still owe one. **The plan fence passes this one dispatch now:** an
+ agent's call of the connector's run-trigger tool passes only for method
+ `run_workflow` of `branch-sweep.yml` on a repository the session holds, from a
+ step whose text names `branch-sweep.yml`; every other dispatch and every other
+ connector write is refused, and the main thread and plan mode still refuse the
+ tool, so the dispatch is a step of an approved plan that names the workflow.
+ (Doctrine §11; LESSONS §382, §453.)
 - **A session CANNOT set repo metadata** — description, website, topics, social
  preview, default branch are all GitHub-UI steps. Propose in `METADATA.md`;
  never report a repo set up while a row says proposed. (Doctrine §10.)
