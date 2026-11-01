@@ -63,20 +63,31 @@ const say = (...a) => { if (!QUIET) console.log(...a); };
 // The hub's checkout can itself be behind. Reporting drift against a stale local
 // main would be the same defect one level up, so fetch first — and if the
 // network is not there, SAY so rather than quietly comparing against yesterday.
+//
+// WHAT IS RECORDED IS THE CHECKOUT'S HEAD, NEVER origin/main. A plan pins the
+// commit its hub checkout is at, and the doctrine a session has read is the
+// doctrine in the files in front of it; recording a commit the files are not at
+// would assert a reading that never happened. The fetch serves only to say how
+// far ahead origin/main is, so a stale checkout is named instead of trusted.
 let head;
 let fetched = true;
+let ahead = 0;
 if (!NO_FETCH) {
   try { git('fetch', 'origin', 'main', '--quiet'); } catch { fetched = false; }
 }
 try {
-  head = fetched ? git('rev-parse', 'origin/main') : git('rev-parse', 'HEAD');
+  head = git('rev-parse', 'HEAD');
 } catch {
   console.error('doctrine-sync: the hub is not a git checkout, so there is nothing to compare against.');
   process.exit(2);
 }
+if (fetched && !NO_FETCH) {
+  try { ahead = Number(git('rev-list', '--count', `${head}..origin/main`)) || 0; } catch { ahead = 0; }
+}
 
 say(`=== doctrine sync · ${NAME} ===`);
 if (!fetched) say('  (could not fetch — comparing against the LOCAL hub checkout, which may itself be behind)');
+if (ahead > 0) say(`  (origin/main is ${ahead} commit(s) ahead of this hub checkout, which is at ${head.slice(0, 7)} — pull the checkout, then run this again)`);
 
 if (!existsSync(MARKER)) {
   if (ADOPT) {
@@ -96,7 +107,22 @@ const since = readFileSync(MARKER, 'utf8').trim().split(/\s+/)[0];
 let known = true;
 try { git('cat-file', '-e', `${since}^{commit}`); } catch { known = false; }
 if (!known) {
-  console.error(`\n.doctrine-sync names ${since.slice(0, 7)}, which is not a commit in this hub. Re-adopt after reading.`);
+  // THE HUB'S HISTORY WAS REWRITTEN, so a marker written before it names a
+  // commit that no longer exists here. There is no range to diff, so no
+  // listing of what moved is possible — and the honest reading is that
+  // everything may have, which is not the same as nothing. Adopting records the
+  // checkout's current commit and says every section is unread.
+  if (ADOPT) {
+    writeFileSync(MARKER, `${head}\n`);
+    say(`\n.doctrine-sync named ${since.slice(0, 7)}, which is not a commit in this hub, so what changed since cannot be listed.`);
+    say(`Recorded ${head.slice(0, 7)}. Every section of DOCTRINE.md is unread since the rewrite: read it whole, not the sections.`);
+    process.exit(0);
+  }
+  console.error(
+    `\n.doctrine-sync names ${since.slice(0, 7)}, which is not a commit in this hub, so the drift since that commit cannot be listed.`
+    + `\n--adopt records the hub's current commit (${head.slice(0, 7)}); every section of the doctrine counts as unread, so read it whole first:`
+    + `\n  node doctrine-sync.mjs --repo ${GIVEN} --adopt`,
+  );
   process.exit(1);
 }
 

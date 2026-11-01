@@ -1328,6 +1328,24 @@ five guesses, in repos carrying between one and eighteen workflows under other
 names. `hub-pin-check.mjs` reads every workflow for this reason; a session
 checking by hand has to do the same. (LESSONS §240.)
 
+- [`hub-pin-check.mjs`](hub-pin-check.mjs) — **every pin on this hub is a commit
+ the hub's `main` reaches.** `node ../noahjefferson/hub-pin-check.mjs --repo .`
+ reads every workflow under `.github/workflows` for a `uses:` line naming this
+ hub and refuses a pin that is not a full 40-character commit, one the hub does
+ not have, or one `git merge-base --is-ancestor` says its `main` does not reach,
+ and refuses a `.doctrine-sync` marker naming a commit the hub does not have. It
+ SKIPS, with a printed line, where no hub checkout is found (`--hub`, then
+ `../noahjefferson`, then `/root/.claude/hub`). **The copies siblings carry as
+ `tools/hub-pin-check.mjs` are superseded by this one**; a sibling stops
+ carrying its own. Not wired into `hub-gates.yml` by this step. (LESSONS §334.)
+- [`hub-gates-local.mjs`](hub-gates-local.mjs) — **run the hub's gates against a
+ sibling from the commit it PINS, which is what its CI checks out.** It reads
+ the pin as the pin check does, refuses one the hub's `main` does not reach, adds
+ a worktree of the hub at that commit with `git worktree add`, runs the gates
+ from there, removes the worktree, and its closing line names the commit the
+ gates ran from and never the tree beside it. A gate the pinned commit does not
+ have is printed as absent from it. **The sibling copies of the local runner are
+ superseded by this one.**
 - [`doctrine-sync.mjs`](doctrine-sync.mjs) — **run this FIRST in any sibling
  session**: `node ../noahjefferson/doctrine-sync.mjs --repo .`. It says what has
  landed in the hub since that repo last reconciled — which files, which commits,
@@ -1335,7 +1353,11 @@ checking by hand has to do the same. (LESSONS §240.)
  to re-read 900 lines and "§7e changed" sends you to the paragraph. Each sibling
  records the hub commit it has read in a `.doctrine-sync` file; `--adopt` moves
  it, and that is an ASSERTION the drift was read, like handoff-check's `--ack`.
- Exits non-zero on unreconciled drift.
+ What it records is the hub checkout's `HEAD`, never `origin/main`; the fetch
+ only prints how far `origin/main` is ahead. A marker naming a commit the hub no
+ longer has (the rewrite) exits 1 without `--adopt`, saying the drift cannot be
+ listed; with `--adopt` it records `HEAD` and prints that every section of the
+ doctrine is unread. Exits non-zero on unreconciled drift.
 
  **Not a CI gate, deliberately.** A sibling's CI going red because the hub moved
  trains everyone to ignore red, and CI cannot tell a *session* what it has not
