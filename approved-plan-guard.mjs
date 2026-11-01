@@ -81,6 +81,19 @@
  *   marker recorded from that exit stands and nothing has happened since but
  *   reads, until an agent is sent under the plan or the owner writes again.
  *
+ *   AN APPROVAL GIVEN AT THE BUTTON BEFORE THE GATES WERE INSTALLED COUNTS TOO. The marker is written by a
+ *   PostToolUse hook, so a session that installs the gates after its plan was approved holds an approval in
+ *   its transcript and none on disk, and every write its agents make is refused. With no marker, the first
+ *   PreToolUse (the dispatcher's `--judge-exit`) reads the transcript for the newest main-thread ExitPlanMode
+ *   call the harness answered as approved, with no EnterPlanMode result or refused exit after it, and writes
+ *   the marker from the plan file as it stands, its `via` saying the approval was given at the button before
+ *   the gates were installed (`recordButtonApproval`). A plan file written after the approval keeps it only
+ *   as an amendment would: when its Goals, Asked, Files, Commands, Rules and Rules of this plan are still
+ *   the approved ones, compared with the plan text the result carries. Each approval is judged once, under
+ *   `button:` and its call's id in APP_EXITS, and `--mark` files its own there as marked, so `--done` is
+ *   never undone and a tool approval taken while the gates were live is never recorded twice.
+ *   A rejected exit, an edit of an approved section, and a marker already present each record nothing.
+ *
  *   A PLAN MODE THE HARNESS BEGAN AFTER THE APPROVAL IS NOT THE PLAN'S (LESSONS §432). A compaction or a
  *   resume after the approval can print a plan-mode notice and report the mode as plan though the plan is
  *   approved and its step is the next move. `restartedPlanMode` in report.mjs reads that from the marker
@@ -371,6 +384,131 @@ function recordAppExit(p) {
   return { uuid: String(last.uuid), outcome, ...(x && x.uuid === last.uuid ? x : {}) };
 }
 
+// ---- an approval pressed at the button before the gates were installed ----
+
+// The prefix of the key under which a button approval is kept in APP_EXITS, beside the app exits: the
+// ExitPlanMode call's id, so each approval is judged once and `--done` is never undone by an old one.
+const BUTTON = 'button:';
+
+/**
+ * Keep one judged key and its outcome in APP_EXITS (the newest hundred stay).
+ * @param {string} key  an exit entry's uuid, or `BUTTON` and an ExitPlanMode call's id.
+ * @param {string} outcome  what was decided for it.
+ * @returns {void}
+ */
+function noteJudged(key, outcome) {
+  const keep = Object.entries(judgedExits()).slice(-99);
+  mkdirSync(dirname(APP_EXITS), { recursive: true });
+  writeFileSync(APP_EXITS, JSON.stringify({ judged: Object.fromEntries([...keep, [key, outcome]]) }, null, 1));
+}
+
+/**
+ * Whether the end of a file holds a string, without parsing it.
+ * @param {string} path  the transcript.
+ * @param {string} needle  the text to look for.
+ * @param {number} [bytes]  how much of the end to read; 8 MB, as `tailEntries` reads.
+ * @returns {boolean} true when the last `bytes` of the file hold the needle; false on any failure.
+ *   The cheap test that keeps a session with no approval from parsing its tail on every call.
+ */
+function tailHas(path, needle, bytes = 8 * 1024 * 1024) {
+  let fd;
+  try {
+    fd = openSync(path, 'r');
+    const size = fstatSync(fd).size;
+    const start = Math.max(0, size - bytes);
+    const buf = Buffer.alloc(size - start);
+    readSync(fd, buf, 0, buf.length, start);
+    return buf.includes(needle);
+  } catch { return false; } finally { if (fd !== undefined) closeSync(fd); }
+}
+
+/**
+ * The approval the owner gave at the button that the transcript shows and nothing recorded.
+ * @param {object[]} entries  the transcript's tail, in file order.
+ * @returns {{plan: string, at: number, id: string, approved: string|null} | null}
+ *   the newest main-thread ExitPlanMode call whose result the harness answered as approved
+ *   (`approvedPlanPath`, the same reading `--mark` makes of the tool's result), with the plan file
+ *   it names, the time of the result, the call's id and the plan text the result carries (null when
+ *   the result arrived as text and carries none). null when a later EnterPlanMode result or a
+ *   later ExitPlanMode result that was not an approval follows it, because plan mode was entered
+ *   again or the exit was refused, and null when the transcript holds no such call.
+ */
+function buttonApproval(entries) {
+  const names = new Map();
+  let found = null;
+  for (const e of entries) {
+    if (e?.isSidechain || e?.agentId) continue;
+    const c = e?.message?.content;
+    if (e?.type === 'assistant' && Array.isArray(c)) for (const b of c) if (b?.type === 'tool_use') names.set(b.id, b.name);
+    if (e?.type !== 'user' || !Array.isArray(c)) continue;
+    for (const b of c) {
+      if (b?.type !== 'tool_result') continue;
+      const n = names.get(b.tool_use_id);
+      if (n === 'EnterPlanMode' && !b.is_error) found = null;
+      else if (n === 'ExitPlanMode') {
+        const obj = e.toolUseResult && typeof e.toolUseResult === 'object' && !Array.isArray(e.toolUseResult) ? e.toolUseResult : null;
+        const plan = approvedPlanPath({ is_error: !!b.is_error, tool_response: obj ?? b.content });
+        const at = Date.parse(e.timestamp ?? '');
+        found = plan && Number.isFinite(at) ? { plan, at, id: String(b.tool_use_id), approved: typeof obj?.plan === 'string' ? obj.plan : null } : null;
+      }
+    }
+  }
+  return found;
+}
+
+/**
+ * Record the approval the owner gave at the button before the gates were installed.
+ * @param {object} p  a PreToolUse payload: its transcript and mode.
+ * @returns {{id: string, outcome: string} | null}
+ *   null in plan mode, when a marker already exists, or when the transcript holds no approved
+ *   ExitPlanMode result that nothing followed; otherwise the call's id and its outcome, judged
+ *   once and kept in APP_EXITS: "recorded" (the marker was written from the plan file as it
+ *   stands now), "changed after" (the plan file was written after the approval and its
+ *   Goals, Asked, Files, Commands, Rules or Rules of this plan are no longer the approved ones,
+ *   so no marker), "no plan file", or "marked" (`--mark` wrote this approval's marker when the
+ *   gates were live, so nothing is recovered, and `--done` is not undone by it).
+ *   WHY THIS EXISTS (finding 2): the marker is written by a PostToolUse hook, so a session
+ *   whose gates are installed after its plan was approved has an approval the transcript holds and
+ *   nothing recorded, and every write of its agents is refused. A plan file written after
+ *   the approval is judged as an amendment is (`amendProblem`): an edit of the Steps or the
+ *   Order keeps the approval, an edit of any of the six approved sections voids it. The marker
+ *   records the step numbers and the scope of the plan text the result carries, which is the
+ *   plan the owner read, never the edited file's. A tail that no longer reaches back to the
+ *   approval records nothing: it fails closed.
+ */
+function recordButtonApproval(p) {
+  if (p.permission_mode === 'plan' || !p.transcript_path || existsSync(MARKER)) return null;
+  if (!tailHas(p.transcript_path, '"name":"ExitPlanMode"')) return null;
+  const x = buttonApproval(tailEntries(p.transcript_path, 8 * 1024 * 1024));
+  if (!x) return null;
+  const key = BUTTON + x.id;
+  const prior = judgedExits()[key];
+  if (prior) return { id: x.id, outcome: prior };
+  let outcome;
+  if (!isPlanFile(x.plan)) outcome = 'no plan file';
+  else {
+    const text = readFileSync(x.plan, 'utf8');
+    const edited = statSync(x.plan).mtimeMs > x.at;
+    const moved = !edited ? [] : x.approved === null ? [...SCOPE_SECTIONS] : scopeChanged(scopeHashes(x.approved), text);
+    if (moved.length) outcome = 'changed after';
+    else {
+      const read = x.approved ?? text;
+      const snap = { scope: scopeHashes(read), script: scriptHashOf(read), ...approvedStepSet(read) };
+      mkdirSync(dirname(MARKER), { recursive: true });
+      writeFileSync(MARKER, JSON.stringify({
+        plan: x.plan, hash: hashOf(x.plan), scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), session: p.session_id ?? null,
+        review: snap.review, steps: snap.steps, standing: snap.standing,
+        via: `the owner's approval at the button, ExitPlanMode call ${x.id} answered at ${new Date(x.at).toISOString()}, recorded before the gates were installed${edited ? '; the Steps or the Order were edited after it' : ''}`,
+        planMatchesFile: x.approved === null ? null : x.approved.trim() === text.trim(), buttonUse: x.id,
+      }, null, 1));
+      writeStepsFile(x.plan);
+      outcome = 'recorded';
+    }
+  }
+  noteJudged(key, outcome);
+  return { id: x.id, outcome };
+}
+
 if (process.argv.includes('--judge-exit')) {
   // hook-dispatch.mjs runs this FIRST on every PreToolUse, before the latch, the
   // manager fence, the dispatch gate or the plan fence reads the marker. It only
@@ -378,6 +516,9 @@ if (process.argv.includes('--judge-exit')) {
   // entry is the owner's; it never refuses. Without it, when the first call
   // after the owner's exit was sending an agent, the dispatch gate refused on
   // the old marker and the exit was never judged (measured 2026-10-04 05:12).
+  // The same first call also recovers an approval given at the button before the gates were installed
+  // (`recordButtonApproval`): the install happens after the approval, so no PostToolUse hook saw it.
+  try { recordButtonApproval(p); } catch { /* records nothing; the checks that follow judge the call as before */ }
   try { recordAppExit(p); } catch { /* records nothing; the checks that follow judge the call as before */ }
   process.exit(0);
 }
@@ -445,6 +586,8 @@ if (process.argv.includes('--mark')) {
     steps: snap.steps, standing: snap.standing,
     via: `ExitPlanMode approval: result ${fromObject ? 'filePath' : 'text'}`, planMatchesFile,
   }, null, 1));
+  // This call's approval is recorded as marked, so the recovery of a button approval never reads it again after `--done`.
+  if (p.tool_use_id) { try { noteJudged(BUTTON + p.tool_use_id, 'marked'); } catch { /* the marker stands either way */ } }
   writeStepsFile(plan);
   process.exit(0);
 }
@@ -559,6 +702,7 @@ if (p.permission_mode === 'plan' && !(!p.plan_mode_forced && restartedPlanMode(p
 // it — a read included, so the marker is written before anything can change
 // the plan file. Never fatal: a failure here records nothing, and the checks
 // below then judge the call as before.
+try { recordButtonApproval(p); } catch { /* records nothing; the checks below judge the call as before */ }
 let app = null;
 try { app = recordAppExit(p); } catch { app = null; }
 if (tool === 'EnterPlanMode' || tool === 'ExitPlanMode') process.exit(0);

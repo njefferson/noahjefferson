@@ -424,6 +424,14 @@ const planOn = (secs, plan) => ({ type: 'attachment', timestamp: later(secs), at
 const exitPlan = (secs, approved, id = 'xp') => [at(tool(0, id, 'ExitPlanMode', { plan: '# Gate test plan' }), later(secs)),
   at(result(0, id, approved ? 'User has approved your plan.' : '<tool_use_error>You are not in plan mode. To enter plan mode, call the EnterPlanMode tool first.</tool_use_error>', !approved), later(secs + 1))];
 const exitEntry = (secs, plan, uuid) => ({ type: 'attachment', uuid, timestamp: later(secs), attachment: { type: 'plan_mode_exit', planFilePath: plan, planExists: true } });
+// The owner's approval at the button as the harness leaves it in the transcript (measured 2026-11-01): the ExitPlanMode call, and a
+// result entry whose text opens "User has approved your plan." and whose `toolUseResult` object carries the plan, `isAgent: false` and
+// the plan file. `how`: 'approved', 'refused' (an error result that still carries the object) or 'declined' (an error text only).
+const buttonExit = (secs, plan, planText, id = 'bx', how = 'approved') => [at(tool(0, id, 'ExitPlanMode', { plan: planText }), later(secs)),
+  how === 'declined'
+    ? at(result(0, id, "The user doesn't want to proceed with this tool use. The tool use was rejected.", true), later(secs + 1))
+    : { ...at(result(0, id, `User has approved your plan. You can now start coding.\n\nYour plan has been saved to: ${plan}\n\n## Approved Plan:\n${planText}`, how === 'refused'), later(secs + 1)),
+      toolUseResult: { plan: planText, isAgent: false, filePath: plan } }];
 
 /**
  * A home with a plan file written an hour ago, a fresh status stamp and no
@@ -2782,6 +2790,80 @@ const CASES = [
       return again.status === 2 && /APPROVED IN THE APP/.test(again.stderr) && !latched(s1)
         && mk1?.appExit === w1.u && readAfter.status === 0
         && wrote.status === 0 && sent.status === 0;
+    },
+  },
+
+  // ---- an approval given at the button before the gates were installed (approved-plan-guard.mjs, hook-dispatch.mjs) ----
+  {
+    name: 'an approval the owner gave at the button before the gates were installed is recorded from the transcript at the first call, once; a refused exit, a plan mode entered after it, a marker already present, or an edit of an approved section after it records none, and an edit of the Steps keeps it with the step numbers as approved',
+    guards: ['button_default_path', 'button_judge_exit', 'button_refused', 'button_enter_after', 'button_later_refusal', 'button_marker_present',
+      'button_changed_after', 'button_steps_edit_kept', 'button_approved_steps', 'button_judged_once', 'button_mark_note'],
+    run(m, dir) {
+      const read = { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } };
+      const build = { tool_name: 'Bash', tool_input: { command: 'node tools/build.mjs' } };
+      const sha = (t) => createHash('sha256').update(t).digest('hex');
+      const steps = (H) => H.plan.replace(/\.md$/, '.steps.md');
+      const done = (H) => spawnSync('node', [join(dir, 'approved-plan-guard.mjs'), '--done'], { encoding: 'utf8', env: { ...process.env, HOME: H.home } });
+      const head = [turn(0, 'start'), ...enterPlan(-60)];
+      // The first call after the install, a read, with an approved ExitPlanMode result and nothing recorded.
+      const A = appHome(dir);
+      const trA = transcript([...head, ...buttonExit(-20, A.plan, STEPS_PLAN)]);
+      const readA = A.guard(trA, read);
+      const mkA = A.mk();
+      const buildA = A.guard(trA, build);
+      const mintedA = readA.status === 0 && mkA?.plan === A.plan && mkA.hash === sha(STEPS_PLAN) && mkA.buttonUse === 'bx' && mkA.planMatchesFile === true
+        && /approval at the button.*before the gates were installed/.test(mkA.via) && A.outcome('button:bx') === 'recorded' && existsSync(steps(A))
+        && mkA.steps?.join() === '1,2' && buildA.status === 0;
+      // --done ends the approved work and the same approval does not come back.
+      const doneA = done(A);
+      A.guard(trA, read);
+      const buildA2 = A.guard(trA, build);
+      const stayedDone = doneA.status === 0 && !existsSync(A.marker) && buildA2.status === 2;
+      // The dispatcher's own first call, --judge-exit.
+      const B = appHome(dir);
+      const trB = transcript([...head, ...buttonExit(-20, B.plan, STEPS_PLAN)]);
+      const judgeB = B.guard(trB, read, '--judge-exit');
+      const mintedB = judgeB.status === 0 && B.mk()?.buttonUse === 'bx';
+      // A refused exit that still carries the object, and one declined in words: neither is an approval.
+      const C = appHome(dir);
+      C.guard(transcript([...head, ...buttonExit(-20, C.plan, STEPS_PLAN, 'bx', 'refused')]), read);
+      const D0 = appHome(dir);
+      D0.guard(transcript([...head, ...buttonExit(-20, D0.plan, STEPS_PLAN, 'bx', 'declined')]), read);
+      const refusedNone = !existsSync(C.marker) && !existsSync(D0.marker) && C.outcome('button:bx') === '';
+      // Plan mode entered again after the approval.
+      const E0 = appHome(dir);
+      E0.guard(transcript([...head, ...buttonExit(-20, E0.plan, STEPS_PLAN), ...enterPlan(-10, 'ep2')]), read);
+      // A later exit that was declined.
+      const F0 = appHome(dir);
+      F0.guard(transcript([...head, ...buttonExit(-20, F0.plan, STEPS_PLAN), ...buttonExit(-10, F0.plan, STEPS_PLAN, 'by', 'declined')]), read);
+      // A marker already present.
+      const G = appHome(dir);
+      writeFileSync(G.marker, JSON.stringify({ plan: G.plan, hash: 'a marker written earlier' }));
+      G.guard(transcript([...head, ...buttonExit(-20, G.plan, STEPS_PLAN)]), read);
+      const keptG = G.mk()?.hash === 'a marker written earlier' && G.outcome('button:bx') === '';
+      // The Goals edited after the approval: an approved section moved, so no marker.
+      const H = appHome(dir);
+      const trH = transcript([...head, ...buttonExit(-20, H.plan, STEPS_PLAN)]);
+      writeFileSync(H.plan, STEPS_PLAN.replace('1. The thing is built and read.', '1. The thing is built, read and changed.'));
+      const buildH = H.guard(trH, build);
+      const movedNone = !existsSync(H.marker) && H.outcome('button:bx') === 'changed after' && buildH.status === 2;
+      // A step added to the Steps after the approval: the approval stands, with the step numbers it had.
+      const I = appHome(dir);
+      const trI = transcript([...head, ...buttonExit(-20, I.plan, STEPS_PLAN)]);
+      const edited = STEPS_PLAN.replace('2. **Check.** Read the thing.', '2. **Check.** Read the thing.\n3. **Extra.** Do one more thing.');
+      writeFileSync(I.plan, edited);
+      const buildI = I.guard(trI, build);
+      const mkI = I.mk();
+      const stepsKept = mkI?.hash === sha(edited) && mkI.steps?.join() === '1,2' && /Steps or the Order were edited/.test(mkI.via ?? '') && buildI.status === 0;
+      // The tool's own approval, taken with the gates live, is filed as marked, so --done is not undone by it.
+      const J = appHome(dir);
+      const mark = J.guard(transcript(head), { hook_event_name: 'PostToolUse', tool_name: 'ExitPlanMode', tool_use_id: 'bm',
+        tool_response: { plan: STEPS_PLAN, isAgent: false, filePath: J.plan } }, '--mark');
+      const markedJ = mark.status === 0 && J.mk()?.via === 'ExitPlanMode approval: result filePath' && J.outcome('button:bm') === 'marked';
+      done(J);
+      J.guard(transcript([...head, ...buttonExit(-20, J.plan, STEPS_PLAN, 'bm')]), read);
+      const notBack = !existsSync(J.marker);
+      return mintedA && stayedDone && mintedB && refusedNone && !existsSync(E0.marker) && !existsSync(F0.marker) && keptG && movedNone && stepsKept && markedJ && notBack;
     },
   },
 
@@ -7495,6 +7577,19 @@ const PLANTS = {
   app_release_agent: ["/^(Agent|Task|SendMessage)$/.test(b.name ?? '')", "/^NEVER$/.test(b.name ?? '')", 'approved-plan-guard.mjs'],
   // The dispatcher judges the owner's exit from plan mode before any gate reads the marker.
   dispatch_judge_exit: ["    run(`node \"${join(HUB, 'approved-plan-guard.mjs')}\" --judge-exit`, raw, root);\n", '\n', 'hook-dispatch.mjs'],
+  // An approval given at the button before the gates were installed is recovered from the transcript.
+  button_default_path: ['try { recordButtonApproval(p); } catch { /* records nothing; the checks below judge the call as before */ }\n', '\n', 'approved-plan-guard.mjs'],
+  button_judge_exit: ['  try { recordButtonApproval(p); } catch { /* records nothing; the checks that follow judge the call as before */ }\n', '\n', 'approved-plan-guard.mjs'],
+  button_refused: ['const plan = approvedPlanPath({ is_error: !!b.is_error, tool_response: obj ?? b.content });', 'const plan = approvedPlanPath({ is_error: false, tool_response: obj ?? b.content });', 'approved-plan-guard.mjs'],
+  button_enter_after: ["if (n === 'EnterPlanMode' && !b.is_error) found = null;", 'if (false) found = null;', 'approved-plan-guard.mjs'],
+  button_later_refusal: ["found = plan && Number.isFinite(at) ? { plan, at, id: String(b.tool_use_id), approved: typeof obj?.plan === 'string' ? obj.plan : null } : null;",
+    "if (plan && Number.isFinite(at)) found = { plan, at, id: String(b.tool_use_id), approved: typeof obj?.plan === 'string' ? obj.plan : null };", 'approved-plan-guard.mjs'],
+  button_marker_present: ['!p.transcript_path || existsSync(MARKER)) return null;', '!p.transcript_path) return null;', 'approved-plan-guard.mjs'],
+  button_changed_after: ["if (moved.length) outcome = 'changed after';", "if (false) outcome = 'changed after';", 'approved-plan-guard.mjs'],
+  button_steps_edit_kept: [': scopeChanged(scopeHashes(x.approved), text);', ': [...SCOPE_SECTIONS];', 'approved-plan-guard.mjs'],
+  button_approved_steps: ['const read = x.approved ?? text;', 'const read = text;', 'approved-plan-guard.mjs'],
+  button_judged_once: ['  if (prior) return { id: x.id, outcome: prior };\n', '\n', 'approved-plan-guard.mjs'],
+  button_mark_note: ['  if (p.tool_use_id) { try { noteJudged(', '  if (false) { try { noteJudged(', 'approved-plan-guard.mjs'],
   // A correction from the owner ends the turn.
   correction_refuse: ['      if (correction) {\n        let reviewed = false;', '      if (false) {\n        let reviewed = false;', 'hook-dispatch.mjs'],
   correction_go: ['const correction = endsWithGoWord(last.text) ? null : when(idx[idx.length - 1]);', 'const correction = when(idx[idx.length - 1]);', 'hook-dispatch.mjs'],

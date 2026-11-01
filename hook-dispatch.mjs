@@ -3027,6 +3027,9 @@ async function main(event, raw, p) {
     // the old marker and the exit was never judged (measured 2026-10-04 05:12).
     // It never refuses: a crash records nothing, and the checks below then
     // judge the call as before.
+    // THE SAME FIRST CALL RECOVERS AN APPROVAL GIVEN AT THE BUTTON BEFORE THE GATES WERE INSTALLED
+    // (`recordButtonApproval`): the install comes after the approval, no PostToolUse hook saw it, and
+    // with no marker on disk every write of the plan's first agent would be refused.
     run(`node "${join(HUB, 'approved-plan-guard.mjs')}" --judge-exit`, raw, root);
     // THE LATCH. While it stands nothing runs but the status command, the main
     // thread's TaskStop (and an agent's own return, which passed above).
