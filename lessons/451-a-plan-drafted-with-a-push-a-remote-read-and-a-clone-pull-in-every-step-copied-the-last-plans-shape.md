@@ -1,0 +1,11 @@
+## 451 · A plan drafted with a push, a remote read and a clone pull in every step copied the last plan's shape, and the plan gate counts none of it
+
+**Enforced by:** CHECKLIST landings-by-what-changed — before a plan goes up, count its pushes, CI runs, remote reads and clone pulls against the changes that need to be live; a change that no later step reads from the remote lands once, in the last step, and a step that pushes says which later step needs what it pushed
+
+**Recorded 2026-11-01.** Measured on 31 October. The first draft of the plan for fourteen findings had thirteen steps, and every one of them ended with a commit, a push, a read of the remote and a pull of the live clone. That is the shape of the hub's last plan, copied. Nothing in the session needed a fix live before the end except the first, which the gates are cloned from. The second draft had eight steps and two pushes: one at the start so the clone has its fix, and one at the end after verification. Eleven pushes, eleven CI runs and eleven remote reads were saved, none of which the plan gate had a word to say about.
+
+**Beside lesson 425.** That lesson says a plan is written by its cost, that every check runs once on what changed in the last step, and that the gate and the review for it are still to be landed. This is the same fault in the landing and not in the checking, with the same finding that the optimising step of the planning rules has no code behind it: the plan gate reads shape and evidence, and a plan whose cost is many times its work passes. Lesson 425's gate is still owed and this lesson adds to it that the count must include landings.
+
+**What a gate would read.** The number of pushes, CI runs and clone pulls the steps name, set against the number of steps whose change a later step reads from the remote. A gate on that count would refuse before the talk turn, the way the gate for the Files section does. It is recorded as the next hub plan's work in the plan's Leaves open section, with the design left to that plan.
+
+**The general form.** A plan copies the shape of its predecessor when the shape is the only thing in front of it. The test that breaks the copy is a count, and the count is made on the draft before anyone is asked to read it.

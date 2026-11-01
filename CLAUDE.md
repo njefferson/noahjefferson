@@ -363,12 +363,20 @@ Every item below has actually happened.
  that turn: `node /root/.claude/hub/plan-guard.mjs --check <the plan's path>`
  prints every fault the approval call would refuse on and exits 1 with any, and a
  talk turn written after a red check is a defect of the session (rule 4, LESSONS
- §435). A status is due when an agent has ended
+ §435). Three more shape faults are refused there, each with no latch: a plan
+ with an Order whose review step has no `node` entry under `/tmp/claude-0/` in
+ its Commands (the one command `aim-review.md` tells the review to run), a
+ Commands entry spelled with `-C` after `git` (the fence strips the flag and its
+ directory from an agent's line, so the entry is written bare), and a plan with
+ Steps whose Files has no code span (LESSONS §443, §444, §445). A status is due when an agent has ended
  since the last one, its time read from the clock (`report.mjs`), and at no
  other time.
  **Background work is the work:** while a background command or workflow the
  session started is still running, it does not end its turn (`stop-guard.mjs`
- refuses the stop; LESSONS §381). A running agent does not hold the turn: its
+ refuses the stop; LESSONS §381). A task a `TaskStop` answered as not found, and
+ a task launched before the newest session start of source startup or resume (a
+ container restart ends every process; a compaction does not), no longer holds
+ the stop (LESSONS §440). A running agent does not hold the turn: its
  completion brings the session back.
  **The gates run from a clone at `/root/.claude/hub`, installed by each
  session's first plan** — `hook-dispatch.mjs --install` run FROM THE CLONE,
@@ -402,7 +410,10 @@ Every item below has actually happened.
  step included, until a later message ends with a go-word. Held work is sent again
  only after a go-word. Nine corrections in a
  row were once worked through on the session's own reading of what was meant.
- (Doctrine §0e rule 3.)
+ A slash command's entry (its name, its message, its local output) is the
+ harness's own text and not a typed message, so it is not a correction and clears
+ no latch; one tag pattern in `transcript-tail.mjs` serves every reader
+ (LESSONS §441). (Doctrine §0e rule 3.)
 - **EVERY TIME GIVEN TO THE OWNER IS CALIFORNIA LOCAL TIME.** (Doctrine §2;
  LESSONS §378.)
 - **DO WHAT THE OWNER ASKED, AND NOTHING MORE.** No additions on the theory of
@@ -622,6 +633,13 @@ Every item below has actually happened.
  (a finished plan holds nothing against the next, LESSONS §435)
  and a mode a caller forced (`plan_mode_forced`, which the
  classifier uses and which must not make every tool a read) leave both halves alone.
+ An approval given at the button before the gates were installed is recovered at
+ the first call: with no marker, the dispatcher writes it from the transcript's
+ approved `ExitPlanMode` result, once, kept across an edit of the Steps or the
+ Order and written for none of a rejected exit, an edit of an approved section,
+ a later plan mode or a marker already present (LESSONS §439). A step end counts
+ only for the plan in force: an agent whose prompt names another plan is not an
+ end of this plan's step with the same number (LESSONS §442).
  (Doctrine §0e rule 4; LESSONS §432.)
 - **THE REPLY GUARD'S RELEASE COMMAND PASSES THE FENCE AND THE LATCH, AND LIFTS THE
  LATCH ITS OWN REFUSAL SET.** `node /root/.claude/hub/reply-guard.mjs --read <host
@@ -1057,7 +1075,10 @@ existing.
  the same fail-open the hook's own history is about. Quietkeep uses it to refuse
  a commit that changes its UI without re-rendering the walkthrough photographs
  it ships; the general shape is **anything generated FROM the app that would
- otherwise go stale in the tree**, which an instruction in a file never once managed. A session checks
+ otherwise go stale in the tree**, which an instruction in a file never once managed.
+ The hook accepts a commit made inside a rebase of the work branch, because HEAD
+ is detached there: it reads the rebase's own head-name record, and a rebase of
+ any other branch or of a detached HEAD is still refused (LESSONS §449). A session checks
  production out to promote, does not switch back, and commits the next release
  onto production; nothing about the act looks different at the time. Each repo
  declares `.branch-guard` (`work=`, optional `promote=` and `escape=`) and this

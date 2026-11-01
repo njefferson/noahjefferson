@@ -1,0 +1,15 @@
+## 450 · A trailer recorded and an identity that never counted were two settled matters, and the session treated one as a fault and asked about the other
+
+**Enforced by:** JUDGEMENT — before a finding about commit metadata is acted on, the doctrine's rule 9b and the commit's own history are read for what the rule counts: a session-link trailer or a model's name in a message is a violation, the container's default git identity is not, and a finding that a rule has been broken before the rule was read is recorded and not rewritten
+
+**Smell:** a finding that a commit's author or committer is the container's default identity and a plan to gate it; the same matter put up as a choice after it was answered; a config change to the repository's identity made on a reading nobody asked for; a trailer found on a sibling's older commits and a proposal to rewrite them.
+
+**Recorded 2026-11-01.** Measured on 31 October across two findings. The first: a sibling's commits made before the doctrine was read carry a session-link trailer. That is the fault 9b names, and the remedy is not this plan's, since rewriting a published history is the owner's call and the matter of what was done is settled in lesson 323. It is recorded and nothing is rewritten. The second: the container's default git identity, which names a model, was read as a fault under 9b. It does not count. The rule is about the chat link and the model named as co-author in a message or a file, and every repository here commits under the container's identity and always has. The session read it the other way, changed the hub's git config to a login and a noreply address in the first step, planned a gate for it, and put it up as a choice four times. A settled matter went back out as an open question, as lesson 438 describes, and a configuration change nobody asked for had to be undone in step 5, with the four local commits made under it re-authored; the one pushed commit under the changed identity stays.
+
+**Beside lessons 258 and 438.** A question the record answers is not a decision, and a gate is not owed for a thing the rule does not count. Both lessons were already written when this happened. What is new is the third fault beside them: acting on a reading of a rule before the rule's own text and the repository's history had been read, and then building on the reading.
+
+**The test.** Before a finding about metadata becomes a step, read what 9b counts and read three commits of the repository's own log. If the history shows the practice from the first commit and the rule does not name it, the finding is closed with the reason.
+
+**What cannot be gated.** Whether a rule counts a thing is a reading of the rule. A gate for the thing the rule does count already exists, the SESSION_LINKS class in `privacy-patterns.mjs`, and a second gate for the thing it does not would refuse every commit in every repository.
+
+**The general form.** A change made on a reading is a change made on the reading's weakest point. The change itself, the config edit, is cheap to make and costs a step to undo, and the reading costs a read.
