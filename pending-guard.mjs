@@ -79,15 +79,12 @@ import { join, dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { tailEntries, textOf, isOwnerMessage } from './transcript-tail.mjs';
+import { tailEntries, textOf, isOwnerMessage, HARNESS_TAG } from './transcript-tail.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
-// An agent's hand-back is enqueued as `<agent-message from="…">` with the
-// words "[Subagent hand-back]" inside it: model output, never a message the
-// owner typed. Measured 2026-10-04 06:15 (California): a status call was held
-// for two of them, printed as the owner's messages. The queue record carries
-// no origin, so what opens a message is all there is to tell them apart by.
-export const HARNESS_TAG = /^\s*<(?:task-notification|agent-message\b|wake\b|webhook-payload|child-session-event|event\b|teammate-message|scheduled|system-reminder|local-command|bash-(?:input|stdout|stderr)|cron|tick\b|command-(?:name|message))|^\s*\[Subagent hand-back\]/i;
+// The tags that open an entry the owner did not type are defined once, in transcript-tail.mjs (this file imports from it, so a
+// definition here would have to be imported back in a circle); this re-export keeps every importer of the name working.
+export { HARNESS_TAG };
 const norm = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 const now = () => Number(process.env.PENDING_GUARD_NOW || Date.now());
 

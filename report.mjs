@@ -1336,14 +1336,39 @@ export function gateReadsBlock(sid, ended = [], seen = null, mark = null) {
  *   by it, so a wrong N prints another agent's note as this one's.
  */
 export function agentStep(path, head = agentHead(path)) {
+  return agentPrompt(path, head)?.step ?? null;
+}
+
+/**
+ * The plan path and the step number an agent was sent, read from its prompt.
+ * @param {string} path  the agent's transcript.
+ * @param {string} [head]  its first 64 KB, when the caller already read it.
+ * @returns {{plan: string, step: number} | null} the first word of the first user entry in the file's first 64 KB (the plan's path
+ *   or its steps file's) and the step number after it, in the one form the dispatch gate lets through; null when the file cannot
+ *   be read or the prompt is anything else. `agentStep` is its `step`; `stepEnds` keeps the `plan` beside it, so a hand-back of
+ *   step 1 of one plan is never counted for step 1 of another (a session runs more than one plan).
+ */
+export function agentPrompt(path, head = agentHead(path)) {
   for (const line of head.split('\n')) {
     let e;
     try { e = JSON.parse(line); } catch { continue; }
     if (e?.type !== 'user') continue;
-    const m = /^\s*\S+\s+(?:step\s+)?(\d+)\s*$/i.exec(textOf(e));
-    return m ? Number(m[1]) : null;
+    const m = /^\s*(\S+)\s+(?:step\s+)?(\d+)\s*$/i.exec(textOf(e));
+    return m ? { plan: m[1], step: Number(m[2]) } : null;
   }
   return null;
+}
+
+/**
+ * The path of the plan the approval marker names, whether or not the file still matches its hash.
+ * @param {string} [marker]  the approval marker's path; `~/.claude/APPROVED-PLAN.json` by default.
+ * @returns {string|null} the marker's `plan`, or null when there is no marker. `stepEnds` keeps only the agents sent under this plan.
+ */
+function markerPlanPath(marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) {
+  try {
+    const p = JSON.parse(readFileSync(marker, 'utf8'))?.plan;
+    return typeof p === 'string' && p ? p : null;
+  } catch { return null; }
 }
 
 /**
@@ -1444,7 +1469,10 @@ export function runningAgents(sid, f = sessionFiles(sid)) {
  * @returns {string[]} the ids a tool result OPENS by launching ("Workflow
  *   launched in background. Task ID: x", "Command running in background with
  *   ID: x") with no notification ending them (completed, failed, killed,
- *   stopped) and no "Successfully stopped task: x". The one definition two
+ *   stopped) and no "Successfully stopped task: x", and not lost: a TaskStop of the id that the harness
+ *   answered "No task found" counts as ended, and so does every task launched before the newest
+ *   SessionStart whose source is a startup or a resume (a container restart ends every process; a
+ *   compaction does not). The one definition two
  *   gates share: stop-guard.mjs refuses a stop while this is not empty, and
  *   the status gate demands a status only while it, or `runningAgents`, is not.
  */
@@ -1456,10 +1484,45 @@ export function runningTasks(raw) {
   const LAUNCH = /^(?:Workflow launched in background\. Task ID: |Command running in background with ID: )([a-z0-9]{6,})\b/;
   const launched = new Set();
   const ended = new Set();
+  // The task id each TaskStop call named, by the call's id: a stop of a task the harness no longer has answers "No task found", often
+  // without the id, and the call's own input is then the only place the id is.
+  const stopped = new Map();
   for (const line of raw.split('\n')) {
     if (!line) continue;
     for (const m of line.matchAll(/<task-id>([a-z0-9]{6,})<\/task-id>[\s\S]{0,800}?<status>(?:completed|failed|killed|stopped|cancelled)<\/status>/g)) ended.add(m[1]);
     for (const m of line.matchAll(/Successfully stopped task: ([a-z0-9]{6,})\b/g)) ended.add(m[1]);
+    // A container restart ends every process it held: a task launched before the newest session start whose source is a startup or a
+    // resume is gone, whatever the transcript says of it. A compaction (SessionStart:compact) restarts nothing and ends nothing.
+    if (line.includes('SessionStart:') && line.includes('hook_success')) {
+      let e; try { e = JSON.parse(line); } catch { e = null; }
+      const a = e?.type === 'attachment' ? e.attachment : null;
+      if (a?.type === 'hook_success' && a.hookEvent === 'SessionStart' && /^SessionStart:(?:startup|resume)$/.test(String(a.hookName ?? ''))) {
+        for (const id of launched) ended.add(id);
+        continue;
+      }
+    }
+    if (line.includes('TaskStop') && line.includes('tool_use')) {
+      let e; try { e = JSON.parse(line); } catch { e = null; }
+      const c = e?.type === 'assistant' ? e.message?.content : null;
+      if (Array.isArray(c)) for (const blk of c) {
+        if (blk?.type !== 'tool_use' || blk.name !== 'TaskStop') continue;
+        stopped.set(blk.id, '');
+        for (const k of ['task_id', 'shell_id', 'id']) if (typeof blk.input?.[k] === 'string' && /^[a-z0-9]{6,}$/.test(blk.input[k])) stopped.set(blk.id, blk.input[k]);
+      }
+    }
+    if (stopped.size && /no task found/i.test(line) && line.includes('tool_result')) {
+      let e; try { e = JSON.parse(line); } catch { e = null; }
+      const c = e?.type === 'user' ? e.message?.content : null;
+      if (Array.isArray(c)) for (const blk of c) {
+        if (blk?.type !== 'tool_result' || !stopped.has(blk.tool_use_id)) continue;
+        const t = typeof blk.content === 'string' ? blk.content
+          : Array.isArray(blk.content) ? blk.content.map((x) => (typeof x === 'string' ? x : x?.text ?? '')).join('\n') : '';
+        if (!/no task found/i.test(t)) continue;
+        if (stopped.get(blk.tool_use_id)) ended.add(stopped.get(blk.tool_use_id));
+        const named = /no task found(?: with id:?)?\s*([a-z0-9]{6,})\b/i.exec(t);
+        if (named) ended.add(named[1]);
+      }
+    }
     if (!line.includes('tool_result') || !line.includes('background')) continue;
     let e; try { e = JSON.parse(line); } catch { continue; }
     const c = e?.message?.content;
@@ -1503,7 +1566,10 @@ export function runningWork(p) {
  * @returns {{ends: {id: string, step: number|null, how: string, at: number, startAt: number, last: string, path: string}[],
  *   running: string[], runningSteps: Set<number>} | null} `ends`: each agent
  *   `agentEnd` finds ended, in file-name order, with the plan step its prompt
- *   names (`agentStep`; null when the prompt names none), how it ended, when,
+ *   names (`agentStep`; null when the prompt names none) and ONLY those sent under the plan in
+ *   force: when an approval marker names a plan, an agent whose prompt names another plan's path
+ *   (neither the plan's nor its steps file's) is left out, so a DONE of an earlier plan's step 1
+ *   never counts for a later plan's step 1. Each carries how it ended, when,
  *   when it began (`agentStart`; NaN when unreadable, which the review gate
  *   reads as not after anything), its
  *   last entry (the hand-back's text when it handed back) and its transcript.
@@ -1524,6 +1590,9 @@ export function stepEnds(p) {
   const ends = [];
   const running = [];
   const runningSteps = new Set();
+  // The plan in force: an agent whose prompt names another plan's path ended under that plan, and its DONE is not this plan's.
+  const inForce = markerPlanPath();
+  const ours = inForce ? new Set([resolvePath(inForce), resolvePath(stepsFilePath(inForce))]) : null;
   for (const a of agentFiles(f.agents)) {
     const id = a.id;
     const path = a.file;
@@ -1531,7 +1600,9 @@ export function stepEnds(p) {
     let end;
     try { end = agentEnd(tailEntries(path, 4 * 1024 * 1024), meta, start, notified.get(id) ?? ''); } catch { continue; }
     const head = agentHead(path);
-    const step = agentStep(path, head);
+    const prompt = agentPrompt(path, head);
+    const step = prompt?.step ?? null;
+    if (end && ours && prompt && !ours.has(resolvePath(prompt.plan))) continue;
     if (!end) { running.push(`agent ${id}`); if (step !== null) runningSteps.add(step); continue; }
     ends.push({ id, step, how: end.how, at: end.at, startAt: agentStart(path, head), last: end.last, path, ...(end.word ? { word: end.word, refusedBefore: end.refusedBefore } : {}) });
   }

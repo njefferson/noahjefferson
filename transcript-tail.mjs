@@ -71,12 +71,22 @@ export function textOf(e) {
   return c.filter((b) => b?.type === 'text').map((b) => b.text ?? '').join('\n');
 }
 
+// The tags the harness opens an entry with when the entry is not something the owner typed: a task notification, an agent's hand-back,
+// a wake, a webhook, a scheduled firing, and a slash command with its output (`<command-name>`, `<command-message>`,
+// `<local-command-…>`). An agent's hand-back is enqueued as `<agent-message from="…">` with the words "[Subagent hand-back]" inside it:
+// model output, never a message the owner typed. Measured 2026-10-04 06:15 (California): a status call was held for two of them,
+// printed as the owner's messages. The queue record carries no origin, so what opens a message is all there is to tell them apart by.
+// The ONE definition: pending-guard.mjs re-exports it (and imports this file, so it cannot be defined there), hook-dispatch.mjs reads
+// it at prompt time, and `isOwnerMessage` below applies it, so the correction check, the latch's clearing and every other reader agree.
+export const HARNESS_TAG = /^\s*<(?:task-notification|agent-message\b|wake\b|webhook-payload|child-session-event|event\b|teammate-message|scheduled|system-reminder|local-command|bash-(?:input|stdout|stderr)|cron|tick\b|command-(?:name|message))|^\s*\[Subagent hand-back\]/i;
+
 /**
  * Is this entry a message the owner actually typed?
  * @param {object} e  a transcript entry.
  * @returns {boolean} true only for a genuine owner message, by the rule in
  *   this file's header; the report clock and the Drive guard both depend on
- *   it never counting hook feedback or a compaction summary as the owner.
+ *   it never counting hook feedback, a compaction summary or a slash command's
+ *   tags (`HARNESS_TAG`) as the owner.
  */
 export function isOwnerMessage(e) {
   if (e?.type === 'attachment') {
@@ -93,6 +103,8 @@ export function isOwnerMessage(e) {
   if (!t) return false;
   if (t.startsWith('[Request interrupted') || t.startsWith('This session is being continued')) return false;
   if (t.startsWith('Stop hook feedback')) return false;
+  // A slash command's entry (`/model`, `/compact`) is the harness's tags around the command, not words the owner wrote to the session.
+  if (HARNESS_TAG.test(t)) return false;
   return true;
 }
 

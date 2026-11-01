@@ -1218,6 +1218,72 @@ const CASES = [
     },
   },
   {
+    name: 'a task the harness no longer has (a TaskStop answered "No task found", with the id in the answer or only in the call) or one launched before the newest startup or resume (a container restart) is not running and holds no stop; a compaction ends nothing, a stop of another id ends nothing, and a task launched after the restart still holds the stop',
+    guards: ['tasks_not_found', 'tasks_not_found_call', 'tasks_restart', 'tasks_restart_source'],
+    run(m, dir) {
+      const say = (entries) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ transcript_path: transcript(entries) }), encoding: 'utf8' }).status;
+      const reply = { type: 'assistant', timestamp: ts(30), message: { role: 'assistant', content: [{ type: 'text', text: 'Stopping here: open for you is nothing new.' }] } };
+      const bash = [tool(2, 'b0', 'Bash', {}), result(3, 'b0', 'Command running in background with ID: bxyz789. Output is being written to: /tmp/x')];
+      const start = (s, source) => ({ type: 'attachment', timestamp: ts(s), attachment: { type: 'hook_success', hookName: `SessionStart:${source}`, hookEvent: 'SessionStart', content: 'brief' } });
+      const lost = (call, text) => [tool(6, 's0', 'TaskStop', call), result(7, 's0', text, true)];
+      const stillRunning = say([...bash, reply]);
+      // The harness answers a stop of a task it no longer has; the id is in the answer, only in the call, or in both.
+      const inAnswer = say([...bash, ...lost({}, 'No task found with ID: bxyz789'), reply]);
+      const inCall = say([...bash, ...lost({ task_id: 'bxyz789' }, 'No task found'), reply]);
+      // A stop of another id does not end this one.
+      const otherId = say([...bash, ...lost({ task_id: 'bother1' }, 'No task found with ID: bother1'), reply]);
+      // A restart ends every process; a compaction does not.
+      const afterResume = say([...bash, start(5, 'resume'), reply]);
+      const afterStartup = say([...bash, start(5, 'startup'), reply]);
+      const afterCompact = say([...bash, start(5, 'compact'), reply]);
+      const launchedAfter = say([start(1, 'resume'), ...bash, reply]);
+      return stillRunning === 2 && inAnswer === 0 && inCall === 0 && otherId === 2
+        && afterResume === 0 && afterStartup === 0 && afterCompact === 2 && launchedAfter === 2;
+    },
+  },
+  {
+    name: 'a slash command\'s entry (the command name, the command message, the local command output) is not a message from the owner, so it neither stands as a correction nor lifts an earlier one, while a typed message without a go-word is still a correction and a typed go-word still is not',
+    guards: ['owner_slash_tags', 'owner_slash_shared', 'pending_reexport'],
+    run(m) {
+      const cmd = turn(5, '<command-name>/model</command-name>\n<command-message>model</command-message>\n<command-args>fable</command-args>');
+      const out = turn(6, '<local-command-stdout>Set model to fable</local-command-stdout>');
+      const typed = turn(7, 'Please change the title of the page');
+      const goAfterCmd = m.dispatch.correctionStanding({}, [turn(0, 'start'), turn(1, 'ok go'), cmd, out]);
+      const correctionSurvives = m.dispatch.correctionStanding({}, [turn(0, 'start'), turn(1, 'change the title'), cmd, out]);
+      const typedStands = m.dispatch.correctionStanding({}, [turn(0, 'start'), turn(1, 'ok go'), cmd, typed]);
+      const goTyped = m.dispatch.correctionStanding({}, [turn(0, 'start'), typed, turn(8, 'continue')]);
+      const shared = m.pending.HARNESS_TAG.test('<command-name>/model</command-name>') && !m.pending.HARNESS_TAG.test('Please change the title of the page');
+      return goAfterCmd === null && correctionSurvives !== null && typedStands !== null && goTyped === null && shared;
+    },
+  },
+  {
+    name: 'a hand-back of one plan\'s step is not counted for the same step number of another: with a plan in force, only the agents whose prompt names its path or its steps file beside it are listed as ended, and the pointer reads only those',
+    guards: ['plan_key_filter', 'plan_key_prompt'],
+    run(m) {
+      const marker = join(process.env.HOME, '.claude', 'APPROVED-PLAN.json');
+      mkdirSync(dirname(marker), { recursive: true });
+      const tr = transcript([turn(0, 'start')]);
+      const subs = join(tr.slice(0, -'.jsonl'.length), 'subagents');
+      mkdirSync(subs, { recursive: true });
+      const sentTo = (prompt) => at({ type: 'user', message: { role: 'user', content: prompt } }, later(-300));
+      const handed = (id, word) => [at(tool(0, `${id}-h`, 'SubagentHandback', { message: `${word}\nThe second line.` }), later(-100)), at(result(0, `${id}-h`, 'Report delivered to your caller.'), later(-99))];
+      writeFileSync(join(subs, 'agent-old.jsonl'), jsonl([sentTo('/plans/old-plan.md step 1'), ...handed('old', 'DONE')]));
+      writeFileSync(join(subs, 'agent-new.jsonl'), jsonl([sentTo('/plans/new-plan.md step 1'), ...handed('new', 'FAILED')]));
+      writeFileSync(join(subs, 'agent-file.jsonl'), jsonl([sentTo('/plans/new-plan.steps.md step 2'), ...handed('file', 'DONE')]));
+      const text = '# P\n\n## Order\n\nOrder: 1 2\n\n## Steps\n\n1. **One.** a\n2. **Two.** b\n';
+      const read = () => { const s = m.report.stepEnds({ transcript_path: tr, session_id: 'nothing-on-disk' }); return { ids: (s?.ends ?? []).map((e) => `${e.id}:${e.step}`).sort().join(','), next: m.report.pointerOf(text, s?.ends ?? [])?.next }; };
+      try {
+        writeFileSync(marker, JSON.stringify({ plan: '/plans/new-plan.md', hash: 'not-this-plan-file' }));
+        const withPlan = read();
+        rmSync(marker, { force: true });
+        const noPlan = read();
+        const prompt = m.report.agentPrompt(join(subs, 'agent-file.jsonl'));
+        return withPlan.ids === 'file:2,new:1' && withPlan.next === 1 && noPlan.ids === 'file:2,new:1,old:1' && noPlan.next === null
+          && prompt?.plan === '/plans/new-plan.steps.md' && prompt?.step === 2;
+      } finally { rmSync(marker, { force: true }); }
+    },
+  },
+  {
     name: 'every refusal says the follow-up is the corrected sentences only; a follow-up that repeats lines of the refused reply is refused once, never again that turn, and corrected sentences, a follow-up with no text, and a repeat from an earlier turn pass',
     guards: ['stop_follow_up', 'stop_repeat', 'stop_repeat_once', 'stop_repeat_record', 'stop_repeat_turn', 'stop_repeat_min'],
     run(m, dir) {
@@ -7279,9 +7345,18 @@ const PLANTS = {
   enqueue_count: ['        size++;\n', '\n', 'pending-guard.mjs'],
   dequeue_count: ["      } else if (e.operation === 'dequeue') {\n        size = Math.max(0, size - 1);", "      } else if (e.operation === 'dequeue') {\n", 'pending-guard.mjs'],
   text_match: ['      if (!x.done && x.key && (t.includes(x.key)', '      if (false && !x.done && x.key && (t.includes(x.key)', 'pending-guard.mjs'],
-  harness_tag: ['const HARNESS_TAG = /^\\s*<(?:task-notification|', 'const HARNESS_TAG = /^NEVER<(?:task-notification|', 'pending-guard.mjs'],
-  harness_handback: ['agent-message\\b|', '', 'pending-guard.mjs'],
-  harness_bare_handback: ['|^\\s*\\[Subagent hand-back\\]/i;', '/i;', 'pending-guard.mjs'],
+  harness_tag: ['export const HARNESS_TAG = /^\\s*<(?:task-notification|', 'export const HARNESS_TAG = /^NEVER<(?:task-notification|', 'transcript-tail.mjs'],
+  tasks_not_found: ['        if (!/no task found/i.test(t)) continue;\n', '        continue;\n', 'report.mjs'],
+  tasks_not_found_call: ['        if (stopped.get(blk.tool_use_id)) ended.add(stopped.get(blk.tool_use_id));\n', '', 'report.mjs'],
+  tasks_restart: ['        for (const id of launched) ended.add(id);\n        continue;', '        continue;', 'report.mjs'],
+  tasks_restart_source: ["/^SessionStart:(?:startup|resume)$/.test(String(a.hookName ?? ''))) {", "/^SessionStart:(?:startup|resume|compact)$/.test(String(a.hookName ?? ''))) {", 'report.mjs'],
+  owner_slash_tags: ['  if (HARNESS_TAG.test(t)) return false;\n  return true;', '  return true;', 'transcript-tail.mjs'],
+  owner_slash_shared: ['|command-(?:name|message))', '|command-NEVER)', 'transcript-tail.mjs'],
+  pending_reexport: ["isOwnerMessage, HARNESS_TAG } from './transcript-tail.mjs';", "isOwnerMessage } from './transcript-tail.mjs';\nconst HARNESS_TAG = /^\\s*<(?:task-notification)/i;", 'pending-guard.mjs'],
+  plan_key_filter: ['    if (end && ours && prompt && !ours.has(resolvePath(prompt.plan))) continue;\n', '', 'report.mjs'],
+  plan_key_prompt: ["return m ? { plan: m[1], step: Number(m[2]) } : null;", "return m ? { plan: '', step: Number(m[2]) } : null;", 'report.mjs'],
+  harness_handback: ['agent-message\\b|', '', 'transcript-tail.mjs'],
+  harness_bare_handback: ['|^\\s*\\[Subagent hand-back\\]/i;', '/i;', 'transcript-tail.mjs'],
   remove_text: ['        if (c) take((x) => x.key === norm(c));\n', '\n', 'pending-guard.mjs'],
   stop_subagent: ['  if (p.agent_id && !stop) return null;', '  if (p.agent_id) return null;', 'pending-guard.mjs'],
   subagent_free: ['  if (p.agent_id && !stop) return null;', '  if (false && p.agent_id && !stop) return null;', 'pending-guard.mjs'],
@@ -7533,7 +7608,7 @@ const PLANTS = {
   progress_latest: [".filter(Boolean).at(-1) ?? '';", ".filter(Boolean)[0] ?? '';", 'report.mjs'],
   progress_running: ["    if (agentEnd(tailEntries(path, 4 * 1024 * 1024), meta, start, notified.get(id) ?? '')) continue;\n", '\n', 'report.mjs'],
   progress_missing: ['catch { return `${who}, step ${a.step}: FLAGGED, no progress note at ${file}.`; }', 'catch { return `${who}, step ${a.step}: no note yet.`; }', 'report.mjs'],
-  progress_step: ['    return m ? Number(m[1]) : null;', '    return m ? 1 : null;', 'report.mjs'],
+  progress_step: ['  return agentPrompt(path, head)?.step ?? null;', '  return 1;', 'report.mjs'],
   // Choice first.
   choice_first: ['if (choiceHit) {', 'if (false) {', 'stop-guard.mjs'],
   choice_marked_only: ['const MARKED = /\\(\\s*recommended\\b[^)\\n]*\\)/i;', 'const MARKED = /./;', 'stop-guard.mjs'],
@@ -7645,7 +7720,7 @@ const PLANTS = {
   steps_correction: ['&& !stopStanding(probe) && (reviewed || !correctionStanding(probe))) left = stepsLeft(state);', '&& !stopStanding(probe)) left = stepsLeft(state);', 'stop-guard.mjs'],
   steps_plan_in_force: ['  const plan = approvedPlan();\n  if (!plan || !state) return [];', "  const plan = { text: '## Steps\\n1. x\\n2. y\\n' };\n  if (!plan || !state) return [];", 'stop-guard.mjs'],
   steps_report_only: ["  for (const e of s.ends) if (e.how === 'a report' && e.step !== null) returned.add(e.step);", '  for (const e of s.ends) if (e.step !== null) returned.add(e.step);', 'report.mjs'],
-  steps_step_read: ['    const step = agentStep(path, head);\n    if (!end) {', '    const step = 1;\n    if (!end) {', 'report.mjs'],
+  steps_step_read: ['    const step = prompt?.step ?? null;\n', '    const step = 1;\n', 'report.mjs'],
   // The pointer: the first step in Order with no DONE hand-back, read by the status, the dispatch gate and the stop guard.
   pointer_order_read: ["    return line ? [...new Set([...line.replace(/^[^:]*:/, '').matchAll(/\\d+/g)].map((x) => Number(x[0])))] : [];", "    return line ? [...new Set([...m[1].matchAll(/\\d+/g)].map((x) => Number(x[0])))] : [];", 'report.mjs'],
   pointer_standing_not_order: ["  return order.length ? { order, standing: numbers('Standing') } : null;", "  return order.length ? { order: [...order, ...numbers('Standing')], standing: numbers('Standing') } : null;", 'report.mjs'],
