@@ -16,7 +16,10 @@
  *       `pointerBlock`): `next: step N`, the first number on the approved
  *       plan's `Order:` line (under `## Order`) with no hand-back whose first
  *       line opens DONE, or `next: none` when every one has; a hand-back
- *       opening REFUSED or FAILED leaves N where it is, and a `Standing:` step
+ *       opening REFUSED or FAILED leaves N where it is, a hand-back opening EJECT
+ *       is a state of its own and leaves N where it is (the plan is rewritten from
+ *       the files it names), a manager's note `Eject: P-N <reason>` closes the
+ *       pointer (`next: none`, the plan ejected to the program), and a `Standing:` step
  *       is never N. Under it each step's state, the newest hand-back of each
  *       step with every line it carries and the path of its report file
  *       (`progress/step-N-report.txt` in the session scratchpad), and the
@@ -525,12 +528,14 @@ export function restartedPlanMode(p, marker = join(homedir(), '.claude', 'APPROV
  * @param {object} p  a PreToolUse payload: `transcript_path` and `session_id`, which say where the session's agents are (`stepEnds`).
  * @param {string} planPath  the plan file's path.
  * @returns {boolean} true only when the plan has an Order, the session's agents can be read, and `pointerOf` finds no step of the Order
- *   without a DONE hand-back (`next` is null). Every doubt reads as false, so a plan that cannot be read as finished keeps the gate.
+ *   without a DONE hand-back (`next` is null), or the manager's notes have ejected the plan to the program (`closed`). Every doubt reads
+ *   as false, so a plan that cannot be read as finished keeps the gate.
  */
 function planFinished(p, planPath) {
   try {
     const s = stepEnds(p);
-    const pointer = s ? pointerOf(readFileSync(planPath, 'utf8'), s.ends) : null;
+    // A PLAN EJECTED TO THE PROGRAM IS CLOSED, AND A CLOSED PLAN HOLDS NOTHING AGAINST THE NEXT: the manager's `Eject:` line closes the pointer.
+    const pointer = s ? pointerOf(readFileSync(planPath, 'utf8'), s.ends, managerNotes(scratchpadOf(String(p?.session_id ?? '')))) : null;
     return !!pointer && pointer.next === null;
   } catch { return false; }
 }
@@ -725,9 +730,9 @@ export function gate(p, now = Date.now()) {
 // An agent's own way of handing back (hook-dispatch.mjs AGENT_RETURN; not
 // imported, because hook-dispatch.mjs imports this file).
 const AGENT_RETURN = /^(?:SubagentHandback|StructuredOutput)$/;
-// The words a hand-back's first line opens with when it says how the step went (agent-rules.md: DONE, REFUSED or FAILED). A hand-back that
+// The words a hand-back's first line opens with when it says how the step went (agent-rules.md: DONE, REFUSED, FAILED or EJECT). A hand-back that
 // opens with one is a report whatever hook refusal came before it (`agentEnd`, LESSONS §436).
-const HAND_BACK_WORD = /^(?:DONE|FAILED|REFUSED)\b/;
+const HAND_BACK_WORD = /^(?:DONE|FAILED|REFUSED|EJECT)\b/;
 // A hook's refusal of a call, as a tool result carries it (is_error true): the
 // call never ran. The one pattern `agentEnd` and `agentReads` share.
 export const HOOK_REFUSAL = /^(?:Error: )?PreToolUse:\S+ hook error/;
@@ -1678,6 +1683,8 @@ export function stepsReturned(p) {
 
 /** A hand-back counts as done when its first line opens with this word. */
 const DONE = /^DONE\b/;
+/** A hand-back is an eject to the plan when its first line opens with this word (agent-rules.md version 5): neither done nor failed. */
+const EJECT = /^EJECT\b/;
 const firstLineOf = (t) => String(t ?? '').split('\n').map((l) => l.trim()).find(Boolean) ?? '';
 
 /**
@@ -1839,14 +1846,31 @@ export function missingParts(text, parts) {
  *   `agentEnd`, LESSONS §436), an interruption or a failure.
  *   `next`: the first number in Order that is not in `done`, or null when every
  *   one is. A Standing step is never `next` and never holds it. The invariant:
- *   `next` advances past a step on a DONE hand-back and on nothing else.
+ *   `next` advances past a step on a DONE hand-back and on nothing else, and on
+ *   the manager's eject of the whole plan (below).
+ *   EJECT IS A STATE OF ITS OWN (Design parts 3 and 4, agent-rules.md version 5):
+ *   `ejected` holds each step of the Order with no DONE hand-back whose newest
+ *   report opens EJECT, a step that stopped on something its text did not name.
+ *   It is neither done nor failed: `next` stays on it, as it stays on a FAILED step,
+ *   because the plan is rewritten from the files the hand-back names and the step is
+ *   sent again. `closed` is the other eject, of the plan to the program: when the
+ *   manager's notes (`managerNotes`, passed as `notes`) carry an `Eject:` line that
+ *   names a program item and a reason, `closed` is `{item, reason}` and `next` is
+ *   null, so the plan in force holds no step and the stop guard has none left.
  */
-export function pointerOf(text, ends) {
+export function pointerOf(text, ends, notes = null) {
   const o = planOrder(text);
   if (!o) return null;
   const done = new Set();
   for (const e of ends ?? []) if (e.how === 'a report' && e.step !== null && DONE.test(firstLineOf(e.last))) done.add(e.step);
-  return { order: o.order, standing: o.standing, done, next: o.order.find((n) => !done.has(n)) ?? null };
+  const newest = new Map();
+  for (const e of ends ?? []) if (e.how === 'a report' && e.step !== null && (!newest.has(e.step) || e.at >= newest.get(e.step).at)) newest.set(e.step, e);
+  const ejected = new Set();
+  for (const [step, e] of newest) if (o.order.includes(step) && !done.has(step) && EJECT.test(firstLineOf(e.last))) ejected.add(step);
+  const closed = notes?.eject ? { item: notes.eject.item, reason: notes.eject.reason } : null;
+  const pointer = { order: o.order, standing: o.standing, done, ejected, closed, next: o.order.find((n) => !done.has(n)) ?? null };
+  if (closed) pointer.next = null;
+  return pointer;
 }
 
 /**
@@ -1861,7 +1885,10 @@ export function pointerOf(text, ends) {
 export function pointerFor(p, text) {
   if (!planOrder(text)) return null;
   const s = stepEnds(p);
-  return s ? pointerOf(text, s.ends) : null;
+  if (!s) return null;
+  let notes = null;
+  try { notes = managerNotes(scratchpadOf(String(p?.session_id ?? ''))); } catch { notes = null; }
+  return pointerOf(text, s.ends, notes);
 }
 
 // ---- the review: a fresh agent clears every move before it goes ----
@@ -2273,6 +2300,11 @@ export const MANAGER_FILE = 'status/manager.txt';
  *   replaces an earlier one) and `Estimate <step>: <M> min` (`estimates` maps a step to the
  *   plan's estimate in minutes, a whole number above zero, the word min optional). Neither is a
  *   measurement the renderer takes: `stepTimeChips` draws what the manager wrote.
+ *   And the plan's eject to the program (Design part 3): `Eject: <program item> <reason>`, such as
+ *   `Eject: P-12 the review found the premise false`, where the item is the program's key of the
+ *   form P-N and the reason is at least one word (`eject` is `{item, reason}`, the newest line
+ *   winning, null when none is written or a line names no item or no reason). It closes the pointer
+ *   of the plan in force (`pointerOf`): the plan stops unfinished and its item goes back to open.
  *   `Next: ...` with no step number is the unnumbered key above
  *   and `Next 119: ...` is the numbered one; neither reads the other's line.
  *   Also `Found <step>.<n> fixed|stopping|queued: <note>`,
@@ -2288,7 +2320,7 @@ export const MANAGER_FILE = 'status/manager.txt';
  */
 export function managerNotes(pad) {
   const out = { read: false, outcome: '', standing: [], ruledOut: [], decisions: [], next: '', sorts: new Map(), judged: new Map(),
-    versions: [], open: [], what: new Map(), why: new Map(), whys: new Map(), nexts: new Map(), done: new Map(), starts: new Map(), estimates: new Map() };
+    versions: [], open: [], what: new Map(), why: new Map(), whys: new Map(), nexts: new Map(), done: new Map(), starts: new Map(), estimates: new Map(), eject: null };
   if (!pad) return out;
   let text = '';
   try { text = readFileSync(join(pad, MANAGER_FILE), 'utf8'); } catch { return out; }
@@ -2315,6 +2347,7 @@ export function managerNotes(pad) {
     else if ((m = /^Done\s+(\d+)\s*:\s*(.*)$/i.exec(l))) out.done.set(Number(m[1]), m[2].trim());
     else if ((m = /^Start\s+(\d+)\s*:\s*(\d{1,2}):(\d{2})\s*$/i.exec(l)) && Number(m[2]) < 24 && Number(m[3]) < 60) out.starts.set(Number(m[1]), Number(m[2]) * 60 + Number(m[3]));
     else if ((m = /^Estimate\s+(\d+)\s*:\s*(\d+)\s*(?:min(?:ute)?s?)?\s*$/i.exec(l)) && Number(m[2]) > 0) out.estimates.set(Number(m[1]), Number(m[2]));
+    else if ((m = /^Eject\s*:?\s*(P-\d+)\b\s*[:,;.-]*\s*(\S.*)$/i.exec(l))) out.eject = { item: m[1].toUpperCase(), reason: m[2].trim() };
     else if ((m = /^Found\s+(\d+)\.(\d+|\*)\s+(fixed|stopping|queued)\s*:?\s*(.*)$/i.exec(l))) out.sorts.set(`${Number(m[1])}.${m[2] === '*' ? '*' : Number(m[2])}`, { how: m[3].toLowerCase(), note: m[4].trim() });
   }
   return out;
@@ -2404,7 +2437,7 @@ export function pointerState(sid, plan = planInForce()) {
   }
   const s = sid ? stepEnds({ session_id: sid }) : null;
   if (!s) return { ...base, why: `no transcript was found for the session${sid ? ` ${sid}` : ' (no CLAUDE_CODE_SESSION_ID in this shell)'}` };
-  const pointer = pointerOf(plan.text, s.ends);
+  const pointer = pointerOf(plan.text, s.ends, base.manager);
   const steps = [...pointer.order.map((step) => ({ step, standing: false })), ...pointer.standing.filter((n) => !pointer.order.includes(n)).map((step) => ({ step, standing: true }))]
     .map(({ step, standing }) => stepRow(step, standing, pointer.done, s, pad));
   return { ...base, read: true, pointer, steps, found: foundLines(pad, markerApprovalTime()) };
@@ -2418,7 +2451,7 @@ export function pointerState(sid, plan = planInForce()) {
  * @param {{ends: object[], runningSteps: Set<number>}} s  `stepEnds`' answer, not null.
  * @param {string|null} pad  the session scratchpad, null when there is none.
  * @returns {{step: number, standing: boolean, state: string, back: object|null, report: string, reportWritten: boolean, doneAt: number|null}}
- *   `state` is DONE, a hand-back's first line (REFUSED, FAILED or anything else), "ended by
+ *   `state` is DONE, a hand-back's first line (REFUSED, FAILED, EJECT or anything else), "ended by
  *   <how>", "running" or "not sent", as `pointerState` documents; `back` the newest ended
  *   agent for the step; `doneAt` the end, in ms, of the newest agent whose hand-back opened
  *   DONE (the very end `stepEnds` read for it), null when no agent's did. The invariant
@@ -2434,7 +2467,7 @@ function stepRow(step, standing, done, s, pad) {
     : s.runningSteps.has(step) ? 'running'
       : !newest ? 'not sent'
         : newest.how !== 'a report' ? `ended by ${newest.how}, no hand-back to count`
-          : /^(?:REFUSED|FAILED)\b/.test(lines[0] ?? '') ? lines[0].match(/^(?:REFUSED|FAILED)/)[0]
+          : /^(?:REFUSED|FAILED|EJECT)\b/.test(lines[0] ?? '') ? lines[0].match(/^(?:REFUSED|FAILED|EJECT)/)[0]
             : `hand-back opens "${clip(lines[0] ?? '').slice(0, 40)}", not DONE`;
   const report = pad ? join(pad, 'progress', `step-${step}-report.txt`) : `progress/step-${step}-report.txt (no scratchpad found)`;
   let reportWritten = false;
@@ -2454,6 +2487,8 @@ function stepRow(step, standing, done, s, pad) {
 export function openForOwner(st) {
   if (!st.read) return [`The pointer is not read: ${st.why}.`];
   if (!st.pointer) return [`There is no pointer: ${st.why}.`];
+  if (st.pointer.closed) return [`The plan ejected to program item ${st.pointer.closed.item}: ${st.pointer.closed.reason}. It closed unfinished, and the item goes back to open with the finding attached.`];
+  if (st.pointer.next !== null && st.pointer.ejected?.has(st.pointer.next)) return [`Step ${st.pointer.next} ejected to the plan: nothing is waiting on the owner, and the plan is rewritten from the files its hand-back names before the step is sent again.`];
   if (st.pointer.next !== null) return [`Nothing is waiting on the owner: the plan runs to its end, and step ${st.pointer.next} is next.`];
   return ['Every step in Order has a DONE hand-back: the plan has run to its end.', ...(st.leaves.length ? ['What the plan itself leaves open:', ...st.leaves.map((l) => `  ${l}`)] : [])];
 }
@@ -2487,6 +2522,8 @@ export function pointerBlock(st, seen = null, mark = null) {
   const out = [p.next === null ? 'next: none' : `next: step ${p.next}`,
     `Order, each step's state: ${st.steps.filter((x) => !x.standing).map((x) => `${x.step} ${x.state}`).join('; ')}.`,
     ...(st.steps.some((x) => x.standing) ? [`Standing, sent at any time: ${st.steps.filter((x) => x.standing).map((x) => `${x.step} ${x.state}`).join('; ')}.`] : [])];
+  // A plan the manager ejected to the program says where it went on its first line.
+  if (p.closed) out[0] = `next: none (the plan ejected to ${p.closed.item}: ${p.closed.reason})`;
   const backs = st.steps.filter((x) => x.back);
   const backKey = (x) => `${x.back.id}@${x.back.at}`;
   const fresh = backs.filter((x) => !seen || !seen.backs?.[backKey(x)]);
@@ -2545,12 +2582,15 @@ const escapeHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '
  * How one step shows on the status page: its chip's colour and its words.
  * @param {ReturnType<typeof pointerState>} st  `pointerState`'s answer.
  * @param {{step: number, standing: boolean, state: string}} x  one of its `steps`.
- * @returns {{cls: 'done'|'wait'|'held'|'open', words: string}} `cls` picks the chip's
+ * @returns {{cls: 'done'|'wait'|'held'|'open'|'eject', words: string}} `cls` picks the chip's
  *   colour token and `words` is what the chip says, so the state never rests on colour
  *   alone. In this order: `done` (green) for a hand-back opening DONE and for a step the
  *   manager's notes name on a `Done N:` line whatever its newest end, because the main
  *   thread counts a step done by decision; `running` (amber) for a step an agent is
- *   running; `under review` (amber) for the step the notes' unnumbered `Next:` line names
+ *   running; `ejected` (blue) for a step whose newest hand-back opens EJECT, and, once the
+ *   manager's `Eject:` line has closed the pointer, for every step of the plan not done,
+ *   saying which program item the plan ejected to (neither state is a failure, so neither
+ *   is drawn red); `under review` (amber) for the step the notes' unnumbered `Next:` line names
  *   first while a review step is running; `open` (red) for a step whose newest end is a
  *   refusal, a failure, an interruption or any hand-back that does not open DONE; and
  *   `held` (purple) for a step not sent, with what it waits on: `after step K`, K the
@@ -2566,6 +2606,8 @@ export function stepChip(st, x) {
   const m = st.manager ?? managerNotes(null);
   if (m.done.has(x.step) || x.state === 'DONE') return { cls: 'done', words: 'done' };
   if (x.state === 'running') return { cls: 'wait', words: 'running' };
+  if (st.pointer?.closed && !x.standing) return { cls: 'eject', words: `ejected, the plan went to ${st.pointer.closed.item}` };
+  if (x.state === 'EJECT') return { cls: 'eject', words: 'ejected to the plan' };
   const reviewing = (st.steps ?? []).some((y) => (st.reviewers ?? []).includes(y.step) && y.state === 'running');
   const named = /\b(\d+)\b/.exec(m.next);
   if (reviewing && named && Number(named[1]) === x.step) return { cls: 'wait', words: 'under review' };
@@ -2684,7 +2726,7 @@ export function reviewWords(st) {
  */
 export function statusPage(st, given, now = new Date()) {
   const li = (s) => `<li>${s}</li>`;
-  const next = !st.read ? `not read (${st.why})` : !st.pointer ? `not defined (${st.why})` : st.pointer.next === null ? 'none' : `step ${st.pointer.next}`;
+  const next = !st.read ? `not read (${st.why})` : !st.pointer ? `not defined (${st.why})` : st.pointer.closed ? `none (the plan ejected to ${st.pointer.closed.item})` : st.pointer.next === null ? 'none' : `step ${st.pointer.next}`;
   const m = st.manager ?? managerNotes(null);
   // Only the Found lines of this plan's own steps: a session's older reports hold the findings of earlier plans, which the notes queue already carries.
   const inPlan = new Set(st.steps.map((x) => x.step));
@@ -2725,14 +2767,14 @@ export function statusPage(st, given, now = new Date()) {
 /* One reading column; each step a block with a state chip in colour and in words, then its bullets. */
 :root {
   --bg: #f6f7f5; --fg: #1d2420; --muted: #56615b; --line: #d5dbd6; --chip-bg: #e8ece9;
-  --done: #1f6b3a; --wait: #8a5a00; --held: #6b3fa0; --open: #9b2c2c;
+  --done: #1f6b3a; --wait: #8a5a00; --held: #6b3fa0; --open: #9b2c2c; --eject: #1b5a8f;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #141917; --fg: #e3e8e4; --muted: #a3ada6; --line: #2e3833; --chip-bg: #222a26;
-  --done: #6fcf8f; --wait: #e8b24a; --held: #c4a3f0; --open: #f08a8a; color-scheme: dark; } }
+  --done: #6fcf8f; --wait: #e8b24a; --held: #c4a3f0; --open: #f08a8a; --eject: #84bdf0; color-scheme: dark; } }
 :root[data-theme="dark"] {
   --bg: #141917; --fg: #e3e8e4; --muted: #a3ada6; --line: #2e3833; --chip-bg: #222a26;
-  --done: #6fcf8f; --wait: #e8b24a; --held: #c4a3f0; --open: #f08a8a; color-scheme: dark; }
+  --done: #6fcf8f; --wait: #e8b24a; --held: #c4a3f0; --open: #f08a8a; --eject: #84bdf0; color-scheme: dark; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; overflow-wrap: anywhere; }
 main { max-width: 44rem; margin: 0 auto; padding: 24px 16px 48px; }
 h1 { font-size: 1.6rem; margin: 0 0 4px; text-wrap: balance; }
@@ -2742,7 +2784,7 @@ section { border-top: 1px solid var(--line); padding-block: 16px; }
 h2 { font-size: 1.1rem; margin: 0 0 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .chip { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; background: var(--chip-bg); font-weight: 600; }
 .tag { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; color: var(--muted); }
-.done { color: var(--done); } .wait { color: var(--wait); } .held { color: var(--held); } .open { color: var(--open); }
+.done { color: var(--done); } .wait { color: var(--wait); } .held { color: var(--held); } .open { color: var(--open); } .eject { color: var(--eject); }
 ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 6px; }
 p { margin: 0 0 8px; }
 </style>

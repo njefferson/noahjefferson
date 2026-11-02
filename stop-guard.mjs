@@ -827,9 +827,13 @@ the report beneath them. Write the choice once.
 // (ending the turn delivers it); a stop from the owner stands, or a correction
 // does and the plan has no review step, because rule 3 then refuses every other
 // call, so a refused stop would leave no move at all; the reply opens with a choice only
-// the owner can settle (`opensWithChoice`); or its first line declares the stop
-// with what is open (`declaresStop`). A session whose agents or plan cannot be
-// read is not refused: this never holds a turn for steps it cannot count.
+// the owner can settle (`opensWithChoice`); its first line declares the stop
+// with what is open (`declaresStop`); or its first line says that a step ejected to
+// the plan and what it waits on (`declaresEject`): a hand-back opening EJECT is a
+// hand-up (Design part 3), not a step to send again as it stands, and a manager's
+// `Eject:` note closes the pointer, so the plan leaves no step at all. A session
+// whose agents or plan cannot be read is not refused: this never holds a turn for
+// steps it cannot count.
 
 /** The first line's declaration WITH what is open: "Stopping here: open for you
  *  is X", where X is at least a few words on the same line. */
@@ -844,6 +848,28 @@ const DECLARED_OPEN = /^\s*(?:[#*_>\s-]*)stopping here[,:]?\s*open for you\b[ \t
  *   steps-left check needs the second half.
  */
 const declaresStop = (text) => DECLARED_OPEN.test(text);
+
+/**
+ * The first line's declaration that a step ejected to the plan, WITH what it waits on: "Step 55 ejected, it waits on <what>", where
+ *  the what is at least a few words on the same line. The verb is "waits on" and not the present participle, which the waiting
+ *  refusal reads as work still running.
+ */
+const EJECT_DECLARED = /^\s*(?:[#*_>\s-]*)step\s+(\d+)\s+(?:is\s+|was\s+)?ejected\b[^\n]*?\bwaits?\s+on\b[ \t]*(\S[^\n]{6,})/i;
+
+/**
+ * Does a reply declare that an ejected step waits on something?
+ * @param {string} text  the reply.
+ * @param {Set<number>|undefined} ejected  the plan's ejected steps (`pointerOf`'s `ejected`): each step of its Order with no DONE
+ *   hand-back whose newest report opens EJECT.
+ * @returns {boolean} true when the FIRST line is "Step N ejected, it waits on <something>" with at least seven characters after
+ *   "waits on" and N is one of the ejected steps. A step that ejected to the plan is not a step left to send: the plan is rewritten
+ *   from the files its hand-back names, which is the owner's button when the rewrite touches an approved section, so the turn may
+ *   end on the words. A declaration naming a step that did not eject, or none, is not this.
+ */
+const declaresEject = (text, ejected) => {
+  const m = EJECT_DECLARED.exec(String(text));
+  return !!m && !!ejected && ejected.has(Number(m[1]));
+};
 
 /**
  * The approved plan's steps no agent has returned for.
@@ -868,11 +894,27 @@ function stepsLeft(state) {
   // REFUSED or FAILED hand-back leaves it where it is. A plan with no Order keeps
   // the older count of steps no agent ended by a report for.
   if (planOrder(plan.text)) {
-    const pointer = pointerOf(plan.text, state.ends);
+    const pointer = pointerNow(plan, state);
+    // A PLAN THE MANAGER EJECTED TO THE PROGRAM HOLDS NO STEP (`pointerOf`'s `closed`): it closed unfinished, its item went back to open,
+    // and the closing check below still asks that every finding of its steps is recorded.
+    if (pointer.closed) return [];
     const next = pointer.order.find((n) => !pointer.done.has(n) && held(n)) ?? null;
     return next === null ? [] : [next];
   }
   return planSteps(plan.text).filter((n) => !state.returned.has(n) && held(n));
+}
+
+/**
+ * The pointer of the plan in force, with the manager's notes read.
+ * @param {{text: string}} plan  the plan in force, with an Order.
+ * @param {{ends: object[]}} state  `stepsReturned`'s answer.
+ * @returns {ReturnType<typeof pointerOf>} `pointerOf` over the session's agents and the notes in its scratchpad, so an `Eject:` line
+ *   there closes the pointer and a hand-back opening EJECT is in `ejected`. Every doubt about the notes reads as no notes.
+ */
+function pointerNow(plan, state) {
+  let notes = null;
+  try { notes = managerNotes(scratchpadOf(String(hook.session_id ?? ''))); } catch { notes = null; }
+  return pointerOf(plan.text, state.ends, notes);
 }
 
 /** Does the approved plan in force define a pointer (an `Order:` line)? */
@@ -893,6 +935,10 @@ let left = [];
 // turn and its completion brings the session back, so a reply that says that agent's work is still going is a report of
 // state and not a hand-off: the WAITING refusal below passes it (finding 2 of the plan of 1 November, five of eight refusals).
 let agentRunning = false;
+// The reply's first line declares that an ejected step waits on something (`declaresEject`).
+let ejectDeclared = false;
+// The steps of the plan in force whose newest report opens EJECT (`pointerOf`'s `ejected`).
+let ejectedNow = new Set();
 // THE CLOSING STOP (Doctrine §0e rule 2): the Found lines of the plan's own steps that the manager sorted as queued with a
 // note that names no key present in the Found queue of a repository the plan's Files names. Read only when the pointer reads
 // next none, and only for the steps of the plan in force, so an earlier plan's lines in the manager notes do not hold the close.
@@ -931,8 +977,13 @@ try {
   const plan = approvedPlan();
   reviewed = plan && aimReviewSteps(plan.text).length ? plan : null;
   const probe = { session_id: hook.session_id, transcript_path: path };
+  // A STEP THAT EJECTED TO THE PLAN (Design part 3): its newest report opens EJECT, so it is not sent again as it stands. A reply whose
+  // first line says the step ejected and what it waits on ends the turn, as a declared stop does.
+  const ejectedSteps = plan && state && planOrder(plan.text) ? pointerNow(plan, state).ejected : undefined;
+  ejectedNow = ejectedSteps ?? new Set();
+  ejectDeclared = declaresEject(reply, ejectedSteps);
   if (state && !state.running.length && !queuedOwner.length && !opensWithChoice(reply) && !declaresStop(reply)
-    && !stopStanding(probe) && (reviewed || !correctionStanding(probe))) {
+    && !ejectDeclared && !stopStanding(probe) && (reviewed || !correctionStanding(probe))) {
     left = stepsLeft(state);
     if (!left.length && plan && planOrder(plan.text)) unrecorded = unrecordedFound(plan);
   }
@@ -951,7 +1002,7 @@ if (left.length) {
   }
   refuse(`STOP REFUSED — this turn ends with ${reviewed ? `the plan's steps not all done (the pointer reads next: step ${left[0]}), ` : pointed ? `the plan's pointer at next: step ${left[0]}, ` : `${left.length} step${left.length === 1 ? '' : 's'} of the approved plan still open (${left.join(', ')}), `}no agent of this session running, and no choice for the owner or declared stop with what is open.
 
-Doctrine §0e rule 2, §11c. An approved plan is the instruction for all of it, and a turn that ends here hands the owner back work the plan already gave you: every return to the owner has restarted the work. Do not end the turn. ${reviewed ? move : pointed ? `Send the step the pointer names, ${left[0]}, with the plan's path and the step's number: it stays next until an agent hands back for it with DONE as the first line, so a REFUSED or FAILED hand-back means sending it again.` : 'Send the next step, or the same step again if its agent ended at a refusal, with the plan\'s path and the step\'s number.'} Give the status at each agent's end. A turn may end only while an agent runs, with a choice only the owner can settle as the first thing in the reply, or declared in the first line: "Stopping here: open for you is <the specific thing>".
+Doctrine §0e rule 2, §11c. An approved plan is the instruction for all of it, and a turn that ends here hands the owner back work the plan already gave you: every return to the owner has restarted the work. Do not end the turn. ${reviewed ? move : pointed ? `Send the step the pointer names, ${left[0]}, with the plan's path and the step's number: it stays next until an agent hands back for it with DONE as the first line, so a REFUSED or FAILED hand-back means sending it again.` : 'Send the next step, or the same step again if its agent ended at a refusal, with the plan\'s path and the step\'s number.'} Give the status at each agent's end. A turn may end only while an agent runs, with a choice only the owner can settle as the first thing in the reply, or declared in the first line: "Stopping here: open for you is <the specific thing>".${ejectedNow.size ? ` Step${ejectedNow.size === 1 ? '' : 's'} ${[...ejectedNow].join(', ')} ejected to the plan: when the plan cannot be rewritten without the owner's button, say so in the first line as "Step N ejected, it waits on <the specific thing>".` : ''}
 `, reply);
 }
 
@@ -962,8 +1013,9 @@ Doctrine §0e rule 2. A finding is recorded for the next plan in the NOTES.md \`
 `, reply);
 }
 
-// A declared stop is allowed, and is the whole point of having a way through.
-if (DECLARED.test(reply)) process.exit(0);
+// A declared stop is allowed, and is the whole point of having a way through. So is the declaration that an ejected step waits on
+// something: it is a hand-up, and the waiting and parking refusals below judge a turn that is carrying on.
+if (DECLARED.test(reply) || ejectDeclared) process.exit(0);
 
 // PARKING is judged on the LAST SENTENCE only, and that is not a nicety.
 // "Let me know if that placement reads wrong — meanwhile I have started the

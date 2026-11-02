@@ -1151,7 +1151,7 @@ export function dispatchGate(p, plan = approvedPlan(), pointer = undefined) {
   else if (ptr === undefined) { try { ptr = pointerFor(p, plan.text); } catch { ptr = null; } }
   if (ptr && n !== ptr.next && !ptr.standing.includes(n)) {
     const standing = ptr.standing.length ? `Standing step${ptr.standing.length === 1 ? '' : 's'} ${ptr.standing.join(', ')}` : 'no Standing step';
-    return refusal(`${head} The pointer reads ${ptr.next === null ? 'next: none (every step in Order has a DONE hand-back)' : `next: step ${ptr.next}`}. `
+    return refusal(`${head} The pointer reads ${ptr.closed ? `next: none (the plan ejected to ${ptr.closed.item}, so it holds no step)` : ptr.next === null ? 'next: none (every step in Order has a DONE hand-back)' : `next: step ${ptr.next}`}. `
       + `Step ${n} is neither that step nor a Standing step, so it is not sent now. ${ptr.next === null ? `Only ${standing} may be sent.` : `Send ${plan.path} step ${ptr.next}, or ${standing}.`} `
       + 'A step becomes next only when an agent hands back for the step before it with DONE as the first line; a REFUSED or FAILED hand-back leaves it where it is.');
   }
@@ -1425,6 +1425,37 @@ export function filesSpanProblem(text) {
   if (planFiles(text).length) return null;
   return 'FILES (Doctrine §0e rule 13): the plan sends agents (it has a "## Steps") and its "## Files" section names no file: the plan fence reads a path only from a code span with no space in it (`approved-plan-guard.mjs`, `src/`, an absolute path), and prose names nothing, '
     + 'so no agent could write anything the plan asks for. Put each file or directory in backticks, on a line labelled with its repository ("- Hub, changed: `a.mjs`").';
+}
+
+/** The four labels every step of a plan that is not Standing carries (Design part 4, agent-rules.md version 5). */
+export const STEP_LABELS = ['Facts', 'Do', 'Observe', 'Kill'];
+
+/**
+ * Does every step of a plan carry its four labels?
+ * @param {string} text  the plan (its current block).
+ * @returns {string|null} null for a plan with no `## Steps` and for one whose every step that is not on the `Standing:` line of its
+ *   `## Order` holds all of Facts, Do, Observe and Kill, each written as the word and a colon (`Facts:`; bold marks round the word
+ *   or round the word and its colon are read too) anywhere in the step's text, so a step written as one paragraph and one written
+ *   as a line for each label both pass. A Standing step (the review and a route check) is not judged: its text is the instruction
+ *   it passes on, and the review's own hand-back is the shape it keeps. Otherwise the refusal, naming each step and the labels it
+ *   lacks. plan-guard.mjs refuses ExitPlanMode on it with the mark that sets no latch, and `--check` prints it. The step is a list
+ *   that cannot be done wrong: Facts is what it depends on, Do the exact actions, Observe what means done and Kill what ends it
+ *   with nothing written, and an agent that reads a step with no Observe has no way to know it is done.
+ */
+export function stepShapeProblem(text) {
+  if (!planSection(text, 'Steps').trim()) return null;
+  const standing = new Set(planOrder(text)?.standing ?? []);
+  const bad = [];
+  for (const n of planSteps(text)) {
+    if (standing.has(n)) continue;
+    const body = stepBody(text, n);
+    const lacks = STEP_LABELS.filter((l) => !new RegExp(`\\b${l}\\b\\**\\s*:`).test(body));
+    if (lacks.length) bad.push(`step ${n} lacks ${lacks.join(', ')}`);
+  }
+  if (!bad.length) return null;
+  return `STEP SHAPE (Design part 4): ${bad.length === 1 ? 'a step of the plan does' : `${bad.length} steps of the plan do`} not carry the four labels, ${bad.join('; ')}. `
+    + 'Every step that is not on the Standing line has Facts (the asks and the facts it depends on, restated), Do (the exact actions), Observe (what must be seen for the step to be done) and Kill (what ends it with nothing further written), '
+    + 'each written as the word and a colon in the step\'s own text, so the agent that reads the step is told how it is done and when it stops. Add the missing labels to the step.';
 }
 
 // ---- the shared rules: a plan points at one file instead of copying it (Doctrine §0e rule 13) ----

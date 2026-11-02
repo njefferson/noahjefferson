@@ -239,10 +239,16 @@ const PLAN = (asked) => ['# Test plan', '',
   '## Call chain', 'The toolbar builder places the button; nothing else reads its position.', '',
   '## Whole app', 'It belongs because it was asked for, and nothing else would change.', '',
   '## Leaves open', 'Nothing is left open by this change, as far as can be seen here.', ''].join('\n');
+// The four labels every step that is not Standing carries (Design part 4; `stepShapeProblem` in hook-dispatch.mjs refuses a plan whose
+// step lacks one). They are one line, appended after a step's sentence on its own line, so that a literal match of the sentence
+// elsewhere in this file still matches. A fixture that puts a new step after an earlier step's sentence replaces the sentence AND this
+// line (`withLabels`), so the earlier step keeps its labels before the new step, and gives the new step its own unless it is Standing.
+const LABELS = 'Facts: the change was asked for as written. Do: make the change. Observe: the change shows in the output. Kill: a red check ends the step.';
+const withLabels = (sentence) => `${sentence}\n${LABELS}`;
 // A plan in the shape the dispatch gate and the plan fence read.
 const STEPS_PLAN = ['# Gate test plan', '',
   '## Goals', '1. The thing is built and read.', GOALS_BLOCK, 'Served by: steps 1 and 2 serve goal 1.', '',
-  '## Steps', '1. **Build.** Make the thing.', '2. **Check.** Read the thing.', '',
+  '## Steps', '1. **Build.** Make the thing.', LABELS, '2. **Check.** Read the thing.', LABELS, '',
   '## Commands', '- git status', '- git commit', '- git push', '- node tools/', '- node --check', '- npm ci', '',
   '## Files touched', '- Repo: `keep.mjs`, `src/`, `docs/notes.md`', ''].join('\n');
 // The same plan with its Files line labelled for one repository.
@@ -253,7 +259,7 @@ const fencePlan = (label) => ({ path: '/plans/gate-test.md', text: STEPS_PLAN.re
 const ORDER_PLAN = STEPS_PLAN
   .replace('Served by: steps 1 and 2 serve goal 1.', 'Served by: steps 1, 2 and 3 serve goal 1.')
   .replace('## Steps', '## Order\nOrder: 1 2\nStanding: 3\nStep 9 is never sent, and the first line of a hand-back decides.\n\n## Steps')
-  .replace('2. **Check.** Read the thing.', '2. **Check.** Read the thing.\n3. **Timer.** Wait on the thing.')
+  .replace(withLabels('2. **Check.** Read the thing.'), `${withLabels('2. **Check.** Read the thing.')}\n3. **Timer.** Wait on the thing.`)
   .replace('## Files touched', '## Leaves open\n- The thing may need a second read.\n\n## Files touched');
 const reply = (s, text) => ({ type: 'assistant', timestamp: ts(s), message: { role: 'assistant', content: [{ type: 'text', text }] } });
 // The same plan with a Standing review step: step 3 tells its agent to follow the hub copy's aim-review.md by its
@@ -513,7 +519,7 @@ function sendingPlan(dir, { rules = rulesLine(dir), files = '- Repo: `a.txt`', a
     '## Asked', OWN_WORDS, '',
     '## Order', 'Order: 1', 'Standing: 2', '',
     ...(rules === null ? [] : ['## Rules', rules, '']),
-    '## Steps', '1. **Build.** Make the toolbar change.', `2. **Review.** Follow ${join(dir, 'aim-review.md')} for the move named on the status page.`, '',
+    '## Steps', '1. **Build.** Make the toolbar change.', LABELS, `2. **Review.** Follow ${join(dir, 'aim-review.md')} for the move named on the status page.`, '',
     '## Commands', '- node /tmp/claude-0/', '',
     ...(files === null ? [] : ['## Files', files, '']),
     ...(answered === null ? [] : ['## Found answered', answered, '']),
@@ -554,7 +560,7 @@ const BT = '`';
  */
 function afterPlanText(dir, line = '') {
   return reviewPlan(dir).replace('Order: 1 2\nStanding: 3\n', `Order: 1 2 4\nStanding: 3\n${line ? `${line}\n` : ''}`)
-    .replace(/(3\. \*\*Review\.\*\*[^\n]*)/, '$1\n4. **Other.** Do another thing.');
+    .replace(/(3\. \*\*Review\.\*\*[^\n]*)/, `$1\n4. **Other.** Do another thing.\n${LABELS}`);
 }
 /**
  * A plan that passes every check of the plan guard, with an Order of steps 1 and 2, a Standing review step 3 and the After line it is given.
@@ -568,7 +574,7 @@ function afterGatePlan(dir, line = '') {
     '## Asked', OWN_WORDS, '',
     '## Order', 'Order: 1 2', 'Standing: 3', ...(line ? [line] : []), '',
     '## Rules', rulesLine(dir), '',
-    '## Steps', '1. **Build.** Make the toolbar change.', '2. **Check.** Read the toolbar change.',
+    '## Steps', '1. **Build.** Make the toolbar change.', LABELS, '2. **Check.** Read the toolbar change.', LABELS,
     `3. **Review.** Follow ${join(dir, 'aim-review.md')} for the move named on the status page.`, '',
     '## Commands', '- node /tmp/claude-0/', '',
     '## Files', '- Repo: `a.txt`', '',
@@ -2995,7 +3001,7 @@ const CASES = [
       // A step added to the Steps after the approval: the approval stands, with the step numbers it had.
       const I = appHome(dir);
       const trI = transcript([...head, ...buttonExit(-20, I.plan, STEPS_PLAN)]);
-      const edited = STEPS_PLAN.replace('2. **Check.** Read the thing.', '2. **Check.** Read the thing.\n3. **Extra.** Do one more thing.');
+      const edited = STEPS_PLAN.replace(withLabels('2. **Check.** Read the thing.'), `${withLabels('2. **Check.** Read the thing.')}\n3. **Extra.** Do one more thing.\n${LABELS}`);
       writeFileSync(I.plan, edited);
       const buildI = I.guard(trI, build);
       const mkI = I.mk();
@@ -4001,10 +4007,10 @@ const CASES = [
     run(m, dir) {
       // Step 4 is added to the Steps and to the Order, between steps 1 and 2, after the approval recorded steps 1 to 3.
       const addedOrder = ORDER_PLAN.replace('Order: 1 2', 'Order: 1 4 2')
-        .replace('3. **Timer.** Wait on the thing.', '3. **Timer.** Wait on the thing.\n4. **Extra.** Never sent.')
+        .replace('3. **Timer.** Wait on the thing.', `3. **Timer.** Wait on the thing.\n4. **Extra.** Never sent.\n${LABELS}`)
         .replace('Served by: steps 1, 2 and 3 serve goal 1.', 'Served by: steps 1, 2, 3 and 4 serve goal 1.');
       // A plan with no Order, and a step 3 added to it.
-      const addedPlain = STEPS_PLAN.replace('2. **Check.** Read the thing.', '2. **Check.** Read the thing.\n3. **Extra.** Never sent.')
+      const addedPlain = STEPS_PLAN.replace(withLabels('2. **Check.** Read the thing.'), `${withLabels('2. **Check.** Read the thing.')}\n3. **Extra.** Never sent.\n${LABELS}`)
         .replace('Served by: steps 1 and 2 serve goal 1.', 'Served by: steps 1, 2 and 3 serve goal 1.');
       const REPORT = 'Here is the report of what the gates now do, and what each one refuses.';
       const ending = (planText, lists, done) => {
@@ -4266,7 +4272,7 @@ const CASES = [
         '## Asked', OWN_WORDS, '',
         '## Order', 'Order: 1', 'Standing: 2', '',
         '## Rules', rulesLine(dir), '',
-        '## Steps', '1. **Build.** Make the toolbar change.', `2. **Review.** ${words}`, '',
+        '## Steps', '1. **Build.** Make the toolbar change.', LABELS, `2. **Review.** ${words}`, '',
         '## Commands', '- node /tmp/claude-0/', '',
         '## Files', '- Repo: `a.txt`', '',
         '## Cost', 'One step on the sonnet tier and one review per move, with one push at the end of the plan.', '',
@@ -4893,7 +4899,7 @@ const CASES = [
       const status = () => spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the no-order test'], { encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: s, TMPDIR: temp } }).stdout ?? '';
       const page = () => { try { return readFileSync(join(pad, 'status', 'fix-run.html'), 'utf8'); } catch { return ''; } };
       const at1 = (out, a, b) => out.indexOf(a) >= 0 && out.indexOf(a) < out.indexOf(b);
-      const THREE = STEPS_PLAN.replace('2. **Check.** Read the thing.', '2. **Check.** Read the thing.\n3. **Wait.** Wait on the thing.');
+      const THREE = STEPS_PLAN.replace(withLabels('2. **Check.** Read the thing.'), `${withLabels('2. **Check.** Read the thing.')}\n3. **Wait.** Wait on the thing.\n${LABELS}`);
       approve(THREE);
       // Nothing sent: every step is held, each after the one before it.
       const printed0 = status(), page0 = page();
@@ -4904,7 +4910,7 @@ const CASES = [
       writeFileSync(join(pad, 'status', 'manager.txt'), ['Start 1: 05:00', 'Estimate 3: 15 min', ''].join('\n'));
       const printed1 = status(), page1 = page();
       // The same steps with an Order of 1 and 2, Standing 3, and a fourth step in neither list.
-      approve(THREE.replace('3. **Wait.** Wait on the thing.', '3. **Wait.** Wait on the thing.\n4. **Stray.** Never sent.').replace('## Steps', '## Order\nOrder: 1 2\nStanding: 3\n\n## Steps'));
+      approve(THREE.replace(withLabels('3. **Wait.** Wait on the thing.'), `${withLabels('3. **Wait.** Wait on the thing.')}\n4. **Stray.** Never sent.\n${LABELS}`).replace('## Steps', '## Order\nOrder: 1 2\nStanding: 3\n\n## Steps'));
       status();
       const ordered = page();
       const checks = [
@@ -7514,6 +7520,217 @@ const CASES = [
     },
   },
 
+  // ---- step 55: a step is four parts (Design part 4), and EJECT is a state of its own (Design part 3) ----
+  {
+    name: 'ExitPlanMode and the check mode refuse a plan with a step that is not on the Standing line and lacks Facts, Do, Observe or Kill, naming the step and the labels it lacks, with the mark that sets no latch; a Standing step, labels written in one paragraph or in bold, and a plan with no Steps pass, and a label word with no colon does not count',
+    guards: ['step_shape_wired', 'step_shape_labels', 'step_shape_standing', 'step_shape_colon', 'step_shape_names'],
+    run(m, dir) {
+      const r = repo({ 'a.txt': 'x\n' });
+      const good = sendingPlan(dir);
+      const noKill = good.replace(LABELS, LABELS.replace(' Kill: a red check ends the step.', ''));
+      const oneParagraph = good.replace(`\n${LABELS}`, ' Facts: the asks. Do: the actions. Observe: the sight. Kill: the end.');
+      const bold = good.replace(LABELS, '**Facts:** the asks. **Do**: the actions. **Observe:** the sight. **Kill**: the end.');
+      const noColon = good.replace(LABELS, 'Facts about the change. Do it. Observe it. Kill it.');
+      // The Order and Standing lines taken out: step 2, the review step, is then an ordinary step and carries no labels.
+      const noOrder = good.replace('Order: 1\nStanding: 2\n', '').replace(/## Order\n\n/, '');
+      // Steps 1 and 2 are ordinary and step 3 is Standing; the labels of step 2 are taken out.
+      const gate = afterGatePlan(dir);
+      const second = gate.indexOf(LABELS, gate.indexOf(LABELS) + 1);
+      const noSecond = gate.slice(0, second) + gate.slice(second + LABELS.length + 1);
+      const [eGood, eNoKill, eOne, eBold, eNoColon, eNoOrder, eNoSecond] = [good, noKill, oneParagraph, bold, noColon, noOrder, noSecond].map((t) => exitFor(dir, t, r.dir));
+      const refused = (x, re) => x.status === 2 && /STEP SHAPE/.test(x.stdout) && /PLAN SHAPE, NO LATCH/.test(x.stdout) && re.test(x.stdout);
+      const direct = [m.dispatch.stepShapeProblem(good), m.dispatch.stepShapeProblem(noKill), m.dispatch.stepShapeProblem(noOrder), m.dispatch.stepShapeProblem(noSecond),
+        m.dispatch.stepShapeProblem(PLAN(OWN_WORDS)), m.dispatch.stepShapeProblem(noColon), m.dispatch.stepShapeProblem(oneParagraph), m.dispatch.stepShapeProblem(bold)];
+      const planFile = join(tmp('sg-check-'), 'shape-test.md');
+      writeFileSync(planFile, noKill);
+      const checked = spawnSync('node', [join(dir, 'plan-guard.mjs'), '--check', planFile], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: r.dir } });
+      const out = [];
+      if (eGood.status !== 0) out.push(`the plan with every label was refused: ${String(eGood.stdout).slice(0, 300)}`);
+      if (!refused(eNoKill, /step 1 lacks Kill\b/)) out.push('a step with no Kill was not refused, naming step 1 and Kill');
+      if (eOne.status !== 0 || eBold.status !== 0) out.push('labels in one paragraph, or in bold, were refused');
+      if (!refused(eNoColon, /step 1 lacks Facts, Do, Observe, Kill\b/)) out.push('label words with no colon were counted');
+      if (!refused(eNoOrder, /step 2 lacks Facts, Do, Observe, Kill\b/) || /step 1 lacks/.test(eNoOrder.stdout)) out.push('a plan with no Order did not have its review step judged as an ordinary step, alone');
+      if (!refused(eNoSecond, /step 2 lacks Facts, Do, Observe, Kill\b/) || /step 1 lacks/.test(eNoSecond.stdout)) out.push('the second of two ordinary steps with no labels was not named alone');
+      if (!(direct[0] === null && /step 1 lacks Kill\b/.test(direct[1] ?? '') && /step 2 lacks/.test(direct[2] ?? '') && /step 2 lacks/.test(direct[3] ?? '') && direct[4] === null
+        && /step 1 lacks/.test(direct[5] ?? '') && direct[6] === null && direct[7] === null)) out.push(`the step shape check gave ${JSON.stringify(direct.map((x) => x === null ? null : 'refusal'))}`);
+      if (checked.status !== 1 || !/STEP SHAPE/.test(checked.stdout)) out.push(`--check did not print the step shape fault and exit 1 (status ${checked.status})`);
+      if (out.length) throw new Error(out.join('; '));
+      return true;
+    },
+  },
+  {
+    name: 'a hand-back opening EJECT is a state of its own: it is a report whatever hook refusal came before it, the pointer keeps next on the step and lists it as ejected (neither done nor failed), the newest report decides and a DONE hand-back wins, and a manager note Eject that names a program item and a reason closes the pointer (next none) where a note with no item or no reason closes nothing; the pointer read for a session and the restart gate read that note from its scratchpad',
+    guards: ['hand_word_eject', 'eject_state', 'eject_newest', 'eject_done_wins', 'eject_closes', 'eject_notes_line', 'eject_pointer_for', 'eject_finished'],
+    run(m, dir) {
+      const said = (secs, id, name, input) => at(tool(0, id, name, input), later(secs));
+      const back = (secs, id, text, err = false) => at(result(0, id, text, err), later(secs));
+      const afterRefusal = (first) => [said(-300, 'e1', 'SendMessage', { message: 'x' }),
+        back(-299, 'e1', 'PreToolUse:SendMessage hook error: [node hook-dispatch.mjs]: PLAN FENCE refused the message', true),
+        said(-298, 'e2', 'SubagentHandback', { message: `${first}\nThe second line.` }), back(-297, 'e2', 'Report delivered to your caller.')];
+      const word = m.report.agentEnd(afterRefusal('EJECT'));
+      const wordKept = word.how === 'a report' && word.word === 'EJECT' && word.refusedBefore === true && m.report.agentEnd(afterRefusal('Ejected, then stopped.')).how === 'a refusal';
+      // The pointer: next stays on an ejected step, which is listed apart from the done steps.
+      const p1 = m.report.pointerOf(ORDER_PLAN, [endFor(1, 100, 10, 'EJECT')]);
+      const stays = p1.next === 1 && p1.ejected.has(1) && !p1.done.has(1) && p1.closed === null;
+      const p2 = m.report.pointerOf(ORDER_PLAN, [endFor(1, 200, 150, 'REFUSED'), endFor(1, 100, 10, 'EJECT')]);
+      const p3 = m.report.pointerOf(ORDER_PLAN, [endFor(1, 100, 10, 'REFUSED'), endFor(1, 200, 150, 'EJECT')]);
+      const newest = !p2.ejected.has(1) && p3.ejected.has(1) && p2.next === 1 && p3.next === 1;
+      const p4 = m.report.pointerOf(ORDER_PLAN, [endFor(1, 100, 10, 'DONE'), endFor(1, 200, 150, 'EJECT')]);
+      const doneWins = p4.done.has(1) && !p4.ejected.has(1) && p4.next === 2;
+      const p5 = m.report.pointerOf(ORDER_PLAN, [endFor(3, 100, 10, 'EJECT'), endFor(1, 100, 10, 'EJECT', 'a refusal')]);
+      const onlyReports = p5.ejected.size === 0 && p5.next === 1;
+      // The note: a program item and a reason, the newest line winning.
+      const s = sid('ej');
+      const parse = (text) => { notesPad(s, text); return m.report.managerNotes(m.report.scratchpadOf(s)).eject; };
+      const e1 = parse('Eject: P-12 the review showed the premise false');
+      const e2 = parse('Eject: P-12');
+      const e3 = parse('Eject: the premise is false');
+      const e4 = parse('Eject: P-12 first reason\neject p-7: the later line replaces it');
+      const e5 = parse('Next: step 2\nEject P-3, the plan stopped on a false fact');
+      const e6 = parse('Eject: P-4x not an item key');
+      const noteOk = e1?.item === 'P-12' && e1.reason === 'the review showed the premise false' && e2 === null && e3 === null && e4?.item === 'P-7' && e4.reason === 'the later line replaces it'
+        && e5?.item === 'P-3' && e5.reason === 'the plan stopped on a false fact' && e6 === null && m.report.managerNotes(null).eject === null;
+      // The note closes the pointer; a hand-back of step 1 stays counted.
+      notesPad(s, 'Eject: P-12 the review showed the premise false');
+      const notes = m.report.managerNotes(m.report.scratchpadOf(s));
+      const closedP = m.report.pointerOf(ORDER_PLAN, [endFor(1, 100, 10, 'DONE')], notes);
+      const openP = m.report.pointerOf(ORDER_PLAN, [endFor(1, 100, 10, 'DONE')]);
+      const closes = closedP.next === null && closedP.closed?.item === 'P-12' && closedP.closed.reason === 'the review showed the premise false' && closedP.done.has(1) && openP.next === 2 && openP.closed === null;
+      // The pointer for a session, read from its agents and its scratchpad.
+      const proj = tmp('sg-proj-');
+      const main = join(proj, `${s}.jsonl`);
+      const subs = join(proj, s, 'subagents');
+      mkdirSync(subs, { recursive: true });
+      writeFileSync(main, jsonl([turn(0, GO)]));
+      writeFileSync(join(subs, 'agent-ej1.jsonl'), jsonl([at({ type: 'user', message: { role: 'user', content: '/plans/gate-test.md step 1' } }, later(-300)),
+        at(tool(0, 'ej1-h', 'SubagentHandback', { message: 'DONE\nThe second line.' }), later(-100)), at(result(0, 'ej1-h', 'Report delivered to your caller.'), later(-99))]));
+      writeFileSync(join(subs, 'agent-ej1.meta.json'), JSON.stringify({ agentType: 'general-purpose', description: 'Plan step 1' }));
+      const forSession = m.report.pointerFor({ session_id: s, transcript_path: main }, ORDER_PLAN);
+      const forOther = m.report.pointerFor({ session_id: sid('ej'), transcript_path: main }, ORDER_PLAN);
+      const readFromPad = forSession?.next === null && forSession.closed?.item === 'P-12' && forOther?.next === 2 && forOther.closed === null;
+      // The restart gate: a plan mode begun at a restart is the plan's while a step is left, and not once the manager has ejected the plan.
+      const A = appHome(dir);
+      writeFileSync(A.plan, ORDER_PLAN);
+      const marker = approvalMarker(A.home, A.plan, ORDER_PLAN);
+      const T = transcript([...approvedEntries(A.plan), ...workEntries(-650, 'w1'), ...restartOf('compaction', A.plan)]);
+      const subsA = join(T.slice(0, -'.jsonl'.length), 'subagents');
+      mkdirSync(subsA, { recursive: true });
+      putAgent(subsA, A.plan, 'a1', 1, -600, -550, 'DONE');
+      const s3 = sid('ej');
+      const holds = m.report.restartedPlanMode({ transcript_path: T, session_id: s3 }, marker) === A.plan;
+      notesPad(s3, 'Eject: P-12 the review showed the premise false');
+      const stands = m.report.restartedPlanMode({ transcript_path: T, session_id: s3 }, marker) === '';
+      const out = [];
+      if (!wordKept) out.push('an EJECT hand-back after a refused call was not a report with its word');
+      if (!stays) out.push('an EJECT hand-back did not leave next on the step and list it as ejected');
+      if (!newest) out.push('the newest report did not decide');
+      if (!doneWins) out.push('a DONE hand-back did not win over an EJECT one');
+      if (!onlyReports) out.push('a Standing step, or an end that is not a report, was listed as ejected');
+      if (!noteOk) out.push(`the Eject note was parsed as ${JSON.stringify([e1, e2, e3, e4, e5, e6])}`);
+      if (!closes) out.push('the Eject note did not close the pointer');
+      if (!readFromPad) out.push(`the pointer for a session did not read the note from its scratchpad: ${JSON.stringify([forSession?.next, forSession?.closed, forOther?.next])}`);
+      if (!(holds && stands)) out.push(`the restart gate did not stand aside for an ejected plan (held ${holds}, stood ${stands})`);
+      if (out.length) throw new Error(out.join('; '));
+      return true;
+    },
+  },
+  {
+    name: 'an ejected step and an ejected plan show on the status page and in the print: a step whose newest hand-back opens EJECT has a chip of its own in colour and in words and not the red one, the pointer block and the open list say the step ejected to the plan, a closed pointer says next none with the program item, every step not done then shows the plan went to that item and a done step stays green, the page carries the colour token with its dark pair, and a session read from disk prints the same words',
+    guards: ['eject_chip', 'eject_chip_closed', 'eject_open_lines', 'eject_open_step', 'eject_block_next', 'eject_page_next', 'eject_css', 'eject_row_state', 'eject_state_note'],
+    run(m, dir) {
+      const back = (lines, n) => ({ id: `agent-${n}`, how: 'a report', at: n, lines, path: '' });
+      const step = (n, state, lines, standing = false) => ({ step: n, standing, state, back: lines ? back(lines, n) : null, report: '', reportWritten: false });
+      const base = { read: true, why: '', planPath: '/plans/x.md', title: 'An eject plan', goalOne: '', leaves: [], reviewers: [3], manager: m.report.managerNotes(null), managerPath: '', found: [], compacted: null,
+        titles: new Map([[1, 'Build'], [2, 'Check'], [3, 'Review']]) };
+      const ej = { ...base, pointer: { order: [1, 2], standing: [3], done: new Set(), ejected: new Set([1]), closed: null, next: 1 },
+        steps: [step(1, 'EJECT', ['EJECT', 'Wall line: the step ejected.']), step(2, 'not sent', null), step(3, 'not sent', null, true)] };
+      const closed = { ...ej, pointer: { ...ej.pointer, closed: { item: 'P-12', reason: 'the premise was false' }, next: null } };
+      const doneClosed = { ...closed, steps: [step(1, 'DONE', ['DONE']), step(2, 'not sent', null), step(3, 'not sent', null, true)] };
+      const now = new Date('2026-10-19T14:15:00Z');
+      const pageEj = m.report.statusPage(ej, 'Status 07:15 — the eject test', now);
+      const pageClosed = m.report.statusPage(closed, 'Status 07:15 — the eject test', now);
+      const blockEj = m.report.pointerBlock(ej);
+      const blockClosed = m.report.pointerBlock(closed);
+      const checks = [
+        ['an ejected step has a chip of its own, not the red one', JSON.stringify(m.report.stepChip(ej, ej.steps[0])) === JSON.stringify({ cls: 'eject', words: 'ejected to the plan' })
+          && m.report.stepChip(ej, ej.steps[1]).cls === 'held' && pageEj.includes('<span class="chip eject">ejected to the plan</span>') && !pageEj.includes('chip open')],
+        ['the pointer block and the open list say the step ejected to the plan', blockEj.split('\n')[0] === 'next: step 1' && blockEj.includes('1 EJECT')
+          && m.report.openForOwner(ej).join(' ').includes('Step 1 ejected to the plan')],
+        ['a closed pointer says next none and the program item, in the block, the page and the open list', blockClosed.split('\n')[0] === 'next: none (the plan ejected to P-12: the premise was false)'
+          && pageClosed.includes('<strong>next: none (the plan ejected to P-12)</strong>') && m.report.openForOwner(closed)[0].includes('ejected to program item P-12: the premise was false')],
+        ['a closed pointer shows every step not done as ejected with the plan, and a done step stays green', m.report.stepChip(closed, closed.steps[0]).words === 'ejected, the plan went to P-12'
+          && m.report.stepChip(closed, closed.steps[1]).cls === 'eject' && m.report.stepChip(doneClosed, doneClosed.steps[0]).cls === 'done'],
+        ['the page carries the colour token and its dark pair', pageEj.includes('.eject { color: var(--eject); }') && (pageEj.match(/--eject:/g) ?? []).length === 3],
+      ];
+      // A session read from disk: one agent handed back EJECT for step 1, then the manager's note ejects the plan.
+      const w = world(dir, [], ORDER_PLAN);
+      const s = sid('ej');
+      const projDir = join(w.home, '.claude', 'projects', '-home-user');
+      const subs = join(projDir, s, 'subagents');
+      mkdirSync(subs, { recursive: true });
+      writeFileSync(join(projDir, `${s}.jsonl`), JSON.stringify(turn(0, 'start')) + '\n');
+      writeFileSync(join(subs, 'agent-ej.jsonl'), jsonl([at({ type: 'user', message: { role: 'user', content: `${w.plan} step 1` } }, later(-400)),
+        at(tool(0, 'ej-b', 'Bash', { command: 'git status' }), later(-300)), at(result(0, 'ej-b', 'clean'), later(-299)),
+        at(tool(0, 'ej-h', 'SubagentHandback', { message: 'EJECT\nWall line: the step met something its text did not name.' }), later(-200)), at(result(0, 'ej-h', 'Report delivered to your caller.'), later(-199))]));
+      writeFileSync(join(subs, 'agent-ej.meta.json'), JSON.stringify({ agentType: 'general-purpose', description: 'Plan step 1' }));
+      const pad = dirname(dirname(notesPad(s, 'Next: step 1')));
+      const status = () => spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the eject print'], { encoding: 'utf8', env: { ...process.env, HOME: w.home, CLAUDE_CODE_SESSION_ID: s } }).stdout ?? '';
+      const page = () => { try { return readFileSync(join(pad, 'status', 'fix-run.html'), 'utf8'); } catch { return ''; } };
+      const printed = status(), disk = page();
+      notesPad(s, 'Eject: P-12 the premise was false');
+      const printedClosed = status(), diskClosed = page();
+      checks.push(['a session read from disk prints the ejected step and the page draws its chip', /^next: step 1$/m.test(printed) && /Order, each step's state: 1 EJECT; 2 not sent\./.test(printed) && disk.includes('<span class="chip eject">ejected to the plan</span>')]);
+      checks.push(['the manager\'s note closes the pointer in the print and on the page', /^next: none \(the plan ejected to P-12: the premise was false\)$/m.test(printedClosed) && diskClosed.includes('ejected, the plan went to P-12')]);
+      const failed = checks.filter(([, ok]) => !ok).map(([label]) => label);
+      if (failed.length) throw new Error(`the eject states failed: ${failed.join('; ')}`);
+      return true;
+    },
+  },
+  {
+    name: 'an ejected step lets the turn end: with an approved plan, a step left and no agent running, a reply whose first line says "Step N ejected, it waits on" and then what, for a step whose newest hand-back opens EJECT, is let through, even when a later sentence would be read as work still running, and the refusal of any other reply names the ejected step and the sentence to use; a declaration for a step that did not eject, one with no what and one with too little are refused, and a plan the manager ejected to the program holds no step',
+    guards: ['eject_declares_step', 'eject_declares_what', 'eject_lets_through', 'eject_exit_declared', 'eject_closed_stop', 'eject_pointer_notes', 'eject_hint'],
+    run(m, dir) {
+      const REPORT = 'Here is the report of what the gates now do, and what each one refuses.';
+      const ending = (text, handBacks, notes = null) => {
+        const w = world(dir, [], ORDER_PLAN);
+        writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha256(ORDER_PLAN), at: new Date().toISOString(), approvedAt: later(-3600), steps: [1, 2, 3], standing: [3] }));
+        const s = sid('ej');
+        const proj = tmp('sg-proj-');
+        const main = join(proj, `${s}.jsonl`);
+        const subs = join(proj, s, 'subagents');
+        mkdirSync(subs, { recursive: true });
+        for (const [n, first] of Object.entries(handBacks)) {
+          const id = `e${n}`;
+          writeFileSync(join(subs, `agent-${id}.jsonl`), jsonl([at({ type: 'user', message: { role: 'user', content: `${w.plan} step ${n}` } }, later(-300)),
+            at(tool(0, `${id}-b`, 'Bash', { command: 'git status' }), later(-200)), at(result(0, `${id}-b`, 'clean'), later(-199)),
+            at(tool(0, `${id}-h`, 'SubagentHandback', { message: `${first}\nWall line: the step is as the case set it.` }), later(-100)), at(result(0, `${id}-h`, 'Report delivered to your caller.'), later(-99))]));
+          writeFileSync(join(subs, `agent-${id}.meta.json`), JSON.stringify({ agentType: 'general-purpose', description: `Plan step ${n}` }));
+        }
+        if (notes !== null) notesPad(s, notes);
+        writeFileSync(main, jsonl([turn(0, GO), reply(5, text)]));
+        return spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: s, transcript_path: main }), encoding: 'utf8', env: { ...process.env, HOME: w.home } });
+      };
+      const err = (r) => r.stderr ?? '';
+      const ejected = { 1: 'DONE', 2: 'EJECT' };
+      const DECL = 'Step 2 ejected, it waits on the plan rewrite from the files its report names.';
+      const plain = ending(REPORT, ejected);
+      const declared = ending(DECL, ejected);
+      const running = ending(`Step 2 ejected, it waits on the plan rewrite, and the check is still running.`, ejected);
+      const wrongStep = ending('Step 1 ejected, it waits on the plan rewrite from the files its report names.', ejected);
+      const noWhat = ending('Step 2 ejected and the plan is rewritten next.', ejected);
+      const tooShort = ending('Step 2 ejected, it waits on it.', ejected);
+      const failedStep = ending(DECL, { 1: 'DONE', 2: 'FAILED' });
+      const notEjected = ending(REPORT, { 1: 'DONE' });
+      const closed = ending(REPORT, { 1: 'DONE' }, 'Eject: P-12 the review found the premise false');
+      const noReason = ending(REPORT, { 1: 'DONE' }, 'Eject: P-12');
+      return plain.status === 2 && err(plain).includes('next: step 2') && err(plain).includes('Step 2 ejected to the plan') && err(plain).includes('it waits on <the specific thing>')
+        && declared.status === 0 && running.status === 0
+        && wrongStep.status === 2 && noWhat.status === 2 && tooShort.status === 2 && failedStep.status === 2 && !err(failedStep).includes('ejected to the plan')
+        && notEjected.status === 2 && err(notEjected).includes('next: step 2') && !err(notEjected).includes('ejected to the plan')
+        && closed.status === 0 && noReason.status === 2;
+    },
+  },
+
   // ---- step 229, change 7: the reply guard's refusal of a Read of the record sets no latch (LESSONS §435) ----
   {
     name: 'step229g: the reply guard\'s refusal of the main thread\'s Read of a file of the record sets no latch and its text says so, since the reads gate already holds every send until a Read of that file has returned; a refusal of any other call, a Grep of the same file or an agent\'s Read among them, keeps its latch and its text says that',
@@ -8969,7 +9186,7 @@ const PLANTS = {
   // Step 229, change 6: a hand-back that opens DONE, FAILED or REFUSED counts after a refusal (LESSONS §436).
   hand_word: ["how: lastRefusal && !word ? 'a refusal' : 'a report', at, last: cut(handback.text)", "how: lastRefusal ? 'a refusal' : 'a report', at, last: cut(handback.text)", 'report.mjs'],
   hand_word_set: [', ...(word ? { word, refusedBefore: lastRefusal } : {}) };', ' };', 'report.mjs'],
-  hand_word_re: ['const HAND_BACK_WORD = /^(?:DONE|FAILED|REFUSED)\\b/;', 'const HAND_BACK_WORD = /^DONE\\b/;', 'report.mjs'],
+  hand_word_re: ['const HAND_BACK_WORD = /^(?:DONE|FAILED|REFUSED|EJECT)\\b/;', 'const HAND_BACK_WORD = /^DONE\\b/;', 'report.mjs'],
   hand_status: ['by ${endWords(a)}.\\n`', 'by ${a.how}.\\n`', 'report.mjs'],
   hand_stepends: ['last: end.last, path, ...(end.word ? { word: end.word, refusedBefore: end.refusedBefore } : {}) });', 'last: end.last, path });', 'report.mjs'],
   hand_endedsince: ['how: end.how, at: end.at, ...(end.word ? { word: end.word, refusedBefore: end.refusedBefore } : {}) });', 'how: end.how, at: end.at });', 'report.mjs'],
@@ -9039,6 +9256,36 @@ const PLANTS = {
   cost_push: ['const numberBeside = ', 'const numberBeside = true || ', 'hook-dispatch.mjs'],
   cost_sends: ['const sends = /\\b(?:agents?|sends?|reviews?)\\b/i.test(body);', 'const sends = true;', 'hook-dispatch.mjs'],
   cost_tier: ['const tier = /\\b(?:opus|sonnet|haiku|fable|mythos|tier)\\b/i.test(body);', 'const tier = true;', 'hook-dispatch.mjs'],
+  // Step 55: a step is four parts (Design part 4), and EJECT is a state of its own (Design part 3).
+  step_shape_wired: ['  if (stepShape) fault(stepShape);\n', '\n', 'plan-guard.mjs'],
+  step_shape_labels: ["export const STEP_LABELS = ['Facts', 'Do', 'Observe', 'Kill'];", "export const STEP_LABELS = ['Facts', 'Do', 'Observe'];", 'hook-dispatch.mjs'],
+  step_shape_standing: ['    if (standing.has(n)) continue;\n    const body = stepBody(text, n);', '    const body = stepBody(text, n);', 'hook-dispatch.mjs'],
+  step_shape_colon: ['\\\\b${l}\\\\b\\\\**\\\\s*:', '\\\\b${l}\\\\b', 'hook-dispatch.mjs'],
+  step_shape_names: ["bad.push(`step ${n} lacks ${lacks.join(', ')}`);", "bad.push('a step lacks a label');", 'hook-dispatch.mjs'],
+  hand_word_eject: ['const HAND_BACK_WORD = /^(?:DONE|FAILED|REFUSED|EJECT)\\b/;', 'const HAND_BACK_WORD = /^(?:DONE|FAILED|REFUSED)\\b/;', 'report.mjs'],
+  eject_state: ['ejected.add(step);', 'void 0;', 'report.mjs'],
+  eject_newest: ['(!newest.has(e.step) || e.at >= newest.get(e.step).at)', '(!newest.has(e.step) || e.at <= newest.get(e.step).at)', 'report.mjs'],
+  eject_done_wins: ['o.order.includes(step) && !done.has(step) && EJECT.test', 'o.order.includes(step) && EJECT.test', 'report.mjs'],
+  eject_closes: ['  if (closed) pointer.next = null;\n', '', 'report.mjs'],
+  eject_notes_line: ['out.eject = { item: m[1].toUpperCase(), reason: m[2].trim() };', 'void 0;', 'report.mjs'],
+  eject_pointer_for: [`  try { notes = managerNotes(scratchpadOf(String(p?.session_id ?? ''))); } catch { notes = null; }\n  return pointerOf(text, s.ends, notes);`, '  return pointerOf(text, s.ends, null);', 'report.mjs'],
+  eject_finished: [`const pointer = s ? pointerOf(readFileSync(planPath, 'utf8'), s.ends, managerNotes(scratchpadOf(String(p?.session_id ?? '')))) : null;`, `const pointer = s ? pointerOf(readFileSync(planPath, 'utf8'), s.ends) : null;`, 'report.mjs'],
+  eject_row_state: [`: /^(?:REFUSED|FAILED|EJECT)\\b/.test(lines[0] ?? '') ? lines[0].match(/^(?:REFUSED|FAILED|EJECT)/)[0]`, `: /^(?:REFUSED|FAILED)\\b/.test(lines[0] ?? '') ? lines[0].match(/^(?:REFUSED|FAILED)/)[0]`, 'report.mjs'],
+  eject_state_note: ['const pointer = pointerOf(plan.text, s.ends, base.manager);', 'const pointer = pointerOf(plan.text, s.ends);', 'report.mjs'],
+  eject_chip: ["  if (x.state === 'EJECT') return { cls: 'eject', words: 'ejected to the plan' };\n", '', 'report.mjs'],
+  eject_chip_closed: ["  if (st.pointer?.closed && !x.standing) return { cls: 'eject', words: `ejected, the plan went to ${st.pointer.closed.item}` };\n", '', 'report.mjs'],
+  eject_open_lines: ['  if (st.pointer.closed) return [`The plan ejected to program item', '  if (false) return [`The plan ejected to program item', 'report.mjs'],
+  eject_open_step: ['if (st.pointer.next !== null && st.pointer.ejected?.has(st.pointer.next)) return', 'if (false) return', 'report.mjs'],
+  eject_block_next: ['  if (p.closed) out[0] = `next: none (the plan ejected to', '  if (false) out[0] = `next: none (the plan ejected to', 'report.mjs'],
+  eject_page_next: ['st.pointer.closed ? `none (the plan ejected to ${st.pointer.closed.item})` : st.pointer.next === null', 'st.pointer.next === null', 'report.mjs'],
+  eject_css: [' .eject { color: var(--eject); }', '', 'report.mjs'],
+  eject_declares_step: ['return !!m && !!ejected && ejected.has(Number(m[1]));', 'return !!m;', 'stop-guard.mjs'],
+  eject_declares_what: ['\\bwaits?\\s+on\\b[ \\t]*(\\S[^\\n]{6,})', '\\bwaits?\\s+on\\b[ \\t]*(\\S[^\\n]{0,})', 'stop-guard.mjs'],
+  eject_lets_through: [' && !ejectDeclared', '', 'stop-guard.mjs'],
+  eject_exit_declared: ['if (DECLARED.test(reply) || ejectDeclared) process.exit(0);', 'if (DECLARED.test(reply)) process.exit(0);', 'stop-guard.mjs'],
+  eject_closed_stop: ['    if (pointer.closed) return [];\n', '', 'stop-guard.mjs'],
+  eject_pointer_notes: [`  try { notes = managerNotes(scratchpadOf(String(hook.session_id ?? ''))); } catch { notes = null; }\n  return pointerOf(plan.text, state.ends, notes);`, '  return pointerOf(plan.text, state.ends, null);', 'stop-guard.mjs'],
+  eject_hint: ['${ejectedNow.size ? ` Step${', '${false ? ` Step${', 'stop-guard.mjs'],
   // Finding 16: a run of the cases says the plants were not run; a run of plants gives its count beside the total.
   run_plants_not_run: ['  // suite for nine hours, and the plants are the other half of it.\n  console.log(`PLANTS NOT RUN:', '  // suite for nine hours, and the plants are the other half of it.\n  console.log(`PLANTS:', 'session-guards.test.mjs'],
   run_plants_counted: ['  }\n  console.log(`PLANTS RUN: ${todo.length} of', '  }\n  console.log(`PLANTS: ${todo.length} of', 'session-guards.test.mjs'],

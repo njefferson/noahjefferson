@@ -782,7 +782,7 @@ if (tool === 'ExitPlanMode') {
   });
   // Loaded here only, because this file runs on every tool call and the plan parsing lives in hook-dispatch.mjs. They are loaded
   // before the sections are looked at, so that the refusal for a missing one carries the mark that sets no latch as well.
-  const { goalsProblem, aimStandingProblem, reviewCommandProblem, commandsGitDirProblem, filesSpanProblem, afterProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem, shippedCheckProblem,
+  const { goalsProblem, aimStandingProblem, reviewCommandProblem, commandsGitDirProblem, filesSpanProblem, stepShapeProblem, afterProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem, shippedCheckProblem,
     readAfterCompactionProblem, costProblem, queueRoots, inScratchpad, NAMES_NO_LATCH, SHAPE_NO_LATCH } = await import('./hook-dispatch.mjs');
   const { scratchpadOf } = await import('./report.mjs');
   // EVERY FAULT IS COLLECTED, AND THE APPROVAL CALL STOPS AT THE FIRST (LESSONS §435). `fault` is where a check's finding lands. At the
@@ -826,6 +826,11 @@ if (tool === 'ExitPlanMode') {
   if (gitDir) fault(gitDir);
   const filesSpan = filesSpanProblem(top);
   if (filesSpan) fault(filesSpan);
+  // EVERY STEP IS A LIST THAT CANNOT BE DONE WRONG (Design part 4): each step that is not on the Standing line carries Facts, Do, Observe
+  // and Kill, so the agent that reads it is told what it depends on, what to do, what means done and what ends it with nothing written.
+  // A fault of the plan's shape, and it sets no latch.
+  const stepShape = stepShapeProblem(top);
+  if (stepShape) fault(stepShape);
   // AN AFTER LINE NAMES STEPS OF THE ORDER AND NOTHING ELSE (Doctrine §0e rule 2, LESSONS §424): the line under `## Order` that
   // narrows what stales a review is read by the review's state and the review gate alike, and a group naming a step the Order
   // does not hold, or not of the form `N after M M`, would be read as no group at all.

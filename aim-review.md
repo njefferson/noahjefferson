@@ -40,6 +40,15 @@ By path, never from a summary, because a summary is the paraphrase that drifted.
 - The status page's source, `status/fix-run.html` in the same scratchpad. Its Next
   line names M, the step whose route is read. Where it names none, M is the step on
   its `next:` line.
+- The step M's own text in the plan, and in it the three labels the review judges
+  the aim by: its Facts (what the step is told it depends on, restated from the
+  plan's asks), its Observe (what must be seen for the step to be done) and its Kill
+  (what ends the step with nothing further written). They are read against the plan's
+  goal 1, the first goal under its Goals, and not against the step's own sentence: a
+  step whose Observe does not show goal 1 any nearer, whose Facts restate a premise
+  the earlier hand-backs show false, or whose Kill leaves a write behind, is aimed at
+  the wrong thing however well the rest of the step reads. A step on the Standing line
+  carries none of the four labels and is read as it is written.
 - The owner's messages, by the script below, and only those typed before the
   moment being judged.
 - For the route: this plan's Rules section, `DOCTRINE.md` section 0e in the live
@@ -57,6 +66,17 @@ The hand-back is the whole of the report. Its first line is the verdict:
   hand-back judged and `next M` for the step whose route it read. For example, the
   words ON-AIM ROUTE-CLEAR step 12 next 13 clear step 13 after step 12. When no
   step of Order has ended yet, N is the word none.
+
+Its second line, directly under the verdict, is the review's own wall line, which
+begins with the words `Wall line:` and is one sentence answering three questions:
+whether step M still serves the plan's goal 1, read from M's Facts, Observe and Kill;
+whether that goal still serves the owner's asks as the plan's Design states them; and
+whether what the review read this send moved either answer. The dispatcher reads only
+the first line (`parseVerdict` in `report.mjs`), so the second line cannot spoil the
+verdict, and a wall line that answers no is a reason for OFF-AIM or for the amendment
+the route names. A step's hand-back carries its own wall line in the same place, under
+its DONE, REFUSED, FAILED or EJECT word; the review's is a separate judgement of the
+move about to go, written before it goes.
 
 Under it:
 
