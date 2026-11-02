@@ -119,6 +119,9 @@ Every item below has actually happened.
  `claude/*` branches, removes one only when merging it into `main` changes
  nothing and the branch still sits at the SHA it judged, and prints every other
  branch, with the count of commits main lacks for a kept `claude/*` one. A
+ branch that shares no history with `main` (every branch from before the
+ rewrite) is removed only when the tree id of its tip equals the tree id of a
+ commit main's whole history holds, and is kept otherwise (LESSONS §454). A
  dispatch is a dry run unless `delete` is set. Branch removal is never handed
  to the owner. A repo without its caller cannot be swept yet; REPOS.md lists
  which still owe one. **The plan fence passes this one dispatch now:** an

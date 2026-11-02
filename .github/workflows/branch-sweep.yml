@@ -19,7 +19,10 @@ name: Branch sweep
 #              its whole output is exactly main's tree id, so merging the
 #              branch into main changes nothing. Any other exit keeps it: 1 is
 #              a conflict, which still prints a tree, so the exit code alone is
-#              not enough; 128 is a history unrelated to main. Kept branches are
+#              not enough; 128 is a history unrelated to main, and such a branch
+#              is removable only when the tree id of its tip equals the tree id
+#              of a commit main's whole history holds, and is kept otherwise.
+#              Kept branches are
 #              printed with the count of commits main lacks. Main is the only
 #              base. Staging never counts, because its history is disposable.
 #   delete     only when the `delete` input is true. Otherwise this is a dry run
@@ -101,10 +104,25 @@ jobs:
           echo "Base: main at $MAIN_SHA, tree $MAIN_TREE"
           echo
 
+          # The tree read below needs every commit of main. The checkout above
+          # takes the whole history; a shallow clone is deepened, and a clone
+          # that is still shallow stops the run rather than judge on part of it.
+          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            git fetch --unshallow --quiet origin
+          fi
+          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            echo "::error::the clone is still shallow, so main's whole history cannot be read."
+            exit 1
+          fi
+
           NAME_OK='^[A-Za-z0-9._/-]+$'
           LIST="$RUNNER_TEMP/removable.txt"
           OUT="$RUNNER_TEMP/merge-tree.out"
+          TREES="$RUNNER_TEMP/main-trees.txt"
           : > "$LIST"
+          # Every tree id of every commit main reaches, for a branch that shares
+          # no history with main (a branch from before the history rewrite).
+          git log --format='%T' "$MAIN_SHA" > "$TREES"
           removable=0
           kept=0
           outside=0
@@ -137,6 +155,25 @@ jobs:
               fi
               printf '%s %s\n' "$SHA" "$NAME" >> "$LIST"
               removable=$((removable + 1))
+            elif [ "$CODE" -eq 128 ] && ! git merge-base "$MAIN_SHA" "$SHA" > /dev/null 2>&1; then
+              # No common history, so the merge cannot be computed. The branch's
+              # work is in main when the tree of its tip is a tree some commit of
+              # main's history holds: a rewrite of messages keeps trees, so a
+              # branch merged before the rewrite matches, and one carrying
+              # unmerged work does not.
+              TIP_TREE=$(git rev-parse "$SHA^{tree}")
+              if grep -qxF "$TIP_TREE" "$TREES"; then
+                if [[ "$NAME" =~ $NAME_OK ]]; then
+                  echo "removable: $NAME at $SHA (no common history with main; its tip tree $TIP_TREE is a tree main's history holds)"
+                else
+                  echo "removable, but its name is outside [A-Za-z0-9._/-], so a deletion will keep it and fail: $NAME at $SHA"
+                fi
+                printf '%s %s\n' "$SHA" "$NAME" >> "$LIST"
+                removable=$((removable + 1))
+              else
+                echo "kept: $NAME at $SHA (no common history with main; its tip tree $TIP_TREE is in no commit of main; $LACKS commits main lacks)"
+                kept=$((kept + 1))
+              fi
             else
               echo "kept: $NAME at $SHA (merge-tree exit $CODE; $LACKS commits main lacks)"
               kept=$((kept + 1))

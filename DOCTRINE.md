@@ -1464,6 +1464,10 @@ Two consequences, both non-optional:
  against `main` exits 0 and its whole output is exactly main's tree id, so
  merging it into main changes nothing; any other result keeps it, printed with
  the count of commits main lacks. Main is the only base; staging never counts.
+ A branch that shares no history with main (every branch from before the history
+ rewrite), where the merge cannot be computed, is removable only when the tree id
+ of its tip equals the tree id of a commit main's whole history holds, and is kept
+ otherwise (LESSONS §454).
  A dispatch is a dry run unless its `delete` input is set. Then each delete is
  a push of the deletion with a lease at the SHA that was judged, so a branch
  that moved since is refused rather than deleted (LESSONS §382), and a name
