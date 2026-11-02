@@ -1372,6 +1372,25 @@ function markerPlanPath(marker = join(homedir(), '.claude', 'APPROVED-PLAN.json'
 }
 
 /**
+ * When the plan in force was approved.
+ * @param {string} [marker]  the approval marker's path; `~/.claude/APPROVED-PLAN.json` by default.
+ * @returns {number} the time in ms of the marker's `approvedAt` (the approved exit's own time, which `approved-plan-guard.mjs`
+ *   records at approval, at recovery and at each amendment), else of the marker's own `at`; NaN when there is no marker or
+ *   neither is readable. A plan path is shared by every plan of a session, so an agent sent before this time is an end of an
+ *   earlier approval of the same path, and a report file last written before it is that approval's.
+ */
+function markerApprovalTime(marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) {
+  try {
+    const mk = JSON.parse(readFileSync(marker, 'utf8'));
+    for (const k of ['approvedAt', 'at']) {
+      const t = Date.parse(typeof mk?.[k] === 'string' ? mk[k] : '');
+      if (Number.isFinite(t)) return t;
+    }
+  } catch { /* no marker, or one that cannot be read */ }
+  return NaN;
+}
+
+/**
  * The first 64 KB of an agent's transcript.
  * @param {string} path  the agent's transcript.
  * @returns {string} the text of the file's first 64 KB, or '' when it cannot be
@@ -1593,6 +1612,9 @@ export function stepEnds(p) {
   // The plan in force: an agent whose prompt names another plan's path ended under that plan, and its DONE is not this plan's.
   const inForce = markerPlanPath();
   const ours = inForce ? new Set([resolvePath(inForce), resolvePath(stepsFilePath(inForce))]) : null;
+  // The harness gives every plan of a session one file, so the path alone cannot tell two approvals of it apart: an agent sent
+  // before this plan's approval is an end of the earlier one. An agent whose start cannot be read is kept, as the review gate keeps it.
+  const approvedFrom = markerApprovalTime();
   for (const a of agentFiles(f.agents)) {
     const id = a.id;
     const path = a.file;
@@ -1603,8 +1625,10 @@ export function stepEnds(p) {
     const prompt = agentPrompt(path, head);
     const step = prompt?.step ?? null;
     if (end && ours && prompt && !ours.has(resolvePath(prompt.plan))) continue;
+    const startAt = agentStart(path, head);
+    if (end && ours && Number.isFinite(startAt) && startAt < approvedFrom) continue;
     if (!end) { running.push(`agent ${id}`); if (step !== null) runningSteps.add(step); continue; }
-    ends.push({ id, step, how: end.how, at: end.at, startAt: agentStart(path, head), last: end.last, path, ...(end.word ? { word: end.word, refusedBefore: end.refusedBefore } : {}) });
+    ends.push({ id, step, how: end.how, at: end.at, startAt, last: end.last, path, ...(end.word ? { word: end.word, refusedBefore: end.refusedBefore } : {}) });
   }
   return { ends, running, runningSteps };
 }
@@ -2176,8 +2200,10 @@ function planInForce(marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) 
  *   manager sorts it by in `status/manager.txt` (`managerNotes`), and the name the
  *   status prints it under. A report file rewritten with its Found lines in another
  *   order renames them, so the manager sorts a step's lines once its report is final.
+ *   A file last written before `since` (ms; the plan's approval) is an earlier approval's of the same
+ *   plan path and is not read; NaN or no value reads every file.
  */
-export function foundLines(pad) {
+export function foundLines(pad, since = NaN) {
   if (!pad) return [];
   const dir = join(pad, 'progress');
   let names = [];
@@ -2185,6 +2211,7 @@ export function foundLines(pad) {
   const out = [];
   for (const n of names.sort((a, b) => parseInt(a.slice(5), 10) - parseInt(b.slice(5), 10))) {
     let text = '';
+    try { if (statSync(join(dir, n)).mtimeMs < since) continue; } catch { continue; }
     try { text = readFileSync(join(dir, n), 'utf8'); } catch { continue; }
     const step = parseInt(n.slice(5), 10);
     let k = 0;
@@ -2363,7 +2390,7 @@ export function pointerState(sid, plan = planInForce()) {
   const pointer = pointerOf(plan.text, s.ends);
   const steps = [...pointer.order.map((step) => ({ step, standing: false })), ...pointer.standing.filter((n) => !pointer.order.includes(n)).map((step) => ({ step, standing: true }))]
     .map(({ step, standing }) => stepRow(step, standing, pointer.done, s, pad));
-  return { ...base, read: true, pointer, steps, found: foundLines(pad) };
+  return { ...base, read: true, pointer, steps, found: foundLines(pad, markerApprovalTime()) };
 }
 
 /**

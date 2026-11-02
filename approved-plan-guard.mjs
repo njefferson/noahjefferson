@@ -370,7 +370,7 @@ function recordAppExit(p) {
     mkdirSync(dirname(MARKER), { recursive: true });
     const snap = snapshotOf(x.plan);
     writeFileSync(MARKER, JSON.stringify({
-      plan: x.plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), session: p.session_id ?? null,
+      plan: x.plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), approvedAt: new Date(x.at).toISOString(), session: p.session_id ?? null,
       review: snap.review,
       steps: snap.steps, standing: snap.standing,
       via: `the owner's exit from plan mode in the app: entry ${x.uuid} at ${new Date(x.at).toISOString()}`, planMatchesFile: null, appExit: x.uuid,
@@ -496,7 +496,7 @@ function recordButtonApproval(p) {
       const snap = { scope: scopeHashes(read), script: scriptHashOf(read), ...approvedStepSet(read) };
       mkdirSync(dirname(MARKER), { recursive: true });
       writeFileSync(MARKER, JSON.stringify({
-        plan: x.plan, hash: hashOf(x.plan), scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), session: p.session_id ?? null,
+        plan: x.plan, hash: hashOf(x.plan), scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), approvedAt: new Date(x.at).toISOString(), session: p.session_id ?? null,
         review: snap.review, steps: snap.steps, standing: snap.standing,
         via: `the owner's approval at the button, ExitPlanMode call ${x.id} answered at ${new Date(x.at).toISOString()}, recorded before the gates were installed${edited ? '; the Steps or the Order were edited after it' : ''}`,
         planMatchesFile: x.approved === null ? null : x.approved.trim() === text.trim(), buttonUse: x.id,
@@ -580,8 +580,9 @@ if (process.argv.includes('--mark')) {
     planMatchesFile = fromObject ? r.plan.trim() === readFileSync(plan, 'utf8').trim() : null;
   } catch { process.exit(0); }                                // the file went between the check and the read: no marker
   mkdirSync(dirname(MARKER), { recursive: true });
+  const approvedNow = new Date().toISOString();
   writeFileSync(MARKER, JSON.stringify({
-    plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), session: p.session_id ?? null,
+    plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: approvedNow, approvedAt: approvedNow, session: p.session_id ?? null,
     review: snap.review,
     steps: snap.steps, standing: snap.standing,
     via: `ExitPlanMode approval: result ${fromObject ? 'filePath' : 'text'}`, planMatchesFile,
@@ -684,7 +685,7 @@ if (process.argv.includes('--amend')) {
     process.exit(2);
   }
   // `...mk` keeps steps, standing and review exactly as approved: an amendment moves the hash and the scope and nothing recorded.
-  writeFileSync(MARKER, JSON.stringify({ ...mk, hash: snap.hash, scope: snap.scope, amendedAt: new Date().toISOString(), amendments: (Number(mk.amendments) || 0) + 1 }, null, 1));
+  writeFileSync(MARKER, JSON.stringify({ ...mk, hash: snap.hash, scope: snap.scope, amendedAt: new Date().toISOString(), amendments: (Number(mk.amendments) || 0) + 1, approvedAt: mk.approvedAt ?? mk.at }, null, 1));
   writeStepsFile(mk.plan);
   process.exit(0);
 }

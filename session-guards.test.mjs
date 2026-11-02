@@ -1287,6 +1287,49 @@ const CASES = [
     },
   },
   {
+    name: 'two approvals of one plan path in one session do not share step ends: an agent sent for step 1 before the plan\'s approval is not an end of its step 1, one sent after is, the time is the marker\'s approval time and else its own time, an agent whose start cannot be read is kept, and a report file written before the approval is not read for Found lines',
+    guards: ['plan_key_time', 'plan_key_since', 'plan_key_found'],
+    run(m) {
+      const marker = join(process.env.HOME, '.claude', 'APPROVED-PLAN.json');
+      mkdirSync(dirname(marker), { recursive: true });
+      const tr = transcript([turn(0, 'start')]);
+      const subs = join(tr.slice(0, -'.jsonl'.length), 'subagents');
+      mkdirSync(subs, { recursive: true });
+      const sentTo = (prompt, s) => at({ type: 'user', message: { role: 'user', content: prompt } }, later(s));
+      const handed = (id, s) => [at(tool(0, `${id}-h`, 'SubagentHandback', { message: 'DONE\nThe second line.' }), later(s)), at(result(0, `${id}-h`, 'Report delivered to your caller.'), later(s + 1))];
+      // An agent with no timestamp on any entry: its start cannot be read.
+      const blind = [{ type: 'user', message: { role: 'user', content: '/plans/new-plan.md step 2' } },
+        { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 'blind-h', name: 'SubagentHandback', input: { message: 'DONE\nThe second line.' } }] } },
+        { type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'blind-h', content: 'Report delivered to your caller.' }] } }];
+      writeFileSync(join(subs, 'agent-early.jsonl'), jsonl([sentTo('/plans/new-plan.md step 1', -600), ...handed('early', -590)]));
+      writeFileSync(join(subs, 'agent-late.jsonl'), jsonl([sentTo('/plans/new-plan.md step 1', -100), ...handed('late', -90)]));
+      writeFileSync(join(subs, 'agent-blind.jsonl'), jsonl(blind));
+      const ids = () => (m.report.stepEnds({ transcript_path: tr, session_id: 'nothing-on-disk' })?.ends ?? []).map((e) => `${e.id}:${e.step}`).sort().join(',');
+      const pad = tmp('sg-found-');
+      mkdirSync(join(pad, 'progress'), { recursive: true });
+      writeFileSync(join(pad, 'progress', 'step-1-report.txt'), 'DONE\nFound: an earlier approval\'s finding.\n');
+      writeFileSync(join(pad, 'progress', 'step-2-report.txt'), 'DONE\nFound: this approval\'s finding.\n');
+      const old = (Date.now() - 600 * 1000) / 1000;
+      utimesSync(join(pad, 'progress', 'step-1-report.txt'), old, old);
+      try {
+        // The approval time is read from approvedAt when the marker holds it, though the marker's own time is later than the late agent.
+        writeFileSync(marker, JSON.stringify({ plan: '/plans/new-plan.md', hash: 'not-this-plan-file', at: later(-50), approvedAt: later(-300) }));
+        const byApprovedAt = ids();
+        // Else the marker's own time.
+        writeFileSync(marker, JSON.stringify({ plan: '/plans/new-plan.md', hash: 'not-this-plan-file', at: later(-300) }));
+        const byOwnTime = ids();
+        // A marker with no readable time drops nobody.
+        writeFileSync(marker, JSON.stringify({ plan: '/plans/new-plan.md', hash: 'not-this-plan-file' }));
+        const noTime = ids();
+        const since = Date.now() - 300 * 1000;
+        const found = m.report.foundLines(pad, since).map((f) => f.key).join(',');
+        const foundAll = m.report.foundLines(pad).map((f) => f.key).join(',');
+        return byApprovedAt === 'blind:2,late:1' && byOwnTime === 'blind:2,late:1' && noTime === 'blind:2,early:1,late:1'
+          && found === '2.1' && foundAll === '1.1,2.1';
+      } finally { rmSync(marker, { force: true }); }
+    },
+  },
+  {
     name: 'every refusal says the follow-up is the corrected sentences only; a follow-up that repeats lines of the refused reply is refused once, never again that turn, and corrected sentences, a follow-up with no text, and a repeat from an earlier turn pass',
     guards: ['stop_follow_up', 'stop_repeat', 'stop_repeat_once', 'stop_repeat_record', 'stop_repeat_turn', 'stop_repeat_min'],
     run(m, dir) {
@@ -1507,7 +1550,7 @@ const CASES = [
       const status = () => spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the approval test'], {
         encoding: 'utf8', env: { ...process.env, HOME: A.home, CLAUDE_CODE_SESSION_ID: '' } }).stdout ?? '';
       const none = status();
-      writeFileSync(A.marker, JSON.stringify({ plan: A.plan, hash: sha(STEPS_PLAN), at: new Date().toISOString(), session: 'ap-1', via: 'the test' }));
+      writeFileSync(A.marker, JSON.stringify({ plan: A.plan, hash: sha(STEPS_PLAN), at: new Date().toISOString(), approvedAt: later(-3600), session: 'ap-1', via: 'the test' }));
       const ok = status();
       appendFileSync(A.plan, 'Edited after the approval.\n');
       const changed = status();
@@ -3370,7 +3413,7 @@ const CASES = [
       const plan = join(home, '.claude', 'plans', 'gate-test.md');
       mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
       const marker = join(home, '.claude', 'APPROVED-PLAN.json');
-      const approve = (text) => { writeFileSync(plan, text); writeFileSync(marker, JSON.stringify({ plan, hash: createHash('sha256').update(text).digest('hex'), at: new Date().toISOString() })); };
+      const approve = (text) => { writeFileSync(plan, text); writeFileSync(marker, JSON.stringify({ plan, hash: createHash('sha256').update(text).digest('hex'), at: new Date().toISOString(), approvedAt: later(-3600) })); };
       approve(ORDER_PLAN);
       writeFileSync(join(home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now() - 10 * 60000, status: 'Status' }));
       const temp = tmp('sg-tmp-');
@@ -3807,7 +3850,7 @@ const CASES = [
       const moved = base.replace('Standing: 3', 'Standing: 2 3');
       const mk = (text, lists) => {
         const w = world(dir, [turn(0, GO)], text);
-        writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha256(text), at: new Date().toISOString(), ...lists }));
+        writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha256(text), at: new Date().toISOString(), approvedAt: later(-3600), ...lists }));
         return w;
       };
       const send = (w, n) => { const id = sid('as'); return { r: w.call('PreToolUse', { session_id: id, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step ${n}`, subagent_type: 'general-purpose' } }), id }; };
@@ -3932,7 +3975,7 @@ const CASES = [
       const edited = base.replace(`Follow ${join(dir, 'aim-review.md')}`, 'Follow the review file');
       const mk = (text, lists) => {
         const w = world(dir, [turn(0, GO)], text);
-        writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha256(text), at: new Date().toISOString(), ...lists }));
+        writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha256(text), at: new Date().toISOString(), approvedAt: later(-3600), ...lists }));
         return w;
       };
       const send = (w, n) => { const id = sid('rr'); return { r: w.call('PreToolUse', { session_id: id, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step ${n}`, subagent_type: 'general-purpose' } }), id }; };
@@ -3963,7 +4006,7 @@ const CASES = [
       const REPORT = 'Here is the report of what the gates now do, and what each one refuses.';
       const ending = (planText, lists, done) => {
         const w = world(dir, [], planText);
-        writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha256(planText), at: new Date().toISOString(), ...lists }));
+        writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha256(planText), at: new Date().toISOString(), approvedAt: later(-3600), ...lists }));
         const s = sid('sr');
         const proj = tmp('sg-proj-');
         const main = join(proj, `${s}.jsonl`);
@@ -4391,7 +4434,7 @@ const CASES = [
       const sha = (t) => createHash('sha256').update(t).digest('hex');
       const text = reviewPlan(dir);
       const w = reviewWorld(dir);
-      writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha(text), scope: m.report.scopeHashes(text), at: new Date().toISOString() }));
+      writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha(text), scope: m.report.scopeHashes(text), at: new Date().toISOString(), approvedAt: later(-3600) }));
       const mk = () => JSON.parse(readFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), 'utf8'));
       const go = (n) => w.send(n, sid('aw'));
       const STEP = { file_path: w.plan, old_string: '2. **Check.** Read the thing.', new_string: '2. **Check.** Read the thing twice.' };
@@ -4475,7 +4518,7 @@ const CASES = [
       mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
       const plan = join(home, '.claude', 'plans', 'gate-test.md');
       const marker = join(home, '.claude', 'APPROVED-PLAN.json');
-      const approve = (body) => { writeFileSync(plan, body); writeFileSync(marker, JSON.stringify({ plan, hash: createHash('sha256').update(body).digest('hex'), at: new Date().toISOString() })); const old = (Date.now() - 60 * 60 * 1000) / 1000; utimesSync(plan, old, old); };
+      const approve = (body) => { writeFileSync(plan, body); writeFileSync(marker, JSON.stringify({ plan, hash: createHash('sha256').update(body).digest('hex'), at: new Date().toISOString(), approvedAt: later(-3600) })); const old = (Date.now() - 60 * 60 * 1000) / 1000; utimesSync(plan, old, old); };
       approve(reviewPlan(dir));
       writeFileSync(join(home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now() - 10 * 60000, status: 'Status' }));
       const status = () => spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the review test'], { encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: s } }).stdout ?? '';
@@ -4633,7 +4676,7 @@ const CASES = [
       const plan = join(home, '.claude', 'plans', 'gate-test.md');
       mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
       writeFileSync(plan, ORDER_PLAN);
-      writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: createHash('sha256').update(ORDER_PLAN).digest('hex'), at: new Date().toISOString() }));
+      writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: createHash('sha256').update(ORDER_PLAN).digest('hex'), at: new Date().toISOString(), approvedAt: later(-3600) }));
       writeFileSync(join(home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now() - 10 * 60000, status: 'Status' }));
       const temp = tmp('sg-tmp-');
       const pad = join(temp, 'claude-0', '-home-user', s, 'scratchpad');
@@ -4796,7 +4839,8 @@ const CASES = [
       writeFileSync(join(proj, `${s}.jsonl`), JSON.stringify(turn(0, 'start')) + '\n');
       const plan = join(home, '.claude', 'plans', 'gate-test.md');
       mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
-      const approve = (text) => { writeFileSync(plan, text); writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: createHash('sha256').update(text).digest('hex'), at: new Date().toISOString() })); };
+      // This case's agents are stamped from the fixture epoch, so the approval is an hour before it.
+      const approve = (text) => { writeFileSync(plan, text); writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: createHash('sha256').update(text).digest('hex'), at: new Date().toISOString(), approvedAt: ts(-3600) })); };
       writeFileSync(join(home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now() - 10 * 60000, status: 'Status' }));
       const temp = tmp('sg-tmp-');
       const pad = join(temp, 'claude-0', '-home-user', s, 'scratchpad');
@@ -5161,7 +5205,7 @@ const CASES = [
       const plan = join(home, '.claude', 'plans', 'gate-test.md');
       mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
       writeFileSync(plan, ORDER_PLAN);
-      writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: sha256(ORDER_PLAN), at: new Date().toISOString() }));
+      writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: sha256(ORDER_PLAN), at: new Date().toISOString(), approvedAt: later(-3600) }));
       writeFileSync(join(home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now() - 10 * 60000, status: 'Status' }));
       // The main thread's reads: two since the last status (a Read and a Grep), one before it, a Bash that is no read, and an entry of a sidechain.
       writeFileSync(main, jsonl([turn(0, 'start'), at(tool(0, 'o1', 'Read', { file_path: '/x/older.md' }), later(-1200)),
@@ -5228,7 +5272,7 @@ const CASES = [
       const plan = join(home, '.claude', 'plans', 'gate-test.md');
       mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
       writeFileSync(plan, ORDER_PLAN);
-      writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: sha256(ORDER_PLAN), at: new Date().toISOString() }));
+      writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: sha256(ORDER_PLAN), at: new Date().toISOString(), approvedAt: later(-3600) }));
       const clockText = JSON.stringify({ at: Date.now() - 7 * 60000, status: 'Status 09:00 — the page test' });
       const clock = join(home, '.claude', 'report-clock.json');
       writeFileSync(clock, clockText);
@@ -5600,7 +5644,7 @@ const CASES = [
       mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
       const plan = join(home, '.claude', 'plans', 'gate-test.md');
       writeFileSync(plan, ORDER_PLAN);
-      writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: sha256(ORDER_PLAN), at: new Date().toISOString() }));
+      writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: sha256(ORDER_PLAN), at: new Date().toISOString(), approvedAt: later(-3600) }));
       const old = (Date.now() - 60 * 60 * 1000) / 1000;
       utimesSync(plan, old, old);
       writeFileSync(join(home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now() - 10 * 60000, status: 'Status' }));
@@ -7491,6 +7535,9 @@ const PLANTS = {
   pending_reexport: ["isOwnerMessage, HARNESS_TAG } from './transcript-tail.mjs';", "isOwnerMessage } from './transcript-tail.mjs';\nconst HARNESS_TAG = /^\\s*<(?:task-notification)/i;", 'pending-guard.mjs'],
   plan_key_filter: ['    if (end && ours && prompt && !ours.has(resolvePath(prompt.plan))) continue;\n', '', 'report.mjs'],
   plan_key_prompt: ["return m ? { plan: m[1], step: Number(m[2]) } : null;", "return m ? { plan: '', step: Number(m[2]) } : null;", 'report.mjs'],
+  plan_key_time: ['  const approvedFrom = markerApprovalTime();\n', '  const approvedFrom = NaN;\n', 'report.mjs'],
+  plan_key_since: ['    if (end && ours && Number.isFinite(startAt) && startAt < approvedFrom) continue;\n', '', 'report.mjs'],
+  plan_key_found: ["    try { if (statSync(join(dir, n)).mtimeMs < since) continue; } catch { continue; }\n", '', 'report.mjs'],
   harness_handback: ['agent-message\\b|', '', 'transcript-tail.mjs'],
   harness_bare_handback: ['|^\\s*\\[Subagent hand-back\\]/i;', '/i;', 'transcript-tail.mjs'],
   remove_text: ['        if (c) take((x) => x.key === norm(c));\n', '\n', 'pending-guard.mjs'],
