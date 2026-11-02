@@ -438,6 +438,17 @@ every rule below while none of the hooks that enforce them was running
    until this check existed (LESSONS §435).
    *Enforced by:* `plan-guard.mjs` (`--check`) and `hook-dispatch.mjs`
    (`planCheckTarget`, `isPlanCheck`).
+   **A plan written after a compaction rests on files read since it, and a plan
+   that sends agents prices its run.** Each file the `## What is` bullets name has
+   a Read, or a Grep of it or of a folder holding it, that came back without an
+   error after the newest compaction (`readAfterCompactionProblem`), and the
+   `## Cost` section states the pushes, the agent sends or reviews and the tier of
+   each step (`costProblem`); both are faults of the plan's shape and set no latch
+   (LESSONS §458). A plan does not edit `permissions.allow` of the session's own
+   settings: the auto-mode classifier refuses that edit whatever the plan says
+   (LESSONS §370).
+   *Enforced by:* `plan-guard.mjs` and `hook-dispatch.mjs`
+   (`readAfterCompactionProblem`, `costProblem`).
 5. **A line before each tool call and a line after each result.**
 6. **Never "waiting on you", never "you owe".** Say "open for you:". A stop is
    declared in the first line as "Stopping here: open for you is X".
@@ -450,7 +461,17 @@ every rule below while none of the hooks that enforce them was running
    says so.** On 2026-09-28 it said so twice while ultracode was on: that notice
    is a harness bug. Say so, and carry on with ultracode on.
 10. **Questions to the owner are real decisions only.** Never something the
-    record already ranks, never research handed back.
+    record already ranks, never research handed back. **A choice is checked
+    against the record each time it is served, and a choice whose recommended
+    option breaks a rule of this doctrine is not a choice.** The open choice
+    goes first in a reply until it is answered, and a turn a hook forces while
+    one stands open puts it first again, so a matter the record had settled was
+    served fifteen times in one session. At each serving the record is read for
+    whether it settles the matter; if it does, the item is acted on or dropped,
+    and an option that skips what this doctrine requires (a status page
+    republished only at a plan's end, a commit identity changed on a reading) is
+    struck and not recommended. No gate can read whether a record settles a
+    matter (LESSONS §465).
 11. **Search the whole codebase before saying a name is real or invented.** A
     partial search reported as a fact is the defect, in either direction.
     *Enforced by:* `plan-guard.mjs` (a plan naming code that exists nowhere is
@@ -546,7 +567,7 @@ every rule below while none of the hooks that enforce them was running
     second route §0d names, not a fresh start. While the latch stands, the main
     thread says in plain text what was refused and stops; an agent returns what
     it has, with the refusal's text.
-    Nineteen refusals are not ends of a route, and set no latch, because
+    Twenty-one refusals are not ends of a route, and set no latch, because
     something other than the owner's next message answers each and a latch would
     only add a wait for the owner to a miss that changed nothing. The list is read
     from the code (`main` in `hook-dispatch.mjs`), each item with the name that
@@ -581,6 +602,14 @@ every rule below while none of the hooks that enforce them was running
       (`readsGate`, rule 13);
     - a send the judgement gate refuses, answered by writing the `Judged` and `Why`
       lines (`judgedGate`, rule 2);
+    - a send the tier gate refuses, because the top tier serves the main thread
+      under an approved plan and no text of the main thread since the model
+      changed names the tier and says whether the work needs it, answered by
+      writing that line (`tierGate`, §11b, LESSONS §459);
+    - an Artifact publish the restored plan mode gate refuses, because the
+      harness's plan mode began at a resume or a compaction after the approval
+      and nothing has said so, answered by saying so in a reply
+      (`restartPublishGate`, LESSONS §460);
     - entering plan mode again once the owner has approved a plan by leaving plan
       mode in the app, because that approval is carried on with, never asked for
       twice; it lifts once an agent is sent under the plan or the owner writes
@@ -1528,7 +1557,13 @@ tool's input, and a top-tier id is one carrying fable or mythos. While an
 approval marker is in force, the stop guard refuses the first reply after the
 serving model changes to a top-tier id unless its first line names the tier and
 says whether the work needs it, once for each change, with the words to use
-(LESSONS §434).
+(LESSONS §434). `hook-dispatch.mjs` (`tierGate`) holds the same line before the
+send it prices: while the top tier serves the main thread under an approved plan,
+no agent is sent until a text of the main thread written since the model changed
+opens with it, and the refusal sets no latch (LESSONS §459). A plan that sends
+agents states its run in a `## Cost` section, the pushes, the sends and the tier
+of each step, and a plan that holds its commits for one push at its end names the
+turns the environment's git hook will force (LESSONS §458, §469).
 
 ## 11c. An approved plan is standing authority. Do not stop at its seams.
 

@@ -153,7 +153,7 @@ import { recallParts } from './compact-recall.mjs';
 import { tailEntries, isOwnerMessage, textOf } from './transcript-tail.mjs';
 import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
   planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, judgedState, stepNumbers, stepBody, markCompacted, sessionFiles, JUDGED_PARTS, WHY_PARTS,
-  planAfter, SCOPE_SECTIONS } from './report.mjs';
+  planAfter, SCOPE_SECTIONS, servingModel, isTopTier, tierWords, restartedPlanMode } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
 import { HARNESS_TAG } from './pending-guard.mjs';
@@ -799,8 +799,9 @@ export function noLatchRepoRefusal(shim, p, reason) {
  * Is this call a latched agent writing its own report?
  * @param {object} p  a PreToolUse payload.
  * @returns {boolean} true only for a subagent's Write, Edit or MultiEdit of a file
- *   directly in `progress/` of this session's scratchpad named `step-N.txt` or
- *   `step-N-report.txt`, where, if the agent's own transcript names the step it was
+ *   directly in `progress/` of this session's scratchpad named `step-N.txt`,
+ *   `step-N-report.txt` or `step-N-review-K.txt` (a review's own record, K counted up so a later
+ *   review never writes over an earlier one: Q-HUB-121), where, if the agent's own transcript names the step it was
  *   sent for (`agentStep`), N is that step. The agent's transcript is
  *   `<main transcript without .jsonl>/subagents/agent-<agent id>.jsonl`, or one level
  *   below `subagents/workflows/<run>/` for an agent a Workflow started
@@ -816,7 +817,7 @@ export function agentReportWrite(p) {
   if (!f) return false;
   const abs = resolve(p.cwd ? String(p.cwd) : process.cwd(), f);
   if (!inScratchpad(abs, p.session_id) || basename(dirname(abs)) !== 'progress' || basename(dirname(dirname(abs))) !== 'scratchpad') return false;
-  const m = /^step-(\d+)(?:-report)?\.txt$/.exec(basename(abs));
+  const m = /^step-(\d+)(?:-report|-review-\d+)?\.txt$/.exec(basename(abs));
   if (!m) return false;
   let own = null;
   try { const file = agentTranscriptPath(p); if (file) own = agentStep(file); } catch { own = null; }
@@ -1537,6 +1538,88 @@ export function rulesGate(p, plan = approvedPlan(), file = undefined) {
   return rulesPinProblem(plan.text, file);
 }
 
+// ---- the top tier names itself before an agent is sent (Doctrine §11b, LESSONS §434) ----
+
+// The same two tests `namesTier` in stop-guard.mjs makes of a first line: it names the tier, and it says whether the work needs it.
+const TIER_NEEDS_WORD = /\bneed(?:s|ed)?\b|\bno more than\b|\brequires?\b/i;
+const tierNamed = (line, model) => (String(line).toLowerCase().includes(String(model).toLowerCase()) || isTopTier(line) || /\btop[- ]tier\b/i.test(line)) && TIER_NEEDS_WORD.test(line);
+
+/**
+ * THE TIER GATE: no agent is sent from the top tier until the main thread has said so in words.
+ * @param {object} p  a main-thread Agent, Task, SendMessage or Workflow call.
+ * @param {{path: string, text: string} | null} [plan]  the plan in force.
+ * @param {object[]} [entries]  the main transcript's tail, passed by the test; read from the payload's transcript when undefined.
+ * @returns {string|null} null for a subagent's call, for a tool that sends no agent, with no approved plan in force, when the transcript
+ *   cannot be read or names no serving model (never read as a lesser tier), and when the serving model is not the top tier. On the top
+ *   tier it is null only when a main-thread text written since the model last changed opens a line (its first non-blank line) that
+ *   names the tier and says whether the work needs it, the line the stop guard asks for after the send; otherwise the refusal,
+ *   which gives the words (`tierWords`). The stop guard can judge a reply only after the turn's calls have run, so the send it
+ *   exists to price had already gone (finding 7 of the plan of 1 November). main() calls it with latch false: writing the line clears it.
+ */
+export function tierGate(p, plan = approvedPlan(), entries = undefined) {
+  if (p.agent_id || !/^(?:Agent|Task|SendMessage|Workflow)$/.test(String(p.tool_name ?? ''))) return null;
+  if (!plan) return null;
+  let rows = entries;
+  if (!rows) { try { rows = tailEntries(String(p.transcript_path ?? ''), 16 * 1024 * 1024); } catch { return null; } }
+  const serving = servingModel(rows);
+  if (!serving || !isTopTier(serving)) return null;
+  // Where the current run of the serving model began: the first main-thread assistant entry after the newest one of another model.
+  let from = 0;
+  rows.forEach((e, i) => {
+    if (e?.type !== 'assistant' || e.isSidechain || e.agentId) return;
+    const m = e.message?.model;
+    if (typeof m === 'string' && m.trim() && !/^<.*>$/.test(m.trim()) && m.trim() !== serving) from = i + 1;
+  });
+  for (let i = from; i < rows.length; i++) {
+    const e = rows[i];
+    if (e?.type !== 'assistant' || e.isSidechain || e.agentId || !Array.isArray(e.message?.content)) continue;
+    for (const b of e.message.content) {
+      if (b?.type !== 'text') continue;
+      const open = String(b.text ?? '').split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+      if (tierNamed(open, serving)) return null;
+    }
+  }
+  return `TIER GATE (Doctrine §11b, LESSONS §434): the top tier (${serving}) is serving this session under an approved plan, and no text of the main thread since the model changed opens with a line that names the tier and says whether the work needs it, so no agent is sent. `
+    + `Write that line first, then send again. Words to use: "${tierWords(serving)}" Where the work does need the top tier, say that instead, and why. This refusal does not latch: writing the line clears it.`;
+}
+
+// ---- a publish in a plan mode the harness restored says so first (Doctrine §0e rule 2, LESSONS §432) ----
+
+/**
+ * THE RESTORED PLAN MODE GATE: a publish raises an approval popup in a plan mode the harness began at a resume, so the owner is told first.
+ * @param {object} p  a main-thread Artifact call.
+ * @param {object[]} [entries]  the main transcript's tail, passed by the test; read from the payload's transcript when undefined.
+ * @param {string} [restarted]  `restartedPlanMode`'s answer, passed by the test; read from the payload when undefined.
+ * @returns {string|null} null for a subagent's call, for any call but an Artifact publish (the action omitted or `publish`), when the
+ *   harness's plan mode did not begin at a restart (`restartedPlanMode` answers ''), and when a main-thread text written since that plan
+ *   mode began says that the resume restored plan mode and that leaving it in the app is the move (it names plan mode, a resume or a
+ *   compaction, and leaving or exiting). Otherwise the refusal, which says what that text carries. Every doubt reads as null, so a
+ *   transcript that cannot be read never holds a publish. main() calls it with latch false: writing the line clears it. The popup
+ *   cost the owner four messages on the morning of 1 November, because nothing had said what it was.
+ */
+export function restartPublishGate(p, entries = undefined, restarted = undefined) {
+  if (p.agent_id || p.tool_name !== 'Artifact') return null;
+  const action = String(p.tool_input?.action ?? 'publish');
+  if (action !== 'publish') return null;
+  const at = restarted ?? restartedPlanMode(p);
+  if (!at) return null;
+  let rows = entries;
+  if (!rows) { try { rows = tailEntries(String(p.transcript_path ?? ''), 16 * 1024 * 1024); } catch { return null; } }
+  let from = 0;
+  rows.forEach((e, i) => { if (e?.type === 'attachment' && !e.isSidechain && !e.agentId && e.attachment?.type === 'plan_mode' && !e.attachment.isSubAgent) from = i; });
+  for (let i = from; i < rows.length; i++) {
+    const e = rows[i];
+    if (e?.type !== 'assistant' || e.isSidechain || e.agentId || !Array.isArray(e.message?.content)) continue;
+    for (const b of e.message.content) {
+      if (b?.type !== 'text') continue;
+      const t = String(b.text ?? '');
+      if (/plan mode/i.test(t) && /\b(?:resume[ds]?|restor\w*|compact\w*)\b/i.test(t) && /\b(?:leav\w+|exit\w*)\b/i.test(t)) return null;
+    }
+  }
+  return `RESTORED PLAN MODE (Doctrine §0e rule 2, LESSONS §432): the plan in force (${at}) is approved, and the harness put the session in plan mode at a resume or a compaction after the approval, so it asks the owner to approve each publish in a popup. `
+    + 'Before this publish, write a line in a reply that tells the owner so: that the resume restored plan mode, that the plan is already approved, and that leaving plan mode in the app is the one move. Then publish. This refusal does not latch: writing the line clears it.';
+}
+
 // ---- a refused read of the record is read again before a step goes (Doctrine §0e rule 13) ----
 
 /**
@@ -1826,6 +1909,74 @@ export function whatIsProblem(text, opts = {}) {
   if (!bad.length) return null;
   return `${head} ${bad.length} of the "## What is" bullets ${bad.length === 1 ? 'does' : 'do'} not quote a line present in a file they name:\n${bad.slice(0, 8).join('\n')}${bad.length > 8 ? `\n… and ${bad.length - 8} more` : ''}\n`
     + 'Quote the line itself, in double quotes, and name the file it is in; a sentence from a conversation or a page that is not in a repository is not evidence here.';
+}
+
+/**
+ * Has every file the plan's "What is" names been read since the session was last compacted?
+ * @param {string} text  the plan (its current block).
+ * @param {{roots?: string[], dir?: string, entries?: object[]}} [opts]  as `whatIsProblem` takes them, and the main transcript's entries.
+ * @returns {string|null} the refusal, or null. After a compaction the session works from a summary, and a plan written from it quoted
+ *   files nobody had opened (finding 4 of the plan of 1 November). Of the files the "## What is" bullets name (the same ones
+ *   `whatIsProblem` looks the quotes up in), each has to have a Read of it, or a Grep of it or of a folder holding it, whose result
+ *   came back without an error after the newest compaction boundary (`compact_boundary`) of the transcript. A bullet is covered when any
+ *   file it can mean is. Null for a plan with no Steps, a Files that names no repository, and a transcript with no compaction. The check
+ *   covers the files of "What is" and no other, because the manager fence refuses the main thread a read of a hub source file, so a
+ *   check over every file of Files would refuse every plan of the hub. plan-guard.mjs refuses ExitPlanMode on it.
+ */
+export function readAfterCompactionProblem(text, opts = {}) {
+  if (!planSection(text, 'Steps').trim()) return null;
+  const roots = opts.roots ?? queueRoots(text, opts.dir);
+  if (!roots.length) return null;
+  const entries = opts.entries ?? [];
+  let cut = -1;
+  entries.forEach((e, i) => { if (e?.type === 'system' && e.subtype === 'compact_boundary' && !e.isSidechain) cut = i; });
+  if (cut < 0) return null;
+  const asked = new Map();
+  const answered = new Set();
+  for (const e of entries.slice(cut + 1)) {
+    const c = e?.message?.content;
+    if (!Array.isArray(c)) continue;
+    for (const b of c) {
+      if (e.type === 'assistant' && b?.type === 'tool_use' && (b.name === 'Read' || b.name === 'Grep')) {
+        const where = String(b.input?.file_path ?? b.input?.path ?? '');
+        asked.set(b.id, { name: b.name, path: where ? resolve(where) : '' });
+      }
+      if (e.type === 'user' && b?.type === 'tool_result' && !b.is_error) answered.add(b.tool_use_id);
+    }
+  }
+  const reads = [...asked].filter(([id]) => answered.has(id)).map(([, r]) => r);
+  const covered = (f) => reads.some((r) => r.path === f || (r.name === 'Grep' && (r.path === '' || f.startsWith(`${r.path}/`))));
+  const lines = planSection(text, 'What is').split('\n').map((l) => LIST_LINE.exec(l)?.[1]).filter(Boolean);
+  const missing = new Set();
+  for (const line of lines) {
+    const named = [...line.replace(QUOTED_SPAN, ' ').matchAll(SOURCE_FILE)].map((m) => m[1]);
+    const files = named.flatMap((n) => namedFileCandidates(n, roots));
+    if (files.length && !files.some(covered)) for (const n of named) missing.add(n);
+  }
+  if (!missing.size) return null;
+  return 'READ AFTER COMPACTION (Doctrine §0e rule 2): the session was compacted, and a plan written from its summary rests on files it has not opened since. '
+    + `The "## What is" section names ${[...missing].join(', ')}, and no Read or Grep of ${missing.size === 1 ? 'it' : 'them'} came back after the newest compaction. Read each, then put the plan up again.`;
+}
+
+/**
+ * Does a plan that sends agents say what the run costs?
+ * @param {string} text  the plan (its current block).
+ * @returns {string|null} the refusal, or null. A plan with a `## Steps` section has a `## Cost` section that states the number of pushes
+ *   (a number or none beside the word push), the agent sends or reviews, and the tier each runs on (opus, sonnet, haiku, fable, mythos or
+ *   the word tier). A plan drafted with a push in every step priced nothing (finding 4 of the plan of 1 November), and the cloud
+ *   environment's git hook turns each unpushed commit into a turn of the main thread. It forces the statement and cannot judge it.
+ *   A fault of the plan's shape: plan-guard.mjs refuses ExitPlanMode on it and sets no latch.
+ */
+export function costProblem(text) {
+  if (!planSection(text, 'Steps').trim()) return null;
+  const body = planSection(text, 'Cost');
+  const head = 'COST (Doctrine §11b): a plan that sends agents prices the run before it starts.';
+  if (!body.trim()) return `${head} The plan has no "## Cost" section with a body.`;
+  const numberBeside = /\b(?:\d+|no|none|zero|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:\w+\s+){0,3}push(?:es)?\b|\bpush(?:es)?\b[^.\n]{0,40}\b(?:\d+|none|zero|one|two|three|four|five)\b/i.test(body);
+  const sends = /\b(?:agents?|sends?|reviews?)\b/i.test(body);
+  const tier = /\b(?:opus|sonnet|haiku|fable|mythos|tier)\b/i.test(body);
+  const lacks = [numberBeside ? '' : 'the number of pushes', sends ? '' : 'the agent sends or reviews', tier ? '' : 'the tier of each step'].filter(Boolean);
+  return lacks.length ? `${head} The "## Cost" section does not state ${lacks.join(', ')}.` : null;
 }
 
 /**
@@ -3045,7 +3196,7 @@ async function main(event, raw, p) {
   // gate's; the state page gate's; the report gate's; the review gate's (a move with no current
   // review, a refused route, an OFF-AIM verdict); the rules gate's; the reads gate's; the
   // judgement gate's; the plan fence's first refusal of an agent that has not read the rules;
-  // and the in-app approval check's. Doctrine §0e rule 14 lists them all, nineteen, and a case holds
+  // and the in-app approval check's, and the tier gate's and the restored plan mode gate's (LESSONS §459, §460). Doctrine §0e rule 14 lists them all, twenty-one, and a case holds
   // its count to the list. A Stop event and the other events never latch.
   const refuse = (why, latch = true) => {
     process.stderr.write(why + '\n');
@@ -3181,6 +3332,11 @@ async function main(event, raw, p) {
         page = READS.has(p.tool_name ?? '') ? null : `STATE PAGE GATE (Doctrine §0e rule 2): the gate could not run (${e?.message ?? e}); only reads run until it is fixed.`;
       }
       if (page) return refuse(page, false);
+      // A PUBLISH IN A PLAN MODE THE HARNESS RESTORED SAYS SO FIRST: the popup it raises is the owner's to meet knowing what it is.
+      // Its own call and not latched: writing the line clears it.
+      let rp = null;
+      try { rp = restartPublishGate(p); } catch { rp = null; }
+      if (rp) return refuse(rp, false);
     }
     // A REFUSAL OF A CALL THAT IS NOT OF THE RECORD SETS NO LATCH: the refusal carries `FENCE_NO_LATCH`, says what
     // the main thread may use and names the check command. The dispatch gate's refusals of a step outside the set
@@ -3219,6 +3375,11 @@ async function main(event, raw, p) {
         rl = `RULES GATE (Doctrine §0e rule 13): the rules file could not be read (${e?.message ?? e}); the gate refuses rather than stop gating.`;
       }
       if (rl) return refuse(rl, false);
+      // THE TOP TIER NAMES ITSELF BEFORE IT SENDS (Doctrine §11b, LESSONS §434): the stop guard asks for the tier line after the
+      // turn's calls have run, so the send had already gone. Its own call and not latched: writing the line clears it.
+      let tg = null;
+      try { tg = tierGate(p); } catch { tg = null; }
+      if (tg) return refuse(tg, false);
       // A REFUSED READ OF THE RECORD IS READ BEFORE A STEP GOES (Doctrine §0e rule 13):
       // while a read of the record the main thread made was refused and no Read has
       // returned on it since, no step is sent. Its own call and not latched: reading

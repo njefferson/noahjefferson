@@ -823,11 +823,28 @@ export function agentEnd(entries, meta = {}, processStart = 0, notified = '') {
     return { how: lastRefusal && !word ? 'a refusal' : 'a report', at, last: cut(handback.text), ...(word ? { word, refusedBefore: lastRefusal } : {}) };
   }
   if (meta?.stoppedByUser || interruptedAt > lastAssistant) return { how: 'an interruption', at, last: cut(last) };
-  if (/^(?:completed)$/.test(notified)) return { how: lastRefusal ? 'a refusal' : 'a report', at, last: cut(last) };
+  // AN AGENT PAUSED ON ITS OWN BACKGROUND RUN IS NOT ENDED: its step text told it to end its turn while the run goes on, the
+  // harness notifies the main thread that the agent's turn completed, and the run's completion resumes the agent. With no
+  // hand-back, a background launch in its own transcript and no completion of that task after it, it is still running, whatever the
+  // notification says; a session restart after its last entry ended the run with it (finding 3 of the plan of 1 November, four times).
+  if (/^(?:completed)$/.test(notified)) {
+    if (!(processStart && at && at < processStart) && pausedOnBackground(entries)) return null;
+    return { how: lastRefusal ? 'a refusal' : 'a report', at, last: cut(last) };
+  }
   if (/^(?:killed|stopped|cancelled)$/.test(notified)) return { how: 'an interruption', at, last: cut(last) };
   if (notified === 'failed') return { how: 'a failure', at, last: cut(last) };
   if (processStart && at && at < processStart) return { how: 'an interruption (the session restarted after its last entry)', at, last: cut(last) };
   return null;
+}
+
+/**
+ * Does an agent's own transcript hold a background run that has not completed?
+ * @param {object[]} entries  the agent's transcript (its tail), in file order.
+ * @returns {boolean} true when `runningTasks` over the agent's own entries finds a launched background command or workflow with no
+ *   completion, stop or kill of it after; false for a transcript that cannot be read as one.
+ */
+function pausedOnBackground(entries) {
+  try { return runningTasks((entries ?? []).map((e) => JSON.stringify(e)).join('\n')).length > 0; } catch { return false; }
 }
 
 /**
@@ -1379,7 +1396,7 @@ function markerPlanPath(marker = join(homedir(), '.claude', 'APPROVED-PLAN.json'
  *   neither is readable. A plan path is shared by every plan of a session, so an agent sent before this time is an end of an
  *   earlier approval of the same path, and a report file last written before it is that approval's.
  */
-function markerApprovalTime(marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) {
+export function markerApprovalTime(marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) {
   try {
     const mk = JSON.parse(readFileSync(marker, 'utf8'));
     for (const k of ['approvedAt', 'at']) {

@@ -301,8 +301,12 @@ if (tool === 'Bash') {
   // substitution — `cat $(rm -rf x)` is not a read, and a check that only
   // looked at the first word would call it one. Quotes are respected.
   for (const { text: seg } of parts) {
-    const words = seg.trim().split(/\s+/).filter(Boolean);
+    let words = seg.trim().split(/\s+/).filter(Boolean);
     if (words.length === 0) continue;
+    // A TIME ZONE SET IN FRONT OF `date` IS A CLOCK READ (finding 12 of the plan of 1 November): `TZ=America/Los_Angeles date` read the
+    // time in California and was refused as an unknown command. Only an Area/City zone in front of date passes; the same assignment in
+    // front of any other command is still an unknown first word.
+    if (/^TZ=[A-Za-z]+(?:\/[A-Za-z_+-]+)+$/.test(words[0]) && words[1] === 'date') words = words.slice(1);
     const w = words[0].replace(/^\(+/, '');
     if (!READERS.has(w)) deny(`"${w}" is not a known read-only command.`);
 
@@ -329,7 +333,7 @@ if (tool === 'Bash') {
       const READ_GIT = new Set([
         'log', 'status', 'diff', 'show', 'rev-parse', 'rev-list', 'ls-files',
         'ls-tree', 'cat-file', 'merge-base', 'describe', 'blame', 'shortlog',
-        'grep', 'count-objects', 'var', 'help', 'branch', 'tag', 'remote',
+        'grep', 'count-objects', 'var', 'help', 'branch', 'tag', 'remote', 'ls-remote', 'config',
       ]);
       // The first non-flag word after `git`, skipping the argument of a flag
       // that takes one — `git -C dir log` is a log. The first version compared
@@ -344,6 +348,17 @@ if (tool === 'Bash') {
       const name = String(sub);
       if (!READ_GIT.has(name)) deny(`"git ${name}" is not read-only.`);
       // `branch`, `tag` and `remote` READ bare and WRITE with an argument.
+      // `config` READS with one key or with --get, --get-all, --get-regexp or --list, and WRITES with a value, an add, an unset, a replace,
+      // a rename, a removal or an edit. Only the reading forms pass (finding 12 of the plan of 1 November).
+      if (name === 'config') {
+        const after = words.slice(words.indexOf('config') + 1);
+        const flags = after.filter((x) => x.startsWith('-'));
+        const rest = after.filter((x) => !x.startsWith('-'));
+        const listing = flags.some((x) => ['--list', '-l'].includes(x));
+        const allowedFlags = new Set(['--get', '--get-all', '--get-regexp', '--list', '-l', '--local', '--global', '--system', '--worktree', '--show-origin', '--null', '-z', '--name-only']);
+        if (flags.some((x) => !allowedFlags.has(x))) deny('"git config" with that flag can write.');
+        if (listing ? rest.length > 0 : rest.length !== 1) deny('"git config" reads one key or lists; a second word is a value, which writes.');
+      }
       if (['branch', 'tag', 'remote'].includes(name)) {
         const after = words.slice(words.indexOf(name) + 1)
           .filter(x => !['-v', '-vv', '-a', '-l', '--list', '--all', 'show'].includes(x));
@@ -768,7 +783,7 @@ if (tool === 'ExitPlanMode') {
   // Loaded here only, because this file runs on every tool call and the plan parsing lives in hook-dispatch.mjs. They are loaded
   // before the sections are looked at, so that the refusal for a missing one carries the mark that sets no latch as well.
   const { goalsProblem, aimStandingProblem, reviewCommandProblem, commandsGitDirProblem, filesSpanProblem, afterProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem, shippedCheckProblem,
-    queueRoots, inScratchpad, NAMES_NO_LATCH, SHAPE_NO_LATCH } = await import('./hook-dispatch.mjs');
+    readAfterCompactionProblem, costProblem, queueRoots, inScratchpad, NAMES_NO_LATCH, SHAPE_NO_LATCH } = await import('./hook-dispatch.mjs');
   const { scratchpadOf } = await import('./report.mjs');
   // EVERY FAULT IS COLLECTED, AND THE APPROVAL CALL STOPS AT THE FIRST (LESSONS §435). `fault` is where a check's finding lands. At the
   // approval call it refuses at once, as each check did, so nothing a check does is run for a plan an earlier check has refused. In the
@@ -834,6 +849,9 @@ if (tool === 'ExitPlanMode') {
   if (what) fault(what);
   const road = roadmapProblem(top);
   if (road) fault(road);
+  // A PLAN THAT SENDS AGENTS PRICES THE RUN (Doctrine §11b): a "## Cost" section stating the pushes, the sends and the tier of each step.
+  const cost = costProblem(top);
+  if (cost) fault(cost);
   // A PLAN THAT MARKS A ROADMAP ITEM IN RESTS ON A READ OF THE APP'S COMMIT LOG (Doctrine §0e rule 2, LESSONS §423): a line in
   // the notes is not the state of the app. The session's transcript has to hold a git log of the repository's production and
   // staging branches read after this plan file was first written, and the plan's "## Shipped check" says what it showed, item by
@@ -842,9 +860,14 @@ if (tool === 'ExitPlanMode') {
   if (CHECK && !p.transcript_path) {
     notJudged.push('the Shipped check, which needs the git log read to be in this session\'s transcript (CLAUDE_CODE_SESSION_ID names no session here)');
     notJudged.push('the Asked section\'s test against the owner\'s messages, which are in the same transcript');
+    notJudged.push('the read after a compaction of the files "What is" names, which needs the compaction to be in this session\'s transcript');
   } else {
     const shipped = shippedCheckProblem(top, { entries: tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024), planFile });
     if (shipped) fault(shipped);
+    // THE FILES THE EVIDENCE NAMES WERE READ AFTER THE NEWEST COMPACTION (Doctrine §0e rule 2): a plan written from the summary quotes
+    // files nobody opened since.
+    const readAfter = readAfterCompactionProblem(top, { entries: tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024) });
+    if (readAfter) fault(readAfter);
   }
   const asked = askedProblem(top, p.transcript_path);
   if (asked) fault(asked);

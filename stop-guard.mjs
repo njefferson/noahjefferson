@@ -95,9 +95,9 @@ import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { pendingMessages, startedAt } from './pending-guard.mjs';
 import { tailEntries, lastOwnerMessage } from './transcript-tail.mjs';
-import { latchStanding, approvedPlan, planSteps, correctionStanding, stopStanding } from './hook-dispatch.mjs';
+import { latchStanding, approvedPlan, planSteps, correctionStanding, stopStanding, foundQueue, queueRoots } from './hook-dispatch.mjs';
 import { runningWork, stepsReturned, planOrder, pointerOf, reviewState, aimReviewSteps, readCompacted, setCompacted, compactedWords, californiaTime,
-  servingModel, isTopTier, readTier, setTier, tierWords } from './report.mjs';
+  servingModel, isTopTier, readTier, setTier, tierWords, foundLines, managerNotes, sortOf, scratchpadOf, markerApprovalTime } from './report.mjs';
 
 /** The transcript is JSONL; the last assistant text is the reply just written. */
 const lastAssistantText = (path) => {
@@ -160,10 +160,11 @@ const REPEAT_MIN = 30;
  * @returns {Set<string>} each line, and each sentence of each line, lowercased
  *   with its whitespace collapsed, of at least REPEAT_MIN characters.
  */
-const units = (text) => {
+const units = (text, skip = () => false) => {
   const out = new Set();
   const add = (s) => { const t = s.toLowerCase().replace(/\s+/g, ' ').trim(); if (t.length >= REPEAT_MIN) out.add(t); };
   for (const line of String(text).split('\n')) {
+    if (skip(line)) continue;
     add(line);
     for (const s of line.split(/(?<=[.!?])\s+/)) add(s);
   }
@@ -179,11 +180,11 @@ const units = (text) => {
  *   repeat has been refused yet) is what a follow-up is judged against; a
  *   failure to write it never costs the refusal.
  */
-function refuse(message, reply) {
+function refuse(message, reply, kind = '') {
   try {
     mkdirSync(dirname(refusedFile()), { recursive: true });
     const lines = readFileSync(path, 'utf8').split('\n').filter((l) => l.trim()).length;
-    writeFileSync(refusedFile(), JSON.stringify({ at: Date.now(), lines, reply, repeated: false }));
+    writeFileSync(refusedFile(), JSON.stringify({ at: Date.now(), lines, reply, repeated: false, kind }));
   } catch { /* the refusal stands without a record */ }
   process.stderr.write(message + FOLLOW_UP);
   process.exit(2);
@@ -282,7 +283,11 @@ if (hook.stop_hook_active) {
     const rec = JSON.parse(readFileSync(refusedFile(), 'utf8'));
     const ownerAt = lastOwnerMessage(tailEntries(path ?? '', 16 * 1024 * 1024))?.at ?? 0;
     if (path && rec && !rec.repeated && Number(rec.at) >= ownerAt) {
-      const refused = units(rec.reply);
+      // A line that carries an artifact link is never a repeat: Doctrine §7i puts the status page's link in every progress
+      // reply. After a refusal for a choice not first, a numbered option line is never one either: that refusal asked for the
+      // choice to be moved to the top, which is the same line written once more. Both are left out of what is judged.
+      const skipLine = (l) => /claude\.ai\/(?:code\/)?artifact\/\S/i.test(l) || (rec.kind === 'choice' && /^\s{0,3}\d{1,2}[.)]\s+\S/.test(l));
+      const refused = units(rec.reply, skipLine);
       const again = [...units(textAfter(path, Number(rec.lines) || 0))].filter((u) => refused.has(u));
       if (again.length) {
         writeFileSync(refusedFile(), JSON.stringify({ ...rec, repeated: true }));
@@ -790,7 +795,7 @@ An open choice is the first thing in a reply until it is answered: a choice
 placed under a long report was missed. Put the numbered options, recommendation
 first, at the top — after a stop declaration and one lead-in line at most — and
 the report beneath them. Write the choice once.
-`, reply);
+`, reply, 'choice');
 }
 
 // 10. A RETURN TO THE OWNER WITH STEPS LEFT (Doctrine §0e rule 2, §11c). A turn
@@ -884,14 +889,54 @@ function hasPointer() {
 // refused and the review is sent (Doctrine §0e rules 2 and 3).
 let reviewed = null;
 let left = [];
+// An agent of the session running now (`stepsReturned`'s running list). The doctrine says a running agent does not hold the
+// turn and its completion brings the session back, so a reply that says that agent's work is still going is a report of
+// state and not a hand-off: the WAITING refusal below passes it (finding 2 of the plan of 1 November, five of eight refusals).
+let agentRunning = false;
+// THE CLOSING STOP (Doctrine §0e rule 2): the Found lines of the plan's own steps that the manager sorted as queued with a
+// note that names no key present in the Found queue of a repository the plan's Files names. Read only when the pointer reads
+// next none, and only for the steps of the plan in force, so an earlier plan's lines in the manager notes do not hold the close.
+let unrecorded = [];
+/**
+ * The queued Found lines of the plan's steps whose note names no key of a Found queue.
+ * @param {{path: string, text: string}} plan  the plan in force.
+ * @returns {{key: string, note: string}[]} each Found line of a step of the plan (its Order and Standing steps, read from a
+ *   report file written since the approval) that `status/manager.txt` sorts as queued and whose note holds no `Q-TAG-N` key
+ *   that the `## Found queue` of a repository the plan's Files names holds; [] when the plan's Files names no repository
+ *   with a queue (nothing to check against), or nothing is unrecorded.
+ */
+function unrecordedFound(plan) {
+  const roots = queueRoots(plan.text);
+  const keys = new Set();
+  for (const r of roots) for (const q of foundQueue(r)) keys.add(q.key);
+  if (!keys.size) return [];
+  const pad = scratchpadOf(String(hook.session_id ?? ''));
+  if (!pad) return [];
+  const order = planOrder(plan.text);
+  const steps = new Set([...(order?.order ?? []), ...(order?.standing ?? [])]);
+  const notes = managerNotes(pad);
+  const out = [];
+  for (const f of foundLines(pad, markerApprovalTime())) {
+    if (!steps.has(f.step)) continue;
+    const s = sortOf(notes, f);
+    if (!s || s.how !== 'queued') continue;
+    const named = String(s.note).match(/Q-[A-Za-z0-9]+-\d+/g) ?? [];
+    if (!named.some((k) => keys.has(k))) out.push({ key: f.key, note: s.note });
+  }
+  return out;
+}
 try {
   const state = stepsReturned({ session_id: hook.session_id, transcript_path: path });
+  agentRunning = !!(state && state.running && state.running.length);
   const plan = approvedPlan();
   reviewed = plan && aimReviewSteps(plan.text).length ? plan : null;
   const probe = { session_id: hook.session_id, transcript_path: path };
   if (state && !state.running.length && !queuedOwner.length && !opensWithChoice(reply) && !declaresStop(reply)
-    && !stopStanding(probe) && (reviewed || !correctionStanding(probe))) left = stepsLeft(state);
-} catch { left = []; }
+    && !stopStanding(probe) && (reviewed || !correctionStanding(probe))) {
+    left = stepsLeft(state);
+    if (!left.length && plan && planOrder(plan.text)) unrecorded = unrecordedFound(plan);
+  }
+} catch { left = []; unrecorded = []; }
 if (left.length) {
   const pointed = hasPointer();
   // WHERE THE PLAN HAS A REVIEW STEP, the next move is the review's: the step the
@@ -907,6 +952,13 @@ if (left.length) {
   refuse(`STOP REFUSED — this turn ends with ${reviewed ? `the plan's steps not all done (the pointer reads next: step ${left[0]}), ` : pointed ? `the plan's pointer at next: step ${left[0]}, ` : `${left.length} step${left.length === 1 ? '' : 's'} of the approved plan still open (${left.join(', ')}), `}no agent of this session running, and no choice for the owner or declared stop with what is open.
 
 Doctrine §0e rule 2, §11c. An approved plan is the instruction for all of it, and a turn that ends here hands the owner back work the plan already gave you: every return to the owner has restarted the work. Do not end the turn. ${reviewed ? move : pointed ? `Send the step the pointer names, ${left[0]}, with the plan's path and the step's number: it stays next until an agent hands back for it with DONE as the first line, so a REFUSED or FAILED hand-back means sending it again.` : 'Send the next step, or the same step again if its agent ended at a refusal, with the plan\'s path and the step\'s number.'} Give the status at each agent's end. A turn may end only while an agent runs, with a choice only the owner can settle as the first thing in the reply, or declared in the first line: "Stopping here: open for you is <the specific thing>".
+`, reply);
+}
+
+if (unrecorded.length) {
+  refuse(`STOP REFUSED — the plan's pointer reads next: none, and ${unrecorded.length} Found line${unrecorded.length === 1 ? '' : 's'} of its steps ${unrecorded.length === 1 ? 'is' : 'are'} sorted as queued in the manager notes with a note that names no key of a Found queue (${unrecorded.slice(0, 6).map((u) => `Found ${u.key}`).join(', ')}).
+
+Doctrine §0e rule 2. A finding is recorded for the next plan in the NOTES.md \`## Found queue\` of a repository the plan's Files names, and that queue is the only record the next plan must answer: a line sorted as queued in the manager notes alone is lost when the session ends. Send an agent to write each into the queue under a new key, write the key into the Found line's note in status/manager.txt, and stop then. If no agent can record it, declare the stop in the first line: "Stopping here: open for you is <the specific thing>".
 `, reply);
 }
 
@@ -935,7 +987,7 @@ const tail = [...sentences].reverse().find((s) => !/^(?:<?https?:\/\/\S+>?|\(.*\
 // the very sentence this guard exists to refuse.
 const CONTINUING = /\b(?:meanwhile|in the meantime|meantime|carrying on|moving on|next up I|I(?:'| ha)?ve (?:started|kicked off|begun)|starting (?:on |the )?(?:the )?next|going on with)\b/i;
 
-const waitHit = WAITING.find((re) => re.test(reply));
+const waitHit = agentRunning ? undefined : WAITING.find((re) => re.test(reply));
 const parkHit = CONTINUING.test(tail) ? undefined : PARKING.find((re) => re.test(tail));
 
 // The template (shape 3) is judged above, before the declaration. The rest of

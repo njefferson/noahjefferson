@@ -506,7 +506,8 @@ function exitFor(dir, planText, projectDir, extra = []) {
  *   section (null for none).
  * @returns {string} the plan.
  */
-function sendingPlan(dir, { rules = rulesLine(dir), files = '- Repo: `a.txt`', answered = null, what = null, roadmap = null, shipped = null } = {}) {
+function sendingPlan(dir, { rules = rulesLine(dir), files = '- Repo: `a.txt`', answered = null, what = null, roadmap = null, shipped = null,
+  cost = 'One step on the sonnet tier and one review per move, with one push at the end of the plan.' } = {}) {
   return ['# Sending plan', '',
     '## Goals', '1. The toolbar shows the export button on its left side.', GOALS_BLOCK, 'Served by: steps 1 and 2 serve goal 1.', '',
     '## Asked', OWN_WORDS, '',
@@ -519,6 +520,7 @@ function sendingPlan(dir, { rules = rulesLine(dir), files = '- Repo: `a.txt`', a
     ...(what === null ? [] : ['## What is', what, '']),
     ...(roadmap === null ? [] : ['## Roadmap', roadmap, '']),
     ...(shipped === null ? [] : ['## Shipped check', shipped, '']),
+    ...(cost === null ? [] : ['## Cost', cost, '']),
     '## Looked up', 'Nothing outside the repository bears on this change at all.', '',
     '## Branches', 'One branch only, because the request names a single control to move.', '',
     '## Call chain', 'The toolbar builder places the button; nothing else reads its position.', '',
@@ -570,6 +572,7 @@ function afterGatePlan(dir, line = '') {
     `3. **Review.** Follow ${join(dir, 'aim-review.md')} for the move named on the status page.`, '',
     '## Commands', '- node /tmp/claude-0/', '',
     '## Files', '- Repo: `a.txt`', '',
+    '## Cost', 'One step on the sonnet tier and one review per move, with one push at the end of the plan.', '',
     '## Looked up', 'Nothing outside the repository bears on this change at all.', '',
     '## Branches', 'One branch only, because the request names a single control to move.', '',
     '## Call chain', 'The toolbar builder places the button; nothing else reads its position.', '',
@@ -4266,6 +4269,7 @@ const CASES = [
         '## Steps', '1. **Build.** Make the toolbar change.', `2. **Review.** ${words}`, '',
         '## Commands', '- node /tmp/claude-0/', '',
         '## Files', '- Repo: `a.txt`', '',
+        '## Cost', 'One step on the sonnet tier and one review per move, with one push at the end of the plan.', '',
         '## Looked up', 'Nothing outside the repository bears on this change at all.', '',
         '## Branches', 'One branch only, because the request names a single control to move.', '',
         '## Call chain', 'The toolbar builder places the button; nothing else reads its position.', '',
@@ -5440,9 +5444,10 @@ const CASES = [
       const held = call('Bash', { command: 'git status' });
       const write = (p, tool_name = 'Write') => call(tool_name, { file_path: p, content: 'x', old_string: 'a', new_string: 'b', edits: [{ old_string: 'a', new_string: 'b' }] });
       const passes = write(`${pad}/progress/step-3-report.txt`).status === 0 && write(`${pad}/progress/step-3.txt`).status === 0
-        && write(`${pad}/progress/step-3-report.txt`, 'Edit').status === 0 && write(`${pad}/progress/step-3.txt`, 'MultiEdit').status === 0;
+        && write(`${pad}/progress/step-3-report.txt`, 'Edit').status === 0 && write(`${pad}/progress/step-3.txt`, 'MultiEdit').status === 0
+        && write(`${pad}/progress/step-3-review-2.txt`).status === 0;
       const stays = [
-        write(`${pad}/progress/step-4-report.txt`), write(`${pad}/progress/step-3.txt.bak`), write(`${pad}/progress/notes.txt`), write(`${pad}/progress/sub/step-3.txt`),
+        write(`${pad}/progress/step-4-report.txt`), write(`${pad}/progress/step-4-review-1.txt`), write(`${pad}/progress/step-3-review-.txt`), write(`${pad}/progress/step-3.txt.bak`), write(`${pad}/progress/notes.txt`), write(`${pad}/progress/sub/step-3.txt`),
         write(`${pad}/status/fix-run.html`), write(`${pad}/step-3.txt`), write(`${pad}/status/step-3.txt`), write(join(w.cwd, 'stray.txt')), write(`/tmp/claude-0/-home-user/another-session/scratchpad/progress/step-3.txt`),
         write(`${pad}/progress/step-3.txt`, 'NotebookEdit'), call('Read', { file_path: `${pad}/progress/step-3-report.txt` }), call('Bash', { command: 'git status' }),
       ].every((r) => r.status === 2 && /REFUSAL LATCH/.test(r.stderr));
@@ -7340,7 +7345,7 @@ const CASES = [
       const passes = /refused except five kinds/.test(rule14) && /the plan check \(rule 4\)/.test(rule14) && /the reply guard's release command/.test(rule14)
         && /`agentReportWrite`/.test(rule14) && source.includes('function agentReportWrite');
       const claude = flat(readFileSync(join(dir, 'CLAUDE.md'), 'utf8'));
-      const index = /Nineteen refusals set no latch, each because something other than the owner's next message answers it/.test(claude) && /lands only when no plan is in force, as the last step of the plan that makes it/.test(claude)
+      const index = /Twenty-one refusals set no latch, each because something other than the owner's next message answers it/.test(claude) && /lands only when no plan is in force, as the last step of the plan that makes it/.test(claude)
         && /plan-guard\.mjs --check <the plan's path>` prints every fault the approval call would refuse on/.test(claude) && !/amend the Rules line/.test(claude);
       const rules = flat(readFileSync(join(dir, 'agent-rules.md'), 'utf8'));
       const header = /lands only when no plan is in force, as the last step of the plan that makes it; no plan is moved to a new rules version without the button/.test(rules)
@@ -7519,6 +7524,289 @@ const CASES = [
       }
     },
   },
+
+  // ---- step 21 of the plan of 1 November, finding 2: the stop guard and a running agent, and what counts as a repeat ----
+  {
+    name: 'finding 2: a reply that says a step is still running ends the turn while an agent of the session is running, and is refused as not finished when none is; a follow-up that repeats only a line carrying the status page\'s link is no repeat, nor is the numbered option that a refusal of a choice not first asked to be moved, while a repeated ordinary sentence, and an option line after any other refusal, are still repeats',
+    guards: ['stop_wait_agent', 'stop_repeat_link', 'stop_repeat_option', 'stop_repeat_kind', 'stop_choice_kind'],
+    run(m, dir) {
+      const w = world(dir);
+      const s = sid('fw');
+      const proj = tmp('sg-proj-');
+      const main = join(proj, `${s}.jsonl`);
+      const subs = join(proj, s, 'subagents');
+      mkdirSync(subs, { recursive: true });
+      const sent = (n) => at({ type: 'user', message: { role: 'user', content: `${w.plan} step ${n}` } }, later(-300));
+      const agent = (id, entries) => {
+        writeFileSync(join(subs, `agent-${id}.jsonl`), jsonl(entries));
+        writeFileSync(join(subs, `agent-${id}.meta.json`), JSON.stringify({ agentType: 'general-purpose', description: `Plan step for ${id}` }));
+      };
+      const returned = (id, n) => agent(id, [sent(n), at(tool(0, `${id}-b`, 'Bash', { command: 'git status' }), later(-200)), at(result(0, `${id}-b`, 'clean'), later(-199)),
+        at(tool(0, `${id}-h`, 'SubagentHandback', { message: `Step ${n} is built.` }), later(-100)), at(result(0, `${id}-h`, 'Report delivered to your caller.'), later(-99))]);
+      const runningFor = (id, n) => agent(id, [sent(n), at(tool(0, `${id}-b`, 'Bash', { command: 'node build.mjs' }), later(-20)), at(result(0, `${id}-b`, 'built'), later(-19))]);
+      const read = [turn(0, GO), tool(1, 'fw1', 'Bash', { command: 'git status' }), result(2, 'fw1', 'clean')];
+      const say = (text) => {
+        writeFileSync(main, jsonl([...read, reply(5, text)]));
+        return spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: s, transcript_path: main }), encoding: 'utf8', env: { ...process.env, HOME: w.home } });
+      };
+      const WAIT = 'The second step is still running in its agent, and its result is read when it ends.';
+      returned('a1', 1); returned('a2', 2);
+      const idle = say(WAIT);
+      runningFor('a2', 2);
+      const running = say(WAIT);
+      // The repeat check, in a home with no plan: a refusal for a waiting reply, then a follow-up.
+      const bare = tmp('sg-home-'); mkdirSync(join(bare, '.claude'), { recursive: true });
+      const FEEDBACK = { type: 'user', isMeta: true, timestamp: ts(6), message: { role: 'user', content: 'Stop hook feedback:\nSTOP REFUSED' } };
+      const flow = (first, second) => {
+        const sess = sid('fr');
+        const tr = transcript([...read, reply(5, first)]);
+        const stop = (active) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sess, transcript_path: tr, stop_hook_active: active }), encoding: 'utf8', env: { ...process.env, HOME: bare } });
+        const one = stop(false);
+        appendFileSync(tr, jsonl([FEEDBACK, reply(8, second)]));
+        return { one, two: stop(true) };
+      };
+      const LINK = 'Status page: https://claude.ai/code/artifact/status-page-of-the-plan-in-force';
+      const OPTION = '1. (Recommended) Land the gates exactly as they are built today.';
+      const link = flow(`${WAIT}\n${LINK}`, `Nothing else changed since.\n${LINK}`);
+      const sentence = flow(`${WAIT}\n${LINK}`, `${WAIT}\n${LINK}`);
+      const CHOICE = ['The first line of the report says the gates were written today.', 'The second line of the report says the cases were written today.',
+        'The third line of the report says the plants were written today.', '', OPTION, '2. Hold the gates for a second look before landing them.'].join('\n');
+      const moved = flow(CHOICE, `${OPTION}\n2. Hold the gates for a second look before landing them.\nThe choice now opens the reply.`);
+      const ordinary = flow(CHOICE, 'The second line of the report says the cases were written today.\nThe choice now opens the reply.');
+      const otherKind = flow(`${WAIT}\n${OPTION}`, OPTION);
+      return idle.status === 2 && /says the work is not finished/.test(idle.stderr) && running.status === 0
+        && link.one.status === 2 && link.two.status === 0 && sentence.two.status === 2 && /sends the refused reply again/.test(sentence.two.stderr)
+        && moved.one.status === 2 && /choice is not the first thing/.test(moved.one.stderr) && moved.two.status === 0 && ordinary.two.status === 2
+        && otherKind.one.status === 2 && otherKind.two.status === 2;
+    },
+  },
+
+  // ---- finding 15: a Found line sorted as queued must name a key of a Found queue before the plan's last stop ----
+  {
+    name: 'finding 15: when the pointer reads next none, a stop is refused for a Found line of a step of the plan that the manager notes sort as queued with a note naming no key of the Found queue of a repository the plan\'s Files names, or a key that queue does not hold; a note that names a key it holds, a line sorted as fixed, an unsorted line, a line of a step outside the plan, and a declared stop with what is open let it end',
+    guards: ['stop_close_wired', 'stop_close_unrecorded', 'stop_close_queue', 'stop_close_exists', 'stop_close_steps', 'stop_close_sorted'],
+    run(m, dir) {
+      const R = repo({ 'NOTES.md': '# Notes\n\n## Found queue\nQ-CL-1: a queued finding that the note can name.\n', 'a.txt': 'x\n' }, 'close-repo');
+      const w = world(dir, [], ORDER_PLAN.replace('- Repo:', '- close-repo:'));
+      const s = sid('cl');
+      const pad = join(process.env.TMPDIR, 'claude-0', '-home-user', s, 'scratchpad');
+      mkdirSync(join(pad, 'progress'), { recursive: true });
+      mkdirSync(join(pad, 'status'), { recursive: true });
+      const proj = tmp('sg-proj-');
+      const main = join(proj, `${s}.jsonl`);
+      const subs = join(proj, s, 'subagents');
+      mkdirSync(subs, { recursive: true });
+      putAgent(subs, w.plan, 'c1', 1, -300, -200, 'DONE');
+      putAgent(subs, w.plan, 'c2', 2, -150, -100, 'DONE');
+      const report = (n, found) => writeFileSync(join(pad, 'progress', `step-${n}-report.txt`), `DONE\nBuilt.\n${found ? 'Found: a defect the case planted and left.\n' : ''}`);
+      const notes = (text) => writeFileSync(join(pad, 'status', 'manager.txt'), `${text}\n`);
+      const read = [turn(0, GO), tool(1, 'cl1', 'Bash', { command: 'git status' }), result(2, 'cl1', 'clean')];
+      const say = (text = 'The plan is finished and every step handed back.') => {
+        writeFileSync(main, jsonl([...read, reply(5, text)]));
+        return spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: s, transcript_path: main }), encoding: 'utf8',
+          env: { ...process.env, HOME: w.home, CLAUDE_PROJECT_DIR: R.dir } });
+      };
+      report(1, true);
+      notes('Found 1.1 queued: left for a later plan with no key');
+      const unkeyed = say();
+      notes('Found 1.1 queued: Q-CL-9 holds it');
+      const missing = say();
+      notes('Found 1.1 queued: Q-CL-1 holds it');
+      const keyed = say();
+      notes('Found 1.1 fixed: put right in the step');
+      const fixed = say();
+      notes('# nothing sorted');
+      const unsorted = say();
+      report(7, true);
+      notes('Found 7.1 queued: a step outside the plan, with no key');
+      const outside = say();
+      notes('Found 1.1 queued: left for a later plan with no key');
+      const declared = say('Stopping here: open for you is the finding that has no key yet.\nThe rest follows.');
+      return unkeyed.status === 2 && /next: none/.test(unkeyed.stderr) && /Found 1\.1/.test(unkeyed.stderr) && /Found queue/.test(unkeyed.stderr) && missing.status === 2
+        && keyed.status === 0 && fixed.status === 0 && unsorted.status === 0 && outside.status === 0 && declared.status === 0;
+    },
+  },
+
+  // ---- finding 3: an agent paused on its own background run is running, whatever the notification says ----
+  {
+    name: 'finding 3: an agent that handed back nothing, whose own transcript launched a background run that has not completed, reads as still running though the main thread was told its turn completed, and is listed by the running agents; once the run\'s completion is in its transcript, or the session restarted after its last entry, it reads as ended',
+    guards: ['paused_background', 'paused_restart', 'paused_completes'],
+    run(m) {
+      const launch = [tool(0, 'l1', 'Bash', { command: 'node long.mjs', run_in_background: true }), result(1, 'l1', 'Command running in background with ID: pausedtask1 (output file in the scratchpad)')];
+      const done = { type: 'user', timestamp: ts(5), message: { role: 'user', content: '<task-notification><task-id>pausedtask1</task-id><status>completed</status></task-notification>' } };
+      const paused = m.report.agentEnd([turn(0, 'step'), ...launch], {}, 0, 'completed');
+      const finished = m.report.agentEnd([turn(0, 'step'), ...launch, done], {}, 0, 'completed');
+      const restarted = m.report.agentEnd([turn(0, 'step'), ...launch], {}, Date.now(), 'completed');
+      const plain = m.report.agentEnd([turn(0, 'step'), tool(0, 'p1', 'Bash', { command: 'git status' }), result(1, 'p1', 'clean')], {}, 0, 'completed');
+      const handed = m.report.agentEnd([turn(0, 'step'), ...launch, tool(2, 'h1', 'SubagentHandback', { message: 'DONE\nBuilt.' }), result(3, 'h1', 'Report delivered to your caller.')], {}, 0, 'completed');
+      // The running agents, read from the files the harness writes.
+      const proj = tmp('sg-proj-');
+      const sidP = sid('pb');
+      const subs = join(proj, sidP, 'subagents');
+      mkdirSync(subs, { recursive: true });
+      const mainP = join(proj, `${sidP}.jsonl`);
+      writeFileSync(mainP, jsonl([turn(0, 'start'), { type: 'user', timestamp: ts(3), message: { role: 'user', content: '<task-notification><task-id>pauseagent1</task-id><status>completed</status></task-notification>' } }]));
+      writeFileSync(join(subs, 'agent-pauseagent1.meta.json'), JSON.stringify({ agentType: 'general-purpose', description: 'Plan step 1' }));
+      writeFileSync(join(subs, 'agent-pauseagent1.jsonl'), jsonl([turn(0, 'step'), ...launch]));
+      const ids = () => (m.report.runningAgents(sidP, { main: mainP, agents: subs }) ?? []).map((a) => a.id).join(',');
+      const listed = ids();
+      writeFileSync(join(subs, 'agent-pauseagent1.jsonl'), jsonl([turn(0, 'step'), ...launch, done]));
+      const after = ids();
+      return paused === null && finished?.how === 'a report' && restarted?.how === 'a report' && plain?.how === 'a report' && handed?.how === 'a report'
+        && listed === 'pauseagent1' && after === '';
+    },
+  },
+
+  // ---- finding 7: the top tier says so before an agent is sent ----
+  {
+    name: 'finding 7: while an approved plan is in force and the top tier serves the main thread, no agent is sent until a text of the main thread written since the model changed opens with a line that names the tier and says whether the work needs it; the refusal gives the words and sets no latch, and a lesser tier, no plan, a subagent\'s call, a tool that sends no agent and a line said before the model changed to another and back are judged as they should be',
+    guards: ['tier_gate_wired', 'tier_gate_no_latch', 'tier_gate_top', 'tier_gate_line', 'tier_gate_needs', 'tier_gate_since', 'tier_gate_plan', 'tier_gate_agent'],
+    run(m, dir) {
+      const FABLE = 'claude-fable-5-1';
+      const OPUS = 'claude-opus-5-5';
+      const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
+      const call = { tool_name: 'Agent', tool_input: { prompt: '/plans/gate-test.md step 1' } };
+      const WORDS = m.report.tierWords(FABLE);
+      const gate = (entries, c = call, pl = plan) => m.dispatch.tierGate(c, pl, entries);
+      const refused = (x) => typeof x === 'string' && /^TIER GATE/.test(x) && x.includes(WORDS) && /does not latch/.test(x);
+      const silent = gate([modelReply(-10, 'Sending the first step now.', FABLE)]);
+      const said = gate([modelReply(-10, `${WORDS}\nSending the first step now.`, FABLE)]);
+      const namesOnly = gate([modelReply(-10, `Serving model: ${FABLE}.\nSending the first step now.`, FABLE)]);
+      const lesser = gate([modelReply(-10, 'Sending the first step now.', OPUS)]);
+      const unknown = gate([]);
+      const noPlan = gate([modelReply(-10, 'Sending the first step now.', FABLE)], call, null);
+      const subagent = gate([modelReply(-10, 'Sending the first step now.', FABLE)], { ...call, agent_id: 'a1' });
+      const noSend = gate([modelReply(-10, 'Sending the first step now.', FABLE)], { tool_name: 'Read', tool_input: { file_path: '/x' } });
+      const wentAndCame = gate([modelReply(-30, WORDS, FABLE), modelReply(-20, 'Back on the lesser tier.', OPUS), modelReply(-10, 'Sending the first step now.', FABLE)]);
+      const sinceChange = gate([modelReply(-30, 'Back on the lesser tier.', OPUS), modelReply(-20, `${WORDS}\nSending now.`, FABLE), modelReply(-10, 'Sending the first step now.', FABLE)]);
+      // Through the dispatcher: refused with the words and no latch, then sent once the line is written; a lesser tier is not held.
+      const w1 = world(dir, [turn(0, GO), modelReply(-10, 'Sending the first step now.', FABLE)]);
+      const s1 = sid('tg');
+      const held = w1.call('PreToolUse', { session_id: s1, tool_name: 'Agent', tool_input: { prompt: `${w1.plan} step 1`, subagent_type: 'general-purpose' } });
+      const w2 = world(dir, [turn(0, GO), modelReply(-10, `${WORDS}\nSending the first step now.`, FABLE)]);
+      const free = w2.call('PreToolUse', { session_id: sid('tg'), tool_name: 'Agent', tool_input: { prompt: `${w2.plan} step 1`, subagent_type: 'general-purpose' } });
+      const w3 = world(dir, [turn(0, GO), modelReply(-10, 'Sending the first step now.', OPUS)]);
+      const lessFree = w3.call('PreToolUse', { session_id: sid('tg'), tool_name: 'Agent', tool_input: { prompt: `${w3.plan} step 1`, subagent_type: 'general-purpose' } });
+      return refused(silent) && said === null && refused(namesOnly) && lesser === null && unknown === null && noPlan === null && subagent === null && noSend === null
+        && refused(wentAndCame) && sinceChange === null
+        && held.status === 2 && /TIER GATE/.test(held.stderr) && !latched(s1) && free.status === 0 && lessFree.status === 0;
+    },
+  },
+
+  // ---- finding 11: a publish in a plan mode the harness restored says so first ----
+  {
+    name: 'finding 11: while the harness\'s plan mode began at a resume or a compaction after the approval, an Artifact publish is refused, with no latch, until a text of the main thread written since that plan mode began says that the resume restored plan mode and that leaving it is the move; a text written before it, an Artifact read, another tool, a subagent\'s call and a plan mode the owner entered are not held',
+    guards: ['restart_pub_wired', 'restart_pub_no_latch', 'restart_pub_tool', 'restart_pub_action', 'restart_pub_restarted', 'restart_pub_said', 'restart_pub_leave', 'restart_pub_since'],
+    run(m, dir) {
+      const OPUS = 'claude-opus-5-5';
+      const SAID = 'The resume restored plan mode, the plan is already approved, and leaving plan mode in the app is the one move.';
+      const publish = { tool_name: 'Artifact', tool_input: { file_path: '/x/fix-run.html' } };
+      const on = (secs) => planOn(secs, '/plans/x.md');
+      const gate = (entries, c = publish, restarted = '/plans/x.md') => m.dispatch.restartPublishGate(c, entries, restarted);
+      const refused = (x) => typeof x === 'string' && /^RESTORED PLAN MODE/.test(x) && /does not latch/.test(x);
+      const silent = gate([on(-900)]);
+      const told = gate([on(-900), modelReply(-800, SAID, OPUS)]);
+      const toldBefore = gate([modelReply(-1000, SAID, OPUS), on(-900)]);
+      const noLeave = gate([on(-900), modelReply(-800, 'The resume restored plan mode and the plan is approved.', OPUS)]);
+      const notRestart = gate([on(-900)], publish, '');
+      const read = gate([on(-900)], { tool_name: 'Artifact', tool_input: { action: 'read', url: 'x' } });
+      const other = gate([on(-900)], { tool_name: 'Write', tool_input: { file_path: '/x' } });
+      const agent = gate([on(-900)], { ...publish, agent_id: 'a1' });
+      // Through the dispatcher, with the restart as the harness leaves it.
+      const planText = PLAN(OWN_WORDS);
+      const w = world(dir, [], planText);
+      writeFileSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: w.plan, hash: sha256(planText), at: new Date(Date.now() - 698 * 1000).toISOString() }));
+      const shape = (kind, extra = []) => [...approvedEntries(w.plan), ...workEntries(-650, 'w1'), ...(kind === 'restart' ? restartOf('compaction', w.plan) : [at(turn(0, 'Go.'), later(-200)), planOn(-199, w.plan)]), ...extra];
+      const through = (kind, extra) => {
+        writeFileSync(w.tr, jsonl(shape(kind, extra)));
+        const s = sid('rp');
+        const r = w.call('PreToolUse', { session_id: s, tool_name: 'Artifact', tool_input: { file_path: join(tmpdir(), 'claude-0', '-home-user', s, 'scratchpad', 'status', 'fix-run.html') } });
+        return { r, latched: latched(s) };
+      };
+      const heldRestart = through('restart');
+      const toldRestart = through('restart', [modelReply(-100, SAID, OPUS)]);
+      const owners = through('owner');
+      return refused(silent) && told === null && refused(toldBefore) && refused(noLeave) && notRestart === null && read === null && other === null && agent === null
+        && heldRestart.r.status === 2 && /RESTORED PLAN MODE/.test(heldRestart.r.stderr) && !heldRestart.latched
+        && !/RESTORED PLAN MODE/.test(toldRestart.r.stderr) && !/RESTORED PLAN MODE/.test(owners.r.stderr);
+    },
+  },
+
+  // ---- finding 12: plan mode passes three more reads ----
+  {
+    name: 'finding 12: plan mode passes git ls-remote, a git config that reads one key or lists, and a clock read with an Area/City time zone set in front of date; git config with a value, an add, an unset or any other flag, a time zone in front of any other command, and a zone with no slash are still refused',
+    guards: ['plan_reads_lsremote', 'plan_reads_config', 'plan_reads_config_value', 'plan_reads_config_flags', 'plan_reads_tz', 'plan_reads_tz_date'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      const pg = (command) => spawnSync('node', [join(dir, 'plan-guard.mjs')], { input: JSON.stringify({ session_id: sid('pr'), cwd: home, permission_mode: 'plan', tool_name: 'Bash', tool_input: { command } }), encoding: 'utf8', env: { ...process.env, HOME: home } });
+      const passes = ['git ls-remote --heads origin', 'git config --get user.name', 'git config user.name', 'git config --list', 'git config --get-regexp remote', 'git config --local --get remote.origin.url',
+        'TZ=America/Los_Angeles date', 'TZ=America/Los_Angeles date +%H:%M', 'git log -1'];
+      const refuses = ['git push origin main', 'git config user.name Somebody', 'git config --unset user.name', 'git config --add remote.origin.fetch x', 'git config --global user.name x', 'git config --list user',
+        'git config --edit', 'TZ=America/Los_Angeles ls', 'TZ=America/Los_Angeles rm x', 'TZ=UTC date', 'git remote add x y'];
+      const bad = passes.filter((c) => pg(c).status !== 0).concat(refuses.filter((c) => pg(c).status !== 2));
+      if (bad.length) throw new Error(`wrong verdict for: ${bad.join(' | ')}`);
+      return true;
+    },
+  },
+
+  // ---- finding 4: a plan rests on files read since the last compaction, and prices the run ----
+  {
+    name: 'finding 4: a plan whose "What is" names a file is refused after a compaction unless a Read of it, or a Grep of it or of a folder holding it, came back without an error after the newest compaction; with no compaction, no steps or a read after the compaction it passes; a plan with steps and no "Cost" section stating the pushes, the sends and the tier is refused with a fault of the plan\'s shape, and one that states them passes',
+    guards: ['read_after_wired', 'read_after_cut', 'read_after_after', 'read_after_result', 'read_after_grep', 'read_after_file', 'read_after_steps', 'cost_wired', 'cost_steps', 'cost_empty', 'cost_push', 'cost_sends', 'cost_tier'],
+    run(m, dir) {
+      const NOTES_A = ['# Notes', '', 'The export control lives in the toolbar builder.', '', '## Next capability release', '- [ ] **Alpha feature moves the button** <!-- decision: 012 -->', ''].join('\n');
+      const R = repo({ 'NOTES.md': NOTES_A, 'a.txt': 'x\n' }, 'after-repo');
+      const files = '- after-repo: `a.txt`';
+      const what = '- "The export control lives in the toolbar builder" (NOTES.md).';
+      const roadmap = '- 012 out: the plan leaves the first feature alone';
+      const plan = sendingPlan(dir, { files, what, roadmap });
+      const notes = join(R.dir, 'NOTES.md');
+      const rd = (id, input, name = 'Read', err = false) => [tool(0, id, name, input), result(0, id, 'content', err)];
+      const check = (entries, text = plan) => m.dispatch.readAfterCompactionProblem(text, { roots: [R.dir], entries });
+      const says = (x) => typeof x === 'string' && /^READ AFTER COMPACTION/.test(x) && x.includes('NOTES.md');
+      const noCompaction = check([turn(0, 'start')]);
+      const readBefore = check([...rd('r1', { file_path: notes }), boundary(0)]);
+      const readAfter = check([boundary(0), ...rd('r2', { file_path: notes })]);
+      const grepFolder = check([boundary(0), ...rd('r3', { pattern: 'export', path: R.dir }, 'Grep')]);
+      const grepFile = check([boundary(0), ...rd('r4', { pattern: 'export', path: notes }, 'Grep')]);
+      const failedRead = check([boundary(0), ...rd('r5', { file_path: notes }, 'Read', true)]);
+      const otherFile = check([boundary(0), ...rd('r6', { file_path: join(R.dir, 'a.txt') })]);
+      const newest = check([boundary(0), ...rd('r7', { file_path: notes }), boundary(0)]);
+      const noSteps = check([boundary(0)], plan.replace('## Steps', '## Notes'));
+      // Through the plan guard at ExitPlanMode: the compaction before plan mode was entered, and no read after it, then a read.
+      const hookCompacted = (extra) => exitFor(dir, plan, R.dir, extra);
+      const gMark = at(boundary(0), later(-880));
+      const exitRefused = hookCompacted([gMark]);
+      const exitRead = hookCompacted([gMark, at(tool(0, 'xr', 'Read', { file_path: notes }), later(-870)), at(result(0, 'xr', 'content'), later(-869))]);
+      const said = (r) => `${r.stdout}${r.stderr}`;
+      // The cost.
+      const cost = (c) => m.dispatch.costProblem(sendingPlan(dir, { files, what, roadmap, cost: c }));
+      const costed = (x, ...re) => typeof x === 'string' && /^COST/.test(x) && re.every((r) => r.test(x));
+      const exitNoCost = exitFor(dir, sendingPlan(dir, { files, what, roadmap, cost: null }), R.dir);
+      return noCompaction === null && says(readBefore) && readAfter === null && grepFolder === null && grepFile === null && says(failedRead) && says(otherFile) && says(newest) && noSteps === null
+        && exitRefused.status === 2 && /READ AFTER COMPACTION/.test(said(exitRefused)) && /sets no latch/.test(said(exitRefused)) && exitRead.status === 0
+        && cost('One step on the sonnet tier and one review per move, with one push at the end of the plan.') === null
+        && cost('Two pushes, three agent sends and the opus tier for the audit.') === null
+        && cost('No push at all; one agent on the haiku tier.') === null
+        && costed(cost(null), /no "## Cost" section/) && costed(cost('The run is cheap.'), /the number of pushes/, /the agent sends or reviews/, /the tier of each step/)
+        && costed(cost('One push and two agent sends.'), /the tier of each step/) && !/the number of pushes/.test(cost('One push and two agent sends.'))
+        && costed(cost('Two pushes on the opus tier.'), /the agent sends or reviews/) && costed(cost('Three agent sends on the opus tier, pushing once.'), /the number of pushes/)
+        && m.dispatch.costProblem(PLAN(OWN_WORDS)) === null
+        && exitNoCost.status === 2 && /COST/.test(said(exitNoCost)) && /sets no latch/.test(said(exitNoCost));
+    },
+  },
+
+  // ---- findings 16 and 23: a run of the cases says the plants were not run, and a run of plants says how many of the total ----
+  {
+    name: 'finding 16: a run of the cases ends with a line saying the plants were not run and how many there are, and a run of plants narrowed to some guard files ends with a line giving the count it ran beside the total, so the by-file runs can be added up',
+    guards: ['run_plants_not_run', 'run_plants_counted'],
+    run(m, dir) {
+      const cases = spawnSync('node', [join(dir, 'session-guards.test.mjs'), '--case=no-such-case-name-at-all'], { encoding: 'utf8', timeout: 120000 });
+      const plants = spawnSync('node', [join(dir, 'session-guards.test.mjs'), '--plants', '--files=no-such-file.mjs'], { encoding: 'utf8', timeout: 120000 });
+      return /PLANTS NOT RUN: this run ran the cases only; the \d+ plants run with --plants/.test(cases.stdout)
+        && /PLANTS RUN: 0 of \d+ \(the plants of no-such-file\.mjs; add the counts of the by-file runs against the total of \d+\)/.test(plants.stdout);
+    },
+  },
 ];
 
 const PLANTS = {
@@ -7615,7 +7903,7 @@ const PLANTS = {
   stop_follow_up: ['  process.stderr.write(message + FOLLOW_UP);', '  process.stderr.write(message);', 'stop-guard.mjs'],
   stop_repeat: ['      if (again.length) {', '      if (false) {', 'stop-guard.mjs'],
   stop_repeat_once: ['!rec.repeated && ', '', 'stop-guard.mjs'],
-  stop_repeat_record: ['writeFileSync(refusedFile(), JSON.stringify({ at: Date.now(), lines, reply, repeated: false }));', 'void 0;', 'stop-guard.mjs'],
+  stop_repeat_record: ['writeFileSync(refusedFile(), JSON.stringify({ at: Date.now(), lines, reply, repeated: false, kind }));', 'void 0;', 'stop-guard.mjs'],
   stop_repeat_turn: ['&& Number(rec.at) >= ownerAt) {', '&& true) {', 'stop-guard.mjs'],
   stop_repeat_min: ['const REPEAT_MIN = 30;', 'const REPEAT_MIN = 1;', 'stop-guard.mjs'],
 
@@ -7788,7 +8076,7 @@ const PLANTS = {
   agents_once: ['    if (done.has(id)) continue;\n', '\n', 'report.mjs'],
   agents_interrupt: ["  if (meta?.stoppedByUser || interruptedAt > lastAssistant) return { how: 'an interruption'", "  if (false) return { how: 'an interruption'", 'report.mjs'],
   agents_refusal: ["how: lastRefusal && !word ? 'a refusal' : 'a report', at, last: cut(handback.text)", "how: 'a report', at, last: cut(handback.text)", 'report.mjs'],
-  agents_running: ['  return null;\n}\n\n/**\n * How an end reads in a line of a status.', "  return { how: 'a report', at, last: cut(last) };\n}\n\n/**\n * How an end reads in a line of a status.", 'report.mjs'],
+  agents_running: ['  return null;\n}\n\n/**\n * Does an agent\'s own transcript hold a background run that has not completed?', "  return { how: 'a report', at, last: cut(last) };\n}\n\n/**\n * Does an agent's own transcript hold a background run that has not completed?", 'report.mjs'],
   agents_since: ['    if (!rec && !(end.at > stampAt)) continue;\n', '\n', 'report.mjs'],
   // Each running agent's progress note.
   progress_block: ['  console.log(progress);\n', '\n', 'report.mjs'],
@@ -7905,7 +8193,7 @@ const PLANTS = {
   steps_choice: ['&& !opensWithChoice(reply) && !declaresStop(reply)', '&& !declaresStop(reply)', 'stop-guard.mjs'],
   steps_declared: ['&& !declaresStop(reply)\n', '\n', 'stop-guard.mjs'],
   steps_declared_open: ['(\\S[^\\n]{6,})/i;', '(\\S[^\\n]{0,})/i;', 'stop-guard.mjs'],
-  steps_correction: ['&& !stopStanding(probe) && (reviewed || !correctionStanding(probe))) left = stepsLeft(state);', '&& !stopStanding(probe)) left = stepsLeft(state);', 'stop-guard.mjs'],
+  steps_correction: ['&& !stopStanding(probe) && (reviewed || !correctionStanding(probe))) {\n    left = stepsLeft(state);', '&& !stopStanding(probe)) {\n    left = stepsLeft(state);', 'stop-guard.mjs'],
   steps_plan_in_force: ['  const plan = approvedPlan();\n  if (!plan || !state) return [];', "  const plan = { text: '## Steps\\n1. x\\n2. y\\n' };\n  if (!plan || !state) return [];", 'stop-guard.mjs'],
   steps_report_only: ["  for (const e of s.ends) if (e.how === 'a report' && e.step !== null) returned.add(e.step);", '  for (const e of s.ends) if (e.step !== null) returned.add(e.step);', 'report.mjs'],
   steps_step_read: ['    const step = prompt?.step ?? null;\n', '    const step = 1;\n', 'report.mjs'],
@@ -8200,7 +8488,7 @@ const PLANTS = {
   report_write_tool: ["if (!p.agent_id || !/^(?:Write|Edit|MultiEdit)$/.test(String(p.tool_name ?? ''))) return false;", 'if (!p.agent_id) return false;', 'hook-dispatch.mjs'],
   report_write_dir: ["basename(dirname(abs)) !== 'progress' || ", '', 'hook-dispatch.mjs'],
   report_write_scratchpad: ['if (!inScratchpad(abs, p.session_id) || ', 'if (', 'hook-dispatch.mjs'],
-  report_write_name: ['(?:-report)?\\.txt$/.exec(basename(abs));', '(?:-report)?\\.txt/.exec(basename(abs));', 'hook-dispatch.mjs'],
+  report_write_name: ['(?:-report|-review-\\d+)?\\.txt$/.exec(basename(abs));', '(?:-report|-review-\\d+)?\\.txt/.exec(basename(abs));', 'hook-dispatch.mjs'],
   report_write_own: ['  return own === null || own === Number(m[1]);', '  return true;', 'hook-dispatch.mjs'],
   rules_first: ["  const first = 'rules' in opts ? opts.rules(p) : rulesFirst(p, plan);\n  if (first) return first;", '  const first = null;\n  if (first) return first;', 'plan-fence.mjs'],
   rules_first_read: ["  if (tool === 'Read' && files.has(reads)) return null;", '  if (false) return null;', 'plan-fence.mjs'],
@@ -8586,9 +8874,9 @@ const PLANTS = {
   doctrine_check_first: ['**The plan is checked whole before the talk turn.**', '**The plan is checked.**', 'DOCTRINE.md'],
   doctrine_rules_rule: ['**A change to the agent rules file lands only when no plan is in force, as the', '**A change to the agent rules file lands at any time, as the', 'DOCTRINE.md'],
   doctrine_no_amend: ['    - a send the rules gate refuses, because the plan pins a rules version the file\n', '    - a send the rules gate refuses, answered by amending the Rules line; a rules version the file\n', 'DOCTRINE.md'],
-  doctrine_count: ['    Nineteen refusals are not ends of a route, and set no latch, because', '    Twenty refusals are not ends of a route, and set no latch, because', 'DOCTRINE.md'],
+  doctrine_count: ['    Twenty-one refusals are not ends of a route, and set no latch, because', '    Twenty-two refusals are not ends of a route, and set no latch, because', 'DOCTRINE.md'],
   doctrine_passes: ['    PreToolUse call on the main thread and in agents is refused except five\n', '    PreToolUse call on the main thread and in agents is refused except three\n', 'DOCTRINE.md'],
-  claude_latch_line: [" clears the main thread's latch, by when it was typed. Nineteen refusals set no", " clears the main thread's latch, by when it was typed. Ten refusals set no", 'CLAUDE.md'],
+  claude_latch_line: [" clears the main thread's latch, by when it was typed. Twenty-one refusals set no", " clears the main thread's latch, by when it was typed. Ten refusals set no", 'CLAUDE.md'],
   rules_header: ['lands only when no plan is in force, as the last step of the plan that makes it; no plan is moved', 'is amended to the new one after the change has been read; no plan is moved', 'agent-rules.md'],
 
   // Step 229, change 4: a plan-mode write to the manager's notes passes (LESSONS §435).
@@ -8617,6 +8905,66 @@ const PLANTS = {
   reply_read_record: ['  return readOfRecord(p, opts);\n}', '  return true;\n}', 'hook-dispatch.mjs'],
   reply_read_note: [' REPLY GUARD, NO LATCH: this call is a Read of a file of the record, so this refusal sets no latch: ', ' REPLY GUARD: this call is a Read of a file of the record. ', 'hook-dispatch.mjs'],
   reply_latch_note: [' This refusal latches the thread until the owner writes again, because ', ' This refusal ends the route, because ', 'hook-dispatch.mjs'],
+
+  // Step 21 of the plan of 1 November, finding 2: a running agent passes the waiting refusal; the repeat check leaves out the status link and a moved option.
+  stop_wait_agent: ['const waitHit = agentRunning ? undefined : WAITING.find((re) => re.test(reply));', 'const waitHit = WAITING.find((re) => re.test(reply));', 'stop-guard.mjs'],
+  stop_repeat_link: ['/claude\\.ai\\/(?:code\\/)?artifact\\/\\S/i.test(l) || (rec.kind', 'false || (rec.kind', 'stop-guard.mjs'],
+  stop_repeat_option: ["(rec.kind === 'choice' && /^\\s{0,3}\\d{1,2}[.)]\\s+\\S/.test(l));", 'false);', 'stop-guard.mjs'],
+  stop_repeat_kind: ["(rec.kind === 'choice' && ", '(true && ', 'stop-guard.mjs'],
+  stop_choice_kind: ["Write the choice once.\n`, reply, 'choice');", 'Write the choice once.\n`, reply);', 'stop-guard.mjs'],
+  // Finding 15: the closing stop reads the Found lines of the plan's own steps.
+  stop_close_wired: ['    if (!left.length && plan && planOrder(plan.text)) unrecorded = unrecordedFound(plan);', '    void 0;', 'stop-guard.mjs'],
+  stop_close_unrecorded: ["if (unrecorded.length) {\n  refuse(`STOP REFUSED — the plan's pointer reads next: none", "if (false) {\n  refuse(`STOP REFUSED — the plan's pointer reads next: none", 'stop-guard.mjs'],
+  stop_close_queue: ['    if (!named.some((k) => keys.has(k))) out.push(', '    if (false) out.push(', 'stop-guard.mjs'],
+  stop_close_exists: ['    if (!named.some((k) => keys.has(k))) out.push(', '    if (!named.length) out.push(', 'stop-guard.mjs'],
+  stop_close_steps: ['    if (!steps.has(f.step)) continue;\n    const s = sortOf(notes, f);', '    const s = sortOf(notes, f);', 'stop-guard.mjs'],
+  stop_close_sorted: ["    if (!s || s.how !== 'queued') continue;", '    if (!s) continue;', 'stop-guard.mjs'],
+  // Finding 3: an agent paused on its own background run is running.
+  paused_background: ['    if (!(processStart && at && at < processStart) && pausedOnBackground(entries)) return null;', '    if (false) return null;', 'report.mjs'],
+  paused_restart: ['!(processStart && at && at < processStart) && pausedOnBackground(entries)', 'pausedOnBackground(entries)', 'report.mjs'],
+  paused_completes: ["  try { return runningTasks((entries ?? []).map((e) => JSON.stringify(e)).join('\\n')).length > 0; } catch { return false; }", '  try { return (entries ?? []).length > 0; } catch { return false; }', 'report.mjs'],
+  // Finding 7: the top tier names itself before an agent is sent.
+  tier_gate_wired: ['      if (tg) return refuse(tg, false);\n', '\n', 'hook-dispatch.mjs'],
+  tier_gate_no_latch: ['if (tg) return refuse(tg, false);', 'if (tg) return refuse(tg);', 'hook-dispatch.mjs'],
+  tier_gate_top: ['  if (!serving || !isTopTier(serving)) return null;', '  if (!serving) return null;', 'hook-dispatch.mjs'],
+  tier_gate_line: ['      if (tierNamed(open, serving)) return null;', '      if (open) return null;', 'hook-dispatch.mjs'],
+  tier_gate_needs: [') && TIER_NEEDS_WORD.test(line);', ');', 'hook-dispatch.mjs'],
+  tier_gate_since: ['m.trim() !== serving) from = i + 1;', 'm.trim() !== serving) from = 0;', 'hook-dispatch.mjs'],
+  tier_gate_plan: ['  if (!plan) return null;\n  let rows = entries;', '  let rows = entries;', 'hook-dispatch.mjs'],
+  tier_gate_agent: ['export function tierGate(p, plan = approvedPlan(), entries = undefined) {\n  if (p.agent_id || ', 'export function tierGate(p, plan = approvedPlan(), entries = undefined) {\n  if (false || ', 'hook-dispatch.mjs'],
+  // Finding 11: a publish in a plan mode the harness restored says so first.
+  restart_pub_wired: ['      if (rp) return refuse(rp, false);\n', '\n', 'hook-dispatch.mjs'],
+  restart_pub_no_latch: ['if (rp) return refuse(rp, false);', 'if (rp) return refuse(rp);', 'hook-dispatch.mjs'],
+  restart_pub_tool: ["  if (p.agent_id || p.tool_name !== 'Artifact') return null;", '  if (p.agent_id) return null;', 'hook-dispatch.mjs'],
+  restart_pub_action: ["  if (action !== 'publish') return null;", '  void 0;', 'hook-dispatch.mjs'],
+  restart_pub_restarted: ['  if (!at) return null;\n  let rows = entries;', '  let rows = entries;', 'hook-dispatch.mjs'],
+  restart_pub_said: ['      if (/plan mode/i.test(t) && ', '      if (false && ', 'hook-dispatch.mjs'],
+  restart_pub_leave: [' && /\\b(?:leav\\w+|exit\\w*)\\b/i.test(t)) return null;', ') return null;', 'hook-dispatch.mjs'],
+  restart_pub_since: ['!e.attachment.isSubAgent) from = i; });', '!e.attachment.isSubAgent) from = 0; });', 'hook-dispatch.mjs'],
+  // Finding 12: plan mode passes ls-remote, a git config that reads, and a time zone in front of date.
+  plan_reads_lsremote: ["'branch', 'tag', 'remote', 'ls-remote', 'config',", "'branch', 'tag', 'remote', 'config',", 'plan-guard.mjs'],
+  plan_reads_config: ["'branch', 'tag', 'remote', 'ls-remote', 'config',", "'branch', 'tag', 'remote', 'ls-remote',", 'plan-guard.mjs'],
+  plan_reads_config_value: ['if (listing ? rest.length > 0 : rest.length !== 1) deny(', 'if (false) deny(', 'plan-guard.mjs'],
+  plan_reads_config_flags: ['if (flags.some((x) => !allowedFlags.has(x))) deny(', 'if (false) deny(', 'plan-guard.mjs'],
+  plan_reads_tz: ["if (/^TZ=[A-Za-z]+(?:\\/[A-Za-z_+-]+)+$/.test(words[0]) && words[1] === 'date') words = words.slice(1);", 'void 0;', 'plan-guard.mjs'],
+  plan_reads_tz_date: ["&& words[1] === 'date') words = words.slice(1);", ') words = words.slice(1);', 'plan-guard.mjs'],
+  // Finding 4: the files the evidence names were read since the last compaction, and the run is priced.
+  read_after_wired: ['    if (readAfter) fault(readAfter);', '    void 0;', 'plan-guard.mjs'],
+  read_after_cut: ['  if (cut < 0) return null;\n  const asked = new Map();', '  const asked = new Map();', 'hook-dispatch.mjs'],
+  read_after_after: ['for (const e of entries.slice(cut + 1)) {', 'for (const e of entries) {', 'hook-dispatch.mjs'],
+  read_after_result: ["b?.type === 'tool_result' && !b.is_error) answered.add(b.tool_use_id);", "b?.type === 'tool_result') answered.add(b.tool_use_id);", 'hook-dispatch.mjs'],
+  read_after_grep: ["(r.name === 'Grep' && (r.path === '' || f.startsWith(`${r.path}/`)))", 'false', 'hook-dispatch.mjs'],
+  read_after_file: ['reads.some((r) => r.path === f || ', 'reads.some((r) => true || ', 'hook-dispatch.mjs'],
+  read_after_steps: ["export function readAfterCompactionProblem(text, opts = {}) {\n  if (!planSection(text, 'Steps').trim()) return null;", 'export function readAfterCompactionProblem(text, opts = {}) {', 'hook-dispatch.mjs'],
+  cost_wired: ['  if (cost) fault(cost);', '  void 0;', 'plan-guard.mjs'],
+  cost_steps: ["export function costProblem(text) {\n  if (!planSection(text, 'Steps').trim()) return null;", 'export function costProblem(text) {', 'hook-dispatch.mjs'],
+  cost_empty: ['  if (!body.trim()) return `${head} The plan has no "## Cost" section with a body.`;', '  void 0;', 'hook-dispatch.mjs'],
+  cost_push: ['const numberBeside = ', 'const numberBeside = true || ', 'hook-dispatch.mjs'],
+  cost_sends: ['const sends = /\\b(?:agents?|sends?|reviews?)\\b/i.test(body);', 'const sends = true;', 'hook-dispatch.mjs'],
+  cost_tier: ['const tier = /\\b(?:opus|sonnet|haiku|fable|mythos|tier)\\b/i.test(body);', 'const tier = true;', 'hook-dispatch.mjs'],
+  // Finding 16: a run of the cases says the plants were not run; a run of plants gives its count beside the total.
+  run_plants_not_run: ['  // suite for nine hours, and the plants are the other half of it.\n  console.log(`PLANTS NOT RUN:', '  // suite for nine hours, and the plants are the other half of it.\n  console.log(`PLANTS:', 'session-guards.test.mjs'],
+  run_plants_counted: ['  }\n  console.log(`PLANTS RUN: ${todo.length} of', '  }\n  console.log(`PLANTS: ${todo.length} of', 'session-guards.test.mjs'],
 };
 
 async function runAll(dir, only, filter) {
@@ -8690,6 +9038,7 @@ if (process.argv.includes('--plants')) {
     if (!caught) bad++;
     rmSync(dir, { recursive: true, force: true });
   }
+  console.log(`PLANTS RUN: ${todo.length} of ${Object.keys(PLANTS).length}${narrowTo ? ` (the plants of ${narrowTo.join(', ') || 'no guard file'}; add the counts of the by-file runs against the total of ${Object.keys(PLANTS).length})` : ' (all of them)'}.`);
   console.log(LEAKS ? `LEAK: the planted live session was changed in ${LEAKS} case run${LEAKS === 1 ? '' : 's'} of the plants` : 'planted live session unchanged by the plants');
   rmSync(STATE, { recursive: true, force: true });
   process.exit(bad ? 1 : 0);
@@ -8698,6 +9047,9 @@ if (process.argv.includes('--plants')) {
   for (const x of r) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.name}${x.err ? ` (${x.err})` : ''}`);
   const failedN = r.filter((x) => !x.ok).length;
   console.log(`${r.length - failedN}/${r.length} passed`);
+  // A RUN OF THE CASES SAYS THE PLANTS WERE NOT RUN (finding 16 of the plan of 1 November): a green line here was reported as the whole
+  // suite for nine hours, and the plants are the other half of it.
+  console.log(`PLANTS NOT RUN: this run ran the cases only; the ${Object.keys(PLANTS).length} plants run with --plants, by guard file (--files=a.mjs), and the full suite is the cases and every plant.`);
   console.log(LEAKS ? `LEAK: the planted live session was changed in ${LEAKS} case${LEAKS === 1 ? '' : 's'} of the run` : 'planted live session unchanged by the run');
   rmSync(STATE, { recursive: true, force: true });
   process.exit(failedN ? 1 : 0);

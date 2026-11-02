@@ -470,7 +470,7 @@ Every item below has actually happened.
  cost the step its record; every other call of it is still refused but its
  return (LESSONS §404). The main thread's `TaskStop` passes so it can stop
  what it started (§11d). Only a message the owner typed after the refusal
- clears the main thread's latch, by when it was typed. Nineteen refusals set no
+ clears the main thread's latch, by when it was typed. Twenty-one refusals set no
  latch, each because something other than the owner's next message answers it;
  the list is in Doctrine §0e rule 14, read from the code, and a case holds its
  count to it. `node /root/.claude/hub/hook-dispatch.mjs --can <tool> <path or
