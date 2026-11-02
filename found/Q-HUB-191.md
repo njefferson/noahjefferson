@@ -1,0 +1,1 @@
+Q-HUB-191: the research plan's reports of steps 30 to 33 and the design conversation of 2 November exist only in the session's files, the scratchpad and the transcript; the record in plans/redesign-record.md carries what steps 33 and 59 put in it, and nothing else of them is in a repository (recorded by step 54 of the redesign plan of 2 November from the plan's own list).

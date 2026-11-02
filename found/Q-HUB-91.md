@@ -1,0 +1,1 @@
+Q-HUB-91: after the resume the harness printed plan mode and the exit call was made without first testing that notice by a send, so the approval had to be pressed a second time at 09:11; lesson 432 and the plan guard gate for the hub plan (found in step 0, recorded by step 219).

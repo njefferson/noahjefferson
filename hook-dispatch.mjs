@@ -1743,15 +1743,35 @@ const QUEUE_KEY = /^\s*(?:[-*]\s+)?\**(Q-[A-Za-z0-9]+-\d+)\**\s*[:.]?\s*(.*)$/;
 // A range of one repo's keys in a plan's "Found answered": `Q-JPS-1 to Q-JPS-12 still queued: <reason>`.
 const QUEUE_RANGE = /^\s*(?:[-*]\s+)?\**Q-([A-Za-z0-9]+)-(\d+)\**\s+(?:to|through|[-–—])\s+\**Q-([A-Za-z0-9]+)-(\d+)\**\s*[:.]?\s*(.*)$/i;
 
+/** The folder, at a repository's root, that holds one file for each finding it has queued. */
+export const QUEUE_FOLDER = 'found';
+
 /**
  * The findings a repository has queued.
  * @param {string} root  a repository's root directory.
- * @returns {{key: string, text: string}[]} each line of the `## Found queue`
- *   section of the root's NOTES.md that opens with a key (`Q-HUB-3`), in file order;
- *   [] when the file or the section is not there. Lines of the section that open
- *   with no key are prose and are not findings.
+ * @returns {{key: string, text: string}[]} where the root has a `found/` folder: the first
+ *   line that opens with a key (`Q-HUB-3`) in each `.md` file of it, one file for each
+ *   finding and named by its key, ordered by tag and then number; the folder is the queue,
+ *   and the NOTES.md section is not read beside it. Where the root has no such folder: each
+ *   line of the `## Found queue` section of the root's NOTES.md that opens with a key, in
+ *   file order; [] when the file or the section is not there. Lines of the section that
+ *   open with no key are prose and are not findings, and so is a file of the folder that
+ *   holds no keyed line.
  */
 export function foundQueue(root) {
+  let queueFiles = null;
+  try { queueFiles = readdirSync(join(root, QUEUE_FOLDER)).filter((n) => n.endsWith('.md')); } catch { queueFiles = null; }
+  if (queueFiles) {
+    const filed = [];
+    for (const n of queueFiles) {
+      let body = '';
+      try { body = readFileSync(join(root, QUEUE_FOLDER, n), 'utf8'); } catch { continue; }
+      const m = body.split('\n').map((l) => QUEUE_KEY.exec(l)).find(Boolean);
+      if (m) filed.push({ key: m[1], text: m[2].trim() });
+    }
+    const part = (k) => /^Q-([A-Za-z0-9]+)-(\d+)$/.exec(k) ?? [k, k, '0'];
+    return filed.sort((a, b) => part(a.key)[1].localeCompare(part(b.key)[1]) || Number(part(a.key)[2]) - Number(part(b.key)[2]));
+  }
   let text = '';
   try { text = readFileSync(join(root, 'NOTES.md'), 'utf8'); } catch { return []; }
   const out = [];

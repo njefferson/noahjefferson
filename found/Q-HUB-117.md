@@ -1,0 +1,1 @@
+Q-HUB-117: hub-pin-check.mjs and hub-gates-local.mjs are wired into no workflow, hub-gates.yml included, and no sibling's CI, and siblings still carry their own tools/hub-pin-check.mjs until a later plan removes them (found in step 4 of the plan of 31 October).

@@ -1,0 +1,1 @@
+Q-HUB-185: step 33's report of the research plan carries a Found line that names a commit by a run of seven hex-set characters, so an agent filing the research plan's Found lines must restate it in words, because no guard holds the hex rule (found in the second review of step 54 of the redesign plan of 2 November, filed in step 54 of the same plan).

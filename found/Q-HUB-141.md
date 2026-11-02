@@ -1,0 +1,1 @@
+Q-HUB-141: LESSONS.md line 50 says "3 judgement calls and 14 checklist items against 6 gate citations"; the lesson files now hold 45, 231 and 248, so the counted claim in the preface is stale by two orders of magnitude (found in step 32 of the research plan of 2 November, filed in step 54 of the redesign plan).

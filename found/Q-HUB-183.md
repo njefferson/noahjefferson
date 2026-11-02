@@ -1,0 +1,1 @@
+Q-HUB-183: no guard serialises two agents' staging and commits in one worktree, so two steps the After line lets run together can collide at `git add` and `git commit` (found in the review of step 53 of the redesign plan of 2 November, filed in step 54 of the same plan).

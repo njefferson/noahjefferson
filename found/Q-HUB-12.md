@@ -1,0 +1,1 @@
+Q-HUB-12: the state page gate holds nothing while the page does not exist, so a session that never gives a status after a compaction is never held to read it; the status command is what writes the page (found in step 43).

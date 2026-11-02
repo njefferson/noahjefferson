@@ -1,0 +1,1 @@
+Q-HUB-4: the stop word anywhere in a message with no go-word at its end holds the whole session, including when the message only discusses the hold; the first design judged that cost too high and the plan's wording was built instead, so the cost is recorded and not decided (found in step 42).

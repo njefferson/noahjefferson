@@ -1,0 +1,1 @@
+Q-HUB-6: the harness guard and the identifier guard that the plan's rules lean on are hooks of the Jefferson-Photography-Studio repository, not hub gates, so the rule that every scratchpad file is run through a harness holds only in a session with that repository checked out beside the hub (found in step 41).

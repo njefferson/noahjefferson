@@ -1,0 +1,1 @@
+Q-HUB-95: the app held plan mode for a message typed two and a half hours after the session's last reply, and an exit taken in the app re-recorded the approval, a tap the harness asked of the person and not of the session; for the hub plan, beside the resume item Q-HUB-88 (found in step 0, recorded by step 219).

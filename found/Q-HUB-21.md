@@ -1,0 +1,1 @@
+Q-HUB-21: the status page's published link stays behind its source: the reply guard refuses the identical publish after one failed, and its read command cannot pass the main thread's latch or fence (found in step 30).

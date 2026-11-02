@@ -1,0 +1,1 @@
+Q-HUB-9: the smoke run's first phase against the real plan stops at the plan path, because the isolated judge records the plan as changed after the owner's last exit from plan mode; the second phase against a copy is the live check (found in step 42).

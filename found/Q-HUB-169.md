@@ -1,0 +1,1 @@
+Q-HUB-169: P-21 says no hub gate does the config-change hook's job today; that was read by Grep over the plan fence, the plan guard and the approved-plan guard for a settings file and not over every guard file (found in step 52 of the redesign plan of 2 November, filed in step 54 of the same plan).

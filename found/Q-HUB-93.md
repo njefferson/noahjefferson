@@ -1,0 +1,1 @@
+Q-HUB-93: the reply guard keys a repeat on the tool, the file and the link, not on the description, so a publish with a changed description is refused as the same call; for the hub plan (found in step 0, recorded by step 219).

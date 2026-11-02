@@ -1,0 +1,1 @@
+Q-HUB-53: the check command a refusal prints names the hub's hook path, which reads the live clone's copy only after the pull of a landing step, so until that pull the printed path is the older copy (found in step 138).

@@ -1,0 +1,1 @@
+Q-HUB-90: a status page publish was sent again unchanged because a harness tool message asked for one identical repeat, and the reply guard latched at 09:17; the harness's line was followed over the gate, which lesson 432 records (found in step 0, recorded by step 219).

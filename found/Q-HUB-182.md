@@ -1,0 +1,1 @@
+Q-HUB-182: step 53 asks for the program item that may change each configuration item while the After line lets it run beside step 52, which creates the items, so CONFIG.md can name items by title only and not by key (found in the review of step 53 of the redesign plan of 2 November, filed in step 54 of the same plan).

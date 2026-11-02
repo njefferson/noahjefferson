@@ -1,0 +1,1 @@
+Q-HUB-111: the plants harness in session-guards.test.mjs throws out of a plant that deletes an export another guard file imports, instead of printing CAUGHT or MISSED, because no plant run is wrapped in a try/catch (found in step 2 of the plan of 31 October).

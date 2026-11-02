@@ -1,0 +1,1 @@
+Q-HUB-49: an open step, one that ended REFUSED or FAILED, draws no time chip, since its Start line belongs to a send that has ended; a resend writes a new Start line and the chip returns (found in step 133).

@@ -86,7 +86,7 @@
  * The queue records are shaped like the real ones: an `enqueue` carries the
  * message as `content`, a `dequeue` carries nothing, a `remove` carries it.
  */
-import { mkdtempSync, writeFileSync, copyFileSync, readFileSync, rmSync, appendFileSync, mkdirSync, existsSync, utimesSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, copyFileSync, readFileSync, rmSync, appendFileSync, mkdirSync, existsSync, utimesSync, readdirSync } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { tmpdir, homedir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -4667,6 +4667,39 @@ const CASES = [
     },
   },
 
+  // ---- the finding queue held in a folder: one file for each finding (PROGRAM.md, Design part 8) ----
+  {
+    name: 'a repository\'s found/ folder is its finding queue where it exists, one .md file for each finding: foundQueue reads the first keyed line of each file, orders the keys by number and not by name, leaves the NOTES.md section unread beside the folder, and skips a file with no keyed line and a file of another type; a plan whose Files names the repository is refused for a key held only in the folder and passes once every key is answered; a repository with the section and no folder is read as before',
+    guards: ['queue_folder', 'queue_folder_order', 'queue_folder_keyed'],
+    run(m) {
+      const A = repo({ 'a.txt': 'x\n', 'NOTES.md': ['# Notes', '', '## Found queue', 'Q-FL-9: a key that sits in the section only, which the folder shadows.', ''].join('\n') }, 'folder-repo');
+      mkdirSync(join(A.dir, 'found'));
+      const put = (n, body) => writeFileSync(join(A.dir, 'found', n), body);
+      put('Q-FL-2.md', 'Q-FL-2: the second finding, which has some words in it.\n');
+      put('Q-FL-10.md', 'Prose before the key is not a finding.\n- Q-FL-10: the tenth finding, in a list.\n');
+      put('Q-FL-1.md', '**Q-FL-1** the first finding, in bold.\n');
+      put('notes.md', 'A file that holds no key at all.\n');
+      put('Q-FL-7.txt', 'Q-FL-7: a key in a file of another type.\n');
+      const plan = (answered) => ['# T', '', '## Files', '- folder-repo: `a.txt`', '', ...(answered ? ['## Found answered', ...answered, ''] : [])].join('\n');
+      const judge = (answered) => m.dispatch.foundAnsweredProblem(plan(answered), { dir: A.dir });
+      const names = (r, ...keys) => typeof r === 'string' && /^FOUND QUEUE/.test(r) && keys.every((k) => r.includes(k));
+      const q = m.dispatch.foundQueue(A.dir);
+      const none = judge(null);
+      const partial = judge(['Q-FL-1: fixed in step 1.', 'Q-FL-2: carried to step 2.']);
+      const all = judge(['Q-FL-1: fixed in step 1.', 'Q-FL-2: carried to step 2.', 'Q-FL-10: dropped, the plan no longer touches it.']);
+      // The section with no folder is read as before; a folder with no file in it is a queue with no finding.
+      const S = repo({ 'a.txt': 'x\n', 'NOTES.md': QUEUE_NOTES }, 'section-repo');
+      const E = repo({ 'a.txt': 'x\n', 'NOTES.md': QUEUE_NOTES }, 'empty-repo');
+      mkdirSync(join(E.dir, 'found'));
+      return q.map((x) => x.key).join(',') === 'Q-FL-1,Q-FL-2,Q-FL-10' && q[0].text.startsWith('the first finding') && q[1].text.startsWith('the second finding') && q[2].text.startsWith('the tenth finding')
+        && names(none, 'Q-FL-1', 'Q-FL-2', 'Q-FL-10', '3 queued findings') && !none.includes('Q-FL-9') && !none.includes('Q-FL-7')
+        && names(partial, 'Q-FL-10 (', '1 queued finding') && !partial.includes('Q-FL-1 (') && !partial.includes('Q-FL-2 (')
+        && all === null
+        && m.dispatch.foundQueue(S.dir).map((x) => x.key).join(',') === 'Q-QR-1,Q-QR-2,Q-QR-3'
+        && m.dispatch.foundQueue(E.dir).length === 0;
+    },
+  },
+
   // ---- the state page: the manager's notes, kept where a status cannot rewrite them ----
   {
     name: 'the manager\'s notes survive a status, and the page draws from them the next move and the Found lines not fixed, stopping the plan first, then queued, each tagged in words, with a count of those not sorted yet, while a fixed Found line, an explanation and a decision stay in the notes; the print says the same, a later line for a Found key replaces an earlier one, and everything drawn from the notes is escaped',
@@ -5089,14 +5122,19 @@ const CASES = [
     },
   },
   {
-    name: 'the hub\'s own NOTES.md queues findings under "Found queue", every keyed line of that section read as a finding with a key of the form Q-HUB-N used once',
+    name: 'the hub\'s own found/ folder holds one .md file for each finding, named by its key and opening with it, foundQueue reads exactly those files as findings with a key of the form Q-HUB-N used once, and the NOTES.md section under "Found queue" holds no keyed line, which the folder would shadow',
     run(m) {
       const q = m.dispatch.foundQueue(HERE);
+      const files = readdirSync(join(HERE, 'found')).filter((n) => n.endsWith('.md'));
       const notes = readFileSync(join(HERE, 'NOTES.md'), 'utf8');
       const section = (/^## Found queue[^\n]*\n([\s\S]*?)(?=^## |^# |$(?![\s\S]))/m.exec(notes) ?? [, ''])[1];
       const keyed = section.split('\n').filter((l) => /^\s*(?:[-*]\s+)?\**Q-/.test(l));
       const keys = q.map((x) => x.key);
-      return q.length > 0 && keyed.length === q.length && keys.every((k) => /^Q-HUB-\d+$/.test(k)) && new Set(keys).size === keys.length && q.every((x) => x.text.length >= 20);
+      const named = files.map((n) => basename(n, '.md'));
+      return q.length > 0 && files.length === q.length && keys.every((k) => /^Q-HUB-\d+$/.test(k)) && new Set(keys).size === keys.length
+        && [...keys].sort().join() === [...named].sort().join() && q.every((x) => x.text.length >= 20)
+        && files.every((n) => readFileSync(join(HERE, 'found', n), 'utf8').startsWith(`${basename(n, '.md')}:`))
+        && keyed.length === 0;
     },
   },
 
@@ -7627,6 +7665,41 @@ const CASES = [
     },
   },
 
+  // ---- finding 15 over a queue held in a found/ folder ----
+  {
+    name: 'finding 15 reads a queue held in a found/ folder: with the repository\'s keys filed one to a file and its NOTES.md section carrying none, a stop at pointer none is refused for a queued Found line whose note names a key the folder does not hold, and let through for one whose note names a key the folder holds',
+    guards: ['queue_folder'],
+    run(m, dir) {
+      const R = repo({ 'NOTES.md': '# Notes\n\n## Found queue\nThe findings are filed one to a file in found/.\n', 'a.txt': 'x\n' }, 'close-folder');
+      mkdirSync(join(R.dir, 'found'));
+      writeFileSync(join(R.dir, 'found', 'Q-CF-1.md'), 'Q-CF-1: a queued finding that the note can name, filed in the folder.\n');
+      const w = world(dir, [], ORDER_PLAN.replace('- Repo:', '- close-folder:'));
+      const s = sid('cf');
+      const pad = join(process.env.TMPDIR, 'claude-0', '-home-user', s, 'scratchpad');
+      mkdirSync(join(pad, 'progress'), { recursive: true });
+      mkdirSync(join(pad, 'status'), { recursive: true });
+      const proj = tmp('sg-proj-');
+      const main = join(proj, `${s}.jsonl`);
+      const subs = join(proj, s, 'subagents');
+      mkdirSync(subs, { recursive: true });
+      putAgent(subs, w.plan, 'c1', 1, -300, -200, 'DONE');
+      putAgent(subs, w.plan, 'c2', 2, -150, -100, 'DONE');
+      writeFileSync(join(pad, 'progress', 'step-1-report.txt'), 'DONE\nBuilt.\nFound: a defect the case planted and left.\n');
+      const notes = (text) => writeFileSync(join(pad, 'status', 'manager.txt'), `${text}\n`);
+      const read = [turn(0, GO), tool(1, 'cf1', 'Bash', { command: 'git status' }), result(2, 'cf1', 'clean')];
+      const say = () => {
+        writeFileSync(main, jsonl([...read, reply(5, 'The plan is finished and every step handed back.')]));
+        return spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: s, transcript_path: main }), encoding: 'utf8',
+          env: { ...process.env, HOME: w.home, CLAUDE_PROJECT_DIR: R.dir } });
+      };
+      notes('Found 1.1 queued: Q-CF-9 holds it');
+      const missing = say();
+      notes('Found 1.1 queued: Q-CF-1 holds it');
+      const keyed = say();
+      return missing.status === 2 && /next: none/.test(missing.stderr) && /Found 1\.1/.test(missing.stderr) && keyed.status === 0;
+    },
+  },
+
   // ---- finding 3: an agent paused on its own background run is running, whatever the notification says ----
   {
     name: 'finding 3: an agent that handed back nothing, whose own transcript launched a background run that has not completed, reads as still running though the main thread was told its turn completed, and is listed by the running agents; once the run\'s completion is in its transcript, or the session restarted after its last entry, it reads as ended',
@@ -8379,6 +8452,10 @@ const PLANTS = {
   queue_verdict_reason: ['\\S.{9,}$/i.test(v)', '\\S.{0,}$/i.test(v)', 'hook-dispatch.mjs'],
   queue_answered_section: ["  for (const l of planSection(text, 'Found answered').split('\\n')) {", "  for (const l of text.split('\\n')) {", 'hook-dispatch.mjs'],
   queue_listed: ['`- ${q.key} (${q.repo}):', '`- (${q.repo}):', 'hook-dispatch.mjs'],
+  // The queue held in a found/ folder, one file for each finding: the folder is read where it exists, in number order, keyed files only.
+  queue_folder: ['  if (queueFiles) {\n    const filed = [];', '  if (false) {\n    const filed = [];', 'hook-dispatch.mjs'],
+  queue_folder_order: ['Number(part(a.key)[2]) - Number(part(b.key)[2]));', 'part(a.key)[2].localeCompare(part(b.key)[2]));', 'hook-dispatch.mjs'],
+  queue_folder_keyed: ['      if (m) filed.push({ key: m[1], text: m[2].trim() });', "      filed.push({ key: m?.[1] ?? '', text: (m?.[2] ?? '').trim() });", 'hook-dispatch.mjs'],
   // The state page: the manager's notes, rendered and counted, never rewritten by a status.
   mgr_found_key: ['key: `${step}.${k}`', 'key: `${step}.0`', 'report.mjs'],
   mgr_sort_regex: ['(fixed|stopping|queued)\\s*:?\\s*(.*)$/i.exec(l)', '(fixed|queued)\\s*:?\\s*(.*)$/i.exec(l)', 'report.mjs'],

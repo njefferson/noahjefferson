@@ -1,0 +1,1 @@
+Q-HUB-130: the gate that reads a plan's Cost (lesson 458) checks that a number sits beside the word push, that an agent, send or review is named and that a tier is named; it cannot tell that the figures are the plan's real ones, and a plan can pass it with a sentence that names all three (found in step 21).

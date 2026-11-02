@@ -1,0 +1,1 @@
+Q-HUB-184: until the live clone is pulled, keys filed in the new folder are invisible to the live stop guard's closing check, so a queued Found line noted with a new key reads as unrecorded at the close unless the closing reply opens with a choice or declares the stop (found in the first review of step 54 of the redesign plan of 2 November, filed in step 54 of the same plan).

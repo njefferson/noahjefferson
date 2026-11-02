@@ -1,0 +1,1 @@
+Q-HUB-27: plan-scope-check prints the owner's messages on every commit, so captured commit output holds them, and five such captures from earlier plans sit in this session's scratchpad (found in steps 17, 23, 47 and 48).

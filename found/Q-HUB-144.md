@@ -1,0 +1,1 @@
+Q-HUB-144: PRs 10 and 12 have stood open since 2026-10-01, and zizmor is pinned at 1.29.0 against 1.31.1 offered; no gate refuses a stale dependency PR (found in step 32 of the research plan of 2 November, filed in step 54 of the redesign plan).

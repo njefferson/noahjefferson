@@ -1,0 +1,1 @@
+Q-HUB-102: a status named a step as the next move because it ran in the same message as the notes edit and read the file before the edit landed; a status that must read a fresh notes line runs in the message after the edit (found in step 218, recorded by step 219).

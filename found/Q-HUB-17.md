@@ -1,0 +1,1 @@
+Q-HUB-17: the doctrine's paragraph on the stop guard's teeth says the guard fires only on a reply that waits and omits the declaration, while stop-guard.mjs now refuses twelve kinds of reply (found in step 45).

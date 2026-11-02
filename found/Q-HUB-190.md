@@ -1,0 +1,1 @@
+Q-HUB-190: the stop hook's instruction to send an agent and the correction hold's instruction to run nothing meet in one turn, and the conflict is not put to the owner once, as goal 6 of the standing goals requires (recorded by step 54 of the redesign plan of 2 November from the plan's own list).

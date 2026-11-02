@@ -1,0 +1,1 @@
+Q-HUB-16: the doctrine still carries an open question on the inline exception to the 44 pixel target in its accessibility section, which it records elsewhere as ruled on 2026-07-29 (found in step 45).

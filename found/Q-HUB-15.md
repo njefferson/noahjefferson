@@ -1,0 +1,1 @@
+Q-HUB-15: Doctrine rule 2's pointer sentence says the main thread reads its next move from the print instead of choosing it, which no plan that can go up does now, because a plan with an Order must carry a review step and that step is what names the move (found in step 45).

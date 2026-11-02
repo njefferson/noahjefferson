@@ -1,0 +1,1 @@
+Q-HUB-140: the hooks page's table gives the Stop event "Yes" for blocking, with a cap of eight blocks in a row; the hub's lessons name stop-guard refusals, and whether the hub's own hooks count against that cap was not measured in step 31 (found in step 31 of the research plan of 2 November, filed in step 54 of the redesign plan).

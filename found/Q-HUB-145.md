@@ -1,0 +1,1 @@
+Q-HUB-145: the branch claude/solve-ent-algebra-trainer-exnzy7 sits on the hub remote; the hub's rule is main only (found in step 32 of the research plan of 2 November, filed in step 54 of the redesign plan; Q-HUB-119 queues the same branch and records why the sweep keeps it).

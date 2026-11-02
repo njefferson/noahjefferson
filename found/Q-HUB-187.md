@@ -1,0 +1,1 @@
+Q-HUB-187: step 54 orders a narrowed run of several cases, and the test file's --case= takes one substring matched against case names, so the agent needs one run per substring or a shared word in the case names; the step's text does not say which (found in the third review of step 54 of the redesign plan of 2 November, filed in step 54 of the same plan).

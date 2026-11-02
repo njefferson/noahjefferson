@@ -1,0 +1,1 @@
+Q-HUB-104: the Drive guard counts a listed folder from the main thread's transcript only, so a folder an agent lists never passes for a later agent, and a compaction empties the main thread's listings; the hub plan's Drive guard item takes both, with the link in the person's message (found in step 218, recorded by step 219).
