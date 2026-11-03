@@ -1,0 +1,1 @@
+Q-HUB-217: the output of a full cases run in the background sits in the harness's task output file, because a redirect is refused on a command line, so a step that names an output file in the scratchpad for such a run cannot write it (found in step 58 of the redesign plan of 2 November, filed in step 60 of the same plan).

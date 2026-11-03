@@ -34,12 +34,13 @@ every rule below while none of the hooks that enforce them was running
    once demanded and which made each status a heartbeat; not while an agent
    merely runs; not while nothing has ended. The owner says what comes next,
    so a status does not announce it.
-   *Enforced by:* `report.mjs`. Its gate refuses a main-thread call while an
-   agent the session launched has ended since the last stamp, naming each agent
-   and how it ended; with no such agent it refuses nothing, and a session whose
-   agents it cannot find is not read as due. The refusal does not latch (rule
-   14): giving the status stamps the clock and writes the clock's time into the
-   status, and the refused call may then run. Every status it stamps then
+   *Held by:* the status print of `report.mjs` and the dispatcher's reminder.
+   No gate refuses a main-thread call for a status that is due: step 58 of the
+   redesign plan removed that refusal, so the manager reads from the print that
+   an agent has ended and gives the status, and nothing refuses it for not
+   doing so (Design part 9, answering the reason of LESSONS §401, which asked
+   for a status at each agent's return). Giving the status stamps the clock and
+   writes the clock's time into the status. Every status the command stamps
    prints, each read from the agent's own transcript or from disk and never
    from what an agent said: each agent the session launched that has ended
    since the last status, with how it ended (a report, a refusal, an
@@ -59,13 +60,16 @@ every rule below while none of the hooks that enforce them was running
    force", and the session could not see why. The manager judges an agent's
    work from these reads, never from its report, because the report says what
    the agent believes happened. What a status then says about them is
-   judgement. The judgement before a send is written down in
-   `status/manager.txt` in five parts (what the hand-back showed, why it ended as it
-   did, what that means for the route, where the route fails next, and the cheapest
-   route from here that holds the owner's rules), the step about to go carries four
-   (why now, what would make it wrong, where it fails next, why it is the cheapest
-   route), and `judgedGate` in `hook-dispatch.mjs` refuses a send without them, in a
-   plan with an Order or without one.
+   judgement. The judgement before a send is the wall line (Design part 2): one
+   written sentence answering whether the step still serves the item's
+   acceptance, whether the item still serves the thesis, and whether what was
+   just seen moved either, in each agent's report after its verdict word and in
+   the review's hand-back. No gate refuses a send for lacking it: step 58 of the
+   redesign plan removed `judgedGate` from `hook-dispatch.mjs`, because the
+   five-part and four-part lines it demanded were a record that a judgement was
+   made and could not show that it was sound (the reason of LESSONS §407 and
+   §417), and the wall line and the review of a plan's first move and of every
+   move after an eject, a failure, a refusal or a correction answer that reason.
    **Every status prints the pointer, and each hand-back, after the goals.**
    The main thread keeps no memory of the plan: it reads its next move from
    this print instead of choosing it. The plan's `## Order` section carries an
@@ -99,7 +103,11 @@ every rule below while none of the hooks that enforce them was running
    against the guards' own code. Its hand-back is the verdict. Its first line
    is ON-AIM or OFF-AIM, then ROUTE-CLEAR or ROUTE-REFUSED, then `step N` for
    the hand-back judged and `next M` for the step whose route it read.
-   *Enforced by:* `reviewGate` in `hook-dispatch.mjs`, which refuses every
+   *Enforced by:* `reviewGate` in `hook-dispatch.mjs`, which since step 58 of
+   the redesign plan judges only the plan's first send, the first send after a
+   hand-back opening EJECT, FAILED or REFUSED (or an agent that ended with none),
+   and the first send after a correction the owner typed, and passes every other
+   send; for those it refuses every
    step but a Standing one unless the newest review hand-back began after the
    end of every agent for a step in Order, a DONE hand-back or not, after the
    plan file's last write and, while a correction stands, after the owner's
@@ -555,8 +563,8 @@ every rule below while none of the hooks that enforce them was running
     the wait between statuses stay refused. The refusal names the original one.
     An agent cannot stamp a status at all, latched or not: the dispatcher
     refuses the status command from an agent, because an agent cannot tell the
-    owner anything, and its stamp would clear the main thread's status gate
-    with no status given. `stop-guard.mjs` lets a latched session stop.
+    owner anything, and its stamp would mark the main thread's status as given
+    when none was. `stop-guard.mjs` lets a latched session stop.
     Only a message the owner typed after the latch clears it, by
     the time it was typed rather than when it was delivered (the harness
     queues a message the moment it is sent and delivers it later), as
@@ -596,6 +604,86 @@ fails when a line of this kind names a file the hub does not have, so a
 replacement cannot point at a gate that is not there. It cannot find a paragraph
 that should have been replaced and was not, which is why the list and the choice
 exist. (LESSONS §396.)
+
+### The structures of the redesign plan of 2 November 2026
+
+These paragraphs state what the redesign plan built, one for each behaviour,
+from its Design parts. Each ends in the gate that holds it where one does.
+
+**The program and its states.** `PROGRAM.md` holds the family's thesis and the
+ranked list of every item of work across the hub and the apps. An entry has a
+key, a repository, a goal, a state, the plan that carries it, its acceptance and
+its dependencies. The states are open, planned, running, parked, done and
+ejected. Every plan serves one item and quotes its acceptance, new work enters by
+being ranked, and a plan's close writes the item's state and what changed. No
+count of lines or characters gates a plan or shortens one. *Held by:* nothing;
+the plan's reading of the file is the manager's.
+
+**The wall line.** Before a step goes, at every stop inside it and at a plan's
+close, one written sentence answers whether the step still serves the item's
+acceptance, whether the item still serves the thesis, and whether what was just
+seen moved either. It stands in each agent's report after the verdict word and
+in the review's hand-back. A no is an eject. *Held by:* no gate; a gate that
+judged the sentence would be the kind of gate Design part 9 replaces. The agent
+rules at version 5 and `aim-review.md` carry the rule.
+
+**The three ejects.** A step ejects to the plan: it hands back EJECT with what it
+saw and the files it names, and writes nothing after. A plan ejects to the
+program: it closes unfinished, its item returns as ejected with the finding
+attached and is re-ranked, and the next item is taken. The program ejects to the
+owner only for a choice that is the owner's, and that item is parked. A manager
+note opening with the word Eject closes the pointer only when it names the plan
+in force by its file name, so a stale line cannot close a later plan's pointer.
+*Held by:* `report.mjs`, which reads EJECT as a state of its own in the pointer,
+the status and the page, and reads the Eject note by the plan's name.
+
+**The step as a list that cannot be done wrong.** Every step carries Facts, Do,
+Observe and Kill. A red check ends the step with nothing written after it, and
+an observation the step did not name ends it as EJECT. The rule that let a failed
+command run again after a write is gone from the agent rules at version 5; the
+code in `reply-guard.mjs` that implements it stays until a later plan changes it.
+*Held by:* `plan-guard.mjs`, which refuses a plan whose step lacks a label, with
+no latch.
+
+**Conversation as the default.** Outside an approved plan and outside plan mode a
+message gets an answer from the files, under the never-rules alone: no
+repository write outside a plan, only staging and main reach a remote, and
+nothing personal lands in a repository. Work begins only at the owner's button.
+Inside a plan a correction holds sends until it is answered, and the word stop
+holds agents, sends and repository writes while it passes reading, answering,
+the status, the plan file, the manager notes and the plan check. Sends of agents
+and workflows stay judged in every state. *Held by:* `hook-dispatch.mjs`, which
+skips the manager fence and the holds outside a plan and keeps the approved-plan,
+push, Drive, keep-information and pending-message guards running, and
+`stop-guard.mjs`, which runs its refusals on a reply's prose under an approved
+plan only and keeps four always on.
+
+**The doctrine read by the part that applies.** The never-rules are on one page,
+`doctrine/never.md`, read whole at every start and after a compaction; the plan
+rules, `doctrine/plans.md`, are read whole at the entry to plan mode; the agent
+rules are read by agents; the product, taste, accessibility and release
+sections, `doctrine/apps.md`, are read when an item points at them. `DOCTRINE.md`
+is the index. *Held by:* `doctrine-read-guard.mjs`.
+
+**The configuration baseline.** `CONFIG.md` lists every configuration item with
+its state and the program item that may change it; a change to any is an item, a
+drift found is a finding that becomes one, and an open dependency update is an
+item. *Held by:* nothing; the baseline is read and compared by hand.
+
+**One file for each finding, and several sessions on one hub.** A finding is its
+own file in `found/`, keyed `Q-HUB-N`, so two sessions never edit one file, and
+the closing check and the plan check take keys from the folder where it exists.
+The program is appended per app with a pull before every write and an eject on
+conflict, and a newer hub is taken up at the next plan and never in the middle of
+one; those two are not built by the redesign plan, and the next plan's first act,
+the pull of the live clone, begins them. *Held by:* `foundQueue` in
+`hook-dispatch.mjs`, read by `plan-guard.mjs` and `stop-guard.mjs`.
+
+**The measure.** At each plan's close `session-cost.mjs` prints tokens by tier,
+the owner's messages, go-words, corrections, refusals and agents, and the close
+entry is written under P-10 in `PROGRAM.md`, so a plan is judged against the
+plans before it. *Held by:* nothing; the instrument prints and the manager
+records.
 
 ## 0g. Act from the owner's goal and the record, and verify once.
 

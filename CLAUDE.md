@@ -1260,6 +1260,11 @@ existing.
  that pronoun is element 2 and in an aeronautical one it is a runway's high end;
  neither is a reason to weaken it.
 
+- [`PROGRAM.md`](PROGRAM.md) — the ranked list of every item of work across the hub and the apps, with each item's goal, acceptance, dependencies, state and plan; a plan serves one item and its close writes the item's state.
+- [`CONFIG.md`](CONFIG.md) — the baseline of every configuration item with its state and the item of the program that may change it; a drift found is a finding.
+- [`found/`](found/) — one file per finding, keyed `Q-HUB-N`, so two sessions never edit one file; the closing check reads its keys.
+- [`doctrine/`](doctrine/) — the doctrine in three files: `never.md` read at every start, `plans.md` read at the entry to plan mode, `apps.md` read where an item points at it; `DOCTRINE.md` is their index.
+
 **AND THE WIRING IS SHARED NOW TOO, WHICH IT WAS NOT.**
 [`.github/workflows/hub-gates.yml`](.github/workflows/hub-gates.yml) is a
 `workflow_call` workflow: a sibling CALLS it instead of copying a job that

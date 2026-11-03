@@ -1,0 +1,1 @@
+Q-HUB-209: doctrine/never.md is 488 lines against the short page Design part 6 names and the maker's figure of about two hundred past which adherence falls, because the sections move whole; which text is trimmed is the owner's choice and is put at the plan's close (found in step 57 of the redesign plan of 2 November, filed in step 60 of the same plan).

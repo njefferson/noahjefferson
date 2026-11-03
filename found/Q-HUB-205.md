@@ -1,0 +1,1 @@
+Q-HUB-205: a finished plan's approval marker stays until the next plan mode, so the skip outside a plan must keep the main thread's repository writes refused, which step 56 does; nothing but that case holds it (found in the reviews of step 56 of the redesign plan of 2 November, filed in step 60 of the same plan).
