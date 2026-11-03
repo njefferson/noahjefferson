@@ -3049,6 +3049,79 @@ export function canText(p, r, shown = '') {
 }
 
 /**
+ * Which state a call is made in: under a plan, after one, or in conversation (Doctrine §0e rule 4, Design part 5).
+ * CONVERSATION IS THE DEFAULT. Outside an approved plan a message is answered from the files and nothing else, under the never-rules
+ * alone, and work begins only at the owner's button, so the holds that keep a plan's run in order have nothing to hold there.
+ * @param {object} p  a hook payload: `permission_mode`, `session_id` and `transcript_path` are read.
+ * @param {{plan?: object|null, pointer?: object|null}} [opts]  the test's plan and pointer; read from disk and the session's agents when absent.
+ * @returns {{kind: 'in force'|'finished'|'conversation', planMode: boolean, plan: object|null}}
+ *   `kind` is 'in force' while an approval marker is in force whose plan's pointer is not none (`pointerFor`): a pointer that cannot
+ *   be read, for a plan with no Order or a session whose agents cannot be read, counts as in force, so the holds stay; and a marker
+ *   that exists but gives no plan (its hash moved, its file went) is not read as no marker. 'finished' is a marker in force whose
+ *   pointer reads none (every step of its Order done, or the plan ejected to the program): the holds are skipped, and the main
+ *   thread's repository writes stay refused (`finishedFence`). 'conversation' is no marker at all. `planMode` is the harness's mode:
+ *   a call made in plan mode skips nothing, whatever `kind` says.
+ */
+export function planPhase(p, opts = {}) {
+  const planMode = String(p?.permission_mode ?? '') === 'plan';
+  let plan = null;
+  try { plan = 'plan' in opts ? opts.plan : approvedPlan(); } catch { plan = null; }
+  if (!plan) {
+    let marker = false;
+    if (!('plan' in opts)) { try { marker = existsSync(join(homedir(), '.claude', 'APPROVED-PLAN.json')); } catch { marker = false; } }
+    return { kind: marker ? 'in force' : 'conversation', planMode, plan: null };
+  }
+  let pointer = null;
+  if ('pointer' in opts) pointer = opts.pointer;
+  else { try { pointer = pointerFor(p, plan.text); } catch { pointer = null; } }
+  return { kind: pointer && pointer.next === null ? 'finished' : 'in force', planMode, plan };
+}
+
+/**
+ * Is a call a write of the plan file?
+ * @param {object} p  a PreToolUse payload.
+ * @returns {boolean} true for the main thread's Write, Edit, MultiEdit or NotebookEdit of a `.md` file directly in `~/.claude/plans`,
+ *   the file the plan is written to. In plan mode the correction hold and the stop hold pass it (Q-HUB-82): a message that orders
+ *   the plan is the one that would otherwise hold the plan's own write.
+ */
+export function planFileWrite(p) {
+  if (p.agent_id || !FILE_WRITES.has(String(p.tool_name ?? ''))) return false;
+  const f = String(p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '');
+  return !!f && f.endsWith('.md') && dirname(resolve(f)) === resolve(homedir(), '.claude', 'plans');
+}
+
+/**
+ * The write the owner's stop word lets through on the main thread, besides a read of the record.
+ * @param {object} p  a PreToolUse payload.
+ * @param {boolean} planMode  whether the harness is in plan mode.
+ * @returns {boolean} true for a write of the plan file (`planFileWrite`) in either state, and, under an approved plan and not in plan
+ *   mode, a write of the manager's notes (`isManagerNotes`) as well. A repository write is neither, so the stop still holds it.
+ */
+export function stopWritePass(p, planMode) {
+  if (planFileWrite(p)) return true;
+  if (planMode || p.agent_id || !FILE_WRITES.has(String(p.tool_name ?? ''))) return false;
+  const f = String(p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '');
+  return !!f && isManagerNotes(f, p.session_id);
+}
+
+/**
+ * The manager fence for a call made after a plan has finished.
+ * @param {object} p  a main-thread PreToolUse payload.
+ * @param {object} [opts]  what `managerFence` takes.
+ * @returns {string|null} the fence's refusal for every call but a read: a finished plan's approval marker stays on disk until the next
+ *   plan mode, and approved-plan-guard.mjs passes a write while the marker's hash matches, so the main thread's repository writes are
+ *   refused here and not left to it. A read outside the record passes, because no plan is running for it to be an agent's work.
+ *   The skip in `main` calls this for the 'finished' kind and never inside the fence itself.
+ */
+export function finishedFence(p, opts = {}) {
+  const fence = managerFence(p, opts);
+  if (!fence) return null;
+  let read = false;
+  try { read = isRead(p, opts.classify ?? planGuardReads); } catch { read = false; }
+  return read ? null : fence;
+}
+
+/**
  * The tool input a check builds from a tool name and one argument.
  * @param {string} tool  the tool's name.
  * @param {string} arg  a path, a pattern, a prompt or a command line.
@@ -3331,11 +3404,28 @@ async function main(event, raw, p) {
     // only add a second wait. Before this, a stop word stopped agents only while
     // its message was still queued (pending-guard.mjs), and nothing held them
     // once it had been delivered. A failure in finding the hold lets the call on.
+    // CONVERSATION IS THE DEFAULT (Doctrine §0e rule 4, Design part 5). While no approval marker is in force whose plan's pointer is
+    // not none and the harness is not in plan mode (`planPhase`), the manager fence (but for a send), the correction hold, the stop
+    // hold, the status gate, the reads gate, the page gate, the recall gate and the judgement gate do not run: a message is answered
+    // from the files, and the never-rules alone bind. approved-plan-guard, push-guard, drive-guard, keep-info-guard and pending-guard
+    // run as ever, so no repository write is made outside a plan, only staging and main reach a remote, and nothing personal lands
+    // in a repository. The skip is here and not inside the exported fence or dispatch functions, and it never skips the send branch:
+    // a send of an agent or a workflow is judged by the dispatch and workflow gates in every state.
+    // AN AGENT'S CALL IS ALWAYS JUDGED AS UNDER A PLAN: an agent exists only under one, `planPhase` reads every agent's transcript (the
+    // cost of the pointer) and would be paid on each of its calls, and the owner's stop word holds an agent whatever the plan's
+    // pointer reads. So the phase is read for the main thread's calls only, and a call that cannot be read is under a plan.
+    let phase = { kind: 'in force', planMode: p.permission_mode === 'plan', plan: null };
+    if (!p.agent_id) { try { phase = planPhase(p); } catch { phase = { kind: 'in force', planMode: p.permission_mode === 'plan', plan: null }; } }
+    const skip = phase.kind !== 'in force' && !phase.planMode;
     let holds = { correction: null, stop: null };
-    try { holds = ownerHolds(p); } catch { holds = { correction: null, stop: null }; }
+    if (!skip) { try { holds = ownerHolds(p); } catch { holds = { correction: null, stop: null }; } }
+    // UNDER A PLAN THE STOP WORD HOLDS AGENTS, SENDS AND REPOSITORY WRITES, and passes a read of the record, the status, the plan
+    // file and the manager's notes; in plan mode it passes the plan file's write and the plan check (Q-HUB-82). A stop message is
+    // also a correction (it ends with no go-word), so the correction hold below still stands over the plan file's and the notes'
+    // writes outside plan mode; only in plan mode does it pass the plan file.
     if (holds.stop && p.tool_name !== 'TaskStop') {
       let record = false;
-      try { record = !p.agent_id && readOfRecord(p); } catch { record = false; }
+      try { record = !p.agent_id && (readOfRecord(p) || stopWritePass(p, phase.planMode)); } catch { record = false; }
       if (!record) return refuse(stopMessage(holds.stop), false);
     }
     // A CORRECTION FROM THE OWNER HOLDS NEW STARTS, BY REFUSAL (Doctrine §0e rule
@@ -3357,6 +3447,9 @@ async function main(event, raw, p) {
     if (!p.agent_id && !mainStop) {
       let correction = holds.correction;
       try { if (correction && readOfRecord(p)) correction = null; } catch { /* a read that cannot be judged stays held */ }
+      // IN PLAN MODE THE CORRECTION DOES NOT HOLD THE PLAN FILE'S WRITE (Q-HUB-82): the message that orders the plan is a correction
+      // until a go-word, and held the very write it ordered. The plan check passes before this point, as the status command does.
+      try { if (correction && phase.planMode && planFileWrite(p)) correction = null; } catch { /* a write that cannot be judged stays held */ }
       try { if (correction && correctionLifts(p, correction)) correction = null; } catch { /* a send that cannot be judged stays held */ }
       if (correction) {
         let reviewed = false;
@@ -3374,13 +3467,17 @@ async function main(event, raw, p) {
     // refusal does not latch either.
     if (!p.agent_id && !mainStop) {
       let recall = null;
-      try { recall = recallGate(p); } catch (e) {
-        recall = READS.has(p.tool_name ?? '') ? null : `RECALL GATE (Doctrine §0e rule 2): the gate could not run (${e?.message ?? e}); only reads run until it is fixed.`;
+      if (!skip) {
+        try { recall = recallGate(p); } catch (e) {
+          recall = READS.has(p.tool_name ?? '') ? null : `RECALL GATE (Doctrine §0e rule 2): the gate could not run (${e?.message ?? e}); only reads run until it is fixed.`;
+        }
       }
       if (recall) return refuse(recall, false);
       let page = null;
-      try { page = pageGate(p); } catch (e) {
-        page = READS.has(p.tool_name ?? '') ? null : `STATE PAGE GATE (Doctrine §0e rule 2): the gate could not run (${e?.message ?? e}); only reads run until it is fixed.`;
+      if (!skip) {
+        try { page = pageGate(p); } catch (e) {
+          page = READS.has(p.tool_name ?? '') ? null : `STATE PAGE GATE (Doctrine §0e rule 2): the gate could not run (${e?.message ?? e}); only reads run until it is fixed.`;
+        }
       }
       if (page) return refuse(page, false);
       // A PUBLISH IN A PLAN MODE THE HARNESS RESTORED SAYS SO FIRST: the popup it raises is the owner's to meet knowing what it is.
@@ -3393,12 +3490,17 @@ async function main(event, raw, p) {
     // the main thread may use and names the check command. The dispatch gate's refusals of a step outside the set
     // the approval recorded carry it and set no latch; its other refusals and the workflow gate's come back
     // through the fence without the mark and latch as before.
-    const fence = managerFence(p);
+    // IN CONVERSATION ONLY A SEND IS ASKED OF THE FENCE (`skip` above): the dispatch gate and the workflow gate judge it as in every
+    // state. After a plan has finished its marker stays on disk and approved-plan-guard passes a write while the marker's hash
+    // matches, so `finishedFence` keeps the main thread's repository writes refused and skips the rest.
+    const send = /^(?:Agent|Task|SendMessage|Workflow)$/.test(String(p.tool_name ?? ''));
+    const fence = !skip || send ? managerFence(p) : phase.kind === 'finished' ? finishedFence(p) : null;
     if (fence) return refuse(fence, !fence.includes(FENCE_NO_LATCH));
     // A STATUS FALLING DUE NEVER STOPS THE WORK. The report gate's refusal does
     // not latch: giving the status stamps the clock, and the refused call may
     // then run. Latched, the session stopped on it (measured 17:54).
-    const rg = run(`node "${join(HUB, 'report.mjs')}" --gate`, raw, root);
+    // In conversation no status falls due: it is asked for only while a plan's agents run.
+    const rg = skip ? { deny: false, status: 0, reason: '', err: '', error: '' } : run(`node "${join(HUB, 'report.mjs')}" --gate`, raw, root);
     if (rg.deny) return refuse(rg.reason, false);
     if (rg.status !== 0 && !READS.has(p.tool_name ?? '')) {
       return refuse(`report.mjs did not run cleanly (${rg.error ?? `exit ${rg.status}`}${rg.err ? `: ${rg.err.trim().split('\n')[0]}` : ''}); only reads run until it is fixed.`);
@@ -3437,8 +3539,10 @@ async function main(event, raw, p) {
       // the file clears it, and a latch would wait on the owner for nothing. A failure
       // reading the record refuses, as the gates above do.
       let rr = null;
-      try { rr = readsGate(p); } catch (e) {
-        rr = `READS GATE (Doctrine §0e rule 13): the refused reads could not be read (${e?.message ?? e}); the gate refuses rather than stop gating.`;
+      if (!skip) {
+        try { rr = readsGate(p); } catch (e) {
+          rr = `READS GATE (Doctrine §0e rule 13): the refused reads could not be read (${e?.message ?? e}); the gate refuses rather than stop gating.`;
+        }
       }
       if (rr) return refuse(rr, false);
       // THE NEWEST HAND-BACK IS JUDGED IN WRITING BEFORE THE NEXT STEP GOES (Doctrine
@@ -3446,8 +3550,10 @@ async function main(event, raw, p) {
       // end of an agent for a step in Order, written after that end. A Standing step
       // passes. Its own call and not latched: writing the line is the way out.
       let jg = null;
-      try { jg = judgedGate(p); } catch (e) {
-        jg = `JUDGEMENT GATE (Doctrine §0e rule 2): the judgement could not be read (${e?.message ?? e}); the gate refuses rather than stop gating.`;
+      if (!skip) {
+        try { jg = judgedGate(p); } catch (e) {
+          jg = `JUDGEMENT GATE (Doctrine §0e rule 2): the judgement could not be read (${e?.message ?? e}); the gate refuses rather than stop gating.`;
+        }
       }
       if (jg) return refuse(jg, false);
     }

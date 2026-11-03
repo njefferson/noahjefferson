@@ -632,6 +632,18 @@ const approvalMarker = (home, plan, text, extra = {}) => {
   writeFileSync(f, JSON.stringify({ plan, hash: createHash('sha256').update(text).digest('hex'), at: new Date(Date.now() - 698 * 1000).toISOString(), ...extra }));
   return f;
 };
+// The environment of a stop-guard run UNDER A PLAN (Design part 5): a home whose approval marker is in force for a plan with no Order, so
+// its pointer cannot be read and counts as in force (`planPhase`), and which records no step, so the steps-left check has nothing to
+// count. The refusals of a reply's prose run under it and, with the same run in a home with no marker, do not.
+const underPlanEnv = () => {
+  const home = tmp('sg-home-');
+  mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
+  const plan = join(home, '.claude', 'plans', 'under-plan.md');
+  const text = '# Under plan\n\n## Steps\n1. Build the thing.\n';
+  writeFileSync(plan, text);
+  approvalMarker(home, plan, text, { steps: [] });
+  return { ...process.env, HOME: home };
+};
 // A reply of the main thread, with the model that wrote it in the entry's own message.
 const modelReply = (secs, text, model) => ({ type: 'assistant', timestamp: later(secs), message: { role: 'assistant', model, content: [{ type: 'text', text }] } });
 
@@ -1178,7 +1190,9 @@ const CASES = [
     name: 'a reply asking the owner for the next work, or offering to drop checks to save time, is refused; honest reports pass',
     guards: ['next_work', 'drop_checks'],
     run(m, dir) {
-      const say = (text) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ transcript_path: transcript([{ type: 'assistant', timestamp: ts(0), message: { role: 'assistant', content: [{ type: 'text', text }] } }]) }), encoding: 'utf8' }).status;
+      // These two refusals run under a plan in force only (Design part 5), so the run is given an approval marker whose pointer is not none.
+      const env = underPlanEnv();
+      const say = (text) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ transcript_path: transcript([{ type: 'assistant', timestamp: ts(0), message: { role: 'assistant', content: [{ type: 'text', text }] } }]) }), encoding: 'utf8', env }).status;
       const asksNext = say('Send the next thing you want built and I will plan it.');
       const drops = say('I stop the workflow and drop the adversarial-check stage for every group. That roughly halves the remaining time.');
       const top = say('The roadmap\'s top item is 085, and it is being built now.');
@@ -1340,16 +1354,22 @@ const CASES = [
   },
   {
     name: 'every refusal says the follow-up is the corrected sentences only; a follow-up that repeats lines of the refused reply is refused once, never again that turn, and corrected sentences, a follow-up with no text, and a repeat from an earlier turn pass',
-    guards: ['stop_follow_up', 'stop_repeat', 'stop_repeat_once', 'stop_repeat_record', 'stop_repeat_turn', 'stop_repeat_min'],
+    guards: ['stop_follow_up', 'stop_repeat', 'stop_repeat_once', 'stop_repeat_record', 'stop_repeat_turn', 'stop_repeat_min', 'plan_only_repeat'],
     run(m, dir) {
       const FIRST = 'The suite ran and the push gate caught every plant that was tried today.';
       const SECOND = 'The release is waiting on the deploy for that commit, and that is all.';
       const REFUSED = `${FIRST}\n${SECOND}`;
       const FEEDBACK = { type: 'user', isMeta: true, timestamp: ts(6), message: { role: 'user', content: 'Stop hook feedback:\nSTOP REFUSED' } };
+      // The waiting refusal and the repeat check run under a plan in force only (Design part 5): the runs are given a marker, and the
+      // last one a home with none.
+      const env = underPlanEnv();
+      const bareHome = tmp('sg-home-');
+      mkdirSync(join(bareHome, '.claude'), { recursive: true });
+      const bare = { ...process.env, HOME: bareHome };
       const run1 = (entries) => {
         const tr = transcript(entries);
         const s = sid('sr');
-        const stop = (active) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: s, transcript_path: tr, stop_hook_active: active }), encoding: 'utf8' });
+        const stop = (active, e = env) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: s, transcript_path: tr, stop_hook_active: active }), encoding: 'utf8', env: e });
         return { tr, stop };
       };
       // 1. The refusal itself carries the follow-up rule.
@@ -1379,10 +1399,21 @@ const CASES = [
       e.stop(false);
       appendFileSync(e.tr, jsonl([owner(later(30), 'Another message, typed after the refusal.'), reply(40, REFUSED)]));
       const stale = e.stop(true);
+      // 7. With no approval marker the waiting sentence is not refused, and the same follow-up that was refused as a repeat under a plan
+      // is let through: the refusal was recorded under the plan, and the check that reads it does not run in conversation.
+      // The reply is one that only the waiting refusal reads (no sentence of it is a statement of state, which is refused in every mode).
+      const ONLY_WAITING = 'The numbers are in the table below, and I\'ll check them against the log.';
+      const none = run1([turn(0, 'start'), reply(5, ONLY_WAITING)]);
+      const unheld = none.stop(false, bare);
+      const g = run1([turn(0, 'start'), reply(5, ONLY_WAITING)]);
+      const heldUnder = g.stop(false);
+      appendFileSync(g.tr, jsonl([FEEDBACK, reply(8, `${ONLY_WAITING}\nOne corrected sentence, now that the log has been read.`)]));
+      const noPlanRepeat = g.stop(true, bare);
       return refused.status === 2 && /the corrected sentences only/.test(refused.stderr) && /Do not send the reply again/.test(refused.stderr)
         && repeat.status === 2 && /sends the refused reply again/.test(repeat.stderr) && /the corrected sentences only|corrected sentences only/.test(repeat.stderr)
         && again.status === 0
-        && corrected.status === 0 && noText.status === 0 && shortOnes.status === 0 && stale.status === 0;
+        && corrected.status === 0 && noText.status === 0 && shortOnes.status === 0 && stale.status === 0
+        && heldUnder.status === 2 && /says the work is not finished/.test(heldUnder.stderr) && unheld.status === 0 && noPlanRepeat.status === 0;
     },
   },
 
@@ -2795,9 +2826,11 @@ const CASES = [
   // ---- choice first (stop-guard.mjs) ----
   {
     name: 'a reply whose recommended option sits under other text is refused; one that opens with its choice, or has no marked option, passes',
-    guards: ['choice_first', 'choice_marked_only', 'choice_open_lines', 'choice_once'],
+    guards: ['choice_first', 'choice_marked_only', 'choice_open_lines', 'choice_once', 'plan_only_choice'],
     run(m, dir) {
-      const say = (text) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('cf'), transcript_path: transcript([turn(0, 'Which way?'), reply(5, text)]) }), encoding: 'utf8' });
+      // The refusal runs under a plan in force only (Design part 5): the runs are given a marker, and one is made without.
+      const env = underPlanEnv();
+      const say = (text, e = env) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('cf'), transcript_path: transcript([turn(0, 'Which way?'), reply(5, text)]) }), encoding: 'utf8', env: e });
       const choice = '1. (Recommended) Land the gates as they are built.\n2. Hold them for a second review.';
       const report = 'The fence gained a check for every cd.\nThe guard gained a test for each plant.\nThe suite covers each check named in the plan.';
       const opens = say(`Open for you, one choice:\n${choice}\n\n${report}`);
@@ -2806,9 +2839,196 @@ const CASES = [
       const under = say(`${report}\n\nOpen for you:\n${choice}`);
       const nested = say(`${report}\n\n1. Which comes first?\n   - Land now (recommended).\n   - Review first.`);
       const twice = say(`Open for you:\n${choice}\n\n${report}\n\nThe same choice again:\n${choice}`);
+      // The same reply, with no approval marker: a choice under a report is not refused in conversation.
+      const bareHome = tmp('sg-home-');
+      mkdirSync(join(bareHome, '.claude'), { recursive: true });
+      const conversation = say(`${report}\n\nOpen for you:\n${choice}`, { ...process.env, HOME: bareHome });
       return opens.status === 0 && declared.status === 0 && plainList.status === 0
         && under.status === 2 && /choice is not the first thing/.test(under.stderr) && under.stderr.includes('Land the gates')
-        && nested.status === 2 && twice.status === 2;
+        && nested.status === 2 && twice.status === 2 && conversation.status === 0;
+    },
+  },
+
+  // ---- conversation is the default (hook-dispatch.mjs main sequence and stop-guard.mjs; Doctrine §0e rule 4, Design part 5) ----
+  {
+    name: 'step56: planPhase reads the state a call is made in: no marker is conversation, a plan whose pointer is not none or cannot be read is in force, a plan whose pointer reads none is finished, a marker that gives no plan is in force, and the harness\'s plan mode is carried beside it; finishedFence refuses every call but a read, and stopWritePass lets the plan file through in both states and the manager\'s notes only outside plan mode',
+    guards: ['conv_phase_none', 'conv_phase_unreadable', 'conv_phase_finished', 'conv_phase_marker', 'conv_phase_mode', 'finished_read_passes', 'stop_write_plan', 'stop_write_notes', 'stop_write_notes_mode'],
+    run(m, dir) {
+      const plan = { path: '/plans/gate-test.md', text: ORDER_PLAN };
+      const at0 = (p, o) => m.dispatch.planPhase(p, o);
+      const none = at0({}, { plan: null });
+      const unreadable = at0({}, { plan, pointer: null });
+      const left = at0({}, { plan, pointer: { next: 2 } });
+      const finished = at0({}, { plan, pointer: { next: null } });
+      const mode = at0({ permission_mode: 'plan' }, { plan, pointer: { next: null } });
+      // A marker that exists and gives no plan (its plan file changed after the approval) is not read as no marker; with no marker file it is.
+      const home = tmp('sg-home-');
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      const probe = spawnSync('node', ['--input-type=module', '-e', `import { planPhase } from ${JSON.stringify(pathToFileURL(join(dir, 'hook-dispatch.mjs')).href)}; console.log(planPhase({}).kind);`], { encoding: 'utf8', env: { ...process.env, HOME: home } }).stdout.trim();
+      writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: join(home, 'missing.md'), hash: 'x' }));
+      const stale = spawnSync('node', ['--input-type=module', '-e', `import { planPhase } from ${JSON.stringify(pathToFileURL(join(dir, 'hook-dispatch.mjs')).href)}; console.log(planPhase({}).kind);`], { encoding: 'utf8', env: { ...process.env, HOME: home } }).stdout.trim();
+      const phases = none.kind === 'conversation' && unreadable.kind === 'in force' && left.kind === 'in force' && finished.kind === 'finished'
+        && !finished.planMode && mode.planMode === true && mode.kind === 'finished' && probe === 'conversation' && stale === 'in force';
+      // finishedFence: a read passes, a write and a non-read command are refused, whatever the plan says.
+      const reads = (q) => q.tool_name === 'Read';
+      const f = (tool_name, tool_input) => m.dispatch.finishedFence({ session_id: sid('ff'), tool_name, tool_input }, { plan, classify: reads });
+      const fence = f('Read', { file_path: '/etc/hostname' }) === null && /^MANAGER FENCE/.test(f('Write', { file_path: '/repo/x.txt' }) ?? '')
+        && /^MANAGER FENCE/.test(f('Bash', { command: 'git commit -m x' }) ?? '');
+      // stopWritePass: the plan file in both states, the manager's notes only outside plan mode, never a repository file or an agent's write.
+      const s = sid('sw');
+      const w = (file_path, extra = {}) => ({ session_id: s, tool_name: 'Write', tool_input: { file_path }, ...extra });
+      const planFile = join(homedir(), '.claude', 'plans', 'a-plan.md');
+      const notes = `/tmp/claude-0/-home-user/${s}/scratchpad/status/manager.txt`;
+      const pass = m.dispatch.stopWritePass(w(planFile), false) && m.dispatch.stopWritePass(w(planFile), true)
+        && m.dispatch.stopWritePass(w(notes), false) && !m.dispatch.stopWritePass(w(notes), true)
+        && !m.dispatch.stopWritePass(w('/repo/x.txt'), false) && !m.dispatch.stopWritePass(w(planFile, { agent_id: 'a1' }), false);
+      return phases && fence && pass;
+    },
+  },
+  {
+    name: 'step56: in conversation, with no approval marker, the manager fence (but for a send), the correction hold and the stop hold do not run: a read of an app\'s source passes a standing correction and a standing stop and sets no latch; a send is still refused by the dispatch gate and a write by approved-plan-guard, neither in the holds\' words; in plan mode the holds run as before; and a marker that gives no plan is not read as no marker',
+    guards: ['conv_skip', 'conv_holds', 'conv_send', 'conv_plan_mode', 'conv_phase_marker', 'conv_phase_none'],
+    run(m, dir) {
+      const WRONG = 'That was done wrong, so answer me before anything else.';
+      const STOPPED = 'Stop. Nothing more until I answer.';
+      const src = repo({ 'app.ts': 'x' }, 'convfix');
+      const bare = (entries) => { const w = world(dir, entries); rmSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), { force: true }); return w; };
+      const probe = (w, extra = {}) => {
+        const s = sid('cv');
+        const r = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: join(src.dir, 'app.ts') }, ...extra });
+        return { r, latched: latched(s) };
+      };
+      const corr = bare([turn(0, GO), turn(5, WRONG)]);
+      const stop = bare([turn(0, GO), turn(5, STOPPED)]);
+      const readCorr = probe(corr);
+      const readStop = probe(stop);
+      const skipped = readCorr.r.status === 0 && readStop.r.status === 0 && !readCorr.latched && !readStop.latched;
+      // A send is judged by the dispatch gate (no plan is in force) and a write by approved-plan-guard, as in every state.
+      const send = probe(corr, { tool_name: 'Agent', tool_input: { prompt: `${corr.plan} step 1`, subagent_type: 'general-purpose' } });
+      const write = probe(corr, { tool_name: 'Write', tool_input: { file_path: join(corr.cwd, 'x.txt'), content: 'x' } });
+      const judged = send.r.status === 2 && /DISPATCH GATE/.test(send.r.stderr) && !/CORRECTION/.test(send.r.stderr)
+        && write.r.status === 2 && /No approved plan is in force/.test(write.r.stderr) && !/CORRECTION/.test(write.r.stderr);
+      // In plan mode the holds run as before: the same read is held by the correction and by the stop.
+      const planCorr = probe(corr, { permission_mode: 'plan' });
+      const planStop = probe(stop, { permission_mode: 'plan' });
+      const held = planCorr.r.status === 2 && /CORRECTION/.test(planCorr.r.stderr) && planStop.r.status === 2 && /STOP \(Doctrine/.test(planStop.r.stderr);
+      // A marker that exists and gives no plan (the plan file changed after the approval) is not read as no marker: the correction still holds.
+      const old = world(dir, [turn(0, GO), turn(5, WRONG)]);
+      appendFileSync(old.plan, '\nA line added after the approval.\n');
+      const oldRead = probe(old);
+      const markerHeld = oldRead.r.status === 2 && /CORRECTION/.test(oldRead.r.stderr);
+      return skipped && judged && held && markerHeld;
+    },
+  },
+  {
+    name: 'step56: after a plan has finished (every step of its Order has a DONE hand-back) the holds are skipped as in conversation and a read of an app\'s source passes a standing correction, while the main thread\'s write stays refused by the manager fence and a send is judged by the dispatch gate; a plan with a step left, and a plan with no Order, hold as before',
+    guards: ['conv_skip', 'conv_holds', 'conv_send', 'conv_phase_finished', 'conv_phase_unreadable', 'finished_writes', 'finished_read_passes'],
+    run(m, dir) {
+      const WRONG = 'That was done wrong, so answer me before anything else.';
+      const src = repo({ 'app.ts': 'x' }, 'finfix');
+      const w = reviewWorld(dir, [turn(0, GO), turn(5, WRONG)]);
+      w.agent('d1', 1, -900, -800, 'DONE');
+      w.agent('d2', 2, -500, -400, 'DONE');
+      const go = (extra = {}) => {
+        const s = sid('fn');
+        const r = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: join(src.dir, 'app.ts') }, ...extra });
+        return { r, latched: latched(s) };
+      };
+      const read = go();
+      const write = go({ tool_name: 'Write', tool_input: { file_path: join(w.cwd, 'x.txt'), content: 'x' } });
+      const send = go({ tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 9`, subagent_type: 'general-purpose' } });
+      const passes = read.r.status === 0 && !read.latched;
+      // The marker is still on disk and approved-plan-guard passes a write while its hash matches, so the fence refuses it here.
+      const fenced = write.r.status === 2 && /MANAGER FENCE/.test(write.r.stderr) && !/CORRECTION/.test(write.r.stderr);
+      const judged = send.r.status === 2 && /The plan has no step 9/.test(send.r.stderr);
+      // A step left (step 2 FAILED): the same read is held again.
+      w.agent('d2', 2, -500, -400, 'FAILED');
+      const left = go();
+      const held = left.r.status === 2 && /CORRECTION/.test(left.r.stderr);
+      // No Order: the pointer cannot be read, so it counts as in force and the correction holds.
+      const plain = world(dir, [turn(0, GO), turn(5, WRONG)]);
+      const noOrder = plain.call('PreToolUse', { session_id: sid('fn'), tool_name: 'Read', tool_input: { file_path: join(src.dir, 'app.ts') } });
+      return passes && fenced && judged && held && noOrder.status === 2 && /CORRECTION/.test(noOrder.stderr);
+    },
+  },
+  {
+    name: 'step56: in plan mode the correction hold and the stop hold pass a write of the plan file and hold a write of anything else; under an approved plan the stop hold holds a repository write and does not hold the plan file or the manager\'s notes, and a correction still holds the plan file\'s write outside plan mode',
+    guards: ['conv_plan_write', 'conv_stop_plan_write', 'conv_stop_repo_write', 'stop_write_plan', 'stop_write_notes'],
+    run(m, dir) {
+      const WRONG = 'That was done wrong, so answer me before anything else.';
+      const STOPPED = 'Stop. Nothing more until I answer.';
+      const bare = (entries) => { const w = world(dir, entries); rmSync(join(w.home, '.claude', 'APPROVED-PLAN.json'), { force: true }); return w; };
+      const write = (w, file, extra = {}) => w.call('PreToolUse', { session_id: sid('pw'), tool_name: 'Write', tool_input: { file_path: file, content: '# Plan\n' }, ...extra });
+      const planFile = (w) => join(w.home, '.claude', 'plans', 'new-plan.md');
+      // Plan mode, no marker (entering plan mode removes it): the message that orders the plan is a correction, and held its own write.
+      const corr = bare([turn(0, GO), turn(5, WRONG)]);
+      const stop = bare([turn(0, GO), turn(5, STOPPED)]);
+      const cPlan = write(corr, planFile(corr), { permission_mode: 'plan' });
+      const cOther = write(corr, join(corr.cwd, 'x.txt'), { permission_mode: 'plan' });
+      const sPlan = write(stop, planFile(stop), { permission_mode: 'plan' });
+      const sOther = write(stop, join(stop.cwd, 'x.txt'), { permission_mode: 'plan' });
+      const inPlanMode = cPlan.status === 0 && cOther.status === 2 && /CORRECTION/.test(cOther.stderr)
+        && sPlan.status === 0 && sOther.status === 2 && /STOP \(Doctrine/.test(sOther.stderr);
+      // Under an approved plan, outside plan mode: the stop hold holds a repository write and passes the plan file and the notes. A stop
+      // message is also a correction, which still holds them, so what is asserted of those two is that the STOP is not the refusal.
+      const a = world(dir, [turn(0, GO), turn(5, STOPPED)]);
+      const sN = sid('pn');
+      const notes = a.call('PreToolUse', { session_id: sN, tool_name: 'Write', tool_input: { file_path: `/tmp/claude-0/-home-user/${sN}/scratchpad/status/manager.txt`, content: 'Version: x\n' } });
+      const aPlan = write(a, join(a.home, '.claude', 'plans', 'other.md'));
+      const aRepo = write(a, join(a.cwd, 'x.txt'));
+      const underPlan = !/STOP \(Doctrine/.test(notes.stderr) && !/STOP \(Doctrine/.test(aPlan.stderr) && aRepo.status === 2 && /STOP \(Doctrine/.test(aRepo.stderr);
+      // A correction (no stop) holds the plan file's write outside plan mode: only plan mode lifts it.
+      const c = world(dir, [turn(0, GO), turn(5, WRONG)]);
+      const cOut = write(c, join(c.home, '.claude', 'plans', 'other.md'));
+      return inPlanMode && underPlan && cOut.status === 2 && /CORRECTION/.test(cOut.stderr);
+    },
+  },
+  {
+    name: 'step56: the stop guard\'s refusals of a reply\'s prose (bolded lead-ins, bold headers, the next work asked for, approval asked in chat, waiting, parking, a choice not first, a feeling named, a promise, the top tier unnamed) run while an approval marker is in force whose pointer is not none and not in conversation or after a plan has finished, while a state claim with no read, handing the owner a step and the waited-on wording are refused in every state',
+    guards: ['plan_only_template', 'plan_only_next', 'plan_only_asking', 'plan_only_wait', 'plan_only_choice', 'plan_only_managing', 'plan_only_tier', 'stop_phase_read', 'conv_phase_finished'],
+    run(m, dir) {
+      const FABLE = 'claude-fable-5-1';
+      const BOLD = ['**One.** a first claim about the fence.', '**Two.** a second claim about the guard.', '**Three.** a third claim about the suite.', '**Four.** a fourth claim about the plants.'].join('\n\n');
+      const HEADERS = ['**Fence**\nThe fence holds the reads.', '**Guard**\nThe guard holds the writes.', '**Suite**\nThe suite holds the plants.'].join('\n\n');
+      const NEXT = 'Send the next thing you want built and I will plan it.';
+      const ASK = 'Can you approve the plan now?';
+      const WAIT = 'The numbers are in the table below, and I\'ll check them against the log.';
+      const PARK = 'The step is built. Let me know if that reads wrong and I will continue.';
+      const CHOICE = 'The first report line says the gates were written today.\nThe second report line says the cases were written today.\nThe third report line says the plants were written today.\n\n1. (Recommended) Land the gates as built today.\n2. Hold the gates for a second look.';
+      const EMOTION = 'I understand your frustration with the status page. The list now reads from the notes file.';
+      const PROMISE = 'From now on I will read the record first.';
+      const planOnly = [BOLD, HEADERS, NEXT, ASK, WAIT, PARK, CHOICE, EMOTION, PROMISE];
+      const STATE = 'The agent is still running.';
+      const HANDED = 'Please open the settings page and set it up.';
+      const OWING = 'I am waiting on you for the next decision.';
+      const always = [STATE, HANDED, OWING];
+      const bareHome = tmp('sg-home-');
+      mkdirSync(join(bareHome, '.claude'), { recursive: true });
+      const states = {
+        conversation: { ...process.env, HOME: bareHome },
+        plan: underPlanEnv(),
+      };
+      const say = (text, env) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('po'), transcript_path: transcript([turn(0, GO), reply(5, text)]) }), encoding: 'utf8', env });
+      // A plan whose every step has a DONE hand-back: finished.
+      const fw = reviewWorld(dir);
+      fw.agent('f1', 1, -900, -800, 'DONE');
+      fw.agent('f2', 2, -500, -400, 'DONE');
+      const sayFinished = (entries) => {
+        writeFileSync(fw.tr, jsonl(entries));
+        return spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('pf'), transcript_path: fw.tr }), encoding: 'utf8', env: { ...process.env, HOME: fw.home } });
+      };
+      const sayF = (text) => sayFinished([turn(0, GO), reply(5, text)]);
+      const refusedBy = (r) => r.status === 2 && /STOP REFUSED/.test(r.stderr);
+      const inPlan = planOnly.map((t) => refusedBy(say(t, states.plan)));
+      const inConversation = planOnly.map((t) => say(t, states.conversation).status === 0);
+      const afterPlan = planOnly.map((t) => sayF(t).status === 0);
+      const everywhere = always.every((t) => refusedBy(say(t, states.conversation)) && refusedBy(say(t, states.plan)) && refusedBy(sayF(t)));
+      // The top tier unnamed: owed under a plan in force, not after the plan has finished.
+      const PLAINLY = 'A short note about the toolbar change, written plainly.';
+      const tierPlan = spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('pt'), transcript_path: transcript([modelReply(-10, PLAINLY, FABLE)]) }), encoding: 'utf8', env: states.plan });
+      const tierFinished = sayFinished([modelReply(-10, PLAINLY, FABLE)]);
+      const tier = refusedBy(tierPlan) && tierFinished.status === 0;
+      return inPlan.every(Boolean) && inConversation.every(Boolean) && afterPlan.every(Boolean) && everywhere && tier;
     },
   },
 
@@ -5720,10 +5940,12 @@ const CASES = [
   // ---- the stop guard's three managing shapes (step 119) ----
   {
     name: 'the stop guard refuses a reply that names the owner\'s emotion, one that promises future conduct, and one whose open line asks for a go-word while the owner\'s newest message is a correction; a code block quoting those words, an honest report, a go-word asked for on a later line, and the same open line when no correction stands pass',
-    guards: ['managing_wired', 'managing_emotion', 'managing_promise', 'managing_go', 'managing_correction', 'managing_correction_read', 'managing_fenced', 'managing_first_line'],
+    guards: ['managing_wired', 'managing_emotion', 'managing_promise', 'managing_go', 'managing_correction', 'managing_correction_read', 'managing_fenced', 'managing_first_line', 'plan_only_managing'],
     run(m, dir) {
       const correction = 'The page shows the wrong step and the list is out of date';
-      const say = (text, ownerText = GO) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('mg'), transcript_path: transcript([turn(0, ownerText), reply(5, text)]) }), encoding: 'utf8' });
+      // These refusals run under a plan in force only (Design part 5): the runs are given a marker whose pointer is not none.
+      const env = underPlanEnv();
+      const say = (text, ownerText = GO, e = env) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('mg'), transcript_path: transcript([turn(0, ownerText), reply(5, text)]) }), encoding: 'utf8', env: e });
       const refusedAs = (r, re) => r.status === 2 && /LESSONS §406/.test(r.stderr) && re.test(r.stderr);
       const emotion = [say('I understand your frustration with the status page. The list now reads from the notes file.'),
         say('You are clearly annoyed about this, and the record shows why.'), say('The owner is upset by the stale page.')];
@@ -5734,9 +5956,16 @@ const CASES = [
       const goNoCorrection = say('Say go when you want the step sent.');
       const fenced = say('The refusal said:\n\n```\nFrom now on I will read the record. I understand your frustration.\n```\nThat is all it said.');
       const honest = say('The fence passes the plan read now, and the suite reports its cases.');
+      // The same three shapes with no approval marker, a correction standing for the third: conversation, so none is refused.
+      const bareHome = tmp('sg-home-');
+      mkdirSync(join(bareHome, '.claude'), { recursive: true });
+      const bare = { ...process.env, HOME: bareHome };
+      const conversation = [say('I understand your frustration with the status page. The list now reads from the notes file.', GO, bare),
+        say('From now on I will read the record first.', GO, bare), say('Say go when you want the step sent.', correction, bare)];
       return emotion.every((r) => refusedAs(r, /names the owner's emotion/)) && promise.every((r) => refusedAs(r, /promises future conduct/))
         && refusedAs(goAsk, /opens by asking for a go-word while the owner's newest message is a correction/) && refusedAs(goAskTwo, /go-word/)
-        && goLater.status === 0 && goNoCorrection.status === 0 && fenced.status === 0 && honest.status === 0;
+        && goLater.status === 0 && goNoCorrection.status === 0 && fenced.status === 0 && honest.status === 0
+        && conversation.every((r) => r.status === 0);
     },
   },
 
@@ -5746,7 +5975,8 @@ const CASES = [
     guards: ['go_instruction', 'go_stopping_here', 'go_gate_hold', 'go_imperative_start', 'go_subject', 'go_verbs', 'go_object'],
     run(m, dir) {
       const correction = 'The page shows the wrong step and the list is out of date';
-      const say = (text, ownerText = correction) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('go'), transcript_path: transcript([turn(0, ownerText), reply(5, text)]) }), encoding: 'utf8' });
+      const env = underPlanEnv();
+      const say = (text, ownerText = correction) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('go'), transcript_path: transcript([turn(0, ownerText), reply(5, text)]) }), encoding: 'utf8', env });
       // Under a correction these were refused before, on the word go-word or on a verb and a go within fifty characters. None instructs the owner.
       const passes = [
         'Stopping here: open for you is nothing; the review gate holds step 190 until a message ends with a go-word.',
@@ -5777,7 +6007,8 @@ const CASES = [
     guards: ['managing_go', 'managing_first_line', 'managing_correction'],
     run(m, dir) {
       const correction = 'The page shows the wrong step and the list is out of date';
-      const say = (text, ownerText = correction) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('gp'), transcript_path: transcript([turn(0, ownerText), reply(5, text)]) }), encoding: 'utf8' });
+      const env = underPlanEnv();
+      const say = (text, ownerText = correction) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('gp'), transcript_path: transcript([turn(0, ownerText), reply(5, text)]) }), encoding: 'utf8', env });
       const goRefused = (r) => r.status === 2 && /LESSONS §406/.test(r.stderr) && /opens by asking for a go-word/.test(r.stderr);
       const verbs = ['Say go.', 'Send ok.', 'Type approved.', 'Write yes.', 'Say okay.', 'Send the go-word.', 'You may write go.', 'Give me a yes.', 'You can say continue.'].map((t) => [t, goRefused(say(t))]);
       const missed = verbs.filter(([, ok]) => !ok).map(([t]) => JSON.stringify(t));
@@ -7809,13 +8040,15 @@ const CASES = [
       const idle = say(WAIT);
       runningFor('a2', 2);
       const running = say(WAIT);
-      // The repeat check, in a home with no plan: a refusal for a waiting reply, then a follow-up.
-      const bare = tmp('sg-home-'); mkdirSync(join(bare, '.claude'), { recursive: true });
+      // The repeat check, in a home whose approval marker is in force for a plan that records no step (so the steps-left check counts
+      // nothing, and the waiting refusal and the repeat check, which run under a plan only, are the ones judged): a refusal for a
+      // waiting reply, then a follow-up.
+      const bare = underPlanEnv();
       const FEEDBACK = { type: 'user', isMeta: true, timestamp: ts(6), message: { role: 'user', content: 'Stop hook feedback:\nSTOP REFUSED' } };
       const flow = (first, second) => {
         const sess = sid('fr');
         const tr = transcript([...read, reply(5, first)]);
-        const stop = (active) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sess, transcript_path: tr, stop_hook_active: active }), encoding: 'utf8', env: { ...process.env, HOME: bare } });
+        const stop = (active) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sess, transcript_path: tr, stop_hook_active: active }), encoding: 'utf8', env: bare });
         const one = stop(false);
         appendFileSync(tr, jsonl([FEEDBACK, reply(8, second)]));
         return { one, two: stop(true) };
@@ -8204,7 +8437,7 @@ const PLANTS = {
   fence_plan_file: ["if (f && f.endsWith('.md') && dirname(resolve(f)) === resolve(homedir(), '.claude', 'plans')) return null;", "if (f && f.endsWith('.md')) return null;", 'hook-dispatch.mjs'],
   fence_enter_plan: [" || tool === 'EnterPlanMode') return null;", ') return null;', 'hook-dispatch.mjs'],
   fence_status_write: ['    if (f && isStatusPage(f, p.session_id)) return null;\n', '\n', 'hook-dispatch.mjs'],
-  manager_wired: ['    const fence = managerFence(p);\n    if (fence) return refuse(fence, !fence.includes(FENCE_NO_LATCH));\n', '\n', 'hook-dispatch.mjs'],
+  manager_wired: ["    const fence = !skip || send ? managerFence(p) : phase.kind === 'finished' ? finishedFence(p) : null;\n    if (fence) return refuse(fence, !fence.includes(FENCE_NO_LATCH));\n", '\n', 'hook-dispatch.mjs'],
   fence_no_latch: ['    if (fence) return refuse(fence, !fence.includes(FENCE_NO_LATCH));', '    if (fence) return refuse(fence);', 'hook-dispatch.mjs'],
   // The manager fence passes a read only of the record.
   read_fence: ['    return outside === null ? null : ', '    return null; // ', 'hook-dispatch.mjs'],
@@ -8597,10 +8830,10 @@ const PLANTS = {
   correction_lifts_wired: ["      try { if (correction && correctionLifts(p, correction)) correction = null; } catch { /* a send that cannot be judged stays held */ }\n", '', 'hook-dispatch.mjs'],
   correction_says_review: [', except the Standing review step and the step that review clears', ', except nothing', 'hook-dispatch.mjs'],
   stop_hold: ['      if (!record) return refuse(stopMessage(holds.stop), false);', '      if (false) return refuse(stopMessage(holds.stop), false);', 'hook-dispatch.mjs'],
-  stop_agents: ['try { record = !p.agent_id && readOfRecord(p); }', 'try { record = readOfRecord(p); }', 'hook-dispatch.mjs'],
+  stop_agents: ['try { record = !p.agent_id && (readOfRecord(p) || stopWritePass(p, phase.planMode)); }', 'try { record = (readOfRecord(p) || stopWritePass(p, phase.planMode)); }', 'hook-dispatch.mjs'],
   stop_taskstop: ["if (holds.stop && p.tool_name !== 'TaskStop') {", 'if (holds.stop) {', 'hook-dispatch.mjs'],
   stop_no_latch: ['if (!record) return refuse(stopMessage(holds.stop), false);', 'if (!record) return refuse(stopMessage(holds.stop));', 'hook-dispatch.mjs'],
-  stop_record_read: ['try { record = !p.agent_id && readOfRecord(p); } catch { record = false; }', 'record = false;', 'hook-dispatch.mjs'],
+  stop_record_read: ['try { record = !p.agent_id && (readOfRecord(p) || stopWritePass(p, phase.planMode)); } catch { record = false; }', 'record = false;', 'hook-dispatch.mjs'],
   // The stop word is the whole word stop anywhere in a message that ends with no go-word; each plant takes one of those three parts out.
   stop_anywhere: ["trim().split(' ').includes(STOP_WORD);", "trim().split(' ')[0] === STOP_WORD;", 'hook-dispatch.mjs'],
   stop_whole_word: ["return String(text ?? '').toLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, ' ').trim().split(' ').includes(STOP_WORD);", "return String(text ?? '').toLowerCase().includes(STOP_WORD);", 'hook-dispatch.mjs'],
@@ -9289,6 +9522,34 @@ const PLANTS = {
   // Finding 16: a run of the cases says the plants were not run; a run of plants gives its count beside the total.
   run_plants_not_run: ['  // suite for nine hours, and the plants are the other half of it.\n  console.log(`PLANTS NOT RUN:', '  // suite for nine hours, and the plants are the other half of it.\n  console.log(`PLANTS:', 'session-guards.test.mjs'],
   run_plants_counted: ['  }\n  console.log(`PLANTS RUN: ${todo.length} of', '  }\n  console.log(`PLANTS: ${todo.length} of', 'session-guards.test.mjs'],
+  // Step 56, conversation is the default (Design part 5): the state a call is made in (`planPhase`), what each state skips in the
+  // dispatcher's main sequence, what the stop hold and the correction hold pass, and the refusals of a reply's prose that run under a plan only.
+  conv_phase_none: ["    return { kind: marker ? 'in force' : 'conversation', planMode, plan: null };", "    return { kind: 'in force', planMode, plan: null };", 'hook-dispatch.mjs'],
+  conv_phase_marker: ["    return { kind: marker ? 'in force' : 'conversation', planMode, plan: null };", "    return { kind: 'conversation', planMode, plan: null };", 'hook-dispatch.mjs'],
+  conv_phase_unreadable: ["kind: pointer && pointer.next === null ? 'finished' : 'in force'", "kind: !pointer || pointer.next === null ? 'finished' : 'in force'", 'hook-dispatch.mjs'],
+  conv_phase_finished: ["kind: pointer && pointer.next === null ? 'finished' : 'in force'", "kind: 'in force'", 'hook-dispatch.mjs'],
+  conv_phase_mode: ["const planMode = String(p?.permission_mode ?? '') === 'plan';", 'const planMode = false;', 'hook-dispatch.mjs'],
+  finished_read_passes: ['  return read ? null : fence;', '  return fence;', 'hook-dispatch.mjs'],
+  finished_writes: [": phase.kind === 'finished' ? finishedFence(p) : null;", ': null;', 'hook-dispatch.mjs'],
+  conv_skip: ["const skip = phase.kind !== 'in force' && !phase.planMode;", 'const skip = false;', 'hook-dispatch.mjs'],
+  conv_plan_mode: ["const skip = phase.kind !== 'in force' && !phase.planMode;", "const skip = phase.kind !== 'in force';", 'hook-dispatch.mjs'],
+  conv_holds: ['if (!skip) { try { holds = ownerHolds(p); } catch', 'if (true) { try { holds = ownerHolds(p); } catch', 'hook-dispatch.mjs'],
+  conv_send: ['const fence = !skip || send ? managerFence(p)', 'const fence = !skip ? managerFence(p)', 'hook-dispatch.mjs'],
+  conv_plan_write: ['try { if (correction && phase.planMode && planFileWrite(p)) correction = null; }', 'try { if (false) correction = null; }', 'hook-dispatch.mjs'],
+  conv_stop_plan_write: ['(readOfRecord(p) || stopWritePass(p, phase.planMode))', 'readOfRecord(p)', 'hook-dispatch.mjs'],
+  conv_stop_repo_write: ['try { record = !p.agent_id && (readOfRecord(p) || stopWritePass(p, phase.planMode)); } catch { record = false; }', 'record = true;', 'hook-dispatch.mjs'],
+  stop_write_plan: ['  if (planFileWrite(p)) return true;\n  if (planMode ||', '  if (false) return true;\n  if (planMode ||', 'hook-dispatch.mjs'],
+  stop_write_notes: ['  return !!f && isManagerNotes(f, p.session_id);', '  return false;', 'hook-dispatch.mjs'],
+  stop_write_notes_mode: ['  if (planMode || p.agent_id || !FILE_WRITES', '  if (p.agent_id || !FILE_WRITES', 'hook-dispatch.mjs'],
+  stop_phase_read: ["try { underPlan = planPhase({ session_id: hook.session_id, transcript_path: path }).kind === 'in force'; } catch { underPlan = true; }", 'underPlan = true;', 'stop-guard.mjs'],
+  plan_only_repeat: ['if (underPlan && path && rec && !rec.repeated', 'if (path && rec && !rec.repeated', 'stop-guard.mjs'],
+  plan_only_tier: ['try { planInForce = underPlan && !!approvedPlan(); }', 'try { planInForce = !!approvedPlan(); }', 'stop-guard.mjs'],
+  plan_only_asking: ['const asked = underPlan ? ASKING.find((re) => re.test(reply)) : undefined;', 'const asked = ASKING.find((re) => re.test(reply));', 'stop-guard.mjs'],
+  plan_only_managing: ['const managing = underPlan ? managingShape(reply, !!correctionNow) : null;', 'const managing = managingShape(reply, !!correctionNow);', 'stop-guard.mjs'],
+  plan_only_next: ['if (underPlan && (nextHit || dropHit)) {', 'if (nextHit || dropHit) {', 'stop-guard.mjs'],
+  plan_only_template: ['if (underPlan && (longestRun >= 4 || headers >= 3)) {', 'if (longestRun >= 4 || headers >= 3) {', 'stop-guard.mjs'],
+  plan_only_choice: ['const choiceHit = underPlan ? misplacedChoice(reply) : null;', 'const choiceHit = misplacedChoice(reply);', 'stop-guard.mjs'],
+  plan_only_wait: ['if ((!waitHit && !parkHit) || !underPlan) process.exit(0);', 'if (!waitHit && !parkHit) process.exit(0);', 'stop-guard.mjs'],
 };
 
 async function runAll(dir, only, filter) {

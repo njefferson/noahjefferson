@@ -95,7 +95,7 @@ import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { pendingMessages, startedAt } from './pending-guard.mjs';
 import { tailEntries, lastOwnerMessage } from './transcript-tail.mjs';
-import { latchStanding, approvedPlan, planSteps, correctionStanding, stopStanding, foundQueue, queueRoots } from './hook-dispatch.mjs';
+import { latchStanding, approvedPlan, planSteps, correctionStanding, stopStanding, foundQueue, queueRoots, planPhase } from './hook-dispatch.mjs';
 import { runningWork, stepsReturned, planOrder, pointerOf, reviewState, aimReviewSteps, readCompacted, setCompacted, compactedWords, californiaTime,
   servingModel, isTopTier, readTier, setTier, tierWords, foundLines, managerNotes, sortOf, scratchpadOf, markerApprovalTime } from './report.mjs';
 
@@ -254,6 +254,17 @@ payloadSession = String(hook.session_id ?? '');
 
 const path = hook.transcript_path;
 
+// THE PROSE REFUSALS RUN ONLY UNDER A PLAN (Doctrine §0e rule 4, Design part 5, LESSONS §376, §384, §395, §406, §428, §434, §456).
+// Conversation is the default outside a plan: a reply there is judged by the never-rules and by the shapes that are about what is
+// claimed, not about how it is worded. `underPlan` is true while an approval marker is in force whose plan's pointer is not none
+// (`planPhase`, hook-dispatch.mjs; a pointer that cannot be read counts as in force). It gates the bolded lead-ins, the headers, a
+// feeling named, a promise, a go-word asked for, a repeated follow-up, the tier line, the choice not first, approval asked in chat,
+// the next work asked for or checks dropped, and waiting or parking. These run in every mode: a state claim with no read, handing
+// the owner a step, the waited-on and owing wording, and the compaction notice; the holds for a background task still running and
+// for steps left are unchanged. A failure reading the state keeps the refusals, as every doubt does.
+let underPlan = true;
+try { underPlan = planPhase({ session_id: hook.session_id, transcript_path: path }).kind === 'in force'; } catch { underPlan = true; }
+
 // Already blocked once this turn. Never loop — the session gets one nudge, and
 // one more only for a follow-up that sends the refused reply again (above).
 // The follow-up is what was written after the refusal: it repeats the refused
@@ -282,7 +293,7 @@ if (hook.stop_hook_active) {
   try {
     const rec = JSON.parse(readFileSync(refusedFile(), 'utf8'));
     const ownerAt = lastOwnerMessage(tailEntries(path ?? '', 16 * 1024 * 1024))?.at ?? 0;
-    if (path && rec && !rec.repeated && Number(rec.at) >= ownerAt) {
+    if (underPlan && path && rec && !rec.repeated && Number(rec.at) >= ownerAt) {
       // A line that carries an artifact link is never a repeat: Doctrine §7i puts the status page's link in every progress
       // reply. After a refusal for a choice not first, a numbered option line is never one either: that refusal asked for the
       // choice to be moved to the top, which is the same line written once more. Both are left out of what is judged.
@@ -356,8 +367,9 @@ if (serving) {
     tier = { model: serving, told: !isTopTier(serving) };
     try { setTier(payloadSession, tier); } catch { /* seen as changed again at the next stop */ }
   }
+  // The tier line is owed only under a plan in force whose pointer is not none (`underPlan`).
   let planInForce = false;
-  try { planInForce = !!approvedPlan(); } catch { planInForce = false; }
+  try { planInForce = underPlan && !!approvedPlan(); } catch { planInForce = false; }
   if (isTopTier(serving) && !tier.told && planInForce) {
     const open = reply.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
     if (namesTier(open, serving)) {
@@ -537,7 +549,7 @@ const ASKING = [
   /\bapprove\s+(?:it|this|the (?:first |second )?plan|plan \d)\b/i,
   /\b(?:press|tap|click|hit)\s+(?:the\s+)?approve\b/i,
 ];
-const asked = ASKING.find((re) => re.test(reply));
+const asked = underPlan ? ASKING.find((re) => re.test(reply)) : undefined;
 if (asked) {
   refuse(`STOP REFUSED — this reply asks for a plan's approval in chat ("${(reply.match(asked) ?? [''])[0]}").
 
@@ -644,7 +656,7 @@ function managingShape(text, correction) {
 // END STOP PATTERNS
 let correctionNow = null;
 try { correctionNow = correctionStanding({ session_id: hook.session_id, transcript_path: path }); } catch { correctionNow = null; }
-const managing = managingShape(reply, !!correctionNow);
+const managing = underPlan ? managingShape(reply, !!correctionNow) : null;
 if (managing) {
   const why = {
     emotion: 'names the owner\'s emotion',
@@ -681,7 +693,7 @@ const DROP_CHECKS = [
 ];
 const nextHit = NEXT_WORK.find((re) => re.test(reply));
 const dropHit = DROP_CHECKS.find((re) => re.test(reply));
-if (nextHit || dropHit) {
+if (underPlan && (nextHit || dropHit)) {
   const said = (reply.match(nextHit ?? dropHit) ?? [''])[0].trim().slice(0, 80);
   refuse(nextHit
     ? `STOP REFUSED — this reply asks the owner for the next work ("${said}").
@@ -715,7 +727,7 @@ for (const p of paras) {
   if (header) headers++;
   if (leadIn) { run++; if (run > longestRun) longestRun = run; } else run = 0;
 }
-if (longestRun >= 4 || headers >= 3) {
+if (underPlan && (longestRun >= 4 || headers >= 3)) {
   refuse(`STOP REFUSED — this reply ${longestRun >= 4 ? `opens ${longestRun} consecutive paragraphs with a bolded lead-in` : `is sectioned under ${headers} bold headers`}.
 
 Doctrine §2: "the bolded lead-in on every paragraph" is a shape that looks like
@@ -786,7 +798,7 @@ function misplacedChoice(text) {
   const out = before <= OPEN_LINES ? marked[1] : marked[0];
   return { line: out.marked[0], before: lines.slice(0, out.start).filter((l) => l.trim()).length };
 }
-const choiceHit = misplacedChoice(reply);
+const choiceHit = underPlan ? misplacedChoice(reply) : null;
 if (choiceHit) {
   refuse(`STOP REFUSED — this reply's choice is not the first thing in it. A numbered option carrying the recommended marker sits under ${choiceHit.before} lines of other text:
   "${choiceHit.line.slice(0, 200)}"
@@ -1046,7 +1058,7 @@ const parkHit = CONTINUING.test(tail) ? undefined : PARKING.find((re) => re.test
 // §2 — the manufactured next step, the closing reflection, a decision list made
 // of things that are not decisions — cannot be told from their honest twins by
 // a pattern, and stays CHECKLIST.
-if (!waitHit && !parkHit) process.exit(0);
+if ((!waitHit && !parkHit) || !underPlan) process.exit(0);
 
 const hit = waitHit ?? parkHit;
 const quote = ((waitHit ? reply : tail).match(hit) ?? [''])[0].trim().slice(0, 80);
