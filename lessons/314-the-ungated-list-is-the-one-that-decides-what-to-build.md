@@ -1,6 +1,6 @@
 ## 314 · Effort flows to what is measured, so the ungated list is the one that decides what to build
 
-**Enforced by:** GATE `quietkeep:tools/roadmaps.mjs` — every plan of record
+**Enforced by:** GATE quietkeep:tools/roadmaps.mjs — every plan of record
 declares itself, is named in the repo's source-of-truth file, states when it was
 last measured and at which release, gives each item one state from a closed set,
 and cites the release or the record behind any state claiming the item is

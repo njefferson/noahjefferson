@@ -1,6 +1,6 @@
 ## 320 · An RMS at one lag over a whole population cannot see a clustered defect, and it reports the defect as absent
 
-**Enforced by:** GATE `harness-side made-to-fail line` — a comparison harness
+**Enforced by:** CHECKLIST harness-side-made-to-fail-line — a comparison harness
 prints, before its own results, the one ratio it MUST reproduce from something
 already known (a report, a screenshot, an earlier figure) and refuses its own
 output when that ratio is not there. · CHECKLIST sweep-the-lag-and-report-the-tail

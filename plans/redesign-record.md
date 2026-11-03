@@ -17,15 +17,62 @@ Three kinds of statement are kept apart on purpose. A count is a count by event 
 
 ## 1. What the owner wants
 
-This is the session's reading of the owner's messages of 31 October to 2 November and of the owner's standing preferences, written in the record's own words and not quoted [T 07:49]. The one measured fact beside it is the volume: 66 owner messages across the four plans of the session, 44 of them not ending in a go-word, 8 of those carrying the whole word stop [S30]. The audit judged about 20 of the first 36 messages to be corrections, complaints or questions about what the session was doing [S20].
+Note. The earlier form of this section was written from the session's replies and checked for shape only; it has been replaced. This section is now the design's requirements, one bullet for each distinct requirement, in the plan's words, each ending in the ids and California dates and times of the owner's messages that set it. The messages are listed in `/tmp/claude-0/-home-user-noahjefferson/3b5a41ea-366d-5a82-93a5-f261bff4c6f6/scratchpad/progress/step-50-intent-map.md` (89 messages, 65 setting a requirement and 24 not). A is the first recall file, B the second, C the transcript after the second compaction. No message is quoted.
 
-- Apps get built and the owner's part is judgement: approve a plan, read a result or a staged page, settle a choice only the owner can settle. Nothing handed back that a session can do. Nothing asked that the record already answers. Nothing asked twice [T 07:49; L 438].
-- The work is made correct before a gate sees it. The rules and the app's own knowledge are applied at the moment of the act by whatever is acting. A gate is the last catch for a mistake or a bypass and is never the decider [T 06:26, 07:49].
-- Domain knowledge must hold at the act. The infrared app drifted toward visible-light assumptions repeatedly and the owner had no way to hold a session on the knowledge except to force it in each time [T 07:49; section 4 below].
-- Cost matters. Developing apps must not need the top subscription to pay for the layer that controls the sessions. The control layer was built to protect the owner from the tool and the owner pays for it in tokens and in messages [T 07:49; section 7].
-- The owner is not to be fought and not to be hurt: no hold that reads a plain go-and-read message as a stop, no gate added each time a correction lands, no plan built from a summary, no reply shaped to pass a guard [T 07:49; S20 findings 2, 4].
-- Everything is open to redesign, the owner's own preferences file and the goals block included. What is fixed is the owner's intent and the nature of the tool [T 07:49].
-- Goal 6 of the goals block ("held by gates that leave it no choice to make") was read by the session first as "the owner never reads" and then corrected: it is about the main thread having no discretion where the owner's rules already decide, and says nothing against the owner reading a plan, a diff or a staged page [T 07:33].
+The one measured fact beside it is the volume: 66 owner messages across the four plans of the session, 44 of them not ending in a go-word, 8 of those carrying the whole word stop [S30]. The audit judged about 20 of the first 36 messages to be corrections, complaints or questions about what the session was doing [S20].
+
+- The fourteen defects reported from another repository's session are recorded as findings, one entry each, and each is verified in the hub before any change is made; a change is made only where the defect departs from the stated intent and is not a widening of permissions [A01: 2026-10-31 16:36 PDT].
+- A restriction is not widened for the session's own purpose; configuration management stands on top of change management, dependency updates are considered, and all of it is hub doctrine for every session across the hub and the apps [A01; B32: 2026-11-02 09:39 PST].
+- A question that is not a choice only the owner can make is not put to the owner; a matter the record has settled is not put as an open question, and a question goes to the owner only where the record has no answer [A02: 2026-10-31 19:22 PDT; A19: 2026-11-01 07:21 PST].
+- The word stop stops everything, and an order for a new plan is carried out in plan mode with the plan file's write not held by the message that gave the order [A03: 2026-10-31 19:23 PDT; C19: 2026-11-02 12:24 PST; C20: 2026-11-02 12:37 PST].
+- The word stop is read by its meaning in context and not matched as a word; the manager applies judgement through a plan; standing instructions may be flawed and are revised on the owner's word [B23: 2026-11-02 07:44 PST].
+- A session does what was asked and takes no step that leaves the app unworkable, including a change to the session's own set of repositories; a repository is not added when the owner has said what will be carried back [A04: 2026-10-31 19:23 PDT; A06: 2026-10-31 19:25 PDT].
+- Where the owner carries a prompt to another session, the session writes the prompt for that and does nothing beyond it [A05: 2026-10-31 19:24 PDT].
+- The owner is not the courier between sessions for what the hub holds; a finding brought from an app's session is taken directly in the hub session and lands in the hub as a file [A07: 2026-10-31 19:27 PDT].
+- What the session does in the other repositories is answered from the files, with a recommendation [A18: 2026-11-01 07:10 PST].
+- The top tier is the owner's switch and is used for judgement, and for a plan's writing; it is not left running past the work that needs it, the next tier carries management, the tier is switched at the owner's word and its cost is stated [A09: 2026-10-31 19:32 PDT; B02: 2026-11-01 11:18 PST; B05: 2026-11-01 16:23 PST; B07: 2026-11-01 20:09 PST].
+- The tier for managing and for executing is chosen for cost and effect, and a recommendation is given; one consistent recommendation is given, the recommendation, the warning and the next move do not conflict, and judgement is delivered in the reply [B35: 2026-11-02 10:19 PST; C08: 2026-11-02 11:32 PST].
+- A plan carries no step or walk its acceptance does not need; updating gates is short; verification runs once over the whole [A10: 2026-10-31 19:45 PDT].
+- The plan first put to the button is the optimized one, checked before it goes up, so the owner does not ask for it repeatedly; corrections are counted [A11: 2026-10-31 20:29 PDT].
+- The session does not raise a recurring prompt asking the owner to approve an artifact update that other sessions do not raise; a prompt the owner must answer is a permission setting with an owner [A14: 2026-11-01 05:44 PST; A15: 2026-11-01 05:45 PST].
+- Whether an approved plan is in force is stated on request, read from the files, before the mode changes; control stays with the owner under the automatic mode, the never-rules holding in every mode [A16: 2026-11-01 05:46 PST].
+- The session's own errors are looked back through and recorded as lessons and gates for the next plan; the recurring problems enter the next plan by being ranked; a recommendation is given [B06: 2026-11-01 20:05 PST].
+- Whether something works is judged against the owner's intent and the owner's own good and never against the session's convenience; the thesis is that intent [B09: 2026-11-01 20:17 PST].
+- Gates are the last catch for mistakes and for purposeful bypass and are never the means of deciding what is right; something earlier makes the work right before a gate sees it [B12: 2026-11-02 06:17 PST].
+- Rules are applied by the session before a gate acts; a gate is not a replacement for applying them [B13: 2026-11-02 06:26 PST].
+- The references the session has built are used at the point of decision; structures that make the right decision the default are built and kept, the session's own judgement is not the only protection, and the doctrine is read by the part that applies [B14: 2026-11-02 06:51 PST].
+- The doctrine read at a start is applied at each step, the facts restated in the step; the redesign shows by a measure that the outcome differs [B15: 2026-11-02 06:54 PST].
+- The design rests on the recorded cause of why the existing mechanisms fail; the question is answered from the record in its turn [B16: 2026-11-02 06:56 PST].
+- One finished redesign meets the stated intent and adds no work against the owner; app work waits on it, so it is done once and right [B17: 2026-11-02 07:14 PST; C09: 2026-11-02 11:34 PST].
+- The doctrine is grouped so the whole is not read repeatedly [B18: 2026-11-02 07:16 PST].
+- The design is not the present apparatus rebuilt elsewhere; it is built from the intent and holds what is needed and nothing else; the overhead cost the owner carries is removed so app work does not require the highest subscription; the practice of others is compared [B19: 2026-11-02 07:23 PST; B29: 2026-11-02 08:51 PST].
+- An app's essential facts (for the infrared editor, that the work is in infrared and was designed for visible light) are kept in front of the session each time work touches them; the best way is stated and gates are not offered as the only answer; a choice that is the owner's does go to the owner [B20: 2026-11-02 07:32 PST].
+- A plan rests on the whole text of the record it draws on and never on a summary of it; the acceptance is quoted from the source [B21: 2026-11-02 07:36 PST].
+- Research precedes the plan (what is wanted, why, how it is best done) and is recorded in enough detail for the plan to rest on; the check is of the whole effect and not of whether one act drew an objection; a plan that cannot finish ejects to the program and does not add gates [B22: 2026-11-02 07:40 PST].
+- A step is a list that cannot be done wrong; what returns needing judgement ejects to the plan, where the higher tier judges, and a lower tier does not judge alone [B24: 2026-11-02 08:13 PST].
+- No step decides in isolation and a plan does not continue on a logged error; the manager does not do the workers' work [B25: 2026-11-02 08:24 PST].
+- The design holds against drifting back, by the program above plans, the configuration baseline and the measure at each plan's close [B26: 2026-11-02 08:30 PST].
+- A named risk is answered by a mechanism and never by the owner watching for it [B27: 2026-11-02 08:32 PST].
+- No length count gates a design or shortens a plan; the design is as long as what is required; plans may sit inside a larger program; all work is ranked through change management and new work updates the dependencies and the list; goals bigger than a plan's are kept [B28: 2026-11-02 08:39 PST].
+- Conversation, not focused work, is the mode for simple questions and for exploring ideas [B29: 2026-11-02 08:51 PST].
+- Claims about practice are researched and not recalled; the blind areas the application imposes, such as compaction and a restarted session, are accounted for [B30: 2026-11-02 09:04 PST].
+- Lessons are learned as the work goes; the same first-send trips at a go-word are fixed once and are not carried in the owner's memory [B31: 2026-11-02 09:18 PST]; a stumble just seen is one of the lessons already named and is recorded with its fix for the next plan [B40: 2026-11-02 10:47 PST].
+- Sessions already running take the changes in; several sessions working on apps stop writing over each other in the hub; what is missing from the design is looked for [B33: 2026-11-02 10:00 PST].
+- A constant check that the work is aimed at the right goal and not only that it proceeds efficiently; a plan ejects to the program and does not half-solve; the seams are addressed, with ejects and one file per finding [B34: 2026-11-02 10:11 PST; C13: 2026-11-02 12:07 PST].
+- The settings the owner must change are stated plainly, each with when, and not in passing; the plan proceeds on a go-word [B36: 2026-11-02 10:34 PST].
+- The knowledge layer is justified for each repository and not for one app only; the hub is considered with the apps [B37: 2026-11-02 10:38 PST].
+- The morning's detail is carried whole into the design, kept in full, and a short summary of it is not a source; nothing of it is discarded for a new session [C01: 2026-11-02 11:20 PST; C15: 2026-11-02 12:12 PST].
+- Research is followed by a plan put to the button in the same session and not by a handoff; work begins at the owner's button [C02: 2026-11-02 11:23 PST].
+- Work the owner marks important is done fully the first time and does not become a new problem; a step cannot be done wrong [C03: 2026-11-02 11:24 PST].
+- One session carries the design to its end, the owner is not sent to start a second, and a session continues from files [C05: 2026-11-02 11:27 PST; C07: 2026-11-02 11:30 PST].
+- The intent is the acceptance and the design lists what it would drop from the present system; each gate replaced answers the written reason of the lesson that made it [C06: 2026-11-02 11:28 PST].
+- The session's own defects are corrected in the design and not carried [C10: 2026-11-02 11:53 PST].
+- A failure the session can foresee is designed out of the plan and is not allowed to happen [C11: 2026-11-02 12:00 PST].
+- The context a task needs sits immediately beside the task, inside the plan's step; an account of a failure is the plain account read from the record and carries no softening [C12: 2026-11-02 12:04 PST].
+- A statement of state or of safety is read from the files before it is made and is never guessed; what was just seen is checked against the work [C16: 2026-11-02 12:18 PST].
+- The session does not tell the owner to give up; the redesign is thought at the size of the intent and not at the size of one prompt [C18: 2026-11-02 12:21 PST].
+- Replies start from what the owner has already established, read from the record, and do not present it as news; the plan proceeds on a go-word [C21: 2026-11-02 12:52 PST].
+- Nothing is handed back to the owner that a session can do, and nothing is asked that the record already answers or asked twice; the owner's part is judgement [A02; A19; C21; L 438].
 
 ## 2. Why each control exists, and what it costs now
 
@@ -151,6 +198,110 @@ The cloud environment (https://code.claude.com/docs/en/cloud-environments, https
 - "You pick a cloud session's permission mode from the mode dropdown."
 
 What the maker says about agents governing agents ([S31] section 11). No page read says that a model supervising another model's replies is a reliable control. The pages call model-judged hooks and the classifier non-deterministic and advise the deterministic kinds (hooks that exit 2, deny rules, managed settings) for rules without exceptions. The maker's guidance on orchestration is "we recommend finding the simplest solution possible, and only increasing complexity when needed" (https://www.anthropic.com/engineering/building-effective-agents), "multi-agent systems use about 15x more tokens than chats" and "Teach the orchestrator how to delegate" (https://www.anthropic.com/engineering/multi-agent-research-system), and for long runs "leaving clear artifacts for the next session" and "a claude-progress.txt file that keeps a log of what agents have done" (https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents). The same page names the failure "Claude declares victory on the entire project too early."
+
+## 5b. The twelve pages step 51 read
+
+Read on 2026-11-02 by step 51, from `code.claude.com` only; no host was refused. The source is `progress/step-51-report.txt` in the session scratchpad [S51]. Every passage is the fetch tool's return, which is a model's account of a page or the page text it handed back, and not the page. Where a hyphen stands inside a word in a quotation ("feed-back"), the report added it; the page has no hyphen there. Where the page writes a figure of seven digits for a token window, 1M stands in its place. The tail of the settings reference was cut short in three windows (section 12).
+
+Hooks reference (https://code.claude.com/docs/en/hooks, from character 100000 to the end):
+
+- "Claude Code applies an 8-consecutive-continuation cap: after stop hooks have continued the turn eight times in a row, Claude Code overrides the next block and ends the turn. The count of consecutive continuations resets each time Claude calls a tool. To raise the cap, set CLAUDE_CODE_STOP_HOOK_BLOCK_CAP."
+- "The `background_tasks` and `session_crons` arrays let hooks distinguish "session is done" from "session is paused waiting for background work to wake it back up"."
+- "Runs before Claude Code applies a model switch that you or a client requested. Use it to block a switch, require confirmation, or show what the switch will cost before it happens." "Claude Code doesn't run PreModelSwitch hooks for switches it makes on its own, such as an automatic model fallback or restoring the model when you resume a session."
+- "PostModelSwitch requires Claude Code v2.1.251 or later. It can't block, because the model has already changed."
+- "ConfigChange hooks can block configuration changes from taking effect." "`policy_settings` changes can't be blocked." "A blocked change surfaces no message to you or to Claude".
+- "InstructionsLoaded: Fires when a `CLAUDE.md` or `.claude/rules/*.md` file is loaded into context." "The hook doesn't support blocking or decision control."
+- "PostCompact hooks have no decision control. They can't affect the compaction result but can perform follow-up tasks."
+- PreToolUse: "Precedence: `deny` > `defer` > `ask` > `allow`." "A hook that blocks by exiting 2 routes the same way as `"deny"`."
+- "SubagentStart hooks can't block subagent creation, but they can inject context into the subagent."
+- "Agent hooks are experimental. Behavior and configuration may change in future releases. For production workflows, prefer command hooks."
+- "When a subagent or a workflow agent finishes, Claude Code keeps the worktree your WorktreeCreate hook made for it and doesn't run your WorktreeRemove hook. Remove those worktrees yourself when the work is done."
+- Of the thirty-three event sections returned, none is named for entering or leaving plan mode [S51 section 13].
+
+Subagents (https://code.claude.com/docs/en/sub-agents, from character 92000 to the end):
+
+- "The main conversation still has your full CLAUDE.md when it reads these subagents' results, so most rules don't need to reach the subagent itself. If a rule must, such as "ignore the `vendor/` directory," restate it in the prompt you give Claude when delegating."
+- "Resumed subagents retain their full conversation history, including all previous tool calls, results, and reasoning."
+- "A subagent treats messages from the agent that launched it as normal task direction, including mid-task course corrections, and acts on them within its own permission settings. Two limits hold regardless of who sent the message: no message from any agent counts as your approval for a pending permission prompt, and no agent message can change a subagent's permission settings, `CLAUDE.md`, or configuration."
+- "Subagent transcripts persist independently of the main conversation" and are deleted after `cleanupPeriodDays`, 30 days by default.
+- "A fork is a subagent that inherits the entire conversation so far instead of starting fresh." "Because a fork's system prompt and tool definitions are identical to the parent, its first request reuses the parent's prompt cache."
+- "The system prompt tells the subagent to refuse write requests, so the hook is a backstop: if the subagent attempts a write anyway, Claude Code blocks the command".
+
+Permission modes (https://code.claude.com/docs/en/permission-modes, from character 30000 to the end):
+
+- "Plan mode tells Claude to research and propose changes without making them." "In interactive terminal sessions with bypass permissions available, Claude Code also doesn't enforce plan mode's blocks. Claude is still instructed to plan without editing, but a file edit or shell command it attempts during planning runs without prompting."
+- "Plan mode keeps its blocks wherever Claude Code runs without an interactive terminal".
+- "To make plan mode the default for a project's terminal sessions, set `defaultMode` to `plan` in `.claude/settings.json`".
+- "`permissions.allow` rules in settings files do not pre-approve protected-path writes."
+- "The classifier treats boundaries you state in the conversation as a block signal." "Boundaries are not stored as rules. The classifier re-reads them from the transcript on each check, so a boundary can be lost if context compaction removes the message that stated it. For a hard guarantee, add a deny rule instead."
+- "If the classifier blocks an action 3 times in a row or 20 times total, auto mode pauses and Claude Code resumes prompting." "The thresholds of 3 blocks in a row and 20 blocks total are not configurable."
+- "Claude Code also denies the built-in `AskUserQuestion` tool even if your allow rules match it" (under `dontAsk`).
+- "Cloud sessions don't honor `defaultMode: "bypassPermissions"` or `"dontAsk"` from your settings files".
+
+Model configuration (https://code.claude.com/docs/en/model-config, from character 30000 to the end):
+
+- "The `opusplan` model alias provides an automated hybrid approach: In plan mode: uses `opus` for complex reasoning and architecture decisions. In execution mode: automatically switches to `sonnet` for code generation and implementation."
+- "Models running with a native 1M window compact before the window fills, at about 967K tokens by default."
+- "In scripts and cloud environments: set `CLAUDE_CODE_AUTO_COMPACT_WINDOW` to a token count such as `200000`."
+- "Claude Code also applies the chain to subagents." (the fallback chain, capped at three models)
+
+Checkpointing (https://code.claude.com/docs/en/checkpointing, the whole page):
+
+- "Every prompt you send that starts a turn creates a new checkpoint". "Claude Code keeps file snapshots for the 100 most recent checkpoints in a session."
+- "A subagent makes edits with Claude's file editing tools, but Claude Code usually doesn't capture those edits in your session's checkpoints."
+- "Checkpointing only tracks files that have been edited within the current session. Manual changes you make to files outside of Claude Code and edits from other concurrent sessions are normally not captured".
+- "Checkpoints are designed for quick, session-level recovery. For permanent version history and collaboration, continue using version control, such as Git".
+
+Prompt caching (https://code.claude.com/docs/en/prompt-caching, the whole page):
+
+- "Each model has its own cache. Switching with `/model` means the next request reads the entire conversation history with no cache hits, even though the content is identical."
+- "The `opusplan` model setting resolves to Opus during plan mode and Sonnet during execution, so each plan-mode toggle is a model switch and starts a fresh cache."
+- "Subagents fall outside the main-conversation TTL bucket, so they get five minutes even on a subscription until you choose a longer one."
+- "Editing CLAUDE.md mid-session: Your project-root and user-level CLAUDE.md files are read once at session start and held in memory. Editing them mid-session does not invalidate the cache, but the edit also doesn't apply."
+
+Features overview (https://code.claude.com/docs/en/features-overview, the whole page):
+
+- "Put guardrails in hooks. An instruction like "never edit `.env`" in CLAUDE.md or a skill is a request, not a guarantee."
+- "Rule of thumb: Keep CLAUDE.md under 200 lines. If it's growing, move reference content to skills or split into `.claude/rules/` files." "Rules with `paths` frontmatter only load when Claude works with matching files, saving context."
+- "With subagents, Claude decides turn by turn what runs next. In a workflow, the script decides".
+
+Managed settings (https://code.claude.com/docs/en/managed-settings, the whole page):
+
+- "Managed settings are the settings your organization deploys to every developer's machine. Claude Code applies them above every other level, so no user, project, local, or `--settings` value overrides them".
+- "Cloud sessions: a session in an Anthropic-hosted environment doesn't read a device's MDM profile or file, so policy for it has to come from server-managed settings." "Cloud sessions have no per-device managed settings key."
+- "The model for a session: a managed `model` is a default, not a lock."
+
+Agent teams (https://code.claude.com/docs/en/agent-teams, the whole page):
+
+- "Agent teams are experimental and disabled by default." "Agent teams add coordination overhead and use significantly more tokens than a single session."
+- "One team per session: a session has exactly one team, scoped to that session. You can't create additional named teams or share a team across sessions."
+- "Two teammates editing the same file leads to overwrites. Break the work so each teammate owns a different set of files."
+- "A teammate can't approve a permission prompt or supply consent on your behalf".
+
+Headless (https://code.claude.com/docs/en/headless, the whole page):
+
+- "Without `--bare`, a `-p` session runs the hooks in a project's `.claude/settings.json` and connects the servers in its `.mcp.json`, even in a folder you've never trusted."
+- "Unless a background command that the main conversation started is still running, Claude Code stops whatever is still running after 10 minutes of continuous idle waiting by default and drops its partial result."
+- "With `--output-format json`, the response payload includes `total_cost_usd` and a per-model cost breakdown ... Both figures are client-side estimates and can differ from your actual bill."
+
+Environment variables (https://code.claude.com/docs/en/env-vars, the whole page in two windows):
+
+- "`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` | Maximum number of consecutive times a Stop or SubagentStop hook may block the turn from ending before Claude Code overrides it and ends the turn anyway (default: 8). Set to `0` to disable the cap."
+- "`CLAUDE_CODE_SUBAGENT_MODEL` | The default model for subagents, agent team teammates, and workflow agents that aren't assigned a model another way." and "`CLAUDE_CODE_SUBAGENT_MODEL_FORCE` | Set to `1` to force one model onto subagents, teammates, and workflow agents."
+- "`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` ... Use lower values like `50` to compact earlier; the variable can't raise the threshold".
+- "`CLAUDE_CODE_REMOTE` | Set automatically to `true` when Claude Code is running as a cloud session."
+- "`CLAUDE_CODE_RESUME_INTERRUPTED_TURN` | Set to `1` to automatically resume if the previous session ended mid-turn."
+
+Settings reference (https://code.claude.com/docs/en/settings-reference, five windows, three cut short):
+
+- `permissions.defaultMode`: "In cloud sessions, Claude Code honors only `acceptEdits`, `plan`, `default`, and `auto` from this key."
+- `attribution`: "Customize the attribution Claude Code adds to git commits and pull requests. Commits get a git trailer such as `Co-Authored-By` by default; pull request descriptions get plain text." "To hide all attribution, set `attribution` to `false`."
+- `includeGitInstructions`: "Claude Code gives Claude two git-related pieces of context: its built-in instructions for how to write commits and pull requests, in the Bash tool's description, and a git status snapshot of your repository." "Cloud sessions never include the snapshot".
+- `crossSessionInbound`: values "accept: Claude Code delivers the message to Claude", "hold: Claude Code shows a notice for the message without delivering it", "refuse: Claude Code drops the message".
+- `idleCompaction`: "Idle compaction compacts a long conversation that you've stepped away from. Your next message then sends a summary instead of the whole conversation."
+- `env`: "When the Claude Desktop app or a self-hosted environment runner starts the session, the launch environment it builds takes precedence instead: Claude Code ignores an `env` value from any settings file for a variable the launch environment already sets."
+
+What the pages answer for each Design part, from step 51's section 14 [S51]. No passage documents a program above plans, the three ejects, a wall check in writing, one file per finding, a pull before every write or a measure of the owner's messages. The documented mechanisms are: plan mode with `defaultMode` `plan`; deny rules and exit 2 as the deterministic kinds; `.claude/rules/` with `paths`, skills and SubagentStart context for loading by part; managed settings and `/status` for what is in force; cross-session messaging and worktrees for several sessions; PreModelSwitch and PostModelSwitch for a model switch; `opusplan`, `CLAUDE_CODE_SUBAGENT_MODEL` and the `attribution` key for the owner's settings. Branch protection is not a Claude Code setting and no page read mentions it, and the environment's own stop hook is not documented in the pages read.
 
 ## 6. What the model said from memory about practice, checked against the reading
 
@@ -295,7 +446,7 @@ This is the session's list of 10:35 with the corrections made after it [T 10:35,
 
 - Every sibling repository's workflows, settings, hooks, tests and lessons' cited gates (about 122 gate cites), and whether any sibling pins `hub-gates.yml` [S32].
 - The infrared app's own files, `IR-SCIENCE.md`, its decision records and its notes. The knowledge layer for that app is that app's own work [T 07:49, 10:38].
-- Documentation pages not read: the tail of the hooks reference (the rest of the event list, including the end of SessionStart), the tail of the subagents page (from "Resume subagents"), the tail of the permission-modes page, the tail of the model-config page (the default auto-compact thresholds), and the checkpointing, prompt-caching, features-overview, managed-settings, agent-teams, headless, env-vars and settings-reference pages. This record must not be read as saying the maker documents nothing there [S31 Found].
+- The settings reference was cut short by the fetch tool inside three of its five windows (inside the `claudeMdExcludes` entry, a `strictKnownMarketplaces` example and the sub-keys of `strictPluginOnlyCustomization`), so it is read in full only for the entries quoted in section 5b. The other pages named in the earlier version of this bullet were read by step 51 and are in section 5b. This record must not be read as saying the maker documents nothing in the unread entries [S51 Found].
 - The fetch tool's return is a model's account. Passages that arrived through saved files were read with Grep and ranges, and a Grep reads only matching lines, so a nearby caveat may sit outside a quotation [S31 Found].
 - Whether the hub's own hooks count against the Stop hook's cap of eight in a row [S31 Found].
 - Whether the 154 refusal sites are distinct messages; mergeable state and checks of the four Dependabot pull requests; whether they would pass the hub's gates [S32].
@@ -304,3 +455,20 @@ This is the session's list of 10:35 with the corrections made after it [T 10:35,
 - Whether the settings of the environment (the git stop hook, branch protection from a tablet) can be changed by the owner and where [S31; T 10:35].
 - The audit's counts of agents refused at least once and of reviews against steps, which the instrument does not reproduce [S30].
 - The Doctrine gates run for the commit that lands this record: its conclusion is read after the push through the connector's read tools and is in the step's report, not in this file.
+
+## 13. The program item that answers each section
+
+Each section of this record is answered by an item of `PROGRAM.md`, the file that ranks the work.
+
+- Section 1, what the owner wants: P-1 and P-3 (the wall check and the step list carry the requirements), and the thesis at the head of `PROGRAM.md`.
+- Section 2, why each control exists and what it costs: P-8, gates as the last catch, which answers the written reason of each lesson for each gate it removes or narrows, and P-10, the measure.
+- Section 3, what failed with the controls in place: P-2 (the ejects), P-3 (the step as a list), P-4 (conversation as the default) and P-8.
+- Section 4, the drift in the infrared app: P-9 for the hub's half and P-22 for that app's own knowledge layer.
+- Section 5 and section 5b, the tool's documented behaviour: P-17 to P-21 (the harness items), P-11 to P-16 (the parked settings) and P-6 (configuration under management).
+- Section 6, the model's memory checked against the reading: P-5 (the doctrine grouped, by the maker's figure for a short instruction file) and P-9.
+- Section 7, the cost by event: P-10, the measure, with the close entry written at the plan's close.
+- Section 8, the configuration inventory: P-6, and P-31 to P-43 for the dependency updates and the sibling pins.
+- Section 9, the seams, the wall check and the three ejects: P-1, P-2 and P-7 (several sessions, one hub).
+- Section 10, the blind areas of the harness: P-17 to P-21.
+- Section 11, the settings the owner changes, and when: P-11 to P-16.
+- Section 12, what this record could not reach: P-22 to P-30 for the apps' own files, P-17 for the harness, and P-44 to P-170 for the findings.

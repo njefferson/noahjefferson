@@ -1,6 +1,6 @@
 ## 271 · A control that arrives as text in a context window is not a control, and its absence for one turn reads as permission
 
-**Enforced by:** GATE plan-guard:noahjefferson/plan-guard.mjs — a `PreToolUse`
+**Enforced by:** GATE hub:plan-guard.mjs — a `PreToolUse`
 hook refusing every write while `permission_mode` is `plan` or a
 `.claude/PLAN-LOCK` marker exists, deny-by-default, planted red before it was
 trusted. · CHECKLIST end-with-the-tool — a plan-mode turn ends by CALLING

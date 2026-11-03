@@ -1,7 +1,6 @@
 ## 322 · A preview at screen scale hides an export-scale defect, and a statistic on the population you were fixing cannot see what you broke outside it — and a fix that leaves the instrument's reading unchanged has not touched the cause
 
-**Enforced by:** GATE `sky-stage-walk` (Jefferson-Photography-Studio,
-`tools/sky-stage-walk.mjs`) — a smoothing stage is exported twice through the
+**Enforced by:** GATE Jefferson-Photography-Studio:tools/sky-stage-walk.mjs — a smoothing stage is exported twice through the
 real app, on and off, and the per-pixel chroma displacement between the two
 files is bounded OVER THE WHOLE FRAME: max at the stage's own gate, the 99.9th
 percentile at the defect's amplitude, and a floor so a stage that does nothing

@@ -1,6 +1,6 @@
 ## 309 · A sweep measures a list of properties, and a defect that is not on the list is invisible however many surfaces it visits
 
-**Enforced by:** GATE `Jefferson-Photography-Studio:tools/a11y-walk.mjs` — two
+**Enforced by:** GATE Jefferson-Photography-Studio:tools/a11y-walk.mjs — two
 additions, both from this. Its hit-target sweep now enters EVERY panel tab and
 measures inside it, not only the tab the app boots into; and its section 5
 asserts that anything which PAINTS a background or a border and holds its own

@@ -1,7 +1,6 @@
 ## 321 · A detector that acts before the thing it detects becomes the cause, and a planted fault has to fail the way the real one does
 
-**Enforced by:** GATE `picker-walk checks 6–8` (Jefferson-Photography-Studio,
-`tools/picker-walk.mjs`) — one window that never came back followed by one that
+**Enforced by:** GATE Jefferson-Photography-Studio:tools/picker-walk.mjs — its checks 6 to 8: one window that never came back followed by one that
 does must not raise the offer; three dead windows in a row must, and only after
 the third click has been issued; a touch that becomes a scroll counts nothing.
 · CHECKLIST plant-it-the-way-the-platform-leaves-it — before trusting a

@@ -1,6 +1,6 @@
 ## 269 · A find-and-replace cannot tell a gate's own fixture from the prose it is fixing, so the sweep disarms the gate and nothing goes red
 
-**Enforced by:** GATE gates-audit:quietkeep:tools/gate-audit.mjs — every gate is
+**Enforced by:** GATE quietkeep:tools/gate-audit.mjs — every gate is
 run against a deliberately planted defect and must go red, and a plant that
 changes nothing is reported as UNVERIFIED rather than passed. · CHECKLIST
 sweep-touches-fixtures — after any repository-wide replacement, the gates whose

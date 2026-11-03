@@ -47,8 +47,9 @@ node handoff-check.mjs --repo ../x # §10, §26 — the handoff is a deliverable
 
 **A section with no declaration FAILS.** That is deliberate: it makes the
 un-gated lessons countable instead of letting them blend in with the gated ones.
-Right now that is 3 judgement calls and 14 checklist items against 6 gate
-citations — the honest picture, and the list of what to automate next.
+Right now that is 182 judgement calls and 411 checklist items against 290 gate
+citations, across 479 lessons, as `node lessons-check.mjs` prints them on its
+first line — the honest picture, and the list of what to automate next.
 
 **Adding a lesson?** It does not land without a declaration. If you cannot
 gate it, say `CHECKLIST` and give it an id; if you cannot even do that, say
@@ -562,3 +563,4 @@ and the filename carries it.
 - **§468** — [The step that installed the gates landed one step before the fix of a defect known to hold them, and the approved plan stood nine hours forty minutes](lessons/468-the-step-that-installed-the-gates-landed-one-step-before-the-fix-of-a-defect-known-to-hold-them-and-the-approved-plan-stood-nine-hours-forty-minutes.md)
 - **§469** — [The environment's git stop hook forced forty-two turns, and each one re-read the whole context at the main thread's tier](lessons/469-the-environments-git-stop-hook-forced-forty-two-turns-and-each-one-re-read-the-whole-context-at-the-main-threads-tier.md)
 - **§470** — [Calls sent together after a TaskStop of an agent's run were all refused by the status gate, because the agent ended again](lessons/470-calls-sent-together-after-a-taskstop-of-an-agents-run-were-all-refused-by-the-status-gate-because-the-agent-ended-again.md)
+- **§471** — [A record of the owner's intent was written from the session's replies and checked for shape only, and four failures of 1 and 2 November came from the same place](lessons/471-a-record-of-intent-was-written-from-the-sessions-replies-and-checked-for-shape-only.md)
