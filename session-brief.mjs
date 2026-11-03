@@ -35,7 +35,9 @@
 // Beside the family and before the lessons, a bounded page of the asks that are
 // written in full elsewhere and broken anyway, read from a section of the hub
 // CLAUDE.md (section 3b below). It is printed at a startup, a compaction, a resume
-// and a clear alike. The full doctrine read is untouched: this is added beside it.
+// and a clear alike. The never-rules page's read is untouched: this is added beside it.
+// The doctrine's index (DOCTRINE.md, which names the file that holds each section) is
+// printed after the lessons, with section 2's reply shapes read from doctrine/plans.md.
 //
 // ## What it prints after a compaction or a resume (LESSONS §385)
 //
@@ -240,7 +242,7 @@ function ownerCard() {
   while (body.length && !body[body.length - 1]) body.pop();
   if (!body.length) return [`THE OWNER'S CORE ASKS: not printed (the hub CLAUDE.md has no non-empty "## ${CARD_HEADING}" section).`];
   const shown = body.slice(0, CARD_LINES);
-  return [`THE OWNER'S CORE ASKS (one page, from the hub CLAUDE.md; the full doctrine is read as well):`, ...shown,
+  return [`THE OWNER'S CORE ASKS (one page, from the hub CLAUDE.md; the never-rules page of the doctrine is read as well):`, ...shown,
     ...(body.length > shown.length ? [`  … ${body.length - shown.length} more lines in the "${CARD_HEADING}" section of ${file}; a card past ${CARD_LINES} lines is no longer one page.`] : [])];
 }
 for (const l of ownerCard()) say(l);
@@ -261,17 +263,35 @@ say();
  *  available. Returns [] when the hub is not checked out, and the caller says
  *  so rather than printing a confident blank. */
 function doctrineSection(n) {
-  const f = join(hub, 'DOCTRINE.md');
+  // The plan rules page holds section 2 since the doctrine was split into three files; the section ends at the
+  // next heading of its own level (a line opening `## `), not at a heading number a file may no longer hold.
+  const f = join(hub, 'doctrine', 'plans.md');
   if (!existsSync(f)) return [];
   const lines = readFileSync(f, 'utf8').split('\n');
   const at = lines.findIndex((l) => l.startsWith(`## ${n}.`));
   if (at < 0) return [];
   const out = [];
-  for (let i = at + 1; i < lines.length && !lines[i].startsWith(`## ${n + 1}.`); i++) {
+  for (let i = at + 1; i < lines.length && !lines[i].startsWith('## '); i++) {
     const m = lines[i].match(/^- \*\*(.+?)\*\*/);
     if (m) out.push(m[1].replace(/\*/g, ''));
   }
   return out;
+}
+
+/**
+ * The doctrine's index, as DOCTRINE.md carries it.
+ * @returns {string[]} the lines of the hub's DOCTRINE.md from its `## The index`
+ *   heading to its end, blank lines left out: one line for each section with the
+ *   file that holds it, and the closing sentence naming the web domains. [] when
+ *   the file or the heading is not there, and the caller says so.
+ */
+function doctrineIndex() {
+  const f = join(hub, 'DOCTRINE.md');
+  if (!existsSync(f)) return [];
+  const lines = readFileSync(f, 'utf8').split('\n');
+  const at = lines.findIndex((l) => l.startsWith('## The index'));
+  if (at < 0) return [];
+  return lines.slice(at + 1).filter((l) => l.trim());
 }
 
 /**
@@ -343,6 +363,18 @@ if (existsSync(lessonDir)) {
   }
 } else {
   say('LESSONS: the hub is not checked out, so the cross-app record is UNAVAILABLE this session.');
+}
+say();
+
+// THE DOCTRINE'S INDEX, printed so a session knows which file holds a section it is told to read. The doctrine is three
+// files in doctrine/ and DOCTRINE.md is their index: never.md is read at every start, plans.md at the entry to plan mode,
+// and apps.md when a plan's item points at one of its sections (doctrine-read-guard.mjs holds the first two).
+const index = doctrineIndex();
+if (index.length) {
+  say('THE DOCTRINE (index of the three files in doctrine/; never.md is read at every start, plans.md at the entry to plan mode, apps.md when a plan item points at it):');
+  for (const l of index) say(`  ${l}`);
+} else {
+  say('THE DOCTRINE: its index is not reachable this session (no DOCTRINE.md with an index beside this brief).');
 }
 say();
 

@@ -99,7 +99,10 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 // that does not quote that block, so a guard copy without it refuses them all.
 const FILES = ['pending-guard.mjs', 'keep-info-guard.mjs', 'compact-recall.mjs', 'reply-guard.mjs', 'transcript-tail.mjs',
   'plan-guard.mjs', 'hook-dispatch.mjs', 'report.mjs', 'drive-guard.mjs', 'approved-plan-guard.mjs', 'plan-scope-check.mjs', 'stop-guard.mjs',
-  'push-guard.mjs', 'plan-fence.mjs', 'doctrine-read-guard.mjs', 'session-brief.mjs', 'CLAUDE.md', 'agent-rules.md', 'DOCTRINE.md', 'session-guards.test.mjs'];
+  'push-guard.mjs', 'plan-fence.mjs', 'doctrine-read-guard.mjs', 'session-brief.mjs', 'CLAUDE.md', 'agent-rules.md', 'DOCTRINE.md',
+  'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-guards.test.mjs'];
+// Every copy of the guards makes a file's folder before it copies it: the doctrine's three pages sit in doctrine/.
+const copyGuard = (from, to) => { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to); };
 // The shared rules file the guards read beside themselves: its version, and the pointer line a plan writes for the hub
 // copy under test (a pointer may name the hub copy's own file, which is the live clone's in a session).
 const RULES_VERSION = Number(/^Rules version:\s*(\d+)\s*$/m.exec(readFileSync(join(HERE, 'agent-rules.md'), 'utf8'))?.[1]);
@@ -211,6 +214,15 @@ const fileReads = (file, total, ranges, when = (k) => ts(k + 1)) => ranges.flatM
   ];
 });
 
+// The Read results of the plan rules page of a hub copy, whole, as the harness records them: what a session in plan mode holds once it has read
+// the page (`doctrine-read-guard.mjs` holds the main thread to reads at the entry to plan mode until it has). Nothing when the copy has no page.
+const planPageRead = (dir) => {
+  const f = join(dir, 'doctrine', 'plans.md');
+  if (!existsSync(f)) return [];
+  const n = readFileSync(f, 'utf8').split('\n').length;
+  return fileReads(f, n, [[1, n]]);
+};
+
 const ASK = 'Why did the restore skip 069? Answer before anything else.';
 const STOPMSG = 'STOP. Nothing more until I answer.';
 // Ends with a go-word: held work is sent again in the turn that delivers it, and no
@@ -294,7 +306,9 @@ function world(dir, entries = [], planText = STEPS_PLAN) {
   writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan, hash: createHash('sha256').update(planText).digest('hex') }));
   writeFileSync(join(home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now(), status: 'Status' }));
   const cwd = tmp('sg-cwd-');
-  const tr = transcript(entries);
+  // A session under test has read the plan rules page, as a session in plan mode has had to (`planPageRead`); a case about that gate
+  // builds its own transcript and does not come through here.
+  const tr = transcript([...planPageRead(dir), ...entries]);
   const subsDir = join(tr.slice(0, -'.jsonl'.length), 'subagents');
   const call = (event, payload, env = {}) => {
     // The plan fence asks every agent to have read the shared rules first (`rulesFirst`): an agent a case makes a call as,
@@ -1493,7 +1507,7 @@ const CASES = [
     name: 'the manager fence passes a read only of the record (the approved plan and the plans folder, the scratchpad, the hub\'s doctrine, lessons and review file, each repo\'s notes and plan pointers, the session\'s transcript); a read of an app\'s source or tool, by Read, Grep, Glob, Bash or the connector, is refused with the reason to send an agent',
     guards: ['read_fence', 'read_fence_pad', 'read_fence_plans', 'read_fence_plan_file', 'read_fence_doctrine', 'read_fence_transcript', 'read_fence_transcript_name',
       'read_fence_repo_files', 'read_fence_hub_files', 'read_fence_aim_review', 'read_fence_read', 'read_fence_grep', 'read_fence_glob', 'read_fence_bash', 'read_fence_bash_dynamic',
-      'read_fence_bash_pipe', 'read_fence_bash_nofile', 'read_fence_bash_bare', 'read_fence_bash_flag', 'read_fence_connector'],
+      'read_fence_bash_pipe', 'read_fence_bash_nofile', 'read_fence_bash_bare', 'read_fence_bash_flag', 'read_fence_connector', 'read_fence_doctrine_dir', 'read_fence_doctrine_hub'],
     run(m) {
       const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
       const s = sid('rf');
@@ -1523,6 +1537,11 @@ const CASES = [
         && notRead(join(sib.dir, 'app.ts')) && notRead(join(hub.dir, 'app.ts')) && notRead(join(hub.dir, 'hook-dispatch.mjs'));
       const theHubFiles = ['LESSONS.md', 'aim-review.md', 'lessons/385-a-lesson.md', 'plans/a-plan.md'].every((n) => read(join(hub.dir, n))) && passes('Grep', { pattern: 'x', path: join(hub.dir, 'lessons') })
         && notRead(join(sib.dir, 'LESSONS.md')) && notRead(join(sib.dir, 'aim-review.md')) && notRead(join(sib.dir, 'lessons', 'a-lesson.md'));
+      // The doctrine's three pages are of the record, in a hub's working tree and in the live clone; another folder of the hub is not, and no sibling's doctrine folder is.
+      const theDoctrinePages = ['plans.md', 'never.md', 'apps.md'].every((n) => read(join(hub.dir, 'doctrine', n)) && read(join(dot, 'hub', 'doctrine', n)))
+        && passes('Grep', { pattern: 'x', path: join(hub.dir, 'doctrine') }) && read(join(dot, 'hub', 'doctrine'))
+        && notRead(join(hub.dir, 'tools', 'x.mjs')) && notRead(join(dot, 'hub', 'tools', 'x.mjs')) && notRead(join(hub.dir, 'doctrine-notes', 'x.md'))
+        && notRead(join(dot, 'hub', 'doctrine', '..', 'hook-dispatch.mjs')) && notRead(join(sib.dir, 'doctrine', 'plans.md'));
       const theRead = notRead('/etc/hostname') && refused('Read', {});
       const theGrep = refused('Grep', { pattern: 'x' }, mine) && refused('Grep', { pattern: 'x', path: sib.dir }) && passes('Grep', { pattern: 'x', path: join(sib.dir, 'NOTES.md') });
       const theGlob = refused('Glob', { pattern: '**/*.ts', path: sib.dir }) && refused('Glob', { pattern: `${sib.dir}/**/*.ts` })
@@ -1537,7 +1556,7 @@ const CASES = [
       const theBashFlag = notBash(`grep --file=${sib.dir}/app.ts foo ${sib.dir}/NOTES.md`);
       const theConnector = refused('mcp__github__get_file_contents', { owner: 'o', repo: 'r', path: 'src/x.ts' }) && refused('mcp__github__search_code', { q: 'x' })
         && passes('ToolSearch', { query: 'x' }) && passes('WebSearch', { query: 'x' }) && passes('mcp__github__actions_list', { owner: 'o', repo: 'r' });
-      return thePlan && thePad && theDoctrine && theTranscript && theTranscriptName && theRepoFiles && theHubFiles && theRead && theGrep && theGlob
+      return thePlan && thePad && theDoctrine && theDoctrinePages && theTranscript && theTranscriptName && theRepoFiles && theHubFiles && theRead && theGrep && theGlob
         && theBash && theBashDynamic && theBashPipe && theBashNoFile && theBashBare && theBashFlag && theConnector
         // A subagent is not held by it: the plan fence holds an agent's reads.
         && passes('Read', { file_path: join(sib.dir, 'app.ts') }, { agent_id: 'a1' });
@@ -2327,7 +2346,7 @@ const CASES = [
 
   // ---- doctrine-read-guard.mjs ----
   {
-    name: 'while the doctrine is due the main thread may only read; Read results on the hub\'s DOCTRINE.md after the marker covering every line clear it, and no other copy does',
+    name: 'while the never page is due the main thread may only read; Read results on the hub\'s never page after the marker covering every line clear it, and no other copy does',
     guards: ['doctrine_refuse', 'doctrine_cover', 'doctrine_after', 'doctrine_hub'],
     run(m) {
       const hub = tmp('sg-hub-');
@@ -2361,13 +2380,13 @@ const CASES = [
       const stillDue = existsSync(dueFile);
       const full = decide(p('Bash'), [...read('r4', doc, 1, 3, later(5)), ...read('r5', doc, 4, 2, later(6), false)], no);
       // The line printed at SessionStart names the hub's own copy.
-      const named = /^DOCTRINE DUE/.test(line) && !line.includes('\n') && line.includes(m.doctrine.HUB_DOCTRINE);
+      const named = /^DOCTRINE DUE/.test(line) && !line.includes('\n') && line.includes(m.doctrine.NEVER_PAGE) && /doctrine\/never\.md$/.test(m.doctrine.NEVER_PAGE);
       return refusesWrite && readPasses && agentPasses && agentToolRefused && !!partial && !!old && !!wrongFile && stillDue
         && full === null && !existsSync(dueFile) && named;
     },
   },
   {
-    name: 'every SessionStart makes the doctrine due and prints one line naming the hub\'s copy, and hook-dispatch holds the main thread to reads until it is read',
+    name: 'every SessionStart makes the never page due and prints one line naming the hub\'s copy, and hook-dispatch holds the main thread to reads until it is read',
     guards: ['doctrine_due', 'doctrine_wired', 'doctrine_line'],
     run(m, dir) {
       const w = world(dir);
@@ -2377,11 +2396,11 @@ const CASES = [
       const read = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan } });
       const agent = w.call('PreToolUse', { session_id: s, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } });
       const startup = w.call('SessionStart', { session_id: sid('dd'), source: 'startup' });
-      // Exactly one line about the doctrine, and it names the DOCTRINE.md beside
+      // Exactly one line about the doctrine, and it names the never page beside
       // the running gate: the copy under test here, the hub clone in a session.
       const oneLine = (out, how) => {
         const lines = String(out ?? '').split('\n').filter((l) => /DOCTRINE/.test(l));
-        return lines.length === 1 && /^DOCTRINE DUE/.test(lines[0]) && lines[0].includes(join(dir, 'DOCTRINE.md')) && lines[0].includes(how);
+        return lines.length === 1 && /^DOCTRINE DUE/.test(lines[0]) && lines[0].includes(join(dir, 'doctrine', 'never.md')) && lines[0].includes(how);
       };
       return due && read.status === 0 && agent.status === 2 && /DOCTRINE GATE/.test(agent.stderr)
         && compact.status === 0 && oneLine(compact.stdout, 'was compacted') && startup.status === 0 && oneLine(startup.stdout, 'started');
@@ -2521,7 +2540,7 @@ const CASES = [
     },
   },
   {
-    name: 'a resumed session makes the doctrine due in one line saying it was resumed, and hook-dispatch holds the main thread to reads until it is read',
+    name: 'a resumed session makes the never page due in one line saying it was resumed, and hook-dispatch holds the main thread to reads until it is read',
     guards: ['doctrine_resumed_word'],
     run(m, dir) {
       const w = world(dir);
@@ -2529,8 +2548,75 @@ const CASES = [
       const resumed = w.call('SessionStart', { session_id: s, source: 'resume' });
       const lines = String(resumed.stdout ?? '').split('\n').filter((l) => /DOCTRINE/.test(l));
       const agent = w.call('PreToolUse', { session_id: s, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } });
-      return resumed.status === 0 && lines.length === 1 && /^DOCTRINE DUE/.test(lines[0]) && lines[0].includes('was resumed') && lines[0].includes(join(dir, 'DOCTRINE.md'))
+      return resumed.status === 0 && lines.length === 1 && /^DOCTRINE DUE/.test(lines[0]) && lines[0].includes('was resumed') && lines[0].includes(join(dir, 'doctrine', 'never.md'))
         && existsSync(join(process.env.DOCTRINE_DUE_DIR, `${s}.json`)) && agent.status === 2 && /DOCTRINE GATE/.test(agent.stderr);
+    },
+  },
+
+  // ---- doctrine-read-guard.mjs: the plan rules page at the entry to plan mode (Doctrine §11e, Design part 6) ----
+  {
+    name: 'at the entry to plan mode, the plan-mode tool or a call already in plan mode, the main thread may only read until Read results cover every line of the plan rules page: a part of it, a read before the newest compaction and a read before the newest exit the transcript shows hold nothing, an exit the transcript does not show and a refused exit leave it held, a subagent, a read and a mode a caller forced pass, and the start\'s page is asked first',
+    guards: ['plans_refuse', 'plans_tool', 'plans_mode', 'plans_agent', 'plans_forced', 'plans_cover', 'plans_exit', 'plans_exit_error', 'plans_compaction', 'plans_start_first'],
+    run(m) {
+      const hub = tmp('sg-plans-');
+      const page = join(hub, 'plans.md');
+      const never = join(hub, 'never.md');
+      writeFileSync(page, Array.from({ length: 12 }, (_, i) => `rule ${i + 1}`).join('\n') + '\n');
+      writeFileSync(never, Array.from({ length: 12 }, (_, i) => `never ${i + 1}`).join('\n') + '\n');
+      // Twelve lines of text and a final newline are thirteen as the harness records them.
+      const N = 13;
+      const classify = (q) => q.tool_name === 'Read';
+      const s = sid('pl');
+      const call = (extra, entries, session = s) => m.doctrine.decide({ session_id: session, tool_name: 'Bash', tool_input: {}, ...extra }, entries, { classify, plans: page, doctrine: never });
+      const refused = (r) => typeof r === 'string' && /^PLAN RULES GATE/.test(r) && r.includes(page) && r.includes(`every line (lines 1 to ${N})`) && /does not latch/.test(r);
+      const IN = { permission_mode: 'plan' };
+      const TOOL = { tool_name: 'EnterPlanMode' };
+      const read = (k = 1) => fileReads(page, N, [[1, N]], (j) => ts(k + j));
+      const exit = (at, isError) => [tool(at, `ex${at}`, 'ExitPlanMode', {}), result(at, `ex${at}`, isError ? 'The plan was not approved.' : 'The plan was approved.', isError)];
+      // No entry: a Bash call in the default mode is nobody's business here.
+      const noEntry = call({}, []) === null && call({ permission_mode: 'default' }, []) === null;
+      const viaTool = refused(call(TOOL, []));
+      const viaMode = refused(call(IN, []));
+      const readPasses = call({ ...IN, tool_name: 'Read' }, []) === null;
+      const agentPasses = call({ ...IN, agent_id: 'a1' }, []) === null && call({ ...TOOL, agent_id: 'a1' }, []) === null;
+      const forcedPasses = call({ ...IN, plan_mode_forced: true }, []) === null;
+      const partial = refused(call(IN, fileReads(page, N, [[1, 7], [1, 7]])));
+      const whole = call(IN, fileReads(page, N, [[1, 7], [8, 6]])) === null && call(TOOL, read()) === null;
+      // Read, then an exit the transcript shows: the next entry owes the page again, and reading it after the exit clears it.
+      const afterExit = [...read(1), ...exit(10, false)];
+      const owedAgain = refused(call(IN, afterExit)) && refused(call(TOOL, afterExit));
+      const readAfterExit = call(IN, [...afterExit, ...fileReads(page, N, [[1, N]], (j) => ts(20 + j))]) === null;
+      // A refused exit leaves the session in plan mode, so it is no exit; with no exit shown the page stays held.
+      const refusedExit = call(IN, [...read(1), ...exit(10, true)]) === null;
+      const unseenExit = call(IN, read(1)) === null;
+      // A compaction after the read replaced it with a summary.
+      const compacted = refused(call(IN, [...read(1), boundary(10), summary(11)])) && call(IN, [...read(1), boundary(10), summary(11), ...fileReads(page, N, [[1, N]], (j) => ts(20 + j))]) === null;
+      // A page whose lines cannot be counted is due in full.
+      const blind = typeof m.doctrine.decide({ session_id: s, tool_name: 'Bash', tool_input: {}, ...IN }, fileReads(join(hub, 'ABSENT.md'), N, [[1, N]]), { classify, plans: join(hub, 'ABSENT.md'), doctrine: never }) === 'string';
+      // The start's page is asked first: with the never page due, a call in plan mode meets the start's refusal, and with it read, the plan page's.
+      const s2 = sid('pl');
+      m.doctrine.markDue({ session_id: s2, source: 'startup' }, never);
+      const first = call(IN, [], s2);
+      const neverRead = fileReads(never, N, [[1, N]], (j) => later(5 + j));
+      const then = call(IN, neverRead, s2);
+      const startFirst = typeof first === 'string' && /^DOCTRINE GATE/.test(first) && refused(then);
+      return noEntry && viaTool && viaMode && readPasses && agentPasses && forcedPasses && partial && whole && owedAgain && readAfterExit && refusedExit && unseenExit && compacted && blind && startFirst;
+    },
+  },
+  {
+    name: 'through hook-dispatch the plan rules page is asked at the entry to plan mode and its refusal sets no latch: a call in plan mode with the page unread is refused as PLAN RULES GATE and no latch is written, a Read of it passes, and with the page read the gate says nothing',
+    guards: ['plans_refuse', 'plans_dispatch_nolatch'],
+    run(m, dir) {
+      const holding = world(dir);
+      // `world` hands its session the page; a transcript of its own, with nothing read, is the case that is held.
+      const bare = world(dir);
+      writeFileSync(bare.tr, jsonl([turn(0, GO)]));
+      const s = sid('pd');
+      const held = bare.call('PreToolUse', { session_id: s, permission_mode: 'plan', tool_name: 'Write', tool_input: { file_path: bare.plan, content: STEPS_PLAN } });
+      const reads = bare.call('PreToolUse', { session_id: s, permission_mode: 'plan', tool_name: 'Read', tool_input: { file_path: join(dir, 'doctrine', 'plans.md') } });
+      const s2 = sid('pd');
+      const clear = holding.call('PreToolUse', { session_id: s2, permission_mode: 'plan', tool_name: 'Write', tool_input: { file_path: holding.plan, content: STEPS_PLAN } });
+      return held.status === 2 && /PLAN RULES GATE/.test(held.stderr) && !latched(s) && reads.status === 0 && !/PLAN RULES GATE/.test(`${clear.stderr}${clear.stdout}`);
     },
   },
 
@@ -2560,6 +2646,42 @@ const CASES = [
       return titled(startup) && startup.stdout.includes('titles only') && titled(cleared)
         && countOnly(compact, 'was compacted') && countOnly(resume, 'was resumed')
         && countOnly(noMarker, 'is not there') && countOnly(noPayload, 'no SessionStart payload');
+    },
+  },
+
+  // ---- session-brief.mjs: the doctrine's index, and section 2's reply shapes read from the file that holds them ----
+  {
+    name: 'the brief prints the doctrine\'s index from DOCTRINE.md and section 2\'s reply shapes from doctrine/plans.md: the exact nine shapes of the real section, the section ending at the next heading of its own level and not at a number, a line saying so where the file or the index is missing',
+    guards: ['brief_shapes_file', 'brief_shapes_end', 'brief_index'],
+    run(m, dir) {
+      const place = (withFiles) => {
+        const hub = tmp('sg-index-');
+        copyFileSync(join(dir, 'session-brief.mjs'), join(hub, 'session-brief.mjs'));
+        mkdirSync(join(hub, 'lessons'));
+        writeFileSync(join(hub, 'lessons', '001-fixture.md'), '## 001 · The first fixture lesson\n\n**Enforced by:** JUDGEMENT\n');
+        for (const [from, to] of withFiles) { mkdirSync(dirname(join(hub, to)), { recursive: true }); if (typeof from === 'string' && existsSync(from)) copyFileSync(from, join(hub, to)); else writeFileSync(join(hub, to), String(from)); }
+        return hub;
+      };
+      const brief = (hub) => spawnSync('node', [join(hub, 'session-brief.mjs'), '--repo', hub], { input: '', encoding: 'utf8', timeout: 20000 });
+      const shapesOf = (out) => {
+        const lines = out.split('\n');
+        const at = lines.findIndex((l) => l.startsWith('HOW TO WRITE BACK (Doctrine 2)'));
+        const end = lines.findIndex((l, i) => i > at && l.startsWith('  And the traverse'));
+        return at < 0 ? null : lines.slice(at + 1, end).map((l) => l.replace(/^ {2}/, ''));
+      };
+      const NINE = ['The closing reflection.', 'The three-item list when there is one finding.', 'The bolded lead-in on every paragraph.', 'Self-deprecation attached to a finding that stands without it.',
+        '"Worth naming" / "worth having" / "worth recording."', 'The status recap when nothing moved.', 'A manufactured next step, so the reply has an ending.',
+        'NEVER RENDER A TABLE OR ANY GRID LAYOUT IN ANYTHING NOAH READS.', 'A REPORT ENDS IN DECISIONS OR IT ENDS IN NOTHING.'];
+      const real = brief(place([[join(dir, 'DOCTRINE.md'), 'DOCTRINE.md'], [join(dir, 'doctrine', 'plans.md'), 'doctrine/plans.md']]));
+      const exact = real.status === 0 && JSON.stringify(shapesOf(real.stdout)) === JSON.stringify(NINE);
+      const indexed = real.stdout.includes('THE DOCTRINE (index of the three files in doctrine/') && real.stdout.includes('  - 0e: PLAN MODE ONLY, AND TALK DURING THE WORK. (doctrine/plans.md)')
+        && real.stdout.includes('  - 16: Security and the supply chain (doctrine/apps.md)') && real.stdout.includes('github.io in section 15b');
+      // The section ends at the next heading of its level: a sub-heading's bullets are in, the next numbered section's are out, whatever its number.
+      const cut = brief(place([['# index\n\n## The index\n\n- 2: x (doctrine/plans.md)\n', 'DOCTRINE.md'], ['## 2. Audience\n\n- **One.** a\n### Sub\n- **Two.** b\n## 11c. Next\n- **Three.** c\n', 'doctrine/plans.md']]));
+      const ends = cut.status === 0 && JSON.stringify(shapesOf(cut.stdout)) === JSON.stringify(['One.', 'Two.']);
+      const missing = brief(place([]));
+      const said = missing.status === 0 && missing.stdout.includes('HOW TO WRITE BACK: Doctrine 2 is not reachable this session.') && missing.stdout.includes('THE DOCTRINE: its index is not reachable this session');
+      return exact && indexed && ends && said;
     },
   },
 
@@ -3141,7 +3263,8 @@ const CASES = [
         const hourAgo = (Date.now() - 3600000) / 1000;
         utimesSync(w.plan, hourAgo, hourAgo);
         const u = uid();
-        writeFileSync(w.tr, jsonl([turn(0, GO), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, w.plan, u), ...after(w)]));
+        // The page of plan rules is read last: after an exit the next entry to plan mode owes it again (`afterLastExit`), and what these calls judge is the app's exit.
+        writeFileSync(w.tr, jsonl([turn(0, GO), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, w.plan, u), ...after(w), ...planPageRead(dir)]));
         return { ...w, u };
       };
       const enter = (w, s) => w.call('PreToolUse', { session_id: s, tool_name: 'EnterPlanMode', tool_input: {} });
@@ -5336,15 +5459,16 @@ const CASES = [
 
   // ---- the pruning rule: a replacement line names a gate the hub has (lesson 396) ----
   {
-    name: 'a line of the doctrine that says a gate enforces a paragraph whole names a gate file the hub has: a fixture naming a missing gate is found first, and the real doctrine passes',
+    name: 'a line of the doctrine that says a gate enforces a paragraph whole names a gate file the hub has: a fixture naming a missing gate is found first, and the real doctrine, its three files read together, holds at least one such line and passes',
     run() {
       const hubHas = (f) => [join(HERE, f), join(HERE, '.github', 'workflows', f), join(HERE, '.claude', 'hooks', f)].some((x) => existsSync(x));
       const fixture = ['## Fixture', '1. **A rule.** It was pruned.', '   *Enforced whole by:* `no-such-gate.mjs`.', '   *Enforced whole by:* `plan-guard.mjs` and `hook-dispatch.mjs`.', 'A line that only mentions `*Enforced whole by:*` in prose.'].join('\n');
       // The control: the instrument must find the missing gate and only that one before the real doctrine is trusted to pass it.
       const found = wholeGates(fixture);
       const missing = found.filter((f) => !hubHas(f));
-      const real = wholeGates(readFileSync(join(HERE, 'DOCTRINE.md'), 'utf8'));
-      return found.length === 3 && missing.length === 1 && missing[0] === 'no-such-gate.mjs' && real.every(hubHas);
+      // The doctrine is the three files of doctrine/ and DOCTRINE.md is their index: the lines are read from the files that hold them.
+      const real = ['never.md', 'plans.md', 'apps.md'].flatMap((n) => wholeGates(readFileSync(join(HERE, 'doctrine', n), 'utf8')));
+      return found.length === 3 && missing.length === 1 && missing[0] === 'no-such-gate.mjs' && real.length > 0 && real.every(hubHas);
     },
   },
   {
@@ -5635,7 +5759,7 @@ const CASES = [
     guards: ['workflow_marker_read'],
     run(m, dir) {
       const copy = tmp('sg-on-');
-      for (const f of FILES) copyFileSync(join(dir, f), join(copy, f));
+      for (const f of FILES) copyGuard(join(dir, f), join(copy, f));
       const flag = 'export const WORKFLOW_SCRIPTS_ACCEPTED = false;';
       const src = readFileSync(join(copy, 'hook-dispatch.mjs'), 'utf8');
       if (!src.includes(flag)) return false;
@@ -6421,7 +6545,7 @@ const CASES = [
     guards: ['plants_files_flag', 'plants_touched_flag', 'plants_dry'],
     run(m, dir) {
       const copy = repo({}, 'plants-copy');
-      for (const f of FILES) copyFileSync(join(dir, f), join(copy.dir, f));
+      for (const f of FILES) copyGuard(join(dir, f), join(copy.dir, f));
       copy.g('add', '-A'); copy.g('commit', '-q', '-m', 'guards');
       const src = readFileSync(join(dir, 'session-guards.test.mjs'), 'utf8');
       // The needle is built, so that this case's own text does not hold it and the first match is the real map.
@@ -6440,7 +6564,7 @@ const CASES = [
       appendFileSync(join(copy.dir, 'plan-fence.mjs'), '\n// touched\n');
       const touched = said(run(copy.dir, '--touched'));
       const plain = tmp('sg-plain-');
-      for (const f of FILES) copyFileSync(join(dir, f), join(plain, f));
+      for (const f of FILES) copyGuard(join(dir, f), join(plain, f));
       const outside = run(plain, '--touched');
       return Number(one[1]) === countOf('stop-guard.mjs') && Number(one[1]) > 0 && Number(one[2]) === total && one[3].split(', ').every((k) => plants[k]?.[2] === 'stop-guard.mjs')
         && Number(two[1]) === countOf('stop-guard.mjs', 'plan-fence.mjs') && Number(nothing[1]) === 0 && Number(all[1]) === total
@@ -7249,7 +7373,8 @@ const CASES = [
       const shape = (kind) => [...approvedEntries(w.plan), ...workEntries(-650, 'w1'), ...(kind === 'restart' ? restartOf('compaction', w.plan) : [at(turn(0, 'Go.'), later(-200)), planOn(-199, w.plan)])];
       const notesOf = (s) => join(tmpdir(), 'claude-0', '-home-user', s, 'scratchpad', 'status', 'manager.txt');
       const through = (kind) => {
-        writeFileSync(w.tr, jsonl(shape(kind)));
+        // The plan rules page is read after the plan mode began (a read before it is no part of how `restartBegan` judges the start).
+        writeFileSync(w.tr, jsonl([...shape(kind), ...planPageRead(dir)]));
         const s = sid('rs');
         const exit = w.call('PreToolUse', { session_id: s, permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { plan: '# x' } });
         const read = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan } });
@@ -7587,7 +7712,7 @@ const CASES = [
     name: 'step229c: the doctrine states the shapes the plan gate asks for from the doctrine and not from the refusal: rule 2 has a paragraph on the Roadmap section (one bullet to an item, its key, in or out, why) and one on the Shipped check (a line to each item marked in, not shipped with the date or the commit\'s subject), each naming its gate and LESSONS 423 where it has one; rule 4 says the plan check runs green before the talk turn and a talk turn after a red check is a defect of the session; rule 13 carries the rule that a change to the agent rules file lands only when no plan is in force; rule 14 counts the refusals that set no latch and lists as many, each with a name the guards hold, names the five kinds of call a latch passes, and no longer answers a stale rules version by amending the Rules line; the index in CLAUDE.md and the header of agent-rules.md say the same, and the rules file\'s version is raised',
     guards: ['doctrine_roadmap', 'doctrine_shipped', 'doctrine_done_counts', 'doctrine_check_first', 'doctrine_rules_rule', 'doctrine_no_amend', 'doctrine_count', 'doctrine_passes', 'claude_latch_line', 'rules_header'],
     run(m, dir) {
-      const doc = readFileSync(join(dir, 'DOCTRINE.md'), 'utf8');
+      const doc = readFileSync(join(dir, 'doctrine', 'plans.md'), 'utf8');
       const flat = (s) => String(s).replace(/\s+/g, ' ');
       const between = (from, to) => { const a = doc.indexOf(from); const b = a < 0 ? -1 : doc.indexOf(to, a + from.length); return a >= 0 && b > a ? doc.slice(a, b) : ''; };
       const rule2 = flat(between('\n2. **A status when an agent has ended', '\n3. **Reply to every point'));
@@ -8448,7 +8573,9 @@ const PLANTS = {
   read_fence_transcript: ['  if (p.transcript_path && a === resolve(String(p.transcript_path))) return true;\n', '', 'hook-dispatch.mjs'],
   read_fence_transcript_name: ["  if (p.session_id && dirname(dirname(a)) === join(dot, 'projects') && basename(a) === `${p.session_id}.jsonl`) return true;\n", '', 'hook-dispatch.mjs'],
   read_fence_repo_files: ["  if (['CLAUDE.md', 'NOTES.md', '.plan-scope', '.claude/PLAN', '.branch-guard', 'IR-SCIENCE.md', 'docs/decisions'].includes(rel)) return true;\n", '', 'hook-dispatch.mjs'],
-  read_fence_hub_files: ["  return rel === 'DOCTRINE.md' || rel === 'LESSONS.md' || rel === AIM_FILE || rel === RULES_FILE || ['lessons', 'plans'].some(", "  return false && ['lessons', 'plans'].some(", 'hook-dispatch.mjs'],
+  read_fence_hub_files: ["  return rel === 'DOCTRINE.md' || rel === 'LESSONS.md' || rel === AIM_FILE || rel === RULES_FILE || ['doctrine', 'lessons', 'plans'].some(", "  return false && ['doctrine', 'lessons', 'plans'].some(", 'hook-dispatch.mjs'],
+  read_fence_doctrine_dir: ["    if (r === '' || r.split('/')[0] !== '..') return true;\n", '', 'hook-dispatch.mjs'],
+  read_fence_doctrine_hub: ["rel === RULES_FILE || ['doctrine', 'lessons', 'plans'].some(", "rel === RULES_FILE || ['lessons', 'plans'].some(", 'hook-dispatch.mjs'],
   read_fence_aim_review: ['rel === AIM_FILE || ', '', 'hook-dispatch.mjs'],
   read_fence_read: ["    return f && of(f) ? null : (f ? `${f} is not of the record` : 'a Read names no file');", '    return null;', 'hook-dispatch.mjs'],
   read_fence_grep: ['    return of(f || cwd) ? null : `${f || `the working directory ${cwd}`} is not of the record`;', '    return null;', 'hook-dispatch.mjs'],
@@ -9395,14 +9522,28 @@ const PLANTS = {
   shape_talk_latches: ['if (talk) fault(talk, false);', 'if (talk) fault(talk);', 'plan-guard.mjs'],
 
   // Step 229, change 3 and the texts: the doctrine, the index and the rules file say what the code does (LESSONS §435).
-  doctrine_roadmap: ['**A plan accounts for the roadmap, one bullet to an item.**', '**A plan accounts for the roadmap.**', 'DOCTRINE.md'],
-  doctrine_shipped: ['**A plan that marks an item in has read the commit log first.**', '**A plan that marks an item in.**', 'DOCTRINE.md'],
-  doctrine_done_counts: ['   opening DONE counts whatever call of the agent was refused before it, and the\n', '   opening DONE counts for nothing once a call of the agent was refused, and the\n', 'DOCTRINE.md'],
-  doctrine_check_first: ['**The plan is checked whole before the talk turn.**', '**The plan is checked.**', 'DOCTRINE.md'],
-  doctrine_rules_rule: ['**A change to the agent rules file lands only when no plan is in force, as the', '**A change to the agent rules file lands at any time, as the', 'DOCTRINE.md'],
-  doctrine_no_amend: ['    - a send the rules gate refuses, because the plan pins a rules version the file\n', '    - a send the rules gate refuses, answered by amending the Rules line; a rules version the file\n', 'DOCTRINE.md'],
-  doctrine_count: ['    Twenty-one refusals are not ends of a route, and set no latch, because', '    Twenty-two refusals are not ends of a route, and set no latch, because', 'DOCTRINE.md'],
-  doctrine_passes: ['    PreToolUse call on the main thread and in agents is refused except five\n', '    PreToolUse call on the main thread and in agents is refused except three\n', 'DOCTRINE.md'],
+  doctrine_roadmap: ['**A plan accounts for the roadmap, one bullet to an item.**', '**A plan accounts for the roadmap.**', 'doctrine/plans.md'],
+  doctrine_shipped: ['**A plan that marks an item in has read the commit log first.**', '**A plan that marks an item in.**', 'doctrine/plans.md'],
+  doctrine_done_counts: ['   opening DONE counts whatever call of the agent was refused before it, and the\n', '   opening DONE counts for nothing once a call of the agent was refused, and the\n', 'doctrine/plans.md'],
+  doctrine_check_first: ['**The plan is checked whole before the talk turn.**', '**The plan is checked.**', 'doctrine/plans.md'],
+  doctrine_rules_rule: ['**A change to the agent rules file lands only when no plan is in force, as the', '**A change to the agent rules file lands at any time, as the', 'doctrine/plans.md'],
+  doctrine_no_amend: ['    - a send the rules gate refuses, because the plan pins a rules version the file\n', '    - a send the rules gate refuses, answered by amending the Rules line; a rules version the file\n', 'doctrine/plans.md'],
+  doctrine_count: ['    Twenty-one refusals are not ends of a route, and set no latch, because', '    Twenty-two refusals are not ends of a route, and set no latch, because', 'doctrine/plans.md'],
+  doctrine_passes: ['    PreToolUse call on the main thread and in agents is refused except five\n', '    PreToolUse call on the main thread and in agents is refused except three\n', 'doctrine/plans.md'],
+  brief_shapes_file: ["const f = join(hub, 'doctrine', 'plans.md');", "const f = join(hub, 'DOCTRINE.md');", 'session-brief.mjs'],
+  brief_shapes_end: ["i < lines.length && !lines[i].startsWith('## '); i++", 'i < lines.length && !lines[i].startsWith(`## ${n + 1}.`); i++', 'session-brief.mjs'],
+  brief_index: ['const index = doctrineIndex();', 'const index = [];', 'session-brief.mjs'],
+  plans_refuse: ['  return `PLAN RULES GATE', '  return null; // `PLAN RULES GATE', 'doctrine-read-guard.mjs'],
+  plans_tool: ["  return p.tool_name === 'EnterPlanMode' || String(p.permission_mode ?? '') === 'plan';", "  return String(p.permission_mode ?? '') === 'plan';", 'doctrine-read-guard.mjs'],
+  plans_mode: ["  return p.tool_name === 'EnterPlanMode' || String(p.permission_mode ?? '') === 'plan';", "  return p.tool_name === 'EnterPlanMode';", 'doctrine-read-guard.mjs'],
+  plans_agent: ['  if (p.agent_id || !planEntry(p)) return null;', '  if (!planEntry(p)) return null;', 'doctrine-read-guard.mjs'],
+  plans_forced: ['  if (p.plan_mode_forced) return false;\n', '', 'doctrine-read-guard.mjs'],
+  plans_cover: ['  return readInFull(afterLastExit(afterLastCompaction(entries)), 0, plans, n) !== null;', '  return entries.length > 0;', 'doctrine-read-guard.mjs'],
+  plans_exit: ['readInFull(afterLastExit(afterLastCompaction(entries)), 0, plans, n)', 'readInFull(afterLastCompaction(entries), 0, plans, n)', 'doctrine-read-guard.mjs'],
+  plans_exit_error: ['asked.has(b.tool_use_id) && !b.is_error) at = i;', 'asked.has(b.tool_use_id)) at = i;', 'doctrine-read-guard.mjs'],
+  plans_compaction: ['readInFull(afterLastExit(afterLastCompaction(entries)), 0, plans, n)', 'readInFull(afterLastExit(entries), 0, plans, n)', 'doctrine-read-guard.mjs'],
+  plans_start_first: ['  return startGate(p, entries, opts) ?? planGate(p, entries, opts);', '  return planGate(p, entries, opts) ?? startGate(p, entries, opts);', 'doctrine-read-guard.mjs'],
+  plans_dispatch_nolatch: ["      if (o.deny) return refuse(reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));", "      if (o.deny) return refuse(reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')));", 'hook-dispatch.mjs'],
   claude_latch_line: [" clears the main thread's latch, by when it was typed. Twenty-one refusals set no", " clears the main thread's latch, by when it was typed. Ten refusals set no", 'CLAUDE.md'],
   rules_header: ['lands only when no plan is in force, as the last step of the plan that makes it; no plan is moved', 'is amended to the new one after the change has been read; no plan is moved', 'agent-rules.md'],
 
@@ -9614,7 +9755,7 @@ if (process.argv.includes('--plants')) {
     const src = readFileSync(join(HERE, file), 'utf8');
     if (!src.includes(from)) { console.log(`PLANT ${key}: the line to take out is not in ${file} — the plant is stale`); bad++; continue; }
     const dir = mkdtempSync(join(tmpdir(), 'sg-plant-'));
-    for (const f of FILES) copyFileSync(join(HERE, f), join(dir, f));
+    for (const f of FILES) copyGuard(join(HERE, f), join(dir, f));
     writeFileSync(join(dir, file), src.replace(from, to));
     const r = await runAll(dir, key, argValue('case'));
     const caught = r.length > 0 && r.some((x) => !x.ok);

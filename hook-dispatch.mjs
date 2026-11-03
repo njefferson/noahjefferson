@@ -2400,7 +2400,7 @@ const GLOB_CHAR = /[*?[\]{}]/;
 const pathLike = (w) => /^(?:\/|~|\.\.?(?:\/|$))/.test(w) || w.includes('/');
 const absOf = (w, cwd) => resolve(cwd || process.cwd(), /^~(?=\/|$)/.test(w) ? w.replace(/^~/, homedir()) : w);
 const READ_FENCE = 'MANAGER FENCE (Doctrine §0e rule 13): the main thread reads only the record: the approved plan and the plans folder, '
-  + 'the session scratchpad, the hub\'s DOCTRINE.md, LESSONS.md, aim-review.md, agent-rules.md, lessons/ and plans/, each repo\'s CLAUDE.md, NOTES.md, .plan-scope, '
+  + 'the session scratchpad, the hub\'s DOCTRINE.md, doctrine/, LESSONS.md, aim-review.md, agent-rules.md, lessons/ and plans/, each repo\'s CLAUDE.md, NOTES.md, .plan-scope, '
   + '.claude/PLAN and .branch-guard, IR-SCIENCE.md and docs/decisions/*.md, this session\'s transcript and the tool results saved beside it, and the live clone\'s doctrine. ';
 
 /**
@@ -2466,8 +2466,9 @@ function repoRootOf(abs) {
  *   review step follows, which the manager reads to know what it is sending),
  *   agent-rules.md (the rules a plan's Rules line points the agents at, which the
  *   manager reads to know what it holds them to) and
- *   everything under lessons/ and plans/. Everything else, an app's source and
- *   tools above all, is false.
+ *   everything under doctrine/ (the three files of the doctrine, in the working
+ *   tree and in the live clone), lessons/ and plans/. Everything else, an app's
+ *   source and tools above all, is false.
  *   The manager fence refuses a read of anything for which this is false.
  */
 export function recordPath(abs, p, planPath) {
@@ -2478,6 +2479,11 @@ export function recordPath(abs, p, planPath) {
   const plan = planPath?.();
   if (plan && a === resolve(String(plan))) return true;
   if (a === join(dot, 'hub', 'DOCTRINE.md') || a === join(HUB, 'DOCTRINE.md')) return true;
+  // The doctrine's three pages: the folder and every file below it, in this hub and in the live clone, whether or not either is a git root here.
+  for (const base of [join(dot, 'hub', 'doctrine'), join(HUB, 'doctrine')]) {
+    const r = relative(base, a);
+    if (r === '' || r.split('/')[0] !== '..') return true;
+  }
   if (p.transcript_path && a === resolve(String(p.transcript_path))) return true;
   if (p.session_id && dirname(dirname(a)) === join(dot, 'projects') && basename(a) === `${p.session_id}.jsonl`) return true;
   // The session's own saved tool results: <projects>/<project>/<session>/tool-results, the folder and what is below it.
@@ -2492,7 +2498,7 @@ export function recordPath(abs, p, planPath) {
   if (/^docs\/decisions\/[^/]+\.md$/.test(rel)) return true;
   const hub = root === HUB || root === join(dot, 'hub') || (existsSync(join(root, 'DOCTRINE.md')) && existsSync(join(root, 'hook-dispatch.mjs')));
   if (!hub) return false;
-  return rel === 'DOCTRINE.md' || rel === 'LESSONS.md' || rel === AIM_FILE || rel === RULES_FILE || ['lessons', 'plans'].some((d) => rel === d || rel.startsWith(`${d}/`));
+  return rel === 'DOCTRINE.md' || rel === 'LESSONS.md' || rel === AIM_FILE || rel === RULES_FILE || ['doctrine', 'lessons', 'plans'].some((d) => rel === d || rel.startsWith(`${d}/`));
 }
 
 /**
