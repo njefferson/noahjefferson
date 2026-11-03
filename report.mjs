@@ -121,7 +121,7 @@
  * No app notifications, ever (2026-09-28).
  */
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, statSync, openSync, readSync, closeSync } from 'node:fs';
-import { join, dirname, resolve as resolvePath } from 'node:path';
+import { join, dirname, basename, resolve as resolvePath } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -535,7 +535,7 @@ function planFinished(p, planPath) {
   try {
     const s = stepEnds(p);
     // A PLAN EJECTED TO THE PROGRAM IS CLOSED, AND A CLOSED PLAN HOLDS NOTHING AGAINST THE NEXT: the manager's `Eject:` line closes the pointer.
-    const pointer = s ? pointerOf(readFileSync(planPath, 'utf8'), s.ends, managerNotes(scratchpadOf(String(p?.session_id ?? '')))) : null;
+    const pointer = s ? pointerOf(readFileSync(planPath, 'utf8'), s.ends, managerNotes(scratchpadOf(String(p?.session_id ?? ''))), planPath) : null;
     return !!pointer && pointer.next === null;
   } catch { return false; }
 }
@@ -1605,7 +1605,9 @@ export function runningWork(p) {
  * @param {object} p  a Stop or PreToolUse payload: `transcript_path` and
  *   `session_id` say where the session's agents are, as `runningWork` finds them.
  * @returns {{ends: {id: string, step: number|null, how: string, at: number, startAt: number, last: string, path: string}[],
- *   running: string[], runningSteps: Set<number>} | null} `ends`: each agent
+ *   running: string[], runningSteps: Set<number>, runningStarts: {id: string, step: number|null, startAt: number}[]} | null}
+ *   `runningStarts` holds each running agent's step and start time (NaN when unreadable), which the review gate reads to tell a plan's
+ *   first send, and the first send after a trigger, from a later one. `ends`: each agent
  *   `agentEnd` finds ended, in file-name order, with the plan step its prompt
  *   names (`agentStep`; null when the prompt names none) and ONLY those sent under the plan in
  *   force: when an approval marker names a plan, an agent whose prompt names another plan's path
@@ -1631,6 +1633,7 @@ export function stepEnds(p) {
   const ends = [];
   const running = [];
   const runningSteps = new Set();
+  const runningStarts = [];
   // The plan in force: an agent whose prompt names another plan's path ended under that plan, and its DONE is not this plan's.
   const inForce = markerPlanPath();
   const ours = inForce ? new Set([resolvePath(inForce), resolvePath(stepsFilePath(inForce))]) : null;
@@ -1649,10 +1652,10 @@ export function stepEnds(p) {
     if (end && ours && prompt && !ours.has(resolvePath(prompt.plan))) continue;
     const startAt = agentStart(path, head);
     if (end && ours && Number.isFinite(startAt) && startAt < approvedFrom) continue;
-    if (!end) { running.push(`agent ${id}`); if (step !== null) runningSteps.add(step); continue; }
+    if (!end) { running.push(`agent ${id}`); if (step !== null) runningSteps.add(step); runningStarts.push({ id, step, startAt }); continue; }
     ends.push({ id, step, how: end.how, at: end.at, startAt, last: end.last, path, ...(end.word ? { word: end.word, refusedBefore: end.refusedBefore } : {}) });
   }
-  return { ends, running, runningSteps };
+  return { ends, running, runningSteps, runningStarts };
 }
 
 /**
@@ -1855,10 +1858,12 @@ export function missingParts(text, parts) {
  *   because the plan is rewritten from the files the hand-back names and the step is
  *   sent again. `closed` is the other eject, of the plan to the program: when the
  *   manager's notes (`managerNotes`, passed as `notes`) carry an `Eject:` line that
- *   names a program item and a reason, `closed` is `{item, reason}` and `next` is
- *   null, so the plan in force holds no step and the stop guard has none left.
+ *   names a program item and a reason, and, where `planPath` is given, the plan's file name (the
+ *   path's last component), `closed` is `{item, reason}` and `next` is
+ *   null, so the plan in force holds no step and the stop guard has none left. A line that does not
+ *   name the plan is a stale one and closes nothing.
  */
-export function pointerOf(text, ends, notes = null) {
+export function pointerOf(text, ends, notes = null, planPath = null) {
   const o = planOrder(text);
   if (!o) return null;
   const done = new Set();
@@ -1867,7 +1872,11 @@ export function pointerOf(text, ends, notes = null) {
   for (const e of ends ?? []) if (e.how === 'a report' && e.step !== null && (!newest.has(e.step) || e.at >= newest.get(e.step).at)) newest.set(e.step, e);
   const ejected = new Set();
   for (const [step, e] of newest) if (o.order.includes(step) && !done.has(step) && EJECT.test(firstLineOf(e.last))) ejected.add(step);
-  const closed = notes?.eject ? { item: notes.eject.item, reason: notes.eject.reason } : null;
+  // THE EJECT NOTE CLOSES THE POINTER ONLY WHEN IT NAMES THE PLAN IN FORCE BY ITS FILE NAME (Design part 3): the manager's notes outlive a plan,
+  // and an `Eject:` line left from an earlier plan closed the pointer of a later one. A caller that knows the plan's path passes it; the line
+  // has to carry the path's last component, the way the plan's own file is named; with no path given (a unit of the pointer alone) any line closes.
+  const named = notes?.eject && (!planPath || String(notes.eject.line ?? '').includes(basename(String(planPath))));
+  const closed = named ? { item: notes.eject.item, reason: notes.eject.reason } : null;
   const pointer = { order: o.order, standing: o.standing, done, ejected, closed, next: o.order.find((n) => !done.has(n)) ?? null };
   if (closed) pointer.next = null;
   return pointer;
@@ -1888,7 +1897,7 @@ export function pointerFor(p, text) {
   if (!s) return null;
   let notes = null;
   try { notes = managerNotes(scratchpadOf(String(p?.session_id ?? ''))); } catch { notes = null; }
-  return pointerOf(text, s.ends, notes);
+  return pointerOf(text, s.ends, notes, markerPlanPath());
 }
 
 // ---- the review: a fresh agent clears every move before it goes ----
@@ -2207,12 +2216,12 @@ export function judgedBlock(st) {
   const where = st.file || 'status/manager.txt (no scratchpad found)';
   switch (st.kind) {
     case 'not-enforced': return 'Judgement: nothing to judge (no agent has ended for a step of the plan, or the plan has no steps).';
-    case 'not-read': return 'Judgement: not read (the session\'s agents cannot be read), so no step is sent.';
+    case 'not-read': return 'Judgement: not read (the session\'s agents cannot be read), so what has been judged cannot be told.';
     case 'judged': return `Judgement: step ${st.step}'s newest hand-back (ended ${at}) is judged in ${st.file}; the step about to go needs its own "Why <step>: now: … | wrong: … | fails: … | cheapest: …" line there.`;
     case 'why-none':
     case 'why-short':
-    case 'why-incomplete': return `Judgement: OWED. Step ${st.send} is about to go and ${where} holds ${st.whyHave} whole "Why ${st.send}:" line${st.whyHave === 1 ? '' : 's'} of the ${st.whyNeed} it needs (now, wrong, fails, cheapest, each ten characters or more), and no step is sent until it is there.`;
-    default: return `Judgement: OWED. Step ${st.step}'s newest hand-back ended ${at}; ${where} needs a line "Judged ${st.step}: is: <what the hand-back showed> | why: <why it ended as it did> | route: <what that means for the route> | fails: <where the route fails next> | cheapest: <the cheapest route from here that holds the owner's rules>" written after it, each part ten characters or more (${st.have} whole line${st.have === 1 ? '' : 's'} for ${st.ends} end${st.ends === 1 ? '' : 's'}${(st.missing ?? []).length ? `; the newest line held lacks ${st.missing.join(', ')}` : ''}), and no step is sent until it is there.`;
+    case 'why-incomplete': return `Judgement: OWED. Step ${st.send} is about to go and ${where} holds ${st.whyHave} whole "Why ${st.send}:" line${st.whyHave === 1 ? '' : 's'} of the ${st.whyNeed} it needs (now, wrong, fails, cheapest, each ten characters or more). No step is held for it now: the wall line each report opens with answers it.`;
+    default: return `Judgement: OWED. Step ${st.step}'s newest hand-back ended ${at}; ${where} needs a line "Judged ${st.step}: is: <what the hand-back showed> | why: <why it ended as it did> | route: <what that means for the route> | fails: <where the route fails next> | cheapest: <the cheapest route from here that holds the owner's rules>" written after it, each part ten characters or more (${st.have} whole line${st.have === 1 ? '' : 's'} for ${st.ends} end${st.ends === 1 ? '' : 's'}${(st.missing ?? []).length ? `; the newest line held lacks ${st.missing.join(', ')}` : ''}). No step is held for it now: the wall line each report opens with answers it.`;
   }
 }
 
@@ -2301,10 +2310,11 @@ export const MANAGER_FILE = 'status/manager.txt';
  *   plan's estimate in minutes, a whole number above zero, the word min optional). Neither is a
  *   measurement the renderer takes: `stepTimeChips` draws what the manager wrote.
  *   And the plan's eject to the program (Design part 3): `Eject: <program item> <reason>`, such as
- *   `Eject: P-12 the review found the premise false`, where the item is the program's key of the
- *   form P-N and the reason is at least one word (`eject` is `{item, reason}`, the newest line
+ *   `Eject: P-12 after-this-plan.md the review found the premise false`, where the item is the program's key of the
+ *   form P-N and the reason is at least one word (`eject` is `{item, reason, line}`, the newest line
  *   winning, null when none is written or a line names no item or no reason). It closes the pointer
- *   of the plan in force (`pointerOf`): the plan stops unfinished and its item goes back to open.
+ *   of the plan in force (`pointerOf`) only when the line names that plan by its file name, the last component of its path, so a line left from an
+ *   earlier plan closes nothing of a later one: the plan stops unfinished and its item goes back to open.
  *   `Next: ...` with no step number is the unnumbered key above
  *   and `Next 119: ...` is the numbered one; neither reads the other's line.
  *   Also `Found <step>.<n> fixed|stopping|queued: <note>`,
@@ -2347,7 +2357,7 @@ export function managerNotes(pad) {
     else if ((m = /^Done\s+(\d+)\s*:\s*(.*)$/i.exec(l))) out.done.set(Number(m[1]), m[2].trim());
     else if ((m = /^Start\s+(\d+)\s*:\s*(\d{1,2}):(\d{2})\s*$/i.exec(l)) && Number(m[2]) < 24 && Number(m[3]) < 60) out.starts.set(Number(m[1]), Number(m[2]) * 60 + Number(m[3]));
     else if ((m = /^Estimate\s+(\d+)\s*:\s*(\d+)\s*(?:min(?:ute)?s?)?\s*$/i.exec(l)) && Number(m[2]) > 0) out.estimates.set(Number(m[1]), Number(m[2]));
-    else if ((m = /^Eject\s*:?\s*(P-\d+)\b\s*[:,;.-]*\s*(\S.*)$/i.exec(l))) out.eject = { item: m[1].toUpperCase(), reason: m[2].trim() };
+    else if ((m = /^Eject\s*:?\s*(P-\d+)\b\s*[:,;.-]*\s*(\S.*)$/i.exec(l))) out.eject = { item: m[1].toUpperCase(), reason: m[2].trim(), line: l };
     else if ((m = /^Found\s+(\d+)\.(\d+|\*)\s+(fixed|stopping|queued)\s*:?\s*(.*)$/i.exec(l))) out.sorts.set(`${Number(m[1])}.${m[2] === '*' ? '*' : Number(m[2])}`, { how: m[3].toLowerCase(), note: m[4].trim() });
   }
   return out;
@@ -2437,7 +2447,7 @@ export function pointerState(sid, plan = planInForce()) {
   }
   const s = sid ? stepEnds({ session_id: sid }) : null;
   if (!s) return { ...base, why: `no transcript was found for the session${sid ? ` ${sid}` : ' (no CLAUDE_CODE_SESSION_ID in this shell)'}` };
-  const pointer = pointerOf(plan.text, s.ends, base.manager);
+  const pointer = pointerOf(plan.text, s.ends, base.manager, plan.path);
   const steps = [...pointer.order.map((step) => ({ step, standing: false })), ...pointer.standing.filter((n) => !pointer.order.includes(n)).map((step) => ({ step, standing: true }))]
     .map(({ step, standing }) => stepRow(step, standing, pointer.done, s, pad));
   return { ...base, read: true, pointer, steps, found: foundLines(pad, markerApprovalTime()) };

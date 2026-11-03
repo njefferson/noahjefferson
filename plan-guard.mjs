@@ -260,6 +260,31 @@ const SED_READ = new RegExp(String.raw`^(?:${SED_ADDR}(?:,${SED_ADDR})?!?)?\s*(?
   + String.raw`|y(.)(?:\\.|(?!\2).)*\2(?:\\.|(?!\2).)*\2)?$`);
 
 if (tool === 'Bash') {
+  // A BASH LINE THAT IS NOT A READ IS REWRITTEN, NOT A STOP (Q-HUB-124): the refusal of a read-shaped line said to say so in plain text and stop,
+  // which ended a turn over a clock read that only needed rewriting. Here the same refusal names the way on and says it is no stop. A write by any
+  // other tool, and every other refusal of plan mode, still say to stop (`deny` above).
+  // The mark the dispatcher reads as "this refusal sets no latch" (`READ_SHAPE_NO_LATCH` in hook-dispatch.mjs, held equal by a case). It is
+  // spelled here and not imported, because this file runs on every call of plan mode and the dispatcher is large to load for each.
+  const READ_SHAPE_NO_LATCH = 'READ SHAPE, NO LATCH:';
+  // The approval guard asks this file whether a command is a write, in a mode it forces (`plan_mode_forced`), and builds its own refusal from the
+  // answer; it gets the words it has always stripped, so its text does not tell an agent to rewrite a line the guard refused for another reason.
+  const deny = (why) => {
+    if (p.plan_mode_forced) {
+      process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny',
+        permissionDecisionReason: `PLAN MODE. ${why} Say so in plain text and stop (Doctrine §0d). Prose approval does not lift this — the mode does.` } }));
+      process.exit(2);
+    }
+    process.stdout.write(JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason:
+          `PLAN MODE. ${READ_SHAPE_NO_LATCH} ${why} In plan mode a Bash line runs only if every command in it is a reader: rewrite the line with readers (cat, ls, grep, head, tail, wc, a git read), `
+          + 'or use the Read, Grep or Glob tool, and send it again. This is no stop: the turn goes on. Prose approval does not lift this — the mode does.',
+      },
+    }));
+    process.exit(2);
+  };
   const cmd = String(input.command ?? '');
   // A reading for reply-guard, and nothing else: exactly `node <this hub's
   // reply-guard.mjs> --read … --said … --route …`, one plain command, as

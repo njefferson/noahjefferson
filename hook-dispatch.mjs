@@ -84,11 +84,11 @@
  * (approved-plan-guard --app-exit); the family guards (drive, approved-plan,
  * reply, keep-info); push-guard; plan-fence (subagents only);
  * doctrine-read-guard (main thread only); then each repo's hooks. EVERY
- * PreToolUse refusal, family or repo, sets a latch, except the
- * report gate's, pending-guard's, the stop hold's, the correction check's, the
+ * PreToolUse refusal, family or repo, sets a latch, except
+ * pending-guard's, the stop hold's, the correction check's, the
  * recall gate's, the state page gate's, the doctrine gate's (the Read it names is its
  * remedy), the in-app approval check's, the review
- * gate's, the rules gate's, the reads gate's, the judgement gate's, the refusal of the
+ * gate's, the rules gate's, the reads gate's, the refusal of the
  * ExitPlanMode call on a name the plan gate has not seen (`NAMES_NO_LATCH`), its refusal of
  * that call for a plan already approved, when the harness's plan mode began at a compaction or a
  * resume after the approval (`APPROVED_NO_LATCH`, LESSONS §432), its refusal of that call for a
@@ -152,8 +152,8 @@ import { createHash } from 'node:crypto';
 import { recallParts } from './compact-recall.mjs';
 import { tailEntries, isOwnerMessage, textOf } from './transcript-tail.mjs';
 import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
-  planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, judgedState, stepNumbers, stepBody, markCompacted, sessionFiles, JUDGED_PARTS, WHY_PARTS,
-  planAfter, SCOPE_SECTIONS, servingModel, isTopTier, tierWords, restartedPlanMode } from './report.mjs';
+  planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, stepEnds, stepBody, markCompacted, sessionFiles,
+  planAfter, SCOPE_SECTIONS, restartedPlanMode } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
 import { HARNESS_TAG } from './pending-guard.mjs';
@@ -770,6 +770,11 @@ export const APPROVED_NO_LATCH = 'PLAN ALREADY APPROVED, NO LATCH:';
  * sets no latch": a write of the plan file answers it, and a latch only stops the reads and writes that do.
  */
 export const SHAPE_NO_LATCH = 'PLAN SHAPE, NO LATCH:';
+/**
+ * The words plan-guard.mjs's refusal of a Bash line opens with when the line is not a read (Q-HUB-124). `noLatchRepoRefusal` reads them as "this
+ * refusal sets no latch": the way on is to rewrite the line with readers, and a latch refused the rewrite until the owner wrote.
+ */
+export const READ_SHAPE_NO_LATCH = 'READ SHAPE, NO LATCH:';
 // The hook shims of the app's identifier guard, `.claude/hooks/ident-guard.sh` and the script it runs. The guard is a hook of the app
 // and not a hub gate, and is not changed here; only the dispatcher's own decision about its refusal is.
 const IDENT_SHIMS = new Set(['ident-guard.sh', 'ident-guard.mjs']);
@@ -789,10 +794,56 @@ const IDENT_SHIMS = new Set(['ident-guard.sh', 'ident-guard.mjs']);
  *   any hook, latches as before. `main` asks this at each repository hook that denied.
  */
 export function noLatchRepoRefusal(shim, p, reason) {
+  // A BASH LINE PLAN MODE REFUSES AS NOT A READ SETS NO LATCH (Q-HUB-124): the way on is to rewrite the line with readers, which a latch refused.
+  if (String(p?.tool_name ?? '') === 'Bash') return shim === 'plan-guard.sh' && String(reason ?? '').includes(READ_SHAPE_NO_LATCH);
   if (String(p?.tool_name ?? '') !== 'ExitPlanMode') return false;
   if (IDENT_SHIMS.has(shim)) return true;
   if (shim === 'plan-guard.sh' && String(reason ?? '').includes(SHAPE_NO_LATCH)) return true;
   return shim === 'plan-guard.sh' && (String(reason ?? '').includes(NAMES_NO_LATCH) || String(reason ?? '').includes(APPROVED_NO_LATCH));
+}
+
+/**
+ * The words added to the approval guard's refusal of a write of a finished plan's file (Q-HUB-123). They name the route, EnterPlanMode,
+ * and say the refusal sets no latch.
+ */
+export const FINISHED_PLAN_NOTE = 'FINISHED PLAN, NO LATCH: this plan has finished (every step of its Order has a DONE hand-back, or it ejected to the program), so its file is no longer '
+  + 'written outside plan mode. The route is EnterPlanMode: write the next plan there, and this refusal sets no latch, so the next call is judged on its own.';
+
+/**
+ * The mark a first shell-shape refusal of an agent carries (Q-HUB-122). The agent's own transcript holds it in the error result, which is
+ * how a second refusal of the kind is told from the first (`shapeFaultFirst`): the first sets no latch and names the rewritten form, the
+ * second latches as every refusal does.
+ */
+export const SHAPE_FAULT_MARK = 'SHELL SHAPE, NO LATCH:';
+export const SHAPE_FAULT_NOTE = `${SHAPE_FAULT_MARK} this is the first refusal of a shell line's shape, so it sets no latch. Rewrite the line as one command from the step's Commands, with every path written in full, no cd, no variable `
+  + 'assignment in front, no semicolon, no && and no pipe, and any file read with the Read or Grep tool and written with the Edit or Write tool; an agent has no wait tool, so a run that may pass ten minutes goes in the '
+  + 'background and the agent ends its turn. A second refusal of a shell line\'s shape latches this agent.';
+
+/**
+ * Is this plan-fence refusal an agent's FIRST shell-shape refusal?
+ * @param {object} p  the refused PreToolUse payload of a subagent's call.
+ * @param {string} reason  the plan fence's refusal text.
+ * @returns {boolean} true only when the call is the agent's Bash, the refusal is for the line's shape (a cd, pushd or popd; a redirect or a
+ *   process substitution that writes; or a command the fence found neither a reader nor an entry in a line that carries a variable assignment in
+ *   front, a semicolon, `&&`, `||` or a pipe), and the agent's own transcript holds no earlier error result carrying `SHAPE_FAULT_MARK`; false
+ *   for a refusal of any other kind, which latches as before, and for a transcript that cannot be found (a doubt latches).
+ */
+export function shapeFaultFirst(p, reason) {
+  if (!p.agent_id || String(p.tool_name ?? '') !== 'Bash') return false;
+  const why = String(reason ?? '');
+  const line = String(p.tool_input?.command ?? '');
+  const cd = /is a (?:cd|pushd|popd), and a (?:cd|pushd|popd) is refused/.test(why);
+  const write = /A redirect writes |Process substitution runs a command/.test(why);
+  const joined = /is neither a reader nor an entry of the Commands/.test(why) && (/^\s*[A-Za-z_][A-Za-z0-9_]*=\S*\s+\S/.test(line) || /;|&&|\|/.test(line));
+  if (!cd && !write && !joined) return false;
+  const file = agentTranscriptPath(p);
+  if (!file) return false;
+  for (const e of tailEntries(file, 8 * 1024 * 1024)) {
+    const c = e?.message?.content;
+    if (e?.type !== 'user' || !Array.isArray(c)) continue;
+    for (const b of c) if (b?.type === 'tool_result' && b.is_error && JSON.stringify(b.content ?? '').includes(SHAPE_FAULT_MARK)) return false;
+  }
+  return true;
 }
 
 /**
@@ -1112,7 +1163,9 @@ export function dispatchGate(p, plan = approvedPlan(), pointer = undefined) {
   if (type && !BUILTIN_AGENT_TYPES.has(type)) {
     return refusal(`${head} "${type}" is a custom agent type, and a custom type carries instructions of its own. Send one of: ${[...BUILTIN_AGENT_TYPES].join(', ')}.`);
   }
-  if (!plan) return refusal(`${head} No approved plan is in force, so no agent can be sent.`);
+  // WITH NO APPROVED PLAN THE REFUSAL SETS NO LATCH (Q-HUB-123, Design part 5): the way on is a plan written in plan mode and approved at
+  // the button, which a latch only held the reads of; a later message changes nothing the refusal had not already said.
+  if (!plan) return refusal(`${head} No approved plan is in force, so no agent can be sent. Enter plan mode (EnterPlanMode), write the plan and put it to the button; or answer from the files in conversation. ${FENCE_NO_LATCH} this refusal sets no latch, so the next call is judged on its own.`);
   const n = sentStep(p, plan);
   if (n === null) return refusal(`${head} Send exactly: ${plan.path} step <n>, or ${stepsFilePath(plan.path)} step <n>`);
   if (namesStepsFile(p, plan)) {
@@ -1212,9 +1265,68 @@ export function stepsFileProblem(plan, file = stepsFilePath(plan.path)) {
 }
 
 /**
+ * The newest correction the owner has typed.
+ * @param {object[]} entries  transcript entries in file order.
+ * @returns {number} the typed time, in ms, of the newest owner message that does not end with a go-word (`isOwnerMessage`,
+ *   `endsWithGoWord`, `typedAt`), whether or not a later go-word has since lifted its hold; 0 when there is none. A correction that a
+ *   go-word followed still makes the next send a move the review clears, because the hold lifted and the work it touched did not.
+ */
+export function newestCorrectionAt(entries) {
+  let best = 0;
+  (entries ?? []).forEach((e, i) => {
+    if (!isOwnerMessage(e) || endsWithGoWord(textOf(e))) return;
+    const at = Date.parse(e.timestamp ?? '');
+    const typed = typedAt(entries, i);
+    const t = Number.isFinite(typed) ? typed : (Number.isFinite(at) ? at : 0);
+    if (t > best) best = t;
+  });
+  return best;
+}
+
+/**
+ * Does this send need the review?
+ * @param {object} p  a main-thread Agent, Task or SendMessage call (its `transcript_path` and `session_id` say where to read).
+ * @param {{path: string, text: string}} plan  the plan in force.
+ * @param {{ends?: object[], runningStarts?: object[], correctionAt?: number}} [opts]  `stepEnds`' ends and running starts and the newest
+ *   correction's typed time, passed by the test; read from the session when omitted.
+ * @returns {{due: boolean, why: string}} `due` is true for: the plan's first send (no agent has begun for a step of the Order that is
+ *   neither Standing nor the review); the first send after a trigger, which is the newest of an end of such a step that ended with no
+ *   hand-back (a refusal, an interruption or a failure) or with a hand-back opening EJECT, FAILED or REFUSED, and the newest correction the
+ *   owner typed (`newestCorrectionAt`), when no agent for such a step has begun after it; and for a session whose agents cannot be read.
+ *   `why` says which, for the refusal. Every other send is not due, and `reviewGate` lets it on.
+ */
+export function reviewDue(p, plan, opts = {}) {
+  const o = planOrder(plan.text);
+  if (!o) return { due: true, why: 'the plan has no Order to read the sends from' };
+  const reviewers = aimReviewSteps(plan.text);
+  const work = (s) => s !== null && o.order.includes(s) && !o.standing.includes(s) && !reviewers.includes(s);
+  const read = 'ends' in opts ? { ends: opts.ends, runningStarts: opts.runningStarts ?? [] } : stepEnds(p);
+  if (!read?.ends) return { due: true, why: 'the session\'s agents cannot be read, so the send is treated as the first' };
+  const ended = read.ends.filter((e) => work(e.step));
+  const starts = [...ended.map((e) => e.startAt), ...(read.runningStarts ?? []).filter((r) => work(r.step)).map((r) => r.startAt)];
+  if (!starts.length) return { due: true, why: 'it is the first send of the plan' };
+  let trigger = 0;
+  let why = '';
+  for (const e of ended) {
+    const first = String(e.last ?? '').split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+    const bad = e.how !== 'a report' || /^(?:EJECT|FAILED|REFUSED)\b/.test(first);
+    if (bad && e.at > trigger) { trigger = e.at; why = `it is the first send after step ${e.step} ${e.how !== 'a report' ? `ended with no hand-back (${e.how})` : `handed back ${first.split(/\s+/)[0]}`}`; }
+  }
+  let corr = 0;
+  if ('correctionAt' in opts) corr = Number(opts.correctionAt) || 0;
+  else { try { corr = newestCorrectionAt(tailEntries(String(p.transcript_path ?? ''), 8 * 1024 * 1024)); } catch { corr = 0; } }
+  if (corr > trigger) { trigger = corr; why = 'it is the first send after a correction the owner typed'; }
+  if (!trigger) return { due: false, why: '' };
+  return starts.some((s) => s > trigger) ? { due: false, why: '' } : { due: true, why };
+}
+
+/**
  * THE REVIEW GATE (Doctrine §0e rule 2): where a Standing step of the plan
- * follows the hub's aim-review.md, no other step is sent until a fresh agent that
- * wrote neither the plan nor the work has cleared it. The manager chooses the
+ * follows the hub's aim-review.md, a send that needs it (`reviewDue`: the plan's
+ * first, and the first after an eject, a failure, a refusal or a correction) is not
+ * sent until a fresh agent that
+ * wrote neither the plan nor the work has cleared it. Every other send passes this gate.
+ * The manager chooses the
  * next move from the evidence, any step of the plan and not only the pointer's,
  * and the reviewer reads that move against the owner's aim and the guards' own
  * rules before it goes.
@@ -1223,6 +1335,8 @@ export function stepsFileProblem(plan, file = stepsFilePath(plan.path)) {
  * @param {ReturnType<typeof reviewState>|null} [state]  report.mjs `reviewState`'s
  *   answer, passed by the test; read from the session when undefined. null is a
  *   state that could not be read, and refuses.
+ * @param {{due: boolean, why: string}} [due]  `reviewDue`'s answer, passed by the test; read from the session when undefined, and taken
+ *   as due when a `state` is passed without it.
  * @returns {string|null} the refusal, or null. Null for a subagent's call, for a
  *   tool that sends no agent, for a prompt that is not a plan step (the dispatch
  *   gate judges that), for a plan with no review step (not enforced, unless the
@@ -1248,7 +1362,7 @@ export function stepsFileProblem(plan, file = stepsFilePath(plan.path)) {
  *   the remedy is a send, an amendment or entering plan mode, and a latch would
  *   wait on the owner for nothing.
  */
-export function reviewGate(p, plan = approvedPlan(), state = undefined) {
+export function reviewGate(p, plan = approvedPlan(), state = undefined, due = undefined) {
   if (p.agent_id || !/^(?:Agent|Task|SendMessage)$/.test(String(p.tool_name ?? ''))) return null;
   const n = sentStep(p, plan);
   // A REVIEW STEP THAT THE APPROVAL RECORDED AND THE PLAN NO LONGER HAS REFUSES EVERY STEP, A STANDING ONE INCLUDED
@@ -1264,6 +1378,14 @@ export function reviewGate(p, plan = approvedPlan(), state = undefined) {
     const unread = approvalSetProblem(plan, n);
     return unread ? `REVIEW GATE (Doctrine §0e rule 2): ${unread} This refusal does not latch.` : null;
   }
+  // THE REVIEW CLEARS ONLY THE MOVES THAT NEED IT (Design part 9): the plan's first send, the first send after a hand-back that
+  // ejected, failed or was refused (or an agent that ended with no hand-back), and the first send after a correction. Every other
+  // send goes on the wall line each report carries. A state that cannot be read is due, so the gate still fails closed.
+  // A review state passed in (the test's seam) with no `due` is the question of a send that is due: it asks what the review says.
+  let need = due;
+  if (need === undefined && state !== undefined) need = { due: true, why: 'the review state was given' };
+  if (need === undefined) { try { need = reviewDue(p, plan); } catch (e) { need = { due: true, why: `the sends could not be read (${String(e?.message ?? e)})` }; } }
+  if (!need.due) return null;
   let st = state;
   let failure = '';
   if (st === undefined) { try { st = reviewState(p, plan); } catch (e) { st = null; failure = String(e?.message ?? e); } }
@@ -1295,7 +1417,7 @@ export function reviewGate(p, plan = approvedPlan(), state = undefined) {
     'no-next': 'the newest review names no step to send ("next M")',
     error: `the review could not be read (${failure || 'an error'}); the gate refuses rather than stop gating`,
   }[st.kind] ?? `the review is in a state this gate does not know (${st.kind})`;
-  return `${head} ${why}, so step ${n} is not sent. ${send}`;
+  return `${head} ${why}, so step ${n} is not sent. This send needs the review because ${need.why}. ${send}`;
 }
 
 /**
@@ -1569,51 +1691,6 @@ export function rulesGate(p, plan = approvedPlan(), file = undefined) {
   return rulesPinProblem(plan.text, file);
 }
 
-// ---- the top tier names itself before an agent is sent (Doctrine §11b, LESSONS §434) ----
-
-// The same two tests `namesTier` in stop-guard.mjs makes of a first line: it names the tier, and it says whether the work needs it.
-const TIER_NEEDS_WORD = /\bneed(?:s|ed)?\b|\bno more than\b|\brequires?\b/i;
-const tierNamed = (line, model) => (String(line).toLowerCase().includes(String(model).toLowerCase()) || isTopTier(line) || /\btop[- ]tier\b/i.test(line)) && TIER_NEEDS_WORD.test(line);
-
-/**
- * THE TIER GATE: no agent is sent from the top tier until the main thread has said so in words.
- * @param {object} p  a main-thread Agent, Task, SendMessage or Workflow call.
- * @param {{path: string, text: string} | null} [plan]  the plan in force.
- * @param {object[]} [entries]  the main transcript's tail, passed by the test; read from the payload's transcript when undefined.
- * @returns {string|null} null for a subagent's call, for a tool that sends no agent, with no approved plan in force, when the transcript
- *   cannot be read or names no serving model (never read as a lesser tier), and when the serving model is not the top tier. On the top
- *   tier it is null only when a main-thread text written since the model last changed opens a line (its first non-blank line) that
- *   names the tier and says whether the work needs it, the line the stop guard asks for after the send; otherwise the refusal,
- *   which gives the words (`tierWords`). The stop guard can judge a reply only after the turn's calls have run, so the send it
- *   exists to price had already gone (finding 7 of the plan of 1 November). main() calls it with latch false: writing the line clears it.
- */
-export function tierGate(p, plan = approvedPlan(), entries = undefined) {
-  if (p.agent_id || !/^(?:Agent|Task|SendMessage|Workflow)$/.test(String(p.tool_name ?? ''))) return null;
-  if (!plan) return null;
-  let rows = entries;
-  if (!rows) { try { rows = tailEntries(String(p.transcript_path ?? ''), 16 * 1024 * 1024); } catch { return null; } }
-  const serving = servingModel(rows);
-  if (!serving || !isTopTier(serving)) return null;
-  // Where the current run of the serving model began: the first main-thread assistant entry after the newest one of another model.
-  let from = 0;
-  rows.forEach((e, i) => {
-    if (e?.type !== 'assistant' || e.isSidechain || e.agentId) return;
-    const m = e.message?.model;
-    if (typeof m === 'string' && m.trim() && !/^<.*>$/.test(m.trim()) && m.trim() !== serving) from = i + 1;
-  });
-  for (let i = from; i < rows.length; i++) {
-    const e = rows[i];
-    if (e?.type !== 'assistant' || e.isSidechain || e.agentId || !Array.isArray(e.message?.content)) continue;
-    for (const b of e.message.content) {
-      if (b?.type !== 'text') continue;
-      const open = String(b.text ?? '').split('\n').map((l) => l.trim()).find(Boolean) ?? '';
-      if (tierNamed(open, serving)) return null;
-    }
-  }
-  return `TIER GATE (Doctrine §11b, LESSONS §434): the top tier (${serving}) is serving this session under an approved plan, and no text of the main thread since the model changed opens with a line that names the tier and says whether the work needs it, so no agent is sent. `
-    + `Write that line first, then send again. Words to use: "${tierWords(serving)}" Where the work does need the top tier, say that instead, and why. This refusal does not latch: writing the line clears it.`;
-}
-
 // ---- a publish in a plan mode the harness restored says so first (Doctrine §0e rule 2, LESSONS §432) ----
 
 /**
@@ -1705,64 +1782,6 @@ export function readsGate(p, plan = approvedPlan(), open = undefined) {
   return `READS GATE (Doctrine §0e rule 13): ${list.length === 1 ? 'a read' : `${list.length} reads`} of the record the main thread made ${list.length === 1 ? 'was' : 'were'} refused and no Read has returned since, so the main thread has not read what it needs and no step is sent on it:\n`
     + `${named.join('\n')}${list.length > named.length ? `\n… and ${list.length - named.length} more` : ''}\n`
     + 'Read each file now (a Read with an offset and a limit, as often as it takes), then send the step. This refusal does not latch: reading clears it.';
-}
-
-// ---- the manager's written judgement of each hand-back, and its reasons for each send (Doctrine §0e rule 2) ----
-
-/**
- * THE JUDGEMENT GATE (LESSONS §407, §417): no step is sent until the newest hand-back has been
- * judged in writing, in five parts, and the step about to go has its reasons written, in four.
- * @param {object} p  a main-thread Agent, Task or SendMessage call.
- * @param {{path: string, text: string} | null} [plan]  the plan in force.
- * @param {ReturnType<typeof judgedState>|null|undefined} [state]  report.mjs `judgedState`'s
- *   answer, passed by the test; read from the session, with the step being sent, when undefined.
- * @returns {string|null} null for a subagent's call, for a tool that sends no agent, for a
- *   prompt that is not a step of the plan (the dispatch gate judges that), for a Standing
- *   step (the review step is sent between hand-backs and judges them), and for a plan with
- *   no step. The plan's steps are its Order where it has one and its `## Steps` where it has
- *   not (`stepNumbers`), so a plan with no Order is gated too. Otherwise null only when
- *   status/manager.txt in the session scratchpad carries, written after the newest end of an
- *   agent for a step of the plan: a line keyed `Judged N:` (N the step of that newest end,
- *   whatever its first line: a REFUSED or FAILED hand-back is judged too) for every end of
- *   that step, each with the five parts `is`, `why`, `route`, `fails` and `cheapest`
- *   (`JUDGED_PARTS`), each of ten characters or more; and a line keyed `Why M:` (M the step
- *   being sent) for each earlier end of that step and one more for this send, each with the
- *   four parts `now`, `wrong`, `fails` and `cheapest` (`WHY_PARTS`), each of ten characters
- *   or more (`judgedState`), so a line left from an earlier send does not stand for the next
- *   one. Else the refusal, which names the file and the line to write. A state that cannot
- *   be read refuses, as the review gate does: a gate that stops gating in silence is the
- *   defect. main() calls it with latch false: writing the line is the way out, and a latch
- *   would wait on the owner for nothing. It forces each part to be written and cannot judge
- *   that what is written is true.
- */
-export function judgedGate(p, plan = approvedPlan(), state = undefined) {
-  if (p.agent_id || !/^(?:Agent|Task|SendMessage)$/.test(String(p.tool_name ?? ''))) return null;
-  const n = sentStep(p, plan);
-  const sn = plan ? stepNumbers(plan.text) : null;
-  if (n === null || !sn || sn.standing.includes(n)) return null;
-  let st = state;
-  let failure = '';
-  if (st === undefined) { try { st = judgedState(p, plan, { send: n }); } catch (e) { st = null; failure = String(e?.message ?? e); } }
-  const head = 'JUDGEMENT GATE (Doctrine §0e rule 2):';
-  if (!st) return `${head} the manager's judgement could not be read (${failure || 'an error'}); the gate refuses rather than stop gating.`;
-  if (st.kind === 'not-enforced' || st.kind === 'judged') return null;
-  if (st.kind === 'not-read') return `${head} the session's agents cannot be read, so whether the newest hand-back has been judged cannot be told and step ${n} is not sent.`;
-  const where = st.file || 'status/manager.txt in the session scratchpad (no scratchpad was found for this session)';
-  if (/^why-/.test(st.kind)) {
-    const have = st.whyHave ?? 0, need = st.whyNeed ?? 1;
-    const found = st.kind === 'why-incomplete' ? `its newest line lacks ${(st.whyMissing ?? []).join(', ') || 'a part'} or carries a part under ten characters` : `the file holds ${have} whole line${have === 1 ? '' : 's'}`;
-    return `${head} step ${n} is about to go and ${where} holds ${have} whole line${have === 1 ? '' : 's'} keyed "Why ${n}:" of the ${need} it needs, one for each earlier end of that step and one for this send (${found}). `
-      + `Write one line: "Why ${n}: ${WHY_PARTS[0]}: <why it goes now> | ${WHY_PARTS[1]}: <what would make it wrong> | ${WHY_PARTS[2]}: <where it fails next> | ${WHY_PARTS[3]}: <why this is the cheapest route>", each part ten characters or more. `
-      + 'This refusal does not latch: writing the line clears it.';
-  }
-  const found = st.kind === 'no-pad' ? 'no notes file could be read'
-    : st.kind === 'none' ? 'the file holds no such line'
-      : st.kind === 'short' ? `the file holds ${st.have} such line${st.have === 1 ? '' : 's'} for ${st.ends} ends of that step, so the newest end has none of its own`
-        : st.kind === 'incomplete' ? `the file holds ${st.partial ?? 0} line${st.partial === 1 ? '' : 's'} for that step that lack ${(st.missing ?? []).join(', ') || 'a part'} or carry a part under ten characters`
-          : `its last write (${st.notesAt ? californiaTime(new Date(st.notesAt)) : 'never'}) is not after that end`;
-  return `${head} the newest hand-back of a step of the plan is step ${st.step}'s, ended ${californiaTime(new Date(st.endAt))} (California), and ${where} has no line keyed "Judged ${st.step}:" with all five parts written after it (${found}). `
-    + `Read the hand-back and write one line: "Judged ${st.step}: ${JUDGED_PARTS[0]}: <what it showed, read from the transcript and the report> | ${JUDGED_PARTS[1]}: <why it ended as it did> | ${JUDGED_PARTS[2]}: <what that means for the route> | ${JUDGED_PARTS[3]}: <where the route fails next> | ${JUDGED_PARTS[4]}: <the cheapest route from here that holds the owner's rules>", each part ten characters or more. `
-    + `Step ${n} is not sent until it is there, and not until a "Why ${n}:" line of four parts is there too. This refusal does not latch: writing the line clears it.`;
 }
 
 // ---- the finding queue: findings recorded for the next plan (Doctrine §0e rule 2) ----
@@ -3018,11 +3037,21 @@ export function canCall(p, opts = {}) {
   const cmd = String(p.tool_input?.command ?? '');
   const free = tool === 'Bash' && (REPORT.test(cmd) || CAN.test(cmd) || isPlanCheck(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path));
   const passesLatch = free || tool === 'TaskStop' || (tool === 'Bash' && !!releaseCommand(cmd));
-  const fence = free ? null : managerFence(p, opts);
+  // THE SKIP OUTSIDE A PLAN IS APPLIED AS THE DISPATCHER APPLIES IT (`main`): in conversation only a send is asked of the fence, and after a
+  // plan has finished the main thread's repository writes are refused (`finishedFence`) and the rest passes. A call made by an agent is
+  // always judged as under a plan.
+  // The state is read from disk as `main` reads it; `opts.phase` ('in force', 'finished' or 'conversation') names it for the test, and a test that
+  // gives the plan (`opts.plan`) without a state asks for the fence as it was, under a plan, so the cases about the fence are not about the state.
+  let phase = { kind: 'in force', planMode: p.permission_mode === 'plan', plan: null };
+  if (opts.phase) phase = { kind: opts.phase, planMode: p.permission_mode === 'plan', plan: null };
+  else if (!p.agent_id && !('plan' in opts)) { try { phase = planPhase(p); } catch { /* read as under a plan */ } }
+  const skipped = phase.kind !== 'in force' && !phase.planMode;
+  const send = /^(?:Agent|Task|SendMessage|Workflow)$/.test(tool);
+  const fence = free ? null : (!skipped || send) ? managerFence(p, opts) : phase.kind === 'finished' ? finishedFence(p, opts) : null;
   const latchKnown = !!p.session_id;
   let latch = null;
   if (latchKnown) { try { latch = latchStanding(p, opts.entries, true); } catch { latch = null; } }
-  return { free, fence, noLatch: !!fence && fence.includes(FENCE_NO_LATCH), latch, latchKnown, passesLatch, passes: !fence && (passesLatch || !latch) };
+  return { free, fence, noLatch: !!fence && fence.includes(FENCE_NO_LATCH), latch, latchKnown, passesLatch, phase: phase.kind, skipped, passes: !fence && (passesLatch || !latch) };
 }
 
 /**
@@ -3037,6 +3066,9 @@ export function canCall(p, opts = {}) {
 export function canText(p, r, shown = '') {
   const lines = [`CHECK ONLY, NOTHING WAS RUN OR CHANGED: ${p.tool_name} ${shown}, as the main thread of ${p.session_id ? `session ${p.session_id}` : 'an unknown session'} would make it now.`];
   if (r.free) lines.push('MANAGER FENCE: not asked. The status command, this check and the plan check (plan-guard.mjs --check of a file of the record) pass every gate of the main thread before the fence, the latch included.');
+  else if (r.skipped) lines.push(r.phase === 'finished'
+    ? `MANAGER FENCE: the plan has finished, so the dispatcher skips the fence for this call except a repository write, which stays refused. ${r.fence === null ? 'This call would pass.' : `This call would be refused. ${r.fence}`}`
+    : `MANAGER FENCE: no plan is in force (conversation), so the dispatcher asks the fence of a send only and skips it for this call, which would pass. ${r.fence === null ? '' : `Sent as an agent or a workflow it would be refused: ${r.fence}`}`.trim());
   else lines.push(r.fence === null ? 'MANAGER FENCE: would pass.' : `MANAGER FENCE: would refuse. ${r.fence}`);
   if (!r.latchKnown) lines.push('LATCH: not read, because this shell holds no CLAUDE_CODE_SESSION_ID; the session is unknown, so the latch is not judged and a path in the session scratchpad cannot be told from one outside it.');
   else if (!r.latch) lines.push('LATCH: none stands.');
@@ -3050,7 +3082,7 @@ export function canText(p, r, shown = '') {
     if (r.fence) by.push(`the manager fence, whose refusal ${r.noLatch ? 'sets no latch' : 'latches the main thread until the owner writes again'}`);
     lines.push(`RESULT: this call would be refused by ${by.join(' and ')}.`);
   }
-  lines.push('NOT JUDGED HERE: the stop and correction holds, the recall and page gates, the report gate, the review, rules, reads and judgement gates that hold a step, plan mode, and the family guards (reply, keep-info, push, doctrine-read); a call this check passes can still be refused by one of them.');
+  lines.push('NOT JUDGED HERE: the stop and correction holds, the recall and page gates, the review, rules and reads gates that hold a step, plan mode, and the family guards (reply, keep-info, push, doctrine-read); a call this check passes can still be refused by one of them.');
   return lines.join('\n');
 }
 
@@ -3323,10 +3355,13 @@ async function main(event, raw, p) {
   // fence's refusal of a call that is not of the record (`FENCE_NO_LATCH`); the
   // latch's own, so it can never move the time an owner message has to come
   // after; pending-guard's; the stop hold's; the correction check's; the recall
-  // gate's; the state page gate's; the report gate's; the review gate's (a move with no current
-  // review, a refused route, an OFF-AIM verdict); the rules gate's; the reads gate's; the
-  // judgement gate's; the plan fence's first refusal of an agent that has not read the rules;
-  // and the in-app approval check's, and the tier gate's and the restored plan mode gate's (LESSONS §459, §460). Doctrine §0e rule 14 lists them all, twenty-one, and a case holds
+  // gate's; the state page gate's; the review gate's (a move with no current
+  // review, a refused route, an OFF-AIM verdict); the rules gate's; the reads gate's;
+  // the plan fence's first refusal of an agent that has not read the rules and its first refusal for the shape of a shell
+  // line (`shapeFaultFirst`); the approval guard's refusal of a write of a finished plan's file; the dispatch gate's refusal
+  // with no approved plan; the plan guard's refusal of a Bash line that is not a read (`READ_SHAPE_NO_LATCH`);
+  // and the in-app approval check's, and the restored plan mode gate's (LESSONS §460). The status, judgement and tier gates are gone
+  // (step 58). Doctrine §0e rule 14 lists them all, twenty-one, and a case holds
   // its count to the list. A Stop event and the other events never latch.
   const refuse = (why, latch = true) => {
     process.stderr.write(why + '\n');
@@ -3412,7 +3447,7 @@ async function main(event, raw, p) {
     // once it had been delivered. A failure in finding the hold lets the call on.
     // CONVERSATION IS THE DEFAULT (Doctrine §0e rule 4, Design part 5). While no approval marker is in force whose plan's pointer is
     // not none and the harness is not in plan mode (`planPhase`), the manager fence (but for a send), the correction hold, the stop
-    // hold, the status gate, the reads gate, the page gate, the recall gate and the judgement gate do not run: a message is answered
+    // hold, the reads gate, the page gate and the recall gate do not run: a message is answered
     // from the files, and the never-rules alone bind. approved-plan-guard, push-guard, drive-guard, keep-info-guard and pending-guard
     // run as ever, so no repository write is made outside a plan, only staging and main reach a remote, and nothing personal lands
     // in a repository. The skip is here and not inside the exported fence or dispatch functions, and it never skips the send branch:
@@ -3427,8 +3462,7 @@ async function main(event, raw, p) {
     if (!skip) { try { holds = ownerHolds(p); } catch { holds = { correction: null, stop: null }; } }
     // UNDER A PLAN THE STOP WORD HOLDS AGENTS, SENDS AND REPOSITORY WRITES, and passes a read of the record, the status, the plan
     // file and the manager's notes; in plan mode it passes the plan file's write and the plan check (Q-HUB-82). A stop message is
-    // also a correction (it ends with no go-word), so the correction hold below still stands over the plan file's and the notes'
-    // writes outside plan mode; only in plan mode does it pass the plan file.
+    // also a correction (it ends with no go-word), and the correction hold below passes the same two writes (`stopWritePass`).
     if (holds.stop && p.tool_name !== 'TaskStop') {
       let record = false;
       try { record = !p.agent_id && (readOfRecord(p) || stopWritePass(p, phase.planMode)); } catch { record = false; }
@@ -3453,9 +3487,11 @@ async function main(event, raw, p) {
     if (!p.agent_id && !mainStop) {
       let correction = holds.correction;
       try { if (correction && readOfRecord(p)) correction = null; } catch { /* a read that cannot be judged stays held */ }
-      // IN PLAN MODE THE CORRECTION DOES NOT HOLD THE PLAN FILE'S WRITE (Q-HUB-82): the message that orders the plan is a correction
-      // until a go-word, and held the very write it ordered. The plan check passes before this point, as the status command does.
-      try { if (correction && phase.planMode && planFileWrite(p)) correction = null; } catch { /* a write that cannot be judged stays held */ }
+      // THE CORRECTION DOES NOT HOLD THE PLAN FILE'S WRITE OR THE MANAGER'S NOTES, as the stop hold does not (Q-HUB-82, Q-HUB-122): the message that
+      // orders the plan is a correction until a go-word, and held the very write it ordered; and the notes are what answers the correction.
+      // `stopWritePass` passes the plan file in either state and the manager's notes under an approved plan outside plan mode; a repository
+      // write is neither and stays held. The plan check passes before this point, as the status command does.
+      try { if (correction && stopWritePass(p, phase.planMode)) correction = null; } catch { /* a write that cannot be judged stays held */ }
       try { if (correction && correctionLifts(p, correction)) correction = null; } catch { /* a send that cannot be judged stays held */ }
       if (correction) {
         let reviewed = false;
@@ -3502,18 +3538,12 @@ async function main(event, raw, p) {
     const send = /^(?:Agent|Task|SendMessage|Workflow)$/.test(String(p.tool_name ?? ''));
     const fence = !skip || send ? managerFence(p) : phase.kind === 'finished' ? finishedFence(p) : null;
     if (fence) return refuse(fence, !fence.includes(FENCE_NO_LATCH));
-    // A STATUS FALLING DUE NEVER STOPS THE WORK. The report gate's refusal does
-    // not latch: giving the status stamps the clock, and the refused call may
-    // then run. Latched, the session stopped on it (measured 17:54).
-    // In conversation no status falls due: it is asked for only while a plan's agents run.
-    const rg = skip ? { deny: false, status: 0, reason: '', err: '', error: '' } : run(`node "${join(HUB, 'report.mjs')}" --gate`, raw, root);
-    if (rg.deny) return refuse(rg.reason, false);
-    if (rg.status !== 0 && !READS.has(p.tool_name ?? '')) {
-      return refuse(`report.mjs did not run cleanly (${rg.error ?? `exit ${rg.status}`}${rg.err ? `: ${rg.err.trim().split('\n')[0]}` : ''}); only reads run until it is fixed.`);
-    }
-    // EVERY MOVE IS CLEARED BY A FRESH REVIEW BEFORE IT GOES (Doctrine §0e rule
-    // 2). After the dispatch gate (inside managerFence above) has passed a step,
-    // this refuses it unless a review that began after everything it judges has
+    // THE STATUS GATE IS GONE (Design part 9): a status falling due refuses nothing. The status print (`report.mjs`), the reminder at each
+    // owner message and the status page rewritten at each hand-back stay, and what they say is read by the owner and not enforced.
+    // THE MOVES THAT NEED IT ARE CLEARED BY A FRESH REVIEW BEFORE THEY GO (Doctrine §0e rule
+    // 2, Design part 9): the plan's first send and the first after an eject, a failure, a refusal or a correction
+    // (`reviewDue`); the wall line of each report covers the rest. After the dispatch gate (inside managerFence above) has passed
+    // a step, this refuses such a send unless a review that began after everything it judges has
     // cleared that step. It is its own call, outside managerFence, because every
     // refusal that comes back through the manager fence latches, and none of
     // these may: sending the review step clears a missing or stale review, an
@@ -3534,11 +3564,7 @@ async function main(event, raw, p) {
         rl = `RULES GATE (Doctrine §0e rule 13): the rules file could not be read (${e?.message ?? e}); the gate refuses rather than stop gating.`;
       }
       if (rl) return refuse(rl, false);
-      // THE TOP TIER NAMES ITSELF BEFORE IT SENDS (Doctrine §11b, LESSONS §434): the stop guard asks for the tier line after the
-      // turn's calls have run, so the send had already gone. Its own call and not latched: writing the line clears it.
-      let tg = null;
-      try { tg = tierGate(p); } catch { tg = null; }
-      if (tg) return refuse(tg, false);
+      // THE TIER GATE IS GONE (Design part 9): the plan's Cost section names the tier of each step, and the stop guard's tier line stays.
       // A REFUSED READ OF THE RECORD IS READ BEFORE A STEP GOES (Doctrine §0e rule 13):
       // while a read of the record the main thread made was refused and no Read has
       // returned on it since, no step is sent. Its own call and not latched: reading
@@ -3551,17 +3577,7 @@ async function main(event, raw, p) {
         }
       }
       if (rr) return refuse(rr, false);
-      // THE NEWEST HAND-BACK IS JUDGED IN WRITING BEFORE THE NEXT STEP GOES (Doctrine
-      // §0e rule 2): status/manager.txt carries a line keyed "Judged N:" for the newest
-      // end of an agent for a step in Order, written after that end. A Standing step
-      // passes. Its own call and not latched: writing the line is the way out.
-      let jg = null;
-      if (!skip) {
-        try { jg = judgedGate(p); } catch (e) {
-          jg = `JUDGEMENT GATE (Doctrine §0e rule 2): the judgement could not be read (${e?.message ?? e}); the gate refuses rather than stop gating.`;
-        }
-      }
-      if (jg) return refuse(jg, false);
+      // THE JUDGEMENT GATE IS GONE (Design part 9): the wall line every report opens with answers it, and the review clears the moves that need it.
     }
     // AN APPROVAL PRESSED IN THE APP COUNTS. When the owner's own exit from
     // plan mode in the app has been recorded as the approval of the plan, plan
@@ -3589,6 +3605,19 @@ async function main(event, raw, p) {
       if (o.deny && g.includes('reply-guard.mjs')) {
         const record = replyReadOfRecord(p);
         return refuse(reason + (record ? REPLY_READ_NOTE : REPLY_LATCH_NOTE), !record);
+      }
+      // THE APPROVAL GUARD'S REFUSAL OF A WRITE OF A FINISHED PLAN'S FILE SETS NO LATCH (Q-HUB-123): every step of that plan has a DONE
+      // hand-back or it ejected, so the way on is EnterPlanMode and a new plan, which the next plan's talk turn does and a latch only held.
+      if (o.deny && g.includes('approved-plan-guard.mjs') && phase.kind === 'finished' && !p.agent_id) {
+        let planWrite = false;
+        try { planWrite = planFileWrite(p); } catch { planWrite = false; }
+        if (planWrite) return refuse(`${reason} ${FINISHED_PLAN_NOTE}`, false);
+      }
+      // A FIRST SHELL-SHAPE REFUSAL OF AN AGENT SETS NO LATCH (Q-HUB-122): the refusal names the rewritten form, and a second one latches.
+      if (o.deny && g.includes('plan-fence.mjs') && p.agent_id) {
+        let shape = false;
+        try { shape = shapeFaultFirst(p, o.reason); } catch { shape = false; }
+        if (shape) return refuse(`${o.reason} ${SHAPE_FAULT_NOTE}`, false);
       }
       if (o.deny) return refuse(reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));
       // A family guard that crashed or timed out has not said yes. The header's

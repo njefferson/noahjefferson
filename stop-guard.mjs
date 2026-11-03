@@ -918,7 +918,7 @@ function stepsLeft(state) {
 
 /**
  * The pointer of the plan in force, with the manager's notes read.
- * @param {{text: string}} plan  the plan in force, with an Order.
+ * @param {{text: string, path?: string}} plan  the plan in force, with an Order; its path names the plan an `Eject:` line has to name.
  * @param {{ends: object[]}} state  `stepsReturned`'s answer.
  * @returns {ReturnType<typeof pointerOf>} `pointerOf` over the session's agents and the notes in its scratchpad, so an `Eject:` line
  *   there closes the pointer and a hand-back opening EJECT is in `ejected`. Every doubt about the notes reads as no notes.
@@ -926,7 +926,7 @@ function stepsLeft(state) {
 function pointerNow(plan, state) {
   let notes = null;
   try { notes = managerNotes(scratchpadOf(String(hook.session_id ?? ''))); } catch { notes = null; }
-  return pointerOf(plan.text, state.ends, notes);
+  return pointerOf(plan.text, state.ends, notes, plan.path);
 }
 
 /** Does the approved plan in force define a pointer (an `Order:` line)? */

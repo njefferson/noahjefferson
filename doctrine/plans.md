@@ -443,7 +443,6 @@ every rule below while none of the hooks that enforce them was running
     only add a wait for the owner to a miss that changed nothing. The list is read
     from the code (`main` in `hook-dispatch.mjs`), each item with the name that
     sets it, and a case holds its count to the list:
-    - a status falling due, cleared by giving it (rule 2, `report.mjs`);
     - a call held while a message from the owner waits, sent again once that
       message is delivered (`pending-guard.mjs`, LESSONS §376);
     - a stop from the owner standing, lifted by the owner's next message, a
@@ -463,20 +462,27 @@ every rule below while none of the hooks that enforce them was running
       any send while no Standing step names the review file by its full path any
       more, each answered by a new plan through plan mode and the owner's button
       (`FENCE_NO_LATCH`, `approvalSetProblem`, `reviewRecordProblem`, rule 13);
-    - a move the review gate refuses, answered by sending the review step, by
-      amending the plan's Steps or Order, or by entering plan mode (`reviewGate`,
-      rule 2);
+      with it the dispatch gate's refusal of a send while no approved plan is in
+      force, answered by entering plan mode (`dispatchGate`, Q-HUB-123);
+    - a move the review gate refuses (the plan's first send and the first after an
+      eject, a failure, a refusal or a correction), answered by sending the review
+      step, by amending the plan's Steps or Order, or by entering plan mode
+      (`reviewGate`, `reviewDue`, rule 2);
     - a send the rules gate refuses, because the plan pins a rules version the file
       has moved past, answered by a new plan through plan mode with the current
       version pinned and the owner's button (`rulesGate`, rule 13);
     - a send the reads gate refuses, answered by reading the refused file
       (`readsGate`, rule 13);
-    - a send the judgement gate refuses, answered by writing the `Judged` and `Why`
-      lines (`judgedGate`, rule 2);
-    - a send the tier gate refuses, because the top tier serves the main thread
-      under an approved plan and no text of the main thread since the model
-      changed names the tier and says whether the work needs it, answered by
-      writing that line (`tierGate`, §11b, LESSONS §459);
+    - the approval guard's refusal of a write of a finished plan's file, answered by
+      entering plan mode and writing the next plan there (`FINISHED_PLAN_NOTE`,
+      `planPhase`, rule 4, Q-HUB-123);
+    - an agent's first refusal for the shape of a shell line (a `cd`, commands
+      joined, a variable assignment in front, a write by redirect), answered by
+      rewriting the line as the refusal says; the second such refusal latches
+      the agent (`shapeFaultFirst`, `SHAPE_FAULT_MARK`, Q-HUB-122);
+    - the plan guard's refusal of a Bash line in plan mode that is not a read,
+      answered by rewriting it with readers or the Read and Grep tools, and no
+      stop (`READ_SHAPE_NO_LATCH`, Q-HUB-124);
     - an Artifact publish the restored plan mode gate refuses, because the
       harness's plan mode began at a resume or a compaction after the approval
       and nothing has said so, answered by saying so in a reply
