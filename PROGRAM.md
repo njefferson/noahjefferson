@@ -54,7 +54,7 @@ The list is the rank. The items the redesign plan builds come first, then the pa
 
 ## Items
 
-268 items: 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 224 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
+277 items (P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, filed by step 63 of the plan of 3 November): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 224 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
 
 ## Items the redesign plan builds
 
@@ -62,7 +62,9 @@ These ten are Design parts 2 to 11 of the redesign plan, in its order. P-1 is pa
 
 ### P-1. The wall check as a written line
 
-Repository: hub. Goal: 1. State: running. Plan: the redesign plan.
+Repository: hub. Goal: 1. State: done. Plan: the redesign plan.
+
+Done: step 55 wrote the wall line into the draft of the agent rules at version 5 and into the review file, and step 61 landed version 5; no gate reads the wall line (Q-HUB-176 to Q-HUB-227 hold the findings).
 
 Acceptance: a step's report opens, after its verdict word, with one line answering whether the step still serves the plan's goal, whether that goal still serves the owner's asks, and whether what was seen moved either, and the review's hand-back carries its own such line. Observed in the first plan run under the new rules, and by a case that fails a report without the line.
 
@@ -70,7 +72,9 @@ Depends: P-3, because the step shape carries the line. The agent rules change la
 
 ### P-2. The three ejects as recorded moves
 
-Repository: hub. Goal: 5. State: running. Plan: the redesign plan.
+Repository: hub. Goal: 5. State: done. Plan: the redesign plan.
+
+Done: step 55 made EJECT a hand-back word, a state of its own in the pointer, the status and the page, and a manager note that names an item of this file closes the pointer, with the stop guard accepting the declaration, and cases and plants for each.
 
 Acceptance: a step that meets an observation it did not name hands back EJECT with what was seen and the files named, and the pointer, the status and the page show EJECT as a state of its own; a manager note that opens with Eject, names an item of this file and gives a reason closes the pointer of the plan in force; a plan that ejects to the program closes with its item back here as ejected, the finding attached and the item re-ranked; the program ejects to the owner only for a choice that is the owner's. Observed by cases for the first two and by the first close that uses the others.
 
@@ -78,7 +82,9 @@ Depends: P-1, P-3.
 
 ### P-3. The step as a list that cannot be done wrong
 
-Repository: hub. Goal: 1. State: running. Plan: the redesign plan.
+Repository: hub. Goal: 1. State: done. Plan: the redesign plan.
+
+Done: step 55 added the plan check that refuses a step lacking Facts, Do, Observe or Kill, with no latch, and the draft rules; step 61 landed the agent rules at version 5 with the failed-command rule changed.
 
 Acceptance: every step of a plan is a list of Facts (the asks and app facts it depends on, restated), Do (the exact actions), Observe (the observation that means done) and Kill (what ends it with nothing written); the plan check refuses a plan whose step lacks a label, with no latch; a red check ends the step and no write follows it; the agent rules say so and no longer let a failed command run again after a write. Observed in the agent rules at version 5 and in the cases for the plan shape.
 
@@ -86,7 +92,9 @@ Depends: the agent rules change lands only as the last act of the redesign plan,
 
 ### P-4. Conversation as the default
 
-Repository: hub. Goal: 4. State: running. Plan: the redesign plan.
+Repository: hub. Goal: 4. State: done. Plan: the redesign plan.
+
+Done: step 56 added one phase predicate for the dispatcher and the stop guard (conversation, in force, finished), skipped the holds outside a plan, and held the stop word by what it protects, with five cases and 26 plants.
 
 Acceptance: in a session with no approved plan in force and not in plan mode, a message gets an answer from the files and nothing else, and the manager fence, the correction hold, the stop hold, the status gate, the reads gate, the page gate, the recall gate and the judgement gate do not run, while the approved-plan, push, Drive, keep-information and pending-message guards still do; inside a plan a correction holds sends until it is answered and the word stop holds agents, sends and repository writes while passing reads, the status, the plan file and the manager notes; neither holds the plan file's write in plan mode; the stop guard's refusals on a reply's prose run only under an approved plan. Observed by a case for each, failing without its change, and a plant the suite catches.
 
@@ -94,7 +102,9 @@ Depends: none. The reasons of lessons 376, 384, 395, 406, 428, 434 and 456 are e
 
 ### P-5. The doctrine grouped
 
-Repository: hub. Goal: 2. State: running. Plan: the redesign plan.
+Repository: hub. Goal: 2. State: done. Plan: the redesign plan.
+
+Done: step 57 moved the 42 sections whole into doctrine/never.md, doctrine/plans.md and doctrine/apps.md, made DOCTRINE.md the index, and narrowed the read guard to the never page at a start and the plan page at the entry to plan mode.
 
 Acceptance: the never-rules are on one short page read whole at every start and after a compaction, the plan rules are read whole at the entry to plan mode, and nothing else is due by the read guard; the product, taste, accessibility and release sections are read when an item points at them; the index in the doctrine file lists every section with its file, the section bodies equal the former file's byte for byte, and no section number cited in the lessons, the instruction file, the notes, the review file or a guard's refusal text is missing from the index.
 
@@ -102,7 +112,9 @@ Depends: the reasons of lessons 383, 385 and 398, which the short page keeps.
 
 ### P-6. Configuration under management
 
-Repository: hub. Goal: 6. State: running. Plan: the redesign plan.
+Repository: hub. Goal: 6. State: done. Plan: the redesign plan.
+
+Done: step 53 wrote CONFIG.md, the baseline of hooks, guard files, rules version, pins, Dependabot, permission rules, branch protection and sibling pins, each with the item that may change it.
 
 Acceptance: a baseline file lists every hook, every guard file with its line count and its count of refusal sites by a stated method, the agent rules version, each action pin, the dependency tool's schedule and open updates, the permission rules, the branch protection the connector reports, each sibling's hub pin and sweep caller, and the environment's own hooks the audit names, each with the item of this file that may change it; a change to any of them is an item, a drift found is a finding that becomes one, and an open dependency update is an item. Observed when the baseline exists with every guard file listed and the docs check exits 0.
 
@@ -110,7 +122,9 @@ Depends: none.
 
 ### P-7. Several sessions, one hub
 
-Repository: hub. Goal: 1. State: running. Plan: the redesign plan.
+Repository: hub. Goal: 1. State: done. Plan: the redesign plan.
+
+Done: step 54 made each finding its own file in found/ and pointed both queue readers at the folder; the per-app append and the plan's pin of the hub commit are not built and stay with the next plans.
 
 Acceptance: each finding is its own file in a folder at the hub root, so two sessions never edit one file, and the reader of the answered-findings check takes keys from that folder where it exists; the program is appended per app with a pull before every write and an eject on conflict; a plan pins the hub commit its gates run from and runs to its end on it; a newer hub is taken up at the next plan and never in the middle of one. The redesign plan builds the folder and the reader. The per-app append and the plan's pin of the hub commit are not built by it, and the next plan's first act, the pull of the live clone, begins them.
 
@@ -118,7 +132,9 @@ Depends: none.
 
 ### P-8. Gates as the last catch
 
-Repository: hub. Goal: 6. State: running. Plan: the redesign plan.
+Repository: hub. Goal: 6. State: done. Plan: the redesign plan.
+
+Done: step 58 removed the judgement and tier gates and the status gate's refusal, narrowed the review gate to the first send, a send after a failed hand-back or a correction, made the three loosenings, and wrote a reason line for each lesson named.
 
 Acceptance: every deterministic gate that held is kept; the judgement-line gate and the tier gate are removed, the status gate's refusal is removed while the status print and the reminder stay, and the review gate refuses a step only for the plan's first send, the first send after a hand-back that opens EJECT, FAILED or REFUSED, or the first send after a correction, when the newest review does not clear it; the three loosenings of Q-HUB-122, Q-HUB-123 and Q-HUB-124 are made; each gate removed or narrowed is answered against the written reason of the lesson that made it. Observed by the narrowed cases, every remaining plant caught, and a line for each lesson named.
 
@@ -126,7 +142,9 @@ Depends: P-1, because the wall line takes the judgement line's place, and P-10, 
 
 ### P-9. The knowledge layer as a shape
 
-Repository: hub. Goal: 1. State: running. Plan: the redesign plan.
+Repository: hub. Goal: 1. State: done. Plan: the redesign plan.
+
+Done: the hub's half only; step 55 gave every step the Facts label and the review a reading against the facts; each app's half is its own item below.
 
 Acceptance: an app's instruction file opens with a short head of the facts a session gets wrong from its prior; tests on that app's own fixtures fail when a fact is broken; the facts are restated in every step that touches them; and the review reads the change against the head. The redesign plan builds the hub's half, which is the Facts label of every step and the review's reading against the head. Each app's half is its own item below, built in that app's own session.
 
@@ -134,7 +152,9 @@ Depends: P-3.
 
 ### P-10. The measure
 
-Repository: hub. Goal: 2. State: running. Plan: the redesign plan.
+Repository: hub. Goal: 2. State: done. Plan: the redesign plan.
+
+Done: the cost instrument was written in step 30 and its totals for the redesign plan were written as the close entry below by step 60.
 
 Acceptance: at each plan's close the cost instrument prints tokens by tier, the owner's messages, go-words, corrections, refusals and pushes, and the plan's close entry is written under this item, so a plan is judged against the plans before it.
 
@@ -149,7 +169,7 @@ Close entry of the redesign plan, written by its step 60 from the cost instrumen
 - Compactions: 0. Pushes: 0 so far; step 61 pushes once.
 - The whole session over six plans: 129 owner messages (49 go-words, 80 without, 14 carrying the word stop), 185 stop-hook messages, 95 main-thread refusals, 111 agents, 3 compactions.
 - No dollars are derived by plan, because the transcript holds no price list and the harness's cost entry is cumulative and lags the transcript (Q-HUB-132).
-State: running until step 61 lands; its close then sets done on the items P-1 to P-10 that it observed, and records the push.
+State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
 ## Parked settings
 
@@ -532,9 +552,9 @@ Depends: the harness version this container runs; P-19.
 
 ### P-47. Q-HUB-123: the dispatch refusal with no approved plan and the approval guard's refusal of a finished plan's edit latch
 
-Repository: hub. Goal: 4. State: answered by P-8. Plan: the redesign plan, step 58.
+Repository: hub. Goal: 4. State: done. Plan: the redesign plan, step 58.
 
-Reading: Design part 9 and step 58 make this loosening, a no-latch mark on both refusals with the second naming the route into plan mode, so the part answers the line. The line stays queued until the change lands.
+Reading: Design part 9 and step 58 make this loosening, a no-latch mark on both refusals with the second naming the route into plan mode, so the part answers the line. Put right by the plan of 3 November, in its step 58.
 
 Acceptance: each refusal sets no latch and the next call is judged on its own, the second names EnterPlanMode as the route, and a second identical call after the first is still refused; a case for each.
 
@@ -542,9 +562,9 @@ Depends: P-8.
 
 ### P-48. Q-HUB-122: a shape fault in an agent's shell line latches the agent on the first refusal
 
-Repository: hub. Goal: 2. State: answered by P-8. Plan: the redesign plan, step 58.
+Repository: hub. Goal: 2. State: done. Plan: the redesign plan, step 58.
 
-Reading: Design part 9 and step 58 make this loosening, so the part answers the line. The line stays queued until the change lands.
+Reading: Design part 9 and step 58 make this loosening, so the part answers the line. Put right by the plan of 3 November, in its step 58.
 
 Acceptance: the first such refusal sets no latch and names the rewritten form, the second latches, and the agent rules say an agent has no wait tool and a long run ends its turn until the run's completion resumes it; a case each way.
 
@@ -570,9 +590,9 @@ Depends: P-17. The hook file is outside the redesign plan's Files, so a later pl
 
 ### P-51. Q-HUB-124: the plan guard's refusal of a read-shaped shell line says to stop
 
-Repository: hub. Goal: 4. State: answered by P-8. Plan: the redesign plan, step 58.
+Repository: hub. Goal: 4. State: done. Plan: the redesign plan, step 58.
 
-Reading: Design part 9 and step 58 make this loosening, so the part answers the line. The reads themselves, ls-remote, a configuration read and a time zone before date, already pass (lesson 461). The line stays queued until the change lands.
+Reading: Design part 9 and step 58 make this loosening, so the part answers the line. The reads themselves, ls-remote, a configuration read and a time zone before date, already pass (lesson 461). Put right by the plan of 3 November, in its step 58.
 
 Acceptance: the refusal says to rewrite the line with a reader and sets no stop; a case.
 
@@ -1248,9 +1268,9 @@ Depends: none.
 
 ### P-135. Q-HUB-82: the correction hold refuses the plan file's write in plan mode under a message that orders the plan
 
-Repository: hub. Goal: 4. State: answered by P-4. Plan: the redesign plan, step 56.
+Repository: hub. Goal: 4. State: done. Plan: the redesign plan, step 56.
 
-Reading: Design part 5 says neither the correction hold nor the stop hold holds the plan file's write in plan mode, and the redesign plan's Found answered section records this line as fixed in step 56. The line stays queued until the change lands.
+Reading: Design part 5 says neither the correction hold nor the stop hold holds the plan file's write in plan mode, and the redesign plan's Found answered section records this line as fixed in step 56. Put right by the plan of 3 November, in its step 56.
 
 Acceptance: in plan mode the correction hold and the stop hold pass a write of the plan file and the plan check; a case fails without the change.
 
@@ -2309,6 +2329,80 @@ Depends: none.
 Repository: hub. Goal: 3. State: open. Plan: none.
 
 Acceptance: a gate holds the page's publish to every send and every status, or the page is regenerated and published by one command; until then the main thread republishes after each, and the versions section carries no lines of earlier plans.
+
+Depends: none.
+
+### P-269. Q-HUB-228: three small records of the redesign plan's step 60 stand off
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the keys Q-HUB-188 to Q-HUB-197 are renumbered or the items line states the offset in one place, the close entry under P-10 is read again after the push, and the list of paragraphs of the instruction file is kept in the repository where P-268 reads it.
+
+Depends: P-268.
+
+### P-270. Q-HUB-229: an agent cannot wait on a background run, and a latched agent returns its report each time a run ends
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the agent rules or the plan fence say what an agent does while a run is in the background, and a resend reads the output files first; a case where a latched agent's run ending does not bring back a second identical report.
+
+Depends: none.
+
+### P-271. Q-HUB-230: the plants of the unchanged guard files were not run in the redesign plan's step 61
+
+Repository: hub. Goal: 6. State: done. Plan: the plan of 3 November, step 63.
+
+Reading: step 63 ran the plants of plan-fence.mjs, approved-plan-guard.mjs, push-guard.mjs, pending-guard.mjs, keep-info-guard.mjs, reply-guard.mjs, compact-recall.mjs and transcript-tail.mjs by file, 191 plants, none missed.
+
+Acceptance: every plant of the suite is run once over the integrated change; read from the closing lines of the by-file runs.
+
+Depends: none.
+
+### P-272. Q-HUB-231: the choice of a rules pin is a meeting of two gates over two copies of one file
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: a plan states one rules pin and both gates accept it, or the owner's rule for which copy binds is written once; a case where the pin is accepted at the exit and at the send.
+
+Depends: P-273.
+
+### P-273. Q-HUB-232: the send gate reads the live clone's rules file and the exit gate the working copy's
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: both gates read one file, or the last step of a plan that changes the rules pulls the clone; a case with the two files at different versions.
+
+Depends: none.
+
+### P-274. Q-HUB-233: the manager fence names a remedy that the rules gate then refuses
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: a refusal that names an agent as the route names one that the other gates pass in the same state; a case with the pull of the live clone while the plan's pin and the clone's version differ.
+
+Depends: P-273.
+
+### P-275. Q-HUB-234: a plan carries both rules files whole to satisfy two gates
+
+Repository: hub. Goal: 2. State: open. Plan: none.
+
+Acceptance: a plan's Rules section is the pointer line again, because the gates agree on one file.
+
+Depends: P-273.
+
+### P-276. Q-HUB-235: an agent's parallel first calls before the read of the rules file cost a send
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the fence passes the rules read made beside a refused call, or counts one parallel batch as one refusal; a case for each.
+
+Depends: none.
+
+### P-277. Q-HUB-236: a review agent can read the Next line's move as work to do
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: aim-review.md opens with the sentence that a review does none of the move it judges; a review that writes outside the scratchpad is refused with that sentence in the refusal.
 
 Depends: none.
 

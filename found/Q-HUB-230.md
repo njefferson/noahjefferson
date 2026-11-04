@@ -1,0 +1,1 @@
+Q-HUB-230: the plants of the guard files the redesign plan did not change, about 202 of 1098, were not run in its step 61; the plan of 3 November ran them by file in its step 63 (found in step 61 of the redesign plan of 2 November, filed in step 63 of the plan of 3 November).

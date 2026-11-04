@@ -1,0 +1,1 @@
+Q-HUB-236: a review agent read the Next line's move as work to do and carried out step 63 in place of judging it, and its writes outside the scratchpad were refused; aim-review.md could open with the sentence that a review does none of the move it judges (found in a review of the plan of 3 November, filed in step 63 of that plan).
