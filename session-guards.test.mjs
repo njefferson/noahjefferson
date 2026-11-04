@@ -8706,9 +8706,90 @@ const CASES = [
       return r.status === 0 && !/clone/.test(out) && !/install line/.test(out);
     },
   },
+  // ---- the two model-switch events (P-18) ----
+  {
+    name: 'a pre-switch payload with the cache warm answers allow with the figures in its system message and writes the switches line',
+    guards: ['switch_allow', 'switch_figures', 'switch_line'],
+    run(m, dir) {
+      const s = sid('sw');
+      const pad = join(process.env.TMPDIR, 'claude-0', '-home-user', s, 'scratchpad');
+      mkdirSync(pad, { recursive: true });
+      const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'PreModelSwitch'], { encoding: 'utf8', env: { ...process.env },
+        input: JSON.stringify({ session_id: s, hook_event_name: 'PreModelSwitch', from_model: 'claude-fable-5-1', to_model: 'claude-sonnet-5-5', source: 'picker', context_tokens: 123456, prompt_cache_warm: true, cache_ttl: '5m', estimated_cache_write_usd: 0.42, pricing: 'catalog' }) });
+      let j = {};
+      try { j = JSON.parse(r.stdout); } catch { return false; }
+      const msg = String(j.systemMessage ?? '');
+      let line = '';
+      try { line = readFileSync(join(pad, 'status', 'switches.txt'), 'utf8'); } catch { return false; }
+      return r.status === 0 && j.hookSpecificOutput?.hookEventName === 'PreModelSwitch' && j.hookSpecificOutput?.permissionDecision === 'allow'
+        && msg.includes('cache warm') && msg.includes('123456 tokens') && msg.includes('$0.42') && msg.includes('claude-sonnet-5-5')
+        && line.includes('before the switch') && line.includes('cache warm') && line.includes('California');
+    },
+  },
+  {
+    name: 'a pre-switch payload with the cache cold answers allow with its figures in the system message',
+    guards: ['switch_allow', 'switch_figures'],
+    run(m, dir) {
+      const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'PreModelSwitch'], { encoding: 'utf8', env: { ...process.env },
+        input: JSON.stringify({ session_id: sid('sw'), from_model: 'claude-sonnet-5-5', to_model: 'claude-fable-5-1', context_tokens: 0, prompt_cache_warm: false, estimated_cache_write_usd: 1.5 }) });
+      let j = {};
+      try { j = JSON.parse(r.stdout); } catch { return false; }
+      const msg = String(j.systemMessage ?? '');
+      return r.status === 0 && j.hookSpecificOutput?.permissionDecision === 'allow' && msg.includes('cache cold') && msg.includes('$1.50') && msg.includes('0 tokens');
+    },
+  },
+  {
+    name: 'a post-switch payload to a top-tier model returns the top-tier line as added context',
+    guards: ['switch_top'],
+    run(m, dir) {
+      const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'PostModelSwitch'], { encoding: 'utf8', env: { ...process.env },
+        input: JSON.stringify({ session_id: sid('sw'), from_model: 'claude-sonnet-5-5', to_model: 'claude-fable-5-1' }) });
+      let j = {};
+      try { j = JSON.parse(r.stdout); } catch { return false; }
+      const ctx = String(j.hookSpecificOutput?.additionalContext ?? '');
+      return r.status === 0 && j.hookSpecificOutput?.hookEventName === 'PostModelSwitch' && ctx.includes('claude-fable-5-1') && ctx.includes('the top tier') && ctx.includes('does not need the top tier');
+    },
+  },
+  {
+    name: 'a post-switch payload to a lesser model returns the lesser line as added context',
+    guards: ['switch_top'],
+    run(m, dir) {
+      const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'PostModelSwitch'], { encoding: 'utf8', env: { ...process.env },
+        input: JSON.stringify({ session_id: sid('sw'), from_model: 'claude-fable-5-1', to_model: 'claude-sonnet-5-5' }) });
+      let j = {};
+      try { j = JSON.parse(r.stdout); } catch { return false; }
+      const ctx = String(j.hookSpecificOutput?.additionalContext ?? '');
+      return r.status === 0 && ctx.includes('claude-sonnet-5-5') && ctx.includes('not on the top tier') && !ctx.includes('does not need');
+    },
+  },
+  {
+    name: 'a payload with no model leaves the switch to go ahead with nothing written',
+    run(m, dir) {
+      const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'PreModelSwitch'], { encoding: 'utf8', env: { ...process.env }, input: JSON.stringify({ session_id: sid('sw') }) });
+      return r.status === 0 && (r.stdout ?? '').trim() === '';
+    },
+  },
+  {
+    name: 'the install against a temporary settings file wires both switch events beside a planted earlier one',
+    guards: ['switch_install'],
+    run(m, dir) {
+      const f = join(tmp('sg-settings-'), 'settings.json');
+      writeFileSync(f, JSON.stringify({ hooks: { PreModelSwitch: [{ matcher: '', hooks: [{ type: 'command', command: 'echo planted-earlier' }] }] } }));
+      const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), '--install'], { encoding: 'utf8', env: { ...process.env, HOOK_DISPATCH_SETTINGS_FILE: f } });
+      let s = {};
+      try { s = JSON.parse(readFileSync(f, 'utf8')); } catch { return false; }
+      const has = (ev, text) => JSON.stringify(s.hooks?.[ev] ?? []).includes(text);
+      return r.status === 0 && has('PreModelSwitch', 'planted-earlier') && has('PreModelSwitch', 'hook-dispatch.mjs') && has('PostModelSwitch', 'hook-dispatch.mjs') && has('Stop', 'hook-dispatch.mjs');
+    },
+  },
 ];
 
 const PLANTS = {
+  switch_allow: ["permissionDecision: 'allow', permissionDecisionReason", "permissionDecision: 'ask', permissionDecisionReason", 'hook-dispatch.mjs'],
+  switch_figures: ['systemMessage: `Model switch, ${figures}.`', 'systemMessage: `Model switch.`', 'hook-dispatch.mjs'],
+  switch_line: ["appendFileSync(join(pad, 'status', 'switches.txt'), line + '\\n');", 'void line;', 'hook-dispatch.mjs'],
+  switch_top: ['const text = isTopTier(to)', 'const text = !isTopTier(to)', 'hook-dispatch.mjs'],
+  switch_install: ["'Stop', 'PreModelSwitch', 'PostModelSwitch'];", "'Stop'];", 'hook-dispatch.mjs'],
   enqueue_count: ['        size++;\n', '\n', 'pending-guard.mjs'],
   dequeue_count: ["      } else if (e.operation === 'dequeue') {\n        size = Math.max(0, size - 1);", "      } else if (e.operation === 'dequeue') {\n", 'pending-guard.mjs'],
   text_match: ['      if (!x.done && x.key && (t.includes(x.key)', '      if (false && !x.done && x.key && (t.includes(x.key)', 'pending-guard.mjs'],

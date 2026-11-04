@@ -26,9 +26,10 @@ Three events are wired.
 
 ### 1.2 User hooks, in `/root/.claude/settings.json`
 
-The file is written by `node /root/.claude/hub/hook-dispatch.mjs --install`, run from the clone at `/root/.claude/hub`. It wires six events, each with one command, `node "/root/.claude/hub/hook-dispatch.mjs"` followed by the event name, an empty matcher and a timeout of 120 seconds.
+The file is written by `node /root/.claude/hub/hook-dispatch.mjs --install`, run from the clone at `/root/.claude/hub`. It wires eight events, each with one command, `node "/root/.claude/hub/hook-dispatch.mjs"` followed by the event name, an empty matcher and a timeout of 120 seconds.
 
-- SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure and Stop.
+- SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure, Stop, PreModelSwitch and PostModelSwitch.
+- PreModelSwitch answers allow with the switch's cost figures in a system message and writes a line to `status/switches.txt` in the session scratchpad; PostModelSwitch returns the tier line as added context and writes the same line. Neither blocks. The install's target file can be named by the environment variable `HOOK_DISPATCH_SETTINGS_FILE`, with the user-level file as the default. Changed by: P-18.
 - It also sets `showClearContextOnPlanAccept` to false.
 - Every event runs the one file, `hook-dispatch.mjs`, which then runs the guards of every repository it finds under the launch directory, reading each repository's own `.claude/settings.json` hooks. So the project hooks of 1.1 and the dispatcher run on the same call.
 - Guard files the dispatcher and its neighbours call, by name in the code: `pending-guard.mjs`, `report.mjs`, `plan-fence.mjs`, `plan-guard.mjs`, `approved-plan-guard.mjs`, `doctrine-read-guard.mjs`, `keep-info-guard.mjs`, `push-guard.mjs`, `drive-guard.mjs`, `reply-guard.mjs`, `stop-guard.mjs`, `compact-recall.mjs`, `transcript-tail.mjs`.
@@ -44,7 +45,7 @@ The file is written by `node /root/.claude/hub/hook-dispatch.mjs --install`, run
 
 ### 1.4 Hook events no setting wires
 
-- The harness documents a ConfigChange hook, a PreModelSwitch hook, a PostModelSwitch hook, and background task lists in the Stop hook's input (read 2 November 2026 at the maker's hooks page). None is wired in either settings file.
+- The harness documents a ConfigChange hook and background task lists in the Stop hook's input (read 2 November 2026 at the maker's hooks page). Neither is wired in either settings file. The PreModelSwitch and PostModelSwitch hooks are served by the dispatcher and wired by its install (1.2), by P-18.
 - Changed by: P-21 (ConfigChange), P-18 (the model-switch hooks), P-19 (the Stop input's task lists), P-20 (the Stop hook block cap).
 
 ### 1.5 The environment's own hooks the audit names

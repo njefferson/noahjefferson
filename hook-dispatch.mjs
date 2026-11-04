@@ -142,7 +142,7 @@
  * It runs from a stable clone (the setup script puts one at ~/.claude/hub), so
  * a broken edit in the working copy cannot refuse its own fix.
  */
-import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, createReadStream, rmSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, appendFileSync, readdirSync, mkdirSync, createReadStream, rmSync, statSync } from 'node:fs';
 import { join, dirname, resolve, basename, relative } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
@@ -153,14 +153,14 @@ import { recallParts } from './compact-recall.mjs';
 import { tailEntries, isOwnerMessage, textOf } from './transcript-tail.mjs';
 import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
   planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, stepEnds, stepBody, markCompacted, sessionFiles,
-  planAfter, SCOPE_SECTIONS, restartedPlanMode, writeStartMode } from './report.mjs';
+  planAfter, SCOPE_SECTIONS, restartedPlanMode, writeStartMode, isTopTier, tierWords } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
 import { HARNESS_TAG } from './pending-guard.mjs';
 import { parseRead, site } from './reply-guard.mjs';
 
 const HUB = dirname(fileURLToPath(import.meta.url));
-const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'Stop'];
+const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'Stop', 'PreModelSwitch', 'PostModelSwitch'];
 const READS = new Set(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'ToolSearch', 'TaskList', 'TaskGet',
   'ListAgents', 'ReadNotifications', 'EnterPlanMode', 'ExitPlanMode', 'Skill']);
 // Repo shims that only call a hub script: run once per event, not once per repo.
@@ -3207,7 +3207,7 @@ export function canMain(args, env = process.env, cwd = process.cwd()) {
  *   it on every session start never stacks duplicates.
  */
 export function install() {
-  const file = join(homedir(), '.claude', 'settings.json');
+  const file = process.env.HOOK_DISPATCH_SETTINGS_FILE || join(homedir(), '.claude', 'settings.json');
   let s = {};
   try { s = JSON.parse(readFileSync(file, 'utf8')); } catch { /* none yet */ }
   s.hooks ??= {};
@@ -3343,8 +3343,47 @@ const REMINDER = [
   'End: done, not done, found and not fixed, open for the owner. Never "waiting on you". No app notifications.',
 ].join('\n');
 
+/**
+ * The two model-switch events (P-18). The pre-switch event shows what a switch costs and lets it go ahead; the post-switch event
+ * gives the model its tier line with the next request. Neither blocks, whatever the payload says.
+ * @param {string} event  PreModelSwitch or PostModelSwitch.
+ * @param {object} p  the payload.
+ * @returns {string} the JSON the harness reads, or '' when the payload carries no model, in which case nothing is written.
+ */
+export function modelSwitch(event, p) {
+  const to = String(p?.to_model ?? '').trim();
+  if (!to) return '';
+  const pre = event === 'PreModelSwitch';
+  const from = String(p?.from_model ?? '').trim() || 'an unnamed model';
+  const tokens = Number.isFinite(Number(p?.context_tokens)) ? Number(p.context_tokens) : null;
+  const warm = p?.prompt_cache_warm === true ? 'warm' : p?.prompt_cache_warm === false ? 'cold' : 'not stated';
+  const usd = Number.isFinite(Number(p?.estimated_cache_write_usd)) && p?.estimated_cache_write_usd !== null ? `$${Number(p.estimated_cache_write_usd).toFixed(2)}` : 'not stated';
+  const figures = `from ${from} to ${to}, ${tokens === null ? 'tokens re-sent not stated' : `${tokens} tokens re-sent with the next request`}, cache ${warm}${p?.cache_ttl ? ` (${p.cache_ttl})` : ''}, estimated cost of writing it ${usd}${p?.pricing ? ` (${p.pricing} pricing)` : ''}`;
+  const stamp = `${new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })} ${californiaTime()} California`;
+  const line = `${stamp}, ${pre ? 'before the switch' : 'after the switch'} (${p?.source ?? 'source not stated'}): ${figures}.`;
+  try {
+    const pad = scratchpadOf(String(p?.session_id ?? ''));
+    if (pad) { mkdirSync(join(pad, 'status'), { recursive: true }); appendFileSync(join(pad, 'status', 'switches.txt'), line + '\n'); }
+  } catch { /* the line is lost; the switch goes ahead */ }
+  if (pre) {
+    return JSON.stringify({
+      systemMessage: `Model switch, ${figures}.`,
+      hookSpecificOutput: { hookEventName: 'PreModelSwitch', permissionDecision: 'allow', permissionDecisionReason: 'A switch is shown with its cost and never held.' },
+    });
+  }
+  const text = isTopTier(to)
+    ? tierWords(to)
+    : `Serving model: ${to}, not the top tier. The work is on this model and not on the top tier (Doctrine §11b).`;
+  return JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostModelSwitch', additionalContext: text } });
+}
+
 async function main(event, raw, p) {
-  const root = resolve(process.env.CLAUDE_PROJECT_DIR || p.cwd || process.cwd());
+  if (event === 'PreModelSwitch' || event === 'PostModelSwitch') {
+    const out = modelSwitch(event, p);
+    if (out) process.stdout.write(out + '\n');
+    return 0;
+  }
+  const root =resolve(process.env.CLAUDE_PROJECT_DIR || p.cwd || process.cwd());
   const printed = [];
   // EVERY PreToolUse refusal, by any guard, family or repo, sets the latch
   // (Doctrine §0d, §0e). Only these do not, each passing latch = false below, and the doctrine
