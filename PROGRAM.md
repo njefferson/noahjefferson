@@ -54,7 +54,7 @@ The list is the rank. The items the redesign plan builds come first, then the pa
 
 ## Items
 
-285 items (P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 225 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
+286 items (P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 226 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
 
 ## Items the redesign plan builds
 
@@ -186,6 +186,16 @@ Close entry of the plan of 3 November that took up its remainder (steps 67 to 70
 - Compactions: 1 (16:33 California time on 3 November). Resumes: 2. Pushes: 0 so far; this step pushes once.
 - The whole session over seven plans: 141 owner messages (57 go-words, 84 without, 15 carrying the word stop), 240 stop-hook messages, 113 main-thread refusals, 142 agents, 4 compactions, 14 resumes.
 - The harness's own running cost entry, the last of 67, reads 158.28 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
+Close entry of the plan of 4 November (steps 71 to 73, the model-switch hooks), written by step 72 from the cost instrument run on this session's transcript, so far and before this step's push. The instrument numbers it plan 8, approved 14:27 California time on 4 November:
+- The owner's messages: 2, of which 2 end in a go-word and 0 do not; none carries the word stop.
+- Stop-hook messages: 9, of which 8 came from the environment's git hook and 1 from the stop guard.
+- Main-thread refusals: 1 (pending guard 1).
+- Agents: 5, all on the sonnet tier, with 41,953 output tokens, 10,239,772 cache-read tokens and 663,147 cache-written tokens; 0 hook refusals.
+- Main-thread turns: 12 on the opus tier with 5,671 output tokens, and 19 on the fable tier with 15,110 output tokens.
+- Compactions: 0. Resumes: 0. Pushes: the instrument does not count them; this step pushes once.
+- The whole session over eight plans: 146 owner messages (61 go-words, 85 without, 15 carrying the word stop), 253 stop-hook messages, 120 main-thread refusals, 147 agents, 4 compactions, 15 resumes.
+- The harness's own running cost entry, the last of 69, reads 190.48 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
+
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
 ## Parked settings
@@ -299,7 +309,7 @@ Depends: the owner.
 
 Repository: hub. Goal: 1. State: done. Plan: the plan of 3 November, steps 67 and 68.
 
-Done: step 67 made the session-start hook clone the hub and install the dispatcher when the clone is absent; step 68 named each recall file by the compaction's own California date and time so none is written over, recorded the start's permission mode in a marker so a plan mode entered by hand is told from a restart's, and made a second exit in the app record no second approval. The piece of the acceptance not yet observed is whether a session start's input carries the permission mode, which is Q-HUB-244 (P-285).
+Done: step 67 made the session-start hook clone the hub and install the dispatcher when the clone is absent; step 68 named each recall file by the compaction's own California date and time so none is written over, recorded the start's permission mode in a marker so a plan mode entered by hand is told from a restart's, and made a second exit in the app record no second approval. The piece of the acceptance not yet observed was whether a session start's input carries the permission mode, which is Q-HUB-244 (P-285). It was observed at the resume of 4 November at 11:12 California time: it does not, at harness version 2.1.316. So the restart part stands unmet, carried by Q-HUB-105's own item (P-157).
 
 Acceptance: after a compaction, after a resume and after a restarted container, the state a session needs is read from files on disk (the approval marker, the plan file, the status page, the manager notes and the filed owner messages), and no step depends on what the model remembers or on a notice the harness prints. Source: the record, section 10.
 
@@ -307,7 +317,9 @@ Depends: the harness version this container runs, which was not read; Q-HUB-85, 
 
 ### P-18. The model-switch hooks
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: done. Plan: the plan of 4 November, steps 71 and 72.
+
+Done: step 71 made the dispatcher serve both events. The pre-switch hook allows every switch, writes a line into `status/switches.txt` of the session scratchpad and shows the tokens re-sent, whether the cache is warm and the estimated cost in its system message; it never asks, denies or blocks, since an ask is treated as a refusal on every surface but the terminal's own command. The post-switch hook writes the same line and hands the model the tier line as added context. The dispatcher's install wires both events, and `CONFIG.md` lists them. The stop guard's tier refusal stays: the hook is advice the model receives with its next request, and the guard is the catch for a reply that still omits the line. The observation left: the two hooks seen in `status/switches.txt` of a session's scratchpad at the owner's next switch.
 
 Acceptance: a PreModelSwitch hook shows what a switch will cost (the tokens the next request re-sends, whether the cache is warm, the estimated cost of writing it) before it happens, and a PostModelSwitch hook gives the model its tier guidance after any switch, an automatic one included; the tier gate is retired for them, or the reason it cannot be is written here.
 
@@ -1487,6 +1499,8 @@ Depends: Q-HUB-98; Q-HUB-101.
 
 Repository: hub. Goal: 1. State: open. Plan: none.
 
+Note: the marker route of the plan of 4 November (step 68) is inert at harness version 2.1.316, because a session start's input carries no permission mode; the next route is the harness supplying the mode or a transcript shape that tells the two apart.
+
 Acceptance: a mark tells the two apart, so a plan mode entered by hand is judged as the plan mode of a new plan and a restart's is judged as the restart's; a case each way.
 
 Depends: P-17; Q-HUB-88.
@@ -2503,9 +2517,19 @@ Depends: none.
 
 ### P-285. Q-HUB-244: a session start's input carrying the permission mode is unconfirmed
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: done. Plan: the plan of 4 November, step 72.
+
+Done: observed at the resume of 4 November at 11:12 California time: `status/start-mode.json` held no mode, so a session start's input carries no permission mode at harness version 2.1.316, and the restart gate reads by the transcript's shape alone. The restart part of P-17 stands unmet, carried by Q-HUB-105's own item (P-157).
 
 Acceptance: the next session start's `status/start-mode.json` in that session's scratchpad is read, and it says whether the start's input carried the permission mode; where it did, a case holds the real shape, and where it did not, the restart gate is recorded as reading by the transcript's shape alone and the line is dropped with that read as the reason.
+
+Depends: none.
+
+### P-286. Q-HUB-245: a case name with spaces given to the suite is cut at its first word and the whole suite starts
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the suite reads a `--case=` value holding spaces whole, or refuses it with a printed line, and a case holds each.
 
 Depends: none.
 

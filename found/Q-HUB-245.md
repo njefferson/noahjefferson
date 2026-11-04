@@ -1,0 +1,1 @@
+Q-HUB-245: a `--case=` value holding spaces given to `session-guards.test.mjs` is cut at its first word by the shell, so a narrowed run started the whole suite; stopped with no harm (found in step 71 of the plan of 4 November, filed in step 72).
