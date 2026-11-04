@@ -1,0 +1,1 @@
+Q-HUB-240: a dependency branch's diff against main carries every change since its old parent, so a step reading one reads the tip against its parent; the next plan's step text says so (found in step 64 of the plan of 3 November).

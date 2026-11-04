@@ -54,7 +54,7 @@ The list is the rank. The items the redesign plan builds come first, then the pa
 
 ## Items
 
-277 items (P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, filed by step 63 of the plan of 3 November): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 224 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
+284 items (P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, and P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 224 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
 
 ## Items the redesign plan builds
 
@@ -2411,6 +2411,62 @@ Depends: none.
 Repository: hub. Goal: 5. State: open. Plan: none.
 
 Acceptance: aim-review.md opens with the sentence that a review does none of the move it judges; a review that writes outside the scratchpad is refused with that sentence in the refusal.
+
+Depends: none.
+
+### P-278. Q-HUB-237: a change of directory before git happened because no step said the shell starts at the repository's root
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: a step that runs git carries the sentence that the shell already starts at the repository's root, or the plan's rules say it once.
+
+Depends: none.
+
+### P-279. Q-HUB-238: 11 plants of the suite belong to no guard file that was run
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the file of each of the 11 plants is found with the plants listing and the plants are run, each closing with its count and no plant missed.
+
+Depends: none.
+
+### P-280. Q-HUB-239: the browser note in package.json pairs the sandbox chromium with a playwright-core version that moved
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the accessibility gate is run in the sandbox once at the installed playwright-core version, and the note is rewritten to what was seen or the pair is pinned.
+
+Depends: none.
+
+### P-281. Q-HUB-240: a dependency branch's diff against main carries every change since its old parent
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: a step that reads a dependency branch reads its tip against its parent, and its text says so.
+
+Depends: none.
+
+### P-282. Q-HUB-241: the four dependency branches stand on the remote after their changes landed on main
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the four branches are read once; each is gone or its pull request is closed, and what remains is recorded.
+
+Depends: none.
+
+### P-283. Q-HUB-242: the Doctrine gates run for the commit pushed by step 65 was in progress when read
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the run for that commit is read through the connector and its conclusion is recorded.
+
+Depends: none.
+
+### P-284. Q-HUB-243: a review agent put a format string with a vertical bar on a git read and was latched
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: aim-review.md names the bare git reads a review may make and says a format string or percent code is not among them.
 
 Depends: none.
 

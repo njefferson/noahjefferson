@@ -1,0 +1,1 @@
+Q-HUB-237: a fifth shell slip in the plan of 3 November, a change of directory before git, happened because no step said the shell already starts at the repository's root; steps could carry that sentence (found in step 60 of that plan, filed in step 63 of that plan).
