@@ -416,7 +416,9 @@ Four pull requests by the dependency tool were open on the hub when the step 32 
 
 ### P-31. Dependency update: zizmor 1.29.0 to 1.31.1
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: the plan of 4 November, steps 64 and 65.
+
+Changed: `.github/requirements-ci.txt` carries zizmor 1.31.1 with the branch's hash set, and the pin check exits 0.
 
 Acceptance: main carries the update in the hub's hash-pinned requirements file, or the pull request is closed with a reason, and the Doctrine gates run for that commit concluded success. The pull request was created on 1 November 2026.
 
@@ -424,7 +426,9 @@ Depends: whether the hub's own gates pass at the new version, which was not read
 
 ### P-32. Dependency update: actions/setup-node 7.0.0 to 7.1.0
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: the plan of 4 November, steps 64 and 65.
+
+Changed: the four workflow uses of actions/setup-node are pinned to the 7.1.0 commit with the tag in the comment.
 
 Acceptance: main carries the update at every one of its four uses (the accessibility, analytics, shared-gates and doctrine workflows), pinned by full commit, or the pull request is closed with a reason, and the runs for that commit concluded success. The pull request was created on 1 November 2026.
 
@@ -432,7 +436,9 @@ Depends: none.
 
 ### P-33. Dependency update: the tooling group, two npm updates
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: the plan of 4 November, steps 64 and 65.
+
+Changed: `package.json` and `package-lock.json` carry axe-core 4.14.0 and playwright-core 1.64.1, and `npm ci` exits 0. The `//browser` note in `package.json` still names playwright-core 1.56.0 and the sandbox browser pairing was not run; it stands as a Found line of step 64.
 
 Acceptance: main carries the two updates with its lockfile updated, or the pull request is closed with a reason, and the Doctrine gates run for that commit concluded success. The pull request was created on 1 October 2026 and had stood 32 days when read.
 
@@ -440,7 +446,9 @@ Depends: none.
 
 ### P-34. Dependency update: cloudflare/wrangler-action 4.0.0 to 4.1.3
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: the plan of 4 November, steps 64 and 65.
+
+Changed: the five workflow uses of cloudflare/wrangler-action are pinned to the 4.1.3 commit with the tag in the comment.
 
 Acceptance: main carries the update at every one of its five uses (the deploy workflow twice and the deploy-myfax workflow three times), pinned by full commit, or the pull request is closed with a reason, and the Deploy run for that commit concluded success. The pull request was created on 1 October 2026 and had stood 32 days when read.
 
