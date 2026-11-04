@@ -153,7 +153,7 @@ import { recallParts } from './compact-recall.mjs';
 import { tailEntries, isOwnerMessage, textOf } from './transcript-tail.mjs';
 import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
   planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, stepEnds, stepBody, markCompacted, sessionFiles,
-  planAfter, SCOPE_SECTIONS, restartedPlanMode } from './report.mjs';
+  planAfter, SCOPE_SECTIONS, restartedPlanMode, writeStartMode } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
 import { HARNESS_TAG } from './pending-guard.mjs';
@@ -3713,7 +3713,10 @@ async function main(event, raw, p) {
   // transcript already holds every line of the doctrine as it stands, read since
   // the last compaction, owes nothing, and the line says so (LESSONS §398).
   let dueLine = '';
+  // The permission mode this start's input carries is kept in the scratchpad, so the restart gate can tell a plan mode the harness
+  // restored from one the owner enters by hand later (Q-HUB-105); a failure costs the mark, never the start.
   if (event === 'SessionStart' && !p.agent_id) {
+    try { writeStartMode(p); } catch { /* no mode recorded for this start */ }
     const due = run(`node "${join(HUB, 'doctrine-read-guard.mjs')}" --due`, raw, root);
     dueLine = due.out.trim().split('\n')[0] ?? '';
   }

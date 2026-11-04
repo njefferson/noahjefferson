@@ -14,7 +14,8 @@
  * oldest first, because a later message overrides an earlier one. The block then
  * says how many are not printed and names the file holding EVERY message of the
  * stretch, whole and in order, which is written under the session's scratchpad
- * and named for the compaction (`compaction-N.txt`). The dispatcher then holds
+ * and named for the compaction (`compaction-N-<California date and time>.txt`, so no later compaction writes over an
+ * earlier file). The dispatcher then holds
  * the main thread to reading and the status until a Read result covering that
  * whole file has returned (`recallGate`), because ten messages of a long run is
  * the summary's own mistake again, smaller.
@@ -128,6 +129,17 @@ export async function messagesSinceCompaction(path) {
 }
 
 /**
+ * The California date and time to the second, for a file's name.
+ * @param {number|Date} [at]  a time; now when omitted.
+ * @returns {string} `YYYY-MM-DD_HH-MM-SS` in America/Los_Angeles, so a later compaction's file never carries an earlier one's name.
+ */
+export function californiaStamp(at = Date.now()) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    .formatToParts(new Date(at)).map((x) => [x.type, x.value]));
+  return `${parts.year}-${parts.month}-${parts.day}_${parts.hour}-${parts.minute}-${parts.second}`;
+}
+
+/**
  * Where the file holding every message of the stretch is written, with no scratchpad.
  * @param {string} path  the session transcript.
  * @returns {string} `<transcript's name>.txt` under $COMPACT_RECALL_DIR, or under
@@ -146,17 +158,19 @@ function recallFile(path) {
  * @param {{text: string, at: string, afterReply?: boolean}[]} msgs  from
  *   `stretchSinceCompaction`.
  * @param {{dir?: string, n?: number}} [opts]  `dir` the folder to write in (the
- *   session scratchpad's `recall`) and `n` the compaction's number, which names
- *   the file `compaction-<n>.txt`; without them the file is `recallFile`'s.
+ *   session scratchpad's `recall`), `n` the compaction's number and `at` its time
+ *   (now when omitted), which name the file `compaction-<n>-<California time>.txt`;
+ *   without them the file is `recallFile`'s.
  * @returns {string} the file's path, or '' when there is nothing to write or the
  *   write failed; `recallBlock` then says no file was written rather than
  *   citing one. THE INVARIANT `recallGate` relies on: the file holds EVERY message
  *   of the stretch, answered or not, numbered with its time, exactly as sent and
- *   in order, and replaces any earlier file of the same name.
+ *   in order; the name carries the time to the second, so no earlier compaction's file
+ *   is written over.
  */
 export function saveRecall(path, msgs, opts = {}) {
   if (!msgs.length) return '';
-  const file = opts.dir ? join(opts.dir, `compaction-${Number(opts.n) || 1}.txt`) : recallFile(path);
+  const file = opts.dir ? join(opts.dir, `compaction-${Number(opts.n) || 1}-${californiaStamp(opts.at)}.txt`) : recallFile(path);
   try {
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, msgs.map((m, i) => `--- ${i + 1} of ${msgs.length}${m.at ? `, ${m.at}` : ''} ---\n${m.text}`).join('\n') + '\n');

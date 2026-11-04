@@ -540,6 +540,40 @@ function planFinished(p, planPath) {
   } catch { return false; }
 }
 
+/** Where a session's start mode is kept: `status/start-mode.json` in its scratchpad, or null with no scratchpad. */
+function startModeFile(sid) {
+  const pad = scratchpadOf(String(sid ?? ''));
+  return pad ? join(pad, 'status', 'start-mode.json') : null;
+}
+
+/**
+ * Record the permission mode a session start's input carried.
+ * @param {object} p  the SessionStart payload: `session_id` and `permission_mode`.
+ * @returns {boolean} true when the file was written. The mode is a string, or null where the input carries none; written at every
+ *   start, so the newest start's is the one `restartBegan` reads. A session with no scratchpad records nothing.
+ */
+export function writeStartMode(p) {
+  const file = startModeFile(p?.session_id);
+  if (!file) return false;
+  try {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, JSON.stringify({ mode: typeof p.permission_mode === 'string' && p.permission_mode ? p.permission_mode : null, source: String(p.source ?? ''), at: new Date().toISOString() }));
+    return true;
+  } catch { return false; }
+}
+
+/**
+ * The permission mode recorded at the session's newest start.
+ * @param {string} sid  the session id.
+ * @returns {string|null} the mode, or null when none was recorded or the file cannot be read (every doubt reads as no mode).
+ */
+function startMode(sid) {
+  try {
+    const m = JSON.parse(readFileSync(startModeFile(sid), 'utf8'))?.mode;
+    return typeof m === 'string' && m ? m : null;
+  } catch { return null; }
+}
+
 /**
  * Did the harness's plan mode begin at a restart after the approval, whatever became of the plan since?
  * @param {object} p  as `restartedPlanMode` takes it.
@@ -551,6 +585,10 @@ function restartBegan(p, marker) {
   try {
     const mk = JSON.parse(readFileSync(marker, 'utf8'));
     if (!mk?.plan || !mk.hash || !p?.transcript_path) return '';
+    // THE START'S OWN MODE (Q-HUB-105): where the session-start hook recorded the permission mode its input carried, a mode other than
+    // plan at the start means a plan mode now is the owner's, entered by hand after it; plan mode at the start leaves the transcript's
+    // shape to decide as before, and no recorded mode reads as before.
+    if (startMode(p.session_id) !== 'plan' && startMode(p.session_id) !== null) return '';
     if (mk.session && p.session_id && mk.session !== p.session_id) return '';
     if (createHash('sha256').update(readFileSync(mk.plan)).digest('hex') !== String(mk.hash)) return '';
     const viaAt = typeof mk.appExit === 'string' ? /\bat (\d{4}-\d{2}-\d{2}T[0-9:.]+Z)\s*$/.exec(String(mk.via ?? ''))?.[1] : undefined;

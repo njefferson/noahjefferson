@@ -1,1 +1,3 @@
 Q-HUB-91: after the resume the harness printed plan mode and the exit call was made without first testing that notice by a send, so the approval had to be pressed a second time at 09:11; lesson 432 and the plan guard gate for the hub plan (found in step 0, recorded by step 219).
+
+Put right: lesson 432's gate answers it, the refusal of the approval call for a plan already approved, held by the case in `session-guards.test.mjs` named "step220b: a plan mode the harness began at a compaction or a resume after the plan was approved is not the plan's". Step 68 of the plan after the take-up adds the start's recorded mode, so a plan mode the owner enters by hand is not read as a restart's.

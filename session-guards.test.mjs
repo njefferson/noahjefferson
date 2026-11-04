@@ -911,11 +911,12 @@ const CASES = [
       const s2 = await m.recall.stretchSinceCompaction(second);
       const open = (x) => x.filter((y) => y.afterReply).map((y) => y.text).join('|');
       const where = tmp('sg-recall-');
-      const file = m.recall.saveRecall(written, w.msgs, { dir: where, n: w.n });
+      const AT = Date.UTC(2026, 10, 3, 20, 0, 0);
+      const file = m.recall.saveRecall(written, w.msgs, { dir: where, n: w.n, at: AT });
       const block = m.recall.recallBlock(w.msgs, file);
       const filed = file && existsSync(file) ? readFileSync(file, 'utf8') : '';
-      const again = m.recall.saveRecall(pending, p.msgs, { dir: where, n: p.n });
-      const file2 = m.recall.saveRecall(second, s2.msgs, { dir: where, n: s2.n });
+      const again = m.recall.saveRecall(pending, p.msgs, { dir: where, n: p.n, at: AT });
+      const file2 = m.recall.saveRecall(second, s2.msgs, { dir: where, n: s2.n, at: AT });
       const order = typed.slice(2).map((t) => block.indexOf(t));
       const filedAt = [answered, ...typed].map((t) => filed.indexOf(t));
       return w.msgs.length === 13 && p.msgs.length === 13 && w.msgs[0].text === answered && !w.msgs[0].afterReply
@@ -925,9 +926,10 @@ const CASES = [
         && order.every((i, k) => i >= 0 && (k === 0 || i > order[k - 1]))
         && block.includes('--- 4 of 13') && block.includes('--- 13 of 13') && !block.includes('--- 3 of 13')
         && /Not printed here: 3 older/.test(block) && !!file && block.includes(file)
-        && basename(file) === 'compaction-1.txt' && again === file && !!file2 && basename(file2) === 'compaction-2.txt'
+        && basename(file) === 'compaction-1-2026-11-03_12-00-00.txt' && again === file && !!file2 && basename(file2) === 'compaction-2-2026-11-03_12-00-00.txt'
+        && m.recall.californiaStamp(Date.UTC(2026, 6, 1, 7, 5, 9)) === '2026-07-01_00-05-09'
         && filedAt.every((i, k) => i >= 0 && (k === 0 || i > filedAt[k - 1])) && filed.includes('--- 1 of 13') && filed.includes('--- 13 of 13')
-        && (await m.recall.recallFor(written, where)) === block;
+        && ((await m.recall.recallFor(written, where)).replace(/compaction-1-[\d_-]+\.txt/, 'F')) === block.replace(/compaction-1-[\d_-]+\.txt/, 'F');
     },
   },
   {
@@ -977,7 +979,8 @@ const CASES = [
       const w = world(dir, [turn(0, 'start'), ...typed.map((t, i) => turn(1 + i, t)), turn(13, GO), boundary(40), summary(40)]);
       const send = () => w.call('PreToolUse', { session_id: s, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } }, env);
       const start = w.call('SessionStart', { session_id: s, source: 'compact' }, env);
-      const file = join(pad, 'recall', 'compaction-1.txt');
+      const named = existsSync(join(pad, 'recall')) ? readdirSync(join(pad, 'recall')).filter((f) => /^compaction-1-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.txt$/.test(f)) : [];
+      const file = join(pad, 'recall', named[0] ?? 'compaction-1-absent.txt');
       const filed = existsSync(file) ? readFileSync(file, 'utf8') : '';
       const total = filed.split('\n').length - 1;
       const marker = join(process.env.RECALL_DUE_DIR, `${s}.json`);
@@ -3256,6 +3259,78 @@ const CASES = [
         && !existsSync(D.marker) && D.outcome(ud) === "not the owner's exit"
         && !existsSync(E.marker) && E.outcome(ue) === 'changed after' && buildE.status === 2 && /was written after that/.test(buildE.stdout)
         && writeJudged.status === 2 && /written only by the owner's approval/.test(writeJudged.stdout);
+    },
+  },
+  {
+    name: 'p17 app exit twice: a second exit from plan mode in the app, for a plan file the marker already records by its hash, records no second approval and leaves the marker byte for byte as it was; an exit for a plan file that changed is recorded',
+    guards: ['app_exit_already'],
+    run(m, dir) {
+      const read = { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } };
+      const A = appHome(dir);
+      const u1 = uid();
+      const tr1 = transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, A.plan, u1)]);
+      A.guard(tr1, read);
+      const first = readFileSync(A.marker, 'utf8');
+      const u2 = uid();
+      const tr2 = transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, A.plan, u2)]);
+      A.guard(tr2, read);
+      const untouched = existsSync(A.marker) && readFileSync(A.marker, 'utf8') === first && A.outcome(u2) === 'already recorded' && A.mk()?.appExit === u1;
+      // A plan file changed before its exit is a different approval: it is recorded.
+      const B = appHome(dir);
+      const ub1 = uid();
+      B.guard(transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, B.plan, ub1)]), read);
+      writeFileSync(B.plan, `${STEPS_PLAN}\nAmended before the second exit.\n`);
+      const ub2 = uid();
+      const old = (Date.now() - 3600000) / 1000;
+      utimesSync(B.plan, old, old);
+      B.guard(transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, B.plan, ub2)]), read);
+      return untouched && B.outcome(ub2) === 'recorded' && B.mk()?.appExit === ub2;
+    },
+  },
+  {
+    name: 'p17 start mode: the session start records the permission mode its input carries under the scratchpad, and the restart gate reads a plan mode as the restart\'s only where plan mode stood at the start; a start that stood in another mode reads the owner\'s, and no recorded mode reads by the transcript as before',
+    guards: ['restart_start_mode'],
+    run(m, dir) {
+      const A = appHome(dir);
+      const base = [...approvedEntries(A.plan), ...workEntries(-650, 'w1')];
+      const T = transcript([...base, ...restartOf('compaction', A.plan)]);
+      const marker = approvalMarker(A.home, A.plan, STEPS_PLAN);
+      const s = sid('sm');
+      const pad = join(tmpdir(), 'claude-0', '-home-user', s, 'scratchpad');
+      mkdirSync(pad, { recursive: true });
+      const rm = () => m.report.restartedPlanMode({ transcript_path: T, session_id: s }, marker);
+      const none = rm();
+      m.report.writeStartMode({ session_id: s, source: 'resume' });
+      const noMode = rm();
+      m.report.writeStartMode({ session_id: s, source: 'resume', permission_mode: 'default' });
+      const owners = rm();
+      m.report.writeStartMode({ session_id: s, source: 'resume', permission_mode: 'plan' });
+      const restart = rm();
+      const filed = JSON.parse(readFileSync(join(pad, 'status', 'start-mode.json'), 'utf8'));
+      // The dispatcher writes it at the start from the payload's own mode.
+      const w = world(dir, [turn(0, 'start')]);
+      const s2 = sid('sd');
+      const pad2 = join(tmpdir(), 'claude-0', '-home-user', s2, 'scratchpad');
+      mkdirSync(pad2, { recursive: true });
+      const r = w.call('SessionStart', { session_id: s2, source: 'resume', permission_mode: 'plan' });
+      let viaDispatch = null; try { viaDispatch = JSON.parse(readFileSync(join(pad2, 'status', 'start-mode.json'), 'utf8')); } catch { /* none */ }
+      return none === A.plan && noMode === A.plan && owners === '' && restart === A.plan && filed.mode === 'plan'
+        && r.status === 0 && viaDispatch?.mode === 'plan' && viaDispatch.source === 'resume';
+    },
+  },
+  {
+    name: 'p17 recall names: a later compaction\'s recall file is a new file named by its California date and time, and an earlier recall file in the same folder is left as it was',
+    guards: ['recall_file_name'],
+    async run(m) {
+      const where = tmp('sg-recall-');
+      const old = join(where, 'compaction-1-2026-10-01_08-00-00.txt');
+      writeFileSync(old, 'earlier stretch, kept\n');
+      const f = namedTranscript([turn(0, 'typed in the later stretch'), boundary(40), summary(40)]);
+      const got = await m.recall.stretchSinceCompaction(f);
+      const file = m.recall.saveRecall(f, got.msgs, { dir: where, n: 1, at: Date.UTC(2026, 10, 3, 20, 0, 0) });
+      return !!file && file !== old && basename(file) === 'compaction-1-2026-11-03_12-00-00.txt'
+        && readFileSync(old, 'utf8') === 'earlier stretch, kept\n' && readFileSync(file, 'utf8').includes('typed in the later stretch')
+        && readdirSync(where).length === 2;
     },
   },
   {
@@ -8678,7 +8753,9 @@ const PLANTS = {
   recall_file_all: ['writeFileSync(file, msgs.map(', 'writeFileSync(file, msgs.slice(-SHOWN).map(', 'compact-recall.mjs'],
   recall_file_answered: ['writeFileSync(file, msgs.map(', 'writeFileSync(file, msgs.filter((m) => m.afterReply !== false).map(', 'compact-recall.mjs'],
   recall_for: ['  const file = saveRecall(path, msgs, dir ? { dir, n } : {});', "  const file = '';", 'compact-recall.mjs'],
-  recall_file_name: ["`compaction-${Number(opts.n) || 1}.txt`", '`compaction-1.txt`', 'compact-recall.mjs'],
+  recall_file_name: ["`compaction-${Number(opts.n) || 1}-${californiaStamp(opts.at)}.txt`", '`compaction-1.txt`', 'compact-recall.mjs'],
+  restart_start_mode: ["    if (startMode(p.session_id) !== 'plan' && startMode(p.session_id) !== null) return '';\n", '\n', 'report.mjs'],
+  app_exit_already: ["  else if (alreadyRecorded(x.plan)) outcome = 'already recorded';\n", '\n', 'approved-plan-guard.mjs'],
   recall_number: ['  return { msgs, n: seg === last ? segs.length : segs.length - 1 };', '  return { msgs, n: segs.length };', 'compact-recall.mjs'],
   // The filed messages are read whole after a compaction (LESSONS §416): where they are written, the marker, the gate and its exits.
   recall_scratchpad: ["pad ? join(pad, 'recall') : ''", "''", 'hook-dispatch.mjs'],

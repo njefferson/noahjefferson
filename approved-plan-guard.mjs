@@ -344,6 +344,19 @@ function judgedExits() {
 }
 
 /**
+ * Does the marker already record this plan file as it stands?
+ * @param {string} plan  the plan file's path.
+ * @returns {boolean} true when the marker names this plan and its hash is the file's hash now, so a second exit from plan mode in the
+ *   app records no second approval (Q-HUB-95) and leaves the marker, with the step it is keyed to, as it is. false on any doubt.
+ */
+function alreadyRecorded(plan) {
+  try {
+    const mk = JSON.parse(readFileSync(MARKER, 'utf8'));
+    return mk?.plan === plan && !!mk.hash && mk.hash === hashOf(plan);
+  } catch { return false; }
+}
+
+/**
  * Record the approval from the owner's own exit from plan mode in the app.
  * @param {object} p  a PreToolUse payload: its transcript, session and mode.
  * @returns {{uuid: string, outcome: string, plan?: string, at?: number, index?: number} | null}
@@ -366,6 +379,7 @@ function recordAppExit(p) {
   if (!x || x.uuid !== last.uuid) outcome = "not the owner's exit";
   else if (!isPlanFile(x.plan)) outcome = 'no plan file';
   else if (statSync(x.plan).mtimeMs > x.at) outcome = 'changed after';
+  else if (alreadyRecorded(x.plan)) outcome = 'already recorded';
   else {
     mkdirSync(dirname(MARKER), { recursive: true });
     const snap = snapshotOf(x.plan);
