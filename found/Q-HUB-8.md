@@ -1,1 +1,3 @@
 Q-HUB-8: agentStep in report.mjs ignores the plan path in an agent's prompt, so an earlier plan's agents with the same step numbers make the review stale; a stale review only refuses and never clears a step wrongly (found in step 42). Put right in step 2 of the plan of 31 October: the prompt reader keeps the plan path beside the step number and the list of step ends drops an agent whose prompt names another plan (lesson 442).
+
+Dropped: the case for it passed in the full run of 246 cases at 20:16 California time on 3 November, and the full run of step 69 of the plan that took up the remainder of the plan of 3 November closed it.

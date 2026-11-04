@@ -1,1 +1,3 @@
 Q-HUB-126: a fresh container runs with no dispatcher until a plan's first step installs it, so the holds, the manager fence, the pending guard and the doctrine gate are off for the session's first hours; the fix is in `.claude/hooks/session-start.sh`, which clones the hub to /root/.claude/hub when it is absent and runs hook-dispatch.mjs --install from the clone, and that file is outside the Files of the plan of 1 November; for the next hub plan, with the file in its Files (lesson 466) (found in step 21, from the audit's finding 9).
+
+Put right: step 67 of the plan that took up the remainder of the plan of 3 November makes the session-start hook clone the hub when the clone is absent and run the install from it, with two cases in the suite.

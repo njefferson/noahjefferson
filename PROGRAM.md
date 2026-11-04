@@ -54,7 +54,7 @@ The list is the rank. The items the redesign plan builds come first, then the pa
 
 ## Items
 
-284 items (P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, and P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 224 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
+285 items (P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 225 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
 
 ## Items the redesign plan builds
 
@@ -169,6 +169,23 @@ Close entry of the redesign plan, written by its step 60 from the cost instrumen
 - Compactions: 0. Pushes: 0 so far; step 61 pushes once.
 - The whole session over six plans: 129 owner messages (49 go-words, 80 without, 14 carrying the word stop), 185 stop-hook messages, 95 main-thread refusals, 111 agents, 3 compactions.
 - No dollars are derived by plan, because the transcript holds no price list and the harness's cost entry is cumulative and lags the transcript (Q-HUB-132).
+Close entry of the plan of 3 November, written by step 69 of the plan after it from the cost instrument run on this session's transcript. The instrument numbers it plan 6, approved 08:28 California time on 3 November and approved again after amendments at 11:57, 12:21 and 12:31:
+- The owner's messages: 13, of which 9 end in a go-word and 4 do not; none carries the word stop.
+- Stop-hook messages: 48, of which 42 came from the environment's git hook and 6 from the stop guard.
+- Main-thread refusals: 5 (manager fence 2, correction hold 1, status gate 1, plan mode 1).
+- Agents: 26, all on the sonnet tier, with 556,198 output tokens, 148,992,403 cache-read tokens and 3,710,459 cache-written tokens; 8 hook refusals (plan fence 7, reply guard 1).
+- Main-thread turns: 169 on the opus tier with 102,740 output tokens, and 18 on the fable tier with 46,942 output tokens.
+- Compactions: 0. Resumes: 2. Pushes: the instrument does not count them.
+
+Close entry of the plan of 3 November that took up its remainder (steps 67 to 70), written by step 69 from the same run, so far and before this step's push. The instrument numbers it plan 7, approved 16:24 California time on 3 November and approved again after an amendment at 19:49:
+- The owner's messages: 8, of which 5 end in a go-word and 3 do not; 1 carries the word stop.
+- Stop-hook messages: 38, of which 34 came from the environment's git hook and 4 from the stop guard.
+- Main-thread refusals: 15 (pending guard 7, status gate 4, manager fence 3, rules gate 1).
+- Agents: 23, all on the sonnet tier, with 172,843 output tokens, 43,050,250 cache-read tokens and 2,613,870 cache-written tokens; 16 hook refusals, all plan fence.
+- Main-thread turns: 124 on the opus tier with 70,979 output tokens, and 38 on the fable tier with 107,335 output tokens.
+- Compactions: 1 (16:33 California time on 3 November). Resumes: 2. Pushes: 0 so far; this step pushes once.
+- The whole session over seven plans: 141 owner messages (57 go-words, 84 without, 15 carrying the word stop), 240 stop-hook messages, 113 main-thread refusals, 142 agents, 4 compactions, 14 resumes.
+- The harness's own running cost entry, the last of 67, reads 158.28 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
 ## Parked settings
@@ -280,7 +297,9 @@ Depends: the owner.
 
 ### P-17. The harness's blind areas
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: done. Plan: the plan of 3 November, steps 67 and 68.
+
+Done: step 67 made the session-start hook clone the hub and install the dispatcher when the clone is absent; step 68 named each recall file by the compaction's own California date and time so none is written over, recorded the start's permission mode in a marker so a plan mode entered by hand is told from a restart's, and made a second exit in the app record no second approval. The piece of the acceptance not yet observed is whether a session start's input carries the permission mode, which is Q-HUB-244 (P-285).
 
 Acceptance: after a compaction, after a resume and after a restarted container, the state a session needs is read from files on disk (the approval marker, the plan file, the status page, the manager notes and the filed owner messages), and no step depends on what the model remembers or on a notice the harness prints. Source: the record, section 10.
 
@@ -536,7 +555,9 @@ One entry for each key of the Found queue in the hub's notes, 127 in all, with t
 
 ### P-44. Q-HUB-118: a commit authored under another identity stays on the hub's remote
 
-Repository: hub. Goal: 4. State: open. Plan: none.
+Repository: hub. Goal: 4. State: parked. Plan: none.
+
+Parked: this waits on the owner raising a rewrite of the hub's history, which the doctrine says is offered only when the owner raises it. It unblocks the choice between keeping the commit and rewriting, and with it the pins and sweeps P-35 to P-43 that a rewrite would move.
 
 Acceptance: the owner has chosen between keeping the commit and rewriting the hub's history to change it, and a read of the remote's log shows the choice applied. If the history is rewritten, every pin and sweep that names the old commits is moved in the same piece of work (lesson 334).
 
@@ -590,7 +611,9 @@ Depends: P-12.
 
 ### P-50. Q-HUB-126: a fresh container runs with no dispatcher until a plan's first step installs it
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: done. Plan: the plan of 3 November, step 67.
+
+Done: the session-start hook clones the hub to the live clone's path when it is absent and runs the install from the clone, printing one line that says so; two cases in the suite hold it, one with the clone absent and one with it present.
 
 Acceptance: the session-start hook clones the hub to the live clone's path when it is absent and installs the dispatcher from that clone, so that the first tool call of a fresh container is already under the holds; read from the hook print of that first call, and a case.
 
@@ -618,7 +641,9 @@ Depends: P-10.
 
 ### P-53. Q-HUB-121: progress and report files keyed by step number alone were overwritten by a later plan's agents
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: the plan of 3 November, step 69.
+
+Done: observed in the full run of 246 cases at 20:16 California time on 3 November, which met the acceptance's case; the Found line is dropped.
 
 Acceptance: the line records a fix for the Standing review step, which writes a numbered review file with its count taken from the files already there, and a latched agent may write that name (lesson 464); a step sent twice still writes one report file, deliberately. Done when the case for it passes in a full run over the next integrated change and the next plan's Found answered section drops the line.
 
@@ -644,7 +669,9 @@ Depends: the harness.
 
 ### P-56. Q-HUB-120: the gates counted an earlier plan's hand-backs as the plan in force's
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: the plan of 3 November, step 69.
+
+Done: observed in the full run of 246 cases at 20:16 California time on 3 November, which met the acceptance's case; the Found line is dropped.
 
 Acceptance: the line records this as put right (lesson 455): a step end counts only when the agent was sent after the plan's approval. Done when the case for it passes in a full run over the next integrated change and the next plan's Found answered section drops the line.
 
@@ -700,7 +727,9 @@ Depends: Jefferson-Photography-Studio's hooks, which the hub cannot read in a se
 
 ### P-63. Q-HUB-8: an earlier plan's agents with the same step numbers made the review stale
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: the plan of 3 November, step 69.
+
+Done: observed in the full run of 246 cases at 20:16 California time on 3 November, which met the acceptance's case; the Found line is dropped.
 
 Acceptance: the line records this as put right in step 2 of the plan of 31 October 2026 (lesson 442): the prompt reader keeps the plan path beside the step number, and the list of step ends drops an agent whose prompt names another plan. Done when the case for it passes in a full run over the next integrated change and the next plan's Found answered section drops the line.
 
@@ -716,7 +745,9 @@ Depends: none.
 
 ### P-65. Q-HUB-10: the Rules line of an approved plan was not part of the approved scope
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: the plan of 3 November, step 69.
+
+Done: observed in the full run of 246 cases at 20:16 California time on 3 November, which met the acceptance's case; the Found line is dropped.
 
 Acceptance: the line records this as put right by the commit of 28 October 2026 (lesson 433): the Rules line and the Rules of this plan section are part of the approved scope, so an edit of either voids the approval. Done when the case for it passes in a full run over the next integrated change and the next plan's Found answered section drops the line.
 
@@ -2467,6 +2498,14 @@ Depends: none.
 Repository: hub. Goal: 5. State: open. Plan: none.
 
 Acceptance: aim-review.md names the bare git reads a review may make and says a format string or percent code is not among them.
+
+Depends: none.
+
+### P-285. Q-HUB-244: a session start's input carrying the permission mode is unconfirmed
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the next session start's `status/start-mode.json` in that session's scratchpad is read, and it says whether the start's input carried the permission mode; where it did, a case holds the real shape, and where it did not, the restart gate is recorded as reading by the transcript's shape alone and the line is dropped with that read as the reason.
 
 Depends: none.
 

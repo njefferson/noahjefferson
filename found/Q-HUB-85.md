@@ -1,1 +1,3 @@
 Q-HUB-85: the recall file of the owner's messages for the stretch that ended with the compaction of 08:47 was written as compaction-3.txt under recall/ in the session scratchpad, while compaction-18.txt and compaction-19.txt from 19 and 20 October already stand beside it, so the number a compaction is given repeats within one session and a later stretch writes over an earlier stretch's file (found in step 213, recorded by step 213).
+
+Put right: step 68 of the plan that took up the remainder of the plan of 3 November names each recall file by the compaction's own California date and time to the second, so no name repeats and no file is written over; a case writes a recall file beside an existing one and reads the existing one unchanged.
