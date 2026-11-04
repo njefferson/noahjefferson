@@ -8604,6 +8604,33 @@ const CASES = [
         && underRead.skipped === false && typeof underRead.fence === 'string' && /not of the record/.test(underRead.fence);
     },
   },
+  // ---- step 67: the session-start hook clones the hub and installs the dispatcher when the clone is absent ----
+  {
+    name: 'the session-start hook clones an absent hub clone and prints the install line without running it',
+    run() {
+      const work = tmp('sg-start-');
+      const clone = join(work, 'clone');
+      const project = tmp('sg-start-project-');
+      const r = spawnSync('bash', [join(HERE, '.claude', 'hooks', 'session-start.sh')], { encoding: 'utf8', timeout: 120000,
+        env: { ...process.env, CLAUDE_PROJECT_DIR: project, HUB_CLONE_PATH: clone, HUB_CLONE_SOURCE: HERE, HUB_CLONE_DRY: '1' } });
+      const out = r.stdout ?? '';
+      return r.status === 0 && out.includes(`cloned it from ${HERE} into ${clone}`)
+        && out.includes(`install line (dry run, not run): node ${clone}/hook-dispatch.mjs --install`)
+        && existsSync(join(clone, 'hook-dispatch.mjs'));
+    },
+  },
+  {
+    name: 'the session-start hook prints nothing of a clone when the hub clone is present',
+    run() {
+      const clone = tmp('sg-start-present-');
+      writeFileSync(join(clone, 'hook-dispatch.mjs'), '// a clone is here\n');
+      const project = tmp('sg-start-project-');
+      const r = spawnSync('bash', [join(HERE, '.claude', 'hooks', 'session-start.sh')], { encoding: 'utf8', timeout: 120000,
+        env: { ...process.env, CLAUDE_PROJECT_DIR: project, HUB_CLONE_PATH: clone, HUB_CLONE_SOURCE: HERE, HUB_CLONE_DRY: '1' } });
+      const out = r.stdout ?? '';
+      return r.status === 0 && !/clone/.test(out) && !/install line/.test(out);
+    },
+  },
 ];
 
 const PLANTS = {
