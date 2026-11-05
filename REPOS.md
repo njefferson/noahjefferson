@@ -51,7 +51,8 @@ a session's confident wrong answer.
 - **Branch guard:** installed. `work=staging`, `promote=main` via
   `QUIETKEEP_PROMOTE=1`.
 - **Gates wired in CI:** the full Spine, plus the hub's `privacy-check.mjs` and
-  `privacy-mirror-check.mjs` checked out and run.
+  `privacy-mirror-check.mjs` checked out and run. Its spine workflow calls the
+  hub's shared gates workflow on `staging` (read 4 November 2026).
 - **The §7e baseline is complete here** — the ⓘ, first-run orientation, patch
   notes from one source, the text diagnostic, and the stale-app offer.
 
@@ -324,11 +325,13 @@ gates were shared and the wiring was not.**
         with:
           pwa: true
 
-**Seven repos call it as of 2026-08-29** — Cv-Thalweg, fauxplane,
-3d-printing-pal, Intersecting-parallels, photo-pointer, MoleBridge and Solve-ent.
-Quietkeep's swap is written and NOT settled: it was pushed to that repo's
-`staging` while another session was working there, which it should not have been,
-and it waits on the owner.
+**Eight repos call it as of 4 November 2026** — Cv-Thalweg, fauxplane,
+3d-printing-pal, Intersecting-parallels, photo-pointer, MoleBridge and Solve-ent
+as of 2026-08-29, and Quietkeep, read on 4 November 2026: its spine workflow
+calls the shared workflow on its `staging` branch, the pin names a commit the
+hub's main reaches, and the hub's pin check passes on it. The dry run of the
+sweep waits on the promote: the caller is on `staging` and not on the default
+branch, so a dispatch answers not found until it is promoted.
 
 **The pin is read out of the CALLING workflow file**, not from a context. Three
 context properties were tried and all three failed — see LESSONS §184, including

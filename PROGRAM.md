@@ -196,6 +196,34 @@ Close entry of the plan of 4 November (steps 71 to 73, the model-switch hooks), 
 - The whole session over eight plans: 146 owner messages (61 go-words, 85 without, 15 carrying the word stop), 253 stop-hook messages, 120 main-thread refusals, 147 agents, 4 compactions, 15 resumes.
 - The harness's own running cost entry, the last of 69, reads 190.48 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
 
+The three entries that follow were written by step 30 of the plan that closes P-19, from the cost instrument run on that session's transcript, which numbers its plans from its own start and so differently from the entries above. They are the close entries owed for the plans that carried P-23, P-35 and P-19.
+
+Close entry of the knowledge-layer plan of 3 November (P-23, steps 20 to 22), which the instrument numbers plan 7, approved 21:10 California time on 3 November:
+- The owner's messages: 3, of which 2 end in a go-word and 1 does not; none carries the word stop.
+- Stop-hook messages: 0.
+- Main-thread refusals: 4 (correction hold 2, manager fence 1, plan rules gate 1).
+- Agents: 4, all on the sonnet tier, with 30,303 output tokens, 6,910,657 cache-read tokens and 611,300 cache-written tokens; 1 hook refusal, plan fence.
+- Main-thread turns: 18 on the opus tier with 12,942 output tokens, and 19 on the fable tier with 83,766 output tokens.
+- Compactions: 1 (09:22 California time on 4 November). Resumes: 2. Pushes: the instrument does not count them; its commit is on Quietkeep's staging.
+
+Close entry of the hub-pin plan of 4 November (P-35, steps 24 to 26), which the instrument numbers plan 8, approved 14:26 California time on 4 November:
+- The owner's messages: 5, of which 3 end in a go-word and 2 do not; none carries the word stop.
+- Stop-hook messages: 0.
+- Main-thread refusals: 4 (correction hold 2, reads gate 1, plan rules gate 1).
+- Agents: 6, all on the sonnet tier, with 41,807 output tokens, 11,909,156 cache-read tokens and 939,597 cache-written tokens; 5 hook refusals, all plan fence.
+- Main-thread turns: 23 on the opus tier with 13,879 output tokens, and 39 on the fable tier with 83,003 output tokens.
+- Compactions: 0. Resumes: 1. Pushes: the instrument does not count them; its commits are on Quietkeep's staging.
+
+Close entry of the plan that closes P-19 (steps 28 to 30), which the instrument numbers plan 9, approved 17:35 California time on 4 November and approved again after amendments at 17:52 and 21:36, read so far and before step 30's push:
+- The owner's messages: 5, of which 4 end in a go-word and 1 does not; none carries the word stop.
+- Stop-hook messages: 0.
+- Main-thread refusals: 3 (pending guard 2, plan rules gate 1).
+- Agents: 10, all on the sonnet tier, with 88,439 output tokens, 26,658,786 cache-read tokens and 1,833,333 cache-written tokens; 8 hook refusals, all plan fence.
+- Main-thread turns: 54 on the opus tier with 36,604 output tokens, and 6 on the fable tier with 8,037 output tokens.
+- Compactions: 0. Resumes: 1. Pushes: the instrument does not count them; steps 28 and 29 each pushed once and step 30 pushes once.
+- The whole session over nine plans: 140 owner messages (53 go-words, 87 without, 11 carrying the word stop), 52 stop-hook messages, 107 main-thread refusals, 115 agents, 6 compactions, 15 resumes.
+- The harness's own running cost entry, the last of 53, reads 616.79 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
+
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
 ## Parked settings
@@ -331,7 +359,9 @@ Depends: the harness version this container runs. The page says PostModelSwitch 
 
 ### P-19. The Stop input's list of running background tasks
 
-Repository: hub. Goal: 5. State: running. Plan: i-m-not-british-make-indexed-riddle.md.
+Repository: hub. Goal: 5. State: done. Plan: i-m-not-british-make-indexed-riddle.md.
+
+Done: the stop guard now reads the Stop input's background_tasks list first, holds on every entry that is not a subagent and has no ended status, prints each holding entry by type and description with the count of session_crons beside it, and falls back to the transcript lister only where the input carries no list. One case with four inputs (a running shell task refuses, an empty list passes, a subagent entry alone passes, an absent list with a planted running task refuses through the lister) and two plants, input_read and input_type, were added to the suite; the narrowed plants run caught all 100 of 1107 and the whole suite passed 258 of 258; lessons 381 and 440 carry a dated paragraph each, and lesson 440's cases are kept for the fallback path. The harness version this container runs is 2.1.318, so the dependence on it is met. Q-HUB-113 is kept, not fixed: the stop guard reads the Stop input's list first so the phrase for a lost task no longer decides the hold where the list is present, and the lister that matches the phrase stays as the fallback, so the words of a real lost-task answer are still unobserved. The record is plans/stop-input-record.md.
 
 Acceptance: the hold on a stop while background work is running reads the background_tasks and session_crons lists of the Stop hook's input and not the transcript's task notices; a case with a planted input shows the stop held with one task running and passed with none, and the cases for a lost task (lesson 440) are retired or kept for the reason written here.
 
@@ -379,7 +409,9 @@ Depends: P-9; the app's own session. The record's section 4 holds the cases that
 
 ### P-23. Knowledge layer: Quietkeep
 
-Repository: Quietkeep. Goal: 1. State: open. Plan: none.
+Repository: Quietkeep. Goal: 1. State: done. Plan: the knowledge-layer plan of 3 November.
+
+Done: Quietkeep's instruction file opens with a head of ten lines under Facts first, each naming the test or Spine step that fails when it is broken, and one line that says the review alone holds it. Two tests in a new test/facts.test.ts hold a role demand-free, so the gate refuses a clock on one, and the content policy to scripts and styles from the site's own files. The suite passed 1642 tests before and after a planted break; the planted break, the clock-on-demand-free-kind line of the gate negated, failed 12 tests including both clock-refusal tests and was restored exactly. The commit stands on Quietkeep's staging with the Spine and Deploy runs green; the promote is the owner's.
 
 Acceptance: the app's instruction file opens with a short head of the facts a session gets wrong from its prior, chosen from the app's own notes (REPOS.md describes it as a local-first planner on IndexedDB through Dexie with an append-only event log, no accounts and no telemetry); tests on its own fixtures fail when a fact is broken; the review reads a change against the head. Observed by breaking one fact in a planted change and watching a test fail.
 
@@ -491,11 +523,13 @@ Each acceptance is the same two observations. The hub's pin check, run from the 
 
 ### P-35. Hub pin and sweep caller: Quietkeep
 
-Repository: Quietkeep. Goal: 6. State: open. Plan: none.
+Repository: Quietkeep. Goal: 6. State: parked. Plan: the hub-pin plan of 4 November.
+
+Parked: the spine workflow's pin, the tracked commit hook and the doctrine marker all name the hub's head as it stood on 4 November, and the hub's pin check run from the hub on the repository exits 0, so the first observation is met. The branch-sweep caller stands on Quietkeep's staging branch with its delete input defaulting to off, and the Spine and Deploy runs for that head concluded success. The second observation, the dry run listing the session branches, waits on the promote: a dispatch of the caller from staging answered not found, because a dispatched workflow must be on the default branch. The promote is the owner's, and the dry run is one dispatch in the plan that follows it. REPOS.md now says the repository calls the shared workflow, the two sources having agreed on that.
 
 Acceptance: as the section above states.
 
-Depends: the repository's own workflows, which were not read in the redesign plan. REPOS.md (29 August 2026) says the swap to the shared gates workflow was written and waits on the owner; the instruction file's census (read 4 September 2026) says the repository calls it from its spine workflow. The two disagree.
+Depends: the repository's own workflows, read on 4 November 2026: the spine workflow calls the shared gates workflow, so the instruction file's census was right and REPOS.md was stale.
 
 ### P-36. Hub pin and sweep caller: fauxplane
 
