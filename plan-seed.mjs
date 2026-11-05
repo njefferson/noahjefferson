@@ -195,8 +195,8 @@ export function seed(o) {
   L();
   L('## Files');
   L();
-  const readOnly = ['DOCTRINE.md', 'LESSONS.md', 'agent-rules.md', 'aim-review.md'].filter((f) => existsSync(join(hub, f)));
-  L(`- Hub, edited: \`PROGRAM.md\`, \`NOTES.md\`, \`found/\`${existsSync(join(hub, 'lessons')) ? ', `lessons/`' : ''}, <the item's own files, each with (new) after it where the plan creates it>`);
+  const readOnly = ['DOCTRINE.md', 'agent-rules.md', 'aim-review.md'].filter((f) => existsSync(join(hub, f)));
+  L(`- Hub, edited: \`PROGRAM.md\`, \`NOTES.md\`, \`found/\`${existsSync(join(hub, 'lessons')) ? ', `lessons/`, `LESSONS.md`' : ''},<the item's own files, each with (new) after it where the plan creates it>`);
   L(`- Hub, read only: ${readOnly.map((f) => `\`${f}\``).join(', ')}`);
   if (resolve(repo) !== hub) L(`- ${basename(repo)}, edited: <the item's own files in ${basename(repo)}>`);
   L(`- Session scratchpad: \`progress/\`, \`status/\`, \`scratch/\`, \`recall/\`, which is \`${pad ? `${pad}/` : '<the session scratchpad, which no session id here names>'}\``);

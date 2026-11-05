@@ -1,0 +1,1 @@
+Q-HUB-250: the analytics and fax deploy workflows still show secrets outside an environment and an anonymous definition under zizmor's auditor persona, three and seven of the first and one of the second in each file, outside the template-injection fix that step 78 made (found in step 78 of the plan of 5 November, filed in step 83 of the plan that wrote the seed).

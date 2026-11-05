@@ -1,0 +1,1 @@
+Q-HUB-258: running all 1130 plants of session-guards.test.mjs in one process exits 134 with the heap out of memory, so the plants must be run by file with the narrowed flags and the whole suite's count comes from the cases and the per-file plant runs (found in step 82 of the plan that wrote the seed, filed in step 83).

@@ -54,7 +54,7 @@ The list is the rank. The items the redesign plan builds come first, then the pa
 
 ## Items
 
-287 items (P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 226 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
+299 items (P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 226 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
 
 ## Items the redesign plan builds
 
@@ -239,6 +239,16 @@ Close entry of the plan that measures the Stop hook block cap (P-20, steps 32 to
 - Pushes: the instrument does not count them; steps 32 and 33 each pushed once and step 35 pushes once.
 - The harness's own running cost entry, the last of 56, reads 667.66 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
 
+Close entry of the plan seed (P-288, steps 81 to 83), written by step 83 from the cost instrument run on this session's transcript, so far and before this step's push. The instrument numbers it plan 10 and names its title, approved 09:14 California time on 5 November:
+- The owner's messages: 0, as the instrument prints for this plan; the session's totals are below.
+- Stop-hook messages: 4 in 3 stops (the environment's git hook 3, the stop guard 1).
+- Main-thread refusals: 2 (manager fence 2).
+- Agents: 7, all on the sonnet tier, with 140,547 output tokens, 32,749,940 cache-read tokens and 1,851,160 cache-written tokens; 1 hook refusal, plan fence.
+- Main-thread turns: 38 on the opus tier with 25,176 output tokens.
+- Compactions: 0. Resumes: 0. Pushes: the instrument does not count them; this step pushes once.
+- The whole session over ten numbered plans: 167 owner messages (72 go-words, 95 without, 16 carrying the word stop), 288 stop-hook messages, 137 main-thread refusals, 166 agents, 5 compactions, 20 resumes.
+- The harness's own running cost entry, the last of 83, reads 313.89 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). The close entry of the plan of 5 November under P-287 above is short by steps 79 and 80, which a close entry written in a middle step always is (Q-HUB-252).
+
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
 ## Parked settings
@@ -347,6 +357,16 @@ Unblocks: sessions that load less into every turn, and the closing of Q-HUB-147 
 Depends: the owner.
 
 ## The harness
+
+### P-288. The plan seed: the record printed into the plan at the entry to plan mode
+
+Repository: hub. Goal: 1. State: done. Plan: the plan of 5 November, steps 81 to 83.
+
+Done: on 5 November `plan-seed.mjs` was written with `plans/seed-template.md`, which holds the standing text the owner edits. One command prints, in the plan's own shape, the item's own entry from this file, the goals block, the rules version, the Files list with the found folder, the Commands, the rules of a plan, the close step with its three acts, the review step, the open found keys as a Found answered section, the roadmap and shipped-check stubs, the next step number, and the movable reads (the remote's heads, the live clone's head, the working copy's head) marked as things another session can move. The dispatcher prints it once at the entry to plan mode and the fence and the plan guard pass the command. Four cases and fifteen plants cover it. Delivery of the print as added context at a tool call and at a prompt is not yet shown by a live entry (Q-HUB-256, Q-HUB-257).
+
+Acceptance: a plan starts from a print of the record covering the item's own entry, the Files shape, the close step, the review step, the rules version, the found keys and the movable heads, with the print covered by cases and the next plan written from it.
+
+Depends: none.
 
 ### P-287. The template-injection findings in the analytics and fax deploy workflows
 
@@ -2593,4 +2613,94 @@ Repository: hub. Goal: 5. State: open. Plan: none.
 Acceptance: the suite reads a `--case=` value holding spaces whole, or refuses it with a printed line, and a case holds each.
 
 Depends: none.
+
+### P-289. Q-HUB-249: the fax deploy workflow runs npx without its no-install flag in a job that handles secrets
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: the step runs the tool through a pinned install or with the no-install flag, and pin-check prints no note for the file.
+
+Depends: none.
+
+### P-290. Q-HUB-250: the analytics and fax deploy workflows show secrets outside an environment and an anonymous definition under the auditor persona
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: zizmor's auditor persona over each of the two files reports no secrets-outside-environment and no anonymous-definition finding, or each remaining finding is recorded with the reason it stands.
+
+Depends: none.
+
+### P-291. Q-HUB-251: the items count line's breakdown does not sum to its number
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the breakdown in `PROGRAM.md` and `NOTES.md` sums to the number the line opens with, counted from the entries, and a case or a check holds it.
+
+Depends: none.
+
+### P-292. Q-HUB-252: a close entry written in a middle step is short by the steps that follow
+
+Repository: hub. Goal: 3. State: open. Plan: none.
+
+Acceptance: the close entry of a plan is written by the plan's last step, or the seed's close step names the step that writes it, and the entry covers every step of the plan.
+
+Depends: P-288.
+
+### P-293. Q-HUB-253: two plans typed from memory of the record reached their reviews with wrong facts
+
+Repository: hub. Goal: 1. State: done. Plan: the plan of 5 November, steps 81 to 83.
+
+Done: answered by the plan seed (P-288), which prints the record into the plan at the write; the next plan written from its print is the proof.
+
+Acceptance: the next plan is written from the seed's print and its review finds no fact typed from memory of the record.
+
+Depends: P-288.
+
+### P-294. Q-HUB-254: the name check's new-file mark on a Commands entry is read by the plan fence as a word of the command
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: a Commands entry that names a file the plan creates passes the plan guard and the plan fence matches the run of it, with a case holding each.
+
+Depends: none.
+
+### P-295. Q-HUB-255: the stop guard holds the main thread's stop on a shell an agent started in the background
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: a stop is not held by a background shell that an agent started while no task the main thread started is running, and a case with plants holds it.
+
+Depends: none.
+
+### P-296. Q-HUB-256: the seed's added context at a tool call has not been shown to reach the model
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: a live entry to plan mode shows the seed's print in the model's context from the tool call's added context, read from the transcript, or the print is moved to the route that does reach it.
+
+Depends: P-288.
+
+### P-297. Q-HUB-257: a prompt's payload carries no permission mode, so the seed's print at a prompt may never fire
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the route by which the dispatcher learns the entry to plan mode is read from a live entry, and the seed prints once at that entry by that route.
+
+Depends: P-288.
+
+### P-298. Q-HUB-258: all the suite's plants in one process exit 134 with the heap out of memory
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the whole suite's plants run in one command without exhausting the heap, or the full run is split by file by the suite itself and its count is printed whole.
+
+Depends: none.
+
+### P-299. Q-HUB-259: the seed's working copy count includes untracked new files
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the seed's print separates changed lines of tracked files from untracked files, and a case holds both.
+
+Depends: P-288.
 
