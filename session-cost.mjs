@@ -34,12 +34,13 @@
  * Prints counts and nothing else: no owner message, no agent id, no task id.
  * Times are California time.
  */
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { isOwnerMessage, textOf } from './transcript-tail.mjs';
 import { endsWithGoWord } from './hook-dispatch.mjs';
 
-console.log('MADE TO FAIL: the planted transcript holds 3 owner messages (2 ending in a go-word), 1 stop refusal, 2 main-thread turns, 2 approved plans (the first approved 2 times) with their titles and program items, 1 agent and 1 compaction; the counts and the two titles printed next must read the same');
+console.log('MADE TO FAIL: the planted transcript holds 3 owner messages (2 ending in a go-word), 1 stop refusal, 2 main-thread turns, 3 approved plans (the first approved 2 times, the third saved as a large-output file) with their titles and program items, 1 agent and 1 compaction; the counts and the two titles printed next must read the same');
 console.log('nothing below is trustworthy unless the planted counts printed next equal those figures');
 
 const fmt = (n) => Number(n || 0).toLocaleString('en-US');
@@ -75,6 +76,17 @@ const resultText = (b) => {
   if (Array.isArray(c)) return c.map((x) => x?.text ?? '').join('\n');
   return '';
 };
+
+// A tool result the harness saved as a large-output file opens with a wrapper that names the saved file and gives a 2KB preview. The
+// text of the result is the saved file where it exists, and the preview otherwise, so an approval saved this way is still read as one.
+function unwrapSaved(t) {
+  const s = String(t ?? '');
+  if (!s.startsWith('<persisted-output>')) return s;
+  const file = /Full output saved to:\s*(\S+)/.exec(s)?.[1] ?? '';
+  try { if (file && existsSync(file)) return readFileSync(file, 'utf8'); } catch { /* the preview below is the text */ }
+  const at = s.indexOf('Preview (first 2KB):');
+  return at < 0 ? s : s.slice(at + 'Preview (first 2KB):'.length).replace(/^\n/, '');
+}
 
 // The title line and the first program key of a plan's Item section, read from the plan's text. Either is null where the text holds none.
 function planIdentity(text) {
@@ -146,7 +158,7 @@ function scanMain(lines) {
     }
     if (e.type === 'user' && Array.isArray(content)) {
       for (const b of content) {
-        const rt = b?.type === 'tool_result' ? resultText(b) : '';
+        const rt = b?.type === 'tool_result' ? unwrapSaved(resultText(b)) : '';
         if (rt.startsWith('User has approved your plan')) {
           // The same plan approved again after an amendment is one plan, not two: the title the approval carries tells them apart.
           const title = rt.match(/Approved Plan[^\n]*\n#\s*([^\n]+)/)?.[1] ?? null;
@@ -376,6 +388,11 @@ function planted() {
     L({ type: 'assistant', timestamp: '2026-11-01T01:10:30.000Z', message: { id: 'plant-two', role: 'assistant', model: 'model-b', usage: { input_tokens: 20, output_tokens: 40, cache_read_input_tokens: 200, cache_creation_input_tokens: 100 }, content: [{ type: 'tool_use', name: 'Write', input: { file_path: '/root/.claude/plans/planted-two.md', content: '# A second planted title\n\n## Item\n\nP-98 of the planted program.\n\n## Asked\n\nnothing' } }] } }),
     L({ type: 'user', timestamp: '2026-11-01T01:11:00.000Z', message: { role: 'user', content: [{ type: 'tool_result', content: 'User has approved your plan. You can now start.\n\n## Approved Plan:\n# A second planted title' }] } }),
   ];
+  // A third plan approved with a result the harness saved as a large-output file: the wrapper's preview carries only the title, and the saved file beside it carries the Item.
+  const savedDir = mkdtempSync(join(tmpdir(), 'cost-saved-'));
+  const savedFile = join(savedDir, 'planted-approval.txt');
+  writeFileSync(savedFile, 'User has approved your plan. You can now start.\n\n## Approved Plan:\n# A third planted title\n\n## Item\n\nP-97 of the planted program.\n\n## Asked\n\nnothing');
+  main.push(L({ type: 'user', timestamp: '2026-11-01T01:12:00.000Z', message: { role: 'user', content: [{ type: 'tool_result', content: '<persisted-output>\nOutput too large (55.2KB). Full output saved to: ' + savedFile + '\n\nPreview (first 2KB):\nUser has approved your plan. You can now start.\n\n## Approved Plan:\n# A third planted title\n\n## Item\n' }] } }));
   const agent = [
     asst('plant-agent-one', 'model-c', '2026-11-01T01:04:30.000Z', 5),
     asst('plant-agent-two', 'model-c', '2026-11-01T01:04:40.000Z', 5),
@@ -393,7 +410,7 @@ const got = {
   titles: p.buckets.slice(1).map((b) => (b.item ?? 'no item read') + ': ' + (b.title ?? 'no title read')).join('; '),
 };
 console.log('planted counts: ' + JSON.stringify(got));
-const want = { owner: 3, go: 2, stop: 1, turns: 2, plans: 2, reapprovals: 1, agents: 1, compactions: 1, refusals: 1, mentions: 2, notifications: 1, titles: 'P-99: A planted title; P-98: A second planted title' };
+const want = { owner: 3, go: 2, stop: 1, turns: 2, plans: 3, reapprovals: 1, agents: 1, compactions: 1, refusals: 1, mentions: 2, notifications: 1, titles: 'P-99: A planted title; P-98: A second planted title; P-97: A third planted title' };
 if (JSON.stringify(got) !== JSON.stringify(want)) {
   console.log('PLANTED COUNTS DO NOT MATCH ' + JSON.stringify(want) + '; nothing below is trustworthy and the run stops');
   process.exit(1);

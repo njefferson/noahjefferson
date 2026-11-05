@@ -295,7 +295,7 @@ try {
     const n = log.length + 1;
     log.push({ call: n, at: new Date().toISOString(), stop_hook_active: !!hook.stop_hook_active });
     writeFileSync(file, JSON.stringify({ ...mk, log }));
-    process.stderr.write(`PLANT ${n} of ${limit} — this refusal is the plan's own measurement of the harness's cap on consecutive stop refusals, not a defect of the reply. Answer it with the one line "PLANT ${n}" and make no tool call, because a tool call resets the count being measured.\n`);
+    process.stderr.write(`PLANT ${n} of ${limit} — this refusal is the plan's own measurement of the harness's cap on consecutive stop refusals, not a defect of the reply. Answer it with one line that names the measurement (the harness's cap on consecutive stop refusals), says this is refusal ${n} of ${limit}, and says the run ends when the harness overrides a refusal or the limit is reached, and make no tool call, because a tool call resets the count being measured.\n`);
     process.exit(2);
   }
 } catch { /* a marker that cannot be read is absent */ }

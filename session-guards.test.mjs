@@ -8802,7 +8802,15 @@ const CASES = [
     guards: ['cost_item_read', 'cost_write_read'],
     run(m, dir) {
       const r = spawnSync('node', [join(dir, 'session-cost.mjs')], { encoding: 'utf8', timeout: 120000 });
-      return r.status === 0 && /planted counts match the known figures/.test(r.stdout) && r.stdout.includes('"titles":"P-99: A planted title; P-98: A second planted title"');
+      return r.status === 0 && /planted counts match the known figures/.test(r.stdout) && r.stdout.includes('"titles":"P-99: A planted title; P-98: A second planted title; P-97: A third planted title"');
+    },
+  },
+  {
+    name: 'the cost instrument reads an approval the harness saved as a large-output file: its planted transcript holds a third approval whose result is the wrapper with a preview carrying only the title, a saved file beside it carrying the Item, and the plan is numbered with its title and its item read from the saved file',
+    guards: ['cost_saved_read'],
+    run(m, dir) {
+      const r = spawnSync('node', [join(dir, 'session-cost.mjs')], { encoding: 'utf8', timeout: 120000 });
+      return r.status === 0 && /"plans":3/.test(r.stdout) && r.stdout.includes('P-97: A third planted title');
     },
   },
 
@@ -9014,6 +9022,7 @@ const PLANTS = {
   cap_plant_log: ['    log.push({ call: n, at: new Date().toISOString(), stop_hook_active: !!hook.stop_hook_active });\n', '\n', 'stop-guard.mjs'],
   cap_plant_line: ['`PLANT ${n} of ${limit}', '`PLOT ${n} of ${limit}', 'stop-guard.mjs'],
   cost_item_read: ['item: section.match(/\\bP-\\d+\\b/)?.[0] ?? null };', 'item: null };', 'session-cost.mjs'],
+  cost_saved_read: ['if (file && existsSync(file)) return', 'if (false && file && existsSync(file)) return', 'session-cost.mjs'],
   cost_write_read: ['lastWrite = planIdentity(b.input?.content);', 'lastWrite = { title: null, item: null };', 'session-cost.mjs'],
   switch_allow: ["permissionDecision: 'allow', permissionDecisionReason", "permissionDecision: 'ask', permissionDecisionReason", 'hook-dispatch.mjs'],
   switch_figures: ['systemMessage: `Model switch, ${figures}.`', 'systemMessage: `Model switch.`', 'hook-dispatch.mjs'],

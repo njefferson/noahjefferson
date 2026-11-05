@@ -233,9 +233,14 @@ Close entry of the plan that closes P-19 (steps 28 to 30), which the instrument 
 - The whole session over nine plans: 140 owner messages (53 go-words, 87 without, 11 carrying the word stop), 52 stop-hook messages, 107 main-thread refusals, 115 agents, 6 compactions, 15 resumes.
 - The harness's own running cost entry, the last of 53, reads 616.79 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
 
-Close entry of the plan that measures the Stop hook block cap (P-20, steps 32 to 36), written by step 35 from the cost instrument run on this session's transcript, so far and before the wait on CI for step 35's push, approved on 5 November after the compaction of 08:03 California time. The instrument does not number this plan: its approval result was saved by the harness as a large-output file, so the result opens with a wrapper and not with the approval sentence, and the instrument folds this plan's entries into the bucket of plan 9, the plan that closed P-19 (Q-HUB-248). So the figures by plan are not measured for this plan; what the instrument prints for the session is these:
-- The owner's messages, stop-hook messages, main-thread refusals and agents for this plan alone: not measured. The 9 refusals opening PLANT were read directly from the transcript and sit inside plan 9's 10 stop-hook messages there.
-- The whole session over nine numbered plans: 147 owner messages (57 go-words, 90 without, 13 carrying the word stop), 62 stop-hook messages, 110 main-thread refusals, 123 agents, 7 compactions, 17 resumes.
+Close entry of the plan that measures the Stop hook block cap (P-20, steps 32 to 36), written by step 35 from the cost instrument run on this session's transcript, so far and before the wait on CI for step 35's push, approved on 5 November after the compaction of 08:03 California time. The instrument did not number this plan when step 35 ran: its approval result was saved by the harness as a large-output file, so the result opens with a wrapper and not with the approval sentence, and the instrument folded this plan's entries into the bucket of plan 9 (Q-HUB-248). The instrument now reads such an approval from the saved file, and numbers this plan 10 (written by step 37 of the plan that closes P-21, from the instrument's run of 5 November). Its figures for this plan alone are these:
+- The owner's messages: 5, of which 4 end in a go-word and 1 does not; none carries the word stop.
+- Stop-hook messages: 9 in 9 stops, all from the environment's command hook and all opening PLANT.
+- Main-thread refusals: 8 (pending guard 6, manager fence 2).
+- Agents: 8, all on the sonnet tier, with 130,699 output tokens, 33,275,735 cache-read tokens and 2,292,169 cache-written tokens; 2 hook refusals, both plan fence.
+- Main-thread turns: 48 on the opus tier with 21,978 output tokens, and 13 on the fable tier with 38,885 output tokens.
+- Compactions: 0. Resumes: 2.
+- The whole session over nine numbered plans, as the instrument printed it then: 147 owner messages (57 go-words, 90 without, 13 carrying the word stop), 62 stop-hook messages, 110 main-thread refusals, 123 agents, 7 compactions, 17 resumes.
 - Pushes: the instrument does not count them; steps 32 and 33 each pushed once and step 35 pushes once.
 - The harness's own running cost entry, the last of 56, reads 667.66 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
 
@@ -432,7 +437,7 @@ Depends: the harness version this container runs; P-12, since the environment's 
 
 ### P-21. The config-change hook
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: i-m-not-british-make-indexed-riddle.md.
 
 Acceptance: a ConfigChange hook reports a change to a user, project or local settings file or a skill file, and the baseline's drift detection uses it; a run in this container shows the hook firing on a planted change. A change to managed policy settings cannot be blocked by it, and server-managed settings do not run it.
 
