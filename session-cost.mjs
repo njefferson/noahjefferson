@@ -27,6 +27,10 @@
  * its first entry. A model's turn is deduplicated by the message id it carries,
  * because one reply can be written as several entries that repeat its usage.
  *
+ * Each plan's heading carries the plan's title line and the first program key of its Item section, read from the plan text the approval
+ * result carries, or from the plan file as last written under a plans folder (the Write call's input) when that has the same title.
+ * Where none is read the heading says no title read or no item read.
+ *
  * Prints counts and nothing else: no owner message, no agent id, no task id.
  * Times are California time.
  */
@@ -35,7 +39,7 @@ import { join } from 'node:path';
 import { isOwnerMessage, textOf } from './transcript-tail.mjs';
 import { endsWithGoWord } from './hook-dispatch.mjs';
 
-console.log('MADE TO FAIL: the planted transcript holds 3 owner messages (2 ending in a go-word), 1 stop refusal, 2 main-thread turns, 1 approved plan approved 2 times, 1 agent and 1 compaction; the counts printed next must read the same');
+console.log('MADE TO FAIL: the planted transcript holds 3 owner messages (2 ending in a go-word), 1 stop refusal, 2 main-thread turns, 2 approved plans (the first approved 2 times) with their titles and program items, 1 agent and 1 compaction; the counts and the two titles printed next must read the same');
 console.log('nothing below is trustworthy unless the planted counts printed next equal those figures');
 
 const fmt = (n) => Number(n || 0).toLocaleString('en-US');
@@ -55,7 +59,7 @@ const addUsage = (rec, u, entries) => {
   rec.inT += u.inT; rec.outT += u.outT; rec.cr += u.cr; rec.cc += u.cc;
 };
 const newBucket = () => ({
-  approvedAt: null, reapprovedAt: [],
+  approvedAt: null, reapprovedAt: [], title: null, item: null,
   owner: 0, ownerGo: 0, ownerStop: 0,
   stopMeta: 0, stopSummaries: 0, stopMsgs: new Map(), stopByHook: new Map(),
   pre: new Map(), preLoose: 0, blocking: new Map(),
@@ -71,6 +75,14 @@ const resultText = (b) => {
   if (Array.isArray(c)) return c.map((x) => x?.text ?? '').join('\n');
   return '';
 };
+
+// The title line and the first program key of a plan's Item section, read from the plan's text. Either is null where the text holds none.
+function planIdentity(text) {
+  const t = String(text ?? '');
+  const title = t.match(/^#\s*([^\n]+)/m)?.[1]?.trim() ?? null;
+  const section = /^## Item\b[^\n]*\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(t)?.[1] ?? '';
+  return { title, item: section.match(/\bP-\d+\b/)?.[0] ?? null };
+}
 
 // The gate a refusal names in its own text. A refusal whose text names none is counted as unnamed, never guessed.
 function gateOf(t) {
@@ -113,6 +125,8 @@ function scanMain(lines) {
   let seg = 0;
   let bad = 0;
   let lastTitle = null;
+  // The plan file as last written under a plans folder, from the Write call's own input, so an approval whose result carries no Item is read against it.
+  let lastWrite = { title: null, item: null };
   let lastCost = null;
   let costStates = 0;
   const msgs = new Map();
@@ -123,18 +137,31 @@ function scanMain(lines) {
     let e;
     try { e = JSON.parse(line); } catch { bad += 1; continue; }
     const content = e.message?.content;
+    if (e.type === 'assistant' && Array.isArray(content)) {
+      for (const b of content) {
+        if (b?.type === 'tool_use' && b.name === 'Write' && /\/plans\/[^/]+\.md$/.test(String(b.input?.file_path ?? '')) && !/\.steps\.md$/.test(String(b.input?.file_path ?? ''))) {
+          lastWrite = planIdentity(b.input?.content);
+        }
+      }
+    }
     if (e.type === 'user' && Array.isArray(content)) {
       for (const b of content) {
         const rt = b?.type === 'tool_result' ? resultText(b) : '';
         if (rt.startsWith('User has approved your plan')) {
           // The same plan approved again after an amendment is one plan, not two: the title the approval carries tells them apart.
           const title = rt.match(/Approved Plan[^\n]*\n#\s*([^\n]+)/)?.[1] ?? null;
+          // The plan's title and program item: from the plan text the approval carries, else from the plan file as last written when its title is the same.
+          const shown = planIdentity(rt.replace(/^[\s\S]*?Approved Plan[^\n]*\n/, ''));
+          const item = shown.item ?? (lastWrite.title && lastWrite.title === (title ?? shown.title) ? lastWrite.item : null);
           if (seg > 0 && title && title === lastTitle) {
             buckets[seg].reapprovedAt.push(e.timestamp);
+            if (!buckets[seg].item) buckets[seg].item = item;
           } else {
             seg += 1;
             buckets[seg] = newBucket();
             buckets[seg].approvedAt = e.timestamp;
+            buckets[seg].title = title ?? shown.title ?? lastWrite.title;
+            buckets[seg].item = item;
             approvals.push(e.timestamp);
           }
           lastTitle = title;
@@ -335,7 +362,7 @@ function planted() {
     asst('plant-one', 'model-a', '2026-11-01T01:01:00.000Z', 10),
     asst('plant-one', 'model-a', '2026-11-01T01:01:01.000Z', 10),
     L({ type: 'system', subtype: 'stop_hook_summary', timestamp: '2026-11-01T01:02:00.000Z', hookErrors: ['[$CLAUDE_PROJECT_DIR/.claude/hooks/stop-guard.sh]: STOP REFUSED this reply says the work is not finished ("still running")'] }),
-    L({ type: 'user', timestamp: '2026-11-01T01:03:00.000Z', message: { role: 'user', content: [{ type: 'tool_result', content: 'User has approved your plan. You can now start.\n\n## Approved Plan:\n# A planted title' }] } }),
+    L({ type: 'user', timestamp: '2026-11-01T01:03:00.000Z', message: { role: 'user', content: [{ type: 'tool_result', content: 'User has approved your plan. You can now start.\n\n## Approved Plan:\n# A planted title\n\n## Item\n\nP-99 of the planted program.\n\n## Asked\n\nnothing' }] } }),
     owner('stop everything now', '2026-11-01T01:04:00.000Z'),
     L({ type: 'user', timestamp: '2026-11-01T01:04:10.000Z', message: { role: 'user', content: [{ type: 'tool_result', content: 'User has approved your plan. You can now start.\n\n## Approved Plan:\n# A planted title' }] } }),
     L({ type: 'attachment', timestamp: '2026-11-01T01:05:00.000Z', attachment: { type: 'queued_command', commandMode: 'prompt', origin: { kind: 'human' }, prompt: 'ok' } }),
@@ -345,6 +372,9 @@ function planted() {
     L({ type: 'user', timestamp: '2026-11-01T01:09:00.000Z', origin: { kind: 'task-notification' }, message: { role: 'user', content: '<task-notification><task-id>plant-task</task-id><status>completed</status></task-notification>' } }),
     L({ type: 'attachment', timestamp: '2026-11-01T01:09:01.000Z', attachment: { type: 'queued_command', commandMode: 'task-notification', prompt: '<task-notification><task-id>plant-task</task-id><status>completed</status></task-notification>' } }),
     L({ type: 'system', subtype: 'compact_boundary', timestamp: '2026-11-01T01:10:00.000Z', compactMetadata: { trigger: 'auto', preTokens: 900, postTokens: 20 } }),
+    // A second plan: its file written under a plans folder (the same message as plant-two, so no turn is added), then approved with a result that carries only the title.
+    L({ type: 'assistant', timestamp: '2026-11-01T01:10:30.000Z', message: { id: 'plant-two', role: 'assistant', model: 'model-b', usage: { input_tokens: 20, output_tokens: 40, cache_read_input_tokens: 200, cache_creation_input_tokens: 100 }, content: [{ type: 'tool_use', name: 'Write', input: { file_path: '/root/.claude/plans/planted-two.md', content: '# A second planted title\n\n## Item\n\nP-98 of the planted program.\n\n## Asked\n\nnothing' } }] } }),
+    L({ type: 'user', timestamp: '2026-11-01T01:11:00.000Z', message: { role: 'user', content: [{ type: 'tool_result', content: 'User has approved your plan. You can now start.\n\n## Approved Plan:\n# A second planted title' }] } }),
   ];
   const agent = [
     asst('plant-agent-one', 'model-c', '2026-11-01T01:04:30.000Z', 5),
@@ -360,9 +390,10 @@ const got = {
   owner: pTotal.owner, go: pTotal.ownerGo, stop: sum(pTotal.stopByHook), turns: sum(new Map([...pTotal.turns].map(([k, v]) => [k, v.msgs]))),
   plans: p.approvals.length, reapprovals: p.buckets.reduce((n, b) => n + b.reapprovedAt.length, 0), agents: sum(pTotal.agentCount), compactions: pTotal.compactions.length,
   refusals: sum(pTotal.pre), mentions: p.preLoose, notifications: pTotal.notif.size,
+  titles: p.buckets.slice(1).map((b) => (b.item ?? 'no item read') + ': ' + (b.title ?? 'no title read')).join('; '),
 };
 console.log('planted counts: ' + JSON.stringify(got));
-const want = { owner: 3, go: 2, stop: 1, turns: 2, plans: 1, reapprovals: 1, agents: 1, compactions: 1, refusals: 1, mentions: 2, notifications: 1 };
+const want = { owner: 3, go: 2, stop: 1, turns: 2, plans: 2, reapprovals: 1, agents: 1, compactions: 1, refusals: 1, mentions: 2, notifications: 1, titles: 'P-99: A planted title; P-98: A second planted title' };
 if (JSON.stringify(got) !== JSON.stringify(want)) {
   console.log('PLANTED COUNTS DO NOT MATCH ' + JSON.stringify(want) + '; nothing below is trustworthy and the run stops');
   process.exit(1);
@@ -394,7 +425,7 @@ for (const path of args) {
   console.log('Refusal-shaped tool results that were mentions of a refusal and not one, left out: main thread ' + fmt(r.preLoose - sum(r.buckets.reduce((m, b) => { for (const [k, v] of b.pre) add(m, k, v); return m; }, new Map()))) + ', agents ' + fmt(r.agentLoose - sum(r.buckets.reduce((m, b) => { for (const [k, v] of b.agentRefusals) add(m, k, v); return m; }, new Map()))));
   r.buckets.forEach((b, i) => {
     const again = b.reapprovedAt.length ? ', approved again after an amendment at ' + b.reapprovedAt.map(when).join(' and ') : '';
-    console.log('\n' + printBucket(i === 0 ? 'Before the first approved plan' : 'Plan ' + i + ', approved ' + when(b.approvedAt) + again, b));
+    console.log('\n' + printBucket(i === 0 ? 'Before the first approved plan' : 'Plan ' + i + ' (' + (b.item ?? 'no item read') + ': ' + (b.title ?? 'no title read') + '), approved ' + when(b.approvedAt) + again, b));
     mergeBucket(grand, b);
   });
   planCount += r.approvals.length;

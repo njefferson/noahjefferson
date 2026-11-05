@@ -100,7 +100,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const FILES = ['pending-guard.mjs', 'keep-info-guard.mjs', 'compact-recall.mjs', 'reply-guard.mjs', 'transcript-tail.mjs',
   'plan-guard.mjs', 'hook-dispatch.mjs', 'report.mjs', 'drive-guard.mjs', 'approved-plan-guard.mjs', 'plan-scope-check.mjs', 'stop-guard.mjs',
   'push-guard.mjs', 'plan-fence.mjs', 'doctrine-read-guard.mjs', 'session-brief.mjs', 'CLAUDE.md', 'agent-rules.md', 'DOCTRINE.md',
-  'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-guards.test.mjs'];
+  'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-cost.mjs', 'session-guards.test.mjs'];
 // Every copy of the guards makes a file's folder before it copies it: the doctrine's three pages sit in doctrine/.
 const copyGuard = (from, to) => { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to); };
 // The shared rules file the guards read beside themselves: its version, and the pointer line a plan writes for the hub
@@ -8796,9 +8796,20 @@ const CASES = [
       return r.status === 0 && has('PreModelSwitch', 'planted-earlier') && has('PreModelSwitch', 'hook-dispatch.mjs') && has('PostModelSwitch', 'hook-dispatch.mjs') && has('Stop', 'hook-dispatch.mjs');
     },
   },
+  // ---- the cost instrument names each plan's title and program item (P-20, step 32) ----
+  {
+    name: 'the cost instrument prints each plan\'s title and program item beside its number: its planted transcript holds two plan files written and two plans approved, one approval carrying the Item in its result and the other read from the plan file as last written, and the run is green only when both are read in order',
+    guards: ['cost_item_read', 'cost_write_read'],
+    run(m, dir) {
+      const r = spawnSync('node', [join(dir, 'session-cost.mjs')], { encoding: 'utf8', timeout: 120000 });
+      return r.status === 0 && /planted counts match the known figures/.test(r.stdout) && r.stdout.includes('"titles":"P-99: A planted title; P-98: A second planted title"');
+    },
+  },
 ];
 
 const PLANTS = {
+  cost_item_read: ['item: section.match(/\\bP-\\d+\\b/)?.[0] ?? null };', 'item: null };', 'session-cost.mjs'],
+  cost_write_read: ['lastWrite = planIdentity(b.input?.content);', 'lastWrite = { title: null, item: null };', 'session-cost.mjs'],
   switch_allow: ["permissionDecision: 'allow', permissionDecisionReason", "permissionDecision: 'ask', permissionDecisionReason", 'hook-dispatch.mjs'],
   switch_figures: ['systemMessage: `Model switch, ${figures}.`', 'systemMessage: `Model switch.`', 'hook-dispatch.mjs'],
   switch_line: ["appendFileSync(join(pad, 'status', 'switches.txt'), line + '\\n');", 'void line;', 'hook-dispatch.mjs'],
