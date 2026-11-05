@@ -54,7 +54,7 @@ The list is the rank. The items the redesign plan builds come first, then the pa
 
 ## Items
 
-286 items (P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 226 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
+287 items (P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 226 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
 
 ## Items the redesign plan builds
 
@@ -195,6 +195,15 @@ Close entry of the plan of 4 November (steps 71 to 73, the model-switch hooks), 
 - Compactions: 0. Resumes: 0. Pushes: the instrument does not count them; this step pushes once.
 - The whole session over eight plans: 146 owner messages (61 go-words, 85 without, 15 carrying the word stop), 253 stop-hook messages, 120 main-thread refusals, 147 agents, 4 compactions, 15 resumes.
 - The harness's own running cost entry, the last of 69, reads 190.48 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
+Close entry of the plan of 5 November (steps 77 to 80, the template-injection fix, item P-287), written by step 78 from the cost instrument run on this session's transcript, so far and before steps 79 and 80. The instrument numbers it plan 9, approved 21:37 California time on 4 November:
+- The owner's messages: 1, of which 1 ends in a go-word and 0 do not; none carries the word stop.
+- Stop-hook messages: 4, all from the environment's git hook.
+- Main-thread refusals: 1 (manager fence 1).
+- Agents: 4 so far, all on the sonnet tier, with 22,858 output tokens, 5,280,861 cache-read tokens and 379,407 cache-written tokens; 0 hook refusals.
+- Main-thread turns: 26 on the opus tier with 21,299 output tokens.
+- Compactions: 0. Resumes: 0. Pushes: the instrument does not count them; step 79 pushes once.
+- The whole session over nine plans: 155 owner messages (67 go-words, 88 without, 15 carrying the word stop), 266 stop-hook messages, 126 main-thread refusals, 151 agents, 5 compactions, 17 resumes.
+- The harness's own running cost entry, the last of 75, reads 265.48 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
 
 The three entries that follow were written by step 30 of the plan that closes P-19, from the cost instrument run on that session's transcript, which numbers its plans from its own start and so differently from the entries above. They are the close entries owed for the plans that carried P-23, P-35 and P-19.
 
@@ -332,6 +341,16 @@ Unblocks: sessions that load less into every turn, and the closing of Q-HUB-147 
 Depends: the owner.
 
 ## The harness
+
+### P-287. The template-injection findings in the analytics and fax deploy workflows
+
+Repository: hub. Goal: 6. State: done. Plan: the plan of 5 November, steps 77 to 80.
+
+Done: on 5 November every input the two workflows expanded inside a shell step passes through that step's environment block and is quoted in the shell, with the dataset default kept as an expression in the environment value. Neither workflow was run. The template-injection suppression for the two files, and its comment, are gone from `.github/zizmor.yml`, which now holds `rules: {}` because zizmor refuses a config without that field. `SECURITY.md` no longer says the suppression exists. The before and after counts and the date are in `NOTES.md`.
+
+Acceptance: zizmor, pinned by version and hash from the hub's requirements file, reports zero template-injection findings on `cf-analytics.yml` and `deploy-myfax.yml` and zero findings over the workflows folder with strict collection and the suppression removed, with the before count, the after count and the date recorded.
+
+Depends: none.
 
 ### P-17. The harness's blind areas
 

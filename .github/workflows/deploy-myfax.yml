@@ -59,8 +59,10 @@ jobs:
       # before anything is checked out or deployed.
       - name: Confirm a live run was meant
         if: inputs.fax_key == 'live'
+        env:
+          CONFIRM_LIVE: ${{ inputs.confirm_live }}
         run: |
-          if [ "${{ inputs.confirm_live }}" != "LIVE" ]; then
+          if [ "$CONFIRM_LIVE" != "LIVE" ]; then
             echo "fax_key=live sends REAL faxes." >&2
             echo "Re-run and type LIVE in the confirm_live box to proceed." >&2
             exit 1

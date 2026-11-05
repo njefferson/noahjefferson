@@ -75,8 +75,7 @@ jobs:
           # push, no commit anywhere in the file), so the checkout token has no
           # job to do after clone. Leaving it in .git/config hands it to every
           # later step in a job that also holds two Cloudflare tokens.
-          # zizmor: artipacked. One line, no behaviour change — unlike the
-          # template-injection fixes in the same file, which are deferred.
+          # zizmor: artipacked. One line, no behaviour change.
           persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -192,68 +191,81 @@ jobs:
           PY
 
       - name: Run
+        # Every input goes through the environment and is quoted in the shell,
+        # so a typed value is data and never shell syntax. The dataset default
+        # stays an expression here, not a shell fallback.
+        env:
+          INPUT_COMMAND: ${{ inputs.command }}
+          INPUT_DATASET: ${{ inputs.dataset }}
+          INPUT_DATASET_OR_DEFAULT: ${{ inputs.dataset || 'httpRequestsAdaptiveGroups' }}
+          INPUT_HOST: ${{ inputs.host }}
+          INPUT_HOST_FIELD: ${{ inputs.host_field }}
+          INPUT_COUNTRY_FIELD: ${{ inputs.country_field }}
+          INPUT_DAYS: ${{ inputs.days }}
+          INPUT_EXCLUDE_IP: ${{ inputs.exclude_ip }}
+          INPUT_SOURCE: ${{ inputs.source }}
         run: |
-          case "${{ inputs.command }}" in
+          case "$INPUT_COMMAND" in
             datasets)
               node cf-analytics.mjs datasets
               ;;
             fields)
-              if [ -z "${{ inputs.dataset }}" ]; then
+              if [ -z "$INPUT_DATASET" ]; then
                 echo "fields needs a dataset name — run 'datasets' first." >&2
                 exit 1
               fi
-              node cf-analytics.mjs fields "${{ inputs.dataset }}"
+              node cf-analytics.mjs fields "$INPUT_DATASET"
               ;;
             report)
-              if [ -z "${{ inputs.dataset }}" ] || [ -z "${{ inputs.host_field }}" ] || [ -z "${{ inputs.country_field }}" ]; then
+              if [ -z "$INPUT_DATASET" ] || [ -z "$INPUT_HOST_FIELD" ] || [ -z "$INPUT_COUNTRY_FIELD" ]; then
                 echo "report needs dataset, host_field and country_field — run 'fields' first." >&2
                 exit 1
               fi
-              node cf-analytics.mjs report "${{ inputs.dataset }}" \
-                --host "${{ inputs.host_field }}" \
-                --country "${{ inputs.country_field }}" \
-                --days "${{ inputs.days }}" \
-                --exclude-ip "${{ inputs.exclude_ip }}" \
-                --source "${{ inputs.source }}"
+              node cf-analytics.mjs report "$INPUT_DATASET" \
+                --host "$INPUT_HOST_FIELD" \
+                --country "$INPUT_COUNTRY_FIELD" \
+                --days "$INPUT_DAYS" \
+                --exclude-ip "$INPUT_EXCLUDE_IP" \
+                --source "$INPUT_SOURCE"
               ;;
             calibrate)
               # Reconciles every estimator against the unsampled daily rollup
               # in one run, because dispatches are serialized by the
               # concurrency group and each round-trip costs a minute.
-              node cf-analytics.mjs calibrate --days "${{ inputs.days }}"
+              node cf-analytics.mjs calibrate --days "$INPUT_DAYS"
               ;;
             people)
               # Aggregates only — the command never prints an address, because
               # this log is public (Doctrine §9).
               node cf-analytics.mjs people \
-                --days "${{ inputs.days }}" \
-                --exclude-ip "${{ inputs.exclude_ip }}"
+                --days "$INPUT_DAYS" \
+                --exclude-ip "$INPUT_EXCLUDE_IP"
               ;;
             humans)
               # Aggregates only (device-type + browser counts, never an address).
               node cf-analytics.mjs humans \
-                --days "${{ inputs.days }}" \
-                --exclude-ip "${{ inputs.exclude_ip }}"
+                --days "$INPUT_DAYS" \
+                --exclude-ip "$INPUT_EXCLUDE_IP"
               ;;
             snapshot)
               # Aggregates only. Emits every view plus a TREND_ROW line.
               node cf-analytics.mjs snapshot \
-                --days "${{ inputs.days }}" \
-                --exclude-ip "${{ inputs.exclude_ip }}"
+                --days "$INPUT_DAYS" \
+                --exclude-ip "$INPUT_EXCLUDE_IP"
               ;;
             region)
               # Aggregates only: counts by edge location (colo) and network,
               # distinct /24 blocks. Never an address (Doctrine §9).
               node cf-analytics.mjs region \
-                --days "${{ inputs.days }}" \
-                --exclude-ip "${{ inputs.exclude_ip }}"
+                --days "$INPUT_DAYS" \
+                --exclude-ip "$INPUT_EXCLUDE_IP"
               ;;
             top-ips)
               # Never pass --full-ips here: this repository is public and the
               # run log is world-readable (Doctrine §9).
-              node cf-analytics.mjs top-ips "${{ inputs.dataset || 'httpRequestsAdaptiveGroups' }}" \
-                --host "${{ inputs.host }}" \
-                --days "${{ inputs.days }}"
+              node cf-analytics.mjs top-ips "$INPUT_DATASET_OR_DEFAULT" \
+                --host "$INPUT_HOST" \
+                --days "$INPUT_DAYS"
               ;;
           esac
 

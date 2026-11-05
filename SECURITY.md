@@ -199,13 +199,11 @@ check in this file and still be one leaked credential from anything.
 - **photo-field-tools** — audited 2026-08-02. zizmor clean, npm audit clean, no credential
  patterns in any tracked file, nothing secret-shaped ever added in history,
  every workflow `contents: read`, lockfile committed, all Actions SHA-pinned.
-- **noahjefferson** — audited 2026-08-02, same, with one carried exception recorded in
- `.github/zizmor.yml`: 19 template-injection sites in `cf-analytics.yml` and
- `deploy-myfax.yml`. Real, assessed, and not yet fixed — both are
- `workflow_dispatch` only, so triggering one needs repo access you would
- already have. The fix is mechanical and awaits a go-ahead, because rewriting
- live analytics and fax deploys that cannot be tested end to end from a
- session is its own risk.
+- **noahjefferson** — audited 2026-08-02, same, with one carried exception that was
+ suppressed in `.github/zizmor.yml`: template-injection sites in `cf-analytics.yml` and
+ `deploy-myfax.yml`. Fixed 2026-11-05: every input those two workflows expanded in a
+ shell now passes through the step's environment block and is quoted, the suppression
+ is gone from the config, and zizmor reports no template-injection finding in either file.
 
 - **Intersecting-parallels** — brought to this line 2026-08-03, and it was NOT
  clean when the audit was first run on it. zizmor found four `artipacked`
