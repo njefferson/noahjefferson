@@ -1,0 +1,1 @@
+Q-HUB-246: an agent made one Bash call outside its step's Commands, a directory listing of the session's project folder, to find the transcript's path before it was known; it read nothing that was written and changed nothing, and the fence passed it (found in step 32 of the plan of 5 November that measures the Stop hook block cap, filed in its step 35).

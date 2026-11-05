@@ -104,3 +104,13 @@ A close entry is a heading sentence naming the plan, its steps, the step that wr
 Step 35 writes one for this plan, after the newest entry, naming it by the first clause of its title, steps 32 to 36, step 35 as the writer, and the instrument's number for it with its item P-20.
 
 The sentence for P-20's Done line at the close: the stop guard's refusals are held below the cap: the cap of eight was measured once with a planted run of nine consecutive refusals, and the result is that BLANK; the hold's count is BLANK; and the cases are the hold case and the plant case. Step 35 fills each blank from the marker's log and the transcript.
+
+## The result, written by step 35
+
+The Done line of P-20: the stop guard's refusals are held below the cap: the cap of eight was measured once with a planted run of nine consecutive refusals, and the result is that the harness honoured eight continuations, each answered by one line with no tool call, and overrode the ninth refusal, ending the turn with a warning that a hook had blocked the turn from ending nine consecutive times; the hold's count is seven, unchanged by the measurement; and the cases are the hold case and the plant case.
+
+How it was read. The marker's log held nine calls on 5 November 2026 between 17:07:55 and 17:08:29 UTC, the first with the loop flag false and calls 2 to 9 with it true. The transcript holds nine stop-hook refusals opening PLANT, numbered 1 to 9 of 9, with eight assistant replies between them and no tool call anywhere in the run, so the count was never reset. The ninth refusal is followed at once by a system warning that names the cap and the variable that raises it, and then by nothing until step 34's end brought the session back about six minutes later. The measured cap equals the documented cap, so STOP_CAP stays 8 and the hold's count stays 7.
+
+The marker was spent by writing the one word spent and then an empty object, so the plant mode reads it as absent and never arms again.
+
+The instrument could not number this plan: its approval result was saved as a large-output file and does not open with the approval sentence, so the plan is folded into plan 9. That is filed as Q-HUB-248, and the close entry under P-10 says the figures by plan are not measured. Plans 7 and 8 name P-23 and P-35, as step 32 found, and their close entries were right.

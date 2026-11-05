@@ -233,6 +233,12 @@ Close entry of the plan that closes P-19 (steps 28 to 30), which the instrument 
 - The whole session over nine plans: 140 owner messages (53 go-words, 87 without, 11 carrying the word stop), 52 stop-hook messages, 107 main-thread refusals, 115 agents, 6 compactions, 15 resumes.
 - The harness's own running cost entry, the last of 53, reads 616.79 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
 
+Close entry of the plan that measures the Stop hook block cap (P-20, steps 32 to 36), written by step 35 from the cost instrument run on this session's transcript, so far and before the wait on CI for step 35's push, approved on 5 November after the compaction of 08:03 California time. The instrument does not number this plan: its approval result was saved by the harness as a large-output file, so the result opens with a wrapper and not with the approval sentence, and the instrument folds this plan's entries into the bucket of plan 9, the plan that closed P-19 (Q-HUB-248). So the figures by plan are not measured for this plan; what the instrument prints for the session is these:
+- The owner's messages, stop-hook messages, main-thread refusals and agents for this plan alone: not measured. The 9 refusals opening PLANT were read directly from the transcript and sit inside plan 9's 10 stop-hook messages there.
+- The whole session over nine numbered plans: 147 owner messages (57 go-words, 90 without, 13 carrying the word stop), 62 stop-hook messages, 110 main-thread refusals, 123 agents, 7 compactions, 17 resumes.
+- Pushes: the instrument does not count them; steps 32 and 33 each pushed once and step 35 pushes once.
+- The harness's own running cost entry, the last of 56, reads 667.66 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
+
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
 ## Parked settings
@@ -392,7 +398,9 @@ Depends: the harness version this container runs; Q-HUB-113.
 
 ### P-20. The Stop hook block cap
 
-Repository: hub. Goal: 6. State: running. Plan: i-m-not-british-make-indexed-riddle.md.
+Repository: hub. Goal: 6. State: done. Plan: i-m-not-british-make-indexed-riddle.md.
+
+Done: the stop guard's refusals are held below the cap. The cap of eight was measured once, on 5 November 2026 at harness version 2.1.318, with a planted run of nine consecutive refusals from the guard's plant mode, each opening PLANT and answered with one line and no tool call; the result is that the harness honoured eight continuations and overrode the ninth refusal, ending the turn with a warning that a hook had blocked the turn from ending nine consecutive times, so the cap measures eight as the documentation states. The marker's log held nine calls, the first with the loop flag false and the other eight true. The hold's count is seven, the cap less one, and the measurement left it unchanged. The cases are the hold case and the plant case, with six plants (cap_hold_count, cap_hold_reset, cap_plant_armed, cap_plant_limit, cap_plant_log and cap_plant_line), all caught through the plants option, and the whole suite passed 261 of 261 when the guard was built. The guard itself refuses at most twice in one continuation chain, so the hold matters at the repeat refusal, where other hooks' refusals in the same chain could bring the count to the cap. The variable in the environment stays open under P-12. The record is plans/stop-cap-record.md.
 
 Acceptance: the cap of eight consecutive continuations is measured once in this container with a planted run of consecutive stop refusals, and the result is written here; the stop guard's refusals are then held below the cap, or the cap's variable is set in the environment.
 
