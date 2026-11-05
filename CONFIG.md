@@ -45,7 +45,7 @@ The file is written by `node /root/.claude/hub/hook-dispatch.mjs --install`, run
 
 ### 1.4 Hook events no setting wires
 
-- The harness documents a ConfigChange hook and background task lists in the Stop hook's input (read 2 November 2026 at the maker's hooks page). Neither is wired in either settings file. The PreModelSwitch and PostModelSwitch hooks are served by the dispatcher and wired by its install (1.2), by P-18.
+- The harness documents a ConfigChange hook and background task lists in the Stop hook's input (read 2 November 2026 at the maker's hooks page). The ConfigChange hook is not wired in either settings file. The stop guard reads the task lists from its input as the Stop hook delivers them, so nothing is wired in a settings file for them (5 November 2026, P-19). The PreModelSwitch and PostModelSwitch hooks are served by the dispatcher and wired by its install (1.2), by P-18.
 - Changed by: P-21 (ConfigChange), P-18 (the model-switch hooks), P-19 (the Stop input's task lists), P-20 (the Stop hook block cap).
 
 ### 1.5 The environment's own hooks the audit names

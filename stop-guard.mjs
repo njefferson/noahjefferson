@@ -399,15 +399,28 @@ Doctrine §11b, LESSONS §434. The manager's turns send agents and check their r
  *  is `runningWork` in report.mjs, the one definition this and the status gate
  *  share, less the agents it lists. */
 const HOLDS_STOP = (x) => !/^agent\b/.test(x);
+// THE STOP INPUT'S LIST IS READ FIRST (P-19, LESSONS §381, §440). The harness puts `background_tasks` and `session_crons` in the
+// Stop hook's input when its task registry is reachable. An entry holds the stop when its type is not subagent (a running agent does
+// not hold the turn) and its status is not an ended word. A scheduled task is not work running, so the count of `session_crons` is
+// information beside the holding entries and holds nothing. An input without the list as an array reads the transcript lister
+// below, exactly as before, so §440's cases are kept for that path.
+const ENDED_WORDS = /^(?:completed|failed|killed|stopped|cancelled|canceled|done|finished|error|errored|terminated)$/i;
+const holdsByInput = (e) => !!e && typeof e === 'object' && String(e.type ?? '').toLowerCase() !== 'subagent' && !ENDED_WORDS.test(String(e.status ?? ''));
 let running = [];
-try { running = (runningWork({ session_id: hook.session_id, transcript_path: path }) ?? []).filter(HOLDS_STOP); } catch { running = []; }
+let cronNote = '';
+if (Array.isArray(hook.background_tasks)) {
+  running = hook.background_tasks.filter(holdsByInput).map((e) => `${String(e.type ?? 'task')}: ${String(e.description ?? e.id ?? '').slice(0, 80)}`);
+  if (Array.isArray(hook.session_crons)) cronNote = ` ${hook.session_crons.length} scheduled task(s) stand beside them and hold nothing.`;
+} else {
+  try { running = (runningWork({ session_id: hook.session_id, transcript_path: path }) ?? []).filter(HOLDS_STOP); } catch { running = []; }
+}
 // A MESSAGE FROM THE OWNER WAITING IN THE QUEUE wins: pending-guard refuses every
 // tool call until the turn ends and delivers it, so refusing the stop as well
 // left no move at all. Measured three times in one afternoon, 2026-10-02.
 let queuedOwner = [];
 try { queuedOwner = pendingMessages(tailEntries(path, 16 * 1024 * 1024), startedAt(hook)); } catch { queuedOwner = []; }
 if (running.length && !queuedOwner.length) {
-  refuse(`STOP REFUSED — ${running.length} task(s) this session started are still running (${running.join(', ')}).
+  refuse(`STOP REFUSED — ${running.length} task(s) this session started are still running (${running.join(', ')}).${cronNote}
 
 Doctrine §0e rule 2, LESSONS §381. Work running in the background IS the work.
 Ending the turn makes no tool call, so nothing else can hold you to it. Do not

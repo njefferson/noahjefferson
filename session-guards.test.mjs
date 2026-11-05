@@ -1261,6 +1261,20 @@ const CASES = [
     },
   },
   {
+    name: 'a stop is held by the Stop input\'s background_tasks list when it is present: one shell task running refuses, an empty list passes, a subagent entry alone passes, and an input without the list falls back to the transcript lister and refuses a planted running task',
+    guards: ['input_read', 'input_type'],
+    run(m, dir) {
+      const reply = { type: 'assistant', timestamp: ts(30), message: { role: 'assistant', content: [{ type: 'text', text: 'Stopping here: open for you is nothing new.' }] } };
+      const bash = [tool(2, 'b0', 'Bash', {}), result(3, 'b0', 'Command running in background with ID: bxyz789. Output is being written to: /tmp/x')];
+      const say = (extra, entries) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ transcript_path: transcript(entries), ...extra }), encoding: 'utf8' }).status;
+      const shell = say({ background_tasks: [{ id: 'b1', type: 'shell', status: 'running', description: 'node long.mjs' }], session_crons: [] }, [reply]);
+      const none = say({ background_tasks: [], session_crons: [] }, [reply]);
+      const agentOnly = say({ background_tasks: [{ id: 'a1', type: 'subagent', status: 'running', description: 'a step' }] }, [reply]);
+      const fallback = say({}, [...bash, reply]);
+      return shell === 2 && none === 0 && agentOnly === 0 && fallback === 2;
+    },
+  },
+  {
     name: 'a task the harness no longer has (a TaskStop answered "No task found", with the id in the answer or only in the call) or one launched before the newest startup or resume (a container restart) is not running and holds no stop; a compaction ends nothing, a stop of another id ends nothing, and a task launched after the restart still holds the stop',
     guards: ['tasks_not_found', 'tasks_not_found_call', 'tasks_restart', 'tasks_restart_source'],
     run(m, dir) {
@@ -8882,6 +8896,9 @@ const PLANTS = {
   running_work: ["try { running = (runningWork({ session_id: hook.session_id, transcript_path: path }) ?? []).filter(HOLDS_STOP); } catch { running = []; }", 'running = [];', 'stop-guard.mjs'],
   // A running agent does not hold the turn; a refusal's follow-up is the correction only.
   agents_hold_stop: ['const HOLDS_STOP = (x) => !/^agent\\b/.test(x);', 'const HOLDS_STOP = () => true;', 'stop-guard.mjs'],
+  // The Stop input's list is read first; a subagent entry never holds (P-19).
+  input_read: ["if (Array.isArray(hook.background_tasks)) {", "if (false) {", 'stop-guard.mjs'],
+  input_type: ["String(e.type ?? '').toLowerCase() !== 'subagent'", "String(e.type ?? '').toLowerCase() !== 'subagent-never'", 'stop-guard.mjs'],
   stop_follow_up: ['  process.stderr.write(message + FOLLOW_UP);', '  process.stderr.write(message);', 'stop-guard.mjs'],
   stop_repeat: ['      if (again.length) {', '      if (false) {', 'stop-guard.mjs'],
   stop_repeat_once: ['!rec.repeated && ', '', 'stop-guard.mjs'],
