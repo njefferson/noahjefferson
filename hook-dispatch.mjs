@@ -160,7 +160,7 @@ import { HARNESS_TAG } from './pending-guard.mjs';
 import { parseRead, site } from './reply-guard.mjs';
 
 const HUB = dirname(fileURLToPath(import.meta.url));
-const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'Stop', 'PreModelSwitch', 'PostModelSwitch'];
+const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'Stop', 'PreModelSwitch', 'PostModelSwitch', 'ConfigChange'];
 const READS = new Set(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'ToolSearch', 'TaskList', 'TaskGet',
   'ListAgents', 'ReadNotifications', 'EnterPlanMode', 'ExitPlanMode', 'Skill']);
 // Repo shims that only call a hub script: run once per event, not once per repo.
@@ -3423,7 +3423,39 @@ export function modelSwitch(event, p) {
   return JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostModelSwitch', additionalContext: text } });
 }
 
+/**
+ * The ConfigChange event (P-21): the harness runs it when a settings file, a managed policy file or a skill file changes. The change is
+ * recorded and never held, a policy change included, which the harness does not let a hook block in any case, and nothing is printed.
+ * @param {object} p  the payload: `session_id`, `source` and optionally `file_path`.
+ * @returns {object|null} the record appended to `status/config-changes.jsonl` in the session scratchpad, with the time as the clock gives
+ *   it, the same time in California, the source, the file path or none, and whether the `CONFIG.md` beside the dispatcher names the path
+ *   or its last segment; null when the payload names no session or the scratchpad is not there, and then nothing is written.
+ */
+export function configChange(p) {
+  try {
+    const pad = scratchpadOf(String(p?.session_id ?? ''));
+    if (!pad) return null;
+    const file = p?.file_path ? String(p.file_path) : null;
+    let baseline = false;
+    if (file) {
+      let text = '';
+      try { text = readFileSync(join(HUB, 'CONFIG.md'), 'utf8'); } catch { text = ''; }
+      baseline = text.includes(file) || (!!basename(file) && text.includes(basename(file)));
+    }
+    const now = new Date();
+    const rec = { at: now.getTime(), time: now.toISOString(), california: `${now.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })} ${californiaTime(now)}`,
+      source: String(p?.source ?? ''), file, baseline };
+    mkdirSync(join(pad, 'status'), { recursive: true });
+    appendFileSync(join(pad, 'status', 'config-changes.jsonl'), JSON.stringify(rec) + '\n');
+    return rec;
+  } catch { return null; /* the change goes ahead whatever the record does */ }
+}
+
 async function main(event, raw, p) {
+  if (event === 'ConfigChange') {
+    configChange(p);
+    return 0;
+  }
   if (event === 'PreModelSwitch' || event === 'PostModelSwitch') {
     const out = modelSwitch(event, p);
     if (out) process.stdout.write(out + '\n');

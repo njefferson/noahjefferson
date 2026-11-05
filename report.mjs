@@ -3073,6 +3073,29 @@ export async function waitForChange(sid, opts = {}) {
   }
 }
 
+/**
+ * The configuration changes recorded since the last status (P-21).
+ * @param {string} sid  the session id; its scratchpad's `status/config-changes.jsonl` is read.
+ * @param {number} stampAt  the last status's time in ms.
+ * @returns {string} one line for each record newer than the stamp, the California time, the source, the path and whether the baseline
+ *   names it; '' when there is none, when the file is missing or when the session has no scratchpad. A line that does not parse is skipped.
+ */
+export function configChangesBlock(sid, stampAt) {
+  const pad = sid ? scratchpadOf(String(sid)) : null;
+  if (!pad) return '';
+  let text = '';
+  try { text = readFileSync(join(pad, 'status', 'config-changes.jsonl'), 'utf8'); } catch { return ''; }
+  const lines = [];
+  for (const l of text.split('\n')) {
+    if (!l.trim()) continue;
+    let r = null;
+    try { r = JSON.parse(l); } catch { continue; }
+    if (!(Number(r?.at) > stampAt)) continue;
+    lines.push(`Configuration change: ${r.california ?? 'an unread time'} California, source ${r.source || 'not stated'}, ${r.file ? r.file : 'no path'}, ${r.baseline ? 'the baseline names it' : 'the baseline does not name it'}.`);
+  }
+  return lines.join('\n');
+}
+
 if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   if (process.argv[2] === '--gate') {
     let p = {};
@@ -3187,6 +3210,8 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   let readsLine = '';
   try { readsLine = readsBlock(sid, previous); } catch (e) { readsLine = `Main thread reads since the last status: not read (${e?.message ?? e}).`; }
   console.log(readsLine);
+  // THE CONFIGURATION CHANGES the dispatcher's ConfigChange record holds since the last status (P-21); nothing prints when there are none.
+  try { const changes = configChangesBlock(sid, previous); if (changes) console.log(changes); } catch { /* the status stands without them */ }
   let ended;
   try { ended = sid ? agentEnds(sid, previous) : null; } catch { ended = null; }
   let block = '';

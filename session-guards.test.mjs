@@ -100,7 +100,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const FILES = ['pending-guard.mjs', 'keep-info-guard.mjs', 'compact-recall.mjs', 'reply-guard.mjs', 'transcript-tail.mjs',
   'plan-guard.mjs', 'hook-dispatch.mjs', 'report.mjs', 'drive-guard.mjs', 'approved-plan-guard.mjs', 'plan-scope-check.mjs', 'stop-guard.mjs',
   'push-guard.mjs', 'plan-fence.mjs', 'doctrine-read-guard.mjs', 'session-brief.mjs', 'CLAUDE.md', 'agent-rules.md', 'DOCTRINE.md',
-  'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-cost.mjs', 'plan-seed.mjs', 'plans/seed-template.md', 'session-guards.test.mjs'];
+  'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-cost.mjs', 'plan-seed.mjs', 'plans/seed-template.md', 'session-guards.test.mjs', 'CONFIG.md'];
 // Every copy of the guards makes a file's folder before it copies it: the doctrine's three pages sit in doctrine/.
 const copyGuard = (from, to) => { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to); };
 // The shared rules file the guards read beside themselves: its version, and the pointer line a plan writes for the hub
@@ -8796,6 +8796,81 @@ const CASES = [
       return r.status === 0 && has('PreModelSwitch', 'planted-earlier') && has('PreModelSwitch', 'hook-dispatch.mjs') && has('PostModelSwitch', 'hook-dispatch.mjs') && has('Stop', 'hook-dispatch.mjs');
     },
   },
+  // ---- the ConfigChange event (P-21) ----
+  {
+    name: 'a configuration change from user settings with a file path appends one record of five fields to the session scratchpad and prints no decision',
+    guards: ['cfg_append'],
+    run(m, dir) {
+      const s = sid('cc');
+      const pad = join(process.env.TMPDIR, 'claude-0', '-home-user', s, 'scratchpad');
+      mkdirSync(pad, { recursive: true });
+      // The baseline beside the dispatcher names settings.json, so its last segment is found there.
+      const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'ConfigChange'], { encoding: 'utf8', env: { ...process.env },
+        input: JSON.stringify({ session_id: s, hook_event_name: 'ConfigChange', source: 'user_settings', file_path: '/planted/home/.claude/settings.json' }) });
+      let lines = [];
+      try { lines = readFileSync(join(pad, 'status', 'config-changes.jsonl'), 'utf8').trim().split('\n'); } catch { return false; }
+      let rec = {};
+      try { rec = JSON.parse(lines[0]); } catch { return false; }
+      return r.status === 0 && lines.length === 1 && Number.isFinite(rec.at) && /^\d{4}-\d\d-\d\d \d\d:\d\d$/.test(String(rec.california))
+        && rec.source === 'user_settings' && rec.file === '/planted/home/.claude/settings.json' && rec.baseline === true
+        && (r.stdout ?? '').trim() === '' && !/decision|systemMessage|continue/.test(r.stdout ?? '');
+    },
+  },
+  {
+    name: 'a configuration change from managed policy is recorded and the output carries no decision',
+    guards: ['cfg_append'],
+    run(m, dir) {
+      const s = sid('cc');
+      const pad = join(process.env.TMPDIR, 'claude-0', '-home-user', s, 'scratchpad');
+      mkdirSync(pad, { recursive: true });
+      const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'ConfigChange'], { encoding: 'utf8', env: { ...process.env },
+        input: JSON.stringify({ session_id: s, source: 'policy_settings' }) });
+      let rec = {};
+      try { rec = JSON.parse(readFileSync(join(pad, 'status', 'config-changes.jsonl'), 'utf8').trim().split('\n')[0]); } catch { return false; }
+      return r.status === 0 && rec.source === 'policy_settings' && rec.file === null && rec.baseline === false && !/decision|block|continue/.test(r.stdout ?? '');
+    },
+  },
+  {
+    name: 'a configuration change with no session id writes nothing and exits zero',
+    guards: ['cfg_append'],
+    run(m, dir) {
+      const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'ConfigChange'], { encoding: 'utf8', env: { ...process.env },
+        input: JSON.stringify({ source: 'skills', file_path: '/planted/skill/SKILL.md' }) });
+      return r.status === 0 && (r.stdout ?? '').trim() === '' && !existsSync(join(DECOY_PAD, 'status', 'config-changes.jsonl'));
+    },
+  },
+  {
+    name: 'the install against a temporary settings file wires ConfigChange beside the other events with the same command and no matcher',
+    guards: ['cfg_install'],
+    run(m, dir) {
+      const f = join(tmp('sg-settings-'), 'settings.json');
+      const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), '--install'], { encoding: 'utf8', env: { ...process.env, HOOK_DISPATCH_SETTINGS_FILE: f } });
+      let s = {};
+      try { s = JSON.parse(readFileSync(f, 'utf8')); } catch { return false; }
+      const cc = s.hooks?.ConfigChange ?? [];
+      const stop = s.hooks?.Stop ?? [];
+      const cmd = (g) => g?.hooks?.[0]?.command ?? '';
+      return r.status === 0 && cc.length === 1 && cc[0].matcher === '' && cmd(cc[0]).endsWith('hook-dispatch.mjs" ConfigChange')
+        && cmd(cc[0]).replace(/ ConfigChange$/, '') === cmd(stop[0]).replace(/ Stop$/, '');
+    },
+  },
+  {
+    name: 'the status print lists a configuration change recorded after the last status and not one recorded before it',
+    guards: ['cfg_status'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      const s = sid('cs');
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      writeFileSync(join(home, '.claude', 'report-clock.json'), JSON.stringify({ at: Date.now() - 4 * 60000, status: 'Status' }));
+      const temp = tmp('sg-tmp-');
+      const pad = join(temp, 'claude-0', '-home-user', s, 'scratchpad');
+      mkdirSync(join(pad, 'status'), { recursive: true });
+      const rec = (ago, file) => JSON.stringify({ at: Date.now() - ago, time: 'x', california: '2026-11-05 10:00', source: 'skills', file, baseline: false });
+      writeFileSync(join(pad, 'status', 'config-changes.jsonl'), `${rec(60000, '/planted/newer-skill.md')}\n${rec(600000, '/planted/older-skill.md')}\n`);
+      const out = spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the configuration test'], { encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: s, TMPDIR: temp } }).stdout ?? '';
+      return out.includes('Configuration change: 2026-11-05 10:00 California, source skills, /planted/newer-skill.md') && !out.includes('older-skill');
+    },
+  },
   // ---- the cost instrument names each plan's title and program item (P-20, step 32) ----
   {
     name: 'the cost instrument prints each plan\'s title and program item beside its number: its planted transcript holds two plan files written and two plans approved, one approval carrying the Item in its result and the other read from the plan file as last written, and the run is green only when both are read in order',
@@ -9028,7 +9103,10 @@ const PLANTS = {
   switch_figures: ['systemMessage: `Model switch, ${figures}.`', 'systemMessage: `Model switch.`', 'hook-dispatch.mjs'],
   switch_line: ["appendFileSync(join(pad, 'status', 'switches.txt'), line + '\\n');", 'void line;', 'hook-dispatch.mjs'],
   switch_top: ['const text = isTopTier(to)', 'const text = !isTopTier(to)', 'hook-dispatch.mjs'],
-  switch_install: ["'Stop', 'PreModelSwitch', 'PostModelSwitch'];", "'Stop'];", 'hook-dispatch.mjs'],
+  switch_install: ["'Stop', 'PreModelSwitch', 'PostModelSwitch', 'ConfigChange'];", "'Stop', 'ConfigChange'];", 'hook-dispatch.mjs'],
+  cfg_append: ["appendFileSync(join(pad, 'status', 'config-changes.jsonl'), JSON.stringify(rec) + '\\n');", 'void rec;', 'hook-dispatch.mjs'],
+  cfg_install: ["'PostModelSwitch', 'ConfigChange'];", "'PostModelSwitch'];", 'hook-dispatch.mjs'],
+  cfg_status: ['    if (!(Number(r?.at) > stampAt)) continue;\n', '', 'report.mjs'],
   enqueue_count: ['        size++;\n', '\n', 'pending-guard.mjs'],
   dequeue_count: ["      } else if (e.operation === 'dequeue') {\n        size = Math.max(0, size - 1);", "      } else if (e.operation === 'dequeue') {\n", 'pending-guard.mjs'],
   text_match: ['      if (!x.done && x.key && (t.includes(x.key)', '      if (false && !x.done && x.key && (t.includes(x.key)', 'pending-guard.mjs'],

@@ -672,7 +672,8 @@ is the index. *Held by:* `doctrine-read-guard.mjs`.
 **The configuration baseline.** `CONFIG.md` lists every configuration item with
 its state and the program item that may change it; a change to any is an item, a
 drift found is a finding that becomes one, and an open dependency update is an
-item. *Held by:* nothing; the baseline is read and compared by hand.
+item. *Held by:* the ConfigChange record of `hook-dispatch.mjs`, which holds a change
+made in a container; the comparison stays by hand.
 
 **One file for each finding, and several sessions on one hub.** A finding is its
 own file in `found/`, keyed `Q-HUB-N`, so two sessions never edit one file, and
