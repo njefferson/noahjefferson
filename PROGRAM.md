@@ -331,7 +331,7 @@ Depends: the harness version this container runs. The page says PostModelSwitch 
 
 ### P-19. The Stop input's list of running background tasks
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: i-m-not-british-make-indexed-riddle.md.
 
 Acceptance: the hold on a stop while background work is running reads the background_tasks and session_crons lists of the Stop hook's input and not the transcript's task notices; a case with a planted input shows the stop held with one task running and passed with none, and the cases for a lost task (lesson 440) are retired or kept for the reason written here.
 
