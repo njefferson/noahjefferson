@@ -97,7 +97,7 @@ import { pendingMessages, startedAt } from './pending-guard.mjs';
 import { tailEntries, lastOwnerMessage } from './transcript-tail.mjs';
 import { latchStanding, approvedPlan, planSteps, correctionStanding, stopStanding, foundQueue, queueRoots, planPhase } from './hook-dispatch.mjs';
 import { runningWork, stepsReturned, planOrder, pointerOf, reviewState, aimReviewSteps, readCompacted, setCompacted, compactedWords, californiaTime,
-  servingModel, isTopTier, readTier, setTier, tierWords, foundLines, managerNotes, sortOf, scratchpadOf, markerApprovalTime } from './report.mjs';
+  servingModel, isTopTier, readTier, setTier, tierWords, foundLines, managerNotes, sortOf, scratchpadOf, markerApprovalTime, runningForPlanStep } from './report.mjs';
 
 /** The transcript is JSONL; the last assistant text is the reply just written. */
 const lastAssistantText = (path) => {
@@ -254,6 +254,52 @@ payloadSession = String(hook.session_id ?? '');
 
 const path = hook.transcript_path;
 
+// THE HARNESS'S CAP ON CONSECUTIVE STOP REFUSALS (P-20, LESSONS §381). The harness continues a turn after a Stop hook refuses it, and
+// after STOP_CAP continuations in a row it overrides the next refusal and ends the turn in silence, which is the shape this guard exists
+// to refuse. The count resets at each tool call, and every Stop hook counts, the environment's own among them. This guard refuses at
+// most twice in one chain (the first stop, and the one repeat below), so it holds itself under the cap at that repeat: where the tail
+// already shows HOLD_AT refusals since the last tool call it passes the stop and says so, instead of adding the one the harness would
+// override. STOP_CAP is the documented eight until the planted run of the plan that serves P-20 sets it from a measurement.
+const STOP_CAP = 8;
+const HOLD_AT = STOP_CAP - 1;
+
+/**
+ * How many Stop-hook refusals the transcript shows since the newest tool call.
+ * @param {object[]} entries  the transcript's tail (`tailEntries`).
+ * @returns {number} the system entries of subtype stop_hook_summary with a non-empty hookErrors list, counted back from the end until
+ *   an assistant entry holding a tool_use block. The refusal being made at this moment is not yet written, so it is not counted.
+ */
+function stopBlocksSinceTool(entries) {
+  let n = 0;
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const e = entries[i];
+    if (e?.type === 'assistant' && Array.isArray(e.message?.content) && e.message.content.some((b) => b?.type === 'tool_use')) break;
+    if (e?.type === 'system' && e.subtype === 'stop_hook_summary' && Array.isArray(e.hookErrors) && e.hookErrors.length) n++;
+  }
+  return n;
+}
+
+// THE PLANT (P-20). A marker file in the session's scratchpad arms a measurement of the cap: while an agent whose prompt names the
+// marker's plan and step is running, every stop of the main thread is refused with a line opening PLANT, each call logged in the marker,
+// until the log holds the limit. It runs before the loop flag is read, because the measurement has to refuse whatever the flag says, and
+// it refuses nothing of its own while armed. A marker that is not JSON (the word spent), an object with no plan and step, a log that
+// holds the limit, a session with no scratchpad and a session with no such agent all read as absent.
+try {
+  const pad = scratchpadOf(payloadSession);
+  const file = pad ? join(pad, 'scratch', 'stop-cap-plant.json') : '';
+  const mk = file ? JSON.parse(readFileSync(file, 'utf8')) : null;
+  const limit = Number(mk?.limit) || 0;
+  const log = Array.isArray(mk?.log) ? mk.log : [];
+  if (mk && typeof mk.plan === 'string' && mk.plan && Number.isInteger(mk.step) && limit > 0 && path && log.length < limit
+    && runningForPlanStep({ session_id: payloadSession, transcript_path: path }, mk.plan, mk.step)) {
+    const n = log.length + 1;
+    log.push({ call: n, at: new Date().toISOString(), stop_hook_active: !!hook.stop_hook_active });
+    writeFileSync(file, JSON.stringify({ ...mk, log }));
+    process.stderr.write(`PLANT ${n} of ${limit} — this refusal is the plan's own measurement of the harness's cap on consecutive stop refusals, not a defect of the reply. Answer it with the one line "PLANT ${n}" and make no tool call, because a tool call resets the count being measured.\n`);
+    process.exit(2);
+  }
+} catch { /* a marker that cannot be read is absent */ }
+
 // THE PROSE REFUSALS RUN ONLY UNDER A PLAN (Doctrine §0e rule 4, Design part 5, LESSONS §376, §384, §395, §406, §428, §434, §456).
 // Conversation is the default outside a plan: a reply there is judged by the never-rules and by the shapes that are about what is
 // claimed, not about how it is worded. `underPlan` is true while an approval marker is in force whose plan's pointer is not none
@@ -301,6 +347,12 @@ if (hook.stop_hook_active) {
       const refused = units(rec.reply, skipLine);
       const again = [...units(textAfter(path, Number(rec.lines) || 0))].filter((u) => refused.has(u));
       if (again.length) {
+        // THE HOLD (P-20): the repeat is the one refusal this guard adds to a chain, so it is the one held under the cap.
+        const held = stopBlocksSinceTool(tailEntries(path, 16 * 1024 * 1024));
+        if (held >= HOLD_AT) {
+          process.stderr.write(`STOP PASSED — the transcript shows ${held} stop refusals since the last tool call, and the harness's cap is ${STOP_CAP}: this guard would have refused the follow-up that repeats "${again[0].slice(0, 120)}", and does not, so the harness never ends the turn in silence.\n`);
+          process.exit(0);
+        }
         writeFileSync(refusedFile(), JSON.stringify({ ...rec, repeated: true }));
         process.stderr.write(`STOP REFUSED — this follow-up sends the refused reply again: ${again.length} line${again.length === 1 ? '' : 's'} of it repeated, the first being
   "${again[0].slice(0, 200)}"

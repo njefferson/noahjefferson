@@ -1540,6 +1540,30 @@ export function runningAgents(sid, f = sessionFiles(sid)) {
   return out;
 }
 
+/**
+ * Is an agent running whose prompt names a given plan and step? (P-20, the plant mode of the stop guard.)
+ * @param {object} p  a Stop payload: `transcript_path` and `session_id` say where the session's agents are, as `runningWork` finds them.
+ * @param {string} plan  the plan's file name, with or without the `.md`.
+ * @param {number} step  the step number.
+ * @returns {boolean} true when a running agent's prompt names that step and a path holding the plan's name; the prompt names either the
+ *   plan or its steps file (`stepsFilePath`, which swaps `.md` for `.steps.md`), so the name is looked for without its `.md`. false for
+ *   anything that cannot be read, so an unreadable session never arms the plant.
+ */
+export function runningForPlanStep(p, plan, step) {
+  const stem = String(plan ?? '').replace(/\.md$/i, '');
+  if (!stem || !Number.isInteger(step)) return false;
+  const tr = String(p?.transcript_path ?? '');
+  const sid = String(p?.session_id ?? '');
+  const f = tr.endsWith('.jsonl') ? { main: tr, agents: join(tr.slice(0, -'.jsonl'.length), 'subagents') } : sessionFiles(sid);
+  try {
+    for (const a of runningAgents(sid, f) ?? []) {
+      const prompt = agentPrompt(a.path);
+      if (prompt && prompt.step === step && prompt.plan.includes(stem)) return true;
+    }
+  } catch { /* unreadable: not armed */ }
+  return false;
+}
+
 // ---- what the session started that is still running ----
 
 /**

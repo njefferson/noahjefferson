@@ -392,7 +392,7 @@ Depends: the harness version this container runs; Q-HUB-113.
 
 ### P-20. The Stop hook block cap
 
-Repository: hub. Goal: 6. State: planned. Plan: i-m-not-british-make-indexed-riddle.md.
+Repository: hub. Goal: 6. State: running. Plan: i-m-not-british-make-indexed-riddle.md.
 
 Acceptance: the cap of eight consecutive continuations is measured once in this container with a planted run of consecutive stop refusals, and the result is written here; the stop guard's refusals are then held below the cap, or the cap's variable is set in the environment.
 

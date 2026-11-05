@@ -8805,9 +8805,84 @@ const CASES = [
       return r.status === 0 && /planted counts match the known figures/.test(r.stdout) && r.stdout.includes('"titles":"P-99: A planted title; P-98: A second planted title"');
     },
   },
+
+  // ---- P-20: the harness's cap on consecutive stop refusals (stop-guard.mjs, report.mjs) ----
+  {
+    name: 'the stop guard holds its own repeat refusal under the harness\'s cap: with a first stop refused for a waiting sentence and a follow-up that repeats it, the repeat is refused when the transcript shows six stop refusals since the last tool call, passes with a line opening STOP PASSED at seven, and is refused again at seven when a tool call stands between the third and the fourth, because the count starts over at a tool call',
+    guards: ['cap_hold_count', 'cap_hold_reset'],
+    run(m, dir) {
+      const env = underPlanEnv();
+      const WAIT = 'The second step is still running in its agent, and its result is read when it ends.';
+      const FEEDBACK = { type: 'user', isMeta: true, timestamp: ts(6), message: { role: 'user', content: 'Stop hook feedback:\nSTOP REFUSED' } };
+      const blocked = (s) => ({ type: 'system', subtype: 'stop_hook_summary', timestamp: ts(s), hookErrors: ['[stop-guard.sh]: STOP REFUSED planted refusal'] });
+      const run = (middle) => {
+        const sess = sid('ch');
+        const tr = transcript([turn(0, GO), tool(1, 'ch1', 'Bash', { command: 'git status' }), result(2, 'ch1', 'clean'), reply(5, WAIT)]);
+        const stop = (active) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sess, transcript_path: tr, stop_hook_active: active }), encoding: 'utf8', env });
+        const one = stop(false);
+        appendFileSync(tr, jsonl([FEEDBACK, ...middle, reply(30, WAIT)]));
+        return { one, two: stop(true) };
+      };
+      const n = (k, from = 10) => Array.from({ length: k }, (_, i) => blocked(from + i));
+      const six = run(n(6));
+      const seven = run(n(7));
+      const split = run([...n(3), tool(14, 'ch2', 'Bash', { command: 'git status' }), result(15, 'ch2', 'clean'), ...n(4, 16)]);
+      return six.one.status === 2 && six.two.status === 2 && /sends the refused reply again/.test(six.two.stderr)
+        && seven.one.status === 2 && seven.two.status === 0 && /^STOP PASSED/.test(seven.two.stderr) && /7 stop refusals/.test(seven.two.stderr)
+        && split.two.status === 2 && /sends the refused reply again/.test(split.two.stderr);
+    },
+  },
+  {
+    name: 'the stop guard\'s plant mode refuses nine stops in a row while an agent for the marker\'s plan and step is running and logs each, and refuses nothing otherwise: with no agent, and with only an agent for another step of the plan and an agent for the same step of another plan, a stop passes and the log stays empty; with an agent sent the steps file of the plan for step 34 the first stop is refused with a line opening PLANT 1 of 9 and the next eight, sent with the loop flag set, with PLANT 2 to PLANT 9, the tenth passes, and the log holds nine calls numbered in order whose first has the flag false and whose last has it true; a marker holding the word spent, and an empty object, pass',
+    guards: ['cap_plant_armed', 'cap_plant_limit', 'cap_plant_log', 'cap_plant_line'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      const s = sid('cp');
+      const proj = tmp('sg-proj-');
+      const main = join(proj, `${s}.jsonl`);
+      const subs = join(proj, s, 'subagents');
+      mkdirSync(subs, { recursive: true });
+      const pad = join(process.env.TMPDIR, 'claude-0', '-home-user', s, 'scratchpad');
+      mkdirSync(join(pad, 'scratch'), { recursive: true });
+      const markerFile = join(pad, 'scratch', 'stop-cap-plant.json');
+      const arm = (o) => writeFileSync(markerFile, typeof o === 'string' ? o : JSON.stringify(o));
+      const logOf = () => { try { return JSON.parse(readFileSync(markerFile, 'utf8')).log ?? []; } catch { return []; } };
+      const fresh = () => arm({ plan: 'planted-plan.md', step: 34, limit: 9, log: [] });
+      writeFileSync(main, jsonl([turn(0, GO), reply(5, 'Nothing is open here.')]));
+      const stop = (active) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: s, transcript_path: main, stop_hook_active: active }), encoding: 'utf8', env: { ...process.env, HOME: home } });
+      fresh();
+      const noAgent = stop(false);
+      const noAgentLog = logOf().length;
+      putAgent(subs, '/plans/planted-plan.md', 'p36', 36, -300, 0, '', true);
+      putAgent(subs, '/plans/other-plan.md', 'o34', 34, -300, 0, '', true);
+      const wrong = stop(false);
+      const wrongLog = logOf().length;
+      putAgent(subs, '/plans/planted-plan.steps.md', 'p34', 34, -300, 0, '', true);
+      const calls = [stop(false)];
+      for (let i = 0; i < 8; i++) calls.push(stop(true));
+      const tenth = stop(true);
+      const log = logOf();
+      const lines = calls.map((c, i) => c.status === 2 && c.stderr.startsWith(`PLANT ${i + 1} of 9`));
+      arm('spent');
+      const spent = stop(false);
+      arm({});
+      const empty = stop(false);
+      return noAgent.status === 0 && noAgentLog === 0 && wrong.status === 0 && wrongLog === 0
+        && lines.every(Boolean) && tenth.status === 0
+        && log.length === 9 && log.every((e, i) => e.call === i + 1) && log[0].stop_hook_active === false && log[8].stop_hook_active === true
+        && spent.status === 0 && empty.status === 0;
+    },
+  },
 ];
 
 const PLANTS = {
+  cap_hold_count: ['if (held >= HOLD_AT) {', 'if (false) {', 'stop-guard.mjs'],
+  cap_hold_reset: ["if (e?.type === 'assistant' && Array.isArray(e.message?.content) && e.message.content.some((b) => b?.type === 'tool_use')) break;", 'if (false) break;', 'stop-guard.mjs'],
+  cap_plant_armed: ['    && runningForPlanStep({ session_id: payloadSession, transcript_path: path }, mk.plan, mk.step)) {', '    && true) {', 'stop-guard.mjs'],
+  cap_plant_limit: [' && log.length < limit\n', '\n', 'stop-guard.mjs'],
+  cap_plant_log: ['    log.push({ call: n, at: new Date().toISOString(), stop_hook_active: !!hook.stop_hook_active });\n', '\n', 'stop-guard.mjs'],
+  cap_plant_line: ['`PLANT ${n} of ${limit}', '`PLOT ${n} of ${limit}', 'stop-guard.mjs'],
   cost_item_read: ['item: section.match(/\\bP-\\d+\\b/)?.[0] ?? null };', 'item: null };', 'session-cost.mjs'],
   cost_write_read: ['lastWrite = planIdentity(b.input?.content);', 'lastWrite = { title: null, item: null };', 'session-cost.mjs'],
   switch_allow: ["permissionDecision: 'allow', permissionDecisionReason", "permissionDecision: 'ask', permissionDecisionReason", 'hook-dispatch.mjs'],
