@@ -54,7 +54,7 @@ The list is the rank. The items the redesign plan builds come first, then the pa
 
 ## Items
 
-299 items (P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 226 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
+308 items (P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 235 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
 
 ## Items the redesign plan builds
 
@@ -254,6 +254,16 @@ Close entry of the plan seed (P-288, steps 81 to 83), written by step 83 from th
 - The whole session over ten numbered plans: 167 owner messages (72 go-words, 95 without, 16 carrying the word stop), 288 stop-hook messages, 137 main-thread refusals, 166 agents, 5 compactions, 20 resumes.
 - The harness's own running cost entry, the last of 83, reads 313.89 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). The close entry of the plan of 5 November under P-287 above is short by steps 79 and 80, which a close entry written in a middle step always is (Q-HUB-252).
 
+Close entry of the plan that closes P-21 (steps 85 to 88), written by step 87 from the cost instrument run on this session's transcript, so far and before this step's push. The instrument does not number this plan apart: it folds it into the bucket of plan 10, the plan seed, approved 09:14 California time on 5 November and approved again after an amendment at 12:01, so the figures below are the bucket's, and the seed plan's own entry above (7 agents, 140,547 output tokens) is part of them:
+- The owner's messages: 4 in the bucket, all ending in a go-word; none carries the word stop.
+- Stop-hook messages: 17 in 14 stops (command hook 3, 13; command hook 2, 4).
+- Main-thread refusals: 7 (manager fence 2, reads gate 2, plan rules gate 1, state page gate 1, pending guard 1), and 1 post-tool blocking error from the approved-plan guard.
+- Agents: 22, all on the sonnet tier, with 232,741 output tokens, 58,429,473 cache-read tokens and 3,552,161 cache-written tokens; 6 hook refusals (plan fence 5, reply guard 1).
+- Main-thread turns: 74 on the fable tier with 113,155 output tokens, and 64 on the opus tier with 42,425 output tokens.
+- Compactions: 1 (12:37 California time on 5 November). Resumes: 3. Pushes: the instrument does not count them; step 86 pushed once and this step pushes once.
+- The whole session over ten numbered plans: 171 owner messages (76 go-words, 95 without, 16 carrying the word stop), 301 stop-hook messages, 22 agents in this bucket.
+- The harness's own running cost entry, the last of 86, reads 374.65 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252).
+
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
 ## Parked settings
@@ -437,7 +447,9 @@ Depends: the harness version this container runs; P-12, since the environment's 
 
 ### P-21. The config-change hook
 
-Repository: hub. Goal: 6. State: planned. Plan: i-m-not-british-make-indexed-riddle.md.
+Repository: hub. Goal: 6. State: done. Plan: after-this-clear-do-tidy-honey.md.
+
+Done: the dispatcher records every ConfigChange payload, a policy change included and none blocked, as one line of status/config-changes.jsonl in the session scratchpad; the status prints each record newer than its stamp; CONFIG.md names the record and treats a recorded change to a baseline file that no item made as a drift to file; the hook is installed from the live clone. A run in this container on 5 November at 13:38 California showed the hook firing on a planted skill file: the record held one line with source skills and the probe's path. The suite passed 271 of 271 with its plants caught. Nine findings of the plan's writing and run are filed as P-300 to P-308.
 
 Acceptance: a ConfigChange hook reports a change to a user, project or local settings file or a skill file, and the baseline's drift detection uses it; a run in this container shows the hook firing on a planted change. A change to managed policy settings cannot be blocked by it, and server-managed settings do not run it.
 
@@ -2708,4 +2720,76 @@ Repository: hub. Goal: 1. State: open. Plan: none.
 Acceptance: the seed's print separates changed lines of tracked files from untracked files, and a case holds both.
 
 Depends: P-288.
+
+### P-300. Q-HUB-260: the plan seed numbers its steps from 1 where the plan file's highest step is higher
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the dispatcher passes the seed the plan's path, or the seed reads the scratchpad's report files, and the print numbers its steps after the highest step number of the plan file and of the progress folder; a case with a planted folder of earlier reports.
+
+Depends: P-288.
+
+### P-301. Q-HUB-261: the plan seed's Files prints two labels for the one repository
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the seed prints one Files line for each repository, and a case holds a repository named by two spellings.
+
+Depends: P-288.
+
+### P-302. Q-HUB-262: the plan seed's Commands name the live clone's path for the checks and the suite
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the seed prints the checks and the suite at the working copy's path, where an agent edits and tests, and a case holds the path.
+
+Depends: P-288.
+
+### P-303. Q-HUB-263: the plan seed's close step has no landing
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the seed's close step carries the fetch, the rebase, the push, the remote reads and the clone's pull, in the shape step 87 of the plan that closes P-21 wrote, and a case holds each line.
+
+Depends: P-288.
+
+### P-304. Q-HUB-264: the pointer counts only hand-backs after the newest approval marker
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: a plan amended and approved again after steps handed back DONE shows those steps as done and not as unsent, where nothing in them changed, and a case with a planted amendment after two DONE hand-backs; read against lesson 455, which counts a step end only for an agent sent after the plan's approval.
+
+Depends: none.
+
+### P-305. Q-HUB-265: a step's Facts took a state from an agent's report
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the review reads each state a step's Facts assert against the record read in that review and not against a report, and the review's text says so; a case or a checklist line the review follows.
+
+Depends: none.
+
+### P-306. Q-HUB-266: a case of the suite that writes into its directory overwrites a tracked working copy file
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the suite runs each case's writes in a copy and not in the working copy, or a case that writes a tracked file there fails, and a plant shows it.
+
+Depends: none.
+
+### P-307. Q-HUB-267: the quoted-form install case checks only the suffix of the written command
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: the case asserts the whole command written, clone path included, and a plant that changes the path is caught.
+
+Depends: none.
+
+### P-308. Q-HUB-268: a read taken at once after a change does not see the ConfigChange record
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: the record is read after a stated wait on its own file, or the hook's write is shown to land before the harness applies the change, and the plan that plants a change reads the record once after the wait.
+
+Depends: P-21.
 

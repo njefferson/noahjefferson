@@ -1,0 +1,1 @@
+Q-HUB-263: the plan seed's close step carries the three acts of a close and no landing, while its rules say the landing step fetches, rebases and pushes, so each plan writes the fetch, the rebase, the push, the remote reads and the clone's pull by hand (found in the writing of the plan that closes P-21, filed in step 87).

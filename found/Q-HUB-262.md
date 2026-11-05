@@ -1,0 +1,1 @@
+Q-HUB-262: the plan seed's Commands printed the checks and the suite at the live clone's path while the edits an agent makes and tests are in the working copy, so every plan rewrites those lines by hand (found in the writing of the plan that closes P-21, filed in step 87).

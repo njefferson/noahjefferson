@@ -1,0 +1,1 @@
+Q-HUB-267: the suite's quoted-form install case checks only the hook-dispatch suffix of the written command and not the clone path in front of it (found in step 85 of the plan that closes P-21, filed in step 87).

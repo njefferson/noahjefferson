@@ -1,0 +1,1 @@
+Q-HUB-260: the plan seed's print numbered its steps from 1 while the plan file's highest step was 84, because the dispatcher passes the seed no plan path, so the print's numbers collided with report files of earlier steps in the scratchpad and the writer renumbered by hand (found in the writing of the plan that closes P-21, filed in step 87).

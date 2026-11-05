@@ -1,0 +1,1 @@
+Q-HUB-264: the pointer of report.mjs counts only hand-backs after the newest approval marker, so a plan amended and approved again after steps had handed back DONE shows those steps as not sent and each is sent again to hand back DONE with nothing changed, which cost the seed plan six agents on 5 November (found in the writing of the plan that closes P-21, filed in step 87).
