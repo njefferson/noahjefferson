@@ -328,6 +328,10 @@ every rule below while none of the hooks that enforce them was running
    (LESSONS §370).
    *Enforced by:* `plan-guard.mjs` and `hook-dispatch.mjs`
    (`readAfterCompactionProblem`, `costProblem`).
+   The plan is typed from the seed's print, `node plan-seed.mjs --item <key or next>`,
+   which the dispatcher prints once at the entry to plan mode: the item's own entry,
+   goals, rules version, standing text, found keys and the reads another session can
+   move, each marked, so a step reads those at the time of use.
 5. **A line before each tool call and a line after each result.**
 6. **Never "waiting on you", never "you owe".** Say "open for you:". A stop is
    declared in the first line as "Stopping here: open for you is X".

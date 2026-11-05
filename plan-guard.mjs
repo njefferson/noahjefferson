@@ -293,6 +293,14 @@ if (tool === 'Bash') {
   // repeat waited for a reading, and plan mode refused the reading (LESSONS §376).
   const reading = parseRead(cmd);
   if (reading && !reading.bad) process.exit(0);
+  // THE PLAN SEED passes in plan mode: it reads files and prints the record in the plan's shape, the plan is typed from it, and it writes
+  // nothing. One plain command of this hub's plan-seed.mjs with --item and the optional --repo, --plan and --steps (`isSeedCommand`, the test
+  // the manager fence reads too); `node` with no --check is refused below, and so is any other line. The test is spelled here and not
+  // imported, like the mark above, and a case holds it equal to `isSeedCommand` in hook-dispatch.mjs.
+  const seedArg = '(?:"[^"`$\\\\]*"|\'[^\']*\'|[^\\s"\'`$\\\\;&|<>(){}*?\\[\\]!#]+)';
+  const seedFlag = `\\s+--(?:item|repo|plan|steps)\\s+${seedArg}`;
+  const seedLine = new RegExp(`^\\s*node\\s+"?${join(dirname(fileURLToPath(import.meta.url)), 'plan-seed.mjs').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"?(?=(?:${seedFlag})*\\s+--item\\s)(?:${seedFlag})+\\s*$`);
+  if (seedLine.test(cmd)) process.exit(0);
   const parts = commands(cmd);
 
   // A REDIRECT WRITES A FILE. `2>&1`, `>&2` and anything aimed at /dev/null do

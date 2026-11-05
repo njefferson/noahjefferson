@@ -245,6 +245,50 @@ export function isPlanCheck(p, planPath = () => approvedPlan()?.path) {
   return recordPath(absOf(target, p.cwd ? String(p.cwd) : process.cwd()), p, planPath);
 }
 
+// THE PLAN SEED (`plan-seed.mjs`): this hub's script, `--item <key or next>` and the optional `--repo`, `--plan` and `--steps`, each with ONE argument that is a
+// word of path characters or a quoted string with nothing in it for the shell to expand, and nothing chained. It reads files and prints the record in
+// the plan's own shape and writes nothing, so the manager fence, the check of a call and the status pass pass it as they pass the plan check, in plan
+// mode too, and the plan guard passes the same line (its own copy of this test).
+const SEED = new RegExp('^\\s*node\\s+"?' + join(HUB, 'plan-seed.mjs').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  + '"?(?=(?:\\s+--(?:item|repo|plan|steps)\\s+' + CAN_ARG + ')*\\s+--item\\s)(?:\\s+--(?:item|repo|plan|steps)\\s+' + CAN_ARG + ')+\\s*$');
+
+/**
+ * Is a Bash line the plan seed's command?
+ * @param {string} cmd  a command line.
+ * @returns {boolean} true only for this hub's `plan-seed.mjs` with an `--item` and any of `--repo`, `--plan` and `--steps`, one argument each, and nothing
+ *   chained. The seed only reads and prints, so the manager fence, `canCall` and the status pass in `main` read this one test.
+ */
+export const isSeedCommand = (cmd) => SEED.test(String(cmd ?? ''));
+
+/**
+ * The plan seed, printed once at the entry to plan mode.
+ * @param {object} p  a main-thread hook payload: `permission_mode`, `session_id` and `cwd` are read; an agent's payload prints nothing.
+ * @param {{pad?: string|null, args?: string[], script?: string}} [opts]  the session scratchpad, the seed's arguments (`--item next` by
+ *   default, which is the first open item of the program) and the script, each given by the test.
+ * @returns {string} the seed's print when this payload is the first to carry the mode plan after one that did not (or after none was
+ *   recorded); '' at every other call. The mode a payload carries is kept in `status/mode-seen.json` of the scratchpad, so a plan mode the
+ *   app or the session enters gets one print and the next prompt or call in the same mode gets none. A payload with no mode leaves the
+ *   record as it stands and prints nothing, and a record that cannot be written prints nothing rather than print again at every call.
+ */
+export function planEntrySeed(p, opts = {}) {
+  if (p?.agent_id) return '';
+  const mode = String(p?.permission_mode ?? '');
+  if (!mode) return '';
+  const pad = 'pad' in opts ? opts.pad : scratchpadOf(String(p?.session_id ?? ''));
+  if (!pad) return '';
+  const file = join(pad, 'status', 'mode-seen.json');
+  let before = '';
+  try { before = String(JSON.parse(readFileSync(file, 'utf8')).mode ?? ''); } catch { before = ''; }
+  if (before !== mode) {
+    try { mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, `${JSON.stringify({ mode, at: new Date().toISOString() })}\n`); } catch { return ''; }
+  }
+  if (mode !== 'plan' || before === 'plan') return '';
+  const r = spawnSync(process.execPath, [opts.script ?? join(HUB, 'plan-seed.mjs'), ...(opts.args ?? ['--item', 'next'])], {
+    encoding: 'utf8', timeout: 30000, cwd: p?.cwd ? String(p.cwd) : undefined, env: { ...process.env, CLAUDE_CODE_SESSION_ID: String(p?.session_id ?? '') },
+  });
+  return r.status === 0 ? String(r.stdout).trim() : '';
+}
+
 /**
  * The reply guard's release command, when a Bash line is exactly that.
  * @param {string} cmd  a command line.
@@ -2971,6 +3015,8 @@ export function managerFence(p, opts = {}) {
   // THE PLAN CHECK PASSES AS THE STATUS COMMAND DOES (`isPlanCheck`, LESSONS §435): `plan-guard.mjs --check` of a file of the record
   // runs the checks the approval call runs, prints every fault and changes nothing, and the plan has to be right before its talk turn.
   if (isPlanCheck(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path)) return null;
+  // THE PLAN SEED PASSES THE SAME WAY (`isSeedCommand`): it reads files and prints the record in the plan's shape, and the plan is typed from it.
+  if (tool === 'Bash' && isSeedCommand(input.command)) return null;
   // THE REPLY GUARD'S RELEASE COMMAND PASSES AS THE STATUS COMMAND DOES (`releaseCommand`, LESSONS §432): a refusal of the reply guard
   // names it as the way on, and a fence that refused it left that refusal with no way out. The other gates still judge it.
   if (tool === 'Bash' && releaseCommand(input.command)) return null;
@@ -3035,7 +3081,7 @@ export function managerFence(p, opts = {}) {
 export function canCall(p, opts = {}) {
   const tool = String(p.tool_name ?? '');
   const cmd = String(p.tool_input?.command ?? '');
-  const free = tool === 'Bash' && (REPORT.test(cmd) || CAN.test(cmd) || isPlanCheck(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path));
+  const free = tool === 'Bash' && (REPORT.test(cmd) || CAN.test(cmd) || isPlanCheck(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path) || (!p.agent_id && isSeedCommand(cmd)));
   const passesLatch = free || tool === 'TaskStop' || (tool === 'Bash' && !!releaseCommand(cmd));
   // THE SKIP OUTSIDE A PLAN IS APPLIED AS THE DISPATCHER APPLIES IT (`main`): in conversation only a send is asked of the fence, and after a
   // plan has finished the main thread's repository writes are refused (`finishedFence`) and the rest passes. A call made by an agent is
@@ -3454,7 +3500,7 @@ async function main(event, raw, p) {
     // is not exempt; the plan fence judges it.
     // THE PLAN CHECK (`isPlanCheck`, LESSONS §435) PASSES THE SAME WAY, on the main thread and for a file of the record: it changes nothing,
     // and a plan is checked in plan mode and under a latch, before its talk turn.
-    const status = p.tool_name === 'Bash' && (REPORT.test(String(p.tool_input?.command ?? '')) || (!p.agent_id && CAN.test(String(p.tool_input?.command ?? ''))) || (!p.agent_id && isPlanCheck(p)));
+    const status = p.tool_name === 'Bash' && (REPORT.test(String(p.tool_input?.command ?? '')) || (!p.agent_id && CAN.test(String(p.tool_input?.command ?? ''))) || (!p.agent_id && isPlanCheck(p)) || (!p.agent_id && isSeedCommand(p.tool_input?.command)));
     const mainStop = p.tool_name === 'TaskStop' && !p.agent_id;
     // THE REPLY GUARD'S RELEASE COMMAND PASSES THE LATCH ON THE MAIN THREAD (`releaseCommand`, LESSONS §432): a refusal of the reply
     // guard names it as the way on, and the latch that refusal set refused the way on with it. Only the latch is passed here: the
@@ -3742,6 +3788,9 @@ async function main(event, raw, p) {
     try { goals = goalsSection(); } catch { goals = ''; }
     printed.push(goals || 'The goals every session serves: not read (no such section in the CLAUDE.md beside hook-dispatch.mjs).');
     printed.push(REMINDER);
+    // THE PLAN SEED, ONCE AT THE ENTRY TO PLAN MODE (`planEntrySeed`): the record is printed in the plan's own shape the first time a prompt
+    // carries the mode plan, so the plan is typed from the record and not from memory. A prompt with no mode prints nothing.
+    try { const seedText = planEntrySeed(p); if (seedText) printed.push(seedText); } catch { /* the plan is typed from the manager's own run of the command */ }
   }
   // A new process starts with an empty queue; pending-guard waits only on what
   // this one was given.
@@ -3821,6 +3870,15 @@ async function main(event, raw, p) {
     }
   }
   if (printed.length) process.stdout.write(printed.join('\n\n') + '\n');
+  // THE SAME PRINT BESIDE A MAIN-THREAD CALL THAT PASSED EVERY GUARD, as added context (never beside a refusal, which returned above): the
+  // call that enters plan mode, or the first after a prompt that carried no mode, is where the mode is first seen. The record of the
+  // mode is shared with the prompt's, so the print is made once for the entry whichever event meets it first.
+  if (event === 'PreToolUse' && !p.agent_id) {
+    try {
+      const seedText = planEntrySeed(p);
+      if (seedText) process.stdout.write(`${JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: seedText } })}\n`);
+    } catch { /* the plan is typed from the manager's own run of the command */ }
+  }
   const post = [markFail, replyNote].filter(Boolean).join('\n');
   if (post) { process.stderr.write(post + '\n'); return 2; }
   return 0;

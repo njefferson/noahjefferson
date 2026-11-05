@@ -100,7 +100,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const FILES = ['pending-guard.mjs', 'keep-info-guard.mjs', 'compact-recall.mjs', 'reply-guard.mjs', 'transcript-tail.mjs',
   'plan-guard.mjs', 'hook-dispatch.mjs', 'report.mjs', 'drive-guard.mjs', 'approved-plan-guard.mjs', 'plan-scope-check.mjs', 'stop-guard.mjs',
   'push-guard.mjs', 'plan-fence.mjs', 'doctrine-read-guard.mjs', 'session-brief.mjs', 'CLAUDE.md', 'agent-rules.md', 'DOCTRINE.md',
-  'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-cost.mjs', 'session-guards.test.mjs'];
+  'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-cost.mjs', 'plan-seed.mjs', 'plans/seed-template.md', 'session-guards.test.mjs'];
 // Every copy of the guards makes a file's folder before it copies it: the doctrine's three pages sit in doctrine/.
 const copyGuard = (from, to) => { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to); };
 // The shared rules file the guards read beside themselves: its version, and the pointer line a plan writes for the hub
@@ -8874,7 +8874,137 @@ const CASES = [
         && spent.status === 0 && empty.status === 0;
     },
   },
+  // ---- the plan seed: a plan is typed from a print of the record at the entry to plan mode ----
+  {
+    name: 'the plan seed prints the named item\'s own entry and its own dependency line and not the line of the entry above, the first open item for next (not a planned one), the goals with the item\'s acceptance as goal 1, the rules version, the found keys as one range line for each run of consecutive keys, a close step carrying its three acts, the found folder in the Files, the next free keys, and every movable read with its mark after the plan; a key not in the program is an error naming the next free key and the next open item',
+    guards: ['seed_depends', 'seed_first_open', 'seed_runs', 'seed_close_acts', 'seed_mark', 'seed_rules_version'],
+    run(m, dir) {
+      const hub = seedHub(dir);
+      const r3 = seedRun(dir, hub, ['--item', 'P-3']);
+      const r2 = seedRun(dir, hub, ['--item', 'P-2']);
+      const rn = seedRun(dir, hub, ['--item', 'next']);
+      const bad = seedRun(dir, hub, ['--item', 'P-99']);
+      const own = r2.status === 0 && /its dependency line is "none\."/.test(r2.stdout) && !r2.stdout.includes('P-90')
+        && r3.status === 0 && /its dependency line is "P-2\."/.test(r3.stdout) && !r3.stdout.includes('P-90');
+      const next = rn.status === 0 && /^PLAN SEED for P-3 \(Third planted item\)/.test(rn.stdout) && !/^PLAN SEED for P-1 /.test(rn.stdout);
+      const missing = bad.status === 1 && /next free program key is P-4/.test(bad.stdout) && /next ranked open item is P-3, Third planted item/.test(bad.stdout);
+      const goals = r3.stdout.includes('\n1. Third planted acceptance words of the case.\n') && r3.stdout.includes(GOALS_BLOCK);
+      const rules = r3.stdout.includes(`\nRules: ${join(homedir(), '.claude', 'hub', 'agent-rules.md')}, version ${RULES_VERSION}.\n`);
+      const ranges = r3.stdout.includes('- Q-HUB-1 to Q-HUB-2 still queued: <') && r3.stdout.includes('- Q-HUB-4 still queued: <');
+      const closeStep = /Closed in the program[\s\S]*Facts:[\s\S]*Do:[\s\S]*Observe:[\s\S]*Kill:/.test(r3.stdout) && /write the item's state in its entry/.test(r3.stdout)
+        && /one file in the found folder named by its key/.test(r3.stdout) && /one close entry for this plan/.test(r3.stdout) && r3.stdout.includes('`found/`');
+      const keys = r3.stdout.includes('the next free program key: P-4') && r3.stdout.includes('the next free found key: Q-HUB-5') && r3.stdout.includes('the next free lesson number: 8');
+      const after = r3.stdout.split('==== THE PLAN ENDS ABOVE THIS LINE ====')[1] ?? '';
+      const movable = after.split('\n').filter((l) => l.startsWith('- ['));
+      const marked = movable.length === 8 && movable.every((l) => l.startsWith('- [movable: another session can move this before a step runs] ')) && !(r3.stdout.split('==== THE PLAN ENDS')[0].includes('[movable'));
+      return own && next && missing && goals && rules && ranges && closeStep && keys && marked;
+    },
+  },
+  {
+    name: 'a plan built from the seed\'s print passes the plan guard\'s checks on its Goals, Rules, Files, Order, Commands, steps and Found answered sections with every placeholder filled, and the Files carry the found folder under the hub label',
+    guards: ['seed_runs', 'seed_close_acts', 'seed_rules_version'],
+    async run(m, dir) {
+      const hub = seedHub(dir);
+      const r = seedRun(dir, hub, ['--item', 'P-3', '--steps', '2']);
+      const body = (r.stdout.split('==== THE PLAN STARTS BELOW THIS LINE ====')[1] ?? '').split('==== THE PLAN ENDS ABOVE THIS LINE ====')[0];
+      const text = body.replace(/<[^<>\n]*>/g, 'filled in with words of the case');
+      const d = m.dispatch;
+      const found = d.planFiles(text).some((f) => f.path === 'found/' && f.repo === 'Hub');
+      const problems = [d.goalsProblem(text), d.rulesProblem(text), d.foundAnsweredProblem(text, { roots: [hub] }), d.aimStandingProblem(text), d.afterProblem(text),
+        d.commandsGitDirProblem(text), d.filesSpanProblem(text), d.stepShapeProblem(text), await d.reviewCommandProblem(text)];
+      const steps = JSON.stringify(d.planSteps(text)) === '[1,2,3,4]';
+      if (problems.some((x) => x !== null)) throw new Error(`the built plan was refused: ${problems.filter((x) => x !== null).map((x) => String(x).slice(0, 160)).join(' | ')}`);
+      return found && steps && r.status === 0;
+    },
+  },
+  {
+    name: 'the manager fence, the check of a call and the plan guard in plan mode pass the plan seed\'s command, one plain command of this hub\'s script with an item and the optional repo, plan and steps arguments, and refuse it chained, without an item, with another flag, or as another script',
+    guards: ['seed_fence', 'seed_can', 'seed_status', 'seed_planguard'],
+    run(m, dir) {
+      const seedPath = join(dir, 'plan-seed.mjs');
+      const good = [`node ${seedPath} --item P-3`, `node "${seedPath}" --item next --repo /home/user/x --steps 2`, `node ${seedPath} --plan /root/.claude/plans/a.md --item P-12`];
+      const bad = [`node ${seedPath} --item P-3 && touch /tmp/x`, `node ${seedPath} --repo /home/user/x`, `node ${seedPath} --item P-3 --out /tmp/x`, `node ${join(dir, 'report.mjs')} --item P-3`,
+        `node ${seedPath} --item P-3 extra`, `node ${seedPath} --item $(touch x)`];
+      const bash = (command) => ({ tool_name: 'Bash', tool_input: { command }, session_id: 'sd', cwd: '/' });
+      const opts = { plan: null, classify: () => false };
+      const fence = (c) => m.dispatch.managerFence(bash(c), opts);
+      const fenced = good.every((c) => fence(c) === null) && bad.every((c) => typeof fence(c) === 'string');
+      const canned = good.every((c) => m.dispatch.canCall(bash(c), opts).free === true && m.dispatch.canCall(bash(c), opts).passesLatch === true) && bad.every((c) => m.dispatch.canCall(bash(c), opts).free === false);
+      const planMode = (c) => spawnSync('node', [join(dir, 'plan-guard.mjs')], { encoding: 'utf8', env: process.env,
+        input: JSON.stringify({ session_id: 'sd', permission_mode: 'plan', tool_name: 'Bash', tool_input: { command: c }, cwd: tmp('sg-cwd-') }) }).status;
+      const guarded = good.every((c) => planMode(c) === 0) && bad.every((c) => planMode(c) === 2);
+      const same = good.every((c) => m.dispatch.isSeedCommand(c)) && bad.every((c) => !m.dispatch.isSeedCommand(c));
+      // Through the dispatcher on the main thread under a latch: the status pass lets it by, and another call is refused by the latch.
+      const w = world(dir, [turn(0, GO)], STEPS_PLAN);
+      const s = sid('sd');
+      mkdirSync(process.env.REFUSAL_LATCH_DIR, { recursive: true });
+      writeFileSync(join(process.env.REFUSAL_LATCH_DIR, `${s}.json`), JSON.stringify({ at: Date.now(), tool: 'Bash', agent: null, reason: 'MANAGER FENCE (Doctrine §0e): planted for the seed case.' }));
+      const underLatch = w.call('PreToolUse', { session_id: s, tool_name: 'Bash', tool_input: { command: good[0] } });
+      const other = w.call('PreToolUse', { session_id: s, tool_name: 'Bash', tool_input: { command: 'git status' } });
+      const dispatched = underLatch.status === 0 && other.status === 2;
+      return fenced && canned && guarded && same && dispatched;
+    },
+  },
+  {
+    name: 'the dispatcher prints the plan seed once at the entry to plan mode: at a prompt carrying the mode plan after one that did not, and as added context beside a passed call carrying plan after one that did not; not at the next prompt or call in the same mode, not again after a payload with no mode, and again at a later entry; an agent\'s payload and a payload with no mode print nothing',
+    guards: ['seed_once', 'seed_record', 'seed_nomode', 'seed_prompt_print', 'seed_call_print'],
+    run(m, dir) {
+      const hub = seedHub(dir);
+      const pad = tmp('sg-seedpad-');
+      const args = ['--item', 'next', '--hub', hub, '--repo', hub];
+      const opts = { pad, args, script: join(dir, 'plan-seed.mjs') };
+      const at = (extra) => m.dispatch.planEntrySeed({ session_id: 'sd', cwd: hub, ...extra }, opts);
+      const seen = [at({ permission_mode: 'default' }), at({ permission_mode: 'plan' }), at({ permission_mode: 'plan' }), at({}), at({ permission_mode: 'plan' }), at({ permission_mode: 'default' }), at({ permission_mode: 'plan' })];
+      const hit = (t) => typeof t === 'string' && t.startsWith('PLAN SEED for P-3 ');
+      const once = seen[0] === '' && hit(seen[1]) && seen[2] === '' && seen[3] === '' && seen[4] === '' && seen[5] === '' && hit(seen[6]);
+      const agent = m.dispatch.planEntrySeed({ session_id: 'sd', agent_id: 'a1', permission_mode: 'plan' }, { ...opts, pad: tmp('sg-seedpad-') }) === '';
+      const unrecorded = m.dispatch.planEntrySeed({ session_id: 'sd', permission_mode: 'plan' }, { ...opts, pad: null }) === '';
+      // Through the hooks: the dispatcher of a COPY of the guards reads the PROGRAM.md beside itself, so the planted program goes in the copy and
+      // never in the directory under test (which is the hub's own working copy in a plain run).
+      const copy = tmp('sg-seedcopy-');
+      for (const f of FILES) copyGuard(join(dir, f), join(copy, f));
+      writeFileSync(join(copy, 'PROGRAM.md'), SEED_PROGRAM);
+      const w = world(copy, [turn(0, GO)], STEPS_PLAN);
+      const sA = sid('se');
+      notesPad(sA, '');
+      const prompt = (mode) => w.call('UserPromptSubmit', { session_id: sA, prompt: GO, ...(mode ? { permission_mode: mode } : {}) }).stdout ?? '';
+      const p1 = prompt('default'), p2 = prompt('plan'), p3 = prompt('plan'), p4 = prompt(null), p5 = prompt('plan');
+      const prompts = !p1.includes('PLAN SEED for') && p2.includes('PLAN SEED for P-3 ') && !p3.includes('PLAN SEED for') && !p4.includes('PLAN SEED for') && !p5.includes('PLAN SEED for');
+      const sB = sid('se');
+      notesPad(sB, '');
+      const call = (mode) => w.call('PreToolUse', { session_id: sB, tool_name: 'Read', tool_input: { file_path: w.plan }, ...(mode ? { permission_mode: mode } : {}) });
+      const added = (r) => { const line = String(r.stdout ?? '').split('\n').find((l) => l.startsWith('{"hookSpecificOutput"')); try { return JSON.parse(line).hookSpecificOutput; } catch { return null; } };
+      const c1 = call('default'), c2 = call('plan'), c3 = call('plan');
+      const a2 = added(c2);
+      const calls = c1.status === 0 && added(c1) === null && c2.status === 0 && a2?.hookEventName === 'PreToolUse' && String(a2?.additionalContext).startsWith('PLAN SEED for P-3 ') && c3.status === 0 && added(c3) === null;
+      if (!(once && agent && unrecorded && prompts && calls)) throw new Error(`once ${once}, agent ${agent}, unrecorded ${unrecorded}, prompts ${prompts}, calls ${calls}`);
+      return true;
+    },
+  },
 ];
+
+// ---- fixtures of the plan seed's cases ----
+// A program of three entries whose dependency lines differ, so a parse that takes the line of the entry above is seen: the first is planned (not
+// open), the second is done, and the third is the first open entry.
+const SEED_PROGRAM = ['# The program', '', 'Intro line of the planted program.', '', '## Thesis', '', 'A planted thesis paragraph of the case, one paragraph only.', '',
+  '## Items', '', '3 items planted for the case, of which one is open.', '', '## The harness', '',
+  '### P-1. First planted item', '', 'Repository: hub. Goal: 6. State: planned. Plan: none.', '', 'Acceptance: First planted acceptance words of the case.', '', 'Depends: P-90 only the first item\'s line.', '',
+  '### P-2. Second planted item', '', 'Repository: hub. Goal: 6. State: done. Plan: none.', '', 'Acceptance: Second planted acceptance words of the case.', '', 'Depends: none.', '',
+  '### P-3. Third planted item', '', 'Repository: hub. Goal: 6. State: open. Plan: none.', '', 'Acceptance: Third planted acceptance words of the case.', '', 'Depends: P-2.', ''].join('\n');
+// A hub for the seed to read: the program above, the goals file, the rules file, the template, three found files (keys 1, 2 and 4) and one lesson (7).
+function seedHub(dir) {
+  const hub = tmp('sg-seedhub-');
+  for (const f of ['CLAUDE.md', 'agent-rules.md', 'plans/seed-template.md']) copyGuard(join(dir, f), join(hub, f));
+  writeFileSync(join(hub, 'PROGRAM.md'), SEED_PROGRAM);
+  mkdirSync(join(hub, 'found'));
+  for (const n of [1, 2, 4]) writeFileSync(join(hub, 'found', `Q-HUB-${n}.md`), `Q-HUB-${n}: a planted finding of the case, number ${n}.\n`);
+  mkdirSync(join(hub, 'lessons'));
+  writeFileSync(join(hub, 'lessons', '7-a-planted-lesson.md'), '## 7 · A planted lesson\n');
+  return hub;
+}
+// The seed run on a planted hub, with no session of its own (the inherited one is the suite's decoy) and the planted hub as the repository.
+const seedRun = (dir, hub, args) => spawnSync('node', [join(dir, 'plan-seed.mjs'), '--hub', hub, '--repo', hub, ...args],
+  { encoding: 'utf8', timeout: 60000, env: { ...process.env, CLAUDE_CODE_SESSION_ID: '' } });
 
 const PLANTS = {
   cap_hold_count: ['if (held >= HOLD_AT) {', 'if (false) {', 'stop-guard.mjs'],
@@ -9940,8 +10070,8 @@ const PLANTS = {
   check_mode_nofile: ['    if (!readable) { console.log(', '    if (false) { console.log(', 'plan-guard.mjs'],
   check_mode_unjudged: ['  if (CHECK && !p.transcript_path) {\n    notJudged.push(', '  if (false) {\n    notJudged.push(', 'plan-guard.mjs'],
   check_fence: ["  if (isPlanCheck(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path)) return null;", '  void 0;', 'hook-dispatch.mjs'],
-  check_status_pass: [' || (!p.agent_id && isPlanCheck(p)));', ');', 'hook-dispatch.mjs'],
-  check_can: [" || CAN.test(cmd) || isPlanCheck(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path));", ' || CAN.test(cmd));', 'hook-dispatch.mjs'],
+  check_status_pass: [' || (!p.agent_id && isPlanCheck(p)) ||', ' || false ||', 'hook-dispatch.mjs'],
+  check_can: [" || CAN.test(cmd) || isPlanCheck(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path) ||", ' || CAN.test(cmd) || false ||', 'hook-dispatch.mjs'],
   check_record: ['  return recordPath(absOf(target, p.cwd ? String(p.cwd) : process.cwd()), p, planPath);', '  return true;', 'hook-dispatch.mjs'],
   check_message: [' (the check of a call and the plan check pass as it does), the main thread', ', the main thread', 'hook-dispatch.mjs'],
 
@@ -10138,6 +10268,22 @@ const PLANTS = {
   can_skip_finished: ["phase.kind === 'finished' ? finishedFence(p, opts) : null;", 'null;', 'hook-dispatch.mjs'],
   can_skip_send: ['const fence = free ? null : (!skipped || send) ? managerFence(p, opts)', 'const fence = free ? null : (!skipped) ? managerFence(p, opts)', 'hook-dispatch.mjs'],
   can_skip_text: ['no plan is in force (conversation), so the dispatcher asks the fence of a send only', 'nothing', 'hook-dispatch.mjs'],
+  // The plan seed: what it prints from the record, and where the dispatcher prints it and passes its command.
+  seed_depends: ["const depends = /^Depends:\\s*(.*)$/m.exec(block)?.[1]?.trim() ?? '';", "const depends = /^Depends:\\s*(.*)$/m.exec(lines.slice(Math.max(0, h.i - 8), end).join('\\n'))?.[1]?.trim() ?? '';", 'plan-seed.mjs'],
+  seed_first_open: ["e.state === 'open'", "e.state !== 'done'", 'plan-seed.mjs'],
+  seed_runs: ['if (last && n === last[1] + 1) last[1] = n; else out.push([n, n]);', 'out.push([n, n]);', 'plan-seed.mjs'],
+  seed_mark: ["const MOVABLE = '[movable: another session can move this before a step runs]';", "const MOVABLE = '';", 'plan-seed.mjs'],
+  seed_rules_version: ['`Rules: ${rulesPath}, version ${rules.version}.`', '`Rules: ${rulesPath}, version 0.`', 'plan-seed.mjs'],
+  seed_close_acts: ['write one file in the found folder named by its key', 'write nothing', 'plans/seed-template.md'],
+  seed_fence: ["  if (tool === 'Bash' && isSeedCommand(input.command)) return null;", '  void 0;', 'hook-dispatch.mjs'],
+  seed_can: [' || (!p.agent_id && isSeedCommand(cmd)));', ');', 'hook-dispatch.mjs'],
+  seed_status: [' || (!p.agent_id && isSeedCommand(p.tool_input?.command)));', ');', 'hook-dispatch.mjs'],
+  seed_planguard: ['  if (seedLine.test(cmd)) process.exit(0);', '  void 0;', 'plan-guard.mjs'],
+  seed_once: ["if (mode !== 'plan' || before === 'plan') return '';", "if (mode !== 'plan') return '';", 'hook-dispatch.mjs'],
+  seed_record: ['  if (before !== mode) {', '  if (false) {', 'hook-dispatch.mjs'],
+  seed_nomode: ["  if (!mode) return '';\n  const pad = 'pad' in opts", "  const pad = 'pad' in opts", 'hook-dispatch.mjs'],
+  seed_prompt_print: ['try { const seedText = planEntrySeed(p); if (seedText) printed.push(seedText); }', 'try { void planEntrySeed; }', 'hook-dispatch.mjs'],
+  seed_call_print: ["hookEventName: 'PreToolUse', additionalContext: seedText", "hookEventName: 'PreToolUse', additionalContext: ''", 'hook-dispatch.mjs'],
 };
 
 async function runAll(dir, only, filter) {
