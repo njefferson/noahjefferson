@@ -1,0 +1,1 @@
+Q-HUB-269: the suite's `--case=` filter run with the words of the seed's cases ran all 135 cases of `session-guards.test.mjs`, so a narrow run by name was not possible with the flag as used (found in step 89 of the batch seed plan, filed in step 92).

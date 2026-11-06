@@ -1,0 +1,1 @@
+Q-HUB-273: the rank in `PROGRAM.md` interleaves items of different sizes and repositories, so a session working from the top meets items it cannot do and pays a whole plan for a one-line fix; the batch print answers this for the hub's findings and leaves the app items open, since each depends on its app's own session (found in the batch seed plan, filed in step 92).

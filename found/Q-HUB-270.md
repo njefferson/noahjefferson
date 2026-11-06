@@ -1,0 +1,1 @@
+Q-HUB-270: `plan-seed.mjs` has no option that writes its print to a named file, and the batch print for the hub's queue ran to 246 KB, too large for an agent to copy with Write, so the harness's saved copy stood in for it (found in step 91 of the batch seed plan, filed in step 92).
