@@ -142,7 +142,7 @@
  * It runs from a stable clone (the setup script puts one at ~/.claude/hub), so
  * a broken edit in the working copy cannot refuse its own fix.
  */
-import { existsSync, readFileSync, writeFileSync, appendFileSync, readdirSync, mkdirSync, createReadStream, rmSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, appendFileSync, readdirSync, mkdirSync, createReadStream, rmSync, statSync, realpathSync } from 'node:fs';
 import { join, dirname, resolve, basename, relative } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
@@ -280,6 +280,36 @@ export function seedPlanFile(opts = {}) {
 }
 
 /**
+ * Which print the dispatcher asks the seed for at the entry to plan mode.
+ * @param {string} cwd  the launch directory of the session.
+ * @param {string} [hub]  the hub's folder holding PROGRAM.md and found/ (the live hub by default); given by the test.
+ * @returns {'batch'|'single'} 'batch' when the first open entry of the session's repository (the hub when the directory is the hub's, else the
+ *   directory's name) is a filed finding: its title names a `Q-TAG-N` key with a file in the found folder. 'single' at every other time, and where the
+ *   program cannot be read.
+ */
+export function seedMode(cwd, hub = HUB) {
+  let text = '';
+  try { text = readFileSync(join(hub, 'PROGRAM.md'), 'utf8'); } catch { return 'single'; }
+  const real = (x) => { try { return realpathSync(x); } catch { return resolve(x); } };
+  const isHub = real(cwd) === real(hub) || (existsSync(join(cwd, 'plan-seed.mjs')) && existsSync(join(cwd, 'PROGRAM.md')));
+  const repoName = isHub ? 'hub' : basename(resolve(cwd));
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const h = /^### P-\d+\.\s*(.*)$/.exec(lines[i]);
+    if (!h) continue;
+    let end = lines.length;
+    for (let j = i + 1; j < lines.length; j++) if (/^#{2,3} /.test(lines[j])) { end = j; break; }
+    const block = lines.slice(i, end).join('\n');
+    if (/^Repository:[^\n]*?\bState:\s*open\b/m.exec(block)?.[0] === undefined) continue;
+    const repository = /^Repository:\s*(.*?)\.\s+(?:Goal|State)\b/m.exec(block)?.[1]?.trim() ?? '';
+    if (repository.toLowerCase() !== repoName.toLowerCase()) continue;
+    const key = /\bQ-[A-Za-z0-9]+-\d+\b/.exec(h[1])?.[0];
+    return key && existsSync(join(isHub ? hub : cwd, 'found', `${key}.md`)) ? 'batch' : 'single';
+  }
+  return 'single';
+}
+
+/**
  * The plan seed, printed once at the entry to plan mode.
  * @param {object} p  a main-thread hook payload: `permission_mode`, `session_id` and `cwd` are read; an agent's payload prints nothing.
  * @param {{pad?: string|null, args?: string[], script?: string}} [opts]  the session scratchpad, the seed's arguments (`--item next` by
@@ -305,7 +335,10 @@ export function planEntrySeed(p, opts = {}) {
   // The seed numbers its steps from the plan file's highest, so it is handed the plan file: the one the approval marker names, else the newest
   // file directly under the plans folder (a plan not yet approved is the newest one written).
   const planFile = opts.args ? '' : seedPlanFile(opts);
-  const r = spawnSync(process.execPath, [opts.script ?? join(HUB, 'plan-seed.mjs'), ...(opts.args ?? ['--item', 'next', ...(planFile ? ['--plan', planFile] : [])])], {
+  const planArgs = planFile ? ['--plan', planFile] : [];
+  const mode0 = opts.args ? null : seedMode(p?.cwd ? String(p.cwd) : process.cwd(), opts.hub);
+  const args = opts.args ?? (mode0 === 'batch' ? ['--batch', ...(opts.hub ? ['--hub', String(opts.hub)] : []), ...planArgs] : ['--item', 'next', ...(opts.hub ? ['--hub', String(opts.hub)] : []), ...planArgs]);
+  const r = spawnSync(process.execPath, [opts.script ?? join(HUB, 'plan-seed.mjs'), ...args], {
     encoding: 'utf8', timeout: 30000, cwd: p?.cwd ? String(p.cwd) : undefined, env: { ...process.env, CLAUDE_CODE_SESSION_ID: String(p?.session_id ?? '') },
   });
   return r.status === 0 ? String(r.stdout).trim() : '';

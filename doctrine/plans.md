@@ -331,7 +331,8 @@ every rule below while none of the hooks that enforce them was running
    The plan is typed from the seed's print, `node plan-seed.mjs --item <key or next>`,
    which the dispatcher prints once at the entry to plan mode: the item's own entry,
    goals, rules version, standing text, found keys and the reads another session can
-   move, each marked, so a step reads those at the time of use.
+   move, each marked, so a step reads those at the time of use; the hub's open
+   findings are printed as a batch grouped by file (`--batch`).
 5. **A line before each tool call and a line after each result.**
 6. **Never "waiting on you", never "you owe".** Say "open for you:". A stop is
    declared in the first line as "Stopping here: open for you is X".

@@ -1264,7 +1264,7 @@ existing.
 - [`CONFIG.md`](CONFIG.md) — the baseline of every configuration item with its state and the item of the program that may change it; a drift found is a finding.
 - [`found/`](found/) — one file per finding, keyed `Q-HUB-N`, so two sessions never edit one file; the closing check reads its keys.
 - [`doctrine/`](doctrine/) — the doctrine in three files: `never.md` read at every start, `plans.md` read at the entry to plan mode, `apps.md` read where an item points at it; `DOCTRINE.md` is their index.
-- [`plan-seed.mjs`](plan-seed.mjs) — prints the record into a plan at the write, in the plan's own shape (item entry and its own dependency line, goals, rules version, standing text from `plans/seed-template.md`, found keys, movable reads marked); `node plan-seed.mjs --item <P-key or next>`, run once by the dispatcher at the entry to plan mode.
+- [`plan-seed.mjs`](plan-seed.mjs) — prints the record into a plan at the write, in the plan's own shape (item entry and its own dependency line, goals, rules version, standing text from `plans/seed-template.md`, found keys, movable reads marked); `node plan-seed.mjs --item <P-key or next>`, run once by the dispatcher at the entry to plan mode; `--batch` (new) prints the repository's open findings as one plan grouped by the file each names, and the dispatcher prints it when the next open item is a finding.
 
 **AND THE WIRING IS SHARED NOW TOO, WHICH IT WAS NOT.**
 [`.github/workflows/hub-gates.yml`](.github/workflows/hub-gates.yml) is a

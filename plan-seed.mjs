@@ -6,6 +6,10 @@
 // start with a print, and this is the same print at the plan's moment.
 //
 //   node plan-seed.mjs --item <P-key | next> [--repo <full path>] [--plan <path>] [--steps <count>] [--hub <full path>]
+//   node plan-seed.mjs --batch [--size <n>] [--steps <n>] [--repo <full path>] [--plan <path>] [--hub <full path>]
+//
+// `--batch` prints the open findings of the repository as ONE plan, grouped by the file each names: a take-up step, a step for each group of up
+// to `--size` findings (eight by default; `--steps` limits the groups printed) that fixes and lands its own commit, and a close.
 //
 // It READS and PRINTS and writes nothing, so the manager fence and the plan guard pass it as they pass the plan check. The print is the plan
 // in its own shape: the Goals with the item's acceptance as goal 1, the item's own entry (its dependency line from its own block and no
@@ -298,12 +302,257 @@ export function seed(o) {
   return { ok: true, text: `${out.join('\n')}\n` };
 }
 
+/**
+ * The open findings of a repository, grouped by the file each is about.
+ * @param {{entries: object[], repoName: string, repo: string, foundDir: string}} o  the program's entries, the repository's name as the program spells it, its path, and its found folder.
+ * @returns {{key: string, item: string, rank: number, text: string, files: string[], home: string}[]} one per open entry of the repository whose title names a
+ *   finding key with a file in the found folder, in the program's rank order. `files` are the code spans of the finding's text that name a path existing in the
+ *   repository, and `home` is the first of them, '' when none.
+ */
+export function openFindings(o) {
+  const out = [];
+  o.entries.forEach((e, rank) => {
+    if (e.state !== 'open' || e.repository.toLowerCase() !== o.repoName.toLowerCase()) return;
+    const key = /\bQ-[A-Za-z0-9]+-\d+\b/.exec(e.title)?.[0];
+    if (!key || !existsSync(join(o.foundDir, `${key}.md`))) return;
+    const text = slurp(join(o.foundDir, `${key}.md`)).replace(/\s+/g, ' ').trim();
+    const files = [];
+    for (const m of text.matchAll(/`([^`\n]+)`/g)) {
+      const s = m[1].trim().replace(/[.,;:]+$/, '');
+      if (s && !/\s/.test(s) && !files.includes(s) && existsSync(join(o.repo, s))) files.push(s);
+    }
+    out.push({ key, item: e.key, rank, text, files, home: files[0] ?? '' });
+  });
+  return out;
+}
+
+/**
+ * Print the batch: the open findings of the repository grouped by the file each names, as a plan in the plan's own shape.
+ * @param {{repo?: string, plan?: string, steps?: number, size?: number, hub?: string, now?: Date}} o
+ * @returns {{ok: boolean, text: string}} the print, or the error when the repository holds no open finding.
+ */
+export function batchSeed(o) {
+  const hub = resolve(o.hub ?? HERE);
+  const repo = resolve(o.repo ?? (existsSync(join(process.env.CLAUDE_PROJECT_DIR || process.cwd(), '.git')) ? (process.env.CLAUDE_PROJECT_DIR || process.cwd()) : hub));
+  const now = o.now ?? new Date();
+  const stamp = `${now.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })} ${californiaTime(now)} California`;
+  const programText = slurp(join(hub, 'PROGRAM.md'));
+  const entries = programEntries(programText);
+  const real = (p) => { try { return realpathSync(p); } catch { return resolve(p); } };
+  const isHub = real(repo) === real(hub) || (existsSync(join(repo, 'plan-seed.mjs')) && existsSync(join(repo, 'PROGRAM.md')));
+  const repoName = isHub ? 'hub' : basename(repo);
+  const findings = openFindings({ entries, repoName, repo, foundDir: join(isHub ? hub : repo, 'found') });
+  if (!findings.length) return { ok: false, text: `plan-seed: no open entry of ${repoName} in PROGRAM.md is a filed finding, so there is no batch to print.\n` };
+  const size = Math.max(1, Math.floor(Number(o.size) || 8));
+  // Group by home, in the order of the lowest-ranked item of each group, the group with no file last; a group past the size is cut into runs of it.
+  const byHome = new Map();
+  for (const f of findings) { if (!byHome.has(f.home)) byHome.set(f.home, []); byHome.get(f.home).push(f); }
+  const homes = [...byHome.keys()].sort((a, b) => (a === '') - (b === '') || byHome.get(a)[0].rank - byHome.get(b)[0].rank);
+  let groups = [];
+  for (const h of homes) { const fs = byHome.get(h); for (let i = 0; i < fs.length; i += size) groups.push({ home: h, list: fs.slice(i, i + size) }); }
+  const limit = Math.floor(Number(o.steps) || 0);
+  if (limit > 0) groups = groups.slice(0, limit);
+  const batch = groups.flatMap((g) => g.list);
+
+  const hubFound = foundQueue(hub);
+  const repoFound = isHub ? [] : foundQueue(repo);
+  const keys = [...new Set([...hubFound, ...repoFound].map((q) => q.key))];
+  const parts = keys.map((k) => /^Q-([A-Za-z0-9]+)-(\d+)$/.exec(k)).filter(Boolean);
+  let fileMax = 0;
+  try { for (const n of readdirSync(join(hub, 'found'))) { const m = /^Q-HUB-(\d+)\.md$/.exec(n); if (m) fileMax = Math.max(fileMax, Number(m[1])); } } catch { /* no folder */ }
+  const hubMax = Math.max(fileMax, ...parts.filter((m) => m[1] === 'HUB').map((m) => Number(m[2])), 0);
+  let lessonMax = 0;
+  try { for (const n of readdirSync(join(hub, 'lessons'))) { const m = /^(\d+)-/.exec(n); if (m) lessonMax = Math.max(lessonMax, Number(m[1])); } } catch { /* no folder */ }
+  const nextP = (entries.reduce((m, e) => Math.max(m, e.n), 0)) + 1;
+  const planText = o.plan ? slurp(resolve(o.plan)) : '';
+  const stepNums = [...planSection(planText, 'Steps').matchAll(/^(\d+)\.\s/gm)].map((m) => Number(m[1]));
+  const takeup = (stepNums.length ? Math.max(...stepNums) : 0) + 1;
+  const g1 = takeup + 1;
+  const close = g1 + groups.length;
+  const review = close + 1;
+  const rules = agentRules(join(hub, 'agent-rules.md'));
+  const rulesPath = join(homedir(), '.claude', 'hub', 'agent-rules.md');
+  const sid = String(process.env.CLAUDE_CODE_SESSION_ID ?? '').trim();
+  const pad = sid ? scratchpadOf(sid) : null;
+  const files = sid ? sessionFiles(sid) : null;
+  const transcript = files?.main ?? '/root/.claude/projects/<the project folder>/<the session id>.jsonl';
+  const tpl = templateBlocks(slurp(join(hub, 'plans', 'seed-template.md')));
+  const itemKeys = batch.map((f) => f.item).join(', ');
+  const vars = { HUB: isHub ? repo : hub, ITEM: itemKeys, TAKEUP: takeup, CLOSE: close, REVIEW: review, NEXTP: `P-${nextP}`, NEXTQ: `Q-HUB-${hubMax + 1}`, NEXTL: lessonMax + 1,
+    TRANSCRIPT: transcript, REVIEWFILE: join(homedir(), '.claude', 'hub', 'aim-review.md') };
+  vars.LANDING = fill(tpl.landing ?? '<plans/seed-template.md has no landing block>', vars);
+  const checks = ['docs-check', 'privacy-check', 'quote-check', 'third-person-check', 'lessons-check', 'example-check', 'pin-check'].map((c) => `\`node ${vars.HUB}/${c}.mjs\``).join(', ');
+
+  const out = [];
+  const L = (s = '') => out.push(s);
+  L(`PLAN SEED for the batch of ${batch.length} open findings of ${repoName}, in ${groups.length} group ${groups.length === 1 ? 'step' : 'steps'}, repository ${basename(repo)}, printed ${stamp}.`);
+  L(`Every line of the plan below was read from a file at this time. The lines under the movable reads at the end can be moved by another session before a step runs, so a step that depends on one reads it at the time of use.`);
+  L('The plan starts at the line of equals signs. Fill each angle-bracket placeholder, delete this header, and keep the rest as printed.');
+  L('==== THE PLAN STARTS BELOW THIS LINE ====');
+  L();
+  L(`# <The plan's title, naming the batch of ${batch.length} open findings of ${repoName}>`);
+  L();
+  L('## Goals');
+  L();
+  L(`1. Each of the ${batch.length} findings of the batch (${batch.map((f) => f.key).join(', ')}) is put right as its own text says, each of its items (${itemKeys}) is done in the program, and the commits are on the remote's main.`);
+  L(goalsBlock(join(hub, 'CLAUDE.md')) || '<the hub CLAUDE.md goals block could not be read>');
+  L();
+  const gnums = groups.map((_, i) => g1 + i);
+  L(`Served by: step ${takeup} serves goals 5 and 6; step${gnums.length === 1 ? '' : 's'} ${gnums.length === 1 ? g1 : `${g1} to ${g1 + gnums.length - 1}`} ${gnums.length === 1 ? 'serves' : 'serve'} goal 1; step ${close} serves goals 5 and 6; step ${review} serves goals 3, 5 and 6.`);
+  L();
+  L('## Asked');
+  L();
+  L(`<What the owner asked, in the session's own words and sharing no run of eight words with any message of the owner: the plan guard refuses a line that does.>`);
+  L();
+  L('## Design');
+  L();
+  L(`The wall line of every report reads against this: the item is the batch of ${batch.length} findings, whose acceptance is goal 1 above. <The owner's asks it serves, and the program's goal it serves.>`);
+  L();
+  L('## Thesis');
+  L();
+  L(planSection(programText, 'Thesis').trim().split(/\n\s*\n/)[0] ?? '<the thesis could not be read>');
+  L();
+  L('## Rules');
+  L();
+  L(rules?.version ? `Rules: ${rulesPath}, version ${rules.version}.` : '<the rules file could not be read: the version is not known>');
+  L();
+  L('## Rules of this plan');
+  L();
+  // In a batch each group step lands its own commit, so the push rule names them (a rebase of one commit onto a moved head does not conflict where many do).
+  L(fill(tpl['rules-of-this-plan'] ?? '<plans/seed-template.md has no rules-of-this-plan block>', vars)
+    .replace("Nothing is pushed except by the take-up step, which lands its one commit, and the close step, which lands the plan's other commits with its own; each fetches",
+      'Nothing is pushed except by the take-up step, each group step and the close step, each landing its own commit; each fetches'));
+  L();
+  const order = [takeup, ...gnums, close];
+  L('## Order');
+  L();
+  L(`Order: ${order.join(' ')}`);
+  L(`Standing: ${review}`);
+  L(`After: ${order.slice(1).map((n, i) => `${n} after ${order[i]}`).join('; ')}`);
+  L();
+  L('## Steps');
+  L();
+  L(fill(tpl['take-up'] ?? '<plans/seed-template.md has no take-up block>', vars));
+  L();
+  const stepOf = new Map();
+  groups.forEach((g, i) => {
+    const n = g1 + i;
+    const ks = g.list.map((f) => f.key);
+    g.list.forEach((f) => stepOf.set(f.key, n));
+    const where = g.home ? `\`${g.home}\`` : 'the files each names';
+    const named = [...new Set(g.list.flatMap((f) => f.files))];
+    const doEach = g.list.map((f) => `for ${f.key} (item ${f.item}) make the change its text names${f.files.length ? ` in ${f.files.map((x) => `\`${x}\``).join(', ')}` : ' in the files its text names'}`).join('; ');
+    L(`${n}. **${g.home ? `Put right in ${where}` : 'Put right in the files each names'}: ${ks.join(', ')}.** ${isHub ? 'Hub' : basename(repo)}, one agent. Facts: the step takes up ${ks.length} filed ${ks.length === 1 ? 'finding' : 'findings'}, each read whole from its file; ${g.list.map((f) => `${f.key} (item ${f.item}): ${f.text}`).join(' ')} The remote's main moves under this session, so it is fetched at the time and this step's commit goes on top of it. Do: \`git status\`, read clean; read with Read and Grep ${where}${named.length > 1 ? ` and ${named.filter((x) => x !== g.home).map((x) => `\`${x}\``).join(', ')}` : ''}; ${doEach}; where the home is a gate file the suite covers, add a case that fails on the old text and a plant for the fix in \`session-guards.test.mjs\`, and run \`node ${vars.HUB}/session-guards.test.mjs\` with the new cases by name, then the plants narrowed to the files touched; after \`git add\`, run ${checks} once each, each exit code read; make one local commit whose subject names ${ks.join(', ')}; then the landing acts: ${vars.LANDING}. Observe: the cases named pass where one was added, every plant is caught, the seven checks exit 0, and the remote's main is the pushed commit with this step's commit above the fetched head. Kill: a red check ends the step FAILED with its lines; a conflict in the rebase or a push refused as not a fast-forward ends it EJECT with nothing pushed and the rebase ended; a refusal of the fetch, the rebase, the push or the pull ends it REFUSED, nothing further done and no other route tried. Report \`progress/step-${n}-report.txt\` (new). Estimate ${15 + 5 * g.list.length} min.`);
+    L();
+  });
+  L(fill(tpl['close-step'] ?? '<plans/seed-template.md has no close-step block>', vars));
+  L();
+  L(fill(tpl['review-step'] ?? '<plans/seed-template.md has no review-step block>', vars));
+  L();
+  L('## Commands');
+  L();
+  L(fill(tpl.commands ?? '<plans/seed-template.md has no commands block>', vars));
+  L();
+  L('## Files');
+  L();
+  const readOnly = ['DOCTRINE.md', 'agent-rules.md', 'aim-review.md'].filter((f) => existsSync(join(hub, f)));
+  const named = [...new Set(batch.flatMap((f) => f.files))];
+  const edited = ['PROGRAM.md', 'NOTES.md', 'found/', ...(existsSync(join(hub, 'lessons')) ? ['lessons/', 'LESSONS.md'] : [])];
+  const mine = [...(named.some((x) => x.endsWith('.mjs')) ? ['session-guards.test.mjs'] : []), ...named].filter((x, i, a) => a.indexOf(x) === i);
+  const mark = (x) => `\`${x}\`${existsSync(join(isHub ? repo : hub, x)) ? '' : ' (new)'}`;
+  if (isHub) {
+    L(`- Hub, edited: ${[...edited.map((x) => `\`${x}\``), ...mine.filter((x) => !edited.includes(x)).map(mark)].join(', ')}`);
+    L(`- Hub, read only: ${readOnly.map((f) => `\`${f}\``).join(', ')}`);
+  } else {
+    L(`- Hub, edited: ${edited.map((x) => `\`${x}\``).join(', ')}`);
+    L(`- Hub, read only: ${readOnly.map((f) => `\`${f}\``).join(', ')}`);
+    L(`- ${basename(repo)}, edited: ${mine.map((x) => `\`${x}\`${existsSync(join(repo, x)) ? '' : ' (new)'}`).join(', ') || '<the files the findings name>'}`);
+  }
+  L(`- Session scratchpad: \`progress/\`, \`status/\`, \`scratch/\`, \`recall/\`, which is \`${pad ? `${pad}/` : '<the session scratchpad, which no session id here names>'}\``);
+  L(`- Session transcript, read only: \`${transcript}\``);
+  L();
+  L('## What is');
+  L();
+  L('- <Each bullet quotes, in double quotes, twelve characters or more of one line of a file it names, read after the newest compaction, and the file is one a repository the plan names holds.>');
+  L();
+  L('## Roadmap');
+  L();
+  const road = roadmapItems(repo);
+  if (!road.length) L(`${basename(repo)}'s NOTES.md keeps no Next capability release section, so there is no roadmap item to mark in or out.`);
+  else for (const r of road) L(`- ${r.key}: <in or out, and why in ten characters or more> (${r.title})`);
+  L();
+  L('## Shipped check');
+  L();
+  const br = repoBranches(repo);
+  if (!road.length) L('No roadmap item is marked in, so no line is owed.');
+  else L(`A line for each item marked in, after a git log of ${br.production} and ${br.staging} has been read in this session: <key>: not shipped, read against ${br.production} and ${br.staging} on <the date>.`);
+  L();
+  L('## Found answered');
+  L();
+  for (const f of batch) L(`- ${f.key} fixed in step ${stepOf.get(f.key)}: ${f.item} is put right in its step as the finding's own text says.`);
+  const inBatch = new Set(batch.map((f) => f.key));
+  const rest = parts.filter((m) => !inBatch.has(m[0]));
+  const byTag = new Map();
+  for (const m of rest) { if (!byTag.has(m[1])) byTag.set(m[1], []); byTag.get(m[1]).push(Number(m[2])); }
+  for (const [tag, ns] of byTag) {
+    for (const [lo, hi] of runs(ns)) {
+      L(lo === hi ? `- Q-${tag}-${lo} still queued: not in this batch, which takes the open findings of ${repoName} up by file.`
+        : `- Q-${tag}-${lo} to Q-${tag}-${hi} still queued: not in this batch, which takes the open findings of ${repoName} up by file.`);
+    }
+  }
+  L();
+  L('## Looked up');
+  L();
+  L('- <Each file or page read for this plan, and what it showed, in one line of more than twenty characters.>');
+  L();
+  L('## Branches');
+  L();
+  L('- <Each route the plan could have taken and did not, and why, in one line of more than twenty characters.>');
+  L();
+  L('## Call chain');
+  L();
+  L('- <What each step reads and writes, and which step hands what to which, in one line of more than twenty characters.>');
+  L();
+  L('## Whole app');
+  L();
+  L('<What the repository exists for and how this batch serves it, in a line of more than twenty characters.>');
+  L();
+  L('## Leaves open');
+  L();
+  L('- <What the plan leaves open and why, in one line of more than twenty characters.>');
+  L();
+  L('## Cost');
+  L();
+  L(`The ${groups.length + 2} steps (${groups.length} group ${groups.length === 1 ? 'step' : 'steps'} with the take-up and the close) run on the sonnet tier with one agent for each, and a review is sent at the plan's first send and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move. ${groups.length + 2} pushes are made, one for each group step and two more for the take-up and the close, each rebased onto the remote's head. <The main thread's tier for the writing and for the management.>`);
+  L();
+  L('## Verification');
+  L();
+  L('- <What is observed at the end that shows the batch\'s acceptance, each as one line.>');
+  L();
+  L('==== THE PLAN ENDS ABOVE THIS LINE ====');
+  L();
+  L(`MOVABLE READS, each read at ${californiaTime(now)} California and marked, so a step reads it again at the time of use:`);
+  const heads = git(['ls-remote', '--heads', 'origin'], repo);
+  L(`- ${MOVABLE} the remote's heads of ${basename(repo)}: ${heads.ok ? (heads.out.split('\n').filter(Boolean).map((l) => l.replace(/\s+/g, ' ')).join('; ') || 'none') : `not read (${heads.out})`}`);
+  const head = git(['rev-parse', 'HEAD'], repo);
+  L(`- ${MOVABLE} the working copy's head: ${head.ok ? head.out : `not read (${head.out})`}`);
+  L(`- ${MOVABLE} the next free program key: P-${nextP}`);
+  L(`- ${MOVABLE} the next free found key: Q-HUB-${hubMax + 1}`);
+  L(`- ${MOVABLE} the next free lesson number: ${lessonMax + 1}`);
+  return { ok: true, text: `${out.join('\n')}\n` };
+}
+
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const a = process.argv.slice(2);
   const val = (f) => { const i = a.indexOf(f); return i >= 0 ? a[i + 1] : undefined; };
+  if (a.includes('--batch')) {
+    const b = batchSeed({ repo: val('--repo'), plan: val('--plan'), steps: val('--steps'), size: val('--size'), hub: val('--hub') });
+    process.stdout.write(b.text);
+    process.exit(b.ok ? 0 : 1);
+  }
   if (!val('--item')) {
-    process.stdout.write('usage: node plan-seed.mjs --item <P-key | next> [--repo <full path>] [--plan <path>] [--steps <count>] [--hub <full path>]\n');
+    process.stdout.write('usage: node plan-seed.mjs --item <P-key | next> | --batch [--size <n>] [--steps <n>] [--repo <full path>] [--plan <path>] [--hub <full path>]\n');
     process.exit(1);
   }
   const r = seed({ item: val('--item'), repo: val('--repo'), plan: val('--plan'), steps: val('--steps'), hub: val('--hub') });

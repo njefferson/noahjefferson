@@ -9179,6 +9179,108 @@ const CASES = [
       return byMarker && newest && wired;
     },
   },
+  // ---- the batch print (the plan of 5 November, step 90): each case on a planted hub in a temporary folder, never on the working copy ----
+  {
+    name: 'the plan seed batch print takes the open findings of the repository, groups them by the file each names in the order of the lowest-ranked item with the group naming no file last, and prints a take-up step naming the five items, two group steps with the right keys in rank order, a close step naming the five, Files carrying the two files and Found answered marking the five fixed in their steps and the other repository\'s key still queued',
+    guards: ['batch_select', 'batch_group', 'batch_home', 'batch_found', 'batch_close'],
+    run(m, dir) {
+      const hub = batchHub(dir);
+      const r = batchRun(dir, hub, []);
+      if (r.status !== 0) throw new Error(`the batch print exited ${r.status}: ${String(r.stderr).slice(0, 200)}`);
+      const t = r.stdout;
+      const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
+      const takeup = step(1), alpha = step(2), beta = step(3), none = step(4), close = step(5);
+      const items = ['P-1', 'P-2', 'P-3', 'P-4', 'P-5'];
+      const okTakeup = takeup.startsWith('Taken up: ') && items.every((i) => takeup.split(' set to planned')[0].includes(i));
+      const okGroups = alpha.startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13, Q-HUB-15.') && beta.startsWith('Put right in `beta.mjs`: Q-HUB-14.') && none.startsWith('Put right in the files each names: Q-HUB-12.')
+        && !/Q-QK-3/.test(alpha + beta + none) && t.includes('\nOrder: 1 2 3 4 5\n') && t.includes('\nStanding: 6\n') && t.includes('\n6. **Review.**');
+      const okClose = items.every((i) => close.includes(i)) && close.startsWith('Closed in the program');
+      const files = t.split('\n').find((l) => l.startsWith('- Hub, edited:')) ?? '';
+      const okFiles = files.startsWith('- Hub, edited: `PROGRAM.md`, `NOTES.md`, `found/`, `lessons/`, `LESSONS.md`') && files.includes('`alpha.mjs`') && files.includes('`beta.mjs`') && files.includes('`session-guards.test.mjs`');
+      const fa = (t.split('\n## Found answered\n')[1] ?? '').split('\n## ')[0];
+      const okFound = ['Q-HUB-11 fixed in step 2:', 'Q-HUB-13 fixed in step 2:', 'Q-HUB-15 fixed in step 2:', 'Q-HUB-14 fixed in step 3:', 'Q-HUB-12 fixed in step 4:'].every((x) => fa.includes(`- ${x}`))
+        && fa.includes('- Q-QK-3 still queued: ') && fa.includes('- Q-HUB-16 to Q-HUB-17 still queued: ') && !/Q-QK-3 fixed/.test(fa);
+      const head = t.split('\n')[0];
+      const okHead = head.startsWith('PLAN SEED for the batch of 5 open findings of hub, in 3 group steps');
+      if (!(okTakeup && okGroups && okClose && okFiles && okFound && okHead)) throw new Error(`takeup ${okTakeup}, groups ${okGroups}, close ${okClose}, files ${okFiles} (${files.slice(0, 200)}), found ${okFound} (${fa.slice(0, 700)}), head ${okHead}`);
+      return true;
+    },
+  },
+  {
+    name: 'the plan seed batch print cuts a group past the size into runs of the size, one step each, numbers its steps after the plan file given, limits the group steps to --steps, and prints one push for each group step in the Cost line',
+    guards: ['batch_size', 'batch_cost', 'batch_steps_limit'],
+    run(m, dir) {
+      const hub = batchHub(dir);
+      const planFile = join(tmp('sg-batchplan-'), 'p.md');
+      writeFileSync(planFile, '# A planted plan\n\n## Steps\n\n7. **One.** planted text of the case.\n');
+      const r = batchRun(dir, hub, ['--size', '2', '--plan', planFile]);
+      const t = r.stdout;
+      const cut = r.status === 0 && t.includes('\nOrder: 8 9 10 11 12 13\n') && t.includes('\n9. **Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13.')
+        && t.includes('\n10. **Put right in `alpha.mjs`: Q-HUB-15.') && t.includes('\n11. **Put right in `beta.mjs`: Q-HUB-14.') && t.includes('\n12. **Put right in the files each names: Q-HUB-12.')
+        && t.includes('\n13. **Closed in the program') && t.includes('\n14. **Review.**');
+      const cost = (t.split('\n## Cost\n\n')[1] ?? '').split('\n')[0];
+      const pushes = cost.includes('one for each group step and two more for the take-up and the close') && cost.includes('and at no other move') && cost.includes('The 6 steps (4 group steps');
+      const lim = batchRun(dir, hub, ['--steps', '1']);
+      const limited = lim.status === 0 && lim.stdout.includes('\nOrder: 1 2 3\n') && lim.stdout.includes('batch of 3 open findings') && !lim.stdout.includes('Q-HUB-14 fixed');
+      if (!(cut && pushes && limited)) throw new Error(`cut ${cut}, pushes ${pushes}, limited ${limited}`);
+      return true;
+    },
+  },
+  {
+    name: 'the plan seed batch print, with its placeholders filled, passes the plan guard\'s check mode as a plan, and a program with no open finding of the repository prints an error and nothing else',
+    guards: ['batch_shape', 'batch_none'],
+    run(m, dir) {
+      const hub = batchHub(dir);
+      const r = batchRun(dir, hub, []);
+      const body = r.stdout.split('==== THE PLAN STARTS BELOW THIS LINE ====\n')[1].split('==== THE PLAN ENDS ABOVE THIS LINE ====')[0];
+      const filled = body.split('\n').map((l) => {
+        if (!/<[^>]+>/.test(l)) return l;
+        if (l.startsWith('# ')) return '# The batch of five planted findings';
+        if (l.startsWith('- <Each bullet quotes')) return '- The line "// a planted file of the case" is in `alpha.mjs`, which is what the plan rests on.';
+        if (l.startsWith('- ')) return l.replace(/<[^>]+>/, 'A planted line of the case that is longer than twenty characters.');
+        return l.replace(/<[^>]+>/g, 'A planted sentence of the case that is longer than twenty characters, in its own words.');
+      }).join('\n').replace(/^- A planted line of the case that is longer than twenty characters\.$/m, '- A planted line of the case that is longer than twenty characters.');
+      const planFile = join(tmp('sg-batchcheck-'), 'batch-check.md');
+      writeFileSync(planFile, filled);
+      // The guards run from a copy inside the planted hub, so the repository the plan's Files names is the planted one and not this checkout.
+      for (const f of FILES) if (!existsSync(join(hub, f))) copyGuard(join(dir, f), join(hub, f));
+      // The name check finds a name in a repository's code, on disk in a repository the Files names, or in the session's tool results: the planted hub
+      // holds the names the standing text uses as folders and files, and a planted repository holds the words of the review step's commands.
+      for (const d of ['progress', 'scratch', 'recall']) mkdirSync(join(hub, d), { recursive: true });
+      for (const f of ['NOTES.md', 'LESSONS.md']) writeFileSync(join(hub, f), '# planted\n');
+      const names = repo({ 'names.txt': 'node --format --pretty Next:\n' });
+      const checked = spawnSync('node', [join(hub, 'plan-guard.mjs'), '--check', planFile], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: names.dir } });
+      const quiet = tmp('sg-batchnone-');
+      writeFileSync(join(quiet, 'PROGRAM.md'), SEED_PROGRAM.replace('State: open', 'State: done'));
+      const none = batchRun(dir, quiet, []);
+      const refused = none.status === 1 && /no open entry of hub in PROGRAM.md is a filed finding/.test(none.stdout) && !/PLAN STARTS BELOW/.test(none.stdout);
+      if (!(checked.status === 0 && refused)) throw new Error(`check status ${checked.status}: ${String(checked.stdout).split('\n').filter((l) => /^\d+\. [A-Z]/.test(l)).map((l) => l.slice(0, 260)).join(' // ')} | refused ${refused}`);
+      return true;
+    },
+  },
+  {
+    name: 'the dispatcher prints the batch at the entry to plan mode where the first open entry of the repository is a filed finding, and the single item where it is not',
+    guards: ['batch_dispatch', 'batch_mode'],
+    run(m, dir) {
+      const hub = batchHub(dir);
+      const opts = (h) => ({ pad: tmp('sg-batchpad-'), hub: h, marker: join(tmp('sg-batchmk-'), 'none.json'), plansDir: tmp('sg-batchplans-') });
+      const single = batchHub(dir);
+      writeFileSync(join(single, 'PROGRAM.md'), readFileSync(join(single, 'PROGRAM.md'), 'utf8').replace('### P-1. Q-HUB-11: ', '### P-1. A planted item with no key: '));
+      // The seed takes the launch directory from CLAUDE_PROJECT_DIR when it holds a checkout, so the case points it at the planted folder.
+      const before = process.env.CLAUDE_PROJECT_DIR;
+      let asBatch, asSingle;
+      try {
+        process.env.CLAUDE_PROJECT_DIR = hub;
+        asBatch = m.dispatch.planEntrySeed({ session_id: 'sd', cwd: hub, permission_mode: 'plan' }, opts(hub));
+        process.env.CLAUDE_PROJECT_DIR = single;
+        asSingle = m.dispatch.planEntrySeed({ session_id: 'sd', cwd: single, permission_mode: 'plan' }, opts(single));
+      } finally { if (before === undefined) delete process.env.CLAUDE_PROJECT_DIR; else process.env.CLAUDE_PROJECT_DIR = before; }
+      const modes = m.dispatch.seedMode(hub, hub) === 'batch' && m.dispatch.seedMode(single, single) === 'single' && m.dispatch.seedMode(tmp('sg-batchnoprog-'), tmp('sg-batchnoprog-')) === 'single';
+      const ok = asBatch.startsWith('PLAN SEED for the batch of 5 open findings of hub') && asSingle.startsWith('PLAN SEED for P-1 (A planted item with no key: ');
+      if (!(ok && modes)) throw new Error(`batch ${asBatch.slice(0, 80)} | single ${asSingle.slice(0, 80)} | modes ${modes}`);
+      return true;
+    },
+  },
 ];
 
 // ---- fixtures of the plan seed's cases ----
@@ -9202,6 +9304,27 @@ function seedHub(dir) {
 }
 // The seed run on a planted hub, with no session of its own (the inherited one is the suite's decoy) and the planted hub as the repository.
 const seedRun = (dir, hub, args) => spawnSync('node', [join(dir, 'plan-seed.mjs'), '--hub', hub, '--repo', hub, ...args],
+  { encoding: 'utf8', timeout: 60000, env: { ...process.env, CLAUDE_CODE_SESSION_ID: '' } });
+
+// A hub for the batch cases: five open findings of the hub (three name `alpha.mjs`, one `beta.mjs`, one names no file that exists, ranked second), one open finding of
+// another repository, one done finding of the hub and one filed finding with no item, over the seed hub's template, rules and goals.
+function batchHub(dir) {
+  const hub = seedHub(dir);
+  const entry = (n, key, repo, state, title) => [`### P-${n}. ${key}: ${title}`, '', `Repository: ${repo}. Goal: 6. State: ${state}. Plan: none.`, '', `Acceptance: Planted acceptance ${n}.`, '', 'Depends: none.', ''].join('\n');
+  const head = ['# The program', '', 'Intro line of the planted program.', '', '## Thesis', '', 'A planted thesis paragraph of the case, one paragraph only.', '', '## Items', '', '7 items planted for the case.', '', '## The harness', ''].join('\n');
+  writeFileSync(join(hub, 'PROGRAM.md'), `${head}\n${[entry(1, 'Q-HUB-11', 'hub', 'open', 'alpha one'), entry(2, 'Q-HUB-12', 'hub', 'open', 'no file'), entry(3, 'Q-HUB-13', 'hub', 'open', 'alpha two'),
+    entry(4, 'Q-HUB-14', 'hub', 'open', 'beta one'), entry(5, 'Q-HUB-15', 'hub', 'open', 'alpha three'), entry(6, 'Q-QK-3', 'Quietkeep', 'open', 'an app finding'), entry(7, 'Q-HUB-17', 'hub', 'done', 'finished')].join('\n')}`);
+  writeFileSync(join(hub, 'alpha.mjs'), '// a planted file of the case\n');
+  writeFileSync(join(hub, 'beta.mjs'), '// a planted file of the case\n');
+  const text = {
+    'Q-HUB-11': 'a planted finding about `alpha.mjs` and its first fault.', 'Q-HUB-14': 'a planted finding about `beta.mjs` and `alpha.mjs`.', 'Q-HUB-13': 'a planted finding about `alpha.mjs` and its second fault.',
+    'Q-HUB-12': 'a planted finding that names no file of the repository at all.', 'Q-HUB-15': 'a planted finding about `alpha.mjs` and its third fault.', 'Q-QK-3': 'a planted finding of another repository about `alpha.mjs`.',
+    'Q-HUB-16': 'a planted filed finding that no item of the program names.', 'Q-HUB-17': 'a planted finding already done, about `alpha.mjs`.' };
+  for (const [k, v] of Object.entries(text)) writeFileSync(join(hub, 'found', `${k}.md`), `${k}: ${v}\n`);
+  return hub;
+}
+// The batch print on a planted hub, with no session of its own.
+const batchRun = (dir, hub, args) => spawnSync('node', [join(dir, 'plan-seed.mjs'), '--batch', '--hub', hub, '--repo', hub, ...args],
   { encoding: 'utf8', timeout: 60000, env: { ...process.env, CLAUDE_CODE_SESSION_ID: '' } });
 
 const PLANTS = {
@@ -10491,6 +10614,19 @@ const PLANTS = {
   seed_planfile_marker: ['    if (mk?.plan && existsSync(String(mk.plan))) return String(mk.plan);\n', '\n', 'hook-dispatch.mjs'],
   seed_planfile_newest: ['files.sort((a, b) => b.at - a.at);', 'files.sort((a, b) => a.at - b.at);', 'hook-dispatch.mjs'],
   seed_planfile_wired: ['const planFile = opts.args ? \'\' : seedPlanFile(opts);', "const planFile = '';", 'hook-dispatch.mjs'],
+  // The batch print: which findings it takes, how it groups and cuts them, what it marks fixed, and where the dispatcher prints it.
+  batch_select: ["if (e.state !== 'open' || e.repository.toLowerCase() !== o.repoName.toLowerCase()) return;", "if (e.state !== 'open') return;", 'plan-seed.mjs'],
+  batch_group: ["(a === '') - (b === '') || byHome.get(a)[0].rank - byHome.get(b)[0].rank", 'byHome.get(a)[0].rank - byHome.get(b)[0].rank', 'plan-seed.mjs'],
+  batch_home: ["rank, text, files, home: files[0] ?? '' });", "rank, text, files, home: '' });", 'plan-seed.mjs'],
+  batch_found: ['L(`- ${f.key} fixed in step', 'L(`- ${f.key} dropped in step', 'plan-seed.mjs'],
+  batch_close: ["const itemKeys = batch.map((f) => f.item).join(', ');", "const itemKeys = batch.map((f) => f.item).slice(0, 1).join(', ');", 'plan-seed.mjs'],
+  batch_size: ['for (let i = 0; i < fs.length; i += size) groups.push({ home: h, list: fs.slice(i, i + size) });', 'groups.push({ home: h, list: fs });', 'plan-seed.mjs'],
+  batch_cost: ['one for each group step and two more for the take-up and the close', 'one for the whole plan', 'plan-seed.mjs'],
+  batch_steps_limit: ['if (limit > 0) groups = groups.slice(0, limit);', 'void limit;', 'plan-seed.mjs'],
+  batch_shape: ['L(`Served by: step ${takeup} serves goals 5 and 6; step${gnums.length', 'L(`Served: step ${takeup} serves goals 5 and 6; step${gnums.length', 'plan-seed.mjs'],
+  batch_none: ['if (!findings.length) return { ok: false', 'if (false) return { ok: false', 'plan-seed.mjs'],
+  batch_dispatch: ["(mode0 === 'batch' ? ['--batch'", "(mode0 === 'never' ? ['--batch'", 'hook-dispatch.mjs'],
+  batch_mode: ["return key && existsSync(join(isHub ? hub : cwd, 'found', `${key}.md`)) ? 'batch' : 'single';", "return 'batch';", 'hook-dispatch.mjs'],
   seed_fence: ["  if (tool === 'Bash' && isSeedCommand(input.command)) return null;", '  void 0;', 'hook-dispatch.mjs'],
   seed_can: [' || (!p.agent_id && isSeedCommand(cmd)));', ');', 'hook-dispatch.mjs'],
   seed_status: [' || (!p.agent_id && isSeedCommand(p.tool_input?.command)));', ');', 'hook-dispatch.mjs'],
