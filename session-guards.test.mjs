@@ -8995,7 +8995,7 @@ const CASES = [
       const found = d.planFiles(text).some((f) => f.path === 'found/' && f.repo === 'Hub');
       const problems = [d.goalsProblem(text), d.rulesProblem(text), d.foundAnsweredProblem(text, { roots: [hub] }), d.aimStandingProblem(text), d.afterProblem(text),
         d.commandsGitDirProblem(text), d.filesSpanProblem(text), d.stepShapeProblem(text), await d.reviewCommandProblem(text)];
-      const steps = JSON.stringify(d.planSteps(text)) === '[1,2,3,4]';
+      const steps = JSON.stringify(d.planSteps(text)) === '[1,2,3,4,5]';
       if (problems.some((x) => x !== null)) throw new Error(`the built plan was refused: ${problems.filter((x) => x !== null).map((x) => String(x).slice(0, 160)).join(' | ')}`);
       return found && steps && r.status === 0;
     },
@@ -9062,6 +9062,121 @@ const CASES = [
       const calls = c1.status === 0 && added(c1) === null && c2.status === 0 && a2?.hookEventName === 'PreToolUse' && String(a2?.additionalContext).startsWith('PLAN SEED for P-3 ') && c3.status === 0 && added(c3) === null;
       if (!(once && agent && unrecorded && prompts && calls)) throw new Error(`once ${once}, agent ${agent}, unrecorded ${unrecorded}, prompts ${prompts}, calls ${calls}`);
       return true;
+    },
+  },
+  // ---- the single print put right (the plan of 5 November, step 89): each case on a planted hub in a temporary folder, never on the working copy ----
+  {
+    name: 'the plan seed numbers its steps from one above the highest step of the plan file it is given: the take-up step first, the item\'s steps, the close, and the review last, with the Order and After lines to match, and from one where no plan file is given',
+    guards: ['seed_number'],
+    run(m, dir) {
+      const hub = seedHub(dir);
+      const planFile = join(tmp('sg-seedplan-'), 'p.md');
+      writeFileSync(planFile, '# A planted plan\n\n## Steps\n\n7. **One.** planted text of the case.\n\n8. **Two.** planted text of the case.\n');
+      const r = seedRun(dir, hub, ['--item', 'P-3', '--plan', planFile]);
+      const none = seedRun(dir, hub, ['--item', 'P-3']);
+      const from9 = r.status === 0 && r.stdout.includes('\nOrder: 9 10 11\n') && r.stdout.includes('\nStanding: 12\n') && r.stdout.includes('\nAfter: 10 after 9; 11 after 10\n')
+        && r.stdout.includes('\n9. **Taken up: P-3') && r.stdout.includes('\n10. **<the item\'s step 10, one result>.**') && r.stdout.includes('\n11. **Closed in the program')
+        && r.stdout.includes('\n12. **Review.**') && r.stdout.includes('Report `progress/step-9-report.txt`') && r.stdout.includes('Report `progress/step-11-report.txt`');
+      const from1 = none.status === 0 && none.stdout.includes('\nOrder: 1 2 3\n') && none.stdout.includes('\n1. **Taken up: P-3') && none.stdout.includes('\n4. **Review.**');
+      return from9 && from1;
+    },
+  },
+  {
+    name: 'the plan seed prints one edited label for the repository whether the print is run for the hub path or for the working copy beside a different hub path, a second label only for another repository, and fills the Commands with the working copy\'s path and never the other hub path',
+    guards: ['seed_label', 'seed_work_path'],
+    run(m, dir) {
+      const hub = seedHub(dir);
+      const wc = tmp('sg-seedwc-');
+      writeFileSync(join(wc, 'plan-seed.mjs'), '// a planted working copy of the case\n');
+      writeFileSync(join(wc, 'PROGRAM.md'), SEED_PROGRAM);
+      const other = tmp('sg-seedother-');
+      const run = (repo) => spawnSync('node', [join(dir, 'plan-seed.mjs'), '--hub', hub, '--repo', repo, '--item', 'P-3'],
+        { encoding: 'utf8', timeout: 60000, env: { ...process.env, CLAUDE_CODE_SESSION_ID: '' } });
+      const edited = (r) => r.stdout.split('\n').filter((l) => /^- [^:`]*, edited:/.test(l));
+      const same = run(hub), work = run(wc), app = run(other);
+      const oneHub = edited(same).length === 1 && edited(same)[0].startsWith('- Hub, edited:');
+      const oneWork = edited(work).length === 1 && edited(work)[0].startsWith('- Hub, edited:') && !/edited: <the item's own files in /.test(work.stdout);
+      const two = edited(app).length === 2 && edited(app)[1].startsWith(`- ${basename(other)}, edited:`);
+      const commands = work.stdout.includes(`- \`node ${wc}/session-guards.test.mjs\``) && work.stdout.includes(`- \`node ${wc}/pin-check.mjs\``) && !work.stdout.includes(`node ${hub}/`)
+        && same.stdout.includes(`- \`node ${hub}/session-guards.test.mjs\``);
+      return oneHub && oneWork && two && commands;
+    },
+  },
+  {
+    name: 'the plan seed\'s close step writes the item\'s state from the step reports, done where every step in Order handed back DONE, and carries the landing acts: the fetch, the rebase with its abort, the read of the commits between the tracking ref and main, the push as a fast-forward with no force, the read of the remote, the doctrine gates, the clone\'s pull and its head, and the clean status',
+    guards: ['seed_state', 'seed_landing'],
+    run(m, dir) {
+      const hub = seedHub(dir);
+      const r = seedRun(dir, hub, ['--item', 'P-3']);
+      const close = (r.stdout.split('\n3. **Closed in the program')[1] ?? '').split('\n4. **Review.**')[0];
+      const acts = ['`git fetch origin main`', '`git rebase origin/main`', '`git rebase --abort`', '`git log origin/main..main`, read as the commits this plan made', '`git push origin main`, and where the remote refuses it as not a fast-forward',
+        'no force and no second try', '`git ls-remote --heads origin`', 'the doctrine gates run for the pushed commit read through the connector', '`git -C /root/.claude/hub pull origin main`', '`git -C /root/.claude/hub rev-parse HEAD`',
+        '`git log origin/main..main`, read empty'];
+      return close.length > 0 && acts.every((a) => close.includes(a)) && close.includes('from the step reports, done where every step in Order handed back DONE and ejected with the finding attached otherwise');
+    },
+  },
+  {
+    name: 'the plan seed\'s take-up step names the item, sets its State to planned with the plan\'s title after a read of the whole program, and lands with the same acts, so another session\'s seed skips the item at its next print',
+    guards: ['seed_takeup', 'seed_takeup_state', 'seed_landing'],
+    run(m, dir) {
+      const hub = seedHub(dir);
+      const r = seedRun(dir, hub, ['--item', 'P-3']);
+      const up = (r.stdout.split('\n1. **Taken up: P-3')[1] ?? '').split('\n2. **<')[0];
+      return up.includes('read `PROGRAM.md` whole') && up.includes('set State to planned and Plan to this plan\'s title') && up.includes('`git push origin main`, and where the remote refuses it as not a fast-forward')
+        && up.includes('`git -C /root/.claude/hub pull origin main`') && up.includes('`git rebase --abort`') && up.includes('Report `progress/step-1-report.txt` (new)');
+    },
+  },
+  {
+    name: 'the plan seed\'s review step says it is never a resend and that it follows the review file from its first line, and the Cost line names the four occasions a review is sent, the plan\'s first send and after an eject, a failure, a refusal or a correction, and no other',
+    guards: ['seed_resend', 'seed_cost'],
+    run(m, dir) {
+      const hub = seedHub(dir);
+      const r = seedRun(dir, hub, ['--item', 'P-3']);
+      const review = (r.stdout.split('\n4. **Review.**')[1] ?? '').split('\n## Commands')[0];
+      const resend = review.includes('This step is never a resend: a send of it reads no step\'s report as its own and does none of any step\'s Do, and it follows the review file from its first line');
+      const cost = (r.stdout.split('\n## Cost\n\n')[1] ?? '').split('\n')[0];
+      const occasions = cost.includes('a review is sent at the plan\'s first send and after an eject, a failure, a refusal or a correction') && cost.includes('and at no other move') && !cost.includes('for each move');
+      return resend && occasions;
+    },
+  },
+  {
+    name: 'the plan seed\'s next item is the first open entry of the repository printed for, the open entries of other repositories ranked before it are counted in the print\'s first line and never named, and a program whose only open entries are another repository\'s is an error naming no item of it as next',
+    guards: ['seed_next_repo', 'seed_passed'],
+    run(m, dir) {
+      const hub = seedHub(dir);
+      const entry = (n, repo, state) => [`### P-${n}. Planted item ${n}`, '', `Repository: ${repo}. Goal: 6. State: ${state}. Plan: none.`, '', `Acceptance: Planted acceptance ${n}.`, '', 'Depends: none.', ''].join('\n');
+      const head = ['# The program', '', '## Thesis', '', 'A planted thesis paragraph of the case.', '', '## Items', '', '4 items planted for the case.', '', '## The harness', ''].join('\n');
+      writeFileSync(join(hub, 'PROGRAM.md'), `${head}\n${entry(1, 'Quietkeep', 'open')}\n${entry(2, 'Quietkeep', 'open')}\n${entry(3, 'hub', 'open')}\n${entry(4, 'hub', 'done')}\n`);
+      const r = seedRun(dir, hub, ['--item', 'next']);
+      const first = r.stdout.split('\n')[0];
+      const ok = r.status === 0 && /^PLAN SEED for P-3 \(Planted item 3\)/.test(first) && first.includes('it passed over 2 open entries of other repositories');
+      writeFileSync(join(hub, 'PROGRAM.md'), `${head}\n${entry(1, 'Quietkeep', 'open')}\n${entry(2, 'fauxplane', 'open')}\n${entry(3, 'hub', 'done')}\n`);
+      const none = seedRun(dir, hub, ['--item', 'next']);
+      const refused = none.status === 1 && /no entry is open/.test(none.stdout) && !/next ranked open item is P-1/.test(none.stdout) && !/^PLAN SEED for/.test(none.stdout);
+      return ok && refused;
+    },
+  },
+  {
+    name: 'the dispatcher hands the seed the plan file the approval marker names, else the newest plan file directly under the plans folder, so the numbering continues, and ignores a steps copy',
+    guards: ['seed_planfile_marker', 'seed_planfile_newest', 'seed_planfile_wired'],
+    run(m, dir) {
+      const hub = seedHub(dir);
+      const plansDir = tmp('sg-seedplans-');
+      const old = join(plansDir, 'old.md'), fresh = join(plansDir, 'fresh.md'), steps = join(plansDir, 'fresh.steps.md');
+      for (const f of [old, fresh, steps]) writeFileSync(f, '# a planted plan\n');
+      utimesSync(old, new Date(2026, 0, 1), new Date(2026, 0, 1));
+      utimesSync(fresh, new Date(2026, 0, 2), new Date(2026, 0, 2));
+      utimesSync(steps, new Date(2026, 0, 3), new Date(2026, 0, 3));
+      const noMarker = join(plansDir, 'no-such-marker.json');
+      const marker = join(plansDir, 'marker.json');
+      writeFileSync(marker, JSON.stringify({ plan: old, hash: 'planted' }));
+      const byMarker = m.dispatch.seedPlanFile({ marker, plansDir }) === old;
+      const newest = m.dispatch.seedPlanFile({ marker: noMarker, plansDir }) === fresh;
+      const stub = join(tmp('sg-seedstub-'), 'stub.mjs');
+      writeFileSync(stub, 'console.log(process.argv.slice(2).join(\' \'));\n');
+      const printed = m.dispatch.planEntrySeed({ session_id: 'sd', cwd: hub, permission_mode: 'plan' }, { pad: tmp('sg-seedpad-'), script: stub, marker: noMarker, plansDir });
+      const wired = printed === `--item next --plan ${fresh}`;
+      return byMarker && newest && wired;
     },
   },
 ];
@@ -10362,6 +10477,20 @@ const PLANTS = {
   seed_mark: ["const MOVABLE = '[movable: another session can move this before a step runs]';", "const MOVABLE = '';", 'plan-seed.mjs'],
   seed_rules_version: ['`Rules: ${rulesPath}, version ${rules.version}.`', '`Rules: ${rulesPath}, version 0.`', 'plan-seed.mjs'],
   seed_close_acts: ['write one file in the found folder named by its key', 'write nothing', 'plans/seed-template.md'],
+  seed_number: ['const first = (stepNums.length ? Math.max(...stepNums) : 0) + 1;', 'const first = 1;', 'plan-seed.mjs'],
+  seed_label: ['if (!isHub) L(`- ${basename(repo)}, edited:', 'if (true) L(`- ${basename(repo)}, edited:', 'plan-seed.mjs'],
+  seed_work_path: ['HUB: isHub ? repo : hub,', 'HUB: hub,', 'plan-seed.mjs'],
+  seed_next_repo: ['e.repository.toLowerCase() === repoName.toLowerCase()', 'true', 'plan-seed.mjs'],
+  seed_passed: ['it passed over ${passedOver} open', 'it passed over 0 open', 'plan-seed.mjs'],
+  seed_takeup: ["L(fill(tpl['take-up']", "void (fill(tpl['take-up']", 'plan-seed.mjs'],
+  seed_cost: ["and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move.", 'for each move.', 'plan-seed.mjs'],
+  seed_state: ['done where every step in Order handed back DONE', 'done', 'plans/seed-template.md'],
+  seed_landing: ['`git push origin main`, and where the remote refuses it as not a fast-forward', '`git push origin main`, and where it fails', 'plans/seed-template.md'],
+  seed_takeup_state: ['set State to planned and Plan to', 'set State to open and Plan to', 'plans/seed-template.md'],
+  seed_resend: ['This step is never a resend', 'This step may be a resend', 'plans/seed-template.md'],
+  seed_planfile_marker: ['    if (mk?.plan && existsSync(String(mk.plan))) return String(mk.plan);\n', '\n', 'hook-dispatch.mjs'],
+  seed_planfile_newest: ['files.sort((a, b) => b.at - a.at);', 'files.sort((a, b) => a.at - b.at);', 'hook-dispatch.mjs'],
+  seed_planfile_wired: ['const planFile = opts.args ? \'\' : seedPlanFile(opts);', "const planFile = '';", 'hook-dispatch.mjs'],
   seed_fence: ["  if (tool === 'Bash' && isSeedCommand(input.command)) return null;", '  void 0;', 'hook-dispatch.mjs'],
   seed_can: [' || (!p.agent_id && isSeedCommand(cmd)));', ');', 'hook-dispatch.mjs'],
   seed_status: [' || (!p.agent_id && isSeedCommand(p.tool_input?.command)));', ');', 'hook-dispatch.mjs'],

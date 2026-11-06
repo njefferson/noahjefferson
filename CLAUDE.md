@@ -30,7 +30,7 @@ never edits this page: its lines are the owner's to change.
 - Do what was asked and nothing more. A correction narrows the work. [Doctrine §0f]
 - A defect with a known fix is fixed, not asked about. A question to the owner is a choice only the owner can make. [Doctrine §0e rule 10; LESSONS §258]
 - Work only inside a plan the owner approved in plan mode, and talk it through first. The main session manages and the agents do the work. [Doctrine §0e rules 4 and 13]
-- A fresh agent clears every move before it goes, and an approved plan runs to its end. [Doctrine §0e rule 2; §11c]
+- A fresh agent clears a plan's first move and every move after an eject, a failure, a refusal or a correction, as the review gate asks, and an approved plan runs to its end. [Doctrine §0e rule 2; §11c]
 - A status at each agent's return says what changed and what it means. The state of the work lives on the status page, and its link goes in every progress reply. [Doctrine §0e rule 2; §7i]
 - A refusal from a hook is the owner speaking. Say what was refused and stop; another route to the same end is refused too. [Doctrine §0d; §0e rule 14]
 - A correction is answered point by point in the turn it arrives, and the word stop stops everything. [Doctrine §0e rule 3]

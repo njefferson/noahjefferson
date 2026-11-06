@@ -261,6 +261,25 @@ const SEED = new RegExp('^\\s*node\\s+"?' + join(HUB, 'plan-seed.mjs').replace(/
 export const isSeedCommand = (cmd) => SEED.test(String(cmd ?? ''));
 
 /**
+ * The plan file the seed numbers its steps after.
+ * @param {{marker?: string, plansDir?: string}} [opts]  the approval marker file and the plans folder, each given by the test.
+ * @returns {string} the plan file the approval marker names when it still exists, else the newest `.md` file directly under the plans folder
+ *   (not a `.steps.md` copy), else ''.
+ */
+export function seedPlanFile(opts = {}) {
+  try {
+    const mk = JSON.parse(readFileSync(opts.marker ?? join(homedir(), '.claude', 'APPROVED-PLAN.json'), 'utf8'));
+    if (mk?.plan && existsSync(String(mk.plan))) return String(mk.plan);
+  } catch { /* no marker */ }
+  try {
+    const dir = opts.plansDir ?? join(homedir(), '.claude', 'plans');
+    const files = readdirSync(dir).filter((n) => n.endsWith('.md') && !n.endsWith('.steps.md')).map((n) => ({ n, at: statSync(join(dir, n)).mtimeMs }));
+    files.sort((a, b) => b.at - a.at);
+    return files[0] ? join(dir, files[0].n) : '';
+  } catch { return ''; }
+}
+
+/**
  * The plan seed, printed once at the entry to plan mode.
  * @param {object} p  a main-thread hook payload: `permission_mode`, `session_id` and `cwd` are read; an agent's payload prints nothing.
  * @param {{pad?: string|null, args?: string[], script?: string}} [opts]  the session scratchpad, the seed's arguments (`--item next` by
@@ -283,7 +302,10 @@ export function planEntrySeed(p, opts = {}) {
     try { mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, `${JSON.stringify({ mode, at: new Date().toISOString() })}\n`); } catch { return ''; }
   }
   if (mode !== 'plan' || before === 'plan') return '';
-  const r = spawnSync(process.execPath, [opts.script ?? join(HUB, 'plan-seed.mjs'), ...(opts.args ?? ['--item', 'next'])], {
+  // The seed numbers its steps from the plan file's highest, so it is handed the plan file: the one the approval marker names, else the newest
+  // file directly under the plans folder (a plan not yet approved is the newest one written).
+  const planFile = opts.args ? '' : seedPlanFile(opts);
+  const r = spawnSync(process.execPath, [opts.script ?? join(HUB, 'plan-seed.mjs'), ...(opts.args ?? ['--item', 'next', ...(planFile ? ['--plan', planFile] : [])])], {
     encoding: 'utf8', timeout: 30000, cwd: p?.cwd ? String(p.cwd) : undefined, env: { ...process.env, CLAUDE_CODE_SESSION_ID: String(p?.session_id ?? '') },
   });
   return r.status === 0 ? String(r.stdout).trim() : '';

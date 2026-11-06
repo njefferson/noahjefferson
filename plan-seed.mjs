@@ -12,7 +12,7 @@
 // other), the rules version read from the rules file, the standing text from `plans/seed-template.md`, the Files in the shape the plan guard
 // reads, the found keys as a ready "Found answered" section, the roadmap and shipped-check stubs from the notes, and last the reads another
 // session can move, each marked and timed, so a step that depends on one reads it at the time of use.
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, realpathSync } from 'node:fs';
 import { join, resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
@@ -29,7 +29,7 @@ const slurp = (f) => { try { return readFileSync(f, 'utf8'); } catch { return ''
 /**
  * The program's entries.
  * @param {string} text  PROGRAM.md.
- * @returns {{key: string, n: number, title: string, block: string, state: string, depends: string, acceptance: string}[]} one per `### P-N. title`
+ * @returns {{key: string, n: number, title: string, block: string, state: string, repository: string, depends: string, acceptance: string}[]} one per `### P-N. title`
  *   heading, in file order. `block` runs from the heading to the line before the next `##` or `###` heading, so the dependency line and the
  *   acceptance are read from THAT block and from no other: the entry above is a different item.
  */
@@ -42,9 +42,10 @@ export function programEntries(text) {
     for (let j = h.i + 1; j < lines.length; j++) if (/^#{2,3} /.test(lines[j])) { end = j; break; }
     const block = lines.slice(h.i, end).join('\n').replace(/\s+$/, '');
     const state = /^Repository:[^\n]*?\bState:\s*([\w-]+)/m.exec(block)?.[1] ?? '';
+    const repository = /^Repository:\s*(.*?)\.\s+(?:Goal|State)\b/m.exec(block)?.[1]?.trim() ?? '';
     const depends = /^Depends:\s*(.*)$/m.exec(block)?.[1]?.trim() ?? '';
     const acceptance = /^Acceptance:\s*([\s\S]*?)(?=\n\s*\n|$)/m.exec(block)?.[1]?.replace(/\s*\n\s*/g, ' ').trim() ?? '';
-    return { key: `P-${h.n}`, n: h.n, title: h.title, block, state, depends, acceptance };
+    return { key: `P-${h.n}`, n: h.n, title: h.title, block, state, repository, depends, acceptance };
   });
 }
 
@@ -91,7 +92,15 @@ export function seed(o) {
   const programText = slurp(join(hub, 'PROGRAM.md'));
   const entries = programEntries(programText);
   const nextP = (entries.reduce((m, e) => Math.max(m, e.n), 0)) + 1;
-  const firstOpen = entries.find((e) => e.state === 'open');
+  // The repository the print is for: the hub when the path is the hub's own or holds the hub's seed and program (the working copy is a
+  // different path from the live clone the script may run out of), else the folder's name. The next item is the first open entry of THIS
+  // repository, and the open entries of other repositories ranked before it are counted, never named as next.
+  const real = (p) => { try { return realpathSync(p); } catch { return resolve(p); } };
+  const isHub = real(repo) === real(hub) || (existsSync(join(repo, 'plan-seed.mjs')) && existsSync(join(repo, 'PROGRAM.md')));
+  const repoName = isHub ? 'hub' : basename(repo);
+  const openAll = entries.filter((e) => e.state === 'open');
+  const firstOpen = openAll.find((e) => e.repository.toLowerCase() === repoName.toLowerCase());
+  const passedOver = firstOpen ? openAll.indexOf(firstOpen) : openAll.length;
   const want = String(o.item ?? '').trim();
   const entry = want === 'next' ? firstOpen : entries.find((e) => e.key === want);
   if (!entry) {
@@ -101,7 +110,7 @@ export function seed(o) {
 
   // ---- the numbers read from the folders ----
   const hubFound = foundQueue(hub);
-  const repoFound = resolve(repo) === hub ? [] : foundQueue(repo);
+  const repoFound = isHub ? [] : foundQueue(repo);
   const keys = [...new Set([...hubFound, ...repoFound].map((q) => q.key))];
   const parts = keys.map((k) => /^Q-([A-Za-z0-9]+)-(\d+)$/.exec(k)).filter(Boolean);
   let fileMax = 0;
@@ -113,7 +122,8 @@ export function seed(o) {
   const stepNums = [...planSection(planText, 'Steps').matchAll(/^(\d+)\.\s/gm)].map((m) => Number(m[1]));
   const first = (stepNums.length ? Math.max(...stepNums) : 0) + 1;
   const count = Math.max(1, Math.floor(Number(o.steps) || 1));
-  const close = first + count;
+  const takeup = first;
+  const close = first + 1 + count;
   const review = close + 1;
   const rules = agentRules(join(hub, 'agent-rules.md'));
   const rulesPath = join(homedir(), '.claude', 'hub', 'agent-rules.md');
@@ -122,14 +132,17 @@ export function seed(o) {
   const files = sid ? sessionFiles(sid) : null;
   const transcript = files?.main ?? '/root/.claude/projects/<the project folder>/<the session id>.jsonl';
   const tpl = templateBlocks(slurp(join(hub, 'plans', 'seed-template.md')));
-  const vars = { HUB: hub, ITEM: entry.key, CLOSE: close, REVIEW: review, NEXTP: `P-${nextP}`, NEXTQ: `Q-HUB-${hubMax + 1}`, NEXTL: lessonMax + 1,
+  // HUB in the standing text is where an agent edits and tests: the working copy when the print is for the hub, never the live clone the
+  // script may run out of.
+  const vars = { HUB: isHub ? repo : hub, ITEM: entry.key, TAKEUP: takeup, CLOSE: close, REVIEW: review, NEXTP: `P-${nextP}`, NEXTQ: `Q-HUB-${hubMax + 1}`, NEXTL: lessonMax + 1,
     TRANSCRIPT: transcript, REVIEWFILE: join(homedir(), '.claude', 'hub', 'aim-review.md') };
+  vars.LANDING = fill(tpl.landing ?? '<plans/seed-template.md has no landing block>', vars);
 
   const out = [];
   const L = (s = '') => out.push(s);
 
   // ---- the header, which is not the plan ----
-  L(`PLAN SEED for ${entry.key} (${entry.title}), repository ${basename(repo)}, printed ${stamp}.`);
+  L(`PLAN SEED for ${entry.key} (${entry.title}), repository ${basename(repo)}, printed ${stamp}${want === 'next' ? `; it passed over ${passedOver} open ${passedOver === 1 ? 'entry' : 'entries'} of other repositories` : ''}.`);
   L(`Every line of the plan below was read from a file at this time. The lines under the movable reads at the end can be moved by another session before a step runs, so a step that depends on one reads it at the time of use.`);
   L('The plan starts at the line of equals signs. Fill each angle-bracket placeholder, delete this header, and keep the rest as printed.');
   L('==== THE PLAN STARTS BELOW THIS LINE ====');
@@ -142,7 +155,8 @@ export function seed(o) {
   const block = goalsBlock(join(hub, 'CLAUDE.md'));
   L(block || '<the hub CLAUDE.md goals block could not be read>');
   L();
-  const served = [`step${count === 1 ? '' : 's'} ${count === 1 ? first : `${first} to ${first + count - 1}`} ${count === 1 ? 'serves' : 'serve'} goal 1`,
+  const w1 = takeup + 1;
+  const served = [`step ${takeup} serves goals 5 and 6`, `step${count === 1 ? '' : 's'} ${count === 1 ? w1 : `${w1} to ${w1 + count - 1}`} ${count === 1 ? 'serves' : 'serve'} goal 1`,
     `step ${close} serves goals 5 and 6`, `step ${review} serves goals 3, 5 and 6`];
   L(`Served by: ${served.join('; ')}.`);
   L();
@@ -172,14 +186,17 @@ export function seed(o) {
   L();
   L(fill(tpl['rules-of-this-plan'] ?? '<plans/seed-template.md has no rules-of-this-plan block>', vars));
   L();
-  const nums = Array.from({ length: count }, (_, i) => first + i);
+  const nums = Array.from({ length: count }, (_, i) => w1 + i);
+  const order = [takeup, ...nums, close];
   L('## Order');
   L();
-  L(`Order: ${[...nums, close].join(' ')}`);
+  L(`Order: ${order.join(' ')}`);
   L(`Standing: ${review}`);
-  L(`After: ${[...nums, close].slice(1).map((n, i) => `${n} after ${[...nums, close][i]}`).join('; ')}`);
+  L(`After: ${order.slice(1).map((n, i) => `${n} after ${order[i]}`).join('; ')}`);
   L();
   L('## Steps');
+  L();
+  L(fill(tpl['take-up'] ?? '<plans/seed-template.md has no take-up block>', vars));
   L();
   for (const n of nums) {
     L(`${n}. **<the item's step ${n}, one result>.** <Repository>, one agent. Facts: <the asks and the facts the step depends on, restated>. Do: <the exact actions and nothing outside them>. Observe: <the observation that means it is done>. Kill: <what ends the step with nothing further written>. Report \`progress/step-${n}-report.txt\` (new). Estimate <minutes> min.`);
@@ -196,9 +213,10 @@ export function seed(o) {
   L('## Files');
   L();
   const readOnly = ['DOCTRINE.md', 'agent-rules.md', 'aim-review.md'].filter((f) => existsSync(join(hub, f)));
-  L(`- Hub, edited: \`PROGRAM.md\`, \`NOTES.md\`, \`found/\`${existsSync(join(hub, 'lessons')) ? ', `lessons/`, `LESSONS.md`' : ''},<the item's own files, each with (new) after it where the plan creates it>`);
+  // One label for a repository: when the print is for the hub its own files go in the one Hub list, and another repository gets its own.
+  L(`- Hub, edited: \`PROGRAM.md\`, \`NOTES.md\`, \`found/\`${existsSync(join(hub, 'lessons')) ? ', `lessons/`, `LESSONS.md`' : ''}, <the item's own files, each with (new) after it where the plan creates it>`);
   L(`- Hub, read only: ${readOnly.map((f) => `\`${f}\``).join(', ')}`);
-  if (resolve(repo) !== hub) L(`- ${basename(repo)}, edited: <the item's own files in ${basename(repo)}>`);
+  if (!isHub) L(`- ${basename(repo)}, edited: <the item's own files in ${basename(repo)}>`);
   L(`- Session scratchpad: \`progress/\`, \`status/\`, \`scratch/\`, \`recall/\`, which is \`${pad ? `${pad}/` : '<the session scratchpad, which no session id here names>'}\``);
   L(`- Session transcript, read only: \`${transcript}\``);
   L();
@@ -254,7 +272,7 @@ export function seed(o) {
   L();
   L('## Cost');
   L();
-  L(`Each of the ${count + 2} steps runs on the sonnet tier with one agent for each, and one review is sent for each move. <The runs and checks the plan makes.> No push is made before the landing step, which makes one push. <The main thread's tier for the writing and for the management.>`);
+  L(`Each of the ${count + 2} steps runs on the sonnet tier with one agent for each, and a review is sent at the plan's first send and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move. <The runs and checks the plan makes.> Two pushes are made, one by the take-up step and one by the close step, each rebased onto the remote's head. <The main thread's tier for the writing and for the management.>`);
   L();
   L('## Verification');
   L();
