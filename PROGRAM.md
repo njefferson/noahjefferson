@@ -1503,7 +1503,9 @@ Depends: none.
 
 ### P-143. Q-HUB-91: after a resume the exit call was made without first testing the harness's plan-mode notice
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: done. Plan: The first batch of the hub's findings: nine findings in four files, taken up first, each group landed, three set done as already put right.
+
+Done: Lesson 432's gate answers it, the refusal of the approval call for a plan already approved, held by the case named step220b in the suite; step 68 of the plan after the take-up adds the start's recorded mode, so a plan mode the owner enters by hand is not read as a restart's.
 
 Acceptance: after a resume, whether plan mode is the plan's or the harness's is read from the approval marker and the plan lock before an exit call is made, and the approval is pressed once.
 
@@ -1535,7 +1537,9 @@ Depends: none.
 
 ### P-147. Q-HUB-95: the app held plan mode for a message typed two and a half hours after the last reply, and an exit taken in the app re-recorded the approval
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: done. Plan: The first batch of the hub's findings: nine findings in four files, taken up first, each group landed, three set done as already put right.
+
+Done: Step 68 of the plan that took up the remainder of the plan of 3 November makes the app's exit leave a marker whose hash already matches the plan file untouched, so a second exit in the app records no second approval; a case holds it.
 
 Acceptance: an exit taken in the app after an approval does not re-record the approval; a case.
 
@@ -2645,7 +2649,7 @@ Depends: none.
 
 ### P-286. Q-HUB-245: a case name with spaces given to the suite is cut at its first word and the whole suite starts
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The first batch of the hub's findings: nine findings in four files, taken up first, each group landed, three set done as already put right.
 
 Acceptance: the suite reads a `--case=` value holding spaces whole, or refuses it with a printed line, and a case holds each.
 
@@ -2823,7 +2827,7 @@ Depends: P-21.
 
 ### P-310. Q-HUB-269: the suite's case filter ran every case
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The first batch of the hub's findings: nine findings in four files, taken up first, each group landed, three set done as already put right.
 
 Acceptance: `--case=` with a case's name runs that case and no other, and a case holds the count run.
 
@@ -2831,7 +2835,7 @@ Depends: none.
 
 ### P-311. Q-HUB-270: the seed has no option that writes its print to a file
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: planned. Plan: The first batch of the hub's findings: nine findings in four files, taken up first, each group landed, three set done as already put right.
 
 Acceptance: `plan-seed.mjs` writes its print to a path it is given, and a case holds the file's first line equal to the printed first line.
 
@@ -2839,7 +2843,7 @@ Depends: P-309.
 
 ### P-312. Q-HUB-271: the batch print takes up findings already put right
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: planned. Plan: The first batch of the hub's findings: nine findings in four files, taken up first, each group landed, three set done as already put right.
 
 Acceptance: the batch print marks a finding whose file carries a Put right sentence and its close step sets that item done without a fix, and a case with a planted such finding.
 
@@ -2847,7 +2851,7 @@ Depends: P-309.
 
 ### P-313. Q-HUB-272: an agent cannot use the reply guard's release command
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The first batch of the hub's findings: nine findings in four files, taken up first, each group landed, three set done as already put right.
 
 Acceptance: a latched agent's release command passes its latch as the main thread's does, or the plan's Commands stop listing it for an agent, and a case holds the rerun after an edit as a new call.
 
@@ -2855,7 +2859,9 @@ Depends: none.
 
 ### P-314. Q-HUB-273: the rank mixes sizes and repositories
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: done. Plan: The first batch of the hub's findings: nine findings in four files, taken up first, each group landed, three set done as already put right.
+
+Done: The batch print answers this for the hub's findings and leaves the app items open, since each depends on its app's own session.
 
 Acceptance: the app items are taken up by each app's own session, and the rank or the print says which repository each open item waits on.
 
@@ -2863,7 +2869,7 @@ Depends: P-309.
 
 ### P-315. Q-HUB-274: a plan mode restored at a restart blocks an approved plan
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The first batch of the hub's findings: nine findings in four files, taken up first, each group landed, three set done as already put right.
 
 Acceptance: the plan guard passes the approval call for the approved plan under a restored mode, an approval of the same plan keeps the marker's time and step lists, and a case with a planted restored mode; this also answers P-304.
 
