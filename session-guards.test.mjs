@@ -7862,7 +7862,7 @@ const CASES = [
         && /readsGate` counts it as no send/.test(rule13);
       const noAmend = !/amending the Rules line/.test(rule14) && !/amend the Rules line/.test(rule14) && /answered by a new plan through plan mode with the current version pinned/.test(rule14);
       // The count in words equals the bullets, and each bullet names something the guards hold.
-      const WORDS = { Eleven: 11, Twelve: 12, Thirteen: 13, Fourteen: 14, Fifteen: 15, Sixteen: 16, Seventeen: 17, Eighteen: 18, Nineteen: 19, Twenty: 20, 'Twenty-one': 21 };
+      const WORDS = { Eleven: 11, Twelve: 12, Thirteen: 13, Fourteen: 14, Fifteen: 15, Sixteen: 16, Seventeen: 17, Eighteen: 18, Nineteen: 19, Twenty: 20, 'Twenty-one': 21, 'Twenty-four': 24 };
       const said = WORDS[/\n\s+([A-Z][a-z-]+) refusals are not ends of a route/.exec(raw14)?.[1] ?? ''];
       const items = raw14.split(/\n {4}- /).slice(1).map((x) => x.split(/\n {4}(?! )\S/)[0]);
       const source = ['hook-dispatch.mjs', 'plan-guard.mjs', 'report.mjs', 'plan-fence.mjs', 'approved-plan-guard.mjs', 'stop-guard.mjs', 'reply-guard.mjs', 'pending-guard.mjs', 'doctrine-read-guard.mjs']
@@ -7875,7 +7875,7 @@ const CASES = [
       const passes = /refused except five kinds/.test(rule14) && /the plan check \(rule 4\)/.test(rule14) && /the reply guard's release command/.test(rule14)
         && /`agentReportWrite`/.test(rule14) && source.includes('function agentReportWrite');
       const claude = flat(readFileSync(join(dir, 'CLAUDE.md'), 'utf8'));
-      const index = /Twenty-one refusals set no latch, each because something other than the owner's next message answers it/.test(claude) && /lands only when no plan is in force, as the last step of the plan that makes it/.test(claude)
+      const index = /(?:Twenty-one|Twenty-four) refusals set no latch, each because something other than the owner's next message answers it/.test(claude) && /lands only when no plan is in force, as the last step of the plan that makes it/.test(claude)
         && /plan-guard\.mjs --check <the plan's path>` prints every fault the approval call would refuse on/.test(claude) && !/amend the Rules line/.test(claude);
       const rules = flat(readFileSync(join(dir, 'agent-rules.md'), 'utf8'));
       const header = /lands only when no plan is in force, as the last step of the plan that makes it; no plan is moved to a new rules version without the button/.test(rules)
@@ -8449,7 +8449,7 @@ const CASES = [
 
   // ---- finding 7: the top tier says so before an agent is sent ----
   {
-    name: 'step58: the tier gate is gone: with an approved plan in force and the top tier serving the main thread, a send of a step with no tier line before it is not refused by the dispatcher and sets no latch, whether or not the line is written and on a lesser tier; the stop guard\'s tier line stays, and the plan\'s Cost section names the tier of each step',
+    name: 'step58, restored by the P-21 replan on the owner\'s ask of 5 November: with an approved plan in force and the top tier serving the main thread, a send is refused by the dispatcher\'s tier hold with no latch, whether or not the tier line is written, and a send on a lesser tier is not refused; the old tier gate by that name stays gone, the stop guard\'s tier line stays, and the plan\'s Cost section names the tier of each step',
     guards: ['tier_gate_gone'],
     run(m, dir) {
       const FABLE = 'claude-fable-5-1';
@@ -8464,7 +8464,8 @@ const CASES = [
       const said = send([modelReply(-10, `${WORDS}\nSending the first step now.`, FABLE)]);
       const lesser = send([modelReply(-10, 'Sending the first step now.', OPUS)]);
       const free = (x) => x.r.status === 0 && !/TIER GATE/.test(x.r.stderr) && !latched(x.s);
-      return free(silent) && free(said) && free(lesser) && m.dispatch.tierGate === undefined && typeof m.report.tierWords === 'function';
+      const held = (x) => x.r.status !== 0 && /top tier/.test(x.r.stderr) && /switch of model/.test(x.r.stderr) && !/TIER GATE/.test(x.r.stderr) && !latched(x.s);
+      return held(silent) && held(said) && free(lesser) && m.dispatch.tierGate === undefined && typeof m.report.tierWords === 'function';
     },
   },
 
@@ -8869,6 +8870,96 @@ const CASES = [
       writeFileSync(join(pad, 'status', 'config-changes.jsonl'), `${rec(60000, '/planted/newer-skill.md')}\n${rec(600000, '/planted/older-skill.md')}\n`);
       const out = spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the configuration test'], { encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: s, TMPDIR: temp } }).stdout ?? '';
       return out.includes('Configuration change: 2026-11-05 10:00 California, source skills, /planted/newer-skill.md') && !out.includes('older-skill');
+    },
+  },
+  // ---- the P-21 replan's three gates: no send on the top tier, a stop through the queue, no exit under auto mode ----
+  {
+    name: 'the dispatch gate holds every send of an agent (an Agent call, a SendMessage and the manager fence\'s own call) while the model serving the main thread is a top-tier id, naming the switch and carrying the mark that sets no latch, and sends as before under a lesser tier, with no model recorded, and where a model is named only inside a tool\'s input',
+    guards: ['tier_hold', 'tier_hold_mark'],
+    run(m, dir) {
+      const base = scopedPlan(dir);
+      const plan = { path: '/plans/gate-test.md', text: base, steps: [1, 2, 3], standing: [3] };
+      const send = { tool_name: 'Agent', tool_input: { prompt: '/plans/gate-test.md step 1' } };
+      const message = { tool_name: 'SendMessage', tool_input: { message: '/plans/gate-test.md step 1' } };
+      const top = [turn(0, 'start'), modelReply(1, 'Working.', 'claude-fable-5-1')];
+      const lesser = [turn(0, 'start'), modelReply(1, 'Working.', 'claude-sonnet-5-5')];
+      const inInput = [turn(0, 'start'), modelReply(1, 'Working.', 'claude-sonnet-5-5'),
+        { type: 'assistant', timestamp: ts(2), message: { role: 'assistant', content: [{ type: 'tool_use', id: 'x1', name: 'Agent', input: { model: 'claude-fable-5-1', prompt: 'x' } }] } }];
+      const held = m.dispatch.dispatchGate(send, plan, null, top);
+      const heldMessage = m.dispatch.dispatchGate(message, plan, null, top);
+      const heldNoPlan = m.dispatch.dispatchGate(send, null, null, top);
+      const viaFence = m.dispatch.managerFence({ session_id: 'tier', ...send }, { plan, pointer: null, entries: top });
+      const says = (r) => typeof r === 'string' && /top tier/.test(r) && /switch of model/.test(r) && /claude-fable-5-1/.test(r) && r.includes(m.dispatch.FENCE_NO_LATCH);
+      return says(held) && says(heldMessage) && says(heldNoPlan) && says(viaFence)
+        && m.dispatch.dispatchGate(send, plan, null, lesser) === null
+        && m.dispatch.dispatchGate(send, plan, null, []) === null
+        && m.dispatch.dispatchGate(send, plan, null, inInput) === null
+        && /No approved plan is in force/.test(m.dispatch.dispatchGate(send, null, null, lesser) ?? '');
+    },
+  },
+  {
+    name: 'the pending guard lets the main thread\'s TaskStop through while a message of the owner\'s sits in the queue, writes no held call for it, and holds every other main-thread call and an agent\'s TaskStop under a stop message as before',
+    guards: ['stop_pass'],
+    run(m) {
+      const queued = [turn(0, 'start'), enq(10, ASK)];
+      const stopped = [turn(0, 'start'), enq(10, STOPMSG)];
+      return m.pending.decide({ session_id: 't', tool_name: 'TaskStop', tool_input: { task_id: 'x' } }, queued) === null
+        && m.pending.decide({ session_id: 't', tool_name: 'TaskStop', tool_input: { task_id: 'x' } }, stopped) === null
+        && /pending-guard/.test(m.pending.decide({ session_id: 't', tool_name: 'Bash', tool_input: { command: 'ls' } }, queued) ?? '')
+        && /pending-guard/.test(m.pending.decide({ session_id: 't', tool_name: 'Read', tool_input: { file_path: '/x' } }, stopped) ?? '')
+        && /pending-guard/.test(m.pending.decide({ session_id: 't', agent_id: 'a1', tool_name: 'TaskStop', tool_input: { task_id: 'x' } }, stopped) ?? '');
+    },
+  },
+  {
+    name: 'the plan gate refuses the approval call while the owner\'s newest typed message is recorded under auto mode, saying the exit goes up only with the session out of auto mode and carrying the mark that sets no latch; a message recorded under plan mode or default, one that records no mode and a task notification after an auto message pass it by (it refuses for nothing about the mode), and the dispatcher reads the mark as no latch',
+    guards: ['exit_auto', 'exit_auto_mark', 'owner_mode'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      mkdirSync(join(home, '.claude', 'plans'), { recursive: true });
+      const s = sid('am');
+      const run = (entries) => spawnSync('node', [join(dir, 'plan-guard.mjs')], {
+        input: JSON.stringify({ session_id: s, transcript_path: transcript(entries), cwd: home, permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { plan: '# A planted plan of the case' } }),
+        encoding: 'utf8', env: { ...process.env, HOME: home } });
+      const mark = m.dispatch.AUTO_EXIT_NO_LATCH;
+      const under = (mode) => run([{ ...turn(0, 'Go.'), ...(mode ? { permissionMode: mode } : {}) }]);
+      const auto = under('auto');
+      const notice = { type: 'user', timestamp: ts(5), origin: { kind: 'task-notification' }, permissionMode: 'plan', message: { role: 'user', content: '<task-notification>done</task-notification>' } };
+      const afterNotice = run([{ ...turn(0, 'Go.'), permissionMode: 'auto' }, notice]);
+      const reason = (() => { try { return JSON.parse(auto.stdout).hookSpecificOutput.permissionDecisionReason; } catch { return ''; } })();
+      const marked = (r) => (r.stdout ?? '').includes(mark);
+      return auto.status === 2 && reason.includes(mark) && /out of auto mode/.test(reason) && /sets no latch/.test(reason)
+        && marked(afterNotice) && !marked(under('plan')) && !marked(under('default')) && !marked(under(null))
+        && m.dispatch.noLatchRepoRefusal('plan-guard.sh', { tool_name: 'ExitPlanMode' }, reason) === true
+        && m.dispatch.noLatchRepoRefusal('plan-guard.sh', { tool_name: 'ExitPlanMode' }, 'PLAN MODE. some other refusal of the call.') === false;
+    },
+  },
+  {
+    name: 'an end of plan mode the owner-typed message before it records under auto mode writes no approval marker, is judged once as under auto mode, says in the print and in the refusal of a write that it is not the owner\'s approval and sets no latch; the same end recorded under plan mode, or recording no mode, writes the marker as before',
+    guards: ['app_auto', 'app_auto_note', 'owner_mode'],
+    run(m, dir) {
+      const read = { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } };
+      const build = { tool_name: 'Bash', tool_input: { command: 'node tools/build.mjs' } };
+      const exitUnder = (mode) => {
+        const A = appHome(dir);
+        const u = uid();
+        const go = { ...turn(-21, 'Go.'), ...(mode ? { permissionMode: mode } : {}) };
+        const tr = transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-22, false), go, exitEntry(-19, A.plan, u)]);
+        return { A, u, tr };
+      };
+      const a = exitUnder('auto');
+      const readA = a.A.guard(a.tr, read);
+      const buildA = a.A.guard(a.tr, build);
+      const enter = a.A.guard(a.tr, { tool_name: 'EnterPlanMode', tool_input: {} }, '--app-exit');
+      const p = exitUnder('plan');
+      p.A.guard(p.tr, read);
+      const n = exitUnder(null);
+      n.A.guard(n.tr, read);
+      const said = /not the owner's approval/;
+      return readA.status === 0 && a.A.mk() === null && a.A.outcome(a.u) === 'under auto mode'
+        && buildA.status === 2 && said.test(`${buildA.stdout}${buildA.stderr}`) && /under auto mode/.test(`${buildA.stdout}${buildA.stderr}`)
+        && enter.status === 0 && said.test(enter.stderr ?? '')
+        && p.A.mk()?.appExit === p.u && p.A.outcome(p.u) === 'recorded'
+        && n.A.mk()?.appExit === n.u && n.A.outcome(n.u) === 'recorded';
     },
   },
   // ---- the cost instrument names each plan's title and program item (P-20, step 32) ----
@@ -9342,6 +9433,14 @@ const PLANTS = {
   switch_line: ["appendFileSync(join(pad, 'status', 'switches.txt'), line + '\\n');", 'void line;', 'hook-dispatch.mjs'],
   switch_top: ['const text = isTopTier(to)', 'const text = !isTopTier(to)', 'hook-dispatch.mjs'],
   switch_install: ["'Stop', 'PreModelSwitch', 'PostModelSwitch', 'ConfigChange'];", "'Stop', 'ConfigChange'];", 'hook-dispatch.mjs'],
+  tier_hold: ['if (serving && isTopTier(serving)) {', 'if (false && serving && isTopTier(serving)) {', 'hook-dispatch.mjs'],
+  tier_hold_mark: ['naming the switch of model, which the owner makes. ${FENCE_NO_LATCH} this refusal', 'naming the switch of model, which the owner makes. this refusal', 'hook-dispatch.mjs'],
+  stop_pass: ["if (!p.agent_id && String(p.tool_name ?? '') === 'TaskStop') return null;", 'if (false) return null;', 'pending-guard.mjs'],
+  exit_auto: ["tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024)) === 'auto') {", "tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024)) === 'never') {", 'plan-guard.mjs'],
+  exit_auto_mark: [" || String(reason ?? '').includes(AUTO_EXIT_NO_LATCH));", ');', 'hook-dispatch.mjs'],
+  owner_mode: ['const m = e.permissionMode ?? e.attachment?.permissionMode;', 'const m = null;', 'transcript-tail.mjs'],
+  app_auto: ["else if (x.mode === 'auto') outcome = 'under auto mode';", "else if (false) outcome = 'under auto mode';", 'approved-plan-guard.mjs'],
+  app_auto_note: ["if (r?.outcome === 'under auto mode') process.stderr.write(`${AUTO_EXIT_NOTE}\\n`);", 'void r;', 'approved-plan-guard.mjs'],
   cfg_append: ["appendFileSync(join(pad, 'status', 'config-changes.jsonl'), JSON.stringify(rec) + '\\n');", 'void rec;', 'hook-dispatch.mjs'],
   cfg_install: ["'PostModelSwitch', 'ConfigChange'];", "'PostModelSwitch'];", 'hook-dispatch.mjs'],
   cfg_status: ['    if (!(Number(r?.at) > stampAt)) continue;\n', '', 'report.mjs'],
@@ -10305,9 +10404,9 @@ const PLANTS = {
 
   // The doctrine gate's refusal, the plan gate's refusal of a name and the identifier guard's refusal of the approval call set no latch (step 199, LESSONS §424).
   latch_doctrine_free: ["      if (o.deny) return refuse(reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));", "      if (o.deny) return refuse(reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')));", 'hook-dispatch.mjs'],
-  latch_names_free: ["  return shim === 'plan-guard.sh' && (String(reason ?? '').includes(NAMES_NO_LATCH) || String(reason ?? '').includes(APPROVED_NO_LATCH));", '  return false;', 'hook-dispatch.mjs'],
+  latch_names_free: ["  return shim === 'plan-guard.sh' && (String(reason ?? '').includes(NAMES_NO_LATCH) || String(reason ?? '').includes(APPROVED_NO_LATCH) || String(reason ?? '').includes(AUTO_EXIT_NO_LATCH));", '  return false;', 'hook-dispatch.mjs'],
   latch_ident_free: ['  if (IDENT_SHIMS.has(shim)) return true;\n', '\n', 'hook-dispatch.mjs'],
-  latch_other_plan: ["  return shim === 'plan-guard.sh' && (String(reason ?? '').includes(NAMES_NO_LATCH) || String(reason ?? '').includes(APPROVED_NO_LATCH));", "  return shim === 'plan-guard.sh';", 'hook-dispatch.mjs'],
+  latch_other_plan: ["  return shim === 'plan-guard.sh' && (String(reason ?? '').includes(NAMES_NO_LATCH) || String(reason ?? '').includes(APPROVED_NO_LATCH) || String(reason ?? '').includes(AUTO_EXIT_NO_LATCH));", "  return shim === 'plan-guard.sh';", 'hook-dispatch.mjs'],
   latch_ident_exit_only: ["  if (String(p?.tool_name ?? '') !== 'ExitPlanMode') return false;\n", '\n', 'hook-dispatch.mjs'],
   latch_other_shim: ['  if (IDENT_SHIMS.has(shim)) return true;\n', '  return true;\n', 'hook-dispatch.mjs'],
 
@@ -10351,7 +10450,7 @@ const PLANTS = {
   restart_lock: ['&& !locked && !p.plan_mode_forced', '&& !p.plan_mode_forced', 'plan-guard.mjs'],
   restart_forced: ['&& !locked && !p.plan_mode_forced', '&& !locked', 'plan-guard.mjs'],
   restart_no_latch_mark: ['${APPROVED_NO_LATCH} the plan is already approved', 'the plan is already approved', 'plan-guard.mjs'],
-  restart_no_latch_dispatch: [" || String(reason ?? '').includes(APPROVED_NO_LATCH));", ');', 'hook-dispatch.mjs'],
+  restart_no_latch_dispatch: [" || String(reason ?? '').includes(APPROVED_NO_LATCH) || String(reason ?? '').includes(AUTO_EXIT_NO_LATCH));", ');', 'hook-dispatch.mjs'],
   restart_classifier_dispatch: ["JSON.stringify({ ...p, permission_mode: 'plan', plan_mode_forced: true }), encoding: 'utf8',", "JSON.stringify({ ...p, permission_mode: 'plan' }), encoding: 'utf8',", 'hook-dispatch.mjs'],
   restart_lock_dispatch: ["JSON.stringify({ ...p, permission_mode: 'plan', plan_mode_forced: true }) : raw;", "JSON.stringify({ ...p, permission_mode: 'plan' }) : raw;", 'hook-dispatch.mjs'],
   restart_apg_standdown: ["if (p.permission_mode === 'plan' && !(!p.plan_mode_forced && restartedPlanMode(p))) process.exit(0);", "if (p.permission_mode === 'plan') process.exit(0);", 'approved-plan-guard.mjs'],

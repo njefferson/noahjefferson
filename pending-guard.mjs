@@ -230,8 +230,12 @@ export function skippedMessages(entries, since = 0, prompt = '') {
  *   from `p.transcript_path` (the last 16 MB) when absent.
  * @returns {string|null} the refusal, carrying every pending message verbatim,
  *   or null to allow. hook-dispatch turns a refusal into exit 2 on stderr.
+ *   THE MAIN THREAD'S TaskStop PASSES THE HOLD: a stop of a running agent goes out whatever sits in the queue. A message of the owner's
+ *   that says stop is the reason the call is made, and the hold refused that call at 12:57 on 5 November, leaving the agent running
+ *   until the owner ended it by hand. Nothing else about the hold changes, and the call is not written to the held-work file.
  */
 export function decide(p, entries) {
+  if (!p.agent_id && String(p.tool_name ?? '') === 'TaskStop') return null;
   const list = entries ?? (p.transcript_path ? tailEntries(p.transcript_path, 16 * 1024 * 1024) : []);
   const pending = pendingMessages(list, startedAt(p));
   if (!pending.length) return null;

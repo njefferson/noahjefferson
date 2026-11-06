@@ -451,7 +451,7 @@ every rule below while none of the hooks that enforce them was running
     second route §0d names, not a fresh start. While the latch stands, the main
     thread says in plain text what was refused and stops; an agent returns what
     it has, with the refusal's text.
-    Twenty-one refusals are not ends of a route, and set no latch, because
+    Twenty-four refusals are not ends of a route, and set no latch, because
     something other than the owner's next message answers each and a latch would
     only add a wait for the owner to a miss that changed nothing. The list is read
     from the code (`main` in `hook-dispatch.mjs`), each item with the name that
@@ -525,7 +525,19 @@ every rule below while none of the hooks that enforce them was running
       file; the talk before the plan is the one refusal of that call the plan gate
       still latches (`SHAPE_NO_LATCH`, LESSONS §435);
     - the app's identifier guard's refusal of the approval call, which still
-      refuses and whose guard is untouched (`noLatchRepoRefusal`, LESSONS §424).
+      refuses and whose guard is untouched (`noLatchRepoRefusal`, LESSONS §424);
+    - the dispatch gate's refusal of a send while the model serving the main thread
+      is the top tier, answered by the owner's switch of model, which the reply says
+      in its first line and ends as a declared stop (`dispatchGate`, `servingModel`,
+      `FENCE_NO_LATCH`);
+    - the plan gate's refusal of the approval call while the owner's newest typed
+      message is recorded under auto mode, answered by the session being out of auto
+      mode and the call going up on a later message, so that the approval is the
+      owner's button (`AUTO_EXIT_NO_LATCH`, `plan-guard.mjs`);
+    - an end of plan mode made under auto mode with no exit call from the session,
+      which records no approval and is said to be no approval, answered by a new
+      plan through plan mode with the session out of auto mode
+      (`recordAppExit`, `AUTO_EXIT_NOTE`, `approved-plan-guard.mjs`).
     The latch's own refusal repeats the original and writes no new latch
     (`latchMessage`). Measured 2026-10-03: the exit from plan mode in the app ended
     plan mode before the session's `ExitPlanMode` call was answered, the call came

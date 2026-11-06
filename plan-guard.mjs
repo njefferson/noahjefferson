@@ -51,7 +51,7 @@
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve, relative, isAbsolute } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { tailEntries, isOwnerMessage, seenInResults, textOf, copiesOwner } from './transcript-tail.mjs';
+import { tailEntries, isOwnerMessage, seenInResults, textOf, copiesOwner, ownerMode } from './transcript-tail.mjs';
 import { parseRead } from './reply-guard.mjs';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -776,6 +776,25 @@ function heldNames(plan, ctx) {
 }
 
 if (tool === 'ExitPlanMode') {
+  // NO EXIT FROM PLAN MODE WHILE THE OWNER'S NEWEST MESSAGE IS RECORDED UNDER AUTO MODE (the P-21 replan, goal 6). The transcript records
+  // the mode on each message the owner typed: plan inside plan mode, the session's base mode outside it. The exits of 5 November were
+  // recorded as the owner's allow-once whether or not a button was shown, and the base mode was auto on every message since 2 November,
+  // so the record holds no mark that tells the owner's press from another answer. The owner chose the session out of auto mode, so that
+  // an approval is the button's. Only the approval call is refused (the check mode judges the plan, not the mode), and a mode that
+  // cannot be read is not auto, so nothing is refused on a doubt. The refusal sets no latch (`AUTO_EXIT_NO_LATCH`).
+  if (!CHECK && !p.plan_mode_forced && ownerMode(tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024)) === 'auto') {
+    const { AUTO_EXIT_NO_LATCH } = await import('./hook-dispatch.mjs');
+    process.stdout.write(JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason: `PLAN MODE. ${AUTO_EXIT_NO_LATCH} the owner's newest message is recorded under auto mode, so an exit from plan mode made now could be answered by the mode and not by the owner's button. `
+          + 'The exit goes up only with the session out of auto mode, so that the approval is the owner\'s press. Say so in the first line of the reply instead of making the call, and put the plan up again on a later message, with the mode read again. '
+          + 'This refusal sets no latch.',
+      },
+    }));
+    process.exit(2);
+  }
   const dir = join(homedir(), '.claude', 'plans');
   // The check mode checks the file it is given and no other: a path that is not a file is a fault of the call, never a reason to check
   // the newest plan in the plans folder, which is what the approval call does when the harness names no file.

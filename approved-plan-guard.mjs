@@ -145,7 +145,7 @@ import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { tailEntries, isOwnerMessage } from './transcript-tail.mjs';
+import { tailEntries, isOwnerMessage, ownerMode } from './transcript-tail.mjs';
 import { californiaTime, scopeHashes, scopeChanged, scopeUnrecorded, SCOPE_SECTIONS, scriptHashOf, stepsFilePath, stepsFileText, approvedStepSet, restartedPlanMode } from './report.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -155,6 +155,11 @@ const APP_EXITS = join(homedir(), '.claude', 'APPROVED-PLAN-app-exits.json');
 const RULE = 'PLAN MODE ONLY, AND TALK DURING THE WORK (Doctrine §0e): nothing runs that is not inside a plan the owner approved in plan mode; '
   + 'a request in chat gets a plan, not an action; while executing, say what each step does before it runs and what it showed after.';
 const hashOf = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
+// What is said when plan mode ended under auto mode with no exit call from the session (`recordAppExit`'s outcome 'under auto mode'). The
+// transcript records no mark that tells the owner's press from another answer, but it records the mode on the owner's typed message
+// that ended plan mode, and under auto the end is the mode's and not the button's. No marker is written, and no latch is set.
+const AUTO_EXIT_NOTE = 'An end of plan mode under auto mode is not the owner\'s approval: the owner-typed message that ended plan mode is recorded under auto, '
+  + 'so no approval marker is written from it and nothing is sent under it. The plan goes up again through plan mode with the session out of auto mode. This sets no latch.';
 
 /**
  * The marker's records of a plan file, from ONE read.
@@ -299,10 +304,11 @@ function lastExitEntry(path) {
 /**
  * The owner's own exit from plan mode in the app, when the transcript shows it.
  * @param {object[]} entries  the transcript's tail, in file order.
- * @returns {{plan: string, at: number, uuid: string, index: number} | null}
+ * @returns {{plan: string, at: number, uuid: string, index: number, mode: string|null} | null}
  *   the newest main-thread `plan_mode_exit` entry, its plan file, time and
- *   index, when plan mode began after the exit before it (an EnterPlanMode
- *   result, or a `plan_mode` entry where the owner entered it in the app) and
+ *   index, and the permission mode recorded on the owner-typed entry that ended plan mode (`mode`: the owner's newest typed message
+ *   before the exit entry, read by `ownerMode`; null where none records one), when plan mode began after the exit before it (an
+ *   EnterPlanMode result, or a `plan_mode` entry where the owner entered it in the app) and
  *   no ExitPlanMode call of the session's was approved since — which is what
  *   makes it the owner's exit rather than the tool's — and nothing entered plan
  *   mode after it. null otherwise: a tail that does not reach back to the start
@@ -327,7 +333,7 @@ function appExit(entries) {
     if (a?.type === 'plan_mode_exit') {
       const at = Date.parse(e.timestamp ?? '');
       found = inPlan && !approved && a.planExists !== false && typeof a.planFilePath === 'string' && e.uuid && Number.isFinite(at)
-        ? { plan: a.planFilePath, at, uuid: String(e.uuid), index: i } : null;
+        ? { plan: a.planFilePath, at, uuid: String(e.uuid), index: i, mode: ownerMode(entries, i) } : null;
       inPlan = false; approved = false;
     }
   });
@@ -364,7 +370,8 @@ function alreadyRecorded(plan) {
  *   newest exit entry and its outcome, judged once and kept in APP_EXITS:
  *   "recorded" (the marker was written from it, hashing the plan file now),
  *   "changed after" (the plan file was written after the exit, so no marker),
- *   "no plan file", or "not the owner's exit". A "recorded" exit has written a
+ *   "no plan file", "under auto mode" (the owner-typed entry that ended plan mode is recorded under auto, so the exit is not the owner's
+ *   press and no marker is written from it; AUTO_EXIT_NOTE says so) or "not the owner's exit". A "recorded" exit has written a
  *   marker the PreToolUse check below then honours like any other, and `--done`
  *   is not undone by it, because it is never judged twice.
  */
@@ -377,6 +384,7 @@ function recordAppExit(p) {
   const x = appExit(tailEntries(p.transcript_path, 8 * 1024 * 1024));
   let outcome;
   if (!x || x.uuid !== last.uuid) outcome = "not the owner's exit";
+  else if (x.mode === 'auto') outcome = 'under auto mode';
   else if (!isPlanFile(x.plan)) outcome = 'no plan file';
   else if (statSync(x.plan).mtimeMs > x.at) outcome = 'changed after';
   else if (alreadyRecorded(x.plan)) outcome = 'already recorded';
@@ -543,6 +551,8 @@ if (process.argv.includes('--app-exit')) {
   if (p.agent_id || tool !== 'EnterPlanMode') process.exit(0);
   let r = null;
   try { r = recordAppExit(p); } catch { r = null; }
+  // An end of plan mode under auto mode is said in the print, and nothing is refused and no latch is set.
+  if (r?.outcome === 'under auto mode') process.stderr.write(`${AUTO_EXIT_NOTE}\n`);
   if (r?.outcome !== 'recorded') process.exit(0);
   let mk = {};
   try { mk = JSON.parse(readFileSync(MARKER, 'utf8')); } catch { process.exit(0); }
@@ -777,7 +787,8 @@ if (input.includes('APPROVED-PLAN')) {
 
 // Said when the newest exit from plan mode was the owner's and recorded nothing.
 const appNote = app?.outcome === 'changed after' ? ` The owner left plan mode in the app${app.at ? ` at ${californiaTime(new Date(app.at))} (California)` : ''}, but ${app.plan ?? 'the plan file'} was written after that, so it is not the plan approved.`
-  : app?.outcome === 'no plan file' ? ' The owner left plan mode in the app, and the plan file that exit names is gone.' : '';
+  : app?.outcome === 'no plan file' ? ' The owner left plan mode in the app, and the plan file that exit names is gone.'
+  : app?.outcome === 'under auto mode' ? ` ${AUTO_EXIT_NOTE}` : '';
 if (!existsSync(MARKER)) deny(`No approved plan is in force, and this is not a recognised read: ${why}${appNote}`);
 let mk = {};
 try { mk = JSON.parse(readFileSync(MARKER, 'utf8')); } catch { deny('The approval marker is unreadable.'); }

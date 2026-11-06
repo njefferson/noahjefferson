@@ -109,6 +109,27 @@ export function isOwnerMessage(e) {
 }
 
 /**
+ * The permission mode recorded on the owner's newest typed message.
+ * @param {object[]} entries  from `tailEntries`, in file order.
+ * @param {number} [before]  only entries at an index below this are looked at (the whole tail when omitted), so a caller can ask for the
+ *   message that came before an entry it already holds.
+ * @returns {string|null} the `permissionMode` field of the newest entry `isOwnerMessage` accepts (a user entry carries it at the top
+ *   level, a delivered queued prompt may carry it on its attachment), such as `plan` inside plan mode and `auto`, `default` or
+ *   `acceptEdits` outside it; null when no owner message is in range or the entry records no mode, which a caller reads as "not known",
+ *   never as a mode. Sidechain and agent entries are not the owner's and are skipped.
+ */
+export function ownerMode(entries, before = Infinity) {
+  const end = Math.min(before, entries?.length ?? 0);
+  for (let i = end - 1; i >= 0; i--) {
+    const e = entries[i];
+    if (e?.isSidechain || e?.agentId || !isOwnerMessage(e)) continue;
+    const m = e.permissionMode ?? e.attachment?.permissionMode;
+    return typeof m === 'string' && m ? m : null;
+  }
+  return null;
+}
+
+/**
  * The owner's most recent message in the tail.
  * @param {object[]} entries  from `tailEntries`.
  * @returns {{text: string, at: number} | null} its text and time in ms, or

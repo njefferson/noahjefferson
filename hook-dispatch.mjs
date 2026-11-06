@@ -93,6 +93,8 @@
  * that call for a plan already approved, when the harness's plan mode began at a compaction or a
  * resume after the approval (`APPROVED_NO_LATCH`, LESSONS §432), its refusal of that call for a
  * fault of the plan's shape, a section missing, short or wrongly shaped (`SHAPE_NO_LATCH`, LESSONS §435),
+ * its refusal of that call while the owner's newest typed message is recorded under auto mode (`AUTO_EXIT_NO_LATCH`), the dispatch
+ * gate's hold of a send while the top tier serves (`dispatchGate`, `FENCE_NO_LATCH`),
  * the reply guard's refusal of a Read of a file of the record (`replyReadOfRecord`, LESSONS §435: the reads
  * gate already holds every send until that file is read) and the
  * app's identifier guard's refusal of that call (`noLatchRepoRefusal`, LESSONS §424), and the manager
@@ -153,7 +155,7 @@ import { recallParts } from './compact-recall.mjs';
 import { tailEntries, isOwnerMessage, textOf } from './transcript-tail.mjs';
 import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
   planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, stepEnds, stepBody, markCompacted, sessionFiles,
-  planAfter, SCOPE_SECTIONS, restartedPlanMode, writeStartMode, isTopTier, tierWords } from './report.mjs';
+  planAfter, SCOPE_SECTIONS, restartedPlanMode, writeStartMode, isTopTier, tierWords, servingModel } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
 import { HARNESS_TAG } from './pending-guard.mjs';
@@ -864,6 +866,12 @@ export const NAMES_NO_LATCH = 'NAME CHECK, NO LATCH:';
  */
 export const APPROVED_NO_LATCH = 'PLAN ALREADY APPROVED, NO LATCH:';
 /**
+ * The words plan-guard.mjs's refusal of the approval call opens with while the owner's newest typed message is recorded under auto mode.
+ * `noLatchRepoRefusal` reads them as "this refusal sets no latch": the remedy is the owner's, a session out of auto mode, and a latch would
+ * only hold the reads and the talk that wait on it. The exit goes up again on a later message with the mode read again.
+ */
+export const AUTO_EXIT_NO_LATCH = 'AUTO MODE EXIT, NO LATCH:';
+/**
  * The words plan-guard.mjs's refusal of the approval call opens with when the fault is one of the plan's SHAPE: a section missing, short or
  * wrongly shaped, or a line not of its form (`denyShape` in plan-guard.mjs, LESSONS §435). `noLatchRepoRefusal` reads them as "this refusal
  * sets no latch": a write of the plan file answers it, and a latch only stops the reads and writes that do.
@@ -898,7 +906,7 @@ export function noLatchRepoRefusal(shim, p, reason) {
   if (String(p?.tool_name ?? '') !== 'ExitPlanMode') return false;
   if (IDENT_SHIMS.has(shim)) return true;
   if (shim === 'plan-guard.sh' && String(reason ?? '').includes(SHAPE_NO_LATCH)) return true;
-  return shim === 'plan-guard.sh' && (String(reason ?? '').includes(NAMES_NO_LATCH) || String(reason ?? '').includes(APPROVED_NO_LATCH));
+  return shim === 'plan-guard.sh' && (String(reason ?? '').includes(NAMES_NO_LATCH) || String(reason ?? '').includes(APPROVED_NO_LATCH) || String(reason ?? '').includes(AUTO_EXIT_NO_LATCH));
 }
 
 /**
@@ -1253,11 +1261,22 @@ export function stopMessage(s) {
  * @param {object|null|undefined} [pointer]  report.mjs `pointerOf`'s answer, passed
  *   by the test; read from the session's agents (`pointerFor`) when undefined,
  *   and null means no pointer to enforce.
+ *   THE TIER HOLD: no agent is sent while the model serving the main thread is a top-tier id (`isTopTier` of `servingModel`, read from
+ *   the transcript the payload names, or from `entries` where the test gives them). The refusal names the switch, which the owner
+ *   makes, and carries `FENCE_NO_LATCH`: the remedy is the owner's switch, and a latch would only stop the main thread's other calls.
+ *   A model that cannot be read is not a top tier, so nothing is held on a doubt.
+ * @param {object[]|undefined} [entries]  the main transcript's entries, for the test; read from the payload's transcript when undefined.
  */
-export function dispatchGate(p, plan = approvedPlan(), pointer = undefined) {
+export function dispatchGate(p, plan = approvedPlan(), pointer = undefined, entries = undefined) {
   const input = p.tool_input ?? {};
   const head = 'DISPATCH GATE (Doctrine §0e): an agent\'s prompt is only the approved plan\'s path and a step number, so everything an agent is told is in the plan the owner read.';
   const refusal = (t) => `${t}\n${approvalBlock()}`;
+  // NO SEND ON THE TOP TIER (P-21 plan, goal 2): the manager's turns need no more than a lesser tier, and a session cannot change its own model.
+  let serving = null;
+  try { serving = servingModel(entries ?? (p.transcript_path ? tailEntries(String(p.transcript_path), 16 * 1024 * 1024) : [])); } catch { serving = null; }
+  if (serving && isTopTier(serving)) {
+    return refusal(`${head} The model serving the main thread is ${serving}, the top tier, and the manager's turns need no more than a lesser one, so no agent is sent while it serves. Say so in the first line of the reply and end the turn as a declared stop naming the switch of model, which the owner makes. ${FENCE_NO_LATCH} this refusal sets no latch, so the next call is judged on its own.`);
+  }
   const type = p.tool_name === 'SendMessage' ? '' : String(input.subagent_type ?? '');
   if (type && !BUILTIN_AGENT_TYPES.has(type)) {
     return refusal(`${head} "${type}" is a custom agent type, and a custom type carries instructions of its own. Send one of: ${[...BUILTIN_AGENT_TYPES].join(', ')}.`);
@@ -3059,7 +3078,7 @@ export function managerFence(p, opts = {}) {
   const tool = String(p.tool_name ?? '');
   const input = p.tool_input ?? {};
   const head = `MANAGER FENCE (Doctrine §0e): the main thread plans, sends agents, checks their results and reports; it does no work itself. ${tool} is not one of those.`;
-  if (tool === 'Agent' || tool === 'Task' || tool === 'SendMessage') return dispatchGate(p, 'plan' in opts ? opts.plan : approvedPlan(), 'pointer' in opts ? opts.pointer : undefined);
+  if (tool === 'Agent' || tool === 'Task' || tool === 'SendMessage') return dispatchGate(p, 'plan' in opts ? opts.plan : approvedPlan(), 'pointer' in opts ? opts.pointer : undefined, opts.entries);
   if (tool === 'Workflow') return workflowGate(p, 'plan' in opts ? opts.plan : approvedPlan(), opts);
   if (tool === 'TaskStop' || tool === 'ExitPlanMode' || tool === 'EnterPlanMode') return null;
   // The main thread may not end its turn while an agent runs, and none of its
@@ -3532,9 +3551,10 @@ async function main(event, raw, p) {
   // the plan fence's first refusal of an agent that has not read the rules and its first refusal for the shape of a shell
   // line (`shapeFaultFirst`); the approval guard's refusal of a write of a finished plan's file; the dispatch gate's refusal
   // with no approved plan; the plan guard's refusal of a Bash line that is not a read (`READ_SHAPE_NO_LATCH`);
-  // and the in-app approval check's, and the restored plan mode gate's (LESSONS §460). The status, judgement and tier gates are gone
-  // (step 58). Doctrine §0e rule 14 lists them all, twenty-one, and a case holds
-  // its count to the list. A Stop event and the other events never latch.
+  // and the in-app approval check's, and the restored plan mode gate's (LESSONS §460), and the dispatch gate's hold of a send while the
+  // top tier serves, the plan gate's refusal of the approval call while the owner's newest message is recorded under auto mode, and the
+  // approval guard's end of plan mode under auto, which records no approval. The status and judgement gates are gone (step 58). Doctrine
+  // §0e rule 14 lists them all, twenty-four, and a case holds its count to the list. A Stop event and the other events never latch.
   const refuse = (why, latch = true) => {
     process.stderr.write(why + '\n');
     // A refused Read of a file of the record is recorded, so it is read again before a step goes (`readsGate`).
