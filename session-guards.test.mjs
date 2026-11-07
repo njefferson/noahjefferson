@@ -8627,6 +8627,29 @@ const CASES = [
     },
   },
 
+  // ---- Q-HUB-245 and Q-HUB-269: the case filter takes several names in one run, with no space in the value ----
+  {
+    name: 'Q-HUB-245/269: --case= takes a comma-separated list of substrings, a case runs when any one is in its name, a single substring matches as before, and the head line names each substring with its count',
+    guards: ['case_split', 'case_count'],
+    run(m, dir) {
+      const head = (arg) => spawnSync('node', [join(dir, 'session-guards.test.mjs'), `--case=${arg}`, '--count'], { encoding: 'utf8', timeout: 120000 }).stdout ?? '';
+      const parse = (out) => {
+        const mm = /CASE FILTER: (\d+) substrings?: (.*); (\d+) of (\d+) cases selected\./.exec(out);
+        return mm ? { n: Number(mm[1]), each: [...mm[2].matchAll(/"([^"]*)" matched (\d+)/g)].map((x) => [x[1], Number(x[2])]), total: Number(mm[3]), all: Number(mm[4]) } : null;
+      };
+      const a = parse(head('Q-HUB-245/269:'));
+      const b = parse(head('finding 16:'));
+      const both = parse(head('Q-HUB-245/269:,finding 16:'));
+      const none = parse(head('no-such-case-a,no-such-case-b'));
+      if (!a || !b || !both || !none) return false;
+      return a.n === 1 && a.each[0][1] === 1 && a.total === 1
+        && b.n === 1 && b.each[0][1] >= 1 && b.total === b.each[0][1]
+        && both.n === 2 && both.each.length === 2 && both.each[0][1] === a.each[0][1] && both.each[1][1] === b.each[0][1]
+        && both.total === a.total + b.total && both.total < both.all
+        && none.n === 2 && none.each.every((x) => x[1] === 0) && none.total === 0;
+    },
+  },
+
   // ---- step 58: the three loosenings (Q-HUB-122, Q-HUB-123, Q-HUB-124) and the check of a call outside a plan ----
   {
     name: 'step58: the dispatch gate\'s refusal with no approved plan in force names EnterPlanMode and sets no latch, so the next call is judged on its own; with a plan in force the dispatch refusals that latched still latch',
@@ -10685,6 +10708,8 @@ const PLANTS = {
   eject_hint: ['${ejectedNow.size ? ` Step${', '${false ? ` Step${', 'stop-guard.mjs'],
   // Finding 16: a run of the cases says the plants were not run; a run of plants gives its count beside the total.
   run_plants_not_run: ['  // suite for nine hours, and the plants are the other half of it.\n  console.log(`PLANTS NOT RUN:', '  // suite for nine hours, and the plants are the other half of it.\n  console.log(`PLANTS:', 'session-guards.test.mjs'],
+  case_split: ["  const words = v === undefined ? [] : v.split(',').map((s) => s.trim()).filter(Boolean);\n", "  const words = v === undefined ? [] : [v];\n", 'session-guards.test.mjs'],
+  case_count: ["const counts = words.map((w) => CASES.filter((c) => c.name.includes(w)).length);\n", "const counts = words.map(() => 0);\n", 'session-guards.test.mjs'],
   run_plants_counted: ['  }\n  console.log(`PLANTS RUN: ${todo.length} of', '  }\n  console.log(`PLANTS: ${todo.length} of', 'session-guards.test.mjs'],
   // Step 56, conversation is the default (Design part 5): the state a call is made in (`planPhase`), what each state skips in the
   // dispatcher's main sequence, what the stop hold and the correction hold pass, and the refusals of a reply's prose that run under a plan only.
@@ -10788,7 +10813,7 @@ async function runAll(dir, only, filter) {
   const results = [];
   for (const c of CASES) {
     if (only && !(c.guards ?? []).includes(only)) continue;
-    if (filter && !c.name.includes(filter)) continue;
+    if (filter && !filter.some((w) => c.name.includes(w))) continue;
     let ok = false, err;
     try { ok = await c.run(m, dir); } catch (e) { ok = false; err = e?.message; }
     // EVERY CASE IS HELD TO THE PLANTED LIVE SESSION: a case that changed its page or its notes reached a
@@ -10806,6 +10831,30 @@ async function runAll(dir, only, filter) {
 // gates a commit touches), and with --dry it lists the plants it would run and runs none. A narrowed run is a quick look at what
 // an edit can have broken: a case exercises more than one file, so the full run stays the gate.
 const argValue = (name) => process.argv.find((x) => x.startsWith(`--${name}=`))?.slice(name.length + 3);
+// --case= takes a comma-separated list of substrings with no space in the value (a space is cut by the shell at its first word,
+// Q-HUB-245, Q-HUB-269); a case runs when any one of them is in its name. An empty value is no filter.
+const caseWords = (v) => {
+  const words = v === undefined ? [] : v.split(',').map((s) => s.trim()).filter(Boolean);
+  return words.length ? words : null;
+};
+/**
+ * The line a filtered run opens with, so a filter that matched the whole suite says so.
+ * @param {string[]} words the substrings given to --case=
+ * @returns {string} the substrings with how many cases each matched, and how many cases the list selects in all
+ */
+function caseFilterHead(words) {
+  const counts = words.map((w) => CASES.filter((c) => c.name.includes(w)).length);
+  const total = CASES.filter((c) => words.some((w) => c.name.includes(w))).length;
+  return `CASE FILTER: ${words.length} substring${words.length === 1 ? '' : 's'}: ${words.map((w, i) => `"${w}" matched ${counts[i]}`).join(', ')}; ${total} of ${CASES.length} cases selected.${total === CASES.length ? ' THE FILTER MATCHED EVERY CASE: this is the whole suite.' : ''}`;
+}
+const caseList = caseWords(argValue('case'));
+if (caseList) console.log(caseFilterHead(caseList));
+// --count prints that head line and runs nothing, so a filter is read before it is used.
+if (process.argv.includes('--count')) {
+  if (!caseList) console.log('CASE FILTER: none given, so every case would run.');
+  rmSync(STATE, { recursive: true, force: true });
+  process.exit(0);
+}
 /**
  * The guard files this checkout has changed.
  * @returns {string[]|null} the top-level file names `git status` shows modified, added or untracked in
@@ -10845,7 +10894,7 @@ if (process.argv.includes('--plants')) {
     const dir = mkdtempSync(join(tmpdir(), 'sg-plant-'));
     for (const f of FILES) copyGuard(join(HERE, f), join(dir, f));
     writeFileSync(join(dir, file), src.replace(from, to));
-    const r = await runAll(dir, key, argValue('case'));
+    const r = await runAll(dir, key, caseList);
     const caught = r.length > 0 && r.some((x) => !x.ok);
     if (!r.length) console.log(`PLANT ${key}: no case names it in its guards`);
     console.log(`${caught ? 'CAUGHT' : 'MISSED'}  plant "${key}" in ${file}${caught ? '' : ' — its cases still passed'}`);
@@ -10857,7 +10906,7 @@ if (process.argv.includes('--plants')) {
   rmSync(STATE, { recursive: true, force: true });
   process.exit(bad ? 1 : 0);
 } else {
-  const r = await runAll(HERE, undefined, argValue('case'));
+  const r = await runAll(HERE, undefined, caseList);
   for (const x of r) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.name}${x.err ? ` (${x.err})` : ''}`);
   const failedN = r.filter((x) => !x.ok).length;
   console.log(`${r.length - failedN}/${r.length} passed`);
