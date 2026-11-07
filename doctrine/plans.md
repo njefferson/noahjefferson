@@ -500,11 +500,10 @@ every rule below while none of the hooks that enforce them was running
       harness's plan mode began at a resume or a compaction after the approval
       and nothing has said so, answered by saying so in a reply
       (`restartPublishGate`, LESSONS §460);
-    - entering plan mode again once the owner has approved a plan by leaving plan
-      mode in the app, because that approval is carried on with, never asked for
-      twice; it lifts once an agent is sent under the plan or the owner writes
-      again, so a later amendment stays possible (`--app-exit` of
-      `approved-plan-guard.mjs`);
+    - an end of plan mode that the session's own exit call did not make, under any
+      mode, which writes no approval marker and says so in the print, because the
+      approval is the exit call's and not the app's (`--app-exit` and
+      `recordAppExit` of `approved-plan-guard.mjs`);
     - an agent's first call, refused by the plan fence because the agent has not
       yet read the rules (`FIRST_REFUSAL` in `plan-fence.mjs`, whose text opens
       `RULES FIRST, NO LATCH:`, rule 13, LESSONS §415);
@@ -519,7 +518,9 @@ every rule below while none of the hooks that enforce them was running
       (`NAMES_NO_LATCH`, LESSONS §424);
     - the plan gate's refusal of the approval call for a plan already approved,
       when the harness's plan mode began at a compaction or a resume after the
-      approval (`APPROVED_NO_LATCH`, LESSONS §432);
+      approval (`APPROVED_NO_LATCH`, LESSONS §432), unless the owner's newest typed
+      message ends with a go-word and came after the harness's plan mode began, when
+      the call passes on the owner's go (`endsWithGoWord`, `plan-guard.mjs`);
     - the plan gate's refusal of the approval call for a fault of the plan's shape,
       a section missing, short or wrongly shaped, answered by a write of the plan
       file; the talk before the plan is the one refusal of that call the plan gate

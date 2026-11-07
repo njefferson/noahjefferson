@@ -106,7 +106,30 @@ if (!CHECK && p.permission_mode === 'plan' && !locked && !p.plan_mode_forced && 
   const approved = restartedPlanMode(p);
   if (approved) {
     if (tool !== 'ExitPlanMode') process.exit(0);
-    const { APPROVED_NO_LATCH } = await import('./hook-dispatch.mjs');
+    const { APPROVED_NO_LATCH, endsWithGoWord } = await import('./hook-dispatch.mjs');
+    // THE EXIT GOES UP ON THE OWNER'S GO. The harness's plan mode comes back at every restart and the owner never ends it from the
+    // app, so the call is the only way out. It passes when the newest owner-typed entry of the main transcript ends with a go-word and
+    // came after the entry that began the harness's plan mode (file order, so a clock cannot reorder them). The plan passed the shape and
+    // talk checks at its approval and is unchanged, so they are not run again for this pass.
+    const tail = tailEntries(p.transcript_path ?? '');
+    const isMain = (e) => !e?.isSidechain && !e?.agentId;
+    let modeAt = -1;
+    tail.forEach((e, i) => {
+      if (!isMain(e) || e?.type !== 'attachment') return;
+      if (e.attachment?.type === 'plan_mode' && !e.attachment.isSubAgent) { if (modeAt < 0) modeAt = i; }
+      else if (e.attachment?.type === 'plan_mode_exit') modeAt = -1;
+    });
+    let ownerAt = -1;
+    for (let i = tail.length - 1; i >= 0; i--) if (isMain(tail[i]) && isOwnerMessage(tail[i])) { ownerAt = i; break; }
+    if (modeAt >= 0 && ownerAt > modeAt && endsWithGoWord(textOf(tail[ownerAt]))) {
+      process.stdout.write(JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
+          additionalContext: `The exit goes up on the owner's go: the plan ${approved} is approved and unchanged, the harness's plan mode began at a restart, and the owner's newest message ends with a go-word, so the button is the owner's.`,
+        },
+      }));
+      process.exit(0);
+    }
     process.stdout.write(JSON.stringify({
       hookSpecificOutput: {
         hookEventName: 'PreToolUse',

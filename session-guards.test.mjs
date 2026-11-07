@@ -3224,7 +3224,7 @@ const CASES = [
 
   // ---- an approval pressed in the app (approved-plan-guard.mjs, hook-dispatch.mjs) ----
   {
-    name: 'the owner\'s exit from plan mode in the app records the approval from its entry, once; a tool-approved exit, an exit with no plan mode before it, or a plan written after the exit records none',
+    name: 'the owner\'s exit from plan mode in the app records no approval (changed by the plan of 6 November: the approval is the exit call\'s), is judged once as no exit call; a tool-approved exit, an exit with no plan mode before it, or a plan written after the exit is judged as before',
     guards: ['app_mint', 'app_tool_approved', 'app_in_plan', 'app_changed_after', 'app_judged_once', 'app_exits_protect'],
     run(m, dir) {
       const read = { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } };
@@ -3236,7 +3236,8 @@ const CASES = [
       const trA = transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, A.plan, ua)]);
       const readA = A.guard(trA, read);
       const mkA = A.mk();
-      const minted = readA.status === 0 && mkA?.appExit === ua && mkA.plan === A.plan && mkA.hash === sha(STEPS_PLAN) && A.outcome(ua) === 'recorded';
+      // Changed by the plan of 6 November: the owner's exit in the app writes no marker, under any mode; it is judged once as no exit call.
+      const minted = readA.status === 0 && mkA === null && A.outcome(ua) === 'no exit call';
       const buildA = A.guard(trA, build);
       // --done ends the approved work, and the same exit does not record it again.
       const done = spawnSync('node', [join(dir, 'approved-plan-guard.mjs'), '--done'], { encoding: 'utf8', env: { ...process.env, HOME: A.home } });
@@ -3247,7 +3248,10 @@ const CASES = [
       const ub = uid();
       const trB = transcript([turn(0, 'start'), planOn(-60, B.plan), ...exitPlan(-20, false), exitEntry(-19, B.plan, ub)]);
       B.guard(trB, read);
-      const mintedB = B.mk()?.appExit === ub;
+      // Judged once: the plan file written after that first judgement does not turn the kept outcome into "changed after".
+      writeFileSync(B.plan, `${STEPS_PLAN}\nEdited after the first judgement.\n`);
+      B.guard(trB, read);
+      const mintedB = B.mk() === null && B.outcome(ub) === 'no exit call';
       // The tool's own approval: --mark records that one, and its exit entry records nothing.
       const C = appHome(dir);
       const uc = uid();
@@ -3266,7 +3270,7 @@ const CASES = [
       const buildE = E.guard(trE, build);
       // The record of judged exits is the owner's, like the marker.
       const writeJudged = B.guard(trB, { tool_name: 'Write', tool_input: { file_path: B.judged, content: '{"judged":{}}' } });
-      return minted && buildA.status === 0
+      return minted && buildA.status === 2
         && done.status === 0 && readA2.status === 0 && !existsSync(A.marker) && buildA2.status === 2
         && mintedB
         && !existsSync(C.marker) && C.outcome(uc) === "not the owner's exit"
@@ -3276,29 +3280,25 @@ const CASES = [
     },
   },
   {
-    name: 'p17 app exit twice: a second exit from plan mode in the app, for a plan file the marker already records by its hash, records no second approval and leaves the marker byte for byte as it was; an exit for a plan file that changed is recorded',
+    name: 'p17 app exit twice (changed by the plan of 6 November): an exit from plan mode in the app, for a plan file a marker already records by its hash, records no second approval and leaves the marker byte for byte as it was; an exit for a plan file that changed writes no marker either and is judged as no exit call',
     guards: ['app_exit_already'],
     run(m, dir) {
       const read = { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } };
       const A = appHome(dir);
-      const u1 = uid();
-      const tr1 = transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, A.plan, u1)]);
-      A.guard(tr1, read);
+      writeFileSync(A.marker, JSON.stringify({ plan: A.plan, hash: createHash('sha256').update(readFileSync(A.plan)).digest('hex'), at: new Date().toISOString() }));
       const first = readFileSync(A.marker, 'utf8');
       const u2 = uid();
       const tr2 = transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, A.plan, u2)]);
       A.guard(tr2, read);
-      const untouched = existsSync(A.marker) && readFileSync(A.marker, 'utf8') === first && A.outcome(u2) === 'already recorded' && A.mk()?.appExit === u1;
-      // A plan file changed before its exit is a different approval: it is recorded.
+      const untouched = existsSync(A.marker) && readFileSync(A.marker, 'utf8') === first && A.outcome(u2) === 'already recorded';
+      // A plan file changed before its exit is a different plan: no marker is written from it.
       const B = appHome(dir);
-      const ub1 = uid();
-      B.guard(transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, B.plan, ub1)]), read);
-      writeFileSync(B.plan, `${STEPS_PLAN}\nAmended before the second exit.\n`);
+      writeFileSync(B.plan, `${STEPS_PLAN}\nAmended before the exit.\n`);
       const ub2 = uid();
       const old = (Date.now() - 3600000) / 1000;
       utimesSync(B.plan, old, old);
       B.guard(transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, B.plan, ub2)]), read);
-      return untouched && B.outcome(ub2) === 'recorded' && B.mk()?.appExit === ub2;
+      return untouched && B.outcome(ub2) === 'no exit call' && B.mk() === null;
     },
   },
   {
@@ -3348,8 +3348,8 @@ const CASES = [
     },
   },
   {
-    name: 'after an approval pressed in the app the main thread does not enter plan mode again, and the refusal does not latch; once the owner writes again or an agent is sent, it may',
-    guards: ['app_reentry', 'app_reentry_no_latch', 'app_release_owner', 'app_release_agent'],
+    name: 'after the owner leaves plan mode in the app the main thread may enter plan mode again (changed by the plan of 6 November: that end records no approval and nothing is carried on with); the print says the end was not the owner\'s approval, sets no latch and writes no marker, whatever has happened since',
+    guards: ['app_no_call_note'],
     run(m, dir) {
       const setUp = (after) => {
         const w = world(dir);
@@ -3368,6 +3368,14 @@ const CASES = [
       const again = enter(w1, s1);
       const mk1 = (() => { try { return JSON.parse(readFileSync(join(w1.home, '.claude', 'APPROVED-PLAN.json'), 'utf8')); } catch { return null; } })();
       const readAfter = w1.call('PreToolUse', { session_id: s1, tool_name: 'Read', tool_input: { file_path: w1.plan } });
+      // The print of the judgement, read from the guard itself: the dispatcher passes an exit 0 without its stderr.
+      const printed = spawnSync('node', [join(dir, 'approved-plan-guard.mjs'), '--app-exit'], {
+        input: JSON.stringify({ session_id: s1, transcript_path: w1.tr, cwd: w1.home, hook_event_name: 'PreToolUse', permission_mode: 'default', tool_name: 'EnterPlanMode', tool_input: {} }),
+        encoding: 'utf8', env: { ...process.env, HOME: w1.home } });
+      // Changed by the plan of 6 November: the app's exit records no approval, so there is nothing to carry on with, entering plan mode
+      // again is not refused, and the print says the end of plan mode was not the owner's approval.
+      const outcome1 = (() => { try { return JSON.parse(readFileSync(join(w1.home, '.claude', 'APPROVED-PLAN-app-exits.json'), 'utf8')).judged?.[w1.u]; } catch { return null; } })();
+      void readAfter;
       // The owner wrote again after the exit (a go-word: any other message is a
       // correction, and a correction refuses every main-thread call).
       const w2 = setUp(() => [owner(later(-5), 'ok')]);
@@ -3375,8 +3383,8 @@ const CASES = [
       // An agent was sent under the plan.
       const w3 = setUp((w) => [at(tool(0, 'ag', 'Agent', { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' }), later(-5))]);
       const sent = enter(w3, sid('ax'));
-      return again.status === 2 && /APPROVED IN THE APP/.test(again.stderr) && !latched(s1)
-        && mk1?.appExit === w1.u && readAfter.status === 0
+      return again.status === 0 && printed.status === 0 && /not the owner's approval/.test(printed.stderr) && !latched(s1)
+        && mk1 === null && outcome1 === 'no exit call'
         && wrote.status === 0 && sent.status === 0;
     },
   },
@@ -3457,7 +3465,7 @@ const CASES = [
 
   // ---- the dispatcher judges the owner's exit first (hook-dispatch.mjs, approved-plan-guard.mjs) ----
   {
-    name: 'an agent sent as the first call after the owner\'s exit from plan mode in the app passes the dispatch gate: the dispatcher judges the exit and records the marker before any gate reads it',
+    name: 'an agent sent as the first call after the owner\'s exit from plan mode in the app is refused by the dispatch gate (changed by the plan of 6 November): the dispatcher judges the exit first, as no exit call, and writes no marker',
     guards: ['dispatch_judge_exit'],
     run(m, dir) {
       const w = world(dir);
@@ -3476,7 +3484,10 @@ const CASES = [
       const u2 = uid();
       writeFileSync(x.tr, jsonl([turn(0, GO), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, x.plan, u2)]));
       const stale = x.call('PreToolUse', { session_id: sid('je'), tool_name: 'Agent', tool_input: { prompt: `${x.plan} step 1`, subagent_type: 'general-purpose' } });
-      return send.status === 0 && mk?.appExit === u && mk.plan === w.plan
+      // Changed by the plan of 6 November: the dispatcher still judges the exit first, and the judgement is that the app's exit is no
+      // approval, so no marker is written and the send is refused for it.
+      const judged = (() => { try { return JSON.parse(readFileSync(join(w.home, '.claude', 'APPROVED-PLAN-app-exits.json'), 'utf8')).judged?.[u]; } catch { return null; } })();
+      return send.status === 2 && mk === null && judged === 'no exit call'
         && stale.status === 2 && /DISPATCH GATE[\s\S]*No approved plan/.test(stale.stderr) && /Marker: none/.test(stale.stderr);
     },
   },
@@ -4157,7 +4168,7 @@ const CASES = [
   // ---- the step numbers the plan held at approval (approved-plan-guard.mjs, hook-dispatch.mjs; Doctrine §0e rules 2 and 13) ----
   {
     name: 'at approval the marker records the step numbers of the plan\'s Steps and those on its Standing line, by the tool\'s approval and by the owner\'s exit in the app; an amendment of a step\'s text, of the Order, and one that adds a step and puts it on the Standing line all keep the approval, move the hash, and leave the recorded numbers as they were',
-    guards: ['approved_step_set', 'approval_steps_snapshot', 'approval_steps_mark', 'approval_steps_exit', 'approval_steps_amend_keep'],
+    guards: ['approved_step_set', 'approval_steps_snapshot', 'approval_steps_mark', 'approval_steps_amend_keep'],
     run(m, dir) {
       const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
       const text = scopedPlan(dir);
@@ -4195,7 +4206,7 @@ const CASES = [
       const after = A.mk();
       return eq(seen.steps, [1, 2, 3]) && eq(seen.standing, [3])
         && eq(mkA?.steps, seen.steps) && eq(mkA?.standing, seen.standing)
-        && mkB?.appExit === ub && eq(mkB?.steps, seen.steps) && eq(mkB?.standing, seen.standing)
+        && mkB === null // changed by the plan of 6 November: the owner's exit in the app records no marker now
         && eq(pre, [0, 0, 0, 0]) && cur !== text && after?.hash === sha256(cur) && after?.amendments === 4
         && eq(after?.steps, seen.steps) && eq(after?.standing, seen.standing);
     },
@@ -4316,7 +4327,7 @@ const CASES = [
   // ---- the review step the approval recorded (approved-plan-guard.mjs, hook-dispatch.mjs, stop-guard.mjs; Doctrine §0e rules 2 and 13) ----
   {
     name: 'at approval the marker records the plan\'s review steps, those Standing steps whose text names the review file by its full path, by the tool\'s approval and by the owner\'s exit in the app, and a plan with no such step records an empty list; an amendment that edits the review step\'s text until it names no review file is let through, moves the hash, and leaves the record as approved while the plan\'s own reading of its review steps is empty',
-    guards: ['approved_step_review', 'approval_steps_snapshot', 'approval_review_mark', 'approval_review_exit', 'approval_review_amend_keep'],
+    guards: ['approved_step_review', 'approval_steps_snapshot', 'approval_review_mark', 'approval_review_amend_keep'],
     run(m, dir) {
       const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
       const text = scopedPlan(dir);
@@ -4351,7 +4362,7 @@ const CASES = [
       A.guard(trA, { tool_name: 'Edit', tool_input: { file_path: A.plan, ...drop }, hook_event_name: 'PostToolUse' }, '--amend');
       const after = A.mk();
       return eq(seen.review, [3]) && eq(timer.review, []) && edited !== text && eq(m.report.approvedStepSet(edited).review, [])
-        && eq(mkA?.review, [3]) && mkB?.appExit === ub && eq(mkB?.review, [3]) && eq(mkC?.review, [])
+        && eq(mkA?.review, [3]) && mkB === null /* changed by the plan of 6 November: the app's exit records no marker */ && eq(mkC?.review, [])
         && pre === 0 && after?.hash === sha256(edited) && after?.amendments === 1 && eq(after?.review, [3]) && eq(after?.steps, seen.steps) && eq(after?.standing, seen.standing);
     },
   },
@@ -4827,7 +4838,7 @@ const CASES = [
   },
   {
     name: 'the main thread may amend the approved plan\'s Steps or Order with no new approval: the write goes only when Goals, Asked, Files, Commands, Rules and Rules of this plan are unchanged in the text it would leave, and the marker\'s hash then follows the file; an edit to any of the six, an agent\'s edit, an edit that cannot be applied, one under a marker with no scope, one from another session and one on a plan that changed after approval are refused, and a change that got past the check leaves no plan in force and is named by the status',
-    guards: ['amend_scope_gate', 'amend_agent', 'amend_no_scope', 'amend_session', 'amend_hash', 'amend_multi', 'amend_ambiguous', 'amend_post', 'amend_rehash', 'amend_post_agent', 'scope_mark', 'scope_app_exit', 'status_scope'],
+    guards: ['amend_scope_gate', 'amend_agent', 'amend_no_scope', 'amend_session', 'amend_hash', 'amend_multi', 'amend_ambiguous', 'amend_post', 'amend_rehash', 'amend_post_agent', 'scope_mark', 'status_scope'],
     run(m, dir) {
       const sha = (t) => createHash('sha256').update(t).digest('hex');
       const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -4910,7 +4921,7 @@ const CASES = [
         && notCarried.status === 2 && /Files/.test(notCarried.stderr) && /NOT carried/.test(notCarried.stderr) && D.mk()?.hash === sha(text)
         && /Scope: CHANGED in Files\./.test(stuck) && /Match: NO/.test(stuck)
         && agentLeft && mainMoved && /Scope: Goals, Asked, Files, Commands, Rules, Rules of this plan are as approved\./.test(carried) && /Match: yes/.test(carried) && !/Scope: CHANGED/.test(carried)
-        && same(scopeF, m.report.scopeHashes(STEPS_PLAN));
+        && scopeF === undefined && F.mk() === null; // changed by the plan of 6 November: the owner's exit in the app records no marker
     },
   },
   {
@@ -5919,7 +5930,7 @@ const CASES = [
   },
   {
     name: 'the approval marker records the hash of the plan\'s script when the plan is approved, through the tool and from the owner\'s exit in the app; an amendment of the Steps moves the marker\'s hash and never the script\'s, so a script edited after approval matches nothing',
-    guards: ['script_mark', 'script_app_exit', 'script_amend_keeps'],
+    guards: ['script_mark', 'script_amend_keeps'],
     run(m, dir) {
       const text = scriptPlan();
       const A = appHome(dir);
@@ -5945,7 +5956,7 @@ const CASES = [
       F.guard(trF, { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
       return mk0?.scriptHash === sha256(SCRIPT) && mk1?.hash === sha256(text.replace(STEP.old_string, STEP.new_string)) && mk1.scriptHash === sha256(SCRIPT)
         && mk2?.hash === sha256(edited) && mk2.scriptHash === sha256(SCRIPT) && m.report.scriptHashOf(edited) !== mk2.scriptHash
-        && F.mk()?.scriptHash === sha256(SCRIPT);
+        && F.mk() === null; // changed by the plan of 6 November: the owner's exit in the app records no marker
     },
   },
 
@@ -6510,7 +6521,7 @@ const CASES = [
   // ---- the steps file beside an approved plan (step 119) ----
   {
     name: 'the steps file: approving a plan, the owner\'s exit from plan mode in the app and an amendment each write <plan>.steps.md beside the plan, holding only its Rules, Steps and Commands sections (every section whose heading opens with one of the three) and nothing else; the dispatch gate accepts a prompt naming it in the plan\'s place and refuses it when it is missing or is not the plan in force, and the plan guard never takes it for the newest plan',
-    guards: ['steps_text_sections', 'steps_mark', 'steps_amend', 'steps_app_exit', 'steps_sent_names', 'steps_problem_wired', 'steps_stale', 'steps_missing', 'steps_not_plan'],
+    guards: ['steps_text_sections', 'steps_mark', 'steps_amend', 'steps_sent_names', 'steps_problem_wired', 'steps_stale', 'steps_missing', 'steps_not_plan'],
     run(m, dir) {
       const text = scopedPlan(dir).replace('## Steps', '## Rules\nRules: the pointer line of the rules file.\n\n## Rules of this plan\n- One rule of the plan\'s own, kept whole.\n\n## Steps');
       const stepsOf = (plan) => m.report.stepsFilePath(plan);
@@ -6569,7 +6580,7 @@ const CASES = [
         encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: repo({ 'a.txt': 'x\n' }).dir },
       });
       return pathOk && sections && marked === m.report.stepsFileText(text, A.plan) && amended === m.report.stepsFileText(amendedText, A.plan) && amended.includes('say what it did')
-        && appFile === m.report.stepsFileText(STEPS_PLAN, F.plan)
+        && appFile === null // changed by the plan of 6 November: the owner's exit in the app records no marker and writes no steps file
         && missing.r.status === 2 && /DISPATCH GATE/.test(missing.r.stderr) && /cannot be read/.test(missing.r.stderr)
         && named.r.status === 0 && planNamed.r.status === 0
         && stale.r.status === 2 && /not the Rules, Steps and Commands of the plan in force/.test(stale.r.stderr)
@@ -7413,6 +7424,38 @@ const CASES = [
         && typeof pin === 'string' && /pins version \d+/.test(pin) && /lands only when no plan is in force, as the last step of the plan that makes it/.test(pin)
         && /no plan is moved to a new rules version without the button/.test(pin) && /no amendment carries it/.test(pin) && /plan-mode button/.test(pin) && /does not latch/.test(pin) && !/amend the Rules line/.test(pin);
       return changes && hashed && oldRead && newShape && olderShape && words;
+    },
+  },
+
+  // ---- the plan of 6 November, step 84: the exit goes up on the owner's go, the marker is kept, an app exit records none ----
+  {
+    name: 'step84a: where the harness began plan mode at a restart after the approval, plan-guard passes the approval call when the owner\'s newest typed message ends with a go-word and came after the plan mode began, saying the exit goes up on the owner\'s go; a message that is no go-word, or a go-word typed before the plan mode began, leaves it refused as already approved',
+    guards: ['go_pass_word', 'go_pass_after', 'go_pass_say'],
+    run(m, dir) {
+      const A = appHome(dir);
+      const base = [...approvedEntries(A.plan), ...workEntries(-650, 'w1')];
+      approvalMarker(A.home, A.plan, STEPS_PLAN);
+      const pg = (tr) => spawnSync('node', [join(dir, 'plan-guard.mjs')], {
+        input: JSON.stringify({ session_id: 'rm', transcript_path: tr, cwd: A.home, permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { plan: '# x' } }),
+        encoding: 'utf8', env: { ...process.env, HOME: A.home } });
+      const restart = restartOf('hook-compact', A.plan);
+      const passed = pg(transcript([...base, ...restart, at(turn(0, 'Go.'), later(-100))]));
+      const plainWord = pg(transcript([...base, ...restart, at(turn(0, 'Why is that so.'), later(-100))]));
+      const goBefore = pg(transcript([...base, at(turn(0, 'Go.'), later(-700)), ...restart]));
+      const refusedAsApproved = (r) => r.status === 2 && /PLAN ALREADY APPROVED, NO LATCH:/.test(r.stdout);
+      return passed.status === 0 && /exit goes up on the owner's go/.test(passed.stdout) && !/PLAN ALREADY APPROVED/.test(passed.stdout)
+        && refusedAsApproved(plainWord) && refusedAsApproved(goBefore);
+    },
+  },
+  {
+    name: 'step84b: an accepted exit from plan mode while a marker already stands whose hash is the plan file\'s keeps that marker byte for byte and writes no second one, saying the approval stands',
+    guards: ['marker_kept'],
+    run(m, dir) {
+      const A = appHome(dir);
+      approvalMarker(A.home, A.plan, STEPS_PLAN, { steps: [1, 2], amendments: 2, via: 'kept by the case' });
+      const first = readFileSync(A.marker, 'utf8');
+      const r = A.guard(transcript([turn(0, 'start')]), { hook_event_name: 'PostToolUse', tool_name: 'ExitPlanMode', tool_response: { plan: STEPS_PLAN, isAgent: false, filePath: A.plan } }, '--mark');
+      return r.status === 0 && readFileSync(A.marker, 'utf8') === first && /approval of .* stands/.test(r.stderr ?? '');
     },
   },
 
@@ -8934,8 +8977,8 @@ const CASES = [
     },
   },
   {
-    name: 'an end of plan mode the owner-typed message before it records under auto mode writes no approval marker, is judged once as under auto mode, says in the print and in the refusal of a write that it is not the owner\'s approval and sets no latch; the same end recorded under plan mode, or recording no mode, writes the marker as before',
-    guards: ['app_auto', 'app_auto_note', 'owner_mode'],
+    name: 'an end of plan mode the owner-typed message before it records under auto mode writes no approval marker, is judged once as under auto mode, says in the print and in the refusal of a write that it is not the owner\'s approval and sets no latch; the same end recorded under plan mode, or recording no mode, writes no marker either and is judged as no exit call (changed by the plan of 6 November)',
+    guards: ['app_auto', 'app_auto_note', 'owner_mode', 'app_no_marker'],
     run(m, dir) {
       const read = { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } };
       const build = { tool_name: 'Bash', tool_input: { command: 'node tools/build.mjs' } };
@@ -8958,8 +9001,9 @@ const CASES = [
       return readA.status === 0 && a.A.mk() === null && a.A.outcome(a.u) === 'under auto mode'
         && buildA.status === 2 && said.test(`${buildA.stdout}${buildA.stderr}`) && /under auto mode/.test(`${buildA.stdout}${buildA.stderr}`)
         && enter.status === 0 && said.test(enter.stderr ?? '')
-        && p.A.mk()?.appExit === p.u && p.A.outcome(p.u) === 'recorded'
-        && n.A.mk()?.appExit === n.u && n.A.outcome(n.u) === 'recorded';
+        // changed by the plan of 6 November: the same end under plan mode, or recording no mode, writes no marker either
+        && p.A.mk() === null && p.A.outcome(p.u) === 'no exit call'
+        && n.A.mk() === null && n.A.outcome(n.u) === 'no exit call';
     },
   },
   // ---- the cost instrument names each plan's title and program item (P-20, step 32) ----
@@ -9762,10 +9806,14 @@ const PLANTS = {
   app_changed_after: ["  else if (statSync(x.plan).mtimeMs > x.at) outcome = 'changed after';\n", '\n', 'approved-plan-guard.mjs'],
   app_judged_once: ['  if (judged[last.uuid]) return { uuid: String(last.uuid), outcome: judged[last.uuid] };\n', '\n', 'approved-plan-guard.mjs'],
   app_exits_protect: ['  if (target === resolve(MARKER) || target === resolve(APP_EXITS)) deny(', '  if (target === resolve(MARKER)) deny(', 'approved-plan-guard.mjs'],
-  app_reentry: ['      if (ax.deny) return refuse(ax.reason, false);\n', '\n', 'hook-dispatch.mjs'],
-  app_reentry_no_latch: ['      if (ax.deny) return refuse(ax.reason, false);', '      if (ax.deny) return refuse(ax.reason);', 'hook-dispatch.mjs'],
-  app_release_owner: ['  const wrote = since.some((e) => isOwnerMessage(e));', '  const wrote = false;', 'approved-plan-guard.mjs'],
-  app_release_agent: ["/^(Agent|Task|SendMessage)$/.test(b.name ?? '')", "/^NEVER$/.test(b.name ?? '')", 'approved-plan-guard.mjs'],
+  // The plan of 6 November retired app_reentry, app_reentry_no_latch, app_release_owner and app_release_agent: the app's exit records no
+  // approval now, so there is no refusal to re-enter plan mode and no release of one. These plants are the plan's own.
+  app_no_call_note: ["  if (r?.outcome === 'no exit call') process.stderr.write(`${NO_CALL_EXIT_NOTE}\\n`);", '  void r;', 'approved-plan-guard.mjs'],
+  app_no_marker: ["  else outcome = 'no exit call';", "  else outcome = 'recorded';", 'approved-plan-guard.mjs'],
+  marker_kept: ['  if (plan && alreadyRecorded(plan)) {', '  if (false && alreadyRecorded(plan)) {', 'approved-plan-guard.mjs'],
+  go_pass_word: ['ownerAt > modeAt && endsWithGoWord(textOf(tail[ownerAt]))', 'ownerAt > modeAt && true', 'plan-guard.mjs'],
+  go_pass_after: ['ownerAt > modeAt && endsWithGoWord(', 'ownerAt >= 0 && endsWithGoWord(', 'plan-guard.mjs'],
+  go_pass_say: ["The exit goes up on the owner's go", 'The exit passes', 'plan-guard.mjs'],
   // The dispatcher judges the owner's exit from plan mode before any gate reads the marker.
   dispatch_judge_exit: ["    run(`node \"${join(HUB, 'approved-plan-guard.mjs')}\" --judge-exit`, raw, root);\n", '\n', 'hook-dispatch.mjs'],
   // An approval given at the button before the gates were installed is recovered from the transcript.
@@ -9894,7 +9942,7 @@ const PLANTS = {
   approved_step_review: ['standing: planOrder(text)?.standing ?? [], review: aimReviewSteps(text) };', 'standing: planOrder(text)?.standing ?? [], review: [] };', 'report.mjs'],
   approval_steps_snapshot: ['script: scriptHashOf(text), ...approvedStepSet(text) };', 'script: scriptHashOf(text) };', 'approved-plan-guard.mjs'],
   approval_steps_mark: ['    steps: snap.steps, standing: snap.standing,\n    via:', '    via:', 'approved-plan-guard.mjs'],
-  approval_steps_exit: ['      steps: snap.steps, standing: snap.standing,\n      via:', '      via:', 'approved-plan-guard.mjs'],
+  // The plan of 6 November retired approval_steps_exit, approval_review_exit, scope_app_exit, script_app_exit and steps_app_exit with the app exit's marker write they took out.
   approval_steps_amend_keep: ['{ ...mk, hash: snap.hash, scope: snap.scope, amendedAt:', '{ ...mk, hash: snap.hash, scope: snap.scope, steps: snap.steps, standing: snap.standing, amendedAt:', 'approved-plan-guard.mjs'],
   approved_plan_lists: ['steps: recorded(mk.steps), standing: recorded(mk.standing) };', 'steps: null, standing: null };', 'hook-dispatch.mjs'],
   approval_set_steps: ['  if (Array.isArray(plan.steps) && !plan.steps.includes(n)) {', '  if (false) {', 'hook-dispatch.mjs'],
@@ -9908,7 +9956,6 @@ const PLANTS = {
   approval_set_review_gate: ['  if (o.standing.includes(n)) {\n    const unread = approvalSetProblem(plan, n);\n    return unread ?', '  if (o.standing.includes(n)) {\n    const unread = null;\n    return unread ?', 'hook-dispatch.mjs'],
   // The review step the approval recorded: kept through every amendment, and a send refused while no Standing step names the review file any more.
   approval_review_mark: ['    review: snap.review,\n    steps: snap.steps, standing: snap.standing,\n    via: `ExitPlanMode', '    steps: snap.steps, standing: snap.standing,\n    via: `ExitPlanMode', 'approved-plan-guard.mjs'],
-  approval_review_exit: ['      review: snap.review,\n      steps: snap.steps, standing: snap.standing,\n      via:', '      steps: snap.steps, standing: snap.standing,\n      via:', 'approved-plan-guard.mjs'],
   approval_review_amend_keep: ['{ ...mk, hash: snap.hash, scope: snap.scope, amendedAt:', '{ ...mk, hash: snap.hash, scope: snap.scope, review: snap.review, amendedAt:', 'approved-plan-guard.mjs'],
   approved_plan_review: ['review: recorded(mk.review), ', 'review: null, ', 'hook-dispatch.mjs'],
   review_record_dispatch_wired: ['  const gone = reviewRecordProblem(plan);\n  if (gone) return refusal(', '  const gone = null;\n  if (gone) return refusal(', 'hook-dispatch.mjs'],
@@ -9981,7 +10028,6 @@ const PLANTS = {
   popup_not_a_read: ["'TodoWrite', 'ToolSearch',", "'TodoWrite', 'AskUserQuestion', 'ToolSearch',", 'plan-guard.mjs'],
   status_scope: ["const moved = scoped ? scopeChanged(mk.scope, bytes.toString('utf8')) : [];", 'const moved = [];', 'report.mjs'],
   scope_mark: ['    plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at:', '    plan, hash: snap.hash, scriptHash: snap.script, at:', 'approved-plan-guard.mjs'],
-  scope_app_exit: ['plan: x.plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at:', 'plan: x.plan, hash: snap.hash, scriptHash: snap.script, at:', 'approved-plan-guard.mjs'],
   amend_scope_gate: ['  if (moved.length) {\n    return `This edit would change', '  if (false) {\n    return `This edit would change', 'approved-plan-guard.mjs'],
   amend_agent: ["if (p.agent_id || !mk.scope || typeof mk.scope !== 'object'", "if (!mk.scope || typeof mk.scope !== 'object'", 'approved-plan-guard.mjs'],
   amend_no_scope: ["!mk.scope || typeof mk.scope !== 'object' || Array.isArray(mk.scope) || ", '', 'approved-plan-guard.mjs'],
@@ -10125,7 +10171,6 @@ const PLANTS = {
   script_planscript_fence: ['  const script = fence ? fence[1] : body.replace', '  const script = body.replace', 'report.mjs'],
   script_hash_of: ["  return s === null ? '' : sha256(s);", '  return sha256(text);', 'report.mjs'],
   script_mark: ['    plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at:', '    plan, hash: snap.hash, scope: snap.scope, at:', 'approved-plan-guard.mjs'],
-  script_app_exit: ['plan: x.plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at:', 'plan: x.plan, hash: snap.hash, scope: snap.scope, at:', 'approved-plan-guard.mjs'],
   script_amend_keeps: ['{ ...mk, hash: snap.hash, scope: snap.scope, amendedAt:', '{ ...mk, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, amendedAt:', 'approved-plan-guard.mjs'],
   // A latched agent writes its own report; an agent reads the rules first.
   report_write_latch: ['if (latch && !status && !mainStop && !release && !reportWrite) return refuse(', 'if (latch && !status && !mainStop && !release) return refuse(', 'hook-dispatch.mjs'],
@@ -10218,7 +10263,6 @@ const PLANTS = {
   steps_text_sections: ['(## (?:Rules|Steps|Commands)\\b', '(## (?:Steps)\\b', 'report.mjs'],
   steps_mark: ['  writeStepsFile(plan);\n  process.exit(0);', '  process.exit(0);', 'approved-plan-guard.mjs'],
   steps_amend: ['  writeStepsFile(mk.plan);\n  process.exit(0);', '  process.exit(0);', 'approved-plan-guard.mjs'],
-  steps_app_exit: ["    writeStepsFile(x.plan);\n    outcome = 'recorded';", "    outcome = 'recorded';", 'approved-plan-guard.mjs'],
   steps_sent_names: ["const names = plan ? [plan.path, stepsFilePath(plan.path)].map(esc).join('|') : '';", "const names = plan ? [plan.path].map(esc).join('|') : '';", 'hook-dispatch.mjs'],
   steps_problem_wired: ['  if (namesStepsFile(p, plan)) {\n    const bad = stepsFileProblem(plan);', '  if (false) {\n    const bad = stepsFileProblem(plan);', 'hook-dispatch.mjs'],
   steps_stale: ['  if (disk !== stepsFileText(plan.text, plan.path)) {', '  if (false) {', 'hook-dispatch.mjs'],
@@ -10445,8 +10489,8 @@ const PLANTS = {
   restart_marker_hash: ["if (createHash('sha256').update(readFileSync(mk.plan)).digest('hex') !== String(mk.hash)) return '';", 'void 0;', 'report.mjs'],
   restart_session: ["if (mk.session && p.session_id && mk.session !== p.session_id) return '';", 'void 0;', 'report.mjs'],
   restart_via: ["const since = Date.parse(viaAt ?? mk.at ?? '');", "const since = Date.parse(mk.at ?? '');", 'report.mjs'],
-  restart_exit_refused: ["if (tool !== 'ExitPlanMode') process.exit(0);\n    const { APPROVED_NO_LATCH }", 'process.exit(0);\n    const { APPROVED_NO_LATCH }', 'plan-guard.mjs'],
-  restart_other_pass: ["if (tool !== 'ExitPlanMode') process.exit(0);\n    const { APPROVED_NO_LATCH }", "if (tool !== 'ExitPlanMode') void 0;\n    const { APPROVED_NO_LATCH }", 'plan-guard.mjs'],
+  restart_exit_refused: ["if (tool !== 'ExitPlanMode') process.exit(0);\n    const { APPROVED_NO_LATCH, endsWithGoWord }", 'process.exit(0);\n    const { APPROVED_NO_LATCH, endsWithGoWord }', 'plan-guard.mjs'],
+  restart_other_pass: ["if (tool !== 'ExitPlanMode') process.exit(0);\n    const { APPROVED_NO_LATCH, endsWithGoWord }", "if (tool !== 'ExitPlanMode') void 0;\n    const { APPROVED_NO_LATCH, endsWithGoWord }", 'plan-guard.mjs'],
   restart_lock: ['&& !locked && !p.plan_mode_forced', '&& !p.plan_mode_forced', 'plan-guard.mjs'],
   restart_forced: ['&& !locked && !p.plan_mode_forced', '&& !locked', 'plan-guard.mjs'],
   restart_no_latch_mark: ['${APPROVED_NO_LATCH} the plan is already approved', 'the plan is already approved', 'plan-guard.mjs'],

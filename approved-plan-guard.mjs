@@ -158,7 +158,9 @@ const hashOf = (p) => createHash('sha256').update(readFileSync(p)).digest('hex')
 // What is said when plan mode ended under auto mode with no exit call from the session (`recordAppExit`'s outcome 'under auto mode'). The
 // transcript records no mark that tells the owner's press from another answer, but it records the mode on the owner's typed message
 // that ended plan mode, and under auto the end is the mode's and not the button's. No marker is written, and no latch is set.
-const AUTO_EXIT_NOTE = 'An end of plan mode under auto mode is not the owner\'s approval: the owner-typed message that ended plan mode is recorded under auto, '
+const NO_CALL_EXIT_NOTE = 'An end of plan mode that the session\'s own ExitPlanMode call did not make is not the owner\'s approval, under any mode, so no approval marker is written from it and nothing is sent under it. '
+  + 'The plan goes up again through plan mode and its exit call. This sets no latch.';
+const AUTO_EXIT_NOTE ='An end of plan mode under auto mode is not the owner\'s approval: the owner-typed message that ended plan mode is recorded under auto, '
   + 'so no approval marker is written from it and nothing is sent under it. The plan goes up again through plan mode with the session out of auto mode. This sets no latch.';
 
 /**
@@ -363,7 +365,9 @@ function alreadyRecorded(plan) {
 }
 
 /**
- * Record the approval from the owner's own exit from plan mode in the app.
+ * Judge the newest end of plan mode that the session's own ExitPlanMode call did not make. Since 6 November it writes NO marker under any
+ * mode, outcome "no exit call" (auto keeps "under auto mode"): the only way out of the harness's plan mode is the exit call, and the
+ * approval is that call's. The text below that speaks of a "recorded" exit describes the earlier behaviour.
  * @param {object} p  a PreToolUse payload: its transcript, session and mode.
  * @returns {{uuid: string, outcome: string, plan?: string, at?: number, index?: number} | null}
  *   null in plan mode or when the transcript holds no exit entry; otherwise the
@@ -388,18 +392,7 @@ function recordAppExit(p) {
   else if (!isPlanFile(x.plan)) outcome = 'no plan file';
   else if (statSync(x.plan).mtimeMs > x.at) outcome = 'changed after';
   else if (alreadyRecorded(x.plan)) outcome = 'already recorded';
-  else {
-    mkdirSync(dirname(MARKER), { recursive: true });
-    const snap = snapshotOf(x.plan);
-    writeFileSync(MARKER, JSON.stringify({
-      plan: x.plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), approvedAt: new Date(x.at).toISOString(), session: p.session_id ?? null,
-      review: snap.review,
-      steps: snap.steps, standing: snap.standing,
-      via: `the owner's exit from plan mode in the app: entry ${x.uuid} at ${new Date(x.at).toISOString()}`, planMatchesFile: null, appExit: x.uuid,
-    }, null, 1));
-    writeStepsFile(x.plan);
-    outcome = 'recorded';
-  }
+  else outcome = 'no exit call'; // an end of plan mode the session's own call did not make is not the owner's approval, under any mode
   const keep = Object.entries(judged).slice(-99);
   mkdirSync(dirname(APP_EXITS), { recursive: true });
   writeFileSync(APP_EXITS, JSON.stringify({ judged: Object.fromEntries([...keep, [String(last.uuid), outcome]]) }, null, 1));
@@ -553,29 +546,9 @@ if (process.argv.includes('--app-exit')) {
   try { r = recordAppExit(p); } catch { r = null; }
   // An end of plan mode under auto mode is said in the print, and nothing is refused and no latch is set.
   if (r?.outcome === 'under auto mode') process.stderr.write(`${AUTO_EXIT_NOTE}\n`);
-  if (r?.outcome !== 'recorded') process.exit(0);
-  let mk = {};
-  try { mk = JSON.parse(readFileSync(MARKER, 'utf8')); } catch { process.exit(0); }
-  let same = false;
-  try { same = mk.appExit === r.uuid && hashOf(mk.plan) === mk.hash; } catch { same = false; }
-  if (!same) process.exit(0);
-  // Released once anything but reading has happened under the approval: an
-  // agent sent, or a message the owner wrote after the exit. Amending a plan
-  // after work under it began is what EnterPlanMode is for.
-  const entries = tailEntries(p.transcript_path, 8 * 1024 * 1024);
-  const i = entries.findIndex((e) => String(e?.uuid ?? '') === r.uuid);
-  if (i < 0) process.exit(0);
-  const since = entries.slice(i + 1);
-  const sent = since.some((e) => e?.type === 'assistant' && !e.isSidechain && Array.isArray(e.message?.content)
-    && e.message.content.some((b) => b?.type === 'tool_use' && /^(Agent|Task|SendMessage)$/.test(b.name ?? '')));
-  const wrote = since.some((e) => isOwnerMessage(e));
-  if (sent || wrote) process.exit(0);
-  const when = Number.isFinite(Date.parse(entries[i].timestamp ?? '')) ? californiaTime(new Date(entries[i].timestamp)) : 'an earlier time';
-  process.stderr.write(`APPROVED IN THE APP: the owner left plan mode in the app at ${when} (California), and that is the approval of ${mk.plan}. `
-    + 'The approval marker is recorded from it, hashed from the plan file as it stood then. A "You are not in plan mode" error from ExitPlanMode beside it is that '
-    + 'approval, not a refusal. Plan mode is not entered again for the same plan: carry on with it. Once an agent has been sent under it, or the owner '
-    + 'writes again, plan mode can be entered to amend it.\n');
-  process.exit(2);
+  // An end of plan mode the session did not call is said in the print under any mode, and nothing is refused and no latch is set.
+  if (r?.outcome === 'no exit call') process.stderr.write(`${NO_CALL_EXIT_NOTE}\n`);
+  process.exit(0);
 }
 
 if (process.argv.includes('--mark')) {
@@ -583,6 +556,12 @@ if (process.argv.includes('--mark')) {
   if (tool !== 'ExitPlanMode') process.exit(0);
   const plan = approvedPlanPath(p);
   const r = p.tool_response;
+  // KEPT MARKER: an accepted exit while a marker already stands for this very plan file writes no second one, so the approval, with the
+  // steps it is keyed to, stands and the harness's plan mode simply ended.
+  if (plan && alreadyRecorded(plan)) {
+    process.stderr.write(`approved-plan-guard --mark: the approval of ${plan} stands and the harness's plan mode ended; the marker is kept and no second one is written.\n`);
+    process.exit(0);
+  }
   if (!plan) {
     // Not this session's plan approved: no marker. A subagent's exit is meant
     // to mint nothing; anything else is said out loud, on the one channel a
@@ -788,7 +767,8 @@ if (input.includes('APPROVED-PLAN')) {
 // Said when the newest exit from plan mode was the owner's and recorded nothing.
 const appNote = app?.outcome === 'changed after' ? ` The owner left plan mode in the app${app.at ? ` at ${californiaTime(new Date(app.at))} (California)` : ''}, but ${app.plan ?? 'the plan file'} was written after that, so it is not the plan approved.`
   : app?.outcome === 'no plan file' ? ' The owner left plan mode in the app, and the plan file that exit names is gone.'
-  : app?.outcome === 'under auto mode' ? ` ${AUTO_EXIT_NOTE}` : '';
+  : app?.outcome === 'under auto mode' ? ` ${AUTO_EXIT_NOTE}`
+  : app?.outcome === 'no exit call' ? ` ${NO_CALL_EXIT_NOTE}` : '';
 if (!existsSync(MARKER)) deny(`No approved plan is in force, and this is not a recognised read: ${why}${appNote}`);
 let mk = {};
 try { mk = JSON.parse(readFileSync(MARKER, 'utf8')); } catch { deny('The approval marker is unreadable.'); }
