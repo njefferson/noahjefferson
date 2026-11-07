@@ -11,12 +11,16 @@
 // `--batch` prints the open findings of the repository as ONE plan, grouped by the file each names: a take-up step, a step for each group of up
 // to `--size` findings (eight by default; `--steps` limits the groups printed) that fixes and lands its own commit, and a close.
 //
-// It READS and PRINTS and writes nothing, so the manager fence and the plan guard pass it as they pass the plan check. The print is the plan
+// `--out <path>` (either mode) writes the whole print to that file and prints one line naming the path and the print's first line, so a print too long
+// for the conversation (the batch print for the hub's queue ran to 246 KB) is read whole from the file. A finding whose own text has a sentence that
+// opens with the words put right is set done at the batch's take-up with that sentence and is left out of every group.
+//
+// Without `--out` it READS and PRINTS and writes nothing, so the manager fence and the plan guard pass it as they pass the plan check. The print is the plan
 // in its own shape: the Goals with the item's acceptance as goal 1, the item's own entry (its dependency line from its own block and no
 // other), the rules version read from the rules file, the standing text from `plans/seed-template.md`, the Files in the shape the plan guard
 // reads, the found keys as a ready "Found answered" section, the roadmap and shipped-check stubs from the notes, and last the reads another
 // session can move, each marked and timed, so a step that depends on one reads it at the time of use.
-import { readFileSync, readdirSync, existsSync, realpathSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, realpathSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
@@ -139,7 +143,7 @@ export function seed(o) {
   // HUB in the standing text is where an agent edits and tests: the working copy when the print is for the hub, never the live clone the
   // script may run out of.
   const vars = { HUB: isHub ? repo : hub, ITEM: entry.key, TAKEUP: takeup, CLOSE: close, REVIEW: review, NEXTP: `P-${nextP}`, NEXTQ: `Q-HUB-${hubMax + 1}`, NEXTL: lessonMax + 1,
-    TRANSCRIPT: transcript, REVIEWFILE: join(homedir(), '.claude', 'hub', 'aim-review.md') };
+    TRANSCRIPT: transcript, REVIEWFILE: join(homedir(), '.claude', 'hub', 'aim-review.md'), PUTRIGHT: '' };
   vars.LANDING = fill(tpl.landing ?? '<plans/seed-template.md has no landing block>', vars);
 
   const out = [];
@@ -303,6 +307,22 @@ export function seed(o) {
 }
 
 /**
+ * The sentence of a finding's text that says the finding was put right.
+ * @param {string} text  the finding's file, its whitespace collapsed to single spaces.
+ * @returns {string} the sentence that opens with the words put right (in any case) at the head of the text or after the end of another sentence, from those
+ *   words to the next full stop followed by a space or the end, at most 400 characters; '' when no sentence opens that way. A finding that only MENTIONS
+ *   the words in the middle of a sentence (one describing other findings that were put right) is not one.
+ */
+export function putRightSentence(text) {
+  const t = String(text ?? '');
+  const m = /(?:^|[.;:)\]]\s+)(put right\b.*)$/i.exec(t);
+  if (!m) return '';
+  const rest = m[1];
+  const end = /\.(?:\s|$)/.exec(rest);
+  return (end ? rest.slice(0, end.index + 1) : rest).slice(0, 400).trim();
+}
+
+/**
  * The open findings of a repository, grouped by the file each is about.
  * @param {{entries: object[], repoName: string, repo: string, foundDir: string}} o  the program's entries, the repository's name as the program spells it, its path, and its found folder.
  * @returns {{key: string, item: string, rank: number, text: string, files: string[], home: string}[]} one per open entry of the repository whose title names a
@@ -321,7 +341,7 @@ export function openFindings(o) {
       const s = m[1].trim().replace(/[.,;:]+$/, '');
       if (s && !/\s/.test(s) && !files.includes(s) && existsSync(join(o.repo, s))) files.push(s);
     }
-    out.push({ key, item: e.key, rank, text, files, home: files[0] ?? '' });
+    out.push({ key, item: e.key, rank, text, files, home: files[0] ?? '', putRight: putRightSentence(text) });
   });
   return out;
 }
@@ -345,14 +365,17 @@ export function batchSeed(o) {
   if (!findings.length) return { ok: false, text: `plan-seed: no open entry of ${repoName} in PROGRAM.md is a filed finding, so there is no batch to print.\n` };
   const size = Math.max(1, Math.floor(Number(o.size) || 8));
   // Group by home, in the order of the lowest-ranked item of each group, the group with no file last; a group past the size is cut into runs of it.
+  // A finding whose own text says it was put right is set done at the take-up with that sentence and is left out of every group.
+  const putRight = findings.filter((f) => f.putRight);
   const byHome = new Map();
-  for (const f of findings) { if (!byHome.has(f.home)) byHome.set(f.home, []); byHome.get(f.home).push(f); }
+  for (const f of findings) { if (f.putRight) continue; if (!byHome.has(f.home)) byHome.set(f.home, []); byHome.get(f.home).push(f); }
   const homes = [...byHome.keys()].sort((a, b) => (a === '') - (b === '') || byHome.get(a)[0].rank - byHome.get(b)[0].rank);
   let groups = [];
   for (const h of homes) { const fs = byHome.get(h); for (let i = 0; i < fs.length; i += size) groups.push({ home: h, list: fs.slice(i, i + size) }); }
   const limit = Math.floor(Number(o.steps) || 0);
   if (limit > 0) groups = groups.slice(0, limit);
-  const batch = groups.flatMap((g) => g.list);
+  const planned = groups.flatMap((g) => g.list);
+  const batch = [...putRight, ...planned];
 
   const hubFound = foundQueue(hub);
   const repoFound = isHub ? [] : foundQueue(repo);
@@ -381,7 +404,12 @@ export function batchSeed(o) {
   const vars = { HUB: isHub ? repo : hub, ITEM: itemKeys, TAKEUP: takeup, CLOSE: close, REVIEW: review, NEXTP: `P-${nextP}`, NEXTQ: `Q-HUB-${hubMax + 1}`, NEXTL: lessonMax + 1,
     TRANSCRIPT: transcript, REVIEWFILE: join(homedir(), '.claude', 'hub', 'aim-review.md') };
   vars.LANDING = fill(tpl.landing ?? '<plans/seed-template.md has no landing block>', vars);
-  const checks = ['docs-check', 'privacy-check', 'quote-check', 'third-person-check', 'lessons-check', 'example-check', 'pin-check'].map((c) => `\`node ${vars.HUB}/${c}.mjs\``).join(', ');
+  // The take-up sets the planned items to planned and the put-right items to done, so it is filled with the planned keys and the put-right paragraph.
+  vars.PUTRIGHT = putRight.length
+    ? `; in the entry of each of these items, whose finding's own text says it was put right, set State to done with the sentence after its key as what changed: ${putRight.map((f) => `${f.item} (${f.key}): ${f.putRight}`).join(' ')}`
+    : '';
+  const takeupVars = { ...vars, ITEM: planned.map((f) => f.item).join(', ') };
+  const checks =['docs-check', 'privacy-check', 'quote-check', 'third-person-check', 'lessons-check', 'example-check', 'pin-check'].map((c) => `\`node ${vars.HUB}/${c}.mjs\``).join(', ');
 
   const out = [];
   const L = (s = '') => out.push(s);
@@ -432,7 +460,7 @@ export function batchSeed(o) {
   L();
   L('## Steps');
   L();
-  L(fill(tpl['take-up'] ?? '<plans/seed-template.md has no take-up block>', vars));
+  L(fill(tpl['take-up'] ?? '<plans/seed-template.md has no take-up block>', takeupVars));
   L();
   const stepOf = new Map();
   groups.forEach((g, i) => {
@@ -489,7 +517,10 @@ export function batchSeed(o) {
   L();
   L('## Found answered');
   L();
-  for (const f of batch) L(`- ${f.key} fixed in step ${stepOf.get(f.key)}: ${f.item} is put right in its step as the finding's own text says.`);
+  for (const f of batch) {
+    L(f.putRight ? `- ${f.key} fixed in step ${takeup}: its own text says it was put right, so ${f.item} is set done at the take-up with no change.`
+      : `- ${f.key} fixed in step ${stepOf.get(f.key)}: ${f.item} is put right in its step as the finding's own text says.`);
+  }
   const inBatch = new Set(batch.map((f) => f.key));
   const rest = parts.filter((m) => !inBatch.has(m[0]));
   const byTag = new Map();
@@ -542,20 +573,41 @@ export function batchSeed(o) {
   return { ok: true, text: `${out.join('\n')}\n` };
 }
 
+/**
+ * Print a result to stdout, or write it whole to a named file.
+ * @param {{ok: boolean, text: string}} r  the seed's result.
+ * @param {string|undefined} outPath  the `--out` path.
+ * @returns {void} without `--out` the text goes to stdout as it always did. With it the whole text is written to that path (its folder made) and stdout
+ *   gets one line naming the path and the print's first line, so a print of any size is read whole from the file; a file that cannot be written
+ *   prints the error and the exit is 1.
+ */
+export function emit(r, outPath) {
+  if (!outPath) { process.stdout.write(r.text); return; }
+  try {
+    const path = resolve(outPath);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, r.text);
+    process.stdout.write(`plan-seed: wrote ${path} (${r.text.split('\n').length - 1} lines); first line: ${r.text.split('\n')[0]}\n`);
+  } catch (err) {
+    process.stdout.write(`plan-seed: could not write ${outPath}: ${err.message}\n`);
+    r.ok = false;
+  }
+}
+
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const a = process.argv.slice(2);
   const val = (f) => { const i = a.indexOf(f); return i >= 0 ? a[i + 1] : undefined; };
   if (a.includes('--batch')) {
     const b = batchSeed({ repo: val('--repo'), plan: val('--plan'), steps: val('--steps'), size: val('--size'), hub: val('--hub') });
-    process.stdout.write(b.text);
+    emit(b, b.ok ? val('--out') : undefined);
     process.exit(b.ok ? 0 : 1);
   }
   if (!val('--item')) {
-    process.stdout.write('usage: node plan-seed.mjs --item <P-key | next> | --batch [--size <n>] [--steps <n>] [--repo <full path>] [--plan <path>] [--hub <full path>]\n');
+    process.stdout.write('usage: node plan-seed.mjs --item <P-key | next> | --batch [--size <n>] [--steps <n>] [--repo <full path>] [--plan <path>] [--hub <full path>] [--out <path>]\n');
     process.exit(1);
   }
   const r = seed({ item: val('--item'), repo: val('--repo'), plan: val('--plan'), steps: val('--steps'), hub: val('--hub') });
-  process.stdout.write(r.text);
+  emit(r, r.ok ? val('--out') : undefined);
   process.exit(r.ok ? 0 : 1);
 }

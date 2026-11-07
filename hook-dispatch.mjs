@@ -339,11 +339,22 @@ export function planEntrySeed(p, opts = {}) {
   const planFile = opts.args ? '' : seedPlanFile(opts);
   const planArgs = planFile ? ['--plan', planFile] : [];
   const mode0 = opts.args ? null : seedMode(p?.cwd ? String(p.cwd) : process.cwd(), opts.hub);
-  const args = opts.args ?? (mode0 === 'batch' ? ['--batch', ...(opts.hub ? ['--hub', String(opts.hub)] : []), ...planArgs] : ['--item', 'next', ...(opts.hub ? ['--hub', String(opts.hub)] : []), ...planArgs]);
+  // The print is written WHOLE to `status/seed-print.txt` of the scratchpad by the seed's own `--out`, and the added context carries the path and the
+  // first forty lines, because the harness cuts a hook's added context at a cap and a print of 143 KB lost its steps past the 25th group.
+  const outFile = join(pad, 'status', 'seed-print.txt');
+  const args = opts.args ?? (mode0 === 'batch' ? ['--batch', ...(opts.hub ? ['--hub', String(opts.hub)] : []), ...planArgs, '--out', outFile]
+    : ['--item', 'next', ...(opts.hub ? ['--hub', String(opts.hub)] : []), ...planArgs, '--out', outFile]);
+  try { rmSync(outFile, { force: true }); } catch { /* a stale print is read as new only if the seed writes it */ }
   const r = spawnSync(process.execPath, [opts.script ?? join(HUB, 'plan-seed.mjs'), ...args], {
     encoding: 'utf8', timeout: 30000, cwd: p?.cwd ? String(p.cwd) : undefined, env: { ...process.env, CLAUDE_CODE_SESSION_ID: String(p?.session_id ?? '') },
   });
-  return r.status === 0 ? String(r.stdout).trim() : '';
+  if (r.status !== 0) return '';
+  let whole = '';
+  try { whole = readFileSync(outFile, 'utf8'); } catch { whole = ''; }
+  if (!whole.trim()) return String(r.stdout).trim();
+  const lines = whole.replace(/\s+$/, '').split('\n');
+  return [`PLAN SEED WRITTEN WHOLE to ${outFile} (${lines.length} lines): read it whole with the Read tool, because the harness cuts added context at a cap. Its first ${Math.min(40, lines.length)} lines follow.`,
+    ...lines.slice(0, 40)].join('\n');
 }
 
 /**

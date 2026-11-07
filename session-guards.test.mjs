@@ -9334,8 +9334,9 @@ const CASES = [
       const newest = m.dispatch.seedPlanFile({ marker: noMarker, plansDir }) === fresh;
       const stub = join(tmp('sg-seedstub-'), 'stub.mjs');
       writeFileSync(stub, 'console.log(process.argv.slice(2).join(\' \'));\n');
-      const printed = m.dispatch.planEntrySeed({ session_id: 'sd', cwd: hub, permission_mode: 'plan' }, { pad: tmp('sg-seedpad-'), script: stub, marker: noMarker, plansDir });
-      const wired = printed === `--item next --plan ${fresh}`;
+      const seedPad = tmp('sg-seedpad-');
+      const printed = m.dispatch.planEntrySeed({ session_id: 'sd', cwd: hub, permission_mode: 'plan' }, { pad: seedPad, script: stub, marker: noMarker, plansDir });
+      const wired = printed === `--item next --plan ${fresh} --out ${join(seedPad, 'status', 'seed-print.txt')}`;
       return byMarker && newest && wired;
     },
   },
@@ -9436,8 +9437,78 @@ const CASES = [
         asSingle = m.dispatch.planEntrySeed({ session_id: 'sd', cwd: single, permission_mode: 'plan' }, opts(single));
       } finally { if (before === undefined) delete process.env.CLAUDE_PROJECT_DIR; else process.env.CLAUDE_PROJECT_DIR = before; }
       const modes = m.dispatch.seedMode(hub, hub) === 'batch' && m.dispatch.seedMode(single, single) === 'single' && m.dispatch.seedMode(tmp('sg-batchnoprog-'), tmp('sg-batchnoprog-')) === 'single';
-      const ok = asBatch.startsWith('PLAN SEED for the batch of 5 open findings of hub') && asSingle.startsWith('PLAN SEED for P-1 (A planted item with no key: ');
+      const ok = asBatch.includes('\nPLAN SEED for the batch of 5 open findings of hub') && asSingle.includes('\nPLAN SEED for P-1 (A planted item with no key: ');
       if (!(ok && modes)) throw new Error(`batch ${asBatch.slice(0, 80)} | single ${asSingle.slice(0, 80)} | modes ${modes}`);
+      return true;
+    },
+  },
+  // ---- the print to a file and the finding already put right (the plan of 6 November, step 96): each case on a planted hub in a temporary folder ----
+  {
+    name: 'the plan seed with --out writes the whole print to the named file and prints one line naming the path and the print\'s first line, in the batch mode and in the single mode, and without --out prints the whole as before',
+    guards: ['seed_out_write', 'seed_out_line'],
+    run(m, dir) {
+      const hub = batchHub(dir);
+      const file = join(tmp('sg-seedout-'), 'deep', 'print.txt');
+      const withOut = batchRun(dir, hub, ['--out', file]);
+      const whole = batchRun(dir, hub, []).stdout;
+      const written = existsSync(file) ? readFileSync(file, 'utf8') : '';
+      const first = whole.split('\n')[0];
+      const line = withOut.stdout.trim();
+      const batchOk = withOut.status === 0 && written === whole && line.split('\n').length === 1 && line.includes(file) && line.endsWith(`first line: ${first}`);
+      const single = seedHub(dir);
+      const file2 = join(tmp('sg-seedout-'), 'single.txt');
+      const s = seedRun(dir, single, ['--item', 'P-3', '--out', file2]);
+      const sWhole = seedRun(dir, single, ['--item', 'P-3']).stdout;
+      const singleOk = s.status === 0 && existsSync(file2) && readFileSync(file2, 'utf8') === sWhole && s.stdout.includes(file2) && s.stdout.trim().split('\n').length === 1;
+      if (!(batchOk && singleOk && whole.includes('==== THE PLAN ENDS ABOVE THIS LINE ====') && written.includes('MOVABLE READS'))) throw new Error(`batch ${batchOk} (${line.slice(0, 200)}), single ${singleOk}`);
+      return true;
+    },
+  },
+  {
+    name: 'the plan seed batch print sets a finding whose text opens a sentence with put right to done in the take-up with that sentence, leaves it out of every group step, answers it in Found answered at the take-up, and does not take a mention of other findings put right in the middle of a sentence for one',
+    guards: ['putright_read', 'putright_skip', 'putright_takeup', 'putright_mid', 'putright_found'],
+    run(m, dir) {
+      const hub = batchHub(dir);
+      writeFileSync(join(hub, 'found', 'Q-HUB-13.md'), 'Q-HUB-13: a planted finding about `alpha.mjs` and its second fault. Put right in step 4 of the planted plan: the fault is gone (a planted note).\n');
+      writeFileSync(join(hub, 'found', 'Q-HUB-14.md'), 'Q-HUB-14: a planted finding about `beta.mjs` and the others that were put right in earlier plans, which this one is not.\n');
+      const r = batchRun(dir, hub, []);
+      if (r.status !== 0) throw new Error(`the batch print exited ${r.status}`);
+      const t = r.stdout;
+      const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
+      const takeup = step(1);
+      const planned = takeup.split(' set to planned')[0];
+      const doneLine = takeup.includes('set State to done') && takeup.includes('P-3 (Q-HUB-13): Put right in step 4 of the planted plan: the fault is gone (a planted note).');
+      const plannedOk = ['P-1', 'P-2', 'P-4', 'P-5'].every((i) => planned.includes(i)) && !planned.includes('P-3');
+      const groups = [step(2), step(3), step(4)];
+      const grouped = groups[0].startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-15.') && groups[1].startsWith('Put right in `beta.mjs`: Q-HUB-14.') && groups[2].startsWith('Put right in the files each names: Q-HUB-12.')
+        && !groups.some((g) => g.includes('Q-HUB-13'));
+      const fa = (t.split('\n## Found answered\n')[1] ?? '').split('\n## ')[0];
+      const answered = fa.includes('- Q-HUB-13 fixed in step 1: its own text says it was put right') && fa.includes('- Q-HUB-14 fixed in step 3:');
+      const head = t.split('\n')[0].startsWith('PLAN SEED for the batch of 5 open findings of hub, in 3 group steps');
+      if (!(doneLine && plannedOk && grouped && answered && head)) throw new Error(`done ${doneLine}, planned ${plannedOk} (${planned.slice(0, 120)}), grouped ${grouped}, answered ${answered}, head ${head}`);
+      return true;
+    },
+  },
+  {
+    name: 'the dispatcher at the entry to plan mode runs the seed with --out into status/seed-print.txt of the scratchpad, and prints a line naming that file and its line count and the first forty lines of the print, the file holding the whole',
+    guards: ['seed_dispatch_out', 'seed_dispatch_lines', 'seed_dispatch_note'],
+    run(m, dir) {
+      const hub = batchHub(dir);
+      const pad = tmp('sg-batchpad-');
+      const opts = { pad, hub, marker: join(tmp('sg-batchmk-'), 'none.json'), plansDir: tmp('sg-batchplans-') };
+      const before = process.env.CLAUDE_PROJECT_DIR;
+      let printed;
+      try {
+        process.env.CLAUDE_PROJECT_DIR = hub;
+        printed = m.dispatch.planEntrySeed({ session_id: 'sd', cwd: hub, permission_mode: 'plan' }, opts);
+      } finally { if (before === undefined) delete process.env.CLAUDE_PROJECT_DIR; else process.env.CLAUDE_PROJECT_DIR = before; }
+      const file = join(pad, 'status', 'seed-print.txt');
+      const whole = existsSync(file) ? readFileSync(file, 'utf8').replace(/\s+$/, '').split('\n') : [];
+      const out = String(printed).split('\n');
+      const named = out[0].startsWith(`PLAN SEED WRITTEN WHOLE to ${file} (${whole.length} lines)`);
+      const forty = out.length === 41 && out.slice(1).every((l, i) => l === whole[i]) && whole.length > 41;
+      const tail = whole.some((l) => l.startsWith('MOVABLE READS')) && !out.some((l) => l.startsWith('MOVABLE READS'));
+      if (!(named && forty && tail)) throw new Error(`named ${named} (${out[0].slice(0, 160)}), forty ${forty} (${out.length} lines, file ${whole.length}), tail ${tail}`);
       return true;
     },
   },
@@ -10787,8 +10858,8 @@ const PLANTS = {
   // The batch print: which findings it takes, how it groups and cuts them, what it marks fixed, and where the dispatcher prints it.
   batch_select: ["if (e.state !== 'open' || e.repository.toLowerCase() !== o.repoName.toLowerCase()) return;", "if (e.state !== 'open') return;", 'plan-seed.mjs'],
   batch_group: ["(a === '') - (b === '') || byHome.get(a)[0].rank - byHome.get(b)[0].rank", 'byHome.get(a)[0].rank - byHome.get(b)[0].rank', 'plan-seed.mjs'],
-  batch_home: ["rank, text, files, home: files[0] ?? '' });", "rank, text, files, home: '' });", 'plan-seed.mjs'],
-  batch_found: ['L(`- ${f.key} fixed in step', 'L(`- ${f.key} dropped in step', 'plan-seed.mjs'],
+  batch_home: ["rank, text, files, home: files[0] ?? '', putRight:", "rank, text, files, home: '', putRight:", 'plan-seed.mjs'],
+  batch_found: ['`- ${f.key} fixed in step ${stepOf.get(f.key)}', '`- ${f.key} dropped in step ${stepOf.get(f.key)}', 'plan-seed.mjs'],
   batch_close: ["const itemKeys = batch.map((f) => f.item).join(', ');", "const itemKeys = batch.map((f) => f.item).slice(0, 1).join(', ');", 'plan-seed.mjs'],
   batch_size: ['for (let i = 0; i < fs.length; i += size) groups.push({ home: h, list: fs.slice(i, i + size) });', 'groups.push({ home: h, list: fs });', 'plan-seed.mjs'],
   batch_cost: ['one for each group step and two more for the take-up and the close', 'one for the whole plan', 'plan-seed.mjs'],
@@ -10797,6 +10868,16 @@ const PLANTS = {
   batch_none: ['if (!findings.length) return { ok: false', 'if (false) return { ok: false', 'plan-seed.mjs'],
   batch_dispatch: ["(mode0 === 'batch' ? ['--batch'", "(mode0 === 'never' ? ['--batch'", 'hook-dispatch.mjs'],
   batch_mode: ["return key && existsSync(join(isHub ? hub : cwd, 'found', `${key}.md`)) ? 'batch' : 'single';", "return 'batch';", 'hook-dispatch.mjs'],
+  seed_out_write: ['writeFileSync(path, r.text);', 'void path;', 'plan-seed.mjs'],
+  seed_out_line: ['`plan-seed: wrote ${path} (', '`plan-seed: wrote ${"it"} (', 'plan-seed.mjs'],
+  putright_read: ['const rest = m[1];', "const rest = '';", 'plan-seed.mjs'],
+  putright_skip: ['for (const f of findings) { if (f.putRight) continue;', 'for (const f of findings) {', 'plan-seed.mjs'],
+  putright_takeup: ["const takeupVars = { ...vars, ITEM: planned.map((f) => f.item).join(', ') };", 'const takeupVars = { ...vars };', 'plan-seed.mjs'],
+  putright_mid: ['(?:^|[.;:)\\]]\\s+)(put right', '(put right', 'plan-seed.mjs'],
+  putright_found: ['fixed in step ${takeup}: its own text says it was put right', 'fixed in step ${stepOf.get(f.key)}: its own text says it was put right', 'plan-seed.mjs'],
+  seed_dispatch_out: ["const outFile = join(pad, 'status', 'seed-print.txt');", "const outFile = join(pad, 'status', 'elsewhere.txt');", 'hook-dispatch.mjs'],
+  seed_dispatch_lines: ["...lines.slice(0, 40)].join('\\n');", "...lines].join('\\n');", 'hook-dispatch.mjs'],
+  seed_dispatch_note: ['`PLAN SEED WRITTEN WHOLE to ${outFile}', '`PLAN SEED to ${outFile}', 'hook-dispatch.mjs'],
   seed_fence: ["  if (tool === 'Bash' && isSeedCommand(input.command)) return null;", '  void 0;', 'hook-dispatch.mjs'],
   seed_can: [' || (!p.agent_id && isSeedCommand(cmd)));', ');', 'hook-dispatch.mjs'],
   seed_status: [' || (!p.agent_id && isSeedCommand(p.tool_input?.command)));', ');', 'hook-dispatch.mjs'],
