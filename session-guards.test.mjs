@@ -6164,7 +6164,7 @@ const CASES = [
     },
   },
   {
-    name: 'every status prints a Judgement line under the Review line, read by the function the judgement gate refuses on: nothing to judge, a hand-back owed its line with the file and the five parts to write, a line short of a part named as such, and a hand-back judged with the step about to go reminded of its own line',
+    name: 'every status prints a Judgement line under the Review line, read by the function the judgement state reads: nothing to judge, and a hand-back judged with the step about to go reminded of its own line; a hand-back with no line, or a line short of a part, prints no owed line, since the gate that held the judgement and reason lines is removed',
     guards: ['judged_status_print', 'judged_block_text'],
     run(m, dir) {
       const home = tmp('sg-home-');
@@ -6193,9 +6193,8 @@ const CASES = [
       const judgedOut = status();
       const before = (out, a, b) => out.indexOf(a) >= 0 && out.indexOf(a) < out.indexOf(b);
       return /^Judgement: nothing to judge/m.test(first) && before(first, 'Review:', 'Judgement:')
-        && /^Judgement: OWED\. Step 1's newest hand-back ended .*"Judged 1: is: <what the hand-back showed> \| why: <why it ended as it did> \| route: .* \| fails: .* \| cheapest: .*".*No step is held for it now: the wall line each report opens with answers it\.$/m.test(owedOut)
-        && owedOut.includes(join(pad, 'status', 'manager.txt')) && before(owedOut, 'Review:', 'Judgement: OWED')
-        && /^Judgement: OWED\..*the newest line held lacks fails, cheapest\)/m.test(partialOut)
+        && !/OWED/.test(owedOut) && !/^Judgement:/m.test(owedOut) && /^Review:/m.test(owedOut)
+        && !/OWED/.test(partialOut) && !/^Judgement:/m.test(partialOut)
         && /^Judgement: step 1's newest hand-back \(ended .*\) is judged in .*"Why <step>: now: … \| wrong: … \| fails: … \| cheapest: …"/m.test(judgedOut) && judgedOut.includes(join(pad, 'status', 'manager.txt'));
     },
   },
@@ -10381,8 +10380,8 @@ const PLANTS = {
   judged_state_newest: ['    if (!newest || e.at > newest.at) newest = e;', '    if (!newest || e.at < newest.at) newest = e;', 'report.mjs'],
   judged_state_unread: ["  if (!read?.ends) return { ...base, kind: 'not-read' };", '  if (!read?.ends) return base;', 'report.mjs'],
   judged_notes_parse: ['    else if ((m = /^Judged\\s+(\\d+)\\s*:\\s*(\\S.*)$/i.exec(l))) out.judged.set(', '    else if (false) out.judged.set(', 'report.mjs'],
-  judged_status_print: ['  console.log(judged);\n', '\n', 'report.mjs'],
-  judged_block_text: ['    default: return `Judgement: OWED.', '    default: return `Judgement: fine.', 'report.mjs'],
+  judged_status_print: ['  if (judged) console.log(judged);\n', '\n', 'report.mjs'],
+  judged_block_text: ["    default: return '';", '    default: return `Judgement: OWED. Step ${st.step} is owed a line.`;', 'report.mjs'],
 
   // The stop guard's three managing shapes.
   managing_wired: ['if (managing) {\n  const why = {', 'if (false) {\n  const why = {', 'stop-guard.mjs'],

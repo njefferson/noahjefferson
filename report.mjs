@@ -2271,19 +2271,17 @@ export function judgedState(p, plan, opts = {}) {
  * @returns {string} one line, never a table: whether the newest end of a step of the plan
  *   has its `Judged N:` line with the five parts, or why the dispatcher's judgement gate
  *   holds the next step; the judged line also says the step about to go needs its own
- *   `Why` line. The OWED line names the file and the whole form to write.
+ *   `Why` line. A hand-back owed a line prints '' (no owed line: the gate that held it is removed).
  */
 export function judgedBlock(st) {
   const at = st.endAt ? californiaStamp(st.endAt) : '';
-  const where = st.file || 'status/manager.txt (no scratchpad found)';
   switch (st.kind) {
     case 'not-enforced': return 'Judgement: nothing to judge (no agent has ended for a step of the plan, or the plan has no steps).';
     case 'not-read': return 'Judgement: not read (the session\'s agents cannot be read), so what has been judged cannot be told.';
     case 'judged': return `Judgement: step ${st.step}'s newest hand-back (ended ${at}) is judged in ${st.file}; the step about to go needs its own "Why <step>: now: … | wrong: … | fails: … | cheapest: …" line there.`;
-    case 'why-none':
-    case 'why-short':
-    case 'why-incomplete': return `Judgement: OWED. Step ${st.send} is about to go and ${where} holds ${st.whyHave} whole "Why ${st.send}:" line${st.whyHave === 1 ? '' : 's'} of the ${st.whyNeed} it needs (now, wrong, fails, cheapest, each ten characters or more). No step is held for it now: the wall line each report opens with answers it.`;
-    default: return `Judgement: OWED. Step ${st.step}'s newest hand-back ended ${at}; ${where} needs a line "Judged ${st.step}: is: <what the hand-back showed> | why: <why it ended as it did> | route: <what that means for the route> | fails: <where the route fails next> | cheapest: <the cheapest route from here that holds the owner's rules>" written after it, each part ten characters or more (${st.have} whole line${st.have === 1 ? '' : 's'} for ${st.ends} end${st.ends === 1 ? '' : 's'}${(st.missing ?? []).length ? `; the newest line held lacks ${st.missing.join(', ')}` : ''}). No step is held for it now: the wall line each report opens with answers it.`;
+    // THE GATE THAT HELD THE JUDGEMENT AND REASON LINES WAS REMOVED (step 58 of the redesign plan), so the print asks for no line
+    // that nothing holds: a hand-back with no line, a short line or a missing Why line prints nothing here.
+    default: return '';
   }
 }
 
@@ -3187,7 +3185,7 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   // the same `judgedState` the dispatcher's judgement gate refuses on.
   let judged = '';
   try { judged = judgedBlock(judgedState({ session_id: sid }, planInForce())); } catch (e) { judged = `Judgement: not read (${e?.message ?? e}).`; }
-  console.log(judged);
+  if (judged) console.log(judged);
   // THE MODEL SERVING THE MAIN THREAD, under the judgement (Doctrine §11b, LESSONS §434): read from the transcript's newest main-thread
   // reply (`modelLine`), so the first reply under an approved plan can name the tier and say whether the work needs it. A failure
   // reading it is printed, never skipped.
