@@ -1,0 +1,1 @@
+Q-HUB-283: the status of 21:32 California on 6 November read a skill reference file that the harness synced at 17:17, which the configuration baseline does not name; the fix is that `CONFIG.md` names the synced skill reference files and a recorded change to one that no item made is filed as a drift (found by the main thread in the first batch plan, filed in step 99).

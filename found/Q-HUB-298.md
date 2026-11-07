@@ -1,0 +1,1 @@
+Q-HUB-298: the lessons check prints its whole output, passes included, past the harness's output cap, so a red run's FAILURES block can be cut off the tool result and unread; the fix is that the check prints its failures first, or only its failures when it is red (found by the first send of step 99 of the first batch plan, filed in a later send of that step).

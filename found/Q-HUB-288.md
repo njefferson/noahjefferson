@@ -1,0 +1,1 @@
+Q-HUB-288: the tier hold reads the serving model from the newest saved main-thread reply, so a model switch counts only after a reply and a send right after the switch is refused on the old model; the fix is that it reads the model-switch record so a switch counts at once (found in a second message from an app session of 7 November, filed in step 99).

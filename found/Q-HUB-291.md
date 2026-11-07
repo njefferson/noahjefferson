@@ -1,0 +1,1 @@
+Q-HUB-291: the identifier ledger does not count an agent id printed in a launch result as read, so the manager's stop of that agent was refused and latched the main thread; the fix is that the ledger counts an id seen in a launch result (found in a second message from an app session of 7 November, filed in step 99).

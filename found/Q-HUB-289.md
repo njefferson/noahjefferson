@@ -1,0 +1,1 @@
+Q-HUB-289: the review takes its move from the status page's Next line, which only a status rewrites, so a review judged a cleared step again; the fix is that it reads the manager notes' newest Next line, or that the page is rewritten whenever that line changes (found in a second message from an app session of 7 November, filed in step 99).

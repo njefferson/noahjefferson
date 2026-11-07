@@ -1,0 +1,1 @@
+Q-HUB-290: the reads gate holds a send on refused reads of earlier closed plans, thirty of them in one turn; the fix is that it counts only refusals made since the plan in force was approved (found in a second message from an app session of 7 November, filed in step 99).

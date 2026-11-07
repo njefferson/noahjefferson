@@ -1,0 +1,1 @@
+Q-HUB-285: two of the first batch plan's four group steps, 96 and 98, went red on existing plants that their own edits staled, each costing a send and a review; the fix is that the suite reports, before a plants run, every plant whose target line its file no longer holds, so a step re-points them before its run (found by the main thread in the first batch plan, filed in step 99).
