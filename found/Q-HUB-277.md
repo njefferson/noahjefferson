@@ -1,0 +1,1 @@
+Q-HUB-277: a standing review agent ran the reply guard's release command with no value and latched itself, although a review never needs that command; the review step's text or `aim-review.md` should say a review never runs it (found in step 86 of the plan that closed P-21 after the lock of 6 November, filed in step 85 of the same plan).

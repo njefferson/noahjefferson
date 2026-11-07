@@ -54,7 +54,7 @@ The list is the rank. The items the redesign plan builds come first, then the pa
 
 ## Items
 
-316 items (P-309 the batch seed, named by the owner on 5 November, and P-310 to P-316 the keys Q-HUB-269 to Q-HUB-275, filed by step 92 of the plan that wrote it; P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 242 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
+319 items (P-317 to P-319 the keys Q-HUB-276 to Q-HUB-278, filed by step 85 of the plan that closed P-21 after the lock of 6 November; P-309 the batch seed, named by the owner on 5 November, and P-310 to P-316 the keys Q-HUB-269 to Q-HUB-275, filed by step 92 of the plan that wrote it; P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 245 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
 
 ## Items the redesign plan builds
 
@@ -273,6 +273,16 @@ Close entry of the batch seed plan (P-309, steps 89 to 93), written by step 92 f
 - Compactions: 0. Resumes: 1. Pushes: the instrument does not count them; step 91 pushed once and this step pushes once.
 - The whole session over eleven numbered plans: 182 owner messages (82 go-words, 100 without, 16 carrying the word stop), 324 stop-hook messages.
 - The harness's own running cost entry, the last of 91, reads 429.03107569999975 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252).
+
+Close entry of the plan that closed P-21 after the lock of 6 November (steps 84 to 86, step 85 the writer), from the cost instrument run on this session's transcript, so far and before this step's push. P-21 itself was built and closed by the earlier plan of 5 November, which landed the three gates (no send on the top tier, a stop that passes the pending guard, no exit from plan mode while the base mode is auto) and ended at the lock of 6 November; this plan landed the exit pass, the kept approval marker and the rule that an end of plan mode the session did not call writes no marker, and put the lessons gate on main right. The instrument numbers it plan 15 and reads its item as P-6, approved 21:37 California time on 6 November; the plan of 5 November it numbers plan 14, approved 22:48 on 5 November and approved again after an amendment at 06:50 on 6 November (12 owner messages, 20 agents, 1 compaction at 09:07 on 6 November):
+- The owner's messages: 0, as the instrument prints for this plan; the session's totals are below.
+- Stop-hook messages: 1 in 1 stop (the environment's git hook).
+- Main-thread refusals: 1 (manager fence 1).
+- Agents: 13, all on the sonnet tier, with 114,084 output tokens, 35,301,954 cache-read tokens and 2,669,044 cache-written tokens; 20 hook refusals (plan fence 18, reply guard 2).
+- Main-thread turns: 49 on the opus tier with 32,160 output tokens.
+- Compactions: 0. Resumes: 0. Pushes: the instrument does not count them; step 84 pushed once and this step pushes once.
+- The whole session over fifteen numbered plans: 181 owner messages (72 go-words, 109 without, 17 carrying the word stop), 79 stop-hook messages.
+- The harness's own running cost entry, the last of 74, reads 841.2174138000001 dollars; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252).
 
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
@@ -1805,7 +1815,9 @@ Depends: P-6. The same fact blocks P-17 to P-21.
 
 ### P-180. Q-HUB-140: whether the hub's own hooks count against the Stop cap was not measured
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: i-m-not-british-make-indexed-riddle.md, step 85.
+
+Done: P-20's planted run, made by the hub's own stop guard, was counted by the harness, which overrode the ninth consecutive refusal, so the hub's own hooks count against the cap.
 
 Acceptance: answered by P-20's measured run; Q-HUB-161 gives the documentation's words.
 
@@ -1973,7 +1985,9 @@ Depends: Q-HUB-138.
 
 ### P-201. Q-HUB-161: the Stop cap was read in the documentation and not measured here
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: i-m-not-british-make-indexed-riddle.md, step 85.
+
+Done: the cap of eight was measured in this container by P-20 and equals the documented cap.
 
 Acceptance: answered by P-20.
 
@@ -2882,4 +2896,28 @@ Repository: hub. Goal: 6. State: open. Plan: none.
 Acceptance: the seed-command test in `hook-dispatch.mjs` and its copy in `plan-guard.mjs` pass the batch flags together, the equality case holds, and a plant on the plan guard's copy is caught.
 
 Depends: P-309.
+
+### P-317. Q-HUB-276: the never-rules page's sentence on the tier hold reads against the gate
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the sentence in section 11b of the never-rules page that says the dispatcher no longer holds a send while the top tier serves is edited, with the owner's button, to say the dispatch gate refuses a send while a top-tier id serves, and no other line of the page changes.
+
+Depends: none.
+
+### P-318. Q-HUB-277: a standing review agent ran the reply guard's release command and latched itself
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: the review step's text or `aim-review.md` says a review never runs the reply guard's release command, and a case or a checklist line the review follows holds it.
+
+Depends: none.
+
+### P-319. Q-HUB-278: the plan seed's template says the shell starts in the repository
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the template's sentence and standing rule say which launch they hold for, and a seed printed for a session launched at the parent folder writes the working copy's git lines with git's directory flag and the full path, held by a case.
+
+Depends: P-288.
 
