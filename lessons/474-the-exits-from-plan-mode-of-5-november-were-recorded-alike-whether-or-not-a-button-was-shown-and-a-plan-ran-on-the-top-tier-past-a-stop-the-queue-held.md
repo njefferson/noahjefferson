@@ -1,6 +1,10 @@
-## 473 · The exits from plan mode of 5 November were recorded alike whether or not a button was shown, a plan ran on the top tier it had called unneeded, and a stop was held by the queue it was sent to answer
+## 474 · The exits from plan mode of 5 November were recorded alike whether or not a button was shown, a plan ran on the top tier it had called unneeded, and a stop was held by the queue it was sent to answer
 
-**Enforced by:** GATE hub:plan-guard.mjs, approved-plan-guard.mjs, pending-guard.mjs and hook-dispatch.mjs — the plan gate refuses the approval call while the newest owner-typed message is recorded under auto mode, the approval guard writes no marker from an end of plan mode recorded under auto, the pending guard lets the main thread's stop of a task through while a message waits, and the dispatch gate sends no agent while the top tier serves; each has a case and a plant in session-guards.test.mjs
+**Enforced by:** GATE hub:plan-guard.mjs — the plan gate refuses the approval call while the newest owner-typed message is recorded under auto mode
+**Enforced by:** GATE hub:approved-plan-guard.mjs — the approval guard writes no marker from an end of plan mode recorded under auto
+**Enforced by:** GATE hub:pending-guard.mjs — the pending guard lets the main thread's stop of a task through while a message waits
+**Enforced by:** GATE hub:hook-dispatch.mjs — the dispatch gate sends no agent while the top tier serves
+**Enforced by:** GATE hub:session-guards.test.mjs — each of the four has a case and a plant
 
 **Recorded 2026-11-06.** Measured on 5 November, California time, in one session, from its transcript read whole.
 
