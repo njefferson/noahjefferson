@@ -10557,7 +10557,7 @@ const PLANTS = {
   doctrine_check_first: ['**The plan is checked whole before the talk turn.**', '**The plan is checked.**', 'doctrine/plans.md'],
   doctrine_rules_rule: ['**A change to the agent rules file lands only when no plan is in force, as the', '**A change to the agent rules file lands at any time, as the', 'doctrine/plans.md'],
   doctrine_no_amend: ['    - a send the rules gate refuses, because the plan pins a rules version the file\n', '    - a send the rules gate refuses, answered by amending the Rules line; a rules version the file\n', 'doctrine/plans.md'],
-  doctrine_count: ['    Twenty-one refusals are not ends of a route, and set no latch, because', '    Twenty-two refusals are not ends of a route, and set no latch, because', 'doctrine/plans.md'],
+  doctrine_count: ['    Twenty-four refusals are not ends of a route, and set no latch, because', '    Twenty-five refusals are not ends of a route, and set no latch, because', 'doctrine/plans.md'],
   doctrine_passes: ['    PreToolUse call on the main thread and in agents is refused except five\n', '    PreToolUse call on the main thread and in agents is refused except three\n', 'doctrine/plans.md'],
   brief_shapes_file: ["const f = join(hub, 'doctrine', 'plans.md');", "const f = join(hub, 'DOCTRINE.md');", 'session-brief.mjs'],
   brief_shapes_end: ["i < lines.length && !lines[i].startsWith('## '); i++", 'i < lines.length && !lines[i].startsWith(`## ${n + 1}.`); i++', 'session-brief.mjs'],
