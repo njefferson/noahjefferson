@@ -8632,7 +8632,9 @@ const CASES = [
     name: 'Q-HUB-245/269: --case= takes a comma-separated list of substrings, a case runs when any one is in its name, a single substring matches as before, and the head line names each substring with its count',
     guards: ['case_split', 'case_count'],
     run(m, dir) {
-      const head = (arg) => spawnSync('node', [join(dir, 'session-guards.test.mjs'), `--case=${arg}`, '--count'], { encoding: 'utf8', timeout: 120000 }).stdout ?? '';
+      // The head line is read from a real filtered run; the run that matches this case runs it nested, and a nested run passes at once.
+      if (process.env.CASE_FILTER_NESTED) return true;
+      const head = (arg) => spawnSync('node', [join(dir, 'session-guards.test.mjs'), `--case=${arg}`], { encoding: 'utf8', timeout: 300000, env: { ...process.env, CASE_FILTER_NESTED: '1' } }).stdout ?? '';
       const parse = (out) => {
         const mm = /CASE FILTER: (\d+) substrings?: (.*); (\d+) of (\d+) cases selected\./.exec(out);
         return mm ? { n: Number(mm[1]), each: [...mm[2].matchAll(/"([^"]*)" matched (\d+)/g)].map((x) => [x[1], Number(x[2])]), total: Number(mm[3]), all: Number(mm[4]) } : null;
@@ -10849,12 +10851,6 @@ function caseFilterHead(words) {
 }
 const caseList = caseWords(argValue('case'));
 if (caseList) console.log(caseFilterHead(caseList));
-// --count prints that head line and runs nothing, so a filter is read before it is used.
-if (process.argv.includes('--count')) {
-  if (!caseList) console.log('CASE FILTER: none given, so every case would run.');
-  rmSync(STATE, { recursive: true, force: true });
-  process.exit(0);
-}
 /**
  * The guard files this checkout has changed.
  * @returns {string[]|null} the top-level file names `git status` shows modified, added or untracked in
