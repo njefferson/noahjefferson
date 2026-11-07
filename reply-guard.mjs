@@ -1113,6 +1113,17 @@ function wroteSince(p, failedUse) {
 }
 
 /**
+ * The file a shell line runs, for the refusal of a repeat to name.
+ * @param {string} cmd  a Bash command.
+ * @returns {string} the first word of the line that names a script file (.mjs, .cjs, .js, .ts, .py, .sh), flags skipped; '' when the line
+ *   names none. A Write or Edit of that file is the change `wroteSince` reads, so the refusal says which file to change.
+ */
+function namedScript(cmd) {
+  for (const s of splitShell(String(cmd ?? ''))) for (const w of s.words ?? []) if (!w.startsWith('-') && /\.(?:mjs|cjs|js|ts|py|sh)$/.test(w)) return w.slice(0, 300);
+  return '';
+}
+
+/**
  * Parse a reading command.
  * @param {string} cmd  a Bash command.
  * @returns {{target: string, said: string, route: string, bad?: string} | null}
@@ -1327,7 +1338,9 @@ export function decide(p) {
     const f = ev[fi];
     const read = ev.slice(fi + 1).some((e) => e.kind === 'read' && e.target === `call:${f.id}`);
     if (!read) {
-      return `reply-guard (LESSONS §374): this is the ${tool} call that failed, unchanged, and its error has not been read. A repeat learns nothing the error did not already say.\n  The error:\n${indent(String(f.text).slice(0, 1500))}\nRead it and change the call. If the identical call is right now (the code it runs was edited, a dropped connection, a file that now exists), record why:\n  node ${SELF} --read call:${f.id} --said "<words copied from the error>" --route "<what is different now>"`;
+      const edit = tool === 'Bash' ? namedScript(String(p.tool_input?.command ?? '')) : '';
+      const editNote = edit ? `\nA Write or Edit of ${edit} by this agent since the failure would have made this a changed call, and none has been made.` : '';
+      return `reply-guard (LESSONS §374): this is the ${tool} call that failed, unchanged, and its error has not been read. A repeat learns nothing the error did not already say.\n  The error:\n${indent(String(f.text).slice(0, 1500))}${editNote}\nRead it and change the call. If the identical call is right now (the code it runs was edited, a dropped connection, a file that now exists), record why:\n  node ${SELF} --read call:${f.id} --said "<words copied from the error>" --route "<what is different now>"`;
     }
   }
 

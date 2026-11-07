@@ -380,14 +380,14 @@ const REPLY_GUARD_REFUSAL = /^reply-guard \(LESSONS §374\)/;
  * Does a release lift the latch standing?
  * @param {{reason: string, own?: boolean} | null} latch  the session's latch as `latchStanding` reads it.
  * @param {{target: string} | null} release  `releaseCommand` of the call.
- * @returns {boolean} true only when the latch is the main thread's (never an agent's own), was set by a refusal of the reply guard
+ * @returns {boolean} true only when the latch (the main thread's, or an agent's own, which that agent's release lifts) was set by a refusal of the reply guard
  *   (its text opens as every reply-guard refusal does), and the release is of the call that refusal named: the target after
  *   `--read` in the refusal's text, a call id compared as written and a host compared by its site (`site` in reply-guard.mjs).
  *   Where the stored text holds no target (the latch keeps the first 1200 characters of a refusal, and an error excerpt can fill
  *   them), the release is taken as of the call, because the reply guard has already checked the reading it records.
  */
 export function releaseLifts(latch, release) {
-  if (!latch || latch.own || !release || !REPLY_GUARD_REFUSAL.test(String(latch.reason ?? ''))) return false;
+  if (!latch || !release || !REPLY_GUARD_REFUSAL.test(String(latch.reason ?? ''))) return false;
   const named = [...String(latch.reason).matchAll(/ --read (\S+)/g)].map((m) => m[1].toLowerCase());
   if (!named.length) return true;
   const want = String(release.target ?? '').toLowerCase();
@@ -395,7 +395,7 @@ export function releaseLifts(latch, release) {
 }
 
 // What a refusal of the reply guard that names its release command ends with, in the refusal itself and in the latch it sets.
-const RELEASE_NOTE = ' On the main thread this command passes the manager fence and the refusal latch as the status command does, and it lifts the latch this refusal set once the reading is recorded.';
+const RELEASE_NOTE = ' On the main thread this command passes the manager fence and the refusal latch as the status command does, and it lifts the latch this refusal set once the reading is recorded. An agent whose own latch this refusal set passes it the same way, and its release of the refused call lifts that latch.';
 
 // What the dispatcher ends a refusal of the reply guard with, by what the call was (LESSONS §435).
 const REPLY_READ_NOTE = ' REPLY GUARD, NO LATCH: this call is a Read of a file of the record, so this refusal sets no latch: the reads gate already holds every step until a Read of that file has returned. '
@@ -3623,8 +3623,10 @@ async function main(event, raw, p) {
     // THE REPLY GUARD'S RELEASE COMMAND PASSES THE LATCH ON THE MAIN THREAD (`releaseCommand`, LESSONS §432): a refusal of the reply
     // guard names it as the way on, and the latch that refusal set refused the way on with it. Only the latch is passed here: the
     // stop hold, the correction check and every later gate judge it as any command, and it lifts the latch after the guards pass it.
-    const release = !p.agent_id && p.tool_name === 'Bash' ? releaseCommand(p.tool_input?.command) : null;
+    // AN AGENT'S RELEASE PASSES ITS OWN LATCH when a refusal of the reply guard set it and the release is of the call that refusal named (Q-HUB-272).
+    const releaseCall = p.tool_name === 'Bash' ? releaseCommand(p.tool_input?.command) : null;
     const latch = latchStanding(p);
+    const release = releaseCall && (!p.agent_id || (latch?.own && releaseLifts(latch, releaseCall))) ? releaseCall : null;
     // A LATCHED AGENT WRITES ITS OWN REPORT: its progress note and report file in the
     // scratchpad pass the latch, so a refusal does not cost its step the record of what
     // it did. Every other call of it is still refused but its own return.
@@ -3834,7 +3836,7 @@ async function main(event, raw, p) {
     // reading and recorded it, so the repeat of the call it refused is no longer a repeat. Only a latch the reply guard set is lifted,
     // and only by a release naming the call its refusal named; any other latch stands for the owner's next message.
     if (release && latch && releaseLifts(latch, release)) {
-      try { rmSync(latchFile(p), { force: true }); } catch { /* the latch stands */ }
+      try { rmSync(latch.own ? latchFile(p, p.agent_id) : latchFile(p), { force: true }); } catch { /* the latch stands */ }
     }
   }
   // --mark's outcome is carried, never discarded: a missed mark went unnoticed

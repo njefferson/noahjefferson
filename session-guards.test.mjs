@@ -7068,6 +7068,73 @@ const CASES = [
     },
   },
 
+  // ---- step 97 of the plan of the first batch: the release command and a rerun after an edit (Q-HUB-272) ----
+  {
+    name: 'step97a: an agent latched by a refusal of the reply guard passes the reply guard\'s release command for the call that refusal named and the release lifts that agent\'s latch, while any other command of it, a release of another call and a latch another guard set stay refused, and the refusal of an unchanged repeat of a shell line names the script file a write of which would have made it a changed call',
+    guards: ['agent_release_pass', 'agent_release_lift', 'agent_release_scope', 'repeat_names_file'],
+    run(m, dir) {
+      process.env.REPLY_LEDGER_DIR = tmp('sg-ledger-');
+      process.env.REPLY_GUARD_NOW = String(Date.parse(ts(-5)));
+      try {
+        const w = world(dir, [turn(0, GO)], STEPS_PLAN);
+        const self = join(dir, 'reply-guard.mjs');
+        const SAID = 'the widget stopped answering today';
+        const ERR = `File content could not be returned because ${SAID}`;
+        const rel = (id) => `node ${self} --read call:${id} --said "${SAID}" --route "the file is readable again after a restart"`;
+        const grepOf = (word) => ({ tool_name: 'Grep', tool_input: { pattern: word, path: w.plan } });
+        const first = grepOf('plan');
+        const second = grepOf('other');
+        const idOf = (call) => m.reply.callHash('Grep', call.tool_input, w.cwd).slice(0, 8);
+        const fail = (s, call, n) => m.reply.record({ session_id: s, cwd: w.cwd, ...call, agent_id: 'a1', tool_use_id: `u-${s}-${n}`, error: ERR }, 'PostToolUseFailure');
+        const go = (s, call) => w.call('PreToolUse', { session_id: s, agent_id: 'a1', ...call });
+        const ownFile = (s) => join(process.env.REFUSAL_LATCH_DIR, `${s}.agent-a1.json`);
+        const send = (s, command) => go(s, { tool_name: 'Bash', tool_input: { command } });
+        // The agent's repeat is refused by the reply guard, which latches that agent; its release of the refused call passes and lifts the latch.
+        const sA = sid('ar');
+        fail(sA, first, 1);
+        const repeat = go(sA, first);
+        const latchedA = existsSync(ownFile(sA)) && !latched(sA);
+        const other = go(sA, grepOf('third'));
+        const released = send(sA, rel(idOf(first)));
+        const liftedA = !existsSync(ownFile(sA));
+        const pass = repeat.status === 2 && /An agent whose own latch this refusal set passes it the same way/.test(repeat.stderr) && latchedA
+          && other.status === 2 && /REFUSAL LATCH/.test(other.stderr) && released.status === 0;
+        // A release of another call passes no latch and lifts nothing; a latch another guard set stands under a release.
+        const sB = sid('ar');
+        fail(sB, first, 1);
+        fail(sB, second, 2);
+        go(sB, first);
+        const wrong = send(sB, rel(idOf(second)));
+        const keptB = existsSync(ownFile(sB));
+        const sC = sid('ar');
+        fail(sC, first, 1);
+        mkdirSync(process.env.REFUSAL_LATCH_DIR, { recursive: true });
+        writeFileSync(ownFile(sC), JSON.stringify({ at: Date.now(), tool: 'Bash', agent: 'a1', reason: 'PLAN FENCE: planted for the release case.' }));
+        const stood = send(sC, rel(idOf(first)));
+        const scope = wrong.status === 2 && /REFUSAL LATCH/.test(wrong.stderr) && keptB && stood.status === 2 && /REFUSAL LATCH/.test(stood.stderr) && existsSync(ownFile(sC));
+        // The refusal of an unchanged shell line names the script file; a write of it between lets the same line through.
+        const cmd = 'node /scratch/check.mjs';
+        const bad = 'node: Cannot find module /scratch/check.mjs';
+        const failed = [tool(0, 'f1', 'Bash', { command: cmd }), result(1, 'f1', bad, true)];
+        const wrote = [tool(2, 'w1', 'Edit', { file_path: '/scratch/check.mjs', old_string: 'x', new_string: 'y' }), result(3, 'w1', 'File edited', false)];
+        let n = 0;
+        const judge = (entries) => {
+          const s = `ar-repeat${++n}`;
+          const base = { session_id: s, tool_name: 'Bash', tool_input: { command: cmd }, transcript_path: transcript(entries) };
+          m.reply.record({ ...base, tool_use_id: 'f1', error: bad }, 'PostToolUseFailure');
+          return m.reply.decide(base);
+        };
+        const refused = judge(failed);
+        const named = /call that failed, unchanged/.test(refused ?? '') && /Write or Edit of \/scratch\/check\.mjs/.test(refused ?? '');
+        const edited = judge([...failed, ...wrote]) === null;
+        return pass && liftedA && scope && named && edited;
+      } finally {
+        delete process.env.REPLY_LEDGER_DIR;
+        delete process.env.REPLY_GUARD_NOW;
+      }
+    },
+  },
+
   // ---- the plan gate's name check, the plan fence's opener, the latch and the review's staleness (step 199) ----
   {
     name: 'the plan gate passes a name it can find: one a tool result printed beyond the old tail of sixteen megabytes, a bare file name that exists in the session scratchpad with no result printing it, a held name whose file now exists, and a bare file name that exists in a repository the plan\'s Files names',
@@ -7581,7 +7648,7 @@ const CASES = [
 
   // ---- step 220, change 3: the reply guard's release command passes the manager fence and the latch, and lifts the latch it set (LESSONS §432) ----
   {
-    name: 'step220c: the reply guard\'s release command, node reply-guard.mjs --read as one plain command, passes the manager fence and the latch on the main thread as the status command does, and a release of the call the latch was set by lifts that latch, whose refusal says so: a release of another call, a latch another guard set, an agent\'s own latch and a reading the reply guard refuses lift nothing',
+    name: 'step220c: the reply guard\'s release command, node reply-guard.mjs --read as one plain command, passes the manager fence and the latch on the main thread as the status command does, and a release of the call the latch was set by lifts that latch, whose refusal says so: a release of another call, a latch another guard set, an agent\'s own latch another guard set and a reading the reply guard refuses lift nothing',
     guards: ['release_parse_bad', 'release_fence', 'release_can', 'release_latch', 'release_lift', 'release_lifts_target', 'release_lifts_origin', 'release_lifts_agent', 'release_note', 'release_message'],
     run(m, dir) {
       const self = join(dir, 'reply-guard.mjs');
@@ -7612,7 +7679,8 @@ const CASES = [
         && lifts(latchOf(named('Example.ORG')), 'www.example.org') === true && lifts(latchOf(named('example.org')), 'other.org') === false
         && lifts(latchOf(R), 'call:xray0009') === true
         && lifts(latchOf('MANAGER FENCE (Doctrine §0e): the main thread does not do that.'), 'call:xray0001') === false
-        && lifts(latchOf(named('call:xray0001'), { own: true }), 'call:xray0001') === false
+        && lifts(latchOf(named('call:xray0001'), { own: true }), 'call:xray0001') === true && lifts(latchOf(named('call:xray0001'), { own: true }), 'call:xray0002') === false
+        && lifts(latchOf('PLAN FENCE: planted.', { own: true }), 'call:xray0001') === false
         && lifts(null, 'call:xray0001') === false && m.dispatch.releaseLifts(latchOf(named('call:xray0001')), null) === false;
       const message = m.dispatch.latchMessage(latchOf(named('call:xray0001')));
       const says = /release command/.test(message) && /lifts a latch the reply guard set/.test(message);
@@ -10604,8 +10672,12 @@ const PLANTS = {
   release_latch: ['if (latch && !status && !mainStop && !release && !reportWrite) return refuse(latchMessage(latch), false);', 'if (latch && !status && !mainStop && !reportWrite) return refuse(latchMessage(latch), false);', 'hook-dispatch.mjs'],
   release_lift: ['if (release && latch && releaseLifts(latch, release)) {', 'if (false) {', 'hook-dispatch.mjs'],
   release_lifts_target: ["return named.some((t) => (t.startsWith('call:') || want.startsWith('call:') ? t === want : site(t) === site(want)));", 'return true;', 'hook-dispatch.mjs'],
-  release_lifts_origin: ["if (!latch || latch.own || !release || !REPLY_GUARD_REFUSAL.test(String(latch.reason ?? ''))) return false;", 'if (!latch || latch.own || !release) return false;', 'hook-dispatch.mjs'],
-  release_lifts_agent: ["if (!latch || latch.own || !release || !REPLY_GUARD_REFUSAL.test(String(latch.reason ?? ''))) return false;", "if (!latch || !release || !REPLY_GUARD_REFUSAL.test(String(latch.reason ?? ''))) return false;", 'hook-dispatch.mjs'],
+  release_lifts_origin: ["if (!latch || !release || !REPLY_GUARD_REFUSAL.test(String(latch.reason ?? ''))) return false;", 'if (!latch || !release) return false;', 'hook-dispatch.mjs'],
+  release_lifts_agent: ["if (!latch || !release || !REPLY_GUARD_REFUSAL.test(String(latch.reason ?? ''))) return false;", "if (!latch || latch.own || !release || !REPLY_GUARD_REFUSAL.test(String(latch.reason ?? ''))) return false;", 'hook-dispatch.mjs'],
+  agent_release_pass: ['const release = releaseCall && (!p.agent_id || (latch?.own && releaseLifts(latch, releaseCall))) ? releaseCall : null;', 'const release = releaseCall && !p.agent_id ? releaseCall : null;', 'hook-dispatch.mjs'],
+  agent_release_lift: ['rmSync(latch.own ? latchFile(p, p.agent_id) : latchFile(p), { force: true });', 'rmSync(latchFile(p), { force: true });', 'hook-dispatch.mjs'],
+  agent_release_scope: ['(!p.agent_id || (latch?.own && releaseLifts(latch, releaseCall)))', '(!p.agent_id || latch?.own)', 'hook-dispatch.mjs'],
+  repeat_names_file: ["const edit = tool === 'Bash' ? namedScript(String(p.tool_input?.command ?? '')) : '';", "const edit = '';", 'reply-guard.mjs'],
   release_note: ['? o.reason + RELEASE_NOTE : o.reason;', '? o.reason : o.reason;', 'hook-dispatch.mjs'],
   release_message: ["+ 'and the reply guard\\'s release command (node reply-guard.mjs --read, one plain command), which lifts a latch the reply guard set once the reading is recorded. '", "+ ''", 'hook-dispatch.mjs'],
 
