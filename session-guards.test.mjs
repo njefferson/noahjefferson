@@ -9286,7 +9286,7 @@ const CASES = [
       const added = (r) => { const line = String(r.stdout ?? '').split('\n').find((l) => l.startsWith('{"hookSpecificOutput"')); try { return JSON.parse(line).hookSpecificOutput; } catch { return null; } };
       const c1 = call('default'), c2 = call('plan'), c3 = call('plan');
       const a2 = added(c2);
-      const calls = c1.status === 0 && added(c1) === null && c2.status === 0 && a2?.hookEventName === 'PreToolUse' && String(a2?.additionalContext).startsWith('PLAN SEED for P-3 ') && c3.status === 0 && added(c3) === null;
+      const calls = c1.status === 0 && added(c1) === null && c2.status === 0 && a2?.hookEventName === 'PreToolUse' && String(a2?.additionalContext).includes('PLAN SEED for P-3 ') && String(a2?.additionalContext).includes('PLAN SEED WRITTEN WHOLE to ') && c3.status === 0 && added(c3) === null;
       if (!(once && agent && unrecorded && prompts && calls)) throw new Error(`once ${once}, agent ${agent}, unrecorded ${unrecorded}, prompts ${prompts}, calls ${calls}`);
       return true;
     },
