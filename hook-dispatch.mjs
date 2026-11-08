@@ -155,7 +155,7 @@ import { recallParts } from './compact-recall.mjs';
 import { tailEntries, isOwnerMessage, textOf } from './transcript-tail.mjs';
 import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
   planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, stepEnds, stepBody, markCompacted, sessionFiles,
-  planAfter, SCOPE_SECTIONS, restartedPlanMode, writeStartMode, isTopTier, tierWords, servingModel } from './report.mjs';
+  planAfter, SCOPE_SECTIONS, restartedPlanMode, writeStartMode, isTopTier, tierWords, servingModel, flaggedAgents } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
 import { HARNESS_TAG } from './pending-guard.mjs';
@@ -3094,7 +3094,16 @@ export function managerFence(p, opts = {}) {
   if (tool === 'TaskStop' || tool === 'ExitPlanMode' || tool === 'EnterPlanMode') return null;
   // The main thread may not end its turn while an agent runs, and none of its
   // other calls can wait: this one does, and returns on what it waits for.
-  if (tool === 'Bash' && WAIT.test(String(input.command ?? ''))) return null;
+  // BUT NOT WHILE A RUNNING AGENT IS FLAGGED (Q-HUB-295): a flagged agent has no fresh note, and a wait on it sits blind. The refusal
+  // names the read to make instead, the status, which prints the last line of the agent's output and its last tool result.
+  if (tool === 'Bash' && WAIT.test(String(input.command ?? ''))) {
+    let flagged = [];
+    try { flagged = 'flagged' in opts ? opts.flagged : flaggedAgents(String(p.session_id ?? '')); } catch { flagged = []; }
+    if (!flagged.length) return null;
+    return `${head} The wait between statuses is refused while a running agent is flagged (${flagged.map((a) => `${a.id}, step ${a.step ?? 'unnamed'}`).join('; ')}): `
+      + `its progress note is missing, empty or older than five minutes, so a wait would sit blind. Read where it is instead: the status command prints, for a flagged agent, `
+      + `the last line of its output and its last tool result.${notOfRecord()}`;
+  }
   // The check of a call changes nothing and is how the main thread learns what passes (`canCall`).
   if (tool === 'Bash' && CAN.test(String(input.command ?? ''))) return null;
   // THE PLAN CHECK PASSES AS THE STATUS COMMAND DOES (`isPlanCheck`, LESSONS §435): `plan-guard.mjs --check` of a file of the record

@@ -226,6 +226,24 @@ every rule below while none of the hooks that enforce them was running
    (rule 13), and nothing asks the session to run it. *Enforced by:*
    `stop-guard.mjs`, which does not count a running agent among the tasks that
    hold a stop.
+   **A background run is announced, a flagged agent is read, and the wait is
+   refused while one is flagged.** An agent ran twenty-eight minutes on a
+   background run with no progress note, and the main thread answered the
+   status's flag by waiting. `plan-fence.mjs` (`backgroundProblem`) refuses an
+   agent's background run until its progress note, written before the launch,
+   names the clock time, a label and the output file's full path, and, where
+   the command names no output file, until the note is written again with the
+   path the launch printed, refusing every other call of that agent meanwhile;
+   `report.mjs` prints for a flagged running agent the last line of the newest
+   file in the step's scratch folder, else of the output file its note names,
+   and its last tool result; `hook-dispatch.mjs` refuses the wait between
+   statuses while any running agent is flagged and names the status as the read
+   to make, setting no latch (Q-HUB-295).
+   **The wait ends when the owner writes.** `report.mjs --wait` returns within
+   its poll interval when an owner message is written to the transcript after
+   the wait began, its first line saying an owner message arrived at its
+   California time and the message printed under it; an agent's end and a
+   progress note's change stay its other conditions (Q-HUB-296).
    *Enforced whole by:* `stop-guard.mjs`.
 3. **Reply to every point in a message from the owner.** A message saying
    something was done wrong is a full stop: answer it, and run nothing else in

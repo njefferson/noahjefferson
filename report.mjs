@@ -125,7 +125,7 @@ import { join, dirname, basename, resolve as resolvePath } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { tailEntries, textOf } from './transcript-tail.mjs';
+import { tailEntries, textOf, ownerMessagesSince } from './transcript-tail.mjs';
 import { startedAt } from './pending-guard.mjs';
 import { load as loadLedger } from './reply-guard.mjs';
 
@@ -2928,19 +2928,87 @@ export function progressBlock(sid, now = Date.now()) {
   if (!running.length) return 'Running agents: none.';
   const pad = scratchpadOf(sid);
   const items = running.map((a) => {
-    const who = `- agent ${a.id}${a.description ? ` "${a.description}"` : ''}`;
-    if (a.step === null) return `${who}: FLAGGED, its prompt names no plan step, so it has no progress note to read.`;
-    const file = pad ? join(pad, 'progress', `step-${a.step}.txt`) : `progress/step-${a.step}.txt (no scratchpad found for session ${sid})`;
-    let text = '', written = 0;
-    try { text = readFileSync(file, 'utf8'); written = statSync(file).mtimeMs; } catch { return `${who}, step ${a.step}: FLAGGED, no progress note at ${file}.`; }
-    const latest = text.split('\n').map((l) => l.trim()).filter(Boolean).at(-1) ?? '';
-    if (!latest) return `${who}, step ${a.step}: FLAGGED, ${file} is empty.`;
-    const age = now - written;
-    const when = `written ${californiaTime(new Date(written))} (California), ${Math.max(0, Math.floor(age / 60000))} minutes ago`;
-    if (age > INTERVAL_MS) return `${who}, step ${a.step}: FLAGGED, the note is older than five minutes (${when}).\n  Latest: ${latest}`;
-    return `${who}, step ${a.step}: ${when}.\n  Latest: ${latest}`;
+    const r = noteReading(a, pad, sid, now);
+    return r.flagged ? `${r.line}${flaggedRead(a, pad, r.text)}` : r.line;
   });
   return ['Running agents, each with the latest line of its progress note:', ...items].join('\n');
+}
+
+/**
+ * Where one running agent's progress note stands.
+ * @param {{id: string, description: string, step: number|null}} a  an entry of `runningAgents`.
+ * @param {string|null} pad  the session scratchpad.
+ * @param {string} sid  the session id.
+ * @param {number} now  the time in ms.
+ * @returns {{line: string, flagged: boolean, text: string}} the status line for the agent; `flagged` is true when the prompt names no
+ *   step, the note is missing or empty, or it is older than five minutes (INTERVAL_MS); `text` is the note's text ('' when unread).
+ */
+function noteReading(a, pad, sid, now) {
+  const who = `- agent ${a.id}${a.description ? ` "${a.description}"` : ''}`;
+  if (a.step === null) return { line: `${who}: FLAGGED, its prompt names no plan step, so it has no progress note to read.`, flagged: true, text: '' };
+  const file = pad ? join(pad, 'progress', `step-${a.step}.txt`) : `progress/step-${a.step}.txt (no scratchpad found for session ${sid})`;
+  let text = '', written = 0;
+  try { text = readFileSync(file, 'utf8'); written = statSync(file).mtimeMs; } catch { return { line: `${who}, step ${a.step}: FLAGGED, no progress note at ${file}.`, flagged: true, text: '' }; }
+  const latest = text.split('\n').map((l) => l.trim()).filter(Boolean).at(-1) ?? '';
+  if (!latest) return { line: `${who}, step ${a.step}: FLAGGED, ${file} is empty.`, flagged: true, text };
+  const age = now - written;
+  const when = `written ${californiaTime(new Date(written))} (California), ${Math.max(0, Math.floor(age / 60000))} minutes ago`;
+  if (age > INTERVAL_MS) return { line: `${who}, step ${a.step}: FLAGGED, the note is older than five minutes (${when}).\n  Latest: ${latest}`, flagged: true, text };
+  return { line: `${who}, step ${a.step}: ${when}.\n  Latest: ${latest}`, flagged: false, text };
+}
+
+/**
+ * The running agents a status flags (Q-HUB-295).
+ * @param {string} sid  the session id.
+ * @param {number} [now]  the time in ms.
+ * @returns {{id: string, description: string, step: number|null, path: string}[]} the running agents whose progress note is missing,
+ *   empty, older than five minutes or unnamed by their prompt, the same reading `progressBlock` flags by; [] when none is flagged or
+ *   the session's files cannot be read. The manager fence refuses the wait between statuses while this is not empty.
+ */
+export function flaggedAgents(sid, now = Date.now()) {
+  const running = sid ? runningAgents(sid) : null;
+  if (!running?.length) return [];
+  const pad = scratchpadOf(sid);
+  return running.filter((a) => noteReading(a, pad, sid, now).flagged);
+}
+
+/**
+ * What a flagged agent has done that its note does not say (Q-HUB-295).
+ * @param {{path: string, step: number|null}} a  a running agent.
+ * @param {string|null} pad  the session scratchpad.
+ * @param {string} noteText  the agent's progress note, '' when unread.
+ * @returns {string} lines to add under the agent's flagged line: the last line of the newest file under `scratch/step-N` or
+ *   `scratch/stepN` in the scratchpad where that folder exists, else of the output file the note names (the last path in the note
+ *   ending .txt, .log, .out or .output that exists); then the agent's last tool result from its own transcript. Never the agent's words.
+ */
+function flaggedRead(a, pad, noteText) {
+  const out = [];
+  let file = null, mtime = -1;
+  const walk = (dir, depth) => {
+    let names = [];
+    try { names = readdirSync(dir); } catch { return; }
+    for (const n of names) {
+      const p = join(dir, n);
+      let s = null;
+      try { s = statSync(p); } catch { continue; }
+      if (s.isDirectory()) { if (depth < 2) walk(p, depth + 1); } else if (s.mtimeMs > mtime) { mtime = s.mtimeMs; file = p; }
+    }
+  };
+  if (pad && a.step !== null) for (const d of [`step-${a.step}`, `step${a.step}`]) { if (!file) walk(join(pad, 'scratch', d), 0); }
+  if (!file) {
+    const named = [...String(noteText).matchAll(/\/[^\s'"`;&|<>()$]+\.(?:txt|log|out|output)\b/g)].map((m) => m[0]).filter((p) => existsSync(p));
+    file = named.at(-1) ?? null;
+  }
+  if (file) {
+    let last = '';
+    try { last = readFileSync(file, 'utf8').split('\n').map((l) => l.trim()).filter(Boolean).at(-1) ?? ''; } catch { last = '(could not be read)'; }
+    out.push(`  Read instead of waiting, last line of ${file}: ${last || '(empty)'}`);
+  } else {
+    out.push('  Read instead of waiting: no output file found under the step\'s scratch folder or named in its note.');
+  }
+  const r = agentReads(tailEntries(a.path, 16 * 1024 * 1024));
+  out.push(r.last ? `  Its last tool result, ${r.last.tool || 'a call'}${r.last.error ? ', an error' : ''}: ${clip(r.last.text).replace(/\n/g, '\n    ')}` : '  Its last tool result: none yet.');
+  return `\n${out.join('\n')}`;
 }
 
 // ---- the wait the main thread may make ----
@@ -3015,8 +3083,17 @@ export async function waitForChange(sid, opts = {}) {
   const sizeOf = (path) => { try { return statSync(path).size; } catch { return -1; } };
   const refusalsOf = (path) => agentReads(tailEntries(path, 16 * 1024 * 1024)).refusals;
   const seen = new Map(first.map((a) => [a.id, { size: sizeOf(a.path), n: refusalsOf(a.path).length }]));
+  // A NEW MESSAGE ENDS THE WAIT (Q-HUB-296): the main transcript is read again only when it has grown, and a new message in it,
+  // written after the wait began, is a fourth reason to return, printed first.
+  let mainSize = -1;
+  let owner = [];
   for (;;) {
     const waited = Date.now() - began;
+    const grown = sizeOf(f.main);
+    if (grown !== mainSize) {
+      mainSize = grown;
+      try { owner = ownerMessagesSince(f.main, began); } catch { owner = []; }
+    }
     const now = runningAgents(sid, f) ?? [];
     const still = new Set(now.map((a) => a.id));
     const ended = first.filter((a) => !still.has(a.id));
@@ -3033,8 +3110,13 @@ export async function waitForChange(sid, opts = {}) {
       const r = refusalsOf(a.path);
       if (r.length > s.n) { refused.push({ a, fresh: r.slice(s.n) }); s.n = r.length; }
     }
-    if (ended.length || moved.length || refused.length) {
-      const out = [`Wait: ${span(waited)} (the limit is ${span(limit)}).`];
+    if (ended.length || moved.length || refused.length || owner.length) {
+      const out = [];
+      if (owner.length) {
+        out.push(`An owner message arrived at ${californiaTime(new Date(owner[0].at))} (California)${owner.length > 1 ? `, ${owner.length} in all` : ''}; the ${owner.length > 1 ? 'messages are' : 'message is'} printed here:`);
+        for (const m of owner) out.push(`  ${String(m.text).trim().slice(0, 4000).replace(/\n/g, '\n  ')}`);
+      }
+      out.push(`Wait: ${span(waited)} (the limit is ${span(limit)}).`);
       if (refused.length) {
         out.push('Refused by a hook since the wait began, each read from the agent\'s own transcript:');
         for (const { a, fresh } of refused) {

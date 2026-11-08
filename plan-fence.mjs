@@ -59,11 +59,12 @@
  *   node plan-fence.mjs     (payload on stdin; exit 2 refuses, reason on stderr)
  */
 import { readFileSync, existsSync, openSync, readSync, closeSync, statSync } from 'node:fs';
-import { resolve, dirname, join, relative, normalize, isAbsolute } from 'node:path';
+import { resolve, dirname, join, relative, normalize, isAbsolute, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { approvedPlan, planFiles, planCommands, inScratchpad, planGuardReads, isRead, labelNames, AGENT_RETURN, agentReportWrite, gitHistoryRepos } from './hook-dispatch.mjs';
 import { commandsIn, heredocs, openerName } from './reply-guard.mjs';
+import { tailEntries } from './transcript-tail.mjs';
 import { agentTranscriptPath, agentStep, stepsFilePath, RULES_FILE, stepBody } from './report.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
@@ -441,6 +442,135 @@ export function agentSentStep(p) {
   try { const f = agentTranscript(p); return f ? agentStep(f) : null; } catch { return null; }
 }
 
+// ---- a background run is announced first (Q-HUB-295, Doctrine §0e rule 2 on a running agent) ----
+// An agent ran twenty-eight minutes on a background run with no progress note, so nothing the status printed said where it was.
+// The note is `progress/step-N.txt` in the scratchpad; a run is announced in it before the launch, and where the command names
+// no output file (the harness names one only in the launch's own result) it is written again straight after the launch.
+const NOTE_FILE = /^step-\d+\.txt$/;
+const OUTPUT_FILE = /\.(?:txt|log|out|output)$/;
+const CLOCK_TIME = /\b(?:[01]?\d|2[0-3]):[0-5]\d\b/;
+const LABEL_WORDS = /\blabel\b[\s:=-]+\S/i;
+const TAIL_BYTES = 4 * 1024 * 1024;
+
+/**
+ * The output file a command line names.
+ * @param {string} command  a Bash command line.
+ * @param {string|undefined} sid  the session id, which names the scratchpad.
+ * @returns {string|null} the first absolute path in the line (heredoc bodies set aside) that is in this session's scratchpad and
+ *   ends in .txt, .log, .out or .output, as a runner's own `--out` or redirect names one; null for a line that names none, as a
+ *   bare suite run does.
+ */
+export function commandOutputFile(command, sid) {
+  const shell = heredocs(String(command ?? '')).shell;
+  for (const m of shell.matchAll(/\/[^\s'"`;&|<>()$]+/g)) {
+    if (OUTPUT_FILE.test(m[0]) && inScratchpad(m[0], sid)) return resolve(m[0]);
+  }
+  return null;
+}
+
+/**
+ * The text a tool call writes into the agent's own progress note.
+ * @param {object} b  a tool_use block.
+ * @param {string|undefined} cwd  the call's working directory, for a relative path.
+ * @param {string|undefined} sid  the session id.
+ * @returns {string|null} the written text when the call is a Write, Edit or MultiEdit of `progress/step-N.txt` in this session's
+ *   scratchpad (not the report, not a review's record); null for any other call.
+ */
+function noteWriteText(b, cwd, sid) {
+  if (b?.type !== 'tool_use' || !/^(?:Write|Edit|MultiEdit)$/.test(String(b.name ?? ''))) return null;
+  const f = String(b.input?.file_path ?? '');
+  if (!f) return null;
+  const abs = resolve(cwd || process.cwd(), f);
+  if (!inScratchpad(abs, sid) || basename(dirname(abs)) !== 'progress' || !NOTE_FILE.test(basename(abs))) return null;
+  const parts = [b.input?.content, b.input?.new_string, ...(Array.isArray(b.input?.edits) ? b.input.edits.map((x) => x?.new_string) : [])];
+  return parts.filter((x) => typeof x === 'string').join('\n');
+}
+
+/**
+ * The output file path a background launch printed in its own result.
+ * @param {string} text  a tool result's text.
+ * @returns {string|null} the first path ending .output, else the first path under /tmp, with trailing punctuation taken off; null when none.
+ */
+function launchPrintedPath(text) {
+  const m = /(\/[^\s'"`<>]+\.output)\b/.exec(text) ?? /(\/tmp\/[^\s'"`<>]+)/.exec(text);
+  return m ? m[1].replace(/[.,;:)]+$/, '') : null;
+}
+
+/**
+ * A background run is announced first, and written again once the launch prints its output file (Q-HUB-295).
+ * @param {object} p  a subagent's PreToolUse payload.
+ * @param {{entries?: object[]}} [opts]  the agent's transcript entries, for the test; read from its own transcript otherwise.
+ * @returns {string|null} null for a main-thread call and for anything that breaks neither rule. Otherwise the refusal:
+ *   (1) a Bash call with `run_in_background` is refused unless the agent's transcript holds, after its previous background launch,
+ *   a write of its progress note naming a clock time, a label (the word label and what follows) and, where the command names an
+ *   output file (`commandOutputFile`), that file's full path; (2) after a background launch whose command named no output file
+ *   and whose result printed one, every call but a write of the progress note carrying that printed path is refused until that
+ *   write is made. Its own return and its TaskStop never reach here. The current call is left out of the transcript it reads.
+ */
+export function backgroundProblem(p, opts = {}) {
+  if (!p.agent_id) return null;
+  const tool = String(p.tool_name ?? '');
+  const input = p.tool_input ?? {};
+  const sid = p.session_id;
+  const cwd = p.cwd;
+  let entries = opts.entries;
+  if (!entries) {
+    let f = null;
+    try { f = agentTranscript(p); } catch { f = null; }
+    try { entries = f ? tailEntries(f, TAIL_BYTES) : []; } catch { entries = []; }
+  }
+  let events = [];
+  for (const e of entries ?? []) {
+    const c = e?.message?.content;
+    if (!Array.isArray(c)) continue;
+    for (const b of c) {
+      if (e.type === 'assistant' && b?.type === 'tool_use') events.push({ use: b });
+      else if (e.type === 'user' && b?.type === 'tool_result') {
+        const text = typeof b.content === 'string' ? b.content : Array.isArray(b.content) ? b.content.map((x) => x?.text ?? '').join('\n') : '';
+        events.push({ result: b, text });
+      }
+    }
+  }
+  // The call being judged may already be in the transcript: leave it, and everything after it, out.
+  const id = String(p.tool_use_id ?? '');
+  if (id) {
+    const at = events.findIndex((x) => x.use?.id === id);
+    if (at >= 0) events = events.slice(0, at);
+  } else {
+    const last = events.findLastIndex((x) => x.use);
+    if (last >= 0 && events[last].use.name === tool && JSON.stringify(events[last].use.input ?? {}) === JSON.stringify(input)
+      && !events.some((x) => x.result?.tool_use_id === events[last].use.id)) events = events.slice(0, last);
+  }
+  const launchAt = events.findLastIndex((x) => x.use?.name === 'Bash' && x.use.input?.run_in_background === true);
+  // The next launch's note must come after the previous launch, and after that launch's second write where it was owed.
+  let since = launchAt;
+  if (launchAt >= 0) {
+    const launch = events[launchAt].use;
+    if (!commandOutputFile(launch.input?.command, sid)) {
+      const result = events.slice(launchAt + 1).find((x) => x.result?.tool_use_id === launch.id);
+      const printed = result ? launchPrintedPath(result.text) : null;
+      if (printed) {
+        const wroteAt = events.findIndex((x, i) => i > launchAt && x.use && (noteWriteText(x.use, cwd, sid) ?? '').includes(printed));
+        const wrote = wroteAt >= 0;
+        if (wrote) since = wroteAt;
+        const own = noteWriteText({ type: 'tool_use', name: tool, input }, cwd, sid);
+        if (!wrote && !(own !== null && own.includes(printed))) {
+          return `${HEAD} BACKGROUND RUN, SECOND WRITE (Q-HUB-295): the launch printed its output file, ${printed}, and the agent's next call is its progress note written again with that full path, so ${tool || 'this call'} is refused. Write progress/step-N.txt in the scratchpad with the clock time, the label and ${printed}, then end the turn on the run with no wait of its own.`;
+        }
+      }
+    }
+  }
+  if (!(tool === 'Bash' && input.run_in_background === true)) return null;
+  const out = commandOutputFile(input.command, sid);
+  const announced = events.slice(since + 1).some((x) => {
+    const t = x.use ? noteWriteText(x.use, cwd, sid) : null;
+    return t !== null && CLOCK_TIME.test(t) && LABEL_WORDS.test(t) && (!out || t.includes(out));
+  });
+  if (announced) return null;
+  return `${HEAD} BACKGROUND RUN ANNOUNCED FIRST (Q-HUB-295): a background run is announced first, with the agent's progress note progress/step-N.txt in the session scratchpad written, before the launch, with the clock time, "label: <the run's label>" and the output file's full path`
+    + `${out ? ` (${out} here)` : ' (this command names no output file, so the note is written again with the path the launch prints, straight after the launch)'}. Write that note, then launch.`;
+}
+
 /**
  * THE REVIEW STEP CHANGES NOTHING OUTSIDE THE SESSION SCRATCHPAD (Doctrine §0e rule 2, LESSONS §423).
  * The review follows aim-review.md and "changes nothing": its hand-back is the verdict and the one script it runs prints the
@@ -519,6 +649,9 @@ export function decide(p, opts = {}) {
   // THE REVIEW STEP WRITES IN THE SCRATCHPAD AND NOWHERE ELSE, whatever the Files list allows (`reviewWriteProblem`; LESSONS §423).
   const review = reviewWriteProblem(p, plan, { ...('step' in opts ? { step: opts.step } : {}), ...(opts.classify ? { classify: opts.classify } : {}) });
   if (review) return review;
+  // A BACKGROUND RUN IS ANNOUNCED FIRST, AND WRITTEN AGAIN ONCE THE LAUNCH PRINTS ITS OUTPUT FILE (`backgroundProblem`, Q-HUB-295).
+  const background = backgroundProblem(p, opts.entries ? { entries: opts.entries } : {});
+  if (background) return background;
   // THE SWEEP'S DISPATCH, FOR THAT WORKFLOW ONLY: judged here and not left to the read check, which refuses the tool.
   if (tool === SWEEP_TOOL) return sweepDispatchProblem(p, plan, { ...('step' in opts ? { step: opts.step } : {}), ...(opts.repos ? { repos: opts.repos } : {}) });
   const where = plan ? `the plan at ${plan.path}` : 'no approved plan (so only readers and the scratchpad)';

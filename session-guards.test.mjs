@@ -2964,6 +2964,161 @@ const CASES = [
     },
   },
 
+  // ---- a background run announced first, a flagged agent read, the wait refused while one is flagged, the wait ended by an owner message (Q-HUB-295, Q-HUB-296) ----
+  {
+    name: 'Q-HUB-295: an agent\'s background run is refused until its progress note, written before the launch, names a clock time, a label and, where the command names its output file, that path; a run naming no output file is then held to a second write of the note with the path the launch printed, every other call is refused until it is made, and the next launch needs its own note',
+    guards: ['bg_announce', 'bg_note_time', 'bg_note_label', 'bg_note_path', 'bg_second_write', 'bg_second_write_pass', 'bg_next_launch'],
+    run(m) {
+      const r = repo({ 'keep.mjs': 'x\n' });
+      const plan = fencePlan(basename(r.dir));
+      const s = sid('bg');
+      const pad = join(tmpdir(), 'claude-0', '-home-user', s, 'scratchpad');
+      const note = join(pad, 'progress', 'step-2.txt');
+      const outFile = join(pad, 'scratch', 'suite-run.txt');
+      const printed = '/tmp/claude-0/tasks/suite-run.output';
+      const call = (tool_name, tool_input, entries) => decideFence(m, { session_id: s, agent_id: 'a1', tool_name, tool_input, cwd: r.dir }, { plan, entries });
+      const wrote = (id, content) => tool(0, id, 'Write', { file_path: note, content });
+      const named = { command: `git status > ${outFile}`, run_in_background: true };
+      const bare = { command: 'git status', run_in_background: true };
+      const announced = /BACKGROUND RUN ANNOUNCED FIRST/;
+      const said = (x, re) => typeof x === 'string' && /^PLAN FENCE/.test(x) && re.test(x);
+      const noNote = call('Bash', named, []);
+      const noTime = call('Bash', named, [wrote('w1', `label: the suite run, output ${outFile}`)]);
+      const noLabel = call('Bash', named, [wrote('w2', `10:05 the suite run, output ${outFile}`)]);
+      const noPath = call('Bash', named, [wrote('w3', '10:05 label: the suite run')]);
+      const otherNote = call('Bash', named, [tool(0, 'w4', 'Write', { file_path: join(pad, 'progress', 'step-2-report.txt'), content: `10:05 label: the suite run, output ${outFile}` })]);
+      const fine = call('Bash', named, [wrote('w5', `10:05 label: the suite run, output ${outFile}`)]);
+      const bareNoNote = call('Bash', bare, []);
+      const bareFine = call('Bash', bare, [wrote('w6', '10:05 label: the suite run')]);
+      const plain = call('Bash', { command: 'git status' }, []);
+      const launched = [wrote('w7', '10:05 label: the suite run'), tool(0, 'L1', 'Bash', bare), result(0, 'L1', `Command running in background. Output is being written to: ${printed}`)];
+      const read = call('Read', { file_path: join(r.dir, 'keep.mjs') }, launched);
+      const shell = call('Bash', { command: 'git status' }, launched);
+      const second = call('Write', { file_path: note, content: `10:09 label: the suite run, output ${printed}` }, launched);
+      const after = [...launched, wrote('w8', `10:09 label: the suite run, output ${printed}`)];
+      const readAfter = call('Read', { file_path: join(r.dir, 'keep.mjs') }, after);
+      const again = call('Bash', bare, after);
+      const againFine = call('Bash', bare, [...after, wrote('w9', '10:20 label: the second run')]);
+      const checks = { noNote: said(noNote, announced) && noNote.includes(outFile), noTime: said(noTime, announced), noLabel: said(noLabel, announced),
+        noPath: said(noPath, announced), otherNote: said(otherNote, announced), fine: fine === null,
+        bareNoNote: String(bareNoNote).includes('written again with the path the launch prints'), bareFine: bareFine === null, plain: plain === null,
+        read: said(read, /SECOND WRITE/) && read.includes(printed), shell: said(shell, /SECOND WRITE/), second: second === null,
+        readAfter: readAfter === null, again: said(again, announced), againFine: againFine === null };
+      const wrong = Object.entries(checks).filter(([, ok]) => !ok).map(([k]) => k);
+      if (wrong.length) throw new Error(`wrong on: ${wrong.join(', ')}; fine=${fine}; bareFine=${bareFine}; plain=${plain}; second=${second}; readAfter=${readAfter}; againFine=${againFine}`);
+      return true;
+    },
+  },
+  {
+    name: 'Q-HUB-295: the status prints, for a running agent whose note is stale, the last line of the newest file in the step\'s scratch folder where one exists, else of the output file its note names, and its last tool result from its own transcript; an agent with a fresh note gets neither',
+    guards: ['flag_read_scratch', 'flag_read_named', 'flag_read_result', 'flag_read_fresh'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      const s = sid('fl');
+      const proj = join(home, '.claude', 'projects', '-home-user');
+      const subs = join(proj, s, 'subagents');
+      mkdirSync(subs, { recursive: true });
+      writeFileSync(join(proj, `${s}.jsonl`), JSON.stringify(turn(0, 'start')) + '\n');
+      const temp = tmp('sg-tmp-');
+      const pad = join(temp, 'claude-0', '-home-user', s, 'scratchpad');
+      const notes = join(pad, 'progress');
+      mkdirSync(notes, { recursive: true });
+      const said = (secs, id, name, input) => at(tool(0, id, name, input), later(secs));
+      const back = (secs, id, text) => at(result(0, id, text), later(secs));
+      const sent = (secs, prompt) => at({ type: 'user', message: { role: 'user', content: prompt } }, later(secs));
+      const agent = (id, entries) => {
+        writeFileSync(join(subs, `agent-${id}.jsonl`), jsonl(entries));
+        writeFileSync(join(subs, `agent-${id}.meta.json`), JSON.stringify({ agentType: 'general-purpose', description: `Plan step for ${id}` }));
+      };
+      const age = (file, minutes) => { const t = (Date.now() - minutes * 60000) / 1000; utimesSync(file, t, t); };
+      agent('scratchy', [sent(-3000, '/plans/gate-test.md step 2'), said(-10, 'a1', 'Bash', { command: 'node suite.mjs' }), back(-9, 'a1', 'suite: 12 of 61 cases passed so far')]);
+      writeFileSync(join(notes, 'step-2.txt'), '10:01 step 2: label: suite run\n'); age(join(notes, 'step-2.txt'), 20);
+      mkdirSync(join(pad, 'scratch', 'step-2'), { recursive: true });
+      writeFileSync(join(pad, 'scratch', 'step-2', 'older.txt'), 'older run line\n'); age(join(pad, 'scratch', 'step-2', 'older.txt'), 30);
+      writeFileSync(join(pad, 'scratch', 'step-2', 'newer.txt'), 'case 11 ok\ncase 12 ok\n');
+      agent('named', [sent(-3000, '/plans/gate-test.md step 3'), said(-10, 'n1', 'Bash', { command: 'node walk.mjs' }), back(-9, 'n1', 'walking screen 4')]);
+      const outFile = join(pad, 'scratch', 'walk-out.txt');
+      writeFileSync(outFile, 'walk at screen 3 of 9\nwalk at screen 4 of 9\n');
+      writeFileSync(join(notes, 'step-3.txt'), `10:02 step 3: label: walk, output ${outFile}\n`); age(join(notes, 'step-3.txt'), 20);
+      agent('fresh', [sent(-3000, '/plans/gate-test.md step 4'), said(-10, 'f1', 'Bash', { command: 'node build.mjs' }), back(-9, 'f1', 'built')]);
+      writeFileSync(join(notes, 'step-4.txt'), '10:03 step 4: label: build\n');
+      const out = spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the flagged read test'], { encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: s, TMPDIR: temp } }).stdout ?? '';
+      const block = out.slice(Math.max(0, out.indexOf('Running agents, each with the latest line'))).split('\n\n')[0];
+      const item = (id) => block.split('\n- agent ').find((x) => x.startsWith(id) || x.startsWith(`${id} `)) ?? '';
+      const scratchy = item('scratchy'), named = item('named'), fresh = item('fresh');
+      return scratchy.includes('FLAGGED') && scratchy.includes(`last line of ${join(pad, 'scratch', 'step-2', 'newer.txt')}: case 12 ok`) && !scratchy.includes('older run line')
+        && /Its last tool result, Bash: suite: 12 of 61 cases passed so far/.test(scratchy)
+        && named.includes('FLAGGED') && named.includes(`last line of ${outFile}: walk at screen 4 of 9`) && /Its last tool result, Bash: walking screen 4/.test(named)
+        && fresh !== '' && !fresh.includes('FLAGGED') && !fresh.includes('Read instead of waiting') && !fresh.includes('Its last tool result');
+    },
+  },
+  {
+    name: 'Q-HUB-295: the manager fence refuses the wait between statuses while a running agent is flagged, naming the status as the read to make instead and setting no latch, and passes it when no running agent is flagged',
+    guards: ['wait_refused_flagged', 'wait_refused_names_read', 'wait_passes_unflagged'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      const s = sid('wf');
+      const proj = join(home, '.claude', 'projects', '-home-user');
+      const subs = join(proj, s, 'subagents');
+      mkdirSync(subs, { recursive: true });
+      writeFileSync(join(proj, `${s}.jsonl`), JSON.stringify(turn(0, 'start')) + '\n');
+      const temp = tmp('sg-tmp-');
+      const notes = join(temp, 'claude-0', '-home-user', s, 'scratchpad', 'progress');
+      mkdirSync(notes, { recursive: true });
+      writeFileSync(join(subs, 'agent-busy.jsonl'), jsonl([at({ type: 'user', message: { role: 'user', content: '/plans/gate-test.md step 2' } }, later(-3000)),
+        at(tool(0, 'b1', 'Bash', { command: 'node build.mjs' }), later(-10)), at(result(0, 'b1', 'built'), later(-9))]));
+      writeFileSync(join(subs, 'agent-busy.meta.json'), JSON.stringify({ agentType: 'general-purpose', description: 'Plan step for busy' }));
+      const noteFile = join(notes, 'step-2.txt');
+      writeFileSync(noteFile, '10:01 step 2: label: build\n');
+      const old = (Date.now() - 20 * 60000) / 1000;
+      utimesSync(noteFile, old, old);
+      const saved = { HOME: process.env.HOME, TMPDIR: process.env.TMPDIR };
+      process.env.HOME = home; process.env.TMPDIR = temp;
+      try {
+        const wait = () => m.dispatch.managerFence({ session_id: s, tool_name: 'Bash', tool_input: { command: `node ${join(dir, 'report.mjs')} --wait` } }, {});
+        const refused = wait() ?? '';
+        const nowFresh = (Date.now()) / 1000;
+        utimesSync(noteFile, nowFresh, nowFresh);
+        const passes = wait();
+        return /MANAGER FENCE/.test(refused) && /flagged/.test(refused) && /status command prints/.test(refused) && refused.includes('busy') && refused.includes(m.dispatch.FENCE_NO_LATCH)
+          && passes === null;
+      } finally {
+        if (saved.HOME === undefined) delete process.env.HOME; else process.env.HOME = saved.HOME;
+        if (saved.TMPDIR === undefined) delete process.env.TMPDIR; else process.env.TMPDIR = saved.TMPDIR;
+      }
+    },
+  },
+  {
+    name: 'Q-HUB-296: the wait returns within its poll interval when an owner message is written to the transcript after it began, its first line saying an owner message arrived at its California time and the message printed under it; a wait with no such message still returns at its limit',
+    guards: ['wait_owner_message', 'wait_owner_first_line'],
+    async run(m, dir) {
+      const home = tmp('sg-home-');
+      const s = sid('wo');
+      const proj = join(home, '.claude', 'projects', '-home-user');
+      const subs = join(proj, s, 'subagents');
+      mkdirSync(subs, { recursive: true });
+      const main = join(proj, `${s}.jsonl`);
+      writeFileSync(main, JSON.stringify(turn(0, 'start')) + '\n');
+      const temp = tmp('sg-tmp-');
+      const notes = join(temp, 'claude-0', '-home-user', s, 'scratchpad', 'progress');
+      mkdirSync(notes, { recursive: true });
+      writeFileSync(join(subs, 'agent-busy.jsonl'), jsonl([at({ type: 'user', message: { role: 'user', content: '/plans/gate-test.md step 2' } }, later(-60)),
+        at(tool(0, 'b1', 'Bash', { command: 'node build.mjs' }), later(-10)), at(result(0, 'b1', 'built'), later(-9))]));
+      writeFileSync(join(subs, 'agent-busy.meta.json'), JSON.stringify({ agentType: 'general-purpose', description: 'Plan step for busy' }));
+      writeFileSync(join(notes, 'step-2.txt'), '10:01 step 2: building\n');
+      const env = (limit) => ({ HOME: home, CLAUDE_CODE_SESSION_ID: s, TMPDIR: temp, REPORT_WAIT_MS: String(limit), REPORT_WAIT_POLL_MS: '100' });
+      const quiet = await waitRun(dir, env(1500), 6000);
+      const p = waitRun(dir, env(8000));
+      await settle();
+      appendFileSync(main, JSON.stringify(owner(new Date().toISOString(), 'Please read the header panel before anything else.')) + '\n');
+      const r = await p;
+      const first = r.out.split('\n')[0];
+      return quiet.code === 0 && quiet.ms >= 1400 && /passed; no running agent's progress note changed/.test(quiet.out) && !quiet.out.includes('owner message')
+        && r.code === 0 && r.ms < 6000 && /^An owner message arrived at \d\d:\d\d \(California\)/.test(first)
+        && r.out.split('\n')[1].includes('Please read the header panel before anything else.');
+    },
+  },
+
   // ---- choice first (stop-guard.mjs) ----
   {
     name: 'a reply whose recommended option sits under other text is refused; one that opens with its choice, or has no marked option, passes',
@@ -9672,6 +9827,22 @@ const PLANTS = {
   host_declined_connect: [".test(L)) { add(attribute(i), { cause: 'proxy'", ".test('')) { add(attribute(i), { cause: 'proxy'", 'reply-guard.mjs'],
   host_declined_norule: ['matchAll(/\\bno rule allows host:?', 'matchAll(/\\bno rule never host:?', 'reply-guard.mjs'],
   host_declined_status: ['try { const declined = declinedHostsBlock(sid, previous); if (declined) console.log(declined); }', "try { const declined = ''; if (declined) console.log(declined); }", 'report.mjs'],
+  bg_announce: ["if (!(tool === 'Bash' && input.run_in_background === true)) return null;", 'if (true) return null;', 'plan-fence.mjs'],
+  bg_note_time: ['CLOCK_TIME.test(t) && ', '', 'plan-fence.mjs'],
+  bg_note_label: ['LABEL_WORDS.test(t) && ', '', 'plan-fence.mjs'],
+  bg_note_path: ['(!out || t.includes(out))', 'true', 'plan-fence.mjs'],
+  bg_second_write: ['if (!wrote && !(own !== null && own.includes(printed))) {', 'if (false) {', 'plan-fence.mjs'],
+  bg_second_write_pass: ['!(own !== null && own.includes(printed))', 'true', 'plan-fence.mjs'],
+  bg_next_launch: ['const announced = events.slice(since + 1).some(', 'const announced = events.some(', 'plan-fence.mjs'],
+  flag_read_scratch: ['if (pad && a.step !== null) for (const d of [', 'if (false && pad && a.step !== null) for (const d of [', 'report.mjs'],
+  flag_read_named: ['const named = [...String(noteText)', "const named = [...String('')", 'report.mjs'],
+  flag_read_result: ['out.push(r.last ? ', 'out.push(false ? ', 'report.mjs'],
+  flag_read_fresh: ['return r.flagged ? `${r.line}${flaggedRead(a, pad, r.text)}` : r.line;', 'return `${r.line}${flaggedRead(a, pad, r.text)}`;', 'report.mjs'],
+  wait_refused_flagged: ['if (!flagged.length) return null;', 'return null;', 'hook-dispatch.mjs'],
+  wait_refused_names_read: ['the status command prints, for a flagged agent, ', 'the thing prints, for a flagged agent, ', 'hook-dispatch.mjs'],
+  wait_passes_unflagged: ["flagged = 'flagged' in opts ? opts.flagged : flaggedAgents(String(p.session_id ?? ''));", "flagged = [{ id: 'x', step: 1 }];", 'hook-dispatch.mjs'],
+  wait_owner_message: ['if (ended.length || moved.length || refused.length || owner.length) {', 'if (ended.length || moved.length || refused.length) {', 'report.mjs'],
+  wait_owner_first_line: ['An owner message arrived at ', 'Something arrived at ', 'report.mjs'],
   cap_hold_count: ['if (held >= HOLD_AT) {', 'if (false) {', 'stop-guard.mjs'],
   cap_hold_reset: ["if (e?.type === 'assistant' && Array.isArray(e.message?.content) && e.message.content.some((b) => b?.type === 'tool_use')) break;", 'if (false) break;', 'stop-guard.mjs'],
   cap_plant_armed: ['    && runningForPlanStep({ session_id: payloadSession, transcript_path: path }, mk.plan, mk.step)) {', '    && true) {', 'stop-guard.mjs'],
@@ -9973,10 +10144,10 @@ const PLANTS = {
   agents_since: ['    if (!rec && !(end.at > stampAt)) continue;\n', '\n', 'report.mjs'],
   // Each running agent's progress note.
   progress_block: ['  console.log(progress);\n', '\n', 'report.mjs'],
-  progress_stale: ['    if (age > INTERVAL_MS) return', '    if (false) return', 'report.mjs'],
+  progress_stale: ['  if (age > INTERVAL_MS) return {', '  if (false) return {', 'report.mjs'],
   progress_latest: [".filter(Boolean).at(-1) ?? '';", ".filter(Boolean)[0] ?? '';", 'report.mjs'],
   progress_running: ["    if (agentEnd(tailEntries(path, 4 * 1024 * 1024), meta, start, notified.get(id) ?? '')) continue;\n", '\n', 'report.mjs'],
-  progress_missing: ['catch { return `${who}, step ${a.step}: FLAGGED, no progress note at ${file}.`; }', 'catch { return `${who}, step ${a.step}: no note yet.`; }', 'report.mjs'],
+  progress_missing: ["catch { return { line: `${who}, step ${a.step}: FLAGGED, no progress note at ${file}.`, flagged: true, text: '' }; }", "catch { return { line: `${who}, step ${a.step}: no note yet.`, flagged: false, text: '' }; }", 'report.mjs'],
   progress_step: ['  return agentPrompt(path, head)?.step ?? null;', '  return 1;', 'report.mjs'],
   // Choice first.
   choice_first: ['if (choiceHit) {', 'if (false) {', 'stop-guard.mjs'],
@@ -10004,7 +10175,7 @@ const PLANTS = {
   wait_limit: ['    if (waited >= limit) {', '    if (false) {', 'report.mjs'],
   wait_idle: ["  if (!first.length) return 'Wait: no agent", "  if (false) return 'Wait: no agent", 'report.mjs'],
   wait_records_nothing: ['      const e = endOf(sid, f, a.id);', '      const e = (agentEnds(sid, 0) ?? []).find((x) => x.id === a.id) ?? endOf(sid, f, a.id);', 'report.mjs'],
-  fence_wait: ["  if (tool === 'Bash' && WAIT.test(String(input.command ?? ''))) return null;\n", '\n', 'hook-dispatch.mjs'],
+  fence_wait: ["  if (tool === 'Bash' && WAIT.test(String(input.command ?? ''))) {\n", '  if (false) {\n', 'hook-dispatch.mjs'],
   fence_wait_exact: ["--wait\\\\s*$');", "--wait');", 'hook-dispatch.mjs'],
   report_no_flag: [String.raw`(?:"(?!-)[^"`, String.raw`(?:"[^"`, 'hook-dispatch.mjs'],
   report_no_flag1: [String.raw`|\'(?!-)[^\']*\')`, String.raw`|\'[^\']*\')`, 'hook-dispatch.mjs'],
@@ -10071,7 +10242,7 @@ const PLANTS = {
   reads_running: ["  const list = [...running.map((a) => ({ id: a.id, description: a.description, path: a.path, state: 'running' })),", "  const list = [...[].map((a) => ({ id: a.id, description: a.description, path: a.path, state: 'running' })),", 'report.mjs'],
   reads_ended: ["    ...(ended ?? []).map((a) => ({ id: a.id, description: a.description, path: a.path, state: `ended by ${endWords(a)}` }))];", '    ];', 'report.mjs'],
   reads_prose: ["      for (const b of c) if (b?.type === 'tool_use') names.set(b.id, b.name ?? '');", "      for (const b of c) { if (b?.type === 'tool_use') names.set(b.id, b.name ?? ''); if (b?.type === 'text' && /refused/i.test(b.text ?? '')) refusals.push({ tool: 'prose', at: NaN, text: String(b.text) }); }", 'report.mjs'],
-  wait_refused: ['    if (ended.length || moved.length || refused.length) {', '    if (ended.length || moved.length) {', 'report.mjs'],
+  wait_refused: ['    if (ended.length || moved.length || refused.length || owner.length) {', '    if (ended.length || moved.length || owner.length) {', 'report.mjs'],
   // A message the harness never delivered: no longer held once a later one has arrived, and printed once.
   overtaken_filter: ['  return waiting.filter((x) => x.owner && !given.some((g) => g > x.at)).map((x) => ({ text: x.text, at: x.at }));', '  return waiting.filter((x) => x.owner).map((x) => ({ text: x.text, at: x.at }));', 'pending-guard.mjs'],
   overtaken_typed: ['x.owner && !given.some((g) => g > x.at)', 'x.owner && !given.some((g) => g > 0)', 'pending-guard.mjs'],
