@@ -867,28 +867,15 @@ export function agentEnd(entries, meta = {}, processStart = 0, notified = '') {
     return { how: lastRefusal && !word ? 'a refusal' : 'a report', at, last: cut(handback.text), ...(word ? { word, refusedBefore: lastRefusal } : {}) };
   }
   if (meta?.stoppedByUser || interruptedAt > lastAssistant) return { how: 'an interruption', at, last: cut(last) };
-  // AN AGENT PAUSED ON ITS OWN BACKGROUND RUN IS NOT ENDED: its step text told it to end its turn while the run goes on, the
-  // harness notifies the main thread that the agent's turn completed, and the run's completion resumes the agent. With no
-  // hand-back, a background launch in its own transcript and no completion of that task after it, it is still running, whatever the
-  // notification says; a session restart after its last entry ended the run with it (finding 3 of the plan of 1 November, four times).
-  if (/^(?:completed)$/.test(notified)) {
-    if (!(processStart && at && at < processStart) && pausedOnBackground(entries)) return null;
-    return { how: lastRefusal ? 'a refusal' : 'a report', at, last: cut(last) };
-  }
+  // AN AGENT IS ENDED ONLY BY ITS HAND-BACK, AN INTERRUPTION OR A FAILURE (Q-HUB-255). The harness tells the main thread an agent's turn
+  // "completed" each time the agent pauses on its own background run and again when it is resumed by the run's end, so the
+  // notification is no end: with no hand-back call in its transcript the agent is still running, whatever the notification says, the
+  // run's completion already in its transcript included. A session restart after its last entry ended it with the process (below).
+  if (/^(?:completed)$/.test(notified) && !(processStart && at && at < processStart)) return null;
   if (/^(?:killed|stopped|cancelled)$/.test(notified)) return { how: 'an interruption', at, last: cut(last) };
   if (notified === 'failed') return { how: 'a failure', at, last: cut(last) };
   if (processStart && at && at < processStart) return { how: 'an interruption (the session restarted after its last entry)', at, last: cut(last) };
   return null;
-}
-
-/**
- * Does an agent's own transcript hold a background run that has not completed?
- * @param {object[]} entries  the agent's transcript (its tail), in file order.
- * @returns {boolean} true when `runningTasks` over the agent's own entries finds a launched background command or workflow with no
- *   completion, stop or kill of it after; false for a transcript that cannot be read as one.
- */
-function pausedOnBackground(entries) {
-  try { return runningTasks((entries ?? []).map((e) => JSON.stringify(e)).join('\n')).length > 0; } catch { return false; }
 }
 
 /**
@@ -985,6 +972,7 @@ export function writeSeen(sid, seen, mark) {
       backs: keep({ ...(seen?.backs ?? {}), ...mark.backs }, 400),
       found: keep({ ...(seen?.found ?? {}), ...mark.found }, 600),
       refusals: { ...(seen?.refusals ?? {}), ...mark.refusals },
+      flagged: keep({ ...(seen?.flagged ?? {}), ...(mark.flagged ?? {}) }, 400),
       approval: mark.approval || seen?.approval || '',
     }));
     return true;
@@ -2922,14 +2910,14 @@ export function writeStatusPage(sid, clock = readClock()) {
  *   step. "none" when no agent is running, and a plain line when the session's
  *   files cannot be read, so a status never implies a read it did not make.
  */
-export function progressBlock(sid, now = Date.now()) {
+export function progressBlock(sid, now = Date.now(), seen = null, mark = null) {
   const running = sid ? runningAgents(sid) : null;
   if (!running) return `Running agents' progress: not read (${sid ? `no transcript found for session ${sid}` : 'no CLAUDE_CODE_SESSION_ID in this shell'}).`;
   if (!running.length) return 'Running agents: none.';
   const pad = scratchpadOf(sid);
   const items = running.map((a) => {
     const r = noteReading(a, pad, sid, now);
-    return r.flagged ? `${r.line}${flaggedRead(a, pad, r.text)}` : r.line;
+    return r.flagged ? `${r.line}${flaggedRead(a, pad, r.text, seen, mark)}` : r.line;
   });
   return ['Running agents, each with the latest line of its progress note:', ...items].join('\n');
 }
@@ -2977,11 +2965,13 @@ export function flaggedAgents(sid, now = Date.now()) {
  * @param {{path: string, step: number|null}} a  a running agent.
  * @param {string|null} pad  the session scratchpad.
  * @param {string} noteText  the agent's progress note, '' when unread.
+ * @param {object|null} [seen]  `readSeen`'s answer; a line it already holds for this agent is not printed again.
+ * @param {{flagged: object}|null} [mark]  filled with the hash of each line printed or held, for `writeSeen`.
  * @returns {string} lines to add under the agent's flagged line: the last line of the newest file under `scratch/step-N` or
  *   `scratch/stepN` in the scratchpad where that folder exists, else of the output file the note names (the last path in the note
  *   ending .txt, .log, .out or .output that exists); then the agent's last tool result from its own transcript. Never the agent's words.
  */
-function flaggedRead(a, pad, noteText) {
+function flaggedRead(a, pad, noteText, seen = null, mark = null) {
   const out = [];
   let file = null, mtime = -1;
   const walk = (dir, depth) => {
@@ -3008,7 +2998,13 @@ function flaggedRead(a, pad, noteText) {
   }
   const r = agentReads(tailEntries(a.path, 16 * 1024 * 1024));
   out.push(r.last ? `  Its last tool result, ${r.last.tool || 'a call'}${r.last.error ? ', an error' : ''}: ${clip(r.last.text).replace(/\n/g, '\n    ')}` : '  Its last tool result: none yet.');
-  return `\n${out.join('\n')}`;
+  // Each line prints when it is new or changed since the last status and not again (the status's rule, LESSONS §402).
+  const fresh = out.filter((line, i) => {
+    const key = `${a.id}:${i}`, h = sha256(line);
+    if (mark?.flagged) mark.flagged[key] = h;
+    return !seen?.flagged || seen.flagged[key] !== h;
+  });
+  return fresh.length ? `\n${fresh.join('\n')}` : '';
 }
 
 // ---- the wait the main thread may make ----
@@ -3249,7 +3245,7 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   // session id there is no memory, and everything prints.
   const sid = String(process.env.CLAUDE_CODE_SESSION_ID ?? '');
   const seen = readSeen(sid);
-  const mark = { backs: {}, found: {}, refusals: {}, approval: '', agents: new Map() };
+  const mark = { backs: {}, found: {}, refusals: {}, flagged: {}, approval: '', agents: new Map() };
   // THE GOALS COME FIRST, ONCE PER SESSION (the standing goals in the hub CLAUDE.md):
   // the stamp is already written, so reading them can never cost the status. A
   // section that cannot be read is said so, never printed as an empty one. Every
@@ -3322,7 +3318,7 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   try { block = agentsBlock(sid, previous, ended, mark.agents); } catch (e) { block = `Agents ended since the last status: not read (${e?.message ?? e}).`; }
   console.log(block);
   let progress = '';
-  try { progress = progressBlock(sid); } catch (e) { progress = `Running agents' progress: not read (${e?.message ?? e}).`; }
+  try { progress = progressBlock(sid, Date.now(), seen, mark); } catch (e) { progress = `Running agents' progress: not read (${e?.message ?? e}).`; }
   console.log(progress);
   // Every refusal each agent received and its last tool result, from its own
   // transcript: the manager judges an agent's work from these, not its report.

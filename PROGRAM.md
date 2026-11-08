@@ -2766,7 +2766,7 @@ Depends: none.
 
 ### P-295. Q-HUB-255: the stop guard holds the main thread's stop on a shell an agent started in the background
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
 
 Acceptance: a stop is not held by a background shell that an agent started while no task the main thread started is running, and a case with plants holds it.
 

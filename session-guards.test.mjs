@@ -2735,7 +2735,7 @@ const CASES = [
   // ---- the agents a status prints (report.mjs) ----
   {
     name: 'every status prints each agent that ended since the last one, how it ended and its last entry, once; one still running is read again at the next',
-    guards: ['agents_block', 'agents_once', 'agents_interrupt', 'agents_refusal', 'agents_running', 'agents_since'],
+    guards: ['agents_block', 'agents_once', 'agents_interrupt', 'agents_refusal', 'agents_since'],
     run(m, dir) {
       const home = tmp('sg-home-');
       const s = sid('ag');
@@ -5926,7 +5926,7 @@ const CASES = [
   // ---- a status shows what changed and nothing twice (step 108) ----
   {
     name: 'a status prints what changed and nothing twice: the goals once per session, a hand-back once, a Found line when it is new, changed or unsorted, a running agent\'s hook refusal once, the approval state in full only when it changed, the main thread\'s reads since the last status, and no hand-back text a second time under the ended agents; with no session id it prints everything each time',
-    guards: ['seen_goals', 'seen_backs', 'seen_found', 'seen_found_unsorted', 'seen_found_changed', 'seen_refusals', 'seen_refusals_new', 'seen_approval', 'seen_agents_dedupe', 'seen_written', 'reads_main_since', 'reads_main_tools', 'reads_main_sidechain', 'reads_print'],
+    guards: ['seen_goals', 'seen_backs', 'seen_found', 'seen_found_unsorted', 'seen_found_changed', 'seen_refusals', 'seen_refusals_new', 'seen_flagged_read', 'seen_approval', 'seen_agents_dedupe', 'seen_written', 'reads_main_since', 'reads_main_tools', 'reads_main_sidechain', 'reads_print'],
     run(m, dir) {
       const home = tmp('sg-home-');
       const s = sid('sn');
@@ -8722,33 +8722,46 @@ const CASES = [
     },
   },
 
-  // ---- finding 3: an agent paused on its own background run is running, whatever the notification says ----
+  // ---- Q-HUB-255: an agent is ended only by its hand-back, an interruption or a failure; a "completed" notification is no end ----
   {
-    name: 'finding 3: an agent that handed back nothing, whose own transcript launched a background run that has not completed, reads as still running though the main thread was told its turn completed, and is listed by the running agents; once the run\'s completion is in its transcript, or the session restarted after its last entry, it reads as ended',
-    guards: ['paused_background', 'paused_restart', 'paused_completes'],
+    name: 'Q-HUB-255: an agent whose transcript holds no hand-back call, an interruption or a failure reads as running though the main thread was told its turn completed, whether it ended its turn on its own background run or was resumed by the run\'s end and is at work again; the status\'s running agents, the wait\'s read, the pointer\'s ends, the review gate\'s ends and the stop guard\'s running work all see it as running; one that handed back is ended by a report, one cut off by an interruption by an interruption, and one whose session restarted after its last entry by an interruption',
+    guards: ['paused_background', 'paused_restart'],
     run(m) {
       const launch = [tool(0, 'l1', 'Bash', { command: 'node long.mjs', run_in_background: true }), result(1, 'l1', 'Command running in background with ID: pausedtask1 (output file in the scratchpad)')];
       const done = { type: 'user', timestamp: ts(5), message: { role: 'user', content: '<task-notification><task-id>pausedtask1</task-id><status>completed</status></task-notification>' } };
+      const atWork = [tool(6, 'w1', 'Bash', { command: 'git status' }), result(7, 'w1', 'clean')];
+      const handBack = [tool(8, 'h1', 'SubagentHandback', { message: 'DONE\nBuilt.' }), result(9, 'h1', 'Report delivered to your caller.')];
+      const cut = { type: 'user', timestamp: ts(9), message: { role: 'user', content: '[Request interrupted by user]' } };
       const paused = m.report.agentEnd([turn(0, 'step'), ...launch], {}, 0, 'completed');
-      const finished = m.report.agentEnd([turn(0, 'step'), ...launch, done], {}, 0, 'completed');
+      const resumed = m.report.agentEnd([turn(0, 'step'), ...launch, done, ...atWork], {}, 0, 'completed');
+      const plain = m.report.agentEnd([turn(0, 'step'), ...atWork], {}, 0, 'completed');
+      const handed = m.report.agentEnd([turn(0, 'step'), ...launch, done, ...atWork, ...handBack], {}, 0, 'completed');
+      const stopped = m.report.agentEnd([turn(0, 'step'), ...launch, cut], { stoppedByUser: true }, 0, 'completed');
       const restarted = m.report.agentEnd([turn(0, 'step'), ...launch], {}, Date.now(), 'completed');
-      const plain = m.report.agentEnd([turn(0, 'step'), tool(0, 'p1', 'Bash', { command: 'git status' }), result(1, 'p1', 'clean')], {}, 0, 'completed');
-      const handed = m.report.agentEnd([turn(0, 'step'), ...launch, tool(2, 'h1', 'SubagentHandback', { message: 'DONE\nBuilt.' }), result(3, 'h1', 'Report delivered to your caller.')], {}, 0, 'completed');
-      // The running agents, read from the files the harness writes.
+      // The readers, over the files the harness writes: one agent paused, one resumed and at work, one that handed back.
       const proj = tmp('sg-proj-');
       const sidP = sid('pb');
       const subs = join(proj, sidP, 'subagents');
       mkdirSync(subs, { recursive: true });
       const mainP = join(proj, `${sidP}.jsonl`);
-      writeFileSync(mainP, jsonl([turn(0, 'start'), { type: 'user', timestamp: ts(3), message: { role: 'user', content: '<task-notification><task-id>pauseagent1</task-id><status>completed</status></task-notification>' } }]));
-      writeFileSync(join(subs, 'agent-pauseagent1.meta.json'), JSON.stringify({ agentType: 'general-purpose', description: 'Plan step 1' }));
-      writeFileSync(join(subs, 'agent-pauseagent1.jsonl'), jsonl([turn(0, 'step'), ...launch]));
-      const ids = () => (m.report.runningAgents(sidP, { main: mainP, agents: subs }) ?? []).map((a) => a.id).join(',');
-      const listed = ids();
-      writeFileSync(join(subs, 'agent-pauseagent1.jsonl'), jsonl([turn(0, 'step'), ...launch, done]));
-      const after = ids();
-      return paused === null && finished?.how === 'a report' && restarted?.how === 'a report' && plain?.how === 'a report' && handed?.how === 'a report'
-        && listed === 'pauseagent1' && after === '';
+      const notice = (id) => ({ type: 'user', timestamp: ts(3), message: { role: 'user', content: `<task-notification><task-id>${id}</task-id><status>completed</status></task-notification>` } });
+      writeFileSync(mainP, jsonl([turn(0, 'start'), notice('pauseagent1'), notice('workagent1'), notice('doneagent1')]));
+      const put = (id, entries) => {
+        writeFileSync(join(subs, `agent-${id}.meta.json`), JSON.stringify({ agentType: 'general-purpose', description: 'Plan step 1' }));
+        writeFileSync(join(subs, `agent-${id}.jsonl`), jsonl([turn(0, 'step'), ...entries]));
+      };
+      put('pauseagent1', launch);
+      put('workagent1', [...launch, done, ...atWork]);
+      put('doneagent1', [...launch, done, ...atWork, ...handBack]);
+      const p = { session_id: sidP, transcript_path: mainP };
+      const listed = (m.report.runningAgents(sidP, { main: mainP, agents: subs }) ?? []).map((a) => a.id).sort().join(',');
+      const steps = m.report.stepEnds(p);
+      const work = (m.report.runningWork(p) ?? []).sort().join(',');
+      return paused === null && resumed === null && plain === null
+        && handed?.how === 'a report' && stopped?.how === 'an interruption' && /^an interruption/.test(restarted?.how ?? '')
+        && listed === 'pauseagent1,workagent1'
+        && steps?.running.slice().sort().join(',') === 'agent pauseagent1,agent workagent1' && steps?.ends.map((e) => e.how).join(',') === 'a report'
+        && work === 'agent pauseagent1,agent workagent1';
     },
   },
 
@@ -9837,7 +9850,7 @@ const PLANTS = {
   flag_read_scratch: ['if (pad && a.step !== null) for (const d of [', 'if (false && pad && a.step !== null) for (const d of [', 'report.mjs'],
   flag_read_named: ['const named = [...String(noteText)', "const named = [...String('')", 'report.mjs'],
   flag_read_result: ['out.push(r.last ? ', 'out.push(false ? ', 'report.mjs'],
-  flag_read_fresh: ['return r.flagged ? `${r.line}${flaggedRead(a, pad, r.text)}` : r.line;', 'return `${r.line}${flaggedRead(a, pad, r.text)}`;', 'report.mjs'],
+  flag_read_fresh: ['return r.flagged ? `${r.line}${flaggedRead(a, pad, r.text, seen, mark)}` : r.line;', 'return `${r.line}${flaggedRead(a, pad, r.text, seen, mark)}`;', 'report.mjs'],
   wait_refused_flagged: ['if (!flagged.length) return null;', 'return null;', 'hook-dispatch.mjs'],
   wait_refused_names_read: ['the status command prints, for a flagged agent, ', 'the thing prints, for a flagged agent, ', 'hook-dispatch.mjs'],
   wait_passes_unflagged: ["flagged = 'flagged' in opts ? opts.flagged : flaggedAgents(String(p.session_id ?? ''));", "flagged = [{ id: 'x', step: 1 }];", 'hook-dispatch.mjs'],
@@ -10140,7 +10153,6 @@ const PLANTS = {
   agents_once: ['    if (done.has(id)) continue;\n', '\n', 'report.mjs'],
   agents_interrupt: ["  if (meta?.stoppedByUser || interruptedAt > lastAssistant) return { how: 'an interruption'", "  if (false) return { how: 'an interruption'", 'report.mjs'],
   agents_refusal: ["how: lastRefusal && !word ? 'a refusal' : 'a report', at, last: cut(handback.text)", "how: 'a report', at, last: cut(handback.text)", 'report.mjs'],
-  agents_running: ['  return null;\n}\n\n/**\n * Does an agent\'s own transcript hold a background run that has not completed?', "  return { how: 'a report', at, last: cut(last) };\n}\n\n/**\n * Does an agent's own transcript hold a background run that has not completed?", 'report.mjs'],
   agents_since: ['    if (!rec && !(end.at > stampAt)) continue;\n', '\n', 'report.mjs'],
   // Each running agent's progress note.
   progress_block: ['  console.log(progress);\n', '\n', 'report.mjs'],
@@ -10514,6 +10526,7 @@ const PLANTS = {
   seen_found_unsorted: ["seen.found?.[f.key] === stamp && how !== 'unsorted') { held++; continue; }", 'seen.found?.[f.key] === stamp) { held++; continue; }', 'report.mjs'],
   seen_found_changed: ["      const stamp = `${f.line}|${how}|${s?.note ?? ''}`;", '      const stamp = `${f.line}`;', 'report.mjs'],
   seen_refusals: ["    if (a.state === 'running' && seen && r.refusals.length <= before) continue;", '    if (false) continue;', 'report.mjs'],
+  seen_flagged_read: ['    return !seen?.flagged || seen.flagged[key] !== h;', '    return true;', 'report.mjs'],
   seen_refusals_new: ['    const fresh = r.refusals.slice(before);', '    const fresh = r.refusals;', 'report.mjs'],
   seen_approval: ['    if (seen && seen.approval === mark.approval) {', '    if (false) {', 'report.mjs'],
   seen_agents_dedupe: ['Last entry: ${printed.has(a.id) ?', 'Last entry: ${false ?', 'report.mjs'],
@@ -11001,9 +11014,8 @@ const PLANTS = {
   stop_close_steps: ['    if (!steps.has(f.step)) continue;\n    const s = sortOf(notes, f);', '    const s = sortOf(notes, f);', 'stop-guard.mjs'],
   stop_close_sorted: ["    if (!s || s.how !== 'queued') continue;", '    if (!s) continue;', 'stop-guard.mjs'],
   // Finding 3: an agent paused on its own background run is running.
-  paused_background: ['    if (!(processStart && at && at < processStart) && pausedOnBackground(entries)) return null;', '    if (false) return null;', 'report.mjs'],
-  paused_restart: ['!(processStart && at && at < processStart) && pausedOnBackground(entries)', 'pausedOnBackground(entries)', 'report.mjs'],
-  paused_completes: ["  try { return runningTasks((entries ?? []).map((e) => JSON.stringify(e)).join('\\n')).length > 0; } catch { return false; }", '  try { return (entries ?? []).length > 0; } catch { return false; }', 'report.mjs'],
+  paused_background: ["  if (/^(?:completed)$/.test(notified) && !(processStart && at && at < processStart)) return null;", "  if (/^(?:completed)$/.test(notified)) return { how: lastRefusal ? 'a refusal' : 'a report', at, last: cut(last) };", 'report.mjs'],
+  paused_restart: ['/^(?:completed)$/.test(notified) && !(processStart && at && at < processStart)) return null;', '/^(?:completed)$/.test(notified)) return null;', 'report.mjs'],
   // Finding 7: the top tier names itself before an agent is sent.
   tier_gate_gone: ['      // THE TIER GATE IS GONE (Design part 9): the plan\'s Cost section names the tier of each step, and the stop guard\'s tier line stays.', "      if (!skip) return refuse('TIER GATE (Doctrine §11b, LESSONS §434): planted back, no tier line was written before the send.', false);\n      // THE TIER GATE IS GONE (Design part 9): the plan's Cost section names the tier of each step, and the stop guard's tier line stays.", 'hook-dispatch.mjs'],
   // Finding 11: a publish in a plan mode the harness restored says so first.

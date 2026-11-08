@@ -238,7 +238,13 @@ every rule below while none of the hooks that enforce them was running
    file in the step's scratch folder, else of the output file its note names,
    and its last tool result; `hook-dispatch.mjs` refuses the wait between
    statuses while any running agent is flagged and names the status as the read
-   to make, setting no latch (Q-HUB-295).
+   to make, setting no latch (Q-HUB-295). It prints each of those two reads
+   when it is new or changed since the last status and not again.
+   **An agent that ended its turn on its own background run is running, not
+   ended.** `report.mjs` (`agentEnd`) counts an agent ended only by its
+   hand-back call, an interruption or a failure, never by the harness's
+   completion notice, so the status, the wait, the pointer, the review gate and
+   the stop guard all read it as running (Q-HUB-255).
    **The wait ends when the owner writes.** `report.mjs --wait` returns within
    its poll interval when an owner message is written to the transcript after
    the wait began, its first line saying an owner message arrived at its
