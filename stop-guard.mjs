@@ -802,6 +802,28 @@ finding and what it costs; cut the shape.
 `, reply);
 }
 
+/** 3c. A HOST LIST ON ONE LINE (Q-HUB-293, Doctrine §2): a list of hosts the owner is meant to paste goes one host to a
+ *  line in one fenced block. A line outside a fenced block holding three or more hostnames, or a line inside one holding
+ *  two or more, is refused. A hostname is two or more labels of lowercase letters, digits and hyphens joined by dots whose
+ *  last label is on HOST_LAST_LABELS, so a file name such as `report.mjs` or `NOTES.md` does not match. */
+const HOST_LAST_LABELS = ['com', 'org', 'net', 'gov', 'edu', 'io', 'dev', 'uk', 'science', 'info'];
+const HOSTNAME = new RegExp(`\\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+(?:${HOST_LAST_LABELS.join('|')})\\b`, 'g');
+let inFence = false;
+let crowded = null;
+for (const line of reply.split('\n')) {
+  if (/^\s*(```|~~~)/.test(line)) { inFence = !inFence; continue; }
+  const n = (line.match(HOSTNAME) ?? []).length;
+  if (n >= (inFence ? 2 : 3)) { crowded = { n, inFence, line: line.trim().slice(0, 120) }; break; }
+}
+if (crowded) {
+  refuse(`STOP REFUSED — this reply puts ${crowded.n} hostnames on one line ${crowded.inFence ? 'inside a fenced block' : 'of prose'} ("${crowded.line}").
+
+Q-HUB-293, Doctrine §2. A host list is pasted one host per line in one fenced
+block with nothing else on the line, so the owner copies it as it stands. Put
+each host on its own line inside one fenced block and remove it from the prose.
+`, reply);
+}
+
 /** 9. AN OPEN CHOICE IS THE FIRST THING IN A REPLY. A reply whose numbered
  *  options carry the recommended marker — "(recommended)", in any case — is
  *  refused unless that list opens the reply: at most OPEN_LINES lines (a stop

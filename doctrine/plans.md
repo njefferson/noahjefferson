@@ -339,6 +339,10 @@ every rule below while none of the hooks that enforce them was running
    *Enforced by:* `stop-guard.mjs`.
 7. **A limit is reported only after every route available was tried**, with the
    failed attempt named. A blocked host is a question, not a finding.
+   *Enforced for declined hosts by:* `reply-guard.mjs` (Q-HUB-294), which records a
+   host as declined by the proxy on curl's CONNECT failure with a 403 or the proxy's
+   no-rule line, and `report.mjs`, whose status prints the hosts declined since the
+   last status, one per line in one fenced block.
 8. **A defect of the session is a bug**, never framed as the owner's preference
    or "your rule".
 9. **When the harness says ultracode is off, the first line of the next reply
@@ -793,6 +797,11 @@ The owner is iPad-first and often driving. So:
  make the thing look nice, which optimises for the wrong moment: the reading,
  not the using. (A session
  handed over a handoff prompt as a styled blockquote — twice in one exchange.)
+ *Enforced for host lists by:* `stop-guard.mjs` (Q-HUB-293), which refuses a reply
+ where a line outside a fenced block holds three or more hostnames or a line inside
+ one holds two or more, a hostname ending in com, org, net, gov, edu, io, dev, uk,
+ science or info so a file name does not match; a host list goes one host per line
+ in one fenced block.
 
 - **A REPORT ENDS IN DECISIONS OR IT ENDS IN NOTHING.** A list of everything
  outstanding is not a handover, it is work handed back. If the owner has to read

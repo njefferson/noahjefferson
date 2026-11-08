@@ -3176,6 +3176,46 @@ const CASES = [
     },
   },
 
+  {
+    name: 'Q-HUB-293: a reply with three hostnames on one prose line, or two on one line inside a fenced block, is refused with the words that a host list goes one host per line in one fenced block; the same hosts one per line in one fenced block pass, two hostnames on a prose line pass, and a line naming three script and markdown file names passes',
+    guards: ['host_list_refusal', 'host_list_fenced_count', 'host_list_last_labels'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      const env = { ...process.env, HOME: home };
+      const say = (text) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('hl'), transcript_path: transcript([turn(0, GO), reply(5, text)]) }), encoding: 'utf8', env });
+      const refused = (r) => r.status === 2 && /STOP REFUSED/.test(r.stderr) && /one host per line in one fenced/.test(r.stderr) && /Q-HUB-293/.test(r.stderr);
+      const prose = say('The three hosts are alpha.example.com, beta.example.org and gamma.example.net today.');
+      const fencedTwo = say('The pair:\n\n```\nalpha.example.com beta.example.org\n```');
+      const fencedOne = say('The three hosts, one per line.\n\n```\nalpha.example.com\nbeta.example.org\ngamma.example.net\n```');
+      const proseTwo = say('The pair are alpha.example.com and beta.example.org today.');
+      const files = say('The edits touch stop-guard.mjs, reply-guard.mjs and report.mjs in the repository.');
+      return refused(prose) && refused(fencedTwo) && fencedOne.status === 0 && proseTwo.status === 0 && files.status === 0;
+    },
+  },
+  {
+    name: 'Q-HUB-294: a host the proxy refused is recorded as declined by the proxy on curl\'s CONNECT failure with a 403 and on the proxy\'s no-rule line, the next status prints both hosts one per line in one fenced block, and the status after it prints neither',
+    guards: ['host_declined_connect', 'host_declined_norule', 'host_declined_status'],
+    run(m, dir) {
+      const home = tmp('sg-home-');
+      const ledger = join(home, '.claude', 'reply-ledger');
+      const s = sid('hd');
+      const status = () => spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the declined hosts test'], { encoding: 'utf8', env: { ...process.env, HOME: home, REPLY_LEDGER_DIR: ledger, CLAUDE_CODE_SESSION_ID: s } }).stdout ?? '';
+      process.env.REPLY_LEDGER_DIR = ledger;
+      try {
+        m.reply.record({ session_id: s, tool_name: 'Bash', tool_use_id: 'c1', tool_input: { command: 'curl -sS https://planted-one.example.com/a' }, error: 'curl: (56) CONNECT tunnel failed, response 403' }, 'PostToolUseFailure');
+        m.reply.record({ session_id: s, tool_name: 'Bash', tool_use_id: 'c2', tool_input: { command: 'curl -sS https://planted-two.example.org/b' }, tool_response: { stdout: 'request blocked: no rule allows host planted-two.example.org', stderr: '' } }, 'PostToolUse');
+        const declines = m.reply.load({ session_id: s }).filter((e) => e.kind === 'decline' && e.cause === 'proxy').map((e) => e.host);
+        const recorded = declines.includes('planted-one.example.com') && declines.includes('planted-two.example.org');
+        const first = status();
+        const printed = /Hosts the proxy declined since the last status[^\n]*\n```\nplanted-one\.example\.com\nplanted-two\.example\.org\n```/.test(first);
+        const second = status();
+        const quiet = !second.includes('planted-one.example.com') && !second.includes('planted-two.example.org') && !second.includes('Hosts the proxy declined');
+        return recorded && printed && quiet;
+      } finally { delete process.env.REPLY_LEDGER_DIR; }
+    },
+  },
+
   // ---- held work (pending-guard.mjs, hook-dispatch.mjs) ----
   {
     name: 'a call refused while an owner message waits is held, printed at the top of the turn that delivers the message when that message ends with a go-word, and printed once; a message that does not leaves it held',
@@ -9626,6 +9666,12 @@ const batchRun = (dir, hub, args) => spawnSync('node', [join(dir, 'plan-seed.mjs
   { encoding: 'utf8', timeout: 60000, env: { ...process.env, CLAUDE_CODE_SESSION_ID: '' } });
 
 const PLANTS = {
+  host_list_refusal: ['if (crowded) {', 'if (false) {', 'stop-guard.mjs'],
+  host_list_fenced_count: ['n >= (inFence ? 2 : 3)', 'n >= 3', 'stop-guard.mjs'],
+  host_list_last_labels: ["${HOST_LAST_LABELS.join('|')}", '[a-z]{2,}', 'stop-guard.mjs'],
+  host_declined_connect: [".test(L)) { add(attribute(i), { cause: 'proxy'", ".test('')) { add(attribute(i), { cause: 'proxy'", 'reply-guard.mjs'],
+  host_declined_norule: ['matchAll(/\\bno rule allows host:?', 'matchAll(/\\bno rule never host:?', 'reply-guard.mjs'],
+  host_declined_status: ['try { const declined = declinedHostsBlock(sid, previous); if (declined) console.log(declined); }', "try { const declined = ''; if (declined) console.log(declined); }", 'report.mjs'],
   cap_hold_count: ['if (held >= HOLD_AT) {', 'if (false) {', 'stop-guard.mjs'],
   cap_hold_reset: ["if (e?.type === 'assistant' && Array.isArray(e.message?.content) && e.message.content.some((b) => b?.type === 'tool_use')) break;", 'if (false) break;', 'stop-guard.mjs'],
   cap_plant_armed: ['    && runningForPlanStep({ session_id: payloadSession, transcript_path: path }, mk.plan, mk.step)) {', '    && true) {', 'stop-guard.mjs'],

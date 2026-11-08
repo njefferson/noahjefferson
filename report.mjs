@@ -127,6 +127,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { tailEntries, textOf } from './transcript-tail.mjs';
 import { startedAt } from './pending-guard.mjs';
+import { load as loadLedger } from './reply-guard.mjs';
 
 export const INTERVAL_MS = 5 * 60 * 1000;
 const CLOCK = join(homedir(), '.claude', 'report-clock.json');
@@ -3094,6 +3095,27 @@ export function configChangesBlock(sid, stampAt) {
   return lines.join('\n');
 }
 
+/**
+ * The hosts this container's proxy declined since the last status (Q-HUB-294, Doctrine §2 on pasted blocks, §0e rule 7 on a blocked host).
+ * @param {string} sid  the session id; the reply guard's ledger for it is read.
+ * @param {number} stampAt  the last status's time in ms (0 when there was none, which reads the whole ledger).
+ * @returns {string} a line saying so and the hosts one per line in one fenced block, the shape they are pasted in; '' when none was
+ *   declined since, when the session has no id or when the ledger cannot be read. A host appears once, in the order it first declined.
+ */
+export function declinedHostsBlock(sid, stampAt) {
+  if (!sid) return '';
+  let events = [];
+  try { events = loadLedger({ session_id: sid }); } catch { return ''; }
+  const hosts = [];
+  for (const e of events) {
+    if (e?.kind !== 'decline' || e.cause !== 'proxy' || !(Number(e.t) > stampAt)) continue;
+    const h = String(e.host ?? '').toLowerCase();
+    if (h && !hosts.includes(h)) hosts.push(h);
+  }
+  if (!hosts.length) return '';
+  return `Hosts the proxy declined since the last status, one per line, to allow or to read:\n\`\`\`\n${hosts.join('\n')}\n\`\`\``;
+}
+
 if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   if (process.argv[2] === '--gate') {
     let p = {};
@@ -3210,6 +3232,8 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   console.log(readsLine);
   // THE CONFIGURATION CHANGES the dispatcher's ConfigChange record holds since the last status (P-21); nothing prints when there are none.
   try { const changes = configChangesBlock(sid, previous); if (changes) console.log(changes); } catch { /* the status stands without them */ }
+  // THE HOSTS THE PROXY DECLINED since the last status, one per line in one fenced block (Q-HUB-294); nothing prints when there are none.
+  try { const declined = declinedHostsBlock(sid, previous); if (declined) console.log(declined); } catch { /* the status stands without them */ }
   let ended;
   try { ended = sid ? agentEnds(sid, previous) : null; } catch { ended = null; }
   let block = '';

@@ -852,7 +852,7 @@ export function readsInFull(cmd, host) {
   return true;
 }
 
-const PROXY_LINE = /CONNECT tunnel failed, response 40[37]|Received HTTP code 40[37] from proxy after CONNECT|no rule or allowlist entry allows host|EGRESS_BLOCKED|connect_rejected/;
+const PROXY_LINE = /CONNECT tunnel failed, response 40[37]|Received HTTP code 40[37] from proxy after CONNECT|no rule or allowlist entry allows host|no rule allows host|EGRESS_BLOCKED|connect_rejected/;
 const CHALLENGE = /cf-mitigated:\s*challenge|<title>\s*Just a moment|Attention Required! \| Cloudflare|\bcaptcha\b|Request blocked\.|The request could not be satisfied|Access Denied<\/title>/i;
 const INSTRUCTION_HEADERS = ['tdm-reservation', 'tdm-policy', 'link', 'retry-after', 'www-authenticate', 'cf-mitigated', 'x-cache', 'content-type', 'location', 'allow'];
 
@@ -912,6 +912,9 @@ export function declinesIn(reqText, out, code, known, fetch = false) {
     for (const m of L.matchAll(/-\s+([a-z0-9.-]+\.[a-z]{2,}):\d+\s+—\s+connect_rejected/gi)) add([m[1].toLowerCase()], { cause: 'proxy', evidence: [L.trim()], excerpt: around(i) });
     for (const m of L.matchAll(/"error_type"\s*:\s*"EGRESS_BLOCKED"\s*,\s*"domain"\s*:\s*"([^"]+)"/g)) add([m[1].toLowerCase()], { cause: 'proxy', evidence: [L.trim().slice(0, 400)], excerpt: L.slice(0, 1200) });
     for (const m of L.matchAll(/allowlist entry allows host \\?"([^"\\]+)\\?"/g)) add([m[1].toLowerCase()], { cause: 'proxy', evidence: [L.trim()], excerpt: around(i) });
+    // The proxy's other wording, `request blocked: no rule allows host <host>` (Q-HUB-294): the host it names, else the host named nearest.
+    for (const m of L.matchAll(/\bno rule allows host:?\s+\\?"?([a-z0-9][a-z0-9.-]*\.[a-z]{2,})/gi)) add([m[1].toLowerCase()], { cause: 'proxy', evidence: [L.trim()], excerpt: around(i) });
+    if (/\bno rule allows host\s*$/i.test(L.trim())) { add(attribute(i), { cause: 'proxy', evidence: [L.trim()], excerpt: around(i) }); continue; }
     if (/CONNECT tunnel failed, response 40[37]|Received HTTP code 40[37] from proxy after CONNECT/.test(L)) { add(attribute(i), { cause: 'proxy', evidence: [L.trim()], excerpt: around(i) }); continue; }
     // ---- a server's own status line, with its headers and body ----
     const st = L.replace(/^< /, '').match(/^HTTP\/[\d.]+\s+(\d{3})\b/);
