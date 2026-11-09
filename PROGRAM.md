@@ -54,7 +54,7 @@ The list is the rank. The items the redesign plan builds come first, then the pa
 
 ## Items
 
-416 items (P-416 the infrared app's colour panel for making a look, entered by the second send of step 357 of the plan of 9 November and not from the Found queue; P-415 the key Q-HUB-371, filed by step 138 of the plan of the batch's first wave of 9 November; P-407 to P-414 the keys Q-HUB-363 to Q-HUB-370, filed by step 136 of the plan of the planning method of 9 November; P-401 to P-406 the keys Q-HUB-357 to Q-HUB-362, filed by step 130 of the plan of the planning method of 9 November; P-389 to P-400 the keys Q-HUB-345 to Q-HUB-356, filed by step 128 of the plan of the standing problems of the gates; P-366 to P-388 the keys Q-HUB-322 to Q-HUB-344, filed by step 118 of the plan of the standing problems of the gates; P-365 the infrared app's populations measured by place, entered by step 339 of that plan and not from the Found queue; P-358 to P-364 the keys Q-HUB-315 to Q-HUB-321, filed by the second send of step 108 of the same plan; P-352 to P-357 the keys Q-HUB-309 to Q-HUB-314, filed by step 108 of the plan of the four gates of 7 November; P-351 the key Q-HUB-308, filed by step 337 of the plan of the infrared app's separation measure; P-350 the infrared app's separation measure of 9 November, entered by step 331 of that plan and not from the Found queue; P-349 the key Q-HUB-307, filed by step 330 of the plan that fixes the sweep and regathers the separation research; P-348 the infrared app's test page work of 8 November, entered by step 329 of that plan and not from the Found queue; P-344 to P-347 the keys Q-HUB-303 to Q-HUB-306, filed by step 103 of the plan of the four gates of 7 November; P-343 the key Q-HUB-302, filed by step 102 of the first batch plan; P-317 to P-319 the keys Q-HUB-276 to Q-HUB-278, filed by step 85 of the plan that closed P-21 after the lock of 6 November; P-320 to P-342 the keys Q-HUB-279 to Q-HUB-301, filed by step 99 of the first batch plan, whose first three keys moved past the keys of the remote's, so P-340 to P-342 are the keys Q-HUB-299 to Q-HUB-301; P-309 the batch seed, named by the owner on 5 November, and P-310 to P-316 the keys Q-HUB-269 to Q-HUB-275, filed by step 92 of the plan that wrote it; P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 330 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
+421 items (P-417 to P-421 the keys Q-HUB-372 to Q-HUB-376, filed by step 147 of the plan of the batch's first wave of 9 November; P-416 the infrared app's colour panel for making a look, entered by the second send of step 357 of the plan of 9 November and not from the Found queue; P-415 the key Q-HUB-371, filed by step 138 of the plan of the batch's first wave of 9 November; P-407 to P-414 the keys Q-HUB-363 to Q-HUB-370, filed by step 136 of the plan of the planning method of 9 November; P-401 to P-406 the keys Q-HUB-357 to Q-HUB-362, filed by step 130 of the plan of the planning method of 9 November; P-389 to P-400 the keys Q-HUB-345 to Q-HUB-356, filed by step 128 of the plan of the standing problems of the gates; P-366 to P-388 the keys Q-HUB-322 to Q-HUB-344, filed by step 118 of the plan of the standing problems of the gates; P-365 the infrared app's populations measured by place, entered by step 339 of that plan and not from the Found queue; P-358 to P-364 the keys Q-HUB-315 to Q-HUB-321, filed by the second send of step 108 of the same plan; P-352 to P-357 the keys Q-HUB-309 to Q-HUB-314, filed by step 108 of the plan of the four gates of 7 November; P-351 the key Q-HUB-308, filed by step 337 of the plan of the infrared app's separation measure; P-350 the infrared app's separation measure of 9 November, entered by step 331 of that plan and not from the Found queue; P-349 the key Q-HUB-307, filed by step 330 of the plan that fixes the sweep and regathers the separation research; P-348 the infrared app's test page work of 8 November, entered by step 329 of that plan and not from the Found queue; P-344 to P-347 the keys Q-HUB-303 to Q-HUB-306, filed by step 103 of the plan of the four gates of 7 November; P-343 the key Q-HUB-302, filed by step 102 of the first batch plan; P-317 to P-319 the keys Q-HUB-276 to Q-HUB-278, filed by step 85 of the plan that closed P-21 after the lock of 6 November; P-320 to P-342 the keys Q-HUB-279 to Q-HUB-301, filed by step 99 of the first batch plan, whose first three keys moved past the keys of the remote's, so P-340 to P-342 are the keys Q-HUB-299 to Q-HUB-301; P-309 the batch seed, named by the owner on 5 November, and P-310 to P-316 the keys Q-HUB-269 to Q-HUB-275, filed by step 92 of the plan that wrote it; P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 335 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
 
 ## Items the redesign plan builds
 
@@ -349,6 +349,16 @@ Close entry of the plan of the planning method (steps 130 to 136, step 136 the w
 - Compactions: 0. Resumes: 0. Pushes: the instrument does not count them; step 130, step 135 and this step push once each.
 - The whole session over three approved plans: 22 owner messages (13 go-words, 9 without, 2 carrying the whole word stop), 89 stop-hook messages, 322 agents, 2 compactions, 7 resumes.
 - The harness's own running cost entry, the last of 5, reads 850.88 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252).
+
+Close entry of the plan of the batch's first wave by file (steps 138 to 147, step 147 the writer), from the cost instrument run on this session's transcript, so far and before this step's push. The instrument numbers it plan 4 and reads no item for it; it was approved 09:43 California time on 9 November:
+- The owner's messages: 0 in the plan; the session's totals are below.
+- Stop-hook messages: 9 in 8 stops (command hook 3, 7; command hook 2, 2).
+- Main-thread refusals: 0.
+- Agents: 13, all on the sonnet tier, with 238,171 output tokens, 46,582,205 cache-read tokens and 1,715,365 cache-written tokens; 0 hook refusals.
+- Main-thread turns: 65 on the opus tier with 33,170 output tokens.
+- Compactions: 1 (09:44 California time on 9 November). Resumes: 0. Pushes: the instrument does not count them; step 138, step 146 and this step push once each.
+- The whole session over four approved plans: 23 owner messages (14 go-words, 9 without, 2 carrying the whole word stop), 99 stop-hook messages, 336 agents, 3 compactions, 8 resumes.
+- The harness's own running cost entry, the last of 6, reads 923.09 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252).
 
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
@@ -3710,7 +3720,9 @@ Depends: none.
 
 ### P-389. Q-HUB-345: the suite's tracked-file watch fails a case for a file another step edited in the same working copy
 
-Repository: hub. Goal: 6. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 6. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 140 of that plan made a plain run copy the checkout and run the cases in the copy, with a case that edits the working copy during a case and passes, and the plant run_in_copy; landed by step 146. What the copy still shares with the working copy is Q-HUB-372.
 
 Acceptance: the cases run against a copy of the tracked files made at the start of the run, so an edit of the working copy during the run is not read as a case's write, with a case that plants an edit during a case and shows it passing.
 
@@ -3718,7 +3730,9 @@ Depends: none.
 
 ### P-390. Q-HUB-346: a case that returns a bare false names no assertion
 
-Repository: hub. Goal: 6. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Left: step 140 of the plan of the batch's first wave made the assertion helper return a mark, made the run count a case that ends in a bare true and print the list with `--bare-list`, and changed the five cases of the stop guard's case file; 304 of the 367 cases of `session-guards.test.mjs` still end in a bare true, and each needs its own labelled rows, which is a rewrite of most of an 11,000-line file and not a mechanical edit.
 
 Acceptance: every case returning a bare boolean is changed to the helper that carries the failed labels and the returned text, with a case that lists any case still returning one.
 
@@ -3726,7 +3740,9 @@ Depends: none.
 
 ### P-391. Q-HUB-347: nothing calls the command that rewrites the status page when the notes' Next line changes
 
-Repository: hub. Goal: 3. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 3. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 141 of that plan added `pageFollowsNext`, run after a main-thread write of the manager notes and before an agent or workflow send, with the plants page_next_after_notes and page_next_before_send; landed by step 146.
 
 Acceptance: the dispatcher runs `report.mjs --page-next` after a main-thread write of the manager notes and before a review is sent, with a case that a planted write runs it.
 
@@ -3734,7 +3750,9 @@ Depends: none.
 
 ### P-392. Q-HUB-348: the pointer's keeping of an earlier DONE leans on the marker's steps list and the path
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 5. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 142 of that plan made the marker record the plan's title line and first approval time, carried across a re-entry to plan mode by a lineage file, and the pointer read both, with a case on two plans written to one path; landed by step 146. The button-approval recovery's write of the identity has no case of its own, Q-HUB-374.
 
 Acceptance: the marker records the plan's first approval time and title line and the pointer reads both, with a case on two plans written to one path.
 
@@ -3742,7 +3760,9 @@ Depends: none.
 
 ### P-393. Q-HUB-349: the identifier shim skip for a launch result's agent id is not driven end to end
 
-Repository: hub. Goal: 6. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 6. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 141 of that plan added a case that drives the whole dispatcher with a planted always-refusing shim and a planted launch result, with the plant ident_skip_loop on the loop's line; landed by step 146.
 
 Acceptance: a case runs the dispatcher's hook loop with a planted app identifier shim and a planted launch result, with a plant on the loop's line.
 
@@ -3758,7 +3778,9 @@ Depends: none.
 
 ### P-395. Q-HUB-351: the rule-number read covers only the numbered lines of the plans page's section on the owner's rules
 
-Repository: hub. Goal: 6. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 6. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 141 of that plan found the old text already read the numbered lines under a third-level heading, held that behaviour for levels 3 and 4 with a case and the plant rule_number_subheading, and made a level 3 to 6 heading a sub-heading explicitly; landed by step 146.
 
 Acceptance: `ruleNumberProblem` reads the numbered lines under the sub-headings as well, with a case on a rule number held under a sub-heading.
 
@@ -3766,7 +3788,9 @@ Depends: none.
 
 ### P-396. Q-HUB-352: the plan fence refuses an agent's write in the window between a write of the plan file and its re-recording
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 5. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 143 of that plan took the second route, a refusal whose words say the plan file is being re-recorded and the same call goes again, with a case on a marker whose hash is stale by one write; landed by step 146. The mark step 142 writes is read by nothing, Q-HUB-375, and the refusal is not on the no-latch list, Q-HUB-376.
 
 Acceptance: the fence reads a hash mismatch that the approval guard's pending re-recording explains as the marker's last recorded plan, or its refusal says the plan is being re-recorded, with a case on a marker whose hash is stale by one write.
 
@@ -3794,7 +3818,9 @@ Depends: none.
 
 ### P-399. Q-HUB-355: the background gate's second refusal latches an agent whose second write was not the first call after the launch
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 5. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 143 of that plan changed the fence's second-refusal words with a case; the template's line had landed on 9 November; landed by step 146.
 
 Acceptance: the refusal's words and the template's background rule say the second write is the first call after the launch and the read comes after it, with a case on each text.
 
@@ -3862,7 +3888,9 @@ Depends: none.
 
 ### P-406. Q-HUB-362: in plan mode with no plan in force the main thread cannot read a repository's source file
 
-Repository: hub. Goal: 1. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 1. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 141 of that plan passes the main thread's read of a path inside a git repository in plan mode with no plan in force, with a case and four plants; an agent transcript is still refused, Q-HUB-373; landed by step 146.
 
 Acceptance: `hook-dispatch.mjs` passes the main thread's read of the repository's own files in plan mode while no plan is in force, with a case on the fence's answer.
 
@@ -3870,7 +3898,9 @@ Depends: none.
 
 ### P-407. Q-HUB-363: the plant tpl_close_keys is missed and the Doctrine gates run ends red on it
 
-Repository: hub. Goal: 1. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 1. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 145 of that plan made the close-keys case assert the whole sentence and made the batch print's commit step list every file a plant targets, the template among them; step 146 ran every plant of the template and the six files, all caught; landed by step 146. The Doctrine gates run for the landing commit was still in progress when this entry was written.
 
 Acceptance: the case behind the plant asserts the whole sentence the plant removes, the Doctrine gates run for the pushed commit concludes success, and the batch print's commit step runs the plants of every file a plant targets.
 
@@ -3878,7 +3908,9 @@ Depends: none.
 
 ### P-408. Q-HUB-364: the commit step's text states none of four orders a plan had to amend by hand
 
-Repository: hub. Goal: 1. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 1. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 145 of that plan put the four sentences into the commit-step block of the template and the seed, with a case on the printed text and four plants; landed by step 146.
 
 Acceptance: the commit step block of `plan-seed.mjs` and `plans/seed-template.md` carries the four sentences of the finding, with a case on the printed text.
 
@@ -3886,7 +3918,9 @@ Depends: none.
 
 ### P-409. Q-HUB-365: the plan fence reads the suite's dry listing of stale plants as a red run
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 5. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 143 of that plan made exit 1 of a suite line carrying the dry switch not a red run, with a case and plants; landed by step 146.
 
 Acceptance: `plan-fence.mjs` does not read the dry listing as a red run, with a case on the fence's answer.
 
@@ -3894,7 +3928,9 @@ Depends: none.
 
 ### P-410. Q-HUB-366: the plan fence reads the suite's usage refusal as a red run
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 5. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 143 of that plan made exit 2 of the suite not a red run while exit 1 still is, with a case on each and plants; landed by step 146.
 
 Acceptance: `plan-fence.mjs` does not read exit 2 of the suite as a red run and still reads exit 1 as one, with a case on each.
 
@@ -3902,7 +3938,9 @@ Depends: none.
 
 ### P-411. Q-HUB-367: a Files line worded read only holds no agent off the file it names
 
-Repository: hub. Goal: 6. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 6. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 143 of that plan made the fence drop a Files line worded read only from the writable files, with a case on a planted plan and plants; landed by step 146.
 
 Acceptance: the fence reads such a line as no write, or the plan check refuses the wording, with a case on a planted plan.
 
@@ -3910,7 +3948,9 @@ Depends: none.
 
 ### P-412. Q-HUB-368: a file step ran its cases under a filter wider than its own names and read other cases red
 
-Repository: hub. Goal: 1. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 1. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 145 of that plan made the group step's text and the template's parallel rules run cases by exact names, each as one quoted switch, and name another step's red case without acting on it, with a case on both and plants; landed by step 146.
 
 Acceptance: the group step's text in `plan-seed.mjs` and `plans/seed-template.md` has it run its cases by exact names, one quoted switch each, with a case on the printed text.
 
@@ -3934,7 +3974,9 @@ Depends: none.
 
 ### P-415. Q-HUB-371: the seed's batch print gave one file to two group steps and merged nothing, so a wave was not partitioned
 
-Repository: hub. Goal: 1. State: planned. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+Repository: hub. Goal: 1. State: done. Plan: The batch's first wave by file: the fence's red-run readings, the seed's partition and commit-step order, the dispatcher's page and plan-mode reads, the pointer's plan identity, and the suite's watch and assertion messages, six file steps at once with one commit step.
+
+Done: step 145 of that plan added `filesUnder` and `mergeSharing` so a folder counts as every file under it, a step's case file is a file it owns, two steps that would share a file become one, and a file a finding names only as a seam goes to the step whose file it is, with two cases on planted batches and six plants; landed by step 146.
 
 Acceptance: the partition in `plan-seed.mjs` counts a folder as every file under it and a step's own case file as a file it owns, gives no file to two steps, merges two steps that would share one, and gives a file a finding names only as a seam to the step whose file it is, with a case on a planted batch.
 
@@ -3947,3 +3989,43 @@ Repository: Jefferson-Photography-Studio. Goal: 5. State: planned. Plan: Record 
 Acceptance: the Colour tab carries one panel: three channel-swap chips that write the app's own swap flag and mixer, the Sky and Foliage boxes keyed on the photograph's sky selection and its complement with each heading saying so, one Strength over the mixer and the bands carried by a saved look, and Save as a look; the test page's Separation check prints the same two keyed centres; every control reachable by finger at 44 points; the record, the notes and the walks' code carry it; the commit stands on staging as 2.76 with every gate green and main unmoved, and no walk runs before the promotion.
 
 Depends: P-365.
+
+### P-417. Q-HUB-372: the suite's copy leaves cases reading the live working copy and loads only the case files present at the start
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: the cases that read the live working copy read the copy or are listed by the suite, with a case on a new case file written during a run.
+
+Depends: none.
+
+### P-418. Q-HUB-373: the plan-mode read pass does not open an agent's transcript
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: `hook-dispatch.mjs` passes that read too if a case shows a plan-mode session needing it, with a case on the fence's answer.
+
+Depends: none.
+
+### P-419. Q-HUB-374: the button-approval recovery's write of the plan identity has no case
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: a case on a recovered button approval reads the title and first approval time from the marker, with a plant on the recovery's write.
+
+Depends: none.
+
+### P-420. Q-HUB-375: the approval guard writes a re-recording mark that the fence does not read
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the fence reads the mark, or the approval guard stops writing it and its cases and plants go.
+
+Depends: none.
+
+### P-421. Q-HUB-376: the fence's re-recording refusal is not on the dispatcher's no-latch list
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: its words are on the list and every counted line of the list is changed in the same step, with the rule 14 case and the `doctrine_count` plant passing.
+
+Depends: none.
