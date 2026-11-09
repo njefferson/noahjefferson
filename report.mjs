@@ -1476,6 +1476,22 @@ function approvedStepNumbers(marker = join(homedir(), '.claude', 'APPROVED-PLAN.
 }
 
 /**
+ * The identity the approval marker recorded for the plan in force (Q-HUB-348).
+ * @param {string} [marker]  the approval marker's path; `~/.claude/APPROVED-PLAN.json` by default.
+ * @returns {number} the time in ms of the marker's `firstApprovedAt` (the first approval of this plan, carried across an amendment approved
+ *   at the button and set afresh for a different plan written to the same path) when the marker also records a non-empty `title`; NaN
+ *   for any marker without both, or none. `stepEnds` keeps an earlier send only from this time on, so a different plan that reuses
+ *   one plan path and the same step numbers never counts an earlier plan's DONE.
+ */
+function approvedIdentityTime(marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) {
+  try {
+    const mk = JSON.parse(readFileSync(marker, 'utf8'));
+    if (typeof mk?.title !== 'string' || !mk.title) return NaN;
+    return Date.parse(typeof mk.firstApprovedAt === 'string' ? mk.firstApprovedAt : '');
+  } catch { return NaN; }
+}
+
+/**
  * The first 64 KB of an agent's transcript.
  * @param {string} path  the agent's transcript.
  * @returns {string} the text of the file's first 64 KB, or '' when it cannot be
@@ -1730,7 +1746,10 @@ export function stepEnds(p) {
   // AN AMENDMENT APPROVED AT THE BUTTON IS THE SAME PLAN (Q-HUB-344): its marker's approval time is later than the sends that handed back
   // DONE before it, and counting only sends after it read them as not sent. A marker that records the steps it was approved with
   // (`approvedStepNumbers`) keeps an earlier send whose prompt names the plan in force and whose step is one of them.
-  const approvedSteps = approvedStepNumbers();
+  // Q-HUB-348: only from the plan's first approval on, read with its title (`approvedIdentityTime`): an earlier plan written to this same path
+  // approved before it, with the same step numbers, is not the plan in force. A marker with no identity keeps no earlier send.
+  const identityFrom = approvedIdentityTime();
+  const approvedSteps = Number.isFinite(identityFrom) ? approvedStepNumbers() : null;
   for (const a of agentFiles(f.agents)) {
     const id = a.id;
     const path = a.file;
@@ -1743,6 +1762,7 @@ export function stepEnds(p) {
     if (end && ours && prompt && !ours.has(resolvePath(prompt.plan))) continue;
     const startAt = agentStart(path, head);
     if (end && ours && Number.isFinite(startAt) && startAt < approvedFrom && !(step !== null && approvedSteps?.has(step))) continue;
+    if (end && ours && Number.isFinite(startAt) && startAt < identityFrom) continue;
     if (!end) { running.push(`agent ${id}`); if (step !== null) runningSteps.add(step); runningStarts.push({ id, step, startAt }); continue; }
     ends.push({ id, step, how: end.how, at: end.at, startAt, last: end.last, path, ...(end.word ? { word: end.word, refusedBefore: end.refusedBefore } : {}) });
   }

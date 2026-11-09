@@ -112,7 +112,7 @@ export const cases = [
   },
   {
     name: 'Q-HUB-344: a send made before an amendment was approved at the button still counts when its prompt names the plan in force and its step is one the marker records; a marker with no steps list, another plan\'s path and a step the marker does not record keep the earlier-approval rule',
-    guards: ['pointer_amended_steps'],
+    guards: ['pointer_amended_steps', 'pointer_plan_identity', 'pointer_identity_missing'],
     run(m, dir, h) {
       const marker = join(process.env.HOME, '.claude', 'APPROVED-PLAN.json');
       mkdirSync(dirname(marker), { recursive: true });
@@ -129,13 +129,26 @@ export const cases = [
       const ids = () => (m.report.stepEnds({ transcript_path: tr, session_id: 'nothing-on-disk' })?.ends ?? []).map((e) => `${e.id}:${e.step}`).sort().join(',');
       try {
         const base = { plan: '/plans/amend-plan.md', hash: 'not-this-plan-file', at: h.later(-50), approvedAt: h.later(-300) };
-        writeFileSync(marker, JSON.stringify({ ...base, steps: [5] }));
+        // Q-HUB-348: the identity the approval guard records, the plan's first approval time and its title line.
+        const same = { firstApprovedAt: h.later(-700), title: '# The amended plan' };
+        writeFileSync(marker, JSON.stringify({ ...base, ...same, steps: [5] }));
         const withSteps = ids();
-        writeFileSync(marker, JSON.stringify(base));
+        writeFileSync(marker, JSON.stringify({ ...base, ...same }));
         const noSteps = ids();
+        // Two plans written to one path: the second was first approved at -300, after the first plan's agents handed back, so its marker
+        // carries the same steps and a later first approval time. It must not count the first plan's DONE.
+        writeFileSync(marker, JSON.stringify({ ...base, firstApprovedAt: h.later(-300), title: '# A different plan', steps: [5] }));
+        const otherPlan = ids();
+        writeFileSync(marker, JSON.stringify({ ...base, steps: [5] }));
+        const noIdentity = ids();
+        writeFileSync(marker, JSON.stringify({ ...base, firstApprovedAt: h.later(-700), steps: [5] }));
+        const noTitle = ids();
         return h.assertAll([
           ['a send of a recorded step before the approval counts', withSteps === 'after5:5,before5:5', withSteps],
           ['a marker with no steps list drops every send before the approval', noSteps === 'after5:5', noSteps],
+          ['a different plan written to the same path drops the earlier plan\'s sends of the same step', otherPlan === 'after5:5', otherPlan],
+          ['a marker that records no identity keeps no send before the approval', noIdentity === 'after5:5', noIdentity],
+          ['a marker that records no title keeps no send before the approval', noTitle === 'after5:5', noTitle],
         ]);
       } finally { rmSync(marker, { force: true }); }
     },
@@ -220,6 +233,8 @@ export const plants = {
   found_none: ["if (!/^Found:/.test(t) || NO_FINDING.test(t)) continue;", "if (!/^Found:/.test(t)) continue;", 'report.mjs'],
   found_report_path: ['(sends.at(-1)?.file ??', '(', 'report.mjs'],
   pointer_amended_steps: ['&& !(step !== null && approvedSteps?.has(step))', '', 'report.mjs'],
+  pointer_plan_identity: ['    if (end && ours && Number.isFinite(startAt) && startAt < identityFrom) continue;\n', '', 'report.mjs'],
+  pointer_identity_missing: ['  const approvedSteps = Number.isFinite(identityFrom) ? approvedStepNumbers() : null;\n', '  const approvedSteps = approvedStepNumbers();\n', 'report.mjs'],
   page_next_refresh: ["  if (shown === escapeHtml(next)) return null;\n", "  if (true) return null;\n", 'report.mjs'],
   page_next_unchanged: ["  if (shown === escapeHtml(next)) return null;\n", "  if (false) return null;\n", 'report.mjs'],
   page_next_cli: ["  if (process.argv[2] === '--page-next') {", "  if (process.argv[2] === '--page-next-off') {", 'report.mjs'],

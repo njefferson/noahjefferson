@@ -155,6 +155,30 @@ const APP_EXITS = join(homedir(), '.claude', 'APPROVED-PLAN-app-exits.json');
 const RULE = 'PLAN MODE ONLY, AND TALK DURING THE WORK (Doctrine §0e): nothing runs that is not inside a plan the owner approved in plan mode; '
   + 'a request in chat gets a plan, not an action; while executing, say what each step does before it runs and what it showed after.';
 const hashOf = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
+// The plan identities the marker's approvals have had, kept beside it because the marker itself is removed whenever plan mode is entered.
+const LINEAGE = join(homedir(), '.claude', 'APPROVED-PLAN-lineage.json');
+/** The plan's title line: the first line opening with a single hash and a space, trimmed; '' when it has none. */
+const titleOf = (text) => String(text ?? '').split('\n').map((l) => l.trim()).find((l) => /^# \S/.test(l)) ?? '';
+/**
+ * The identity a new marker records for a plan approved now (Q-HUB-348).
+ * @param {string} plan  the plan file, absolute.
+ * @param {string} approvedAt  this approval's own time, as an ISO string.
+ * @returns {{firstApprovedAt: string, title: string}} the plan's title line and the time of the first approval of this plan: the time
+ *   the earlier approval of this same path and title recorded (an amendment approved at the button is the same plan), else `approvedAt`
+ *   (a different plan written to a path an earlier plan used is a new plan, and an earlier plan's DONE hand-backs are not its own).
+ *   Writes the lineage file, and fails soft: a plan or lineage that cannot be read gives `approvedAt` and an empty title.
+ */
+function identityOf(plan, approvedAt) {
+  let title = '';
+  try { title = titleOf(readFileSync(plan, 'utf8')); } catch { /* an unreadable plan has no title */ }
+  let first = approvedAt;
+  try {
+    const was = JSON.parse(readFileSync(LINEAGE, 'utf8'));
+    if (was?.plan === plan && title && was.title === title && Number.isFinite(Date.parse(String(was.firstApprovedAt ?? '')))) first = was.firstApprovedAt;
+  } catch { /* no lineage: this approval is the first */ }
+  try { mkdirSync(dirname(LINEAGE), { recursive: true }); writeFileSync(LINEAGE, JSON.stringify({ plan, title, firstApprovedAt: first })); } catch { /* the marker stands without it */ }
+  return { firstApprovedAt: first, title };
+}
 // What is said when plan mode ended under auto mode with no exit call from the session (`recordAppExit`'s outcome 'under auto mode'). The
 // transcript records no mark that tells the owner's press from another answer, but it records the mode on the owner's typed message
 // that ended plan mode, and under auto the end is the mode's and not the button's. No marker is written, and no latch is set.
@@ -511,7 +535,7 @@ function recordButtonApproval(p) {
       const snap = { scope: scopeHashes(read), script: scriptHashOf(read), ...approvedStepSet(read) };
       mkdirSync(dirname(MARKER), { recursive: true });
       writeFileSync(MARKER, JSON.stringify({
-        plan: x.plan, hash: hashOf(x.plan), scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), approvedAt: new Date(x.at).toISOString(), session: p.session_id ?? null,
+        plan: x.plan, hash: hashOf(x.plan), scope: snap.scope, scriptHash: snap.script, at: new Date().toISOString(), approvedAt: new Date(x.at).toISOString(), ...identityOf(x.plan, new Date(x.at).toISOString()), session: p.session_id ?? null,
         review: snap.review, steps: snap.steps, standing: snap.standing,
         via: `the owner's approval at the button, ExitPlanMode call ${x.id} answered at ${new Date(x.at).toISOString()}, recorded before the gates were installed${edited ? '; the Steps or the Order were edited after it' : ''}`,
         planMatchesFile: x.approved === null ? null : x.approved.trim() === text.trim(), buttonUse: x.id,
@@ -585,7 +609,7 @@ if (process.argv.includes('--mark')) {
   mkdirSync(dirname(MARKER), { recursive: true });
   const approvedNow = new Date().toISOString();
   writeFileSync(MARKER, JSON.stringify({
-    plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: approvedNow, approvedAt: approvedNow, session: p.session_id ?? null,
+    plan, hash: snap.hash, scope: snap.scope, scriptHash: snap.script, at: approvedNow, approvedAt: approvedNow, ...identityOf(plan, approvedNow), session: p.session_id ?? null,
     review: snap.review,
     steps: snap.steps, standing: snap.standing,
     via: `ExitPlanMode approval: result ${fromObject ? 'filePath' : 'text'}`, planMatchesFile,
@@ -681,9 +705,14 @@ if (process.argv.includes('--amend')) {
   if (mk.session && p.session_id && mk.session !== p.session_id) process.exit(0);
   let snap;
   try { snap = snapshotOf(mk.plan); } catch { process.exit(0); }
-  if (snap.hash === mk.hash) process.exit(0);
+  // The re-recording mark of the PreToolUse check is answered here whatever the outcome: the hash moves to the file's, or the plan is out of force.
+  const rerecording = mk.rerecording;
+  delete mk.rerecording;
+  const unmarked = () => { if (rerecording) { try { writeFileSync(MARKER, JSON.stringify(mk, null, 1)); } catch { /* the mark ages out in the fence */ } } };
+  if (snap.hash === mk.hash) { unmarked(); process.exit(0); }
   const moved = mk.scope && typeof mk.scope === 'object' && !Array.isArray(mk.scope) ? scopeChanged(mk.scope, readFileSync(mk.plan, 'utf8')) : [...SCOPE_SECTIONS];
   if (moved.length) {
+    unmarked();
     process.stderr.write(`approved-plan-guard --amend: ${mk.plan} now differs from the approved plan in ${moved.join(', ')}, so the approval was NOT carried to it and no plan is in force. `
       + 'A changed plan goes back through plan mode.\n');
     process.exit(2);
@@ -729,6 +758,10 @@ if (FILE_TOOLS.includes(tool)) {
   if (current.plan && target === resolve(current.plan)) {
     const bar = amendProblem(current);
     if (bar) deny(bar);
+    // Q-HUB-352: this write is let through and the PostToolUse `--amend` moves the marker's hash to the file's only after it. Between the two the
+    // marker's hash is stale by this one write, so the marker says so: `rerecording` holds the hash it had and the time of the mark, which the
+    // plan fence reads as a plan being re-recorded and not a plan out of force. `--amend` removes it.
+    try { writeFileSync(MARKER, JSON.stringify({ ...current, rerecording: { fromHash: current.hash, at: new Date().toISOString() } }, null, 1)); } catch { /* no mark: the fence refuses as before */ }
     process.exit(0);
   }
 }
