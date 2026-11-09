@@ -54,7 +54,7 @@ The list is the rank. The items the redesign plan builds come first, then the pa
 
 ## Items
 
-388 items (P-366 to P-388 the keys Q-HUB-322 to Q-HUB-344, filed by step 118 of the plan of the standing problems of the gates; P-365 the infrared app's populations measured by place, entered by step 339 of that plan and not from the Found queue; P-358 to P-364 the keys Q-HUB-315 to Q-HUB-321, filed by the second send of step 108 of the same plan; P-352 to P-357 the keys Q-HUB-309 to Q-HUB-314, filed by step 108 of the plan of the four gates of 7 November; P-351 the key Q-HUB-308, filed by step 337 of the plan of the infrared app's separation measure; P-350 the infrared app's separation measure of 9 November, entered by step 331 of that plan and not from the Found queue; P-349 the key Q-HUB-307, filed by step 330 of the plan that fixes the sweep and regathers the separation research; P-348 the infrared app's test page work of 8 November, entered by step 329 of that plan and not from the Found queue; P-344 to P-347 the keys Q-HUB-303 to Q-HUB-306, filed by step 103 of the plan of the four gates of 7 November; P-343 the key Q-HUB-302, filed by step 102 of the first batch plan; P-317 to P-319 the keys Q-HUB-276 to Q-HUB-278, filed by step 85 of the plan that closed P-21 after the lock of 6 November; P-320 to P-342 the keys Q-HUB-279 to Q-HUB-301, filed by step 99 of the first batch plan, whose first three keys moved past the keys of the remote's, so P-340 to P-342 are the keys Q-HUB-299 to Q-HUB-301; P-309 the batch seed, named by the owner on 5 November, and P-310 to P-316 the keys Q-HUB-269 to Q-HUB-275, filed by step 92 of the plan that wrote it; P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 303 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
+400 items (P-389 to P-400 the keys Q-HUB-345 to Q-HUB-356, filed by step 128 of the plan of the standing problems of the gates; P-366 to P-388 the keys Q-HUB-322 to Q-HUB-344, filed by step 118 of the plan of the standing problems of the gates; P-365 the infrared app's populations measured by place, entered by step 339 of that plan and not from the Found queue; P-358 to P-364 the keys Q-HUB-315 to Q-HUB-321, filed by the second send of step 108 of the same plan; P-352 to P-357 the keys Q-HUB-309 to Q-HUB-314, filed by step 108 of the plan of the four gates of 7 November; P-351 the key Q-HUB-308, filed by step 337 of the plan of the infrared app's separation measure; P-350 the infrared app's separation measure of 9 November, entered by step 331 of that plan and not from the Found queue; P-349 the key Q-HUB-307, filed by step 330 of the plan that fixes the sweep and regathers the separation research; P-348 the infrared app's test page work of 8 November, entered by step 329 of that plan and not from the Found queue; P-344 to P-347 the keys Q-HUB-303 to Q-HUB-306, filed by step 103 of the plan of the four gates of 7 November; P-343 the key Q-HUB-302, filed by step 102 of the first batch plan; P-317 to P-319 the keys Q-HUB-276 to Q-HUB-278, filed by step 85 of the plan that closed P-21 after the lock of 6 November; P-320 to P-342 the keys Q-HUB-279 to Q-HUB-301, filed by step 99 of the first batch plan, whose first three keys moved past the keys of the remote's, so P-340 to P-342 are the keys Q-HUB-299 to Q-HUB-301; P-309 the batch seed, named by the owner on 5 November, and P-310 to P-316 the keys Q-HUB-269 to Q-HUB-275, filed by step 92 of the plan that wrote it; P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 315 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
 
 ## Items the redesign plan builds
 
@@ -329,6 +329,16 @@ Close entry of the plan of the four populations measured by place (P-365, steps 
 - Compactions: 0. Resumes: 0. Pushes: the instrument does not count them; step 339 pushed the hub once, step 344 pushed the app's staging once and this step pushes the hub once.
 - The whole session over four approved plans: 64 owner messages (26 go-words, 38 without, 3 carrying the whole word stop), 28 stop-hook messages, 68 agents, 4 compactions, 11 resumes.
 - The harness's own running cost entry, the last of 22, reads 4,974.60 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252).
+
+Close entry of the plan of the standing problems of the gates, fixed by file and in parallel (steps 118 to 128, step 128 the writer), from the cost instrument run on this session's transcript, so far and before this step's push. The instrument numbers it plan 2 and reads no item for it; it was approved 21:43 California time on 8 November:
+- The owner's messages: 1 in the plan, ending in a go-word; the session's totals are below.
+- Stop-hook messages: 20 in 18 stops (command hook 3, 17; command hook 2, 3).
+- Main-thread refusals: 1 (manager fence).
+- Agents: 22, all on the sonnet tier, with 493,900 output tokens, 113,498,870 cache-read tokens and 4,194,196 cache-written tokens; 3 hook refusals, all plan fence.
+- Main-thread turns: 97 on the opus tier with 59,343 output tokens.
+- Compactions: 1 (22:32 California time on 8 November). Resumes: 0. Pushes: the instrument does not count them; step 118, step 127 and this step push once each.
+- The whole session over two approved plans: 15 owner messages (11 go-words, 4 without, 2 carrying the whole word stop), 57 stop-hook messages, 291 agents, 2 compactions, 6 resumes.
+- The harness's own running cost entry, the last of 4, reads 797.33 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252).
 
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
@@ -2911,7 +2921,9 @@ Depends: none.
 
 ### P-305. Q-HUB-265: a step's Facts took a state from an agent's report
 
-Repository: hub. Goal: 1. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 1. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 126 of that plan added to rule 13 of the plans page that a step's Facts take state from a read of the record and never from a report's claim.
 
 Acceptance: the review reads each state a step's Facts assert against the record read in that review and not against a report, and the review's text says so; a case or a checklist line the review follows.
 
@@ -2919,7 +2931,9 @@ Depends: none.
 
 ### P-306. Q-HUB-266: a case of the suite that writes into its directory overwrites a tracked working copy file
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 119 of that plan made a plain run record the content of every tracked file of its checkout and fail the case after which one is rewritten or removed, naming the file, with cases that plant a write and a removal under a suite copy; the watch's false reds under parallel steps are Q-HUB-345.
 
 Acceptance: the suite runs each case's writes in a copy and not in the working copy, or a case that writes a tracked file there fails, and a plant shows it.
 
@@ -2927,7 +2941,9 @@ Depends: none.
 
 ### P-307. Q-HUB-267: the quoted-form install case checks only the suffix of the written command
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 119 of that plan made the install case compare the whole written command, clone path included, with the plant install_path.
 
 Acceptance: the case asserts the whole command written, clone path included, and a plant that changes the path is caught.
 
@@ -3003,7 +3019,9 @@ Depends: none.
 
 ### P-316. Q-HUB-275: the main thread cannot run the batch print by hand
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 of that plan widened the seed-command test in the dispatcher and its copy in the plan guard together to accept the batch print with its size, hub, repo, plan and steps arguments, with the equality case and plants on both copies.
 
 Acceptance: the seed-command test in `hook-dispatch.mjs` and its copy in `plan-guard.mjs` pass the batch flags together, the equality case holds, and a plant on the plan guard's copy is caught.
 
@@ -3011,7 +3029,9 @@ Depends: P-309.
 
 ### P-317. Q-HUB-276: the never-rules page's sentence on the tier hold reads against the gate
 
-Repository: hub. Goal: 1. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 1. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 126 of that plan made the never page's section on the owner's credit say that the dispatch gate still refuses a send while a top-tier id serves and sets no latch, and that only the earlier tier gate was removed.
 
 Acceptance: the sentence in section 11b of the never-rules page that says the dispatcher no longer holds a send while the top tier serves is edited, with the owner's button, to say the dispatch gate refuses a send while a top-tier id serves, and no other line of the page changes.
 
@@ -3019,7 +3039,9 @@ Depends: none.
 
 ### P-318. Q-HUB-277: a standing review agent ran the reply guard's release command and latched itself
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 126 of that plan added to the review file that a review never runs the reply guard's release command, with or without a value.
 
 Acceptance: the review step's text or `aim-review.md` says a review never runs the reply guard's release command, and a case or a checklist line the review follows holds it.
 
@@ -3027,7 +3049,9 @@ Depends: none.
 
 ### P-319. Q-HUB-278: the plan seed's template says the shell starts in the repository
 
-Repository: hub. Goal: 1. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 1. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 124 of that plan made the template's sentence say it holds for a launch inside the repository and what the git lines need at the parent folder, with a case and a plant.
 
 Acceptance: the template's sentence and standing rule say which launch they hold for, and a seed printed for a session launched at the parent folder writes the working copy's git lines with git's directory flag and the full path, held by a case.
 
@@ -3075,7 +3099,9 @@ Depends: the owner, whose go of 21:31 California on 6 November kept the shape as
 
 ### P-322. Q-HUB-281: the doctrine's apps page lacks the general form of gathering what a judgement needs
 
-Repository: hub. Goal: 1. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 1. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 126 of that plan added a paragraph under the test-page rule of the apps page on gathering, on the device and headless, the details a judgement needs before a method is chosen.
 
 Acceptance: the apps page carries the form: the details a judgement needs are gathered on the test page on the device and headless over the owner's frames before a method is chosen.
 
@@ -3083,7 +3109,9 @@ Depends: none.
 
 ### P-323. Q-HUB-282: a plan that holds its commits names no forced stop-hook turns
 
-Repository: hub. Goal: 2. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 2. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 of that plan made the plan check ask a plan whose rules hold commits for a count of forced stop-hook turns in its Cost, and step 124 put the place for the count in both of the seed's cost lines.
 
 Acceptance: the seed's cost line and the plan check ask for the count of turns the environment's git stop hook forces while a commit stands unpushed, where a plan holds commits, and a case holds each.
 
@@ -3091,7 +3119,9 @@ Depends: none.
 
 ### P-324. Q-HUB-283: a synced skill reference file is not in the configuration baseline
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 126 of that plan added section 1.2a to the configuration baseline naming the synced skill reference files and stating that a recorded change to one that no item made is a drift.
 
 Acceptance: `CONFIG.md` names the synced skill reference files and a recorded change to one that no item made is filed as a drift.
 
@@ -3099,7 +3129,9 @@ Depends: P-6.
 
 ### P-325. Q-HUB-284: an agent wrote after its own red run in the same send
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 122 of that plan made the plan fence refuse an agent's write outside the scratchpad once its own transcript holds a red run of the suite, with plants on the wiring and the three forms of a red result.
 
 Acceptance: `plan-fence.mjs` refuses an agent's write after its own red run of the cases or the plants in the same send, and a case with a plant is caught.
 
@@ -3107,7 +3139,9 @@ Depends: none.
 
 ### P-326. Q-HUB-285: a step's own edit stales plants that then go red
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 119 of that plan made a plants run, and its dry run, name every stale plant before running any.
 
 Acceptance: the suite reports, before a plants run, every plant whose target line its file no longer holds, and a case with a planted stale target.
 
@@ -3115,7 +3149,9 @@ Depends: none.
 
 ### P-327. Q-HUB-286: no place in the seed or the close template for findings passed in from another session
 
-Repository: hub. Goal: 1. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 1. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 124 of that plan gave both prints a section for findings passed in and the close-step template the filing of such findings in the session's words.
 
 Acceptance: the seed's print and the close step's template carry a block for findings the owner passes in from another session, filed by the close in the session's words, and a case with a planted block.
 
@@ -3131,7 +3167,9 @@ Depends: none.
 
 ### P-329. Q-HUB-288: the tier hold counts a model switch only after a reply
 
-Repository: hub. Goal: 2. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 2. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 of that plan had the dispatcher write a model-switch record at the switch and the dispatch gate count a switch at once while the record is newer than the newest reply, with a case and the plant tier_switch_record.
 
 Acceptance: the tier hold reads the model-switch record so a switch counts at once, and a case with a planted switch before any reply.
 
@@ -3139,7 +3177,9 @@ Depends: P-18.
 
 ### P-330. Q-HUB-289: the review takes its move from a page line only a status rewrites
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 121 of that plan added the page refresh on a changed Next line (`report.mjs --page-next`) and step 126 made the review file read its move from the manager notes' newest unnumbered Next line; nothing calls the refresh command yet, which is Q-HUB-347.
 
 Acceptance: the review reads the manager notes' newest Next line, or the page is rewritten whenever that line changes, and a case with a planted change.
 
@@ -3147,7 +3187,9 @@ Depends: none.
 
 ### P-331. Q-HUB-290: the reads gate holds a send on refused reads of earlier closed plans
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 of that plan had the approved plan carry its approval time and the reads gate drop refusals older than it, with the plant reads_since_approval.
 
 Acceptance: the reads gate counts only refusals made since the plan in force was approved, and a case with a planted refusal before the approval.
 
@@ -3155,7 +3197,9 @@ Depends: none.
 
 ### P-332. Q-HUB-291: the identifier ledger does not count an agent id in a launch result as read
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 of that plan made a main-thread TaskStop of an id a launch result printed skip the app's identifier shim, with a case on the function; driving the skip end to end is Q-HUB-349.
 
 Acceptance: the ledger counts an id seen in a launch result and the manager's stop of that agent passes, with a case.
 
@@ -3251,7 +3295,9 @@ Depends: none.
 
 ### P-339. Q-HUB-298: a red run of the lessons check can have its failures cut from the tool result
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 119 of that plan made the lessons check print its failures first and nothing long after when it is red, with a red run read on a planted lesson under a temporary folder.
 
 Acceptance: `lessons-check.mjs` prints its FAILURES block before any passing output, or prints only failures when it exits 1, so a result cut by the harness's cap still carries the failures, with a plant watched failing.
 
@@ -3259,7 +3305,9 @@ Depends: none.
 
 ### P-343. Q-HUB-302: another session committed to the hub while a plan ran and its keys met the close's
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 124 of that plan made the seed's close step read the remote's head before filing and the seed count the next free found key, lesson number and program key past the remote's, under a planted repository.
 
 Acceptance: a hub plan fetches and reads the remote's head before each landing step is written, so the found keys, program keys and lesson numbers the close files are the next free ones past the remote's, held by a check the landing step runs or by the seed's print.
 
@@ -3267,7 +3315,9 @@ Depends: none.
 
 ### P-349. Q-HUB-307: the plan-scope check's verdict is void when files in a new folder are staged after it is recorded
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 125 of that plan made the plan-scope check read the status with untracked files listed one by one, so each file under a new folder is hashed by content, with a case and a plant.
 
 Acceptance: the plan-scope check hashes the files under an untracked folder one by one, or the seed's landing step says to stage first and record the verdict after, so a verdict recorded before staging holds at the commit, with a plant watched failing.
 
@@ -3275,7 +3325,9 @@ Depends: none.
 
 ### P-351. Q-HUB-308: a plan's Commands spelled four hub checks with a bare path, and they take only the repo flag and a path
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 124 of that plan made the template and the batch print spell each check as its own usage gives (the docs check bare, the quote check bare, the rest after the repo flag), with plants on the spelling.
 
 Acceptance: the plan seed's standing text and the Commands it prints spell each hub check in the form its usage gives (docs-check with a bare path, the other checks with the repo flag and the path), held by a check the plan check runs or by the seed's print, so a step does not fail on its first send for a command line the plan spelled wrongly.
 
@@ -3298,7 +3350,9 @@ Hub findings of the plan, carried to the next plan for their own files and not w
 
 ### P-352. Q-HUB-309: the plan named a line of the plans page that does not exist
 
-Repository: hub. Goal: 1. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 1. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 of that plan added `ruleNumberProblem`, which reads a step's naming of a rule of the plans page by number against the page's own numbering and is wired into the plan check as a shape fault; it reads only the numbered lines of the page's section on the owner's rules, which is Q-HUB-351.
 
 Acceptance: the plan check reads a plan's step text that names "rule N" of the plans page against the page's own numbering, or the plan seed prints the page's rule numbers beside the step shape, so a step does not name a rule the page lacks.
 
@@ -3306,7 +3360,9 @@ Depends: none.
 
 ### P-353. Q-HUB-310: the pin check prints a note about a workflow that handles secrets and runs an unpinned tool
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Back to open by step 128 of the plan of the standing problems of the gates: step 126 could not put it right. Line 155 of the myfax deploy workflow runs the pinned tool with the yes switch and nothing installs it first, so the line cannot take the no-install switch, and the pin check reads no declared acceptance from any place. The fix needs the pin check taught to read a declared acceptance, or the workflow given a step that installs the pinned tool with npm ci before the run.
 
 Acceptance: the note that a deploy workflow runs `npx` without `--no-install` in a workflow that handles secrets is either put right in that workflow or recorded as accepted with its reason, so the pin check's output carries no standing note nobody has judged.
 
@@ -3314,7 +3370,9 @@ Depends: none.
 
 ### P-354. Q-HUB-311: a step that changes a printed block runs only its own new cases, and the existing case that asserts on the print goes stale
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 122 of that plan made the plan fence refuse an agent's commit of a guard file the suite covers unless its transcript holds a run of the whole suite with no case filter after the last edit, and step 124 put the same rule in the seed's standing text.
 
 Acceptance: a step that edits a guard file runs every case of the suite before its commit, or the plan seed's standing text and a check say so, so a case asserting on a printed block is found red in the step that changed it and not first on the runner, with a case that plants the stale assertion.
 
@@ -3322,7 +3380,9 @@ Depends: none.
 
 ### P-355. Q-HUB-312: a case filter with a space in its value is cut at the space by the tool wrapper
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 119 of that plan made the suite's usage lines say to quote the whole switch and made it refuse stray words among its arguments and a filter that selects more than half the suite, with an override switch.
 
 Acceptance: the suite's usage lines say that a case filter containing a space is quoted as a whole switch, or the suite accepts a filter without a space for every case, and a run with an unquoted filter selecting a wrong set of cases refuses itself, with a case holding it.
 
@@ -3330,7 +3390,9 @@ Depends: none.
 
 ### P-356. Q-HUB-313: the harness's auto-mode classifier refuses an amend of an unpushed commit as destructive
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 124 of that plan made the template's standing text say that a commit with a wrong message is replaced by new commits and never amended, with a case and a plant.
 
 Acceptance: the agent rules or the plan seed's standing text say that a commit with a wrong message is replaced by new commits and not amended, so a step does not spend a send on a command the harness refuses, with the line read by the plan check.
 
@@ -3348,7 +3410,9 @@ Depends: none.
 
 ### P-358. Q-HUB-315: one plants run over three guard files exhausts the suite's heap near plant 680
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 119 of that plan made the plants run in chunks of twenty-five, each in a new process, with a by-file count line and a case holding the total against the sum of the per-file counts; the largest file's plants ran 451 of 451 caught under the changed runner.
 
 Acceptance: the suite releases what each plant holds or runs each plant in a fresh process, so one plants run over all guard files completes, with a case holding the plant total against the sum of the per-file counts.
 
@@ -3364,7 +3428,9 @@ Depends: P-345.
 
 ### P-360. Q-HUB-317: the wait and the stop guard meet on an agent paused on its own background run
 
-Repository: hub. Goal: 3. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 3. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 of that plan made the manager fence pass the wait while every flagged agent's note names an output file written within five minutes, and step 121 made the wait print the last line of that file for a flagged agent, each with a case and a plant.
 
 Acceptance: the wait between statuses passes while the flagged agent is paused on its own background run, printing the last line of that run's output file, with a case holding it under a planted paused agent.
 
@@ -3372,7 +3438,9 @@ Depends: none.
 
 ### P-361. Q-HUB-318: the background-run gate's refusal words do not say that the note, the launch and the second write each stand alone in their turns
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 122 of that plan made both refusal words of the background gate say that the note, the launch and the note's second write each stand alone in their turns, with plants on the words.
 
 Acceptance: the gate's refusal words and the agent rules say that each of the note's first write, the launch and the note's second write is the one call of its turn, held by a case on the words.
 
@@ -3380,7 +3448,9 @@ Depends: none.
 
 ### P-362. Q-HUB-319: a case that writes into the working copy or names no failing assertion costs sends under the red-run rule
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 119 of that plan added the tracked-file comparison before and after each case and a helper that puts every failed label and the returned text in the failure message; the older cases still returning a bare boolean are Q-HUB-346.
 
 Acceptance: the suite compares the working copy's tracked files before and after each case and every assertion of a case carries the text its call returned in its failure message, with a case that plants a write into the working copy.
 
@@ -3388,7 +3458,9 @@ Depends: none.
 
 ### P-363. Q-HUB-320: a step that adds a fence refusal is not told the dispatcher decides separately which refusals latch
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 124 of that plan made the step shape list the dispatcher among the files of a step that adds a fence refusal, and step 126 added a paragraph to rule 14 of the plans page that the dispatcher decides by fixed refusal words which fence refusals latch.
 
 Acceptance: the plans page names the dispatcher's no-latch refusal words beside the plan fence's refusal rule, and the plan seed's step shape lists the dispatcher among the files of a step that adds a fence refusal.
 
@@ -3404,7 +3476,9 @@ Depends: none.
 
 ### P-366. Q-HUB-322: the session brief advises a hard reset of the working copy when it is behind the remote
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 125 of that plan made the brief read the working copy's status and, where anything is uncommitted, print the fetch and the rebase and no reset; a clean stale tree is still offered the reset; three plants.
 
 Acceptance: `session-brief.mjs` reads the working copy's status and, where anything is uncommitted, names the landing step's fetch and rebase and prints no reset, with a case holding it under a planted repository.
 
@@ -3412,7 +3486,9 @@ Depends: none.
 
 ### P-367. Q-HUB-323: the approval guard's refusal of a scope edit outside plan mode names no route the session has
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 of that plan made the refusal name the session's own plan-mode entry and exit calls as the route and say a harness restart may have ended the mode, with a case and the plant amend_route_words.
 
 Acceptance: the refusal in `approved-plan-guard.mjs` names the session's own entry to plan mode as the route and says a harness restart may have ended the mode, with a case on the words.
 
@@ -3428,7 +3504,9 @@ Depends: the owner's choice.
 
 ### P-369. Q-HUB-325: the plan check and the approval call resolve a file of the What is section differently
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 of that plan gave the check and the approval call one function, `namedFileOf`, against the repositories the plan's Files names, found once from the payload's working directory, with a case and the plant named_file_one; the check mode against a real plan is Q-HUB-350.
 
 Acceptance: in `plan-guard.mjs` the check and the approval call resolve the path by one function against the repositories the plan's Files names, with a case that fails when they differ.
 
@@ -3436,7 +3514,9 @@ Depends: none.
 
 ### P-370. Q-HUB-326: a refused exit call counts as the newest plan-mode call for the talk check
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 of that plan made the talk check skip an exit result that is a gate's refusal of any kind, under a planted transcript, with the plant talk_refusal_marks.
 
 Acceptance: the talk check in `plan-guard.mjs` counts only plan-mode calls that were not refused, with a case under a planted transcript.
 
@@ -3444,7 +3524,9 @@ Depends: none.
 
 ### P-371. Q-HUB-327: a tool result in the same assistant turn is not yet in the transcript when a later call's hook runs
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 appended a sentence that the call goes in a turn of its own to the dispatcher's refusals that read an earlier call, step 122 did the same for the fence's refusals, and step 126 added the line to the plans page, each held by a case on the words.
 
 Acceptance: the plans page says that a call a gate must see goes in a turn of its own, and the refusal words of `hook-dispatch.mjs` and `plan-fence.mjs` that read an earlier call say so, held by cases on the words.
 
@@ -3452,7 +3534,9 @@ Depends: none.
 
 ### P-372. Q-HUB-328: the dispatcher's check of a call does not judge plan mode or the approval guard
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 of that plan made the check run the plan guard's and the approval guard's judgement as the call would meet them and print which would refuse; the check cannot know the harness's plan mode unless the payload carries it.
 
 Acceptance: the check in `hook-dispatch.mjs` runs the plan guard's and the approval guard's judgement as the call would meet them and says which would refuse, with a case for each.
 
@@ -3460,7 +3544,9 @@ Depends: none.
 
 ### P-373. Q-HUB-329: the status prints no plan mode
 
-Repository: hub. Goal: 3. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 3. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 121 of that plan added `modeLine`, printed by the status under the serving model, giving the plan mode the owner's newest message carried and whether the gates read it as the owner's or as a restart's, with five plants.
 
 Acceptance: every status from `report.mjs` carries one line giving the harness's plan mode as the newest payload showed it and whether the gates read it as the owner's or as a restart's, with a case.
 
@@ -3468,7 +3554,9 @@ Depends: none.
 
 ### P-374. Q-HUB-330: a missed or stale plant is printed once in a very long runner log
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 119 of that plan made the suite's last lines repeat every missed and stale plant, and step 124 made the template's landing block read the gates run's failing lines into the report.
 
 Acceptance: the last lines of `session-guards.test.mjs` repeat every missed and stale plant, and a landing step in `plans/seed-template.md` reads the gates run's failing lines into its report, with a case holding the closing lines.
 
@@ -3476,7 +3564,9 @@ Depends: none.
 
 ### P-375. Q-HUB-331: the status page renders every Version line and every Open line ever written
 
-Repository: hub. Goal: 3. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 3. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 121 of that plan made the page show the newest Version line and the newest Open line and fold the earlier ones under a disclosure with a count, with three plants.
 
 Acceptance: the page written by `report.mjs` shows the newest Version line and the newest Open line with the rest folded under each, with a case.
 
@@ -3484,7 +3574,9 @@ Depends: none.
 
 ### P-376. Q-HUB-332: a step sent more than once overwrites its one report file and a resend renumbers its Found lines
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 121 of that plan made the status, the pointer and the page read the report of every send of a step and key a Found line by its text, and step 124 made the step shape name a report file for each send after the first.
 
 Acceptance: the step shape in `plans/seed-template.md` names a report file for each send after the first, and `report.mjs` reads every send's report and keys a Found line by its text, with a case on a resend.
 
@@ -3492,7 +3584,9 @@ Depends: none.
 
 ### P-377. Q-HUB-333: a Found line saying there is no new finding is counted and sorted as one
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 121 of that plan made a Found line whose words say there is nothing new count as none, while a line beginning with none of a named thing still counts, with a case and the plant found_none.
 
 Acceptance: `report.mjs` counts a Found line whose text says there is no new finding as none, with a case.
 
@@ -3500,7 +3594,9 @@ Depends: none.
 
 ### P-378. Q-HUB-334: the close's report names its filed findings as a range of keys
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 124 of that plan made the close step in the template and the Verification of both prints say each filed key is named beside the line it came from, never as a range, with plants on the line.
 
 Acceptance: `plans/seed-template.md` and `plan-seed.mjs` have the close's report name each filed key beside the line it came from, with a case on the print.
 
@@ -3508,7 +3604,9 @@ Depends: none.
 
 ### P-379. Q-HUB-335: a stop hook asked for a commit and a push at nearly every turn while a plan held its commits
 
-Repository: hub. Goal: 2. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 2. State: open. Plan: none.
+
+Back to open by step 128 of the plan of the standing problems of the gates: step 125 read the repository's `.claude/settings.json` and found the hook that asks is the environment's, not the repository's; the repository's Stop hook runs the stop guard and holds no such request, so nothing in the repository can be changed for it. It stays with whoever configures the environment and is the owner's to decide.
 
 Acceptance: the hook that asks is identified as the harness's or the repository's, and where it is the repository's it reads the plan's landing rule and prints nothing while a plan in force holds its commits, with a case.
 
@@ -3516,7 +3614,9 @@ Depends: none.
 
 ### P-380. Q-HUB-336: the plan seed printed at a plan mode a resume brought back and took the program's next item and not the session's
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 of that plan had the session start record the mode it carries so a resumed plan mode prints no seed, and step 124 made the seed take the item the session's approval marker names when its session matches, each with cases and plants.
 
 Acceptance: `hook-dispatch.mjs` prints the seed only at a plan mode that follows an owner prompt or the session's own entry call, and `plan-seed.mjs` takes the item the session's approval marker names where one does, with a case for each.
 
@@ -3532,7 +3632,9 @@ Depends: the owner's choice.
 
 ### P-382. Q-HUB-338: the stop guard refuses one fault of a reply per turn
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 123 of that plan made the stop guard gather every fault of a reply and print them as one numbered refusal, a single fault keeping its own words, with a case on a reply with three faults and four plants.
 
 Acceptance: one refusal from `stop-guard.mjs` lists every fault of the reply, each in its own words, with a case on a reply with three faults.
 
@@ -3548,7 +3650,9 @@ Depends: the owner's choice.
 
 ### P-384. Q-HUB-340: a step edited a decision record without running the decisions check
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 of that plan added `decisionsCheckProblem` to the plan check, refusing a step that names the decision records folder without naming the decisions check, with a case and the plant decisions_check_named; the check mode against a real plan is Q-HUB-350.
 
 Acceptance: the plan check in `plan-guard.mjs` refuses a step whose Files line names the decision records folder and whose text does not name the decisions check, with a case.
 
@@ -3556,7 +3660,9 @@ Depends: none.
 
 ### P-385. Q-HUB-341: a plan's Verification promised a main-thread read of a path outside the record
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 120 of that plan added `verificationReadProblem` to the plan check, refusing a Verification line that names a main-thread read of a path the manager fence does not call of the record, with a case and the plant verification_read.
 
 Acceptance: the plan check in `plan-guard.mjs` refuses a Verification line that names a main-thread read of a path outside the record, with a case.
 
@@ -3564,7 +3670,9 @@ Depends: none.
 
 ### P-386. Q-HUB-342: a message printed in a pending guard refusal was printed again at the next prompt as never given
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 125 of that plan added `markPrinted` to the pending guard, recording in the record the skipped-release check keeps the messages a refusal printed, with a case and two plants.
 
 Acceptance: `pending-guard.mjs` counts a message printed in a refusal as given once that turn has ended, with a case.
 
@@ -3572,7 +3680,9 @@ Depends: none.
 
 ### P-387. Q-HUB-343: the stop guard read a sentence denying any wait on the owner as one asserting it
 
-Repository: hub. Goal: 6. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 6. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 123 of that plan gave the waiting-on-you pattern a negative lookbehind and the you-owe pattern a negative lookahead, so the negated forms pass and the affirmative forms still refuse, with a case and two plants.
 
 Acceptance: `stop-guard.mjs` lets the negated forms through where one pattern does it, with a case, and otherwise the report records why it is not worth the code.
 
@@ -3580,8 +3690,106 @@ Depends: none.
 
 ### P-388. Q-HUB-344: an approval for an amendment reset the pointer and steps that had handed back DONE read as not sent
 
-Repository: hub. Goal: 5. State: planned. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+Repository: hub. Goal: 5. State: done. Plan: The standing problems of the gates, fixed by file and in parallel: the thirty-one newest findings of the batch and the twenty-three of 8 November, each gate file changed once by one agent, seven agents at a time.
+
+Done: step 121 of that plan made the pointer keep a DONE hand-back made before the marker's approval time when its prompt names the plan in force and its step is in the marker's steps list, with the plant pointer_amended_steps; the identity gap for a plan reusing a path is Q-HUB-348.
 
 Acceptance: the pointer in `report.mjs` counts a DONE hand-back whose agent's prompt names the plan in force whatever approval it was made under, with a case on a re-approval of the same plan file.
+
+Depends: none.
+
+### P-389. Q-HUB-345: the suite's tracked-file watch fails a case for a file another step edited in the same working copy
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: the cases run against a copy of the tracked files made at the start of the run, so an edit of the working copy during the run is not read as a case's write, with a case that plants an edit during a case and shows it passing.
+
+Depends: none.
+
+### P-390. Q-HUB-346: a case that returns a bare false names no assertion
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: every case returning a bare boolean is changed to the helper that carries the failed labels and the returned text, with a case that lists any case still returning one.
+
+Depends: none.
+
+### P-391. Q-HUB-347: nothing calls the command that rewrites the status page when the notes' Next line changes
+
+Repository: hub. Goal: 3. State: open. Plan: none.
+
+Acceptance: the dispatcher runs `report.mjs --page-next` after a main-thread write of the manager notes and before a review is sent, with a case that a planted write runs it.
+
+Depends: none.
+
+### P-392. Q-HUB-348: the pointer's keeping of an earlier DONE leans on the marker's steps list and the path
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the marker records the plan's first approval time and title line and the pointer reads both, with a case on two plans written to one path.
+
+Depends: none.
+
+### P-393. Q-HUB-349: the identifier shim skip for a launch result's agent id is not driven end to end
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: a case runs the dispatcher's hook loop with a planted app identifier shim and a planted launch result, with a plant on the loop's line.
+
+Depends: none.
+
+### P-394. Q-HUB-350: the plan check's new reads were never run in check mode against a plan
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: a case runs `plan-guard.mjs --check` on a planted plan carrying each of the three faults and reads each refusal's words.
+
+Depends: none.
+
+### P-395. Q-HUB-351: the rule-number read covers only the numbered lines of the plans page's section on the owner's rules
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: `ruleNumberProblem` reads the numbered lines under the sub-headings as well, with a case on a rule number held under a sub-heading.
+
+Depends: none.
+
+### P-396. Q-HUB-352: the plan fence refuses an agent's write in the window between a write of the plan file and its re-recording
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the fence reads a hash mismatch that the approval guard's pending re-recording explains as the marker's last recorded plan, or its refusal says the plan is being re-recorded, with a case on a marker whose hash is stale by one write.
+
+Depends: none.
+
+### P-397. Q-HUB-353: the seed does not say a resend's review goes only after every parallel step has handed back
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the standing text of a parallel batch in `plans/seed-template.md` says it, with a case on the printed line.
+
+Depends: none.
+
+### P-398. Q-HUB-354: the seed's batch print does not say who puts right an existing case a parallel step turned red
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the batch print's commit step says where the code and where the case is put right, with a case on the print.
+
+Depends: none.
+
+### P-399. Q-HUB-355: the background gate's second refusal latches an agent whose second write was not the first call after the launch
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the refusal's words and the template's background rule say the second write is the first call after the launch and the read comes after it, with a case on each text.
+
+Depends: none.
+
+### P-400. Q-HUB-356: the commit step stages every file before its per-step commits and the Commands hold no unstage
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the landing text of `plans/seed-template.md` has a step with several commits stage nothing beforehand and name each commit's own files after the message, with a case on the printed text.
 
 Depends: none.
