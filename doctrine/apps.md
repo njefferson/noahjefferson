@@ -184,7 +184,8 @@ issue.
  in `rem`.
 - Findings live in an append-only register (ACCESSIBILITY.md where present);
  fixed rows keep their release number; never silently delete a row.
-- Run the a11y audit (axe-core + custom checks, both themes) before any UI ship.
+- Run the a11y audit (axe-core + custom checks, both themes) at the promotion to
+ main, once over the release, and never against a staging build or a test page.
 
 TREMOR IS A SUPPORTED CONDITION. NOT SUPPORTING IT IS A FAILURE — the same fail
 state as hue-only encoding, and judged the same way. Assume a user whose pointer
@@ -361,6 +362,9 @@ without evidence is the one that makes it the owner's fault.
 - The MOMENT a release merges to production, record it in the repo's Project
  facts (what shipped + the implementation facts a later session needs) and prune
  the roadmap. Do it unprompted.
+- A staging step of a plan carries the measurement the owner asked for and the
+ test page's print, and no walk: the accessibility gate and the cold read run
+ once, at the promotion to main.
 - Docs-only changes (this file, NOTES.md, CLAUDE.md) may skip the staging gate.
 
 ### Release taxonomy and numbering
@@ -1060,7 +1064,10 @@ a page of its own, and asks the owner to press one button.** This is not a
 last resort and it is not a favour to ask for: it is the cheapest, most honest
 instrument available, because it runs on the real device, through the real
 browser, against the real storage. It is faster than three rounds of guessing
-and it leaves something behind that the next session can press again.
+and it leaves something behind that the next session can press again. A plan's
+step that needs a device number names the page as its instrument, builds the
+measurement into it first where the page lacks it, and never reads a container
+render for it.
 
 This is the escalation of §7f's diagnostic, which reports STATE. The test page
 RUNS THINGS and reports what they cost — and the two live together, since a

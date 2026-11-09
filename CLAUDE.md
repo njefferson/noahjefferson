@@ -745,6 +745,14 @@ Every item below has actually happened.
  --touched` runs only the plants of those guard files, `--dry` lists them, and
  `--case=` narrows the cases; the full run, once, over the integrated change, is
  the gate (LESSONS §413).
+- **A PLAN COMES TO THE BUTTON IN ITS OPTIMIZED SHAPE, AND IS NEVER RESHAPED BY
+ THE OWNER'S ASK.** The seed prints the shape and the plans page states the
+ procedure: steps partitioned by file, group steps run together, one commit step
+ that lands once, the cost said, and no walk against a staging build. (Doctrine
+ §0e rule 4.)
+- **EVERY REPLY ENDS WITH THE STATE LINE, AND A PAUSE ON THE OWNER IS NEVER
+ WRITTEN AS NOTHING OPEN.** Paused, pending what; running, what; or finished,
+ nothing pending. "Open for you" lists decisions only. (Doctrine §0e rule 6.)
 - **AN OPEN CHOICE IS THE FIRST THING IN A REPLY, UNTIL IT IS ANSWERED.** A
  choice placed under a long report was missed. The numbered options, the
  recommendation first, open the reply, after a stop declaration and one

@@ -13,7 +13,9 @@ every rule below while none of the hooks that enforce them was running
    first line says what is being done now and what comes next. During the work,
    each step says what it is and what it found, in plain terms. The end says
    what was done, what was not, what was found and not fixed, and what is open
-   for the owner. Process noise with no finding in it is not telling.
+   for the owner. It also says whether the session is paused and pending what of
+   the owner's, running what, or finished, in the state line rule 6 fixes.
+   Process noise with no finding in it is not telling.
    *Enforced by:* the dispatcher's UserPromptSubmit reminder; the rest is
    judgement.
 2. **A status when an agent has ended, and what the work says in it.** A
@@ -384,9 +386,40 @@ every rule below while none of the hooks that enforce them was running
    goals, rules version, standing text, found keys and the reads another session can
    move, each marked, so a step reads those at the time of use; the hub's open
    findings are printed as a batch grouped by file (`--batch`).
+   **The planning procedure a session follows before any plan goes up.** (a) What
+   is: read from the record, the files and the remote's head, never remembered.
+   (b) What should be: the owner's goal in the program's rank. (c) Why: the cause
+   before the route. (d) The route: the cheapest that holds the rules. (e) The
+   walls: each removed inside the plan, or named with what follows it. (f)
+   Optimize: fewer steps, no waits, the cheapest model, steps run together where
+   they share no file and no dependency, one landing where one is enough, and the
+   cost said. (g) Permanent: everything agreed is in the plan file before the
+   button, so nothing rests on a chat turn.
+   **The shape a plan arrives in.** Its steps are partitioned by the files they
+   write, so no two share a file. The group steps run together, up to seven, and
+   the Order's After line says so. Each guard a step edits has its own case file
+   under the guard cases folder. One commit step proves and lands once: it runs
+   every case, the plants of each edited guard file, the checks, one commit for
+   each group step, and the push. The close files and indexes. A plan whose steps
+   run one after another says in its Branches why they cannot run together. A
+   step that needs a number from the device names the app's test page as its
+   instrument and never a container render, and no accessibility walk, cold read,
+   browser walk or screenshot tour runs against a staging build or a test page as
+   a step of a plan; the gate runs once, at the promotion to main. No gate
+   refuses a plan for its shape, by the owner's word of 9 November: the seed
+   prints the shape, this page states it, and the review's sequence rule reads
+   the Order.
 5. **A line before each tool call and a line after each result.**
-6. **Never "waiting on you", never "you owe".** Say "open for you:". A stop is
-   declared in the first line as "Stopping here: open for you is X".
+6. **Never "waiting on you", never "you owe", never a line saying nothing is
+   open while the session is paused on the owner.** Every reply ends with the
+   state line in one of its fixed forms: State, then paused, pending the owner's
+   go-word; or paused, pending the button on the plan; or paused, pending the
+   owner's answer to the choice above; or running, with the step, nothing pending
+   from the owner; or finished, nothing pending from the owner. A stop is declared
+   in the first line as "Stopping here", then paused, pending what lifts it, or
+   finished, nothing pending. "Open for you:" lists decisions only and never a
+   pause. The blame shapes stay refused: waiting on you, you owe, and the owner
+   named as the reason a thing stopped.
    *Enforced by:* `stop-guard.mjs`.
 7. **A limit is reported only after every route available was tried**, with the
    failed attempt named. A blocked host is a question, not a finding.
@@ -782,7 +815,9 @@ developing the apps: each repo's ranked roadmap names the next work, and a
 session works it in parallel across the horizon, never one item polished for
 hours while the rest wait. Speed comes from cutting what is unnecessary.
 Verification is not that: it runs once, over the integrated release at the
-staging boundary, never per step, and nothing reaches staging without it.
+promotion to main, which is the public boundary, and never per step. Staging
+carries the owner's own pass on the device and the app's test page as the
+measurement, and nothing walks it.
 `stop-guard.mjs` refuses a reply that asks the owner for the next work, and one
 that offers to drop verification to save time. (LESSONS §380.)
 
