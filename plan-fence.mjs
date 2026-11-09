@@ -66,6 +66,7 @@ import { approvedPlan, planFiles, planCommands, inScratchpad, planGuardReads, is
 import { commandsIn, heredocs, openerName } from './reply-guard.mjs';
 import { tailEntries } from './transcript-tail.mjs';
 import { agentTranscriptPath, agentStep, stepsFilePath, RULES_FILE, stepBody, restartedPlanMode } from './report.mjs';
+import { SESSION_LINKS } from './privacy-patterns.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
 const WRITES = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
@@ -620,6 +621,55 @@ export function reviewWriteProblem(p, plan, opts = {}) {
   return out ? `${why} a redirect writes ${out}, outside it.` : null;
 }
 
+// ---- a commit message is plain, and a heredoc write is a redirect write (Doctrine 9b) ----
+// An agent committed twice with the harness's attribution trailer naming a model, and no hook refused either. A commit line whose text
+// carries a chat link, a trailer of the attribution kind or a model's name is refused here, before git runs; the repository's commit-msg
+// hook (`branch-guard.mjs`) refuses the same at the commit, from any thread. The refusal opens with `COMMIT_MARK`, which the dispatcher
+// reads as a shape fault, so the first one sets no latch.
+export const COMMIT_MARK = 'COMMIT MESSAGE RULE:';
+const COMMIT_TRAILERS = [/Co-Authored-By:/i, /Claude-Session:/i];
+const COMMIT_MODELS = [/(?<![\w./-])(?:Sonnet|Opus|Haiku|Fable|Mythos)(?![\w/-])/, /claude-(?:sonnet|opus|haiku)/i];
+
+/**
+ * What a commit message holds that the rule refuses.
+ * @param {string} text  a commit line or a message.
+ * @returns {string|null} 'a chat link', 'an attribution trailer' or 'a model\'s name' for the first found; null for plain text.
+ */
+export function commitMessageFault(text) {
+  const t = String(text ?? '');
+  if (SESSION_LINKS.some((r) => new RegExp(r.source, r.flags.replace('g', '')).test(t))) return 'a chat link or a session trailer';
+  if (COMMIT_TRAILERS.some((r) => r.test(t))) return 'an attribution trailer';
+  if (COMMIT_MODELS.some((r) => r.test(t))) return 'a model\'s name';
+  return null;
+}
+
+/**
+ * The refusal for a git commit line whose text breaks the commit rule.
+ * @param {string} command  the whole Bash line, heredoc bodies included (a message is often written that way).
+ * @param {{words: string[]}[]} segs  the line's commands.
+ * @returns {string|null} null when no segment is a `git commit`, or the text is plain; else the refusal, which opens with `COMMIT_MARK`.
+ */
+export function commitProblem(command, segs) {
+  const isCommit = segs.some((s) => {
+    const w = stripRedirects(s.words).words;
+    return w[0] === 'git' && w.slice(1).includes('commit');
+  });
+  if (!isCommit) return null;
+  const fault = commitMessageFault(command);
+  return fault ? `${HEAD} ${COMMIT_MARK} this commit's text holds ${fault}. A commit message is plain and reader-facing, with no trailer, no chat link and no model's name, whatever the harness's attribution reminder asks (Doctrine 9b); write the message again without it.` : null;
+}
+
+/**
+ * The refusal for a heredoc that writes a file.
+ * @param {string} command  the whole Bash line.
+ * @returns {string|null} null when no heredoc body is written to a file; else the refusal, which names the file and reads as a redirect write
+ *   (the dispatcher's shape-fault reading keys on those words), because a heredoc written to a file is a redirect write and the Write tool is the route.
+ */
+export function heredocWriteProblem(command) {
+  const files = Object.keys(heredocs(String(command ?? '')).files);
+  return files.length ? `${HEAD} A redirect writes ${files[0]} by a heredoc, and a heredoc write is a redirect write: write the file with the Write or Edit tool.` : null;
+}
+
 /**
  * Decide one subagent call.
  * @param {object} p  the PreToolUse payload.
@@ -687,6 +737,10 @@ export function decide(p, opts = {}) {
       return `${HEAD} "${words.join(' ').slice(0, 160)}" is a ${prog}, and a ${prog} is refused: write every path in full.${openedNote(s)}`;
     }
   }
+  const commit = commitProblem(String(input.command ?? ''), segs);
+  if (commit) return commit;
+  const heredoc = heredocWriteProblem(String(input.command ?? ''));
+  if (heredoc) return heredoc;
   const red = redirectTargets(shell);
   if (red.proc) return `${HEAD} Process substitution runs a command nothing here can classify.`;
   const targets = [...red.targets];

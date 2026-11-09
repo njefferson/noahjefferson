@@ -984,7 +984,8 @@ export function shapeFaultFirst(p, reason) {
   const cd = /is a (?:cd|pushd|popd), and a (?:cd|pushd|popd) is refused/.test(why);
   const write = /A redirect writes |Process substitution runs a command/.test(why);
   const joined = /is neither a reader nor an entry of the Commands/.test(why) && (/^\s*[A-Za-z_][A-Za-z0-9_]*=\S*\s+\S/.test(line) || /;|&&|\|/.test(line));
-  if (!cd && !write && !joined) return false;
+  const commit = /COMMIT MESSAGE RULE:/.test(why);
+  if (!cd && !write && !joined && !commit) return false;
   const file = agentTranscriptPath(p);
   if (!file) return false;
   for (const e of tailEntries(file, 8 * 1024 * 1024)) {

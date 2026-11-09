@@ -100,7 +100,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const FILES = ['pending-guard.mjs', 'keep-info-guard.mjs', 'compact-recall.mjs', 'reply-guard.mjs', 'transcript-tail.mjs',
   'plan-guard.mjs', 'hook-dispatch.mjs', 'report.mjs', 'drive-guard.mjs', 'approved-plan-guard.mjs', 'plan-scope-check.mjs', 'stop-guard.mjs',
   'push-guard.mjs', 'plan-fence.mjs', 'doctrine-read-guard.mjs', 'session-brief.mjs', 'CLAUDE.md', 'agent-rules.md', 'DOCTRINE.md',
-  'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-cost.mjs', 'plan-seed.mjs', 'plans/seed-template.md', 'session-guards.test.mjs', 'CONFIG.md'];
+  'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-cost.mjs', 'plan-seed.mjs', 'plans/seed-template.md', 'session-guards.test.mjs', 'CONFIG.md', 'privacy-patterns.mjs', 'branch-guard.mjs'];
 // Every copy of the guards makes a file's folder before it copies it: the doctrine's three pages sit in doctrine/.
 const copyGuard = (from, to) => { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to); };
 // The shared rules file the guards read beside themselves: its version, and the pointer line a plan writes for the hub
@@ -2242,6 +2242,71 @@ const CASES = [
       const main = m.dispatch.managerFence({ session_id: s, tool_name: TOOL, tool_input: sweep }, { plan });
       const inPlanMode = m.dispatch.planGuardReads({ session_id: s, tool_name: TOOL, tool_input: sweep, cwd: r.dir });
       return passes && refusals.every(swept) && others.every(fenced) && /^MANAGER FENCE/.test(main ?? '') && inPlanMode === false;
+    },
+  },
+  {
+    name: 'step114: the plan fence refuses an agent\'s git commit line whose text holds a chat link, an attribution trailer or a model\'s name, naming the commit rule, passes a plain commit line (a heredoc message included) and a line that is no commit, and refuses a heredoc written to a file as a redirect write',
+    guards: ['commit_fault_link', 'commit_fault_trailer', 'commit_fault_model', 'commit_fault_scope', 'commit_fault_wired', 'heredoc_write_fault', 'heredoc_write_wired'],
+    run(m) {
+      const r = repo({ 'keep.mjs': 'x\n' });
+      const plan = fencePlan(basename(r.dir));
+      const s = sid('cm');
+      const scratch = `/tmp/claude-0/-home-user/${s}/scratchpad`;
+      const b = (command) => decideFence(m, { session_id: s, agent_id: 'a1', tool_name: 'Bash', tool_input: { command }, cwd: r.dir }, { plan });
+      const link = 'claude.ai/code/' + 'session_x';
+      const trailer = 'Co-Authored-' + 'By: Someone <a@example.invalid>';
+      const session = 'Claude-' + 'Session: x';
+      const refused = [`git commit -m "Fix the toolbar" -m "${trailer}"`, `git commit -m "see ${link}"`, `git commit -m "Fix" -m "${session}"`,
+        'git commit -m "Tuned by Sonnet 5"', 'git commit -m "claude-opus-5 wrote this"', `git commit --amend -m "Fix" -m "${trailer}"`,
+        `git commit -m "$(cat <<'EOF'\nFix the toolbar\n\n${trailer}\nEOF\n)"`].map((c) => [c, b(c)]);
+      const plain = ['git commit -m "Refuse a trailer in a commit message"', 'git commit -m "$(cat <<\'EOF\'\nPlain subject\nEOF\n)"', 'git status',
+        `git commit -m "Move the folder opus/ and the file notes-sonnet.md"`].map((c) => [c, b(c)]);
+      const bad = [...refused.filter(([, x]) => !/^PLAN FENCE.*COMMIT MESSAGE RULE:.*plain and reader-facing/.test(x ?? '')), ...plain.filter(([, x]) => x !== null)];
+      if (bad.length) throw new Error(`wrong on: ${bad.map(([c, x]) => JSON.stringify([c, x])).join(', ')}`);
+      const notCommit = b(`git log --grep "${trailer}"`);
+      const heredoc = b(`cat > ${scratch}/note.txt <<'EOF'\nhello\nEOF`);
+      const heredocAfter = b(`cat <<'EOF' > ${scratch}/note.txt\nhello\nEOF`);
+      const written = /^PLAN FENCE.* A redirect writes .*by a heredoc/;
+      return written.test(heredoc ?? '') && written.test(heredocAfter ?? '') && !/COMMIT MESSAGE RULE/.test(notCommit ?? '');
+    },
+  },
+  {
+    name: 'step114: the first refusal of a commit line or a heredoc write sets no latch and the dispatcher names the rewritten form',
+    guards: ['commit_fault_first'],
+    run(m, dir) {
+      const w = world(dir);
+      const s = sid('cf');
+      const agentLatch = (id) => existsSync(join(process.env.REFUSAL_LATCH_DIR, `${s}.agent-${id}.json`));
+      const bash = (id, command) => w.call('PreToolUse', { session_id: s, agent_id: id, tool_name: 'Bash', tool_input: { command } });
+      const commit = bash('a1', 'git commit -m "Tuned by Sonnet 5"');
+      const heredoc = bash('a2', `cat > ${w.cwd}/x.txt <<'EOF'\nhello\nEOF`);
+      const MARK = m.dispatch.SHAPE_FAULT_MARK;
+      return [commit, heredoc].every((r) => r.status === 2 && /PLAN FENCE/.test(r.stderr) && r.stderr.includes(MARK)) && /COMMIT MESSAGE RULE/.test(commit.stderr)
+        && !agentLatch('a1') && !agentLatch('a2');
+    },
+  },
+  {
+    name: 'step114: the commit-msg hook that branch-guard.mjs installs refuses a message holding a trailer, a chat link or a model\'s name, printing the line it refused on, and passes a plain one, in a temporary repository; the tracked copy is held to what the generator writes',
+    guards: ['commit_msg_hook_trailer', 'commit_msg_hook_link', 'commit_msg_hook_model', 'commit_msg_hook_install', 'commit_msg_hook_line'],
+    run(m, dir) {
+      const t = tmp('sg-cmh-');
+      const g = (...a) => spawnSync('git', ['-C', t, ...a], { encoding: 'utf8' });
+      g('init', '-q', '-b', 'main'); g('config', 'user.email', 't@example.invalid'); g('config', 'user.name', 't'); g('config', 'commit.gpgsign', 'false');
+      writeFileSync(join(t, '.branch-guard'), 'work=main\n');
+      const inst = spawnSync('node', [join(dir, 'branch-guard.mjs'), '--repo', t, '--install'], { encoding: 'utf8', timeout: 60000 });
+      const hook = join(t, '.git', 'hooks', 'commit-msg');
+      if (inst.status !== 0 || !existsSync(hook) || !existsSync(join(t, '.githooks', 'commit-msg'))) throw new Error(`install: ${inst.status} ${inst.stdout} ${inst.stderr}`);
+      writeFileSync(join(t, 'a.txt'), 'a\n'); g('add', '-A');
+      const link = 'claude.ai/code/' + 'session_x';
+      const trailer = 'Co-Authored-' + 'By: Someone <a@example.invalid>';
+      const commit = (msg) => { writeFileSync(join(t, 'msg.txt'), msg); return g('commit', '-q', '-F', join(t, 'msg.txt')); };
+      const refuse = (msg, line) => { const r = commit(msg); return r.status !== 0 && /plain and reader-facing/.test(r.stderr) && r.stderr.includes(line); };
+      const trailerOk = refuse(`Fix\n\n${trailer}\n`, 'Co-Authored-');
+      const linkOk = refuse(`Fix\n\nsee ${link}\n`, 'session_x');
+      const modelOk = refuse('Fix\n\nTuned by Sonnet 5\n', 'Tuned by Sonnet 5') && refuse('Fix\n\nclaude-opus-5 wrote it\n', 'claude-opus-5');
+      const plain = commit('Fix the toolbar\n\nMove the folder opus/ and the file notes-sonnet.md\n');
+      const check = spawnSync('node', [join(dir, 'branch-guard.mjs'), '--repo', t], { encoding: 'utf8', timeout: 60000 });
+      return trailerOk && linkOk && modelOk && plain.status === 0 && check.status === 0;
     },
   },
   {
@@ -10236,6 +10301,18 @@ const PLANTS = {
   fence_taskstop: ["  if (tool === 'TaskStop') return null;\n", '\n', 'plan-fence.mjs'],
   fence_label: [' || !labelNames(repo, root)) return false;', ') return false;', 'plan-fence.mjs'],
   fence_live_hub: ['  if (inLiveHub(target)) return false;\n', '\n', 'plan-fence.mjs'],
+  commit_fault_link: ['if (SESSION_LINKS.some(', 'if (false && SESSION_LINKS.some(', 'plan-fence.mjs'],
+  commit_fault_trailer: ['if (COMMIT_TRAILERS.some((r) => r.test(t)))', 'if (false)', 'plan-fence.mjs'],
+  commit_fault_model: ['if (COMMIT_MODELS.some((r) => r.test(t)))', 'if (false)', 'plan-fence.mjs'],
+  commit_fault_scope: ["return w[0] === 'git' && w.slice(1).includes('commit');", 'return true;', 'plan-fence.mjs'],
+  commit_fault_wired: ['  if (commit) return commit;\n', '\n', 'plan-fence.mjs'],
+  heredoc_write_fault: ['return files.length ?', 'return false ?', 'plan-fence.mjs'],
+  heredoc_write_wired: ['  if (heredoc) return heredoc;\n', '\n', 'plan-fence.mjs'],
+  commit_msg_hook_trailer: ['Co-Authored-By:|Claude-Session:', 'Nosuchtrailerwords:', 'branch-guard.mjs'],
+  commit_msg_hook_link: ['.ai/code/session_', '.ai/code/nolink_', 'branch-guard.mjs'],
+  commit_msg_hook_model: ['(Sonnet|Opus|Haiku|Fable|Mythos)', '(Nosuchmodelname)', 'branch-guard.mjs'],
+  commit_msg_hook_install: ['  writeFileSync(cmLivePath, cmWant);\n', '\n', 'branch-guard.mjs'],
+  commit_msg_hook_line: ['echo "      $2" >&2', 'echo "      " >&2', 'branch-guard.mjs'],
   fence_wired: ['`node "${join(HUB, \'plan-fence.mjs\')}"`, ', '', 'hook-dispatch.mjs'],
   // The doctrine gate.
   doctrine_refuse: ['  return `DOCTRINE GATE', '  return null; // `DOCTRINE GATE', 'doctrine-read-guard.mjs'],
@@ -11268,7 +11345,8 @@ const PLANTS = {
   finished_plan_note: ["export const FINISHED_PLAN_NOTE = 'FINISHED PLAN, NO LATCH: this plan has finished", "export const FINISHED_PLAN_NOTE = 'this plan has finished", 'hook-dispatch.mjs'],
   shape_fault_first: ['if (shape) return refuse(`${o.reason} ${SHAPE_FAULT_NOTE}`, false);', 'if (shape) return refuse(`${o.reason} ${SHAPE_FAULT_NOTE}`, true);', 'hook-dispatch.mjs'],
   shape_fault_second: ["if (b?.type === 'tool_result' && b.is_error && JSON.stringify(b.content ?? '').includes(SHAPE_FAULT_MARK)) return false;", 'void 0;', 'hook-dispatch.mjs'],
-  shape_fault_kinds: ['if (!cd && !write && !joined) return false;', 'if (false) return false;', 'hook-dispatch.mjs'],
+  shape_fault_kinds: ['if (!cd && !write && !joined && !commit) return false;', 'if (false) return false;', 'hook-dispatch.mjs'],
+  commit_fault_first: ['if (!cd && !write && !joined && !commit) return false;', 'if (!cd && !write && !joined) return false;', 'hook-dispatch.mjs'],
   shape_fault_note: ["Rewrite the line as one command from the step's Commands", 'Rewrite the line', 'hook-dispatch.mjs'],
   read_shape_words: ['This is no stop: the turn goes on. ', '', 'plan-guard.mjs'],
   read_shape_mark: ['`PLAN MODE. ${READ_SHAPE_NO_LATCH} ${why} In plan mode', '`PLAN MODE. ${why} In plan mode', 'plan-guard.mjs'],

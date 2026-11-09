@@ -237,6 +237,15 @@ the push, not a courtesy a session may remember to extend.
  [`privacy-patterns.mjs`](privacy-patterns.mjs): `privacy-check.mjs` refuses
  it in any file and `privacy-history-check.mjs` in any commit message or
  blob (LESSONS §323).
+- **THE COMMIT MESSAGE IS REFUSED BEFORE IT IS WRITTEN, AND AT THE COMMIT.**
+ An agent committed twice with the harness's attribution trailer naming a
+ model, and no hook refused either, because the history scan runs only when
+ a session runs it. [`plan-fence.mjs`](plan-fence.mjs) refuses an agent's
+ `git commit` line whose text holds a chat link, an attribution trailer or a
+ model's name, before git runs (and refuses a heredoc written to a file as the
+ redirect write it is); the repository's `commit-msg` hook, generated and
+ installed by [`branch-guard.mjs`](branch-guard.mjs) with `--install`, refuses
+ the same in the message at the commit, from any thread.
 - **Why a gate and not a resolution:** the violation that created this rule
  was committed by DILIGENCE — a habit of recording exact words verbatim pointed at
  the wrong object (LESSONS §52). A failure mode driven by a repo's best
