@@ -8292,7 +8292,7 @@ const CASES = [
       // The start handler.
       const start = (tr) => spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'SessionStart'], { input: JSON.stringify({ session_id: s, transcript_path: tr, cwd: cwdDir, hook_event_name: 'SessionStart', source: 'resume', permission_mode: 'plan' }), encoding: 'utf8', env });
       const said = start(T);
-      const startLine = said.status === 0 && said.stdout.includes('PLAN MODE RESTORED BY THE HARNESS') && said.stdout.includes(A.plan) && said.stdout.includes(want)
+      const startLine = said.status === 0 && said.stdout.includes('PLAN MODE RESTORED BY THE HARNESS') && said.stdout.includes(A.plan) && said.stdout.includes(`${want} California time`)
         && /not the owner's entry/.test(said.stdout) && said.stdout.includes('Q-HUB-304') && !/\b(?:please|you must|ask the owner)\b/i.test(said.stdout);
       const startNone = !start(T0).stdout.includes('PLAN MODE RESTORED');
       // The agent.
@@ -8308,7 +8308,7 @@ const CASES = [
           encoding: 'utf8', env });
       };
       const ctx = (r) => (r.stdout ?? '').split('\n').filter((l) => l.startsWith('{')).map((l) => { try { return JSON.parse(l)?.hookSpecificOutput?.additionalContext ?? ''; } catch { return ''; } }).filter(Boolean).join('\n');
-      const whole = (c) => c.includes(want) && c.includes(A.plan) && /restart brought this plan mode back/.test(c) && /approved plan is in force/.test(c)
+      const whole = (c) => c.includes(`${want} California time`) && c.includes(A.plan) && /restart brought this plan mode back/.test(c) && /approved plan is in force/.test(c)
         && /no stop for this step/.test(c) && /end the step REFUSED/.test(c) && /harness's words/.test(c);
       const f1 = callAs(T, readRules, 'fence');
       const f2 = callAs(T, [...readRules, ...second], 'fence');
