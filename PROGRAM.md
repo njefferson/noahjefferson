@@ -54,7 +54,7 @@ The list is the rank. The items the redesign plan builds come first, then the pa
 
 ## Items
 
-351 items (P-351 the key Q-HUB-308, filed by step 337 of the plan of the infrared app's separation measure; P-350 the infrared app's separation measure of 9 November, entered by step 331 of that plan and not from the Found queue; P-349 the key Q-HUB-307, filed by step 330 of the plan that fixes the sweep and regathers the separation research; P-348 the infrared app's test page work of 8 November, entered by step 329 of that plan and not from the Found queue; P-344 to P-347 the keys Q-HUB-303 to Q-HUB-306, filed by step 103 of the plan of the four gates of 7 November; P-343 the key Q-HUB-302, filed by step 102 of the first batch plan; P-317 to P-319 the keys Q-HUB-276 to Q-HUB-278, filed by step 85 of the plan that closed P-21 after the lock of 6 November; P-320 to P-342 the keys Q-HUB-279 to Q-HUB-301, filed by step 99 of the first batch plan, whose first three keys moved past the keys of the remote's, so P-340 to P-342 are the keys Q-HUB-299 to Q-HUB-301; P-309 the batch seed, named by the owner on 5 November, and P-310 to P-316 the keys Q-HUB-269 to Q-HUB-275, filed by step 92 of the plan that wrote it; P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 273 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
+357 items (P-352 to P-357 the keys Q-HUB-309 to Q-HUB-314, filed by step 108 of the plan of the four gates of 7 November; P-351 the key Q-HUB-308, filed by step 337 of the plan of the infrared app's separation measure; P-350 the infrared app's separation measure of 9 November, entered by step 331 of that plan and not from the Found queue; P-349 the key Q-HUB-307, filed by step 330 of the plan that fixes the sweep and regathers the separation research; P-348 the infrared app's test page work of 8 November, entered by step 329 of that plan and not from the Found queue; P-344 to P-347 the keys Q-HUB-303 to Q-HUB-306, filed by step 103 of the plan of the four gates of 7 November; P-343 the key Q-HUB-302, filed by step 102 of the first batch plan; P-317 to P-319 the keys Q-HUB-276 to Q-HUB-278, filed by step 85 of the plan that closed P-21 after the lock of 6 November; P-320 to P-342 the keys Q-HUB-279 to Q-HUB-301, filed by step 99 of the first batch plan, whose first three keys moved past the keys of the remote's, so P-340 to P-342 are the keys Q-HUB-299 to Q-HUB-301; P-309 the batch seed, named by the owner on 5 November, and P-310 to P-316 the keys Q-HUB-269 to Q-HUB-275, filed by step 92 of the plan that wrote it; P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 273 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
 
 ## Items the redesign plan builds
 
@@ -310,6 +310,15 @@ Close entry of the plan of the infrared app's separation measure (P-350, steps 3
 - Main-thread turns: 283 on the opus tier with 121,942 output tokens, and 9 on the fable tier with 3,880 output tokens.
 - Compactions: 0. Resumes: 1. Pushes: the instrument does not count them.
 - The harness's own running cost entry, the last of 16, reads about 4,876 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252).
+
+Close entry of the plan of the four gates of 7 November (P-334, steps 103 to 117, step 108 the writer), from the cost instrument run on this session's transcript, so far and before this step's push. The instrument numbers it plan 1 and reads its approval as 17:35 California time on 8 November; the bucket before the first approved plan holds the session's earlier owner messages, 8 in all:
+- The owner's messages: 0 in the plan; 8 before it, of which 7 end in a go-word and 1 carries the whole word stop.
+- Stop-hook messages: 24 in 20 stops (command hook 3, 19; command hook 2, 5).
+- Main-thread refusals: 8, all manager fence.
+- Agents: 18, all on the sonnet tier, with 152,513 output tokens, 47,410,166 cache-read tokens and 2,803,618 cache-written tokens; 5 hook refusals, all plan fence.
+- Main-thread turns: 150 on the opus tier with 76,725 output tokens.
+- Compactions: 0 in the plan (1 before it, at 14:50 California time on 8 November). Resumes: 0. Pushes: the instrument does not count them; each landing step pushed once and this step pushes once.
+- The harness's own running cost entry, the last of 1, reads 731.275678600003 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252).
 
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
@@ -2798,7 +2807,9 @@ Depends: none.
 
 ### P-295. Q-HUB-255: the stop guard holds the main thread's stop on a shell an agent started in the background
 
-Repository: hub. Goal: 5. State: planned. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+Repository: hub. Goal: 5. State: done. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+
+Done: step 115 made `agentEnd` in `report.mjs` count an agent ended only by its hand-back call, an interruption or a failure, so an agent paused on its own background run reads as running to the status, the wait, the pointer, the review gate and the stop guard, with cases and plants caught and a line on the plans page; the close of the plan of the four gates of 7 November recorded it.
 
 Acceptance: a stop is not held by a background shell that an agent started while no task the main thread started is running, and a case with plants holds it.
 
@@ -3148,7 +3159,9 @@ Depends: none.
 
 ### P-334. Q-HUB-293: a host list went out as one sentence
 
-Repository: hub. Goal: 6. State: planned. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+Repository: hub. Goal: 6. State: done. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+
+Done: step 104 made `stop-guard.mjs` refuse a reply where a line outside a fenced block holds three or more hostnames or a line inside one holds two or more, with its case and plants caught, and added a line on the plans page; the close of the plan of the four gates of 7 November recorded it.
 
 Acceptance: `stop-guard.mjs` refuses a reply where a line outside a fenced block holds three or more hostnames or a line inside one holds two or more, with a refusal saying a host list goes one host per line in one fenced block, a plant watched refusing, and a line on the plans page.
 
@@ -3156,7 +3169,9 @@ Depends: none.
 
 ### P-335. Q-HUB-294: the reply guard records no host the proxy refused
 
-Repository: hub. Goal: 6. State: planned. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+Repository: hub. Goal: 6. State: done. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+
+Done: step 104 made `reply-guard.mjs` record a host as declined by the proxy on the proxy's no-rule line as well as on the CONNECT 403 it already read, and made `report.mjs` print the hosts declined since the last status one per line in one fenced block, with its case and plants caught and a line on the plans page; the close of the plan of the four gates of 7 November recorded it.
 
 Acceptance: `reply-guard.mjs` records a host as declined by the proxy and every status prints the hosts declined since the last one, one per line in one fenced block, with a plant watched refusing and a line on the plans page.
 
@@ -3164,7 +3179,9 @@ Depends: none.
 
 ### P-336. Q-HUB-295: a background run had no progress note and the main thread waited instead of reading
 
-Repository: hub. Goal: 3. State: planned. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+Repository: hub. Goal: 3. State: done. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+
+Done: step 106 made `plan-fence.mjs` refuse an agent's background run until its progress note names a label and the output file, made `report.mjs` print a flagged running agent's last output line and last tool result, and made `hook-dispatch.mjs` refuse the wait while an agent is flagged; step 115 put the flagged read through the status's memory so it prints once; its cases and plants were caught and the plans page carries the lines; the close of the plan of the four gates of 7 November recorded it.
 
 Acceptance: `plan-fence.mjs` refuses an agent's background run without a progress note written that turn, `report.mjs` prints the newest output file's last line for a running agent with no fresh note, and `hook-dispatch.mjs` refuses the wait while an agent is flagged, each with a plant watched refusing and a line on the plans page.
 
@@ -3172,7 +3189,9 @@ Depends: none.
 
 ### P-337. Q-HUB-296: the wait sat its full limit while owner messages arrived
 
-Repository: hub. Goal: 3. State: planned. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+Repository: hub. Goal: 3. State: done. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+
+Done: step 106 made the wait in `report.mjs` return within one poll interval when a new owner message is written to the transcript, its first line naming the message's California time with the message under it, with a case and a plant caught and a line on the plans page; the close of the plan of the four gates of 7 November recorded it.
 
 Acceptance: the wait returns as soon as a new owner message is written to the transcript, printing its California time and the message first, with a plant watched refusing and a line on the plans page.
 
@@ -3190,7 +3209,9 @@ Depends: P-312.
 
 ### P-344. Q-HUB-303: an agent halts at the harness's read-only notice under a plan mode the harness brought back after an approval
 
-Repository: hub. Goal: 6. State: planned. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+Repository: hub. Goal: 6. State: done. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+
+Done: step 112 made `plan-fence.mjs` add the four-statement line, with the approval's time in California time, to each agent's first call while `restartedPlanMode` holds, and made the start handler in `hook-dispatch.mjs` print only what is established, with a whole-state case and plants caught; whether the line moves an agent past the harness's notice stays open under P-345; the close of the plan of the four gates of 7 November recorded it.
 
 Acceptance: while `restartedPlanMode` holds, the plan fence gives each agent's first call an added-context line saying a restart brought this plan mode back after the approval of the named time, that the approved plan is in force, that the harness's read-only notice is no stop for the step, and that a call the harness itself refuses ends the step REFUSED carrying the harness's words; the dispatcher's start handler prints only what is established; a case with a planted restored plan mode and a plant that takes out the line.
 
@@ -3198,7 +3219,9 @@ Depends: none.
 
 ### P-346. Q-HUB-305: two sessions built opposite answers to the app's exit from plan mode, and no paragraph states the restored plan mode for every actor
 
-Repository: hub. Goal: 6. State: planned. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+Repository: hub. Goal: 6. State: done. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+
+Done: step 112 wrote one paragraph under rule 4 of the plans page stating what each actor does under a plan mode the harness brings back after an approval, and one suite case that runs every actor through one planted restored plan mode, with the approval time asserted in California time; the close of the plan of the four gates of 7 November recorded it.
 
 Acceptance: the plans page states under rule 4, in one paragraph, what every actor does under a plan mode the harness brings back after an approval, and one suite case runs every actor through one planted restored plan mode.
 
@@ -3206,7 +3229,9 @@ Depends: P-344.
 
 ### P-347. Q-HUB-306: a plan that touches a state the record has fixed before is not required to cite the fixes
 
-Repository: hub. Goal: 6. State: planned. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+Repository: hub. Goal: 6. State: done. Plan: The four gates of 7 November: a host list on one line refused, hosts the proxy refused recorded and printed, a background run announced first and a flagged agent read instead of waited on, and the wait ended by an owner message.
+
+Done: step 113 added to `hook-dispatch.mjs` a check, called by the plan check and the approval call in `plan-guard.mjs`, that refuses a plan whose Steps name a gate function in a code span that lessons record fixes for unless its Design cites each of those lessons, setting no latch, with cases and plants caught and a line on the plans page under 11e; the close of the plan of the four gates of 7 November recorded it.
 
 Acceptance: the plan check and the approval call refuse a plan whose Steps name a gate function in a code span that the lessons record fixes for, unless its Design cites each of those lessons by number, setting no latch, with a plant watched refusing before it is believed and a line on the plans page under 11e.
 
@@ -3241,5 +3266,53 @@ Depends: none.
 Repository: hub. Goal: 6. State: open. Plan: none.
 
 Acceptance: the plan seed's standing text and the Commands it prints spell each hub check in the form its usage gives (docs-check with a bare path, the other checks with the repo flag and the path), held by a check the plan check runs or by the seed's print, so a step does not fail on its first send for a command line the plan spelled wrongly.
+
+Depends: none.
+
+### P-352. Q-HUB-309: the plan named a line of the plans page that does not exist
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the plan check reads a plan's step text that names "rule N" of the plans page against the page's own numbering, or the plan seed prints the page's rule numbers beside the step shape, so a step does not name a rule the page lacks.
+
+Depends: none.
+
+### P-353. Q-HUB-310: the pin check prints a note about a workflow that handles secrets and runs an unpinned tool
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: the note that a deploy workflow runs `npx` without `--no-install` in a workflow that handles secrets is either put right in that workflow or recorded as accepted with its reason, so the pin check's output carries no standing note nobody has judged.
+
+Depends: none.
+
+### P-354. Q-HUB-311: a step that changes a printed block runs only its own new cases, and the existing case that asserts on the print goes stale
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: a step that edits a guard file runs every case of the suite before its commit, or the plan seed's standing text and a check say so, so a case asserting on a printed block is found red in the step that changed it and not first on the runner, with a case that plants the stale assertion.
+
+Depends: none.
+
+### P-355. Q-HUB-312: a case filter with a space in its value is cut at the space by the tool wrapper
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: the suite's usage lines say that a case filter containing a space is quoted as a whole switch, or the suite accepts a filter without a space for every case, and a run with an unquoted filter selecting a wrong set of cases refuses itself, with a case holding it.
+
+Depends: none.
+
+### P-356. Q-HUB-313: the harness's auto-mode classifier refuses an amend of an unpushed commit as destructive
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the agent rules or the plan seed's standing text say that a commit with a wrong message is replaced by new commits and not amended, so a step does not spend a send on a command the harness refuses, with the line read by the plan check.
+
+Depends: none.
+
+### P-357. Q-HUB-314: the doctrine gates runs for the heads of 8 and 9 November concluded failure in the session-guards step and the cause was not read
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: the failing case or plant of the doctrine gates runs 589 and 590 is read from the run's log and put right, so the remote's head carries a green doctrine gates run, and the runner's wall time for that step (about 26 minutes) is recorded against the 10-minute bound the plan's background rule assumes.
 
 Depends: none.
