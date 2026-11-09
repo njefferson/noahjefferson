@@ -300,9 +300,28 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'Q-HUB-359: the end-of-turn reminder printed at an owner prompt carries the state line in its fixed forms and the stop\'s first-line form, and never lets a pause be written as nothing open',
+    guards: ['reminder_state_line', 'reminder_stop_first_line'],
+    run(m, dir, h) {
+      const copy = h.tmp('sg-remcopy-');
+      for (const f of h.FILES) h.copyGuard(join(dir, f), join(copy, f));
+      const w = h.world(copy, [h.turn(0, h.GO)], h.STEPS_PLAN);
+      const s = h.sid('rm');
+      h.notesPad(s, '');
+      const out = w.call('UserPromptSubmit', { session_id: s, prompt: h.GO }).stdout ?? '';
+      return h.assertAll([
+        ['the End line carries the state line in its fixed forms', /state line in its fixed forms: paused, pending what of the owner's; running, what; or finished/.test(out), out.slice(0, 600)],
+        ['the End line makes open for the owner decisions only and bars nothing-open for a pause', /open for the owner as decisions only/.test(out) && /never "nothing open" for a pause/.test(out), out.slice(0, 600)],
+        ['the first-line sentence gives the stop form', /a stop's first line is "Stopping here", then paused, pending what lifts it, or finished, nothing pending/.test(out), out.slice(0, 600)],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
+  reminder_state_line: ['and the state line in its fixed forms: paused, pending what of the owner\\\'s; running, what; or finished.', 'and nothing more.', 'hook-dispatch.mjs'],
+  reminder_stop_first_line: ['a stop\\\'s first line is "Stopping here", then paused, pending what lifts it, or finished, nothing pending.', 'what you are doing now.', 'hook-dispatch.mjs'],
   seed_batch_dispatch: [String.raw`--(?:item\\s|batch(?:\\s|$))`, String.raw`--(?:item\\s)`, 'hook-dispatch.mjs'],
   seed_batch_planguard: [String.raw`--(?:item\\s|batch(?:\\s|$))`, String.raw`--(?:item\\s)`, 'plan-guard.mjs'],
   cost_forced_turns: ["!holds || forced ? ''", "true ? ''", 'hook-dispatch.mjs'],

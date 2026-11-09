@@ -3757,8 +3757,8 @@ async function toolCensus(path) {
 const REMINDER = [
   'OWNER MESSAGE (LESSONS §370). Before any tool call, reply to EVERY point in it.',
   'If it says something was done wrong: answer it, and run nothing else this turn.',
-  'First line: what you are doing now.',
-  'End: done, not done, found and not fixed, open for the owner. Never "waiting on you". No app notifications.',
+  'First line: what you are doing now; a stop\'s first line is "Stopping here", then paused, pending what lifts it, or finished, nothing pending.',
+  'End: done, not done, found and not fixed, open for the owner as decisions only, and the state line in its fixed forms: paused, pending what of the owner\'s; running, what; or finished. Never "waiting on you", and never "nothing open" for a pause. No app notifications.',
 ].join('\n');
 
 /**
