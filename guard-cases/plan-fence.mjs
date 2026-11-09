@@ -2,7 +2,8 @@
 // of the sixth finding of the take-up. Shape: guard-cases/shape.mjs.
 import { join, basename } from 'node:path';
 import { tmpdir } from 'node:os';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, mkdtempSync, rmSync, utimesSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 const SUITE = 'node /home/user/noahjefferson/session-guards.test.mjs';
 
@@ -122,6 +123,127 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'Q-HUB-352: the plan fence refuses a write between a write of the plan file and its re-recording with words saying the plan file is being re-recorded and the call goes again, and gives the generic refusal when the hash holds or the marker is the newer file, and passes the scratchpad',
+    guards: ['fence_rerecord_words', 'fence_rerecord_mtime', 'fence_rerecord_wired'],
+    run(m, dir, h) {
+      const r = h.repo({ 'keep.mjs': 'x\n' });
+      const s = h.sid('rerec');
+      const pad = join(tmpdir(), 'claude-0', '-home-user', s, 'scratchpad');
+      const tmp = mkdtempSync(join(tmpdir(), 'fence-rerec-'));
+      try {
+        const planFile = join(tmp, 'plan.md');
+        const marker = join(tmp, 'marker.json');
+        const oldText = 'old plan\n';
+        writeFileSync(planFile, oldText);
+        writeFileSync(marker, JSON.stringify({ plan: planFile, hash: createHash('sha256').update(oldText).digest('hex') }));
+        const call = (file_path) => h.decideFence(m, { session_id: s, agent_id: 'a1', tool_name: 'Write', tool_input: { file_path, content: 'y\n' }, cwd: r.dir }, { plan: null, marker });
+        const target = join(r.dir, 'keep.mjs');
+        const settled = call(target);
+        const mtime = (f, sec) => utimesSync(f, sec, sec);
+        // The plan file is written after the marker: its hash is stale by one write.
+        writeFileSync(planFile, 'new plan\n');
+        mtime(marker, 1000);
+        mtime(planFile, 2000);
+        const stale = call(target);
+        const scratch = call(join(pad, 'progress', 'step-1.txt'));
+        // The marker is the newer file: the re-recording happened and the plan was edited since, so the generic refusal stands.
+        mtime(marker, 3000);
+        const edited = call(target);
+        const said = (x) => typeof x === 'string' && /^PLAN FENCE/.test(x) && x.includes('being re-recorded') && x.includes('send the same call again');
+        const generic = (x) => typeof x === 'string' && /^PLAN FENCE/.test(x) && !x.includes('being re-recorded') && x.includes('outside the Files list');
+        // The hash holds (the plan text is back to the recorded one): no plan is in force for another reason.
+        writeFileSync(planFile, oldText);
+        mtime(marker, 1000);
+        mtime(planFile, 2000);
+        const holds = call(target);
+        return h.assertAll([
+          ['a plan file newer than the marker, with a stale hash, is refused with the re-recording words', said(stale), stale],
+          ['the scratchpad write passes while the plan file is being re-recorded', scratch === null, scratch],
+          ['a marker newer than the plan file gets the generic refusal', generic(edited), edited],
+          ['a hash that holds gets the generic refusal', generic(holds), holds],
+          ['a hash that holds before any write gets the generic refusal', generic(settled), settled],
+        ]);
+      } finally { rmSync(tmp, { recursive: true, force: true }); }
+    },
+  },
+  {
+    name: 'Q-HUB-355: the second-write refusal says the second write is the first call after the launch and that the read of the run\'s output comes after it',
+    guards: ['fence_second_write_words'],
+    run(m, dir, h) {
+      const r = h.repo({ 'keep.mjs': 'x\n' });
+      const plan = h.fencePlan(basename(r.dir));
+      const s = h.sid('second');
+      const pad = join(tmpdir(), 'claude-0', '-home-user', s, 'scratchpad');
+      const note = join(pad, 'progress', 'step-2.txt');
+      const printed = '/tmp/claude-0/tasks/suite-run.output';
+      const launched = [h.tool(0, 'w9', 'Write', { file_path: note, content: 'label: the suite run' }), h.tool(0, 'L2', 'Bash', { command: 'git status', run_in_background: true }),
+        h.result(0, 'L2', `Command running in background. Output is being written to: ${printed}`)];
+      const read = h.decideFence(m, { session_id: s, agent_id: 'a1', tool_name: 'Read', tool_input: { file_path: printed }, cwd: r.dir }, { plan, entries: launched });
+      return h.assertAll([
+        ['the refusal says the second write is the first call after the launch', typeof read === 'string' && /second write is the first call after the launch/.test(read), read],
+        ['the refusal says the read of the output comes after the second write', typeof read === 'string' && /read of the run's output comes after it/.test(read), read],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-365 and Q-HUB-366: the plan fence does not read the dry listing of stale plants (exit 1 under the dry switch) or the suite\'s usage refusal (exit 2) as a red run, and still reads exit 1 of any other run and a failed notice of exit 1 as red',
+    guards: ['fence_dry_exit', 'fence_usage_exit', 'fence_notred_wired', 'fence_notred_notice'],
+    run(m, dir, h) {
+      const r = h.repo({ 'keep.mjs': 'x\n' });
+      const plan = h.fencePlan(basename(r.dir));
+      const s = h.sid('notred');
+      const edit = { file_path: join(r.dir, 'keep.mjs'), old_string: 'x', new_string: 'y' };
+      const call = (entries) => h.decideFence(m, { session_id: s, agent_id: 'a1', tool_name: 'Edit', tool_input: edit, cwd: r.dir }, { plan, entries });
+      const ran = (id, command, text) => [h.tool(0, id, 'Bash', { command }), h.result(0, id, text, true)];
+      const notice = (command, code) => [h.tool(0, 'n1', 'Bash', { command, run_in_background: true }), h.result(0, 'n1', 'Command running in background'),
+        h.turn(5, `<task-notification><status>failed</status><summary>Background command "${command}" failed with exit code ${code}</summary></task-notification>`)];
+      const red = (x) => typeof x === 'string' && x.includes('RED RUN, NOTHING WRITTEN AFTER');
+      const dry = `${SUITE} --plants --dry`;
+      const got = {
+        dry: call(ran('d1', dry, 'Exit code 1\nstale plant: x')),
+        dryFiles: call(ran('d2', `${SUITE} --plants --dry --files=report.mjs`, 'Exit code 1\nstale plant: x')),
+        usage: call(ran('u1', `${SUITE} --case=Q-HUB-1`, 'Exit code 2\nusage: quote the filter')),
+        one: call(ran('o1', `${SUITE} --case='Q-HUB-1'`, 'Exit code 1\n2 cases failed')),
+        plants: call(ran('p1', `${SUITE} --plants`, 'Exit code 1\nplant missed')),
+        dryTwo: call(ran('d3', dry, 'Exit code 3\nbroken')),
+        noticeDry: call(notice(dry, 1)),
+        noticeUsage: call(notice(`${SUITE} --case=x`, 2)),
+        noticeOne: call(notice(SUITE, 1)),
+      };
+      return h.assertAll([
+        ['the dry listing at exit 1 is not a red run', got.dry === null, got.dry],
+        ['the dry listing narrowed to a file at exit 1 is not a red run', got.dryFiles === null, got.dryFiles],
+        ['the usage refusal at exit 2 is not a red run', got.usage === null, got.usage],
+        ['exit 1 of a case run is a red run', red(got.one), got.one],
+        ['exit 1 of a plants run without the dry switch is a red run', red(got.plants), got.plants],
+        ['another exit of the dry listing is a red run', red(got.dryTwo), got.dryTwo],
+        ['a failed notice of the dry listing at exit 1 is not a red run', got.noticeDry === null, got.noticeDry],
+        ['a failed notice of exit 2 is not a red run', got.noticeUsage === null, got.noticeUsage],
+        ['a failed notice of exit 1 of the suite is a red run', red(got.noticeOne), got.noticeOne],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-367: the plan fence holds an agent off the files of a Files line worded read only, and leaves the other lines of the same Files section writable',
+    guards: ['fence_readonly_words', 'fence_readonly_wired'],
+    run(m, dir, h) {
+      const r = h.repo({ 'keep.mjs': 'x\n', 'ro.mjs': 'x\n', 'ro2.mjs': 'x\n', 'rw.mjs': 'x\n' });
+      const label = basename(r.dir);
+      const base = h.fencePlan(label);
+      const plan = { ...base, text: `${base.text}- ${label}, read only: \`ro.mjs\`\n- ${label}: \`ro2.mjs\` (Read-Only)\n- ${label}: \`rw.mjs\`\n` };
+      const s = h.sid('readonly');
+      const w = (name) => h.decideFence(m, { session_id: s, agent_id: 'a1', tool_name: 'Edit', tool_input: { file_path: join(r.dir, name), old_string: 'x', new_string: 'y' }, cwd: r.dir }, { plan });
+      const refused = (x) => typeof x === 'string' && x.includes('outside the Files list');
+      const got = { ro: w('ro.mjs'), ro2: w('ro2.mjs'), rw: w('rw.mjs'), keep: w('keep.mjs') };
+      return h.assertAll([
+        ['a file of a line worded read only is refused', refused(got.ro), got.ro],
+        ['a file of a line with read-only worded after it is refused', refused(got.ro2), got.ro2],
+        ['a file of a plain line of the same section is writable', got.rw === null, got.rw],
+        ['a file of the first line of the section is writable', got.keep === null, got.keep],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
@@ -139,4 +261,14 @@ export const plants = {
   fence_own_turn_second: ["The note, the launch and the note's second write each stand alone in their turns, one call in each, and so does any report written after the run ends.", '', 'plan-fence.mjs'],
   fence_own_turn_announce: ["The note, the launch and the note's second write each stand alone in their turns, one call in each, so the note is the one call of this turn and the launch is the one call of the next.", '', 'plan-fence.mjs'],
   fence_own_turn_rules: ['    + ` ${OWN_TURN}`;', '    ;', 'plan-fence.mjs'],
+  fence_rerecord_words: ['    if (rerecording) return `', '    if (false) return `', 'plan-fence.mjs'],
+  fence_rerecord_mtime: ['return statSync(mk.plan).mtimeMs >= statSync(file).mtimeMs ? String(mk.plan) : null;', 'return String(mk.plan);', 'plan-fence.mjs'],
+  fence_rerecord_wired: ["const rerecording = !plan && (!('plan' in opts) || opts.marker) ? rerecordingPlan(opts.marker ? { marker: opts.marker } : {}) : null;", 'const rerecording = null;', 'plan-fence.mjs'],
+  fence_second_write_words: ["The second write is the first call after the launch, and the read of the run's output comes after it, never before. ", '', 'plan-fence.mjs'],
+  fence_dry_exit: ["return Number(code) === 1 && /\\s--dry(?:\\s|=|$)/.test(String(command ?? ''));", 'return false;', 'plan-fence.mjs'],
+  fence_usage_exit: ['  if (Number(code) === 2) return true;', '  if (Number(code) === 2) return false;', 'plan-fence.mjs'],
+  fence_notred_wired: [' && !notRedSuiteExit(ran.get(x.result.tool_use_id), x.text)', '', 'plan-fence.mjs'],
+  fence_notred_notice: ["\n      && !notRedSuiteExit([...ran.values()].at(-1) ?? '', x.text)) {", ') {', 'plan-fence.mjs'],
+  fence_readonly_words: ['    if (/\\bread[- ]only\\b/i.test(line)) continue;\n', '', 'plan-fence.mjs'],
+  fence_readonly_wired: ['const files = plan ? writableFiles(plan.text) : [];', 'const files = plan ? planFiles(plan.text) : [];', 'plan-fence.mjs'],
 };

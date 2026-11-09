@@ -62,7 +62,8 @@ import { readFileSync, existsSync, openSync, readSync, closeSync, statSync } fro
 import { resolve, dirname, join, relative, normalize, isAbsolute, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { approvedPlan, planFiles, planCommands, inScratchpad, planGuardReads, isRead, labelNames, AGENT_RETURN, agentReportWrite, gitHistoryRepos, approvalStamp } from './hook-dispatch.mjs';
+import { createHash } from 'node:crypto';
+import { approvedPlan, planSection, planFiles, planCommands, inScratchpad, planGuardReads, isRead, labelNames, AGENT_RETURN, agentReportWrite, gitHistoryRepos, approvalStamp } from './hook-dispatch.mjs';
 import { commandsIn, heredocs, openerName } from './reply-guard.mjs';
 import { tailEntries } from './transcript-tail.mjs';
 import { agentTranscriptPath, agentStep, stepsFilePath, RULES_FILE, stepBody, restartedPlanMode } from './report.mjs';
@@ -172,6 +173,39 @@ export function underFiles(target, files) {
     const nf = normalize(f);
     return f.endsWith('/') ? rel.startsWith(nf) && rel.length > nf.length : rel === nf;
   });
+}
+
+/**
+ * The paths a plan's Files section lets an agent write (Q-HUB-367).
+ * @param {string} text  the plan.
+ * @returns {{repo: string|null, path: string}[]} `planFiles` of every line of the Files section except a line worded read only
+ *   (`read only` or `read-only`, any case), whose code spans are readable and never writable.
+ */
+export function writableFiles(text) {
+  const out = [];
+  for (const line of planSection(text, 'Files').split('\n')) {
+    if (/\bread[- ]only\b/i.test(line)) continue;
+    out.push(...planFiles(`## Files\n${line}\n`));
+  }
+  return out;
+}
+
+/**
+ * Is the plan file being re-recorded (Q-HUB-352)?
+ * @param {{marker?: string}} [opts]  the approval marker's path, `~/.claude/APPROVED-PLAN.json` by default.
+ * @returns {string|null} the path of the plan when the marker names a readable plan file whose hash is not the marker's and whose last
+ *   write is newer than the marker's, which is the moment between a write of the plan and the approval guard's re-recording of it; null
+ *   when the marker cannot be read, the hash holds, or the marker is the newer file (a plan edited after its last recording).
+ */
+export function rerecordingPlan(opts = {}) {
+  try {
+    const file = opts.marker ?? join(homedir(), '.claude', 'APPROVED-PLAN.json');
+    const mk = JSON.parse(readFileSync(file, 'utf8'));
+    if (!mk?.plan || !mk.hash) return null;
+    const bytes = readFileSync(mk.plan);
+    if (createHash('sha256').update(bytes).digest('hex') === String(mk.hash)) return null;
+    return statSync(mk.plan).mtimeMs >= statSync(file).mtimeMs ? String(mk.plan) : null;
+  } catch { return null; }
 }
 
 /**
@@ -580,7 +614,7 @@ export function backgroundProblem(p, opts = {}) {
         if (wrote) since = wroteAt;
         const own = noteWriteText({ type: 'tool_use', name: tool, input }, cwd, sid);
         if (!wrote && !(own !== null && own.includes(printed))) {
-          return `${HEAD} BACKGROUND RUN, SECOND WRITE (Q-HUB-295): the launch printed its output file, ${printed}, and the agent's next call is its progress note written again with that full path, so ${tool || 'this call'} is refused. Write progress/step-N.txt in the scratchpad with a line opening with "label:" naming the run and ${printed}, with no time in it, then end the turn on the run with no wait of its own. ${OWN_TURN} The note, the launch and the note's second write each stand alone in their turns, one call in each, and so does any report written after the run ends.`;
+          return `${HEAD} BACKGROUND RUN, SECOND WRITE (Q-HUB-295): the launch printed its output file, ${printed}, and the agent's next call is its progress note written again with that full path, so ${tool || 'this call'} is refused. The second write is the first call after the launch, and the read of the run's output comes after it, never before. Write progress/step-N.txt in the scratchpad with a line opening with "label:" naming the run and ${printed}, with no time in it, then end the turn on the run with no wait of its own. ${OWN_TURN} The note, the launch and the note's second write each stand alone in their turns, one call in each, and so does any report written after the run ends.`;
         }
       }
     }
@@ -663,12 +697,28 @@ export function redSuiteRun(events) {
   const ran = new Map();
   for (const x of events ?? []) {
     if (x.use?.name === 'Bash' && SUITE_RUN.test(String(x.use.input?.command ?? ''))) ran.set(x.use.id, String(x.use.input.command));
-    if (x.result && ran.has(x.result.tool_use_id) && (x.result.is_error === true || /^\s*Exit code [1-9]/.test(x.text))) return ran.get(x.result.tool_use_id);
-    if (x.note === true && SUITE_RUN.test(x.text) && /<status>(?:failed|killed)<\/status>|exit code [1-9]|\bfailed with\b/i.test(x.text)) {
+    if (x.result && ran.has(x.result.tool_use_id) && (x.result.is_error === true || /^\s*Exit code [1-9]/.test(x.text)) && !notRedSuiteExit(ran.get(x.result.tool_use_id), x.text)) return ran.get(x.result.tool_use_id);
+    if (x.note === true && SUITE_RUN.test(x.text) && /<status>(?:failed|killed)<\/status>|exit code [1-9]|\bfailed with\b/i.test(x.text)
+      && !notRedSuiteExit([...ran.values()].at(-1) ?? '', x.text)) {
       return [...ran.values()].at(-1) ?? 'the suite';
     }
   }
   return null;
+}
+
+/**
+ * Is a non-zero exit of the suite one that is not a red run (Q-HUB-365, Q-HUB-366)?
+ * @param {string} command  the Bash line that ran the suite.
+ * @param {string} text  the result text, which opens `Exit code N` for a non-zero exit.
+ * @returns {boolean} true for exit 2, the suite's usage refusal (an unquoted case filter), and for exit 1 of a line carrying the dry switch,
+ *   the listing of stale plants, which exits 1 by design while a plant is stale; false for exit 1 of any other run, and for a result that
+ *   carries no exit code.
+ */
+export function notRedSuiteExit(command, text) {
+  const code = /exit code (\d+)/i.exec(String(text ?? ''))?.[1];
+  if (code === undefined) return false;
+  if (Number(code) === 2) return true;
+  return Number(code) === 1 && /\s--dry(?:\s|=|$)/.test(String(command ?? ''));
 }
 
 /**
@@ -833,7 +883,7 @@ export function decide(p, opts = {}) {
     if (isRead(p, opts.reads)) return null;
     return `${HEAD} ${tool} is not a read, a write the Files list allows, a Commands entry or the agent's own return, under ${where}.`;
   }
-  const files = plan ? planFiles(plan.text) : [];
+  const files = plan ? writableFiles(plan.text) : [];
   const cmds = plan ? planCommands(plan.text) : [];
   const input = p.tool_input ?? {};
   const allowedPath = (abs) => HARMLESS.has(abs) || inScratchpad(abs, p.session_id) || underFiles(abs, files);
@@ -843,6 +893,9 @@ export function decide(p, opts = {}) {
     const abs = resolve(p.cwd || process.cwd(), f);
     if (f && allowedPath(abs)) return null;
     if (f && inLiveHub(abs)) return `${HEAD} ${tool} to ${f} is in the live gate copy, which an agent never writes.`;
+    // A WRITE BETWEEN A WRITE OF THE PLAN AND ITS RE-RECORDING: the marker's hash is stale by one write, so say so and let the call go again (Q-HUB-352).
+    const rerecording = !plan && (!('plan' in opts) || opts.marker) ? rerecordingPlan(opts.marker ? { marker: opts.marker } : {}) : null;
+    if (rerecording) return `${HEAD} PLAN FILE BEING RE-RECORDED (Q-HUB-352): the plan file ${rerecording} was written and the approval guard has not yet re-recorded it, so no plan is in force for this one moment and ${tool} to ${f || '(no path)'} is refused. The plan file is being re-recorded: send the same call again.`;
     return `${HEAD} ${tool} to ${f || '(no path)'} is outside the Files list of ${where} for its repo, and outside the scratchpad.`;
   }
 
