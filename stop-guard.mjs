@@ -171,23 +171,49 @@ const units = (text, skip = () => false) => {
   return out;
 };
 
+/** The faults found in the reply so far, in the order they were found (Q-HUB-338). */
+const FAULTS = [];
+
 /**
- * Refuse the stop, record the reply that was refused, and say the follow-up is the correction only.
+ * Note a fault of the reply. Nothing is written and nothing exits here: every check runs, and `flushFaults` makes one refusal that
+ * lists them all, so a reply with three faults costs one follow-up and not three (Q-HUB-338).
  * @param {string} message  the refusal's own words.
  * @param {string} reply  the reply just refused.
- * @returns {never} writes the message and FOLLOW_UP to stderr and exits 2. The
- *   record (the reply, the transcript's line count now, the time, and that no
- *   repeat has been refused yet) is what a follow-up is judged against; a
- *   failure to write it never costs the refusal.
+ * @param {string} [kind]  'choice' for the choice-not-first fault, which the repeat check reads.
+ * @returns {void} adds the fault to `FAULTS`.
  */
 function refuse(message, reply, kind = '') {
+  FAULTS.push({ message, reply, kind });
+}
+
+/**
+ * Refuse the stop for every fault noted, record the reply that was refused, and say the follow-up is the correction only.
+ * @returns {void} with no fault noted, returns. With one, writes its message and FOLLOW_UP to stderr and exits 2, the words it always
+ *   had; with more, writes one refusal that numbers each fault in its own words, and exits 2. The record (the reply, the transcript's
+ *   line count now, the time, and that no repeat has been refused yet) is what a follow-up is judged against; a failure to write it
+ *   never costs the refusal.
+ */
+function flushFaults() {
+  if (!FAULTS.length) return;
+  const reply = FAULTS[0].reply;
+  const kind = FAULTS.some((f) => f.kind === 'choice') ? 'choice' : FAULTS[0].kind;
   try {
     mkdirSync(dirname(refusedFile()), { recursive: true });
     const lines = readFileSync(path, 'utf8').split('\n').filter((l) => l.trim()).length;
     writeFileSync(refusedFile(), JSON.stringify({ at: Date.now(), lines, reply, repeated: false, kind }));
   } catch { /* the refusal stands without a record */ }
-  process.stderr.write(message + FOLLOW_UP);
+  const strip = (m) => m.replace(/^STOP REFUSED — /, '').trimEnd();
+  const text = FAULTS.length === 1 ? FAULTS[0].message
+    : `STOP REFUSED — this reply has ${FAULTS.length} faults, listed together so one follow-up corrects all of them.\n\n`
+      + FAULTS.map((f, i) => `FAULT ${i + 1} of ${FAULTS.length}: ${strip(f.message)}\n`).join('\n');
+  process.stderr.write(text + FOLLOW_UP);
   process.exit(2);
+}
+
+/** End the stop as allowed, unless a fault was noted: then refuse for all of them. */
+function finish() {
+  flushFaults();
+  process.exit(0);
 }
 
 /** Saying the work is not finished. Present tense only — "I waited for CI and
@@ -222,9 +248,10 @@ const DECLARED = /^\s*(?:[#*_>\s-]*)stopping here[,:]?\s*open for you\b/i;
  *  refused (2026-09-28, LESSONS §370): say what is open for them instead. This
  *  is refused even under a declared stop, because the declaration used to BE
  *  "waiting on you" and the rule changed under it. */
+// A NEGATED FORM DENIES THE WAIT AND IS NOT THE WAIT (Q-HUB-343): "not waiting on you", "nothing is waiting on you", "you owe nothing".
 const OWING = [
-  /\bwaiting (?:on|for) you\b/i,
-  /\byou owe\b/i,
+  /(?<!\b(?:not|never|no longer|nothing is|nothing was|nobody is|no one is|isn'?t|aren'?t|wasn'?t)\s+)\bwaiting (?:on|for) you\b/i,
+  /\byou owe\b(?!\s+(?:nothing|no\b))/i,
   /\b(?:I'?m|I am|we'?re) waiting\b/i,
 ];
 
@@ -1114,7 +1141,7 @@ Doctrine §0e rule 2. A finding is recorded for the next plan in the NOTES.md \`
 
 // A declared stop is allowed, and is the whole point of having a way through. So is the declaration that an ejected step waits on
 // something: it is a hand-up, and the waiting and parking refusals below judge a turn that is carrying on.
-if (DECLARED.test(reply) || ejectDeclared) process.exit(0);
+if (DECLARED.test(reply) || ejectDeclared) finish();
 
 // PARKING is judged on the LAST SENTENCE only, and that is not a nicety.
 // "Let me know if that placement reads wrong — meanwhile I have started the
@@ -1145,7 +1172,7 @@ const parkHit = CONTINUING.test(tail) ? undefined : PARKING.find((re) => re.test
 // §2 — the manufactured next step, the closing reflection, a decision list made
 // of things that are not decisions — cannot be told from their honest twins by
 // a pattern, and stays CHECKLIST.
-if ((!waitHit && !parkHit) || !underPlan) process.exit(0);
+if ((!waitHit && !parkHit) || !underPlan) finish();
 
 const hit = waitHit ?? parkHit;
 const quote = ((waitHit ? reply : tail).match(hit) ?? [''])[0].trim().slice(0, 80);
@@ -1176,3 +1203,4 @@ Two ways forward, and only these two:
 If there is genuinely nothing to wait for and nothing left to do, say what
 landed and what is still owed — without a waiting sentence in it.
 `, reply);
+flushFaults();
