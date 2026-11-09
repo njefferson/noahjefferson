@@ -20,7 +20,7 @@ export const cases = [
       const rec = spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: recSession, transcript_path: h.transcript([h.turn(0, h.GO), h.reply(5, 'Line one.\n\nLine two.\n\nLine three.\n\n1. Fix it (recommended)\n2. Leave it\n\nI am waiting on you for the next decision.')]) }), encoding: 'utf8', env: { ...env, STOP_REFUSED_DIR: recDir } });
       let recKind = '';
       try { recKind = JSON.parse(readFileSync(join(recDir, `${recSession}.json`), 'utf8')).kind; } catch (e) { recKind = `unreadable: ${e.message}`; }
-      h.assertAll([
+      return h.assertAll([
         ['a choice fault beside another is listed and recorded as the choice kind', rec.status === 2 && /FAULT \d of 2: this reply's choice is not the first thing in it/.test(rec.stderr) && recKind === 'choice', `exit ${rec.status}, kind ${recKind}: ${rec.stderr}`],
         ['the reply with three faults is refused', many.status === 2, `exit ${many.status}: ${many.stderr}`],
         ['the refusal says how many faults it lists', /has 3 faults/.test(many.stderr), many.stderr],
@@ -32,7 +32,6 @@ export const cases = [
         ['a reply with one fault gets its own words and no count', one.status === 2 && /^STOP REFUSED — this reply tells the owner they are waited on/.test(one.stderr) && !/faults, listed together/.test(one.stderr), `exit ${one.status}: ${one.stderr}`],
         ['a reply with no fault passes', clean.status === 0, `exit ${clean.status}: ${clean.stderr}`],
       ]);
-      return true;
     },
   },
   {
@@ -44,12 +43,13 @@ export const cases = [
       const denied = ['I am not waiting on you.', 'Nothing is waiting on you.', 'The step is not waiting for you.', 'You owe nothing here.', 'You owe no answer.']
         .map((t) => [t, say(t)]);
       const wrong = denied.filter(([, r]) => r.status !== 0).map(([t, r]) => `${JSON.stringify(t)} exit ${r.status}: ${r.stderr.split('\n')[0].slice(0, 100)}`);
-      if (wrong.length) throw new Error(`refused, and should pass: ${wrong.join('; ')}`);
       const said = ['I am waiting on you for the answer.', 'The step is waiting for you.', 'You owe me an answer.']
         .map((t) => [t, say(t)]);
       const missed = said.filter(([, r]) => r.status !== 2 || !/waited on or owe something/.test(r.stderr)).map(([t, r]) => `${JSON.stringify(t)} exit ${r.status}: ${r.stderr.split('\n')[0].slice(0, 100)}`);
-      if (missed.length) throw new Error(`passed, and should be refused: ${missed.join('; ')}`);
-      return true;
+      return h.assertAll([
+        ['each sentence that denies the wait passes', wrong.length === 0, `refused, and should pass: ${wrong.join('; ')}`],
+        ['each affirmative form is refused for the owing wording', missed.length === 0, `passed, and should be refused: ${missed.join('; ')}`],
+      ]);
     },
   },
   {
@@ -69,12 +69,13 @@ export const cases = [
       // A finished state is refused while the session is paused, so the four paused and running forms are the passes.
       const passes = forms.slice(0, 4).map((f) => [f, say(`The line is changed.\n\n${f}`)]);
       const wrong = passes.filter(([, r]) => r.status !== 0).map(([f, r]) => `${JSON.stringify(f)} exit ${r.status}: ${r.stderr.split('\n')[0].slice(0, 120)}`);
-      if (wrong.length) throw new Error(`refused, and should pass: ${wrong.join('; ')}`);
       const blames = ['I am waiting on you for the answer.', 'You owe me the go-word.', 'The work stopped because of the owner.', 'The step is paused because you have not answered.']
         .map((t) => [t, say(`The line is changed. ${t}\n\n${forms[0]}`)]);
       const missed = blames.filter(([, r]) => r.status !== 2 || !/waited on or owe something/.test(r.stderr)).map(([t, r]) => `${JSON.stringify(t)} exit ${r.status}: ${r.stderr.split('\n')[0].slice(0, 120)}`);
-      if (missed.length) throw new Error(`passed, and should be refused: ${missed.join('; ')}`);
-      return true;
+      return h.assertAll([
+        ['each fixed state form passes', wrong.length === 0, `refused, and should pass: ${wrong.join('; ')}`],
+        ['each blame shape is refused for the owing wording', missed.length === 0, `passed, and should be refused: ${missed.join('; ')}`],
+      ]);
     },
   },
   {
@@ -87,14 +88,13 @@ export const cases = [
       const fresh = say(`Stopping here, then paused, pending the owner's go-word on the review.\n\nThe page is written.\n\n${tail}`);
       const older = say(`Stopping here: open for you is the choice below.\n\nThe page is written.\n\n${tail}`);
       const none = say(`The page is written.\n\n${tail}`);
-      h.assertAll([
+      return h.assertAll([
         ['the new declaration passes', fresh.status === 0, `exit ${fresh.status}: ${fresh.stderr}`],
         ['the older declaration passes', older.status === 0, `exit ${older.status}: ${older.stderr}`],
         ['the older declaration passes with a note saying it is the older form', /older form, accepted for one release/.test(older.stderr), older.stderr],
         ['the new declaration carries no such note', !/older form/.test(fresh.stderr), fresh.stderr],
         ['a reply with neither declaration is refused for the parking sentence', none.status === 2 && /hands the turn back for permission/.test(none.stderr), `exit ${none.status}: ${none.stderr}`],
       ]);
-      return true;
     },
   },
   {
@@ -117,7 +117,7 @@ export const cases = [
       const pausedNothing = run(planEnv, 'default', [h.turn(0, fix), h.reply(5, `${body}\n\nState: paused, pending nothing from the owner.`)]);
       const openNone = run(planEnv, 'default', [h.turn(0, fix), h.reply(5, `${body}\n\nOpen for you: nothing.\n${STATE}`)]);
       const several = run(planEnv, 'default', [h.turn(0, fix), h.reply(5, `${body}\n\nOpen for you: none.\nI am waiting on you for the go-word.`)]);
-      h.assertAll([
+      return h.assertAll([
         ['plan mode with no plan in force and no state line is refused with the forms named', planNone.status === 2 && /breaks the state line rule/.test(planNone.stderr) && /State: paused, pending the button on the plan/.test(planNone.stderr), `exit ${planNone.status}: ${planNone.stderr}`],
         ['plan mode with no plan in force and the state line passes', planWith.status === 0, `exit ${planWith.status}: ${planWith.stderr}`],
         ['a reply with no state line outside plan mode, with no correction, is not refused for it', notPlan.status === 0, `exit ${notPlan.status}: ${notPlan.stderr}`],
@@ -129,7 +129,6 @@ export const cases = [
         ['an open-for-you line saying nothing is refused', openNone.status === 2 && /open-for-you line says nothing is open/.test(openNone.stderr), `exit ${openNone.status}: ${openNone.stderr}`],
         ['the faults of the reply are listed together in one refusal', several.status === 2 && /has 2 faults/.test(several.stderr) && /FAULT \d of 2: this reply tells the owner they are waited on or owe something/.test(several.stderr), `exit ${several.status}: ${several.stderr}`],
       ]);
-      return true;
     },
   },
 ];

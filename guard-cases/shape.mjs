@@ -7,9 +7,12 @@
 // `cases` is an array of { name, guards, run(m, dir, h) }:
 //   name    unique across the whole suite; a name already taken is refused when the suite loads.
 //   guards  the plant keys this case answers for; a key named here must be a key of `plants`, or a plants run says NO PLANT.
-//   run     returns true when the case holds, or throws an Error naming the assertion that did not, with the text the call returned.
+//   run     ends in `return h.assertAll([...])`, which throws an Error naming every row that did not hold, with the text the call returned.
+//             A case that ends in a bare `return true` passes but is counted in the run's BARE BOOLEAN CASES line (`--bare-list` names
+//             them), because when it turns red it names no assertion.
 //             m   the guard modules, imported fresh from `dir`.
-//             dir the folder the guards sit in: the working copy in a plain run, a copy with one plant applied in a plants run.
+//             dir the folder the guards sit in: a copy of the checkout made when a plain run starts, or a copy with one plant applied in a
+//                 plants run. An edit of the working copy during a run is not seen by a case.
 //             h   the helpers of session-guards.test.mjs: tmp, sid, turn, tool, result, repo, world, seedHub, batchHub, suiteCopy and
 //                 the rest of the list at the object `H` there. `h.assertAll([[label, ok, got], ...])` throws with every failed label and
 //                 what it got, and is the way to end a case that checks more than one thing.

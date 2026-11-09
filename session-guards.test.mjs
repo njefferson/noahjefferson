@@ -10086,6 +10086,43 @@ const CASES = [
     },
   },
   {
+    name: 'step 140: a plain run copies the checkout when it starts and runs the cases in the copy, so an edit of the working copy during a case is not read as that case\'s write, while a case that writes into the folder it was given still fails',
+    guards: ['run_in_copy'],
+    run(m, dir, h) {
+      const body = [
+        "  { name: 'planted-edits-working-copy', run(m, d, h) { writeFileSync(join(h.HERE, 'CONFIG.md'), 'edited by another step while the run goes on\\n'); return true; } },",
+        "  { name: 'planted-writes-own-folder', run(m, d) { writeFileSync(join(d, 'CONFIG.md'), 'written by the case\\n'); return true; } },",
+      ].join('\n');
+      const c = h.suiteCopy(dir, { 'guard-cases/planted-edits.mjs': `import { writeFileSync } from 'node:fs';\nimport { join } from 'node:path';\nexport const cases = [\n${body}\n];\n` });
+      const edits = c.run(['--case=planted-edits-working-copy']);
+      const own = c.run(['--case=planted-writes-own-folder']);
+      return h.assertAll([
+        ['an edit of the working copy during a case passes and the run says it ran in a copy', edits.status === 0 && /^PASS  planted-edits-working-copy$/m.test(edits.stdout) && /^RUN IN A COPY: the cases ran against a copy of \d+ files/m.test(edits.stdout) && /^TRACKED FILES: \d+ watched; no case changed one$/m.test(edits.stdout), edits.stdout + edits.stderr],
+        ['a case that writes into the folder it was given still fails and names the file', own.status === 1 && /^FAIL  planted-writes-own-folder .*WROTE INTO THE WORKING COPY \(1\): CONFIG\.md was rewritten/m.test(own.stdout), own.stdout + own.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'step 140: the run counts the cases that end in a bare true and --bare-list names each, while a case that ends in assertAll is not counted',
+    guards: ['bare_detect', 'bare_list', 'asserted_mark'],
+    run(m, dir, h) {
+      const body = [
+        "  { name: 'planted-bare-true', run() { return true; } },",
+        "  { name: 'planted-labelled-rows', run(m, d, h) { return h.assertAll([['a row that holds', true, 'x']]); } },",
+      ].join('\n');
+      const c = h.suiteCopy(dir, { 'guard-cases/planted-bare.mjs': `export const cases = [\n${body}\n];\n` });
+      const plain = c.run(['--case=planted-bare-true,planted-labelled-rows']);
+      const listed = c.run(['--case=planted-bare-true,planted-labelled-rows', '--bare-list']);
+      return h.assertAll([
+        ['both planted cases pass', plain.status === 0 && /^2\/2 passed$/m.test(plain.stdout), plain.stdout + plain.stderr],
+        ['the count is one of two', /^BARE BOOLEAN CASES: 1 of 2 cases ended in a bare true/m.test(plain.stdout), plain.stdout],
+        ['a plain run names no case', !/^BARE BOOLEAN CASE: /m.test(plain.stdout), plain.stdout],
+        ['--bare-list names the bare case', /^BARE BOOLEAN CASE: planted-bare-true$/m.test(listed.stdout), listed.stdout],
+        ['--bare-list does not name the case that ends in assertAll', !/^BARE BOOLEAN CASE: planted-labelled-rows$/m.test(listed.stdout), listed.stdout],
+      ]);
+    },
+  },
+  {
     name: 'step 119: the lessons check prints its failures first and nothing long after them when it is red, exits 1, and prints every list of passes when it is green',
     guards: ['lessons_red_first'],
     run(m, dir, h) {
@@ -10819,7 +10856,7 @@ const PLANTS = {
   amend_hash: ['if (hashOf(mk.plan) !== mk.hash) return `The plan file', 'if (false) return `The plan file', 'approved-plan-guard.mjs'],
   amend_multi: ['for (const e of Array.isArray(input?.edits) ? input.edits : []) {', 'for (const e of Array.isArray(input?.edits) ? input.edits.slice(0, 1) : []) {', 'approved-plan-guard.mjs'],
   amend_ambiguous: ['if (n === 0 || (n > 1 && !e.replace_all)) return null;', 'if (n === 0) return null;', 'approved-plan-guard.mjs'],
-  amend_post: ['  if (moved.length) {\n    process.stderr.write(`approved-plan-guard --amend:', '  if (false) {\n    process.stderr.write(`approved-plan-guard --amend:', 'approved-plan-guard.mjs'],
+  amend_post: ['  if (moved.length) {\n    unmarked();\n    process.stderr.write(`approved-plan-guard --amend:', '  if (false) {\n    unmarked();\n    process.stderr.write(`approved-plan-guard --amend:', 'approved-plan-guard.mjs'],
   amend_rehash: ['{ ...mk, hash: snap.hash, scope: snap.scope, amendedAt:', '{ ...mk, hash: mk.hash, scope: snap.scope, amendedAt:', 'approved-plan-guard.mjs'],
   amend_post_agent: ['if (p.agent_id || !AMENDING.includes(tool)) process.exit(0);', 'if (!AMENDING.includes(tool)) process.exit(0);', 'approved-plan-guard.mjs'],
   amend_wired: ["const o = run(`node \"${join(HUB, 'approved-plan-guard.mjs')}\" --amend`, raw, root);", 'const o = { deny: false, status: 0 };', 'hook-dispatch.mjs'],
@@ -11609,18 +11646,28 @@ const PLANTS = {
   plants_closing_missed: ['\n  console.log(missed.length ? `MISSED PLANTS (', '\n  console.log(false ? `MISSED PLANTS (', 'session-guards.test.mjs'],
   plants_closing_stale: ['\n  console.log(stale.length ? `STALE PLANTS (', '\n  console.log(false ? `STALE PLANTS (', 'session-guards.test.mjs'],
   plants_by_file: ['\n    console.log(plantsByFile());\n    rmSync(STATE', '\n    rmSync(STATE', 'session-guards.test.mjs'],
+  run_in_copy: ['\n  const copy = checkoutCopy(HERE);\n', '\n  const copy = null;\n', 'session-guards.test.mjs'],
+  bare_detect: ['\n    else if (ok === true) bare = true;\n', '\n', 'session-guards.test.mjs'],
+  bare_list: ["\n  if (process.argv.includes('--bare-list')) for", "\n  if (false) for", 'session-guards.test.mjs'],
+  asserted_mark: ['\n  return ASSERTED;\n};', '\n  return true;\n};', 'session-guards.test.mjs'],
 };
+
+/**
+ * What `assertAll` returns when every row held. It is a mark of its own and not the boolean `true`, so the runner can tell a case
+ * that ended in `assertAll` from one that ends in a bare `return true` (Q-HUB-346); the runner turns it into a pass.
+ */
+const ASSERTED = Symbol('assertAll: every row held');
 
 /**
  * Fail a case with every failed assertion named and the text the call returned beside it (Q-HUB-319): a case that
  * ends in `return a && b && c` names nothing when it is red, and one red run could not be read.
  * @param {Array<[string, boolean, unknown]>} rows label, whether it held, and what the call returned
- * @returns {true} when every row held; else it throws
+ * @returns {symbol} the mark `ASSERTED` when every row held; else it throws
  */
 const assertAll = (rows) => {
   const failed = rows.filter(([, ok]) => !ok);
   if (failed.length) throw new Error(failed.map(([label, , got]) => `${label}: got ${JSON.stringify(String(got ?? '').slice(0, 600))}`).join(' | '));
-  return true;
+  return ASSERTED;
 };
 
 /**
@@ -11689,14 +11736,18 @@ for (const f of CASE_FILE_NAMES) {
 
 /**
  * The tracked files of a checkout, watched for a rewrite or a removal by a case (Q-HUB-266, Q-HUB-319).
- * @param {string} dir the checkout
- * @returns {{count: number, changed: () => string[]}|null} null when `dir` is not a git checkout; `changed()` names each tracked
+ * @param {string} dir the checkout, or the copy of one
+ * @param {string[]} [list] the files to watch, for a copy that holds no git directory; else git names the tracked files of `dir`
+ * @returns {{count: number, changed: () => string[]}|null} null when `dir` is not a git checkout and no list is given; `changed()` names each
  *   file whose content differs from what it held at the last call (or at this one), once.
  */
-function trackedWatch(dir) {
-  const ls = spawnSync('git', ['-C', dir, 'ls-files', '-z'], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
-  if (ls.status !== 0) return null;
-  const files = (ls.stdout ?? '').split('\0').filter(Boolean);
+function trackedWatch(dir, list = null) {
+  let files = list;
+  if (!files) {
+    const ls = spawnSync('git', ['-C', dir, 'ls-files', '-z'], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+    if (ls.status !== 0) return null;
+    files = (ls.stdout ?? '').split('\0').filter(Boolean);
+  }
   const stat = (f) => { try { const s = statSync(join(dir, f)); return `${s.size}:${s.mtimeMs}`; } catch { return null; } };
   const sum = (f) => { try { return createHash('sha256').update(readFileSync(join(dir, f))).digest('hex'); } catch { return null; } };
   const base = new Map(files.map((f) => [f, { stat: stat(f), sum: sum(f) }]));
@@ -11717,6 +11768,25 @@ function trackedWatch(dir) {
 }
 let WROTE = 0;
 
+/**
+ * A copy of the checkout made when a plain run starts (Q-HUB-345): the tracked files and the untracked files git does not ignore.
+ * The cases run in the copy and the watch compares the copy, so a file another step edits in the working copy during the run is
+ * not read as a case's write.
+ * @param {string} dir the checkout
+ * @returns {{dir: string, files: string[]}|null} null when `dir` is not a git checkout; else the copy's folder and the files in it
+ */
+function checkoutCopy(dir) {
+  const ls = spawnSync('git', ['-C', dir, 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+  if (ls.status !== 0) return null;
+  const copy = mkdtempSync(join(REAL_TMP, 'sg-run-'));
+  const files = [];
+  for (const f of new Set((ls.stdout ?? '').split('\0').filter(Boolean))) {
+    // A file another step removed while the copy was made is not in the copy.
+    try { copyGuard(join(dir, f), join(copy, f)); files.push(f); } catch { /* not copied */ }
+  }
+  return { dir: copy, files };
+}
+
 async function runAll(dir, only, filter, watch = null) {
   const imp = (f) => import(pathToFileURL(join(dir, f)).href + `?v=${Math.random()}`);
   const m = { pending: await imp('pending-guard.mjs'), keep: await imp('keep-info-guard.mjs'), recall: await imp('compact-recall.mjs'), reply: await imp('reply-guard.mjs'),
@@ -11725,8 +11795,12 @@ async function runAll(dir, only, filter, watch = null) {
   for (const c of CASES) {
     if (only && !(c.guards ?? []).includes(only)) continue;
     if (filter && !filter.some((w) => c.name.includes(w))) continue;
-    let ok = false, err;
+    let ok = false, err, bare = false;
     try { ok = await c.run(m, dir, H); } catch (e) { ok = false; err = e?.message; }
+    // A CASE THAT ENDS IN A BARE `return true` NAMES NO ASSERTION WHEN IT TURNS RED (Q-HUB-346): the mark assertAll returns is a pass,
+    // and a bare true is a pass the run lists as a case still to change.
+    if (ok === ASSERTED) ok = true;
+    else if (ok === true) bare = true;
     if (!ok && !err) err = 'the case returned false and threw nothing, so it names no assertion; its conditions are read in order';
     // A CASE NEVER WRITES INTO THE WORKING COPY: the tracked files of the checkout are compared after every case of a plain run.
     const wrote = watch ? watch.changed() : [];
@@ -11735,7 +11809,7 @@ async function runAll(dir, only, filter, watch = null) {
     // session through the inherited variable, fails for it, and puts the planted bytes back so the next case is judged alone.
     const leak = decoyChanged();
     if (leak) { ok = false; LEAKS++; err = `${err ? `${err}; ` : ''}LEAK: this case reached the planted live session (${leak})`; plantDecoy(); }
-    results.push({ name: c.name, ok, err });
+    results.push({ name: c.name, ok, err, bare });
     while (MADE.length) rmSync(MADE.pop(), { recursive: true, force: true });
   }
   return results;
@@ -11895,11 +11969,16 @@ if (process.argv.includes('--plants') && argValue('plant-keys') !== undefined) {
   rmSync(STATE, { recursive: true, force: true });
   process.exit(bad ? 1 : 0);
 } else {
-  const watch = trackedWatch(HERE);
-  const r = await runAll(HERE, undefined, caseList, watch);
+  const copy = checkoutCopy(HERE);
+  const watch = trackedWatch(copy ? copy.dir : HERE, copy ? copy.files : null);
+  const r = await runAll(copy ? copy.dir : HERE, undefined, caseList, watch);
   for (const x of r) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.name}${x.err ? ` (${x.err})` : ''}`);
   const failedN = r.filter((x) => !x.ok).length;
   console.log(`${r.length - failedN}/${r.length} passed`);
+  console.log(copy ? `RUN IN A COPY: the cases ran against a copy of ${copy.files.length} files made when the run started; an edit of the working copy during the run is not read as a case's write` : 'RUN IN THE WORKING COPY: this folder is not a git checkout, so no copy was made');
+  console.log(`BARE BOOLEAN CASES: ${r.filter((x) => x.bare).length} of ${r.length} cases ended in a bare true and name no assertion if they turn red; each is changed to end in h.assertAll, and --bare-list names them`);
+  if (process.argv.includes('--bare-list')) for (const x of r.filter((y) => y.bare)) console.log(`BARE BOOLEAN CASE: ${x.name}`);
+  if (copy) rmSync(copy.dir, { recursive: true, force: true });
   console.log(watch ? (WROTE ? `TRACKED FILES: ${watch.count} watched; ${WROTE} case${WROTE === 1 ? '' : 's'} wrote into the working copy` : `TRACKED FILES: ${watch.count} watched; no case changed one`) : 'TRACKED FILES: not watched, this folder is not a git checkout');
   // A RUN OF THE CASES SAYS THE PLANTS WERE NOT RUN (finding 16 of the plan of 1 November): a green line here was reported as the whole
   // suite for nine hours, and the plants are the other half of it.
