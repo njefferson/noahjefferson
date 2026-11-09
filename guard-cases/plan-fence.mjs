@@ -187,6 +187,32 @@ export const cases = [
     },
   },
   {
+    name: 'the background gate\'s two refusals each name the progress note file for the step the agent was sent and say that every send of the step writes that one file, and name a generic step-N file where the step cannot be read',
+    guards: ['fence_note_sentence_announce', 'fence_note_sentence_second'],
+    run(m, dir, h) {
+      const r = h.repo({ 'keep.mjs': 'x\n' });
+      const plan = h.fencePlan(basename(r.dir));
+      const s = h.sid('notefile');
+      const pad = join(tmpdir(), 'claude-0', '-home-user', s, 'scratchpad');
+      const printed = '/tmp/claude-0/tasks/suite-run.output';
+      const base = { session_id: s, agent_id: 'a1', cwd: r.dir };
+      const announce = h.decideFence(m, { ...base, tool_name: 'Bash', tool_input: { command: 'git status', run_in_background: true } }, { plan, entries: [], step: 152 });
+      const launched = [h.tool(0, 'n7', 'Write', { file_path: join(pad, 'progress', 'step-152.txt'), content: 'label: the suite run' }), h.tool(0, 'N1', 'Bash', { command: 'git status', run_in_background: true }),
+        h.result(0, 'N1', `Command running in background. Output is being written to: ${printed}`)];
+      const second = h.decideFence(m, { ...base, tool_name: 'Bash', tool_input: { command: 'git status' } }, { plan, entries: launched, step: 152 });
+      const unread = h.decideFence(m, { ...base, tool_name: 'Bash', tool_input: { command: 'git status', run_in_background: true } }, { plan, entries: [], step: null });
+      const words = /every send of the step writes that one file/;
+      const opens = (x, re) => typeof x === 'string' && /^PLAN FENCE/.test(x) && re.test(x);
+      return h.assertAll([
+        ['the announced-first refusal keeps its opening words and names the note for the step', opens(announce, /BACKGROUND RUN ANNOUNCED FIRST \(Q-HUB-295\)/) && announce.includes('progress/step-152.txt in the session scratchpad, and every send'), announce],
+        ['the announced-first refusal says every send writes that one file', opens(announce, words), announce],
+        ['the second-write refusal keeps its opening words and names the note for the step', opens(second, /BACKGROUND RUN, SECOND WRITE \(Q-HUB-295\)/) && second.includes('progress/step-152.txt in the session scratchpad, and every send'), second],
+        ['the second-write refusal says every send writes that one file', opens(second, words), second],
+        ['a step that cannot be read gets the generic note name', opens(unread, words) && unread.includes('progress/step-N.txt (N is the step number this agent was sent)'), unread],
+      ]);
+    },
+  },
+  {
     name: 'Q-HUB-365 and Q-HUB-366: the plan fence does not read the dry listing of stale plants (exit 1 under the dry switch) or the suite\'s usage refusal (exit 2) as a red run, and still reads exit 1 of any other run and a failed notice of exit 1 as red',
     guards: ['fence_dry_exit', 'fence_usage_exit', 'fence_notred_wired', 'fence_notred_notice'],
     run(m, dir, h) {
@@ -269,6 +295,8 @@ export const plants = {
   fence_usage_exit: ['  if (Number(code) === 2) return true;', '  if (Number(code) === 2) return false;', 'plan-fence.mjs'],
   fence_notred_wired: [' && !notRedSuiteExit(ran.get(x.result.tool_use_id), x.text)', '', 'plan-fence.mjs'],
   fence_notred_notice: ["\n      && !notRedSuiteExit([...ran.values()].at(-1) ?? '', x.text)) {", ') {', 'plan-fence.mjs'],
+  fence_note_sentence_announce: ["so the note is the one call of this turn and the launch is the one call of the next.${NOTE_SENTENCE}`;", "so the note is the one call of this turn and the launch is the one call of the next.`;", 'plan-fence.mjs'],
+  fence_note_sentence_second: ["and so does any report written after the run ends.${NOTE_SENTENCE}`;", 'and so does any report written after the run ends.`;', 'plan-fence.mjs'],
   fence_readonly_words: ['    if (/\\bread[- ]only\\b/i.test(line)) continue;\n', '', 'plan-fence.mjs'],
   fence_readonly_wired: ['const files = plan ? writableFiles(plan.text) : [];', 'const files = plan ? planFiles(plan.text) : [];', 'plan-fence.mjs'],
 };

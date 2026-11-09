@@ -7,8 +7,8 @@ import { join } from 'node:path';
 
 export const cases = [
   {
-    name: 'step 125: the brief offers no hard reset where the stale working copy holds uncommitted work, and names the fetch and the rebase instead; a clean stale working copy is still offered the reset',
-    guards: ['brief_stale_status', 'brief_stale_no_reset', 'brief_stale_rebase'],
+    name: 'step 152: the brief\'s catch-up names no command that discards work: a stale working copy that is clean and holds nothing the remote lacks is told a fast-forward pull, one with uncommitted changes or one ahead of the remote is told so with the counts and printed no command, and the hub itself prints the block once',
+    guards: ['brief_stale_status', 'brief_stale_ahead', 'brief_stale_ff', 'brief_stale_once'],
     run(m, dir, h) {
       const hub = h.tmp('sg-brief-');
       copyFileSync(join(dir, 'session-brief.mjs'), join(hub, 'session-brief.mjs'));
@@ -20,24 +20,36 @@ export const cases = [
       };
       const dirty = clone('dirtyrepo');
       const clean = clone('cleanrepo');
-      // The remote moves on after both clones were made, so both are one commit behind.
+      const ahead = clone('aheadrepo');
+      const hubClone = clone('hubrepo');
+      // The remote moves on after the clones were made, so each is one commit behind.
       origin.write('b.txt', '2\n');
       origin.g('add', '-A');
       origin.g('commit', '-q', '-m', 'the remote moves on');
       writeFileSync(join(dirty, 'wip.txt'), 'work in progress\n');
-      const brief = (d) => spawnSync('node', [join(hub, 'session-brief.mjs'), '--repo', d], { input: '', encoding: 'utf8', timeout: 60000 });
+      writeFileSync(join(ahead, 'mine.txt'), 'a commit the remote lacks\n');
+      spawnSync('git', ['-C', ahead, 'add', 'mine.txt'], { encoding: 'utf8' });
+      spawnSync('git', ['-C', ahead, '-c', 'user.name=case', '-c', 'user.email=case@example.invalid', 'commit', '-q', '-m', 'a local commit'], { encoding: 'utf8' });
+      copyFileSync(join(dir, 'session-brief.mjs'), join(hubClone, 'session-brief.mjs'));
+      const brief = (d, script = join(hub, 'session-brief.mjs')) => spawnSync('node', [script, '--repo', d], { input: '', encoding: 'utf8', timeout: 60000 });
       const a = brief(dirty);
       const b = brief(clean);
+      const c = brief(ahead);
+      const d = brief(hubClone, join(hubClone, 'session-brief.mjs'));
       const ao = `${a.stdout}${a.stderr}`;
       const bo = `${b.stdout}${b.stderr}`;
+      const co = `${c.stdout}${c.stderr}`;
+      const dout = `${d.stdout}${d.stderr}`;
+      const noCommand = (o, at) => !/reset --hard|git -C \S+ (?:pull|fetch|rebase)/.test(o.slice(o.indexOf(at)).split('\n').slice(0, 12).join('\n'));
       return h.assertAll([
         ['the dirty working copy is called stale', /DIRTYREPO IS STALE — 1 commit/.test(ao), ao],
-        ['the dirty working copy is offered no reset', !/reset --hard/.test(ao), ao],
-        ['the dirty working copy is told the fetch', ao.includes(`git -C ${dirty} fetch origin `), ao],
-        ['the dirty working copy is told the rebase', ao.includes(`git -C ${dirty} rebase origin/`), ao],
-        ['the dirty working copy is told its work is uncommitted', ao.includes('UNCOMMITTED WORK SITS IN DIRTYREPO'), ao],
-        ['the clean stale working copy is still offered the reset', bo.includes(`git -C ${clean} reset --hard origin/`), bo],
-        ['the clean stale working copy is not told it holds uncommitted work', !bo.includes('UNCOMMITTED WORK SITS IN'), bo],
+        ['the dirty working copy is offered no reset and no other command', !/reset --hard/.test(ao) && noCommand(ao, 'DIRTYREPO IS STALE'), ao],
+        ['the dirty working copy is told the counts of what the remote lacks', /DIRTYREPO HOLDS WORK THE REMOTE LACKS: 1 uncommitted change\(s\) and 0 commit\(s\)/.test(ao), ao],
+        ['the working copy ahead of the remote is called stale and offered no command', /AHEADREPO IS STALE — 1 commit/.test(co) && !/reset --hard/.test(co) && noCommand(co, 'AHEADREPO IS STALE'), co],
+        ['the working copy ahead of the remote is told the counts', /AHEADREPO HOLDS WORK THE REMOTE LACKS: 0 uncommitted change\(s\) and 1 commit\(s\)/.test(co), co],
+        ['the clean stale working copy is told a fast-forward pull and no reset', bo.includes(`git -C ${clean} pull --ff-only origin `) && !/reset --hard/.test(bo), bo],
+        ['the clean stale working copy is not told it holds work', !bo.includes('HOLDS WORK THE REMOTE LACKS'), bo],
+        ['the hub itself prints the stale block once', (dout.match(/IS STALE/g) ?? []).length === 1, dout],
       ]);
     },
   },
@@ -100,9 +112,10 @@ export const cases = [
 ];
 
 export const plants = {
-  brief_stale_status: ["\n    if (sh('git status --porcelain', dir)) {\n", "\n    if (false) {\n", 'session-brief.mjs'],
-  brief_stale_no_reset: ["\n    } else {\n      say(`      git -C ${dir} reset --hard origin/${br}`);", "\n    }\n    {\n      say(`      git -C ${dir} reset --hard origin/${br}`);", 'session-brief.mjs'],
-  brief_stale_rebase: ["\n      say(`      git -C ${dir} rebase origin/${br}`);\n", "\n      void 0;\n", 'session-brief.mjs'],
+  brief_stale_status: ['    if (dirtyCount > 0 || aheadCount > 0) {\n', '    if (false) {\n', 'session-brief.mjs'],
+  brief_stale_ahead: ['    if (dirtyCount > 0 || aheadCount > 0) {\n', '    if (dirtyCount > 0) {\n', 'session-brief.mjs'],
+  brief_stale_ff: ['pull --ff-only origin ${br}', 'reset --hard origin/${br}', 'session-brief.mjs'],
+  brief_stale_once: ['  if (checked.has(resolve(dir))) continue;\n', '', 'session-brief.mjs'],
   pending_print_record: ["\n    try { markPrinted(p); } catch { /* the refusal stands either way */ }\n", "\n", 'pending-guard.mjs'],
   pending_mark_write: ["\n  writeFileSync(f, JSON.stringify({ keys: [...seen, ...add] }));\n", "\n  void add;\n", 'pending-guard.mjs'],
   scope_untracked_listed: ["run('git status --porcelain=v1 -z --untracked-files=all');", "run('git status --porcelain=v1 -z');", 'plan-scope-check.mjs'],

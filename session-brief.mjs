@@ -94,7 +94,11 @@ say();
 //
 // The cost of staleness lands when you START WRITING, not when you push. One
 // fetch each, before the session has a chance to conclude anything.
+const checked = new Set();
 for (const [label, dir] of [[name, repo], ['the hub', hub]]) {
+  // The hub itself is both the repository and the hub: its block is printed once.
+  if (checked.has(resolve(dir))) continue;
+  checked.add(resolve(dir));
   const br = sh('git symbolic-ref --short HEAD', dir);
   if (!br) continue;
   sh(`git fetch --quiet origin ${br}`, dir);
@@ -105,16 +109,16 @@ for (const [label, dir] of [[name, repo], ['the hub', hub]]) {
     say('    build a merge on it, and do not number anything off the end of a file');
     say('    in it. Catch up first:');
     say('');
-    // A HARD RESET DESTROYS WHAT IS UNCOMMITTED, AND THE ADVICE WAS PRINTED TWICE WHILE FOUR FILES OF A STEP SAT IN THE TREE (Q-HUB-322).
-    // Where the tree holds anything uncommitted the brief names the landing step's own way up (a fetch, then a rebase of the commits
-    // onto the remote's head) and prints no reset at all.
-    if (sh('git status --porcelain', dir)) {
-      say(`      UNCOMMITTED WORK SITS IN ${label.toUpperCase()}: no reset is offered, because it would destroy it.`);
-      say('      Commit it as the plan\'s landing step does, then put the commits on top of the remote:');
-      say(`      git -C ${dir} fetch origin ${br}`);
-      say(`      git -C ${dir} rebase origin/${br}`);
+    // THE CATCH-UP NAMES NO COMMAND THAT DISCARDS WORK (Q-HUB-322, and the session brief of 9 November, which printed a hard reset over an
+    // unpushed commit). A copy that is behind, clean and holds nothing the remote lacks is told a fast-forward pull; a copy that holds
+    // uncommitted changes or commits the remote lacks is told so, with the counts, and is printed no command.
+    const dirtyCount = (sh('git status --porcelain', dir) ?? '').split('\n').filter(Boolean).length;
+    const aheadCount = parseInt(sh(`git rev-list --count origin/${br}..HEAD`, dir) ?? '0', 10) || 0;
+    if (dirtyCount > 0 || aheadCount > 0) {
+      say(`      ${label.toUpperCase()} HOLDS WORK THE REMOTE LACKS: ${dirtyCount} uncommitted change(s) and ${aheadCount} commit(s) not on origin/${br}.`);
+      say('      No command is printed, because a catch-up that is wrong here would discard it. Commit it, then put the commits on top of the remote as the plan\'s landing step does.');
     } else {
-      say(`      git -C ${dir} reset --hard origin/${br}`);
+      say(`      git -C ${dir} pull --ff-only origin ${br}`);
     }
     say('');
   }

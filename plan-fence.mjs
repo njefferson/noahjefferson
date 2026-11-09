@@ -595,6 +595,9 @@ export function callEvents(p, opts = {}) {
  */
 export function backgroundProblem(p, opts = {}) {
   if (!p.agent_id) return null;
+  // Both refusals name the one note file the gate reads for the step the agent was sent, because every send of a step writes that one file.
+  const step = 'step' in opts ? opts.step : agentSentStep(p);
+  const NOTE_SENTENCE = ` The note is the file ${step === null ? 'progress/step-N.txt (N is the step number this agent was sent)' : `progress/step-${step}.txt`} in the session scratchpad, and every send of the step writes that one file, never a file named for the send.`;
   const tool = String(p.tool_name ?? '');
   const input = p.tool_input ?? {};
   const sid = p.session_id;
@@ -614,7 +617,7 @@ export function backgroundProblem(p, opts = {}) {
         if (wrote) since = wroteAt;
         const own = noteWriteText({ type: 'tool_use', name: tool, input }, cwd, sid);
         if (!wrote && !(own !== null && own.includes(printed))) {
-          return `${HEAD} BACKGROUND RUN, SECOND WRITE (Q-HUB-295): the launch printed its output file, ${printed}, and the agent's next call is its progress note written again with that full path, so ${tool || 'this call'} is refused. The second write is the first call after the launch, and the read of the run's output comes after it, never before. Write progress/step-N.txt in the scratchpad with a line opening with "label:" naming the run and ${printed}, with no time in it, then end the turn on the run with no wait of its own. ${OWN_TURN} The note, the launch and the note's second write each stand alone in their turns, one call in each, and so does any report written after the run ends.`;
+          return `${HEAD} BACKGROUND RUN, SECOND WRITE (Q-HUB-295): the launch printed its output file, ${printed}, and the agent's next call is its progress note written again with that full path, so ${tool || 'this call'} is refused. The second write is the first call after the launch, and the read of the run's output comes after it, never before. Write progress/step-N.txt in the scratchpad with a line opening with "label:" naming the run and ${printed}, with no time in it, then end the turn on the run with no wait of its own. ${OWN_TURN} The note, the launch and the note's second write each stand alone in their turns, one call in each, and so does any report written after the run ends.${NOTE_SENTENCE}`;
         }
       }
     }
@@ -627,7 +630,7 @@ export function backgroundProblem(p, opts = {}) {
   });
   if (announced) return null;
   return `${HEAD} BACKGROUND RUN ANNOUNCED FIRST (Q-HUB-295): a background run is announced first, with the agent's progress note progress/step-N.txt in the session scratchpad written, before the launch, with a line opening with "label:" naming the run and the output file's full path, and no time, because no agent reads a clock and the gate and the status read the note's time from the file's own write time`
-    + `${out ? ` (${out} here)` : ' (this command names no output file, so the note is written again with the path the launch prints, straight after the launch)'}. Write that note, then launch. ${OWN_TURN} The note, the launch and the note's second write each stand alone in their turns, one call in each, so the note is the one call of this turn and the launch is the one call of the next.`;
+    + `${out ? ` (${out} here)` : ' (this command names no output file, so the note is written again with the path the launch prints, straight after the launch)'}. Write that note, then launch. ${OWN_TURN} The note, the launch and the note's second write each stand alone in their turns, one call in each, so the note is the one call of this turn and the launch is the one call of the next.${NOTE_SENTENCE}`;
 }
 
 /**
@@ -871,7 +874,7 @@ export function decide(p, opts = {}) {
   const review = reviewWriteProblem(p, plan, { ...('step' in opts ? { step: opts.step } : {}), ...(opts.classify ? { classify: opts.classify } : {}) });
   if (review) return review;
   // A BACKGROUND RUN IS ANNOUNCED FIRST, AND WRITTEN AGAIN ONCE THE LAUNCH PRINTS ITS OUTPUT FILE (`backgroundProblem`, Q-HUB-295).
-  const background = backgroundProblem(p, opts.entries ? { entries: opts.entries } : {});
+  const background = backgroundProblem(p, { ...(opts.entries ? { entries: opts.entries } : {}), ...('step' in opts ? { step: opts.step } : {}) });
   if (background) return background;
   // A RED RUN OF THE SUITE ENDS THE SEND: NO FILE OUTSIDE THE SCRATCHPAD IS WRITTEN AFTER IT (`writeAfterRedProblem`, Q-HUB-284).
   const afterRed = writeAfterRedProblem(p, opts.entries ? { entries: opts.entries } : {});

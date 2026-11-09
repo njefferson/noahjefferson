@@ -705,14 +705,9 @@ if (process.argv.includes('--amend')) {
   if (mk.session && p.session_id && mk.session !== p.session_id) process.exit(0);
   let snap;
   try { snap = snapshotOf(mk.plan); } catch { process.exit(0); }
-  // The re-recording mark of the PreToolUse check is answered here whatever the outcome: the hash moves to the file's, or the plan is out of force.
-  const rerecording = mk.rerecording;
-  delete mk.rerecording;
-  const unmarked = () => { if (rerecording) { try { writeFileSync(MARKER, JSON.stringify(mk, null, 1)); } catch { /* the mark ages out in the fence */ } } };
-  if (snap.hash === mk.hash) { unmarked(); process.exit(0); }
+  if (snap.hash === mk.hash) process.exit(0);
   const moved = mk.scope && typeof mk.scope === 'object' && !Array.isArray(mk.scope) ? scopeChanged(mk.scope, readFileSync(mk.plan, 'utf8')) : [...SCOPE_SECTIONS];
   if (moved.length) {
-    unmarked();
     process.stderr.write(`approved-plan-guard --amend: ${mk.plan} now differs from the approved plan in ${moved.join(', ')}, so the approval was NOT carried to it and no plan is in force. `
       + 'A changed plan goes back through plan mode.\n');
     process.exit(2);
@@ -758,10 +753,8 @@ if (FILE_TOOLS.includes(tool)) {
   if (current.plan && target === resolve(current.plan)) {
     const bar = amendProblem(current);
     if (bar) deny(bar);
-    // Q-HUB-352: this write is let through and the PostToolUse `--amend` moves the marker's hash to the file's only after it. Between the two the
-    // marker's hash is stale by this one write, so the marker says so: `rerecording` holds the hash it had and the time of the mark, which the
-    // plan fence reads as a plan being re-recorded and not a plan out of force. `--amend` removes it.
-    try { writeFileSync(MARKER, JSON.stringify({ ...current, rerecording: { fromHash: current.hash, at: new Date().toISOString() } }, null, 1)); } catch { /* no mark: the fence refuses as before */ }
+    // Q-HUB-352, Q-HUB-375: this write is let through and the PostToolUse `--amend` moves the marker's hash to the file's only after it. Between
+    // the two the plan fence reads the plan file's and the marker's write times (`rerecordingPlan`), so this guard leaves no mark of its own.
     process.exit(0);
   }
 }
