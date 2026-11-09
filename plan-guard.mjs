@@ -858,7 +858,7 @@ if (tool === 'ExitPlanMode') {
   // Loaded here only, because this file runs on every tool call and the plan parsing lives in hook-dispatch.mjs. They are loaded
   // before the sections are looked at, so that the refusal for a missing one carries the mark that sets no latch as well.
   const { goalsProblem, aimStandingProblem, reviewCommandProblem, commandsGitDirProblem, filesSpanProblem, stepShapeProblem, afterProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem, shippedCheckProblem,
-    readAfterCompactionProblem, costProblem, queueRoots, inScratchpad, NAMES_NO_LATCH, SHAPE_NO_LATCH } = await import('./hook-dispatch.mjs');
+    readAfterCompactionProblem, costProblem, lessonCitedProblem, queueRoots, inScratchpad, NAMES_NO_LATCH, SHAPE_NO_LATCH } = await import('./hook-dispatch.mjs');
   const { scratchpadOf } = await import('./report.mjs');
   // EVERY FAULT IS COLLECTED, AND THE APPROVAL CALL STOPS AT THE FIRST (LESSONS §435). `fault` is where a check's finding lands. At the
   // approval call it refuses at once, as each check did, so nothing a check does is run for a plan an earlier check has refused. In the
@@ -932,6 +932,9 @@ if (tool === 'ExitPlanMode') {
   // A PLAN THAT SENDS AGENTS PRICES THE RUN (Doctrine §11b): a "## Cost" section stating the pushes, the sends and the tier of each step.
   const cost = costProblem(top);
   if (cost) fault(cost);
+  // A PLAN THAT NAMES A GATE FUNCTION CITES THE LESSONS THAT RECORD FIXES FOR IT (Doctrine §11e, §11f, Q-HUB-306): its Design carries each by number.
+  const cited = lessonCitedProblem(top);
+  if (cited) fault(cited);
   // A PLAN THAT MARKS A ROADMAP ITEM IN RESTS ON A READ OF THE APP'S COMMIT LOG (Doctrine §0e rule 2, LESSONS §423): a line in
   // the notes is not the state of the app. The session's transcript has to hold a git log of the repository's production and
   // staging branches read after this plan file was first written, and the plan's "## Shipped check" says what it showed, item by

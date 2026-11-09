@@ -2210,6 +2210,41 @@ export function costProblem(text) {
 }
 
 /**
+ * Does a plan whose steps name a gate function cite, in its Design, each lesson that records a fix for it?
+ * @param {string} text  the plan (its current block).
+ * @param {{lessonsDir?: string}} [opts]  the folder of lesson files (default: `lessons/` beside this file).
+ * @returns {string|null} the refusal, or null. A gate function is a code span of the plan's `## Steps` made of letters and digits only
+ *   (no dot, no space, so a file name is not one) that begins in lower case and holds a capital (`restartedPlanMode`), the way the hub
+ *   writes its functions, so a plain word such as `main` or `Read` is not judged. Each file directly under `lessons/` whose text names
+ *   the function as a whole word is a lesson that records a fix for it; the plan's `## Design` has to carry that lesson's number as
+ *   `§N` or as the word lesson and N (leading zeros ignored). The refusal names each function and each number missing. Null for a plan
+ *   with no `## Steps`. It forces the Design to account for earlier fixes of the state the steps touch (Doctrine §11e, §11f), and
+ *   cannot judge that the account is true. A fault of the plan's shape: plan-guard.mjs refuses ExitPlanMode on it and sets no latch.
+ */
+export function lessonCitedProblem(text, opts = {}) {
+  const steps = planSection(text, 'Steps');
+  if (!steps.trim()) return null;
+  const names = [...new Set([...steps.matchAll(/`([a-z][a-z0-9]*[A-Z][A-Za-z0-9]*)`/g)].map((m) => m[1]))];
+  if (!names.length) return null;
+  const dir = opts.lessonsDir ?? join(HUB, 'lessons');
+  let files = [];
+  try { files = readdirSync(dir).filter((f) => /^\d+[a-z]?-.*\.md$/.test(f)).sort(); } catch { return null; }
+  const design = planSection(text, 'Design');
+  const cited = (n) => new RegExp(`(?:§\\s*|\\blessons?\\s+)0*${n}\\b`, 'i').test(design);
+  const bodies = files.map((f) => { let t = ''; try { t = readFileSync(join(dir, f), 'utf8'); } catch { /* an unreadable lesson names nothing */ } return { n: /^0*(\d+[a-z]?)-/.exec(f)[1], t }; });
+  const bad = [];
+  for (const name of names) {
+    const word = new RegExp(`\\b${name}\\b`);
+    const missing = bodies.filter((b) => word.test(b.t) && !cited(b.n)).map((b) => `§${b.n}`);
+    if (missing.length) bad.push(`- \`${name}\`: the Design does not cite ${missing.join(', ')}`);
+  }
+  if (!bad.length) return null;
+  return 'LESSONS CITED (Doctrine §11e, §11f): the plan\'s steps name a gate function that the lessons record fixes for, and its "## Design" does not account for them:\n'
+    + `${bad.slice(0, 8).join('\n')}${bad.length > 8 ? `\n… and ${bad.length - 8} more` : ''}\n`
+    + 'Read each lesson named, and cite it in the "## Design" as §N with what it fixed and why the plan\'s change is not that fix again.';
+}
+
+/**
  * A repository's open roadmap items.
  * @param {string} root  a repository's root directory.
  * @returns {{key: string, title: string}[]} each top-level `- [ ] **Title**` bullet of the

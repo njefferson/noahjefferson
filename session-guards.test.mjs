@@ -8973,6 +8973,57 @@ const CASES = [
     },
   },
 
+  // ---- Q-HUB-306: a plan whose steps name a gate function cites, in its Design, each lesson that records a fix for it ----
+  {
+    name: 'Q-HUB-306: a plan whose steps name a gate function in a code span is refused, with a fault of the plan\'s shape that sets no latch, unless its Design cites by number (as §N or as lesson N) each lesson that names the function; with every number cited, with a function no lesson names, with a file name that has a dot or with a plain word it passes',
+    guards: ['lesson_cited_wired', 'lesson_cited_filter', 'lesson_cited_camel', 'lesson_cited_sign'],
+    run(m, dir) {
+      const lessons = tmp('sg-lessons-');
+      writeFileSync(join(lessons, '460-planted-first.md'), '## 460 · first\n\nThe fix is in restartedPlanMode and nowhere else.\n');
+      writeFileSync(join(lessons, '007g-planted-second.md'), '## 7g · second\n\nrestartedPlanMode was read wrongly; main was also named here.\n');
+      writeFileSync(join(lessons, '012-planted-third.md'), '## 12 · third\n\nA lesson that names no function at all but the word main.\n');
+      const base = sendingPlan(dir, { cost: 'One step on the sonnet tier and one review, with one push.' });
+      const planWith = (span, design) => base.replace('Make the toolbar change.', `Make the toolbar change in ${span}.`)
+        .replace('## Commands', `${design === null ? '' : `## Design\n${design}\n\n`}## Commands`);
+      const check = (span, design) => m.dispatch.lessonCitedProblem(planWith(span, design), { lessonsDir: lessons });
+      const refusedFor = (x, ...re) => typeof x === 'string' && /^LESSONS CITED/.test(x) && re.every((r) => r.test(x));
+      const fn = '`restartedPlanMode`';
+      const bothCited = check(fn, 'Earlier fixes: §460 and lesson 7g; this is not that fix again.');
+      const oneCited = check(fn, 'Earlier fixes: §460 only.');
+      const noDesign = check(fn, null);
+      const wrongNumber = check(fn, 'Earlier fixes: §46 and lesson 7g.');
+      const unnamed = check('`neverNamedByLesson`', null);
+      const dotted = check('`restartedPlanMode.mjs`', null);
+      const plainWord = check('`main`', null);
+      const noSteps = m.dispatch.lessonCitedProblem(planWith(fn, null).replace('## Steps', '## Notes'), { lessonsDir: lessons });
+      const noFolder = m.dispatch.lessonCitedProblem(planWith(fn, null), { lessonsDir: join(lessons, 'absent') });
+      // Through the plan guard at ExitPlanMode. The guard reads the hub copy's own lessons folder, which this case only reads and never
+      // writes: the lessons that name the function are asked of the default folder, and the Design that cites them all is built from that.
+      const R = repo({ 'a.txt': 'x\n' }, 'cited-repo');
+      const realRefusal = m.dispatch.lessonCitedProblem(planWith(fn, 'Earlier fixes: none.'));
+      const realNumbers = (/does not cite ([^\n]+)/.exec(realRefusal ?? '') ?? [])[1] ?? '';
+      const exitRefused = exitFor(dir, planWith(fn, 'Earlier fixes: none.'), R.dir);
+      const exitCited = exitFor(dir, planWith(fn, `Earlier fixes: ${realNumbers}.`), R.dir);
+      const said = (r) => `${r.stdout}${r.stderr}`;
+      const checks = [
+        ['every number cited passes', bothCited === null, bothCited],
+        ['one number cited names the other', refusedFor(oneCited, /restartedPlanMode/, /§7g/) && !/§460/.test(oneCited ?? ''), oneCited],
+        ['no Design names both', refusedFor(noDesign, /restartedPlanMode/, /§460/, /§7g/), noDesign],
+        ['a wrong number names the missing one only', refusedFor(wrongNumber, /§460/) && !/§7g/.test(wrongNumber ?? ''), wrongNumber],
+        ['a function no lesson names passes', unnamed === null, unnamed],
+        ['a file name with a dot passes', dotted === null, dotted],
+        ['a plain word passes', plainWord === null, plainWord],
+        ['a plan with no Steps passes', noSteps === null, noSteps],
+        ['a missing lessons folder passes', noFolder === null, noFolder],
+        ['the plan guard refuses with no latch', exitRefused.status === 2 && /LESSONS CITED/.test(said(exitRefused)) && /sets no latch/.test(said(exitRefused)), `${exitRefused.status} ${said(exitRefused)}`],
+        ['the plan guard passes the lessons check with every number cited', !/LESSONS CITED/.test(said(exitCited)), `${exitCited.status} ${said(exitCited)}`],
+      ];
+      const failed = checks.filter(([, ok]) => !ok);
+      if (failed.length) throw new Error(failed.map(([label, , got]) => `${label}: got ${JSON.stringify(String(got).slice(0, 600))}`).join(' | '));
+      return true;
+    },
+  },
+
   // ---- findings 16 and 23: a run of the cases says the plants were not run, and a run of plants says how many of the total ----
   {
     name: 'finding 16: a run of the cases ends with a line saying the plants were not run and how many there are, and a run of plants narrowed to some guard files ends with a line giving the count it ran beside the total, so the by-file runs can be added up',
@@ -11137,6 +11188,10 @@ const PLANTS = {
   cost_push: ['const numberBeside = ', 'const numberBeside = true || ', 'hook-dispatch.mjs'],
   cost_sends: ['const sends = /\\b(?:agents?|sends?|reviews?)\\b/i.test(body);', 'const sends = true;', 'hook-dispatch.mjs'],
   cost_tier: ['const tier = /\\b(?:opus|sonnet|haiku|fable|mythos|tier)\\b/i.test(body);', 'const tier = true;', 'hook-dispatch.mjs'],
+  lesson_cited_wired: ['  if (cited) fault(cited);', '  void 0;', 'plan-guard.mjs'],
+  lesson_cited_filter: ['word.test(b.t) && !cited(b.n))', 'word.test(b.t) && false)', 'hook-dispatch.mjs'],
+  lesson_cited_camel: ['`([a-z][a-z0-9]*[A-Z][A-Za-z0-9]*)`', '`([A-Za-z][A-Za-z0-9]*)`', 'hook-dispatch.mjs'],
+  lesson_cited_sign: ['(?:§\\\\s*|\\\\blessons?\\\\s+)0*${n}', '(?:\\\\blessons?\\\\s+)0*${n}', 'hook-dispatch.mjs'],
   // Step 55: a step is four parts (Design part 4), and EJECT is a state of its own (Design part 3).
   step_shape_wired: ['  if (stepShape) fault(stepShape);\n', '\n', 'plan-guard.mjs'],
   step_shape_labels: ["export const STEP_LABELS = ['Facts', 'Do', 'Observe', 'Kill'];", "export const STEP_LABELS = ['Facts', 'Do', 'Observe'];", 'hook-dispatch.mjs'],

@@ -1020,6 +1020,15 @@ the clone every gate runs from; a copy anywhere else is not the doctrine.
 Agents are not held by it: `plan-fence.mjs` holds them to the approved plan
 instead (§11b).
 
+*Enforced by:* `lessonCitedProblem` in `hook-dispatch.mjs`, called by
+`plan-guard.mjs` at `--check` and at the approval call (Q-HUB-306): a plan whose
+`## Steps` name a gate function in a code span (letters and digits only, lower
+case first and a capital inside, so a file name or a plain word is not judged)
+cites in its `## Design`, as §N or as the word lesson and N, each lesson file
+whose text names that function, or is refused, naming the function and each
+number missing. It is a fault of the plan's shape and sets no latch. It forces
+the account of earlier fixes and cannot judge that the account is true.
+
 **The tell, stated so it can be caught early:** the urge to write a NEW rule
 is itself the signal to go and check whether it is already written. That urge
 arrives precisely when a failure feels freshly discovered, which is exactly
