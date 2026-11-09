@@ -1,0 +1,1 @@
+Q-HUB-334: the close's report named the findings it filed as a range of keys and not key by key, so the stop guard's demand for a key beside each queued line could be met only with the range; the fix, in `plans/seed-template.md` and `plan-seed.mjs`, is that the close's report names each filed key beside the line it came from (found on 8 November, filed in step 118).

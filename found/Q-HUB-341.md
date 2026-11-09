@@ -1,0 +1,1 @@
+Q-HUB-341: a plan's Verification promised a main-thread read of a research digest and the manager fence refused the read as not of the record; the fix, in `plan-guard.mjs`, is that the plan check refuses a Verification line that names a main-thread read of a path outside the record (found on 8 November, filed in step 118).

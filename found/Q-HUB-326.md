@@ -1,0 +1,1 @@
+Q-HUB-326: a refused exit call counts as the newest plan-mode call, so a refusal of the exit for a shape fault, which sets no latch, still forces a fresh talk turn and another owner message; the fix, in `plan-guard.mjs`, is that the talk check counts only plan-mode calls that were not refused (found on 8 November, filed in step 118).

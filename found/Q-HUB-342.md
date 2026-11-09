@@ -1,0 +1,1 @@
+Q-HUB-342: the pending guard printed an undelivered message inside a refusal and the next prompt printed the same message again as never given, so it was answered twice; the fix, in `pending-guard.mjs`, is that a message printed in a refusal counts as given once that turn has ended (found on 8 November, filed in step 118).

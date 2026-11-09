@@ -1,0 +1,1 @@
+Q-HUB-331: the status page renders every Version line and every Open line ever written to the manager notes, twenty-seven and twenty-four on 8 November, twenty of the latter saying nothing; the fix, in `report.mjs`, is that the page shows the newest of each with the rest folded under it (found on 8 November, filed in step 118).

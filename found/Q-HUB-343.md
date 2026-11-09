@@ -1,0 +1,1 @@
+Q-HUB-343: the stop guard read a sentence that denied any wait on the owner as one asserting it; the fix, in `stop-guard.mjs`, is to allow the negated forms where one pattern does it, and otherwise to record why it is not worth the code (found on 8 November, filed in step 118).

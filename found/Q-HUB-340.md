@@ -1,0 +1,1 @@
+Q-HUB-340: a step edited a decision record without running the decisions check and the landing failed on a bare file name in that record; the fix, in `plan-guard.mjs`, is that the plan check refuses a step whose Files line names the decision records folder and whose text does not name the decisions check (found on 8 November, filed in step 118).

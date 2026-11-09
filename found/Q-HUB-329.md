@@ -1,0 +1,1 @@
+Q-HUB-329: the status prints no mode, so whether the harness's plan mode was on and whether the gates read it as the owner's or as a restart's could not be read; the fix, in `report.mjs`, is one line in every status giving both (found on 8 November, filed in step 118).

@@ -1,0 +1,1 @@
+Q-HUB-338: the stop guard refuses one fault of a reply per turn, so a reply with a missing compaction line, a missing tier line and three bold headers costs three follow-ups; the fix, in `stop-guard.mjs`, is that one refusal lists every fault of the reply (found on 8 November, filed in step 118).

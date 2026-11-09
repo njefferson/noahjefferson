@@ -1,0 +1,1 @@
+Q-HUB-333: a Found line whose text says there is no new finding is counted and sorted as a finding; the fix, in `report.mjs`, is that such a line counts as none (found on 8 November, filed in step 118).
