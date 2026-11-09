@@ -11630,7 +11630,7 @@ const PLANTS = {
   seed_call_print: ["hookEventName: 'PreToolUse', additionalContext: seedText", "hookEventName: 'PreToolUse', additionalContext: ''", 'hook-dispatch.mjs'],
   // Step 119 of the plan of 8 November: the case files, the runner's holds and the lessons check. Each line holds a newline, so the first match is the code and not this map.
   case_files_load: ['    CASES.push(c);\n  }\n  for (const [k, v] of Object.entries(ps)) {', '    void c;\n  }\n  for (const [k, v] of Object.entries(ps)) {', 'session-guards.test.mjs'],
-  case_files_helpers: ['let ok = false, err;\n    try { ok = await c.run(m, dir, H); }', 'let ok = false, err;\n    try { ok = await c.run(m, dir); }', 'session-guards.test.mjs'],
+  case_files_helpers: ['let ok = false, err, bare = false;\n    try { ok = await c.run(m, dir, H); }', 'let ok = false, err, bare = false;\n    try { ok = await c.run(m, dir); }', 'session-guards.test.mjs'],
   case_files_dup_case: ['\n    if (CASES.some((x) => x.name === c.name)) throw', '\n    if (false) throw', 'session-guards.test.mjs'],
   case_files_dup_plant: ['\n    if (PLANTS[k]) throw', '\n    if (false) throw', 'session-guards.test.mjs'],
   case_files_plants_merge: ['    PLANTS[k] = v;\n  }\n}', '    void v;\n  }\n}', 'session-guards.test.mjs'],
