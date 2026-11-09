@@ -5936,7 +5936,7 @@ const CASES = [
       const source = readFileSync(join(dir, 'session-guards.test.mjs'), 'utf8');
       const live = [...source.matchAll(/join\(HERE, '(?:found|doctrine|NOTES\.md|\.claude|\.github)'|foundQueue\(HERE\)/g)].map((x) => x[0]);
       // The control: the instrument must find a planted live read before the file is judged by it.
-      const planted = [...`const a = join(HE${'RE'}, 'found', x); foundQueue(HE${'RE'});`.matchAll(/join\(HERE, '(?:found|doctrine|NOTES\.md|\.claude|\.github)'|foundQueue\(HERE\)/g)].length;
+      const planted = [...`const a = join(H${'ERE'}, 'found', x); foundQueue(H${'ERE'});`.matchAll(/join\(HERE, '(?:found|doctrine|NOTES\.md|\.claude|\.github)'|foundQueue\(HERE\)/g)].length;
       return h.assertAll([
         ['the instrument finds the two planted live reads', planted === 2, planted],
         ['no case reads the found folder, the doctrine, NOTES.md, the settings, the workflows or the hook through the live home path', live.length === 0, live.join(' | ')],
