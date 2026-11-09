@@ -242,7 +242,12 @@ const PARKING = [
 ];
 
 /** The declaration §11c requires, and it has to be the FIRST line. */
-const DECLARED = /^\s*(?:[#*_>\s-]*)stopping here[,:]?\s*open for you\b/i;
+// THE STATE LINE (Q-HUB-359). A stop's first line is "Stopping here, then paused, pending <what lifts it>" or "Stopping here, then finished,
+// nothing pending". The older words, "Stopping here: open for you is <X>", are accepted beside it for one release so a session mid-plan on
+// the older clone is not refused (`DECLARED_OLD`); a pause is a state and never a decision listed as open.
+const DECLARED_NEW = /^\s*(?:[#*_>\s-]*)stopping here[,:]?\s*(?:then\s+)?(?:paused,\s*pending\b|finished,\s*nothing pending\b)/i;
+const DECLARED_OLD = /^\s*(?:[#*_>\s-]*)stopping here[,:]?\s*open for you\b/i;
+const DECLARED = { test: (text) => DECLARED_NEW.test(text) || DECLARED_OLD.test(text) };
 
 /** 4. OWING. A reply saying the reader is waited on, or owes anything, is
  *  refused (2026-09-28, LESSONS §370): say what is open for them instead. This
@@ -253,6 +258,10 @@ const OWING = [
   /(?<!\b(?:not|never|no longer|nothing is|nothing was|nobody is|no one is|isn'?t|aren'?t|wasn'?t)\s+)\bwaiting (?:on|for) you\b/i,
   /\byou owe\b(?!\s+(?:nothing|no\b))/i,
   /\b(?:I'?m|I am|we'?re) waiting\b/i,
+  // THE OWNER AS THE REASON A THING STOPPED (Q-HUB-359): a pause is a state with what lifts it, never a fault of the owner's.
+  /\b(?:stopped|paused|held|blocked|stuck|stalled)\s+(?:because|since)\s+(?:of\s+)?(?:you|the owner)\b/i,
+  /\bbecause\s+(?:you|the owner)\s+(?:have not|haven'?t|has not|hasn'?t|did not|didn'?t|not yet)\b/i,
+  /\b(?:you|the owner)\s+(?:are|is)\s+the\s+reason\b/i,
 ];
 
 /** A word saying whether work needs a tier: need, needs, needed, requires, or "no more than". */
@@ -623,7 +632,9 @@ if (owed) {
 LESSONS §370. Never "waiting on you", never "you owe". Name what is open
 instead: "Open for you: <the specific decision>". If the work is
 unfinished, carry on with it; if it genuinely stops, the first line is
-"Stopping here: open for you is <the specific thing>".
+"Stopping here, then paused, pending <what lifts it>" (or "Stopping here,
+then finished, nothing pending"), and the end of the reply is the state line,
+never a line saying nothing is open while the session is paused.
 `, reply);
 }
 
@@ -924,6 +935,48 @@ the report beneath them. Write the choice once.
 `, reply, 'choice');
 }
 
+/** 9b. THE STATE LINE (Q-HUB-359, Doctrine §0e rule 3). Every reply ends with one line of fixed words saying whether the session is paused
+ *  and pending what of the owner, running what, or finished: the paused form names the go-word, the button on the plan or the answer to the
+ *  choice above as what it is pending; the running form is "State: running, step N, nothing pending from the owner" and the finished form
+ *  is "State: finished, nothing pending from the owner". Narrow on purpose: it is owed only while the session is paused on the owner,
+ *  that is in plan mode with no plan in force, under a standing correction, or while the reply opens with a choice under a plan in force.
+ *  Refused once with the rest of the reply's faults: a reply whose last line is no state line, a state that is paused and says nothing is
+ *  pending, a state of finished while the session is paused, and an open-for-you line that says nothing or none is open. */
+const STATE_LINE = /^[#*_>\s-]*state\b[:,]?\s*(?:then\s+)?(?:paused,\s*pending\s+\S[^\n]*|running\b[^\n]*\bnothing pending from the owner[^\n]*|finished,\s*nothing pending[^\n]*)$/i;
+const STATE_TRAILER = /^(?:<?https?:\/\/\S+>?|\(.*\)|Status\b.*|[-*_]{3,})$/;
+
+/**
+ * The faults of a reply's end under the state line rule.
+ * @param {string} text  the reply.
+ * @returns {string[]} each fault in words: the last line that says something is no state line, a paused state saying nothing is pending, a
+ *   finished state (the session is paused here), an open-for-you line saying nothing or none is open; [] when the end is clean.
+ */
+function stateLineFaults(text) {
+  const lines = String(text).split('\n').map((l) => l.trim()).filter(Boolean);
+  const end = [...lines].reverse().find((l) => !STATE_TRAILER.test(l) && !/claude\.ai\/(?:code\/)?artifact\/\S/i.test(l)) ?? '';
+  const faults = [];
+  if (!STATE_LINE.test(end)) faults.push(`the last line of the reply is no state line ("${end.slice(0, 100)}")`);
+  else if (/^[#*_>\s-]*state\b[:,]?\s*(?:then\s+)?paused\b[^\n]*(?:\bpending\s+(?:nothing|none)\b|\bnothing\s+(?:is\s+)?(?:open|pending)\b)/i.test(end)) faults.push(`the state line says the session is paused and nothing is pending ("${end.slice(0, 100)}")`);
+  else if (/^[#*_>\s-]*state\b[:,]?\s*(?:then\s+)?finished\b/i.test(end)) faults.push(`the state line says finished while the session is paused on the owner ("${end.slice(0, 100)}")`);
+  const none = lines.find((l) => /^[#*_>\s-]*open for you\b[^\n]*\b(?:nothing|none)\b/i.test(l));
+  if (none) faults.push(`an open-for-you line says nothing is open while the session is paused ("${none.slice(0, 100)}")`);
+  return faults;
+}
+
+// Owed while paused on the owner: plan mode with no plan in force (the harness reports the mode in the Stop payload), a standing correction
+// or a choice open at the top of the reply under a plan in force.
+let noPlanInForce = false;
+try { noPlanInForce = !approvedPlan(); } catch { noPlanInForce = false; }
+const pausedOnOwner = (String(hook.permission_mode ?? '') === 'plan' && noPlanInForce)
+  || (underPlan && (!!correctionNow || opensWithChoice(reply)));
+const stateFaults = pausedOnOwner ? stateLineFaults(reply) : [];
+if (stateFaults.length) {
+  refuse(`STOP REFUSED — this reply's end breaks the state line rule: ${stateFaults.join('; ')}.
+
+Q-HUB-359, Doctrine §0e rule 3. The session is paused on the owner here (plan mode with no plan in force, a standing correction, or a choice open), and a pause is a state, never a line saying nothing is open. End the reply with one line of these words: "State: paused, pending the owner's go-word", "State: paused, pending the button on the plan", "State: paused, pending the owner's answer to the choice above", "State: running, step N, nothing pending from the owner" or "State: finished, nothing pending from the owner". Open for you lists decisions only.
+`, reply);
+}
+
 // 10. A RETURN TO THE OWNER WITH STEPS LEFT (Doctrine §0e rule 2, §11c). A turn
 // that ends while an approved plan has a step no agent has handed back for, and
 // with no agent of the session running, is the session handing the owner back
@@ -963,7 +1016,10 @@ the report beneath them. Write the choice once.
 
 /** The first line's declaration WITH what is open: "Stopping here: open for you
  *  is X", where X is at least a few words on the same line. */
-const DECLARED_OPEN = /^\s*(?:[#*_>\s-]*)stopping here[,:]?\s*open for you\b[ \t]*(?:is|are|:)?[ \t]*(\S[^\n]{6,})/i;
+const DECLARED_OPEN_OLD = /^\s*(?:[#*_>\s-]*)stopping here[,:]?\s*open for you\b[ \t]*(?:is|are|:)?[ \t]*(\S[^\n]{6,})/i;
+// The new form with what lifts the pause: "Stopping here, then paused, pending <at least seven characters>".
+const DECLARED_OPEN_NEW = /^\s*(?:[#*_>\s-]*)stopping here[,:]?\s*(?:then\s+)?paused,\s*pending\b[ \t]*(\S[^\n]{6,})/i;
+const DECLARED_OPEN = { test: (text) => DECLARED_OPEN_NEW.test(text) || DECLARED_OPEN_OLD.test(text) };
 
 /**
  * Does a reply declare its stop, saying what is open?
@@ -1141,7 +1197,13 @@ Doctrine §0e rule 2. A finding is recorded for the next plan in the NOTES.md \`
 
 // A declared stop is allowed, and is the whole point of having a way through. So is the declaration that an ejected step waits on
 // something: it is a hand-up, and the waiting and parking refusals below judge a turn that is carrying on.
-if (DECLARED.test(reply) || ejectDeclared) finish();
+if (DECLARED.test(reply) || ejectDeclared) {
+  // The older declaration passes for one release, and the pass says so (Q-HUB-359).
+  if (!FAULTS.length && DECLARED_OLD.test(reply) && !DECLARED_NEW.test(reply)) {
+    process.stderr.write('STOP PASSED — the declaration "Stopping here: open for you is <X>" is the older form, accepted for one release; the form now is "Stopping here, then paused, pending <what lifts it>" or "Stopping here, then finished, nothing pending".\n');
+  }
+  finish();
+}
 
 // PARKING is judged on the LAST SENTENCE only, and that is not a nicety.
 // "Let me know if that placement reads wrong — meanwhile I have started the
@@ -1196,8 +1258,9 @@ Two ways forward, and only these two:
      was wanted in the first place.
 
   2. DECLARE IT — make the FIRST line of your reply, verbatim:
-       Stopping here: open for you is <the specific thing>
-     Not at the end. Not "I'll hold". The first line, or it reads as
+       Stopping here, then paused, pending <what lifts it>
+     (the older "Stopping here: open for you is <the specific thing>" is
+     accepted for one release). Not at the end. Not "I'll hold". The first line, or it reads as
      "I am continuing" and the silence gets discovered by being asked.
 
 If there is genuinely nothing to wait for and nothing left to do, say what
