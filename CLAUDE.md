@@ -481,8 +481,7 @@ Every item below has actually happened.
  call again, answer the correction, read the filed messages and the page, send the
  review or amend the
  plan or enter plan mode as the review gate's refusal says, send a new plan through
- plan mode as the rules gate's refusal says, write the `Judged` and `Why` lines as the
- judgement gate's refusal says, put the plan right as a refusal of its shape says,
+ plan mode as the rules gate's refusal says, put the plan right as a refusal of its shape says,
  or carry on with the approved
  plan; that last refusal lifts once an agent is sent under the plan or the
  owner writes again. (Doctrine §0d; §0e rule 14; LESSONS §435.)
@@ -575,8 +574,9 @@ Every item below has actually happened.
  write and `report.mjs` renders: `Version:` and `Open:`, one line each; `What
  41:`, `Why 41:` and `Next 41:` for step 41's section; `Done 41:` to count a step
  done by decision whatever its newest end; `Next:` with no number, the next move;
- `Judged 41:` with the five-part judgement of step 41's hand-back (the judgement
- gate, below, which reads `Why 41:` as four parts of reasons); and `Found 41.3
+ `Judged 41:` with the five-part judgement of step 41's hand-back (no gate
+ demands the line since step 58 of the redesign plan removed that gate, as rule 2 of
+ the plans page records); and `Found 41.3
  fixed|stopping|queued:` to sort the third Found line of
  step 41's report (`Found 41.*` sorts the whole step). A plan with no `Order:` line
  gets a section for every step of its `## Steps` as well, and `Start 41: 07:15`
@@ -677,24 +677,7 @@ Every item below has actually happened.
  and refuses it when the file is missing or is not exactly what the plan in
  force gives, so an agent is never sent a copy that has drifted.
  (Doctrine §0e rule 13; LESSONS §409.)
-- **THE NEWEST HAND-BACK IS JUDGED IN WRITING, IN FIVE PARTS, AND THE STEP ABOUT
- TO GO CARRIES FOUR, BEFORE THE NEXT STEP GOES.** `status/manager.txt` in the
- session scratchpad carries one line, `Judged N: is: <what the hand-back showed,
- read from the transcript and the report> | why: <why it ended as it did> |
- route: <what that means for the route> | fails: <where the route fails next> |
- cheapest: <the cheapest route from here that holds the owner's rules>`, for each
- end of an agent for step N of the plan, however it ended, written after that
- end; and one line, `Why M: now: <why it goes now> | wrong: <what would make it
- wrong> | fails: <where it fails next> | cheapest: <why this is the cheapest
- route>`, for the step M about to go, one for each earlier end of that step and
- one for this send. Each part is ten characters or more. `judgedGate` in
- `hook-dispatch.mjs` refuses a send until the lines are there, in a plan with an
- Order (its Order, its Standing steps passing) and in a plan without one (its
- `## Steps`), fails closed when the session's agents cannot be read, and does not
- latch. Every status prints a Judgement line under the Review line, read by the
- same function. The lines are a record that a judgement was made, in the parts
- the owner asked for, and fresh; the reading is the manager's.
- (Doctrine §0e rule 2; LESSONS §407, §417.)
+- **JUDGEMENT LINES ARE NOT DEMANDED BY ANY GATE.** The gate that demanded them was removed by step 58 of the redesign plan, and the wall line and the review answer its reason; rule 2 of the plans page records it. (Doctrine §0e rule 2.)
 - **A PLAN RESTS ON QUOTED EVIDENCE AND ACCOUNTS FOR THE ROADMAP.** A plan that
  sends agents and whose Files names a repository has a `## What is` section
  whose bullets each quote, in double quotes, twelve characters or more of a line
