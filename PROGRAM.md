@@ -4089,7 +4089,7 @@ Depends: none.
 
 ### P-422. Q-HUB-377: the seed's landing block names neither a doctrine marker nor the workflow pin it moves with
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: the landing block of the seed template says the marker and the workflow pin move together or not at all, with a case that reads the sentence from the print.
 
@@ -4097,7 +4097,7 @@ Depends: none.
 
 ### P-423. Q-HUB-378: the hub pin check prints its two commits as bare ids that a runner's masking blanks
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: each commit `hub-pin-check.mjs` prints carries its subject beside it, with a case that shows the subject in the output.
 
@@ -4105,7 +4105,7 @@ Depends: none.
 
 ### P-424. Q-HUB-379: a take-up copies a plan's title whole and the third-person check refuses a title with a possessive
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: the take-up text says the title is written without that phrase and the plan check refuses a title the third-person check would refuse, with a case on each.
 
@@ -4113,7 +4113,7 @@ Depends: none.
 
 ### P-425. Q-HUB-380: the key a new program entry receives at its take-up can differ from the key the seed printed
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: the take-up step names the entry's final key in its report and the close step reads the key from the program and not from the plan's text, with a case on a renumbered entry.
 
@@ -4121,7 +4121,7 @@ Depends: none.
 
 ### P-426. Q-HUB-381: the scope judgement a landing writes has no bound on the diff it reads
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: the scope record carries the count of diff lines the judge read and `plan-scope-check.mjs` refuses a verdict whose count is under the diff's, with a case on a planted verdict that read part.
 
@@ -4129,7 +4129,7 @@ Depends: none.
 
 ### P-427. Q-HUB-382: the dispatcher's check of a call passes a history read the manager fence then refuses
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: the check runs the fence's own classifier on the call, with a case on a history read carrying the stat flag.
 
@@ -4137,7 +4137,7 @@ Depends: none.
 
 ### P-428. Q-HUB-383: the manager fence refuses a search whose pattern holds a slash, reading the pattern as a path
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: the fence reads a search's pattern argument as a pattern, or its refusal names the Grep tool as the route, with a case on a pattern holding a slash.
 
@@ -4145,7 +4145,7 @@ Depends: none.
 
 ### P-429. Q-HUB-384: the reads gate and the status print read two lists of refused reads
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: the gate and the print read one list and count a refusal before a compaction by one rule, with a case on a recall file refused before a compaction.
 
@@ -4161,7 +4161,7 @@ Depends: none.
 
 ### P-431. Q-HUB-386: nothing holds a plan's take-up before its other steps or its pull of the gates' clone to the plan's end
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: the take-up text carries no pull, the close carries it as its last act, and the plan check refuses a plan whose pull step runs beside a step that writes files, with a case on each.
 
@@ -4185,7 +4185,7 @@ Depends: none.
 
 ### P-434. Q-HUB-389: the dispatcher's check of a call is refused under a latch the plans page says it passes
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: the check passes every latch the plans page's list says it passes, with a case on a check run under a standing latch.
 
@@ -4251,7 +4251,7 @@ Depends: none.
 
 ### P-441. Q-HUB-396: the seed's commit step lists no plants of the suite file or of a doctrine page a step edits
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: the commit step the seed prints names the plants of every file the wave's steps edit, the suite file and the doctrine pages among them, with a case on the print.
 
@@ -4259,7 +4259,7 @@ Depends: none.
 
 ### P-442. Q-HUB-397: the seed gave the fence's case file to two steps and left the plans page out of the step whose finding counts a list there
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: a file a finding's fix counts a list in joins the step that owns the list's other places, and a case file goes to the step that owns its guard file only, with a case on a planted batch.
 
@@ -4275,7 +4275,7 @@ Depends: none.
 
 ### P-444. Q-HUB-399: the seed prints a wave of three landings where this wave ran one take-up, file steps and one landing
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: the seed and its template print the shape this wave ran, a claim-only take-up, file steps that prove their own new plants by key and one landing that proves in the foreground and pushes once, with the seed's cases in the suite file brought to it.
 
@@ -4283,7 +4283,7 @@ Depends: none.
 
 ### P-445. Q-HUB-400: the plan check asks every plan to answer the found file of a finding whose item is done
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: a finding whose program item reads done is not asked for in a plan's found answers, with a case on a done item and a queued one.
 
@@ -4291,7 +4291,7 @@ Depends: none.
 
 ### P-446. Q-HUB-401: the suite's runner reads only the first case switch of a run
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: the runner reads every case switch of a run, or the plan rule text says one switch to a run, with a case on a run that names two.
 
@@ -4299,7 +4299,7 @@ Depends: none.
 
 ### P-447. Q-HUB-402: the suite's latch helper reads only the session's own latch file
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The batch's third wave: the dispatcher with the status reader, the suite with the pin and scope checks, the plan check with the plans page, and the seed made to print this shape, four file steps at once and one landing.
 
 Acceptance: the helper takes an agent id and reads that agent's latch file, with a case on an agent's latch.
 
