@@ -125,7 +125,7 @@ import { join, dirname, basename, resolve as resolvePath } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { tailEntries, textOf, ownerMessagesSince } from './transcript-tail.mjs';
+import { tailEntries, textOf, ownerMessagesSince, ownerMode } from './transcript-tail.mjs';
 import { startedAt } from './pending-guard.mjs';
 import { load as loadLedger } from './reply-guard.mjs';
 
@@ -1134,6 +1134,27 @@ export function modelLine(sid) {
     : `Serving model: ${id}, not the top tier. Read from the newest main-thread reply in the session's transcript.`;
 }
 
+/**
+ * The status print's line for the harness's plan mode (Q-HUB-329).
+ * @param {string} sid  the session id.
+ * @param {string} [marker]  the approval marker's path; `~/.claude/APPROVED-PLAN.json` by default.
+ * @returns {string} one line giving the permission mode the owner's newest message in the transcript carried (`ownerMode`: `plan`,
+ *   `auto`, `default` and the like) and, in plan mode, whether the gates read it as the owner's or as a restart's
+ *   (`restartedPlanMode`: a plan mode that came with a compaction or a resume after the approval). "not read" with the reason when
+ *   the transcript cannot be found; a mode the message does not record is said to be unknown, never guessed.
+ */
+export function modeLine(sid, marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) {
+  const f = sid ? sessionFiles(sid) : null;
+  if (!f) return `Plan mode: not read (${sid ? `no transcript found for session ${sid}` : 'no CLAUDE_CODE_SESSION_ID in this shell'}).`;
+  const mode = ownerMode(tailEntries(f.main, 16 * 1024 * 1024));
+  if (!mode) return "Plan mode: unknown (the owner's newest message in the transcript records no permission mode).";
+  if (mode !== 'plan') return `Plan mode: off. The owner's newest message carried permission mode ${mode}, so the gates judge a call as outside plan mode.`;
+  const restart = restartedPlanMode({ transcript_path: f.main, session_id: sid }, marker);
+  return restart
+    ? `Plan mode: on, and the gates read it as a restart's: it came with a compaction or a resume after ${restart} was approved, so the plan stands and the mode is not the plan's.`
+    : "Plan mode: on, and the gates read it as the owner's: the owner's newest message carried permission mode plan and no restart began it.";
+}
+
 const refusedFile = (sid) => join(process.env.REFUSED_READS_DIR || join(homedir(), '.claude', 'refused-reads'), `${safeKey(sid)}.json`);
 
 /**
@@ -1440,6 +1461,21 @@ export function markerApprovalTime(marker = join(homedir(), '.claude', 'APPROVED
 }
 
 /**
+ * The step numbers the approval marker was written with.
+ * @param {string} [marker]  the approval marker's path; `~/.claude/APPROVED-PLAN.json` by default.
+ * @returns {Set<number>|null} the numbers of the marker's `steps` list (every step of the plan's Steps section at the approval), or null
+ *   when the marker holds no such list or cannot be read; every doubt reads as null, which keeps the rule that a send before the
+ *   approval is an earlier approval's. `stepEnds` keeps a send made before the approval time when its step is among these (Q-HUB-344).
+ */
+function approvedStepNumbers(marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) {
+  try {
+    const steps = JSON.parse(readFileSync(marker, 'utf8'))?.steps;
+    const nums = Array.isArray(steps) ? steps.filter((n) => Number.isInteger(n)) : [];
+    return nums.length ? new Set(nums) : null;
+  } catch { return null; }
+}
+
+/**
  * The first 64 KB of an agent's transcript.
  * @param {string} path  the agent's transcript.
  * @returns {string} the text of the file's first 64 KB, or '' when it cannot be
@@ -1691,6 +1727,10 @@ export function stepEnds(p) {
   // The harness gives every plan of a session one file, so the path alone cannot tell two approvals of it apart: an agent sent
   // before this plan's approval is an end of the earlier one. An agent whose start cannot be read is kept, as the review gate keeps it.
   const approvedFrom = markerApprovalTime();
+  // AN AMENDMENT APPROVED AT THE BUTTON IS THE SAME PLAN (Q-HUB-344): its marker's approval time is later than the sends that handed back
+  // DONE before it, and counting only sends after it read them as not sent. A marker that records the steps it was approved with
+  // (`approvedStepNumbers`) keeps an earlier send whose prompt names the plan in force and whose step is one of them.
+  const approvedSteps = approvedStepNumbers();
   for (const a of agentFiles(f.agents)) {
     const id = a.id;
     const path = a.file;
@@ -1702,7 +1742,7 @@ export function stepEnds(p) {
     const step = prompt?.step ?? null;
     if (end && ours && prompt && !ours.has(resolvePath(prompt.plan))) continue;
     const startAt = agentStart(path, head);
-    if (end && ours && Number.isFinite(startAt) && startAt < approvedFrom) continue;
+    if (end && ours && Number.isFinite(startAt) && startAt < approvedFrom && !(step !== null && approvedSteps?.has(step))) continue;
     if (!end) { running.push(`agent ${id}`); if (step !== null) runningSteps.add(step); runningStarts.push({ id, step, startAt }); continue; }
     ends.push({ id, step, how: end.how, at: end.at, startAt, last: end.last, path, ...(end.word ? { word: end.word, refusedBefore: end.refusedBefore } : {}) });
   }
@@ -2300,26 +2340,64 @@ function planInForce(marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) 
  *   line's place among that file's Found lines, counted from 1, and `key` is
  *   `<step>.<n>` ("41.3", the third Found line of step 41's report): the name the
  *   manager sorts it by in `status/manager.txt` (`managerNotes`), and the name the
- *   status prints it under. A report file rewritten with its Found lines in another
- *   order renames them, so the manager sorts a step's lines once its report is final.
+ *   status prints it under. Every send's report of a step is read (`reportFiles`) and a line is identified by its text, so a
+ *   resend that repeats the earlier lines renumbers nothing; a line whose words say there is nothing new is no finding.
  *   A file last written before `since` (ms; the plan's approval) is an earlier approval's of the same
  *   plan path and is not read; NaN or no value reads every file.
  */
 export function foundLines(pad, since = NaN) {
   if (!pad) return [];
   const dir = join(pad, 'progress');
-  let names = [];
-  try { names = readdirSync(dir).filter((n) => /^step-\d+-report\.txt$/.test(n)); } catch { return []; }
   const out = [];
-  for (const n of names.sort((a, b) => parseInt(a.slice(5), 10) - parseInt(b.slice(5), 10))) {
-    let text = '';
-    try { if (statSync(join(dir, n)).mtimeMs < since) continue; } catch { continue; }
-    try { text = readFileSync(join(dir, n), 'utf8'); } catch { continue; }
-    const step = parseInt(n.slice(5), 10);
+  const steps = new Set(reportFiles(pad).map((r) => r.step));
+  for (const step of [...steps].sort((a, b) => a - b)) {
+    // Every send's report of the step, the first send's first. A resend's report carries the Found lines of the sends before it
+    // (agent-rules), so a line is identified by its TEXT: the same text from a later send is the same finding and keeps the place it
+    // first had, and a resend that adds a line gives it the next number instead of renumbering the rest (Q-HUB-332).
+    const seen = new Set();
     let k = 0;
-    for (const l of text.split('\n')) if (/^Found:/.test(l.trim())) { k++; out.push({ step, n: k, key: `${step}.${k}`, file: join(dir, n), line: clip(l.trim()) }); }
+    for (const r of reportFiles(pad).filter((x) => x.step === step)) {
+      let text = '';
+      try { if (statSync(r.file).mtimeMs < since) continue; } catch { continue; }
+      try { text = readFileSync(r.file, 'utf8'); } catch { continue; }
+      for (const l of text.split('\n')) {
+        const t = l.trim();
+        if (!/^Found:/.test(t) || NO_FINDING.test(t)) continue;
+        const line = clip(t);
+        if (seen.has(line)) continue;
+        seen.add(line);
+        k++;
+        out.push({ step, n: k, key: `${step}.${k}`, file: r.file, line });
+      }
+    }
   }
   return out;
+}
+
+/**
+ * A Found line whose own words say there is nothing new (Q-HUB-333): `Found: none`, `Found: none new.`, `Found: no new finding`,
+ * `Found: nothing new`. Narrow on purpose: `none` counts only when it ends the clause (`none of the plants caught it` is a finding).
+ */
+const NO_FINDING = /^Found:\s*(?:none(?:\s+(?:new|found|seen|to report))?\s*(?:[.;,:!]|$|\s[-—])|no\s+(?:new\s+)?(?:finding|defect|issue|problem)s?\b|nothing\s+(?:new|found|to\s+report)\b)/i;
+
+/**
+ * The report files of a scratchpad, every send of every step.
+ * @param {string|null} pad  the session scratchpad.
+ * @returns {{step: number, send: number, file: string}[]} each `progress/step-N-report.txt` (send 1) and each
+ *   `progress/step-N-M-report.txt` (send M, the step number and then the send's number: the shape the seed's step text gives a step
+ *   sent again), by step then send; [] when there is no scratchpad or no such file.
+ */
+export function reportFiles(pad) {
+  if (!pad) return [];
+  const dir = join(pad, 'progress');
+  let names = [];
+  try { names = readdirSync(dir); } catch { return []; }
+  const out = [];
+  for (const n of names) {
+    const m = /^step-(\d+)(?:-(\d+))?-report\.txt$/.exec(n);
+    if (m) out.push({ step: Number(m[1]), send: m[2] ? Number(m[2]) : 1, file: join(dir, n) });
+  }
+  return out.sort((a, b) => a.step - b.step || a.send - b.send);
 }
 
 /** The manager's own notes, a plain-text file in the session scratchpad that `report.mjs` never rewrites. */
@@ -2528,7 +2606,9 @@ function stepRow(step, standing, done, s, pad) {
         : newest.how !== 'a report' ? `ended by ${newest.how}, no hand-back to count`
           : /^(?:REFUSED|FAILED|EJECT)\b/.test(lines[0] ?? '') ? lines[0].match(/^(?:REFUSED|FAILED|EJECT)/)[0]
             : `hand-back opens "${clip(lines[0] ?? '').slice(0, 40)}", not DONE`;
-  const report = pad ? join(pad, 'progress', `step-${step}-report.txt`) : `progress/step-${step}-report.txt (no scratchpad found)`;
+  // The newest send's report where the step was sent more than once (Q-HUB-332); the first send's path where none is written.
+  const sends = pad ? reportFiles(pad).filter((r) => r.step === step) : [];
+  const report = pad ? (sends.at(-1)?.file ?? join(pad, 'progress', `step-${step}-report.txt`)) : `progress/step-${step}-report.txt (no scratchpad found)`;
   let reportWritten = false;
   try { reportWritten = !!pad && statSync(report).isFile(); } catch { reportWritten = false; }
   const doneEnd = mine.filter((e) => e.how === 'a report' && DONE.test(firstLineOf(e.last))).at(-1) ?? null;
@@ -2816,6 +2896,14 @@ export function statusPage(st, given, now = new Date()) {
   const un = groups.unsorted.length;
   const unsortedLine = un ? [li(`${un} Found line${un === 1 ? ' is' : 's are'} not sorted yet by the manager; the status print lists ${un === 1 ? 'it' : 'each'}.`)] : [];
   const open = m.open.length ? m.open : openForOwner(st);
+  // THE NEWEST OF EACH, THE REST FOLDED (Q-HUB-331): the notes keep every Version and Open line ever written, and the page showed all of them.
+  // The newest is the last written; earlier ones sit under a closed disclosure so the page reads as it stands now.
+  const newestAndFolded = (lines, what) => {
+    if (lines.length < 2) return lines.map((v) => li(escapeHtml(v))).join('\n');
+    const older = lines.slice(0, -1);
+    return `${li(escapeHtml(lines.at(-1)))}\n<li><details><summary>${older.length} earlier ${what} line${older.length === 1 ? '' : 's'}</summary>\n<ul>\n${older.slice().reverse().map((v) => li(escapeHtml(v))).join('\n')}\n</ul>\n</details></li>`;
+  };
+  const openList = m.open.length ? newestAndFolded(m.open, 'Open') : open.map((o) => li(escapeHtml(o))).join('\n');
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -2856,14 +2944,14 @@ ${st.compacted ? `<p class="asof">${escapeHtml(compactedWords(st.compacted))}</p
 <section>
 <h2>Versions</h2>
 <ul>
-${m.versions.map((v) => li(escapeHtml(v))).join('\n') || li('none written')}
+${newestAndFolded(m.versions, 'Version') || li('none written')}
 </ul>
 </section>
 ${stepsHtml}
 ${reviewsHtml}<section>
 <h2>Open for you</h2>
 <ul>
-${open.map((o) => li(escapeHtml(o))).join('\n')}
+${openList}
 </ul>
 </section>
 <section>
@@ -2897,6 +2985,27 @@ export function writeStatusPage(sid, clock = readClock()) {
   const file = join(pad, 'status', 'fix-run.html');
   writeFileSync(file, statusPage(state, clock.status || 'no status has been given yet', clock.at ? new Date(clock.at) : new Date()));
   return file;
+}
+
+/**
+ * Rewrite the status page when the manager notes' newest unnumbered Next line has changed (Q-HUB-289).
+ * @param {string} sid  the session id.
+ * @param {{at: number, status: string}} [clock]  as `writeStatusPage` takes it.
+ * @returns {string|null} the page's path when it was rewritten; null when there is no scratchpad, no page yet (a page is created by a
+ *   status, never here), or the page already carries that Next line. The review takes its move from the notes' Next line, which only a
+ *   status rewrote into the page, so a review judged a step that was already cleared; the page now follows the line.
+ *   Like `writeStatusPage` it writes the page and only the page: no clock, no print, no memory.
+ */
+export function refreshPageForNext(sid, clock = readClock()) {
+  const pad = sid ? scratchpadOf(sid) : null;
+  if (!pad) return null;
+  const file = join(pad, 'status', 'fix-run.html');
+  let page = '';
+  try { page = readFileSync(file, 'utf8'); } catch { return null; }
+  const next = managerNotes(pad).next;
+  const shown = /The next move: ([^<]*)</.exec(page)?.[1] ?? '';
+  if (shown === escapeHtml(next)) return null;
+  return writeStatusPage(sid, clock);
 }
 
 /**
@@ -3140,6 +3249,14 @@ export async function waitForChange(sid, opts = {}) {
           out.push(`- agent ${a.id}${a.description ? ` "${a.description}"` : ''}, step ${a.step}${written ? `, written ${californiaTime(new Date(written))} (California)` : ''}.\n  Latest: ${latest}`);
         }
       }
+      // A PAUSED AGENT'S RUN IS READ, NOT WAITED ON (Q-HUB-317): an agent still running whose note has gone stale is flagged, and the wait
+      // prints for it what the status prints, the last line of the output file its note names and its last tool result.
+      const stale = [];
+      for (const a of now) {
+        const r = noteReading(a, pad, sid, Date.now());
+        if (r.flagged) stale.push(`${r.line}${flaggedRead(a, pad, r.text)}`);
+      }
+      if (stale.length) out.push('Running agents whose note is flagged, each read instead of waited on:', ...stale);
       out.push('This wait records nothing; the next status prints every ended agent.');
       return out.join('\n');
     }
@@ -3211,6 +3328,17 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
         { limit: Number(process.env.REPORT_WAIT_MS) || undefined, poll: Number(process.env.REPORT_WAIT_POLL_MS) || undefined });
     } catch (e) { out = `Wait: not read (${e?.message ?? e}).`; }
     console.log(out);
+    process.exit(0);
+  }
+  if (process.argv[2] === '--page-next') {
+    // THE PAGE FOLLOWS THE MANAGER'S NEXT LINE (Q-HUB-289): rewrites the page only when the notes' newest unnumbered Next line is not the
+    // one the page carries, and does nothing else (`refreshPageForNext`). The session is read as `--page` reads it.
+    let hook = {};
+    try { hook = JSON.parse(readFileSync(0, 'utf8')); } catch { /* no payload: the variable below */ }
+    const who = String(hook.session_id || process.env.CLAUDE_CODE_SESSION_ID || '');
+    let wrote = null;
+    try { wrote = refreshPageForNext(who); } catch (e) { console.log(`status page: not written (${e?.message ?? e})`); process.exit(0); }
+    console.log(wrote ? `status page written: ${wrote}` : 'status page: the Next line it carries is the notes\' newest, or there is no page yet; nothing written.');
     process.exit(0);
   }
   if (process.argv[2] === '--page') {
@@ -3292,6 +3420,10 @@ if (process.argv[1] && process.argv[1].endsWith('report.mjs')) {
   let model = '';
   try { model = modelLine(sid); } catch (e) { model = `Serving model: not read (${e?.message ?? e}).`; }
   console.log(model);
+  // THE HARNESS'S PLAN MODE, under the model (Q-HUB-329): the mode the owner's newest message carried and how the gates read it.
+  let planMode = '';
+  try { planMode = modeLine(sid); } catch (e) { planMode = `Plan mode: not read (${e?.message ?? e}).`; }
+  console.log(planMode);
   console.log('');
   console.log(status);
   if (m && m[1].padStart(5, '0') !== hhmm) console.log(`(the status said ${m[1]}; the clock says ${hhmm}, and that is what was stamped)`);
