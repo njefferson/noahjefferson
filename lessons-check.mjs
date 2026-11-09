@@ -371,6 +371,20 @@ if (CHECKLIST_ONLY) {
   process.exit(0);
 }
 
+// A RED RUN PRINTS ITS FAILURES FIRST AND NOTHING ELSE LONG (Q-HUB-298). The passes below are about three
+// hundred lines, and a tool result cut at the harness's output cap kept the head and dropped the tail, which
+// is where the failures used to sit: a red run could be read as a run with no failures. So while the check is
+// red it prints the failures, then one line of counts, and the lists of passes stay out of the output.
+if (failures.length) {
+  console.log(`=== lessons gate: RED, ${failures.length} failure${failures.length === 1 ? '' : 's'} ===`);
+  console.log(`\nFAILURES (${failures.length}):`);
+  for (const f of failures) console.log(`  ✗ ${f}`);
+  console.log(`\n${lessonCount} lessons · ${gates.length} gated · ${checklist.length} checklist · ${judgements.length} judgement · ${unverified.length} unverified here. The lists of passes are printed only when the check is green.`);
+  console.log('A lesson that declares no enforcement is a lesson that will be ignored');
+  console.log('again. Doctrine §16.8: make it a gate, not an intention. Exiting non-zero.');
+  process.exit(1);
+}
+
 console.log('=== lessons gate ===');
 console.log(`${lessonCount} lessons · ${gates.length} gated · ${checklist.length} checklist · ${judgements.length} judgement`);
 
@@ -392,11 +406,4 @@ if (unverified.length) {
   for (const u of unverified) console.log(`  ? ${u}`);
 }
 
-if (failures.length) {
-  console.log(`\nFAILURES (${failures.length}):`);
-  for (const f of failures) console.log(`  ✗ ${f}`);
-  console.log('\nA lesson that declares no enforcement is a lesson that will be ignored');
-  console.log('again. Doctrine §16.8: make it a gate, not an intention. Exiting non-zero.');
-  process.exit(1);
-}
 console.log('\nPASS — every lesson declares how it is enforced, and every cited gate exists.');

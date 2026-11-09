@@ -6,6 +6,34 @@
  *   node session-guards.test.mjs --plants  MADE TO FAIL: for each check, a copy of
  *                                          the guards with that check taken out, and
  *                                          a case naming it must then FAIL
+ *   node session-guards.test.mjs "--case=a name,another name"
+ *                                          only the cases whose names hold one of the
+ *                                          substrings. A value with a space is quoted
+ *                                          as the WHOLE switch, as shown: unquoted, the
+ *                                          shell cuts it at the first space, the rest
+ *                                          become stray words, and the run is refused
+ *                                          (Q-HUB-312). So is a filter that selects
+ *                                          more than half of the suite, which is the
+ *                                          cut filter's other face: `--allow-wide`
+ *                                          runs it anyway.
+ *   --plants --files=a.mjs,b.mjs | --touched | --dry   narrow or list the plants
+ *
+ * CASE FILES. Beside the cases and the plants below, the suite loads every `.mjs` file in
+ * `guard-cases/`, one per guard file, named for it (`guard-cases/report.mjs` holds the cases
+ * and plants of `report.mjs`), so that several steps can add cases at once without editing one
+ * file. A case file exports `cases` (an array of the shape below, whose `run(m, dir, h)` gets
+ * the helpers of this file as its third argument) and `plants` (the shape of `PLANTS`); a case
+ * or plant name that is already taken is refused at load. `guard-cases/shape.mjs` is the empty
+ * shape to copy. A plants run narrowed to a guard file runs that file's plants wherever they
+ * are written, and `--touched` counts a touched `guard-cases/X.mjs` as a touch of `X.mjs`.
+ *
+ * THE RUNNER'S OWN HOLDS. A plain run records the content of every tracked file of its own
+ * checkout before the first case and fails the case after which one is rewritten or removed
+ * (Q-HUB-266, Q-HUB-319). A plants run puts at most PLANT_CHUNK plants, 25 unless the
+ * environment says otherwise, in one process and runs the next chunk in a new one, because the
+ * modules of every plant stay in a process's heap (Q-HUB-315). Before it runs, a plants run
+ * names every plant whose line to take out its file no longer holds (Q-HUB-285), and its
+ * last lines repeat every plant missed or stale (Q-HUB-330).
  *
  * Covered: pending-guard.mjs (a message the owner sent and the session has not
  * been given), keep-info-guard.mjs (a commit that takes information back),
@@ -86,7 +114,7 @@
  * The queue records are shaped like the real ones: an `enqueue` carries the
  * message as `content`, a `dequeue` carries nothing, a `remove` carries it.
  */
-import { mkdtempSync, writeFileSync, copyFileSync, readFileSync, rmSync, appendFileSync, mkdirSync, existsSync, utimesSync, readdirSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, copyFileSync, readFileSync, rmSync, appendFileSync, mkdirSync, existsSync, utimesSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { tmpdir, homedir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -100,7 +128,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const FILES = ['pending-guard.mjs', 'keep-info-guard.mjs', 'compact-recall.mjs', 'reply-guard.mjs', 'transcript-tail.mjs',
   'plan-guard.mjs', 'hook-dispatch.mjs', 'report.mjs', 'drive-guard.mjs', 'approved-plan-guard.mjs', 'plan-scope-check.mjs', 'stop-guard.mjs',
   'push-guard.mjs', 'plan-fence.mjs', 'doctrine-read-guard.mjs', 'session-brief.mjs', 'CLAUDE.md', 'agent-rules.md', 'DOCTRINE.md',
-  'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-cost.mjs', 'plan-seed.mjs', 'plans/seed-template.md', 'session-guards.test.mjs', 'CONFIG.md', 'privacy-patterns.mjs', 'branch-guard.mjs'];
+  'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-cost.mjs', 'plan-seed.mjs', 'plans/seed-template.md', 'session-guards.test.mjs', 'CONFIG.md', 'privacy-patterns.mjs', 'branch-guard.mjs', 'lessons-check.mjs'];
 // Every copy of the guards makes a file's folder before it copies it: the doctrine's three pages sit in doctrine/.
 const copyGuard = (from, to) => { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to); };
 // The shared rules file the guards read beside themselves: its version, and the pointer line a plan writes for the hub
@@ -120,6 +148,7 @@ const MADE = [];
 const tmp = (p) => { const d = mkdtempSync(join(tmpdir(), p)); MADE.push(d); return d; };
 // Every file the guards keep per session lands here, never in the real
 // ~/.claude: a latch or a due marker left there by a test binds a real session.
+const REAL_TMP = tmpdir();
 const STATE = mkdtempSync(join(tmpdir(), 'sg-state-'));
 process.env.REFUSAL_LATCH_DIR = join(STATE, 'latch');
 process.env.DOCTRINE_DUE_DIR = join(STATE, 'due');
@@ -6941,7 +6970,7 @@ const CASES = [
   {
     name: 'the plants run narrowed to the guard files a commit touches: --files= lists only the plants of those files, --touched only the plants of the files git shows changed in the checkout, --dry runs none, and --touched outside a git checkout refuses rather than read "nothing touched"',
     guards: ['plants_files_flag', 'plants_touched_flag', 'plants_dry'],
-    run(m, dir) {
+    async run(m, dir) {
       const copy = repo({}, 'plants-copy');
       for (const f of FILES) copyGuard(join(dir, f), join(copy.dir, f));
       copy.g('add', '-A'); copy.g('commit', '-q', '-m', 'guards');
@@ -6951,6 +6980,9 @@ const CASES = [
       const begin = src.indexOf(needle) + needle.length - 2;
       const block = src.slice(begin, src.indexOf('\n};\n', begin) + 2);
       const plants = new Function(`return (${block})`)();
+      // The plants the case files under guard-cases/ write count too: the suite merges them into the one map.
+      const caseFolder = join(dir, 'guard-cases');
+      if (existsSync(caseFolder)) for (const f of readdirSync(caseFolder).filter((x) => x.endsWith('.mjs')).sort()) Object.assign(plants, (await import(`${pathToFileURL(join(caseFolder, f)).href}?v=${Math.random()}`)).plants ?? {});
       const countOf = (...names) => Object.values(plants).filter(([, , f]) => names.includes(f)).length;
       const total = Object.keys(plants).length;
       const run = (where, ...args) => spawnSync('node', [join(where, 'session-guards.test.mjs'), '--plants', '--dry', ...args], { encoding: 'utf8', timeout: 60000 });
@@ -9384,7 +9416,7 @@ const CASES = [
   },
   {
     name: 'the install against a temporary settings file wires ConfigChange beside the other events with the same command and no matcher',
-    guards: ['cfg_install'],
+    guards: ['cfg_install', 'install_path'],
     run(m, dir) {
       const f = join(tmp('sg-settings-'), 'settings.json');
       const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), '--install'], { encoding: 'utf8', env: { ...process.env, HOOK_DISPATCH_SETTINGS_FILE: f } });
@@ -9393,7 +9425,10 @@ const CASES = [
       const cc = s.hooks?.ConfigChange ?? [];
       const stop = s.hooks?.Stop ?? [];
       const cmd = (g) => g?.hooks?.[0]?.command ?? '';
-      return r.status === 0 && cc.length === 1 && cc[0].matcher === '' && cmd(cc[0]).endsWith('hook-dispatch.mjs" ConfigChange')
+      // The whole written command is compared, the clone path in front of the file name included (Q-HUB-267): a suffix check passed
+      // an install that wrote the wrong folder.
+      const want = (ev) => `node "${join(dir, 'hook-dispatch.mjs')}" ${ev}`;
+      return r.status === 0 && cc.length === 1 && cc[0].matcher === '' && cmd(cc[0]) === want('ConfigChange') && cmd(stop[0]) === want('Stop')
         && cmd(cc[0]).replace(/ ConfigChange$/, '') === cmd(stop[0]).replace(/ Stop$/, '');
     },
   },
@@ -9986,6 +10021,137 @@ const CASES = [
       return true;
     },
   },
+
+  // ---- step 119 of the plan of 8 November: the case files, the runner's holds, the lessons check ----
+  {
+    name: 'step 119: the suite loads every file under guard-cases/ and runs its cases with the suite\'s helpers as the third argument, names no assertion for a case that returns false, refuses a case or a plant whose name is taken, merges the plants of a case file into the one map, and counts a touched case file as a touch of the guard file it is named for',
+    guards: ['case_files_load', 'case_files_helpers', 'case_files_dup_case', 'case_files_dup_plant', 'case_files_plants_merge', 'touched_case_file', 'no_assertion_text'],
+    run(m, dir, h) {
+      const c = h.suiteCopy(dir, { 'planted-target.mjs': PLANTED_TARGET, 'guard-cases/planted.mjs': PLANTED_CASE_FILE, 'guard-cases/stop-guard.mjs': 'export const cases = [];\nexport const plants = {};\n' });
+      const pass = c.run(['--case=planted-caught-case']);
+      const fail = c.run(['--case=planted-failing-case']);
+      const dry = c.run(['--plants', '--dry', '--files=planted-target.mjs']);
+      appendFileSync(join(c.dir, 'guard-cases', 'stop-guard.mjs'), '\n// touched\n');
+      const touched = c.run(['--plants', '--dry', '--touched']);
+      const viaFiles = c.run(['--plants', '--dry', '--files=stop-guard.mjs']);
+      const countOf = (r) => Number(/^PLANTS TO RUN: (\d+) of/m.exec(r.stdout)?.[1] ?? -1);
+      const dupCase = h.suiteCopy(dir, { 'guard-cases/planted.mjs': PLANTED_CASE_FILE, 'guard-cases/planted-two.mjs': PLANTED_CASE_FILE.replace(/planted_/g, 'planted_two_') }).run(['--case=planted-caught-case']);
+      const dupPlant = h.suiteCopy(dir, { 'guard-cases/planted.mjs': PLANTED_CASE_FILE, 'guard-cases/planted-two.mjs': 'export const cases = [];\n' + PLANTED_CASE_FILE.slice(PLANTED_CASE_FILE.indexOf('export const plants')) }).run(['--case=planted-caught-case']);
+      return h.assertAll([
+        ['a case of a case file runs, receives the helpers and passes', pass.status === 0 && /^PASS  planted-caught-case$/m.test(pass.stdout) && /^1\/1 passed$/m.test(pass.stdout), pass.stdout + pass.stderr],
+        ['a case that returns false is a FAIL naming no assertion in so many words', fail.status === 1 && /^FAIL  planted-failing-case \(the case returned false and threw nothing, so it names no assertion/m.test(fail.stdout), fail.stdout + fail.stderr],
+        ['the plants of the case file are in the map the files flag narrows', countOf(dry) === 3 && /^PLANTS TO RUN: 3 of \d+: planted_caught, planted_missed, planted_stale$/m.test(dry.stdout), dry.stdout + dry.stderr],
+        ['a touched case file counts as a touch of its guard file', countOf(touched) > 0 && countOf(touched) === countOf(viaFiles), `${touched.stdout} | ${viaFiles.stdout}`],
+        ['a second case of a taken name is refused when the suite loads', dupCase.status !== 0 && /a case named "planted-caught-case" already stands/.test(dupCase.stdout + dupCase.stderr), dupCase.stdout + dupCase.stderr],
+        ['a second plant of a taken name is refused when the suite loads', dupPlant.status !== 0 && /a plant named "planted_caught" already stands/.test(dupPlant.stdout + dupPlant.stderr), dupPlant.stdout + dupPlant.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'step 119: a plain run compares the tracked files of its checkout after every case and fails the case after which one is rewritten or removed, naming the file, while a case that writes the bytes a file already holds, and a case that writes nothing, pass',
+    guards: ['tracked_watch', 'tracked_watch_fail'],
+    run(m, dir, h) {
+      const body = [
+        "  { name: 'planted-writer', run(m, d) { writeFileSync(join(d, 'CONFIG.md'), 'planted words\\n'); return true; } },",
+        "  { name: 'planted-remover', run(m, d) { rmSync(join(d, 'doctrine'), { recursive: true, force: true }); return true; } },",
+        "  { name: 'planted-same-bytes', run(m, d) { writeFileSync(join(d, 'CONFIG.md'), readFileSync(join(d, 'CONFIG.md'), 'utf8')); return true; } },",
+        "  { name: 'planted-quiet', run() { return true; } },",
+      ].join('\n');
+      const c = h.suiteCopy(dir, { 'guard-cases/planted-writes.mjs': `import { writeFileSync, readFileSync, rmSync } from 'node:fs';\nimport { join } from 'node:path';\nexport const cases = [\n${body}\n];\n` });
+      const quiet = c.run(['--case=planted-quiet']);
+      const same = c.run(['--case=planted-same-bytes']);
+      const writer = c.run(['--case=planted-writer']);
+      const remover = c.run(['--case=planted-remover']);
+      return h.assertAll([
+        ['a case that writes nothing passes and the run says how many files it watched', quiet.status === 0 && /^PASS  planted-quiet$/m.test(quiet.stdout) && /^TRACKED FILES: \d+ watched; no case changed one$/m.test(quiet.stdout), quiet.stdout + quiet.stderr],
+        ['a case that writes the bytes a file already holds passes', same.status === 0 && /^PASS  planted-same-bytes$/m.test(same.stdout), same.stdout + same.stderr],
+        ['a case that rewrites a tracked file fails and names it', writer.status === 1 && /^FAIL  planted-writer .*WROTE INTO THE WORKING COPY \(1\): CONFIG\.md was rewritten/m.test(writer.stdout) && /1 case wrote into the working copy/.test(writer.stdout), writer.stdout + writer.stderr],
+        ['a case that removes tracked files fails and names one', remover.status === 1 && /^FAIL  planted-remover .*WROTE INTO THE WORKING COPY \(\d+\): doctrine\/\S+ was removed/m.test(remover.stdout), remover.stdout + remover.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'step 119: the lessons check prints its failures first and nothing long after them when it is red, exits 1, and prints every list of passes when it is green',
+    guards: ['lessons_red_first'],
+    run(m, dir, h) {
+      const hub = (extra) => {
+        const d = h.tmp('sg-lessons-');
+        copyFileSync(join(dir, 'lessons-check.mjs'), join(d, 'lessons-check.mjs'));
+        mkdirSync(join(d, 'lessons'));
+        const good = '## 1 · A planted lesson\n\n**Enforced by:** JUDGEMENT\n\n**Smell:** a planted smell of the case.\n';
+        writeFileSync(join(d, 'lessons', '1-a-planted-lesson.md'), good);
+        let index = '# Lessons\n\nPlanted prose of the case.\n\n- **§1** — [A planted lesson](lessons/1-a-planted-lesson.md)\n';
+        if (extra) {
+          writeFileSync(join(d, 'lessons', '2-an-undeclared-lesson.md'), '## 2 · An undeclared lesson\n\nThis one declares nothing.\n');
+          index += '- **§2** — [An undeclared lesson](lessons/2-an-undeclared-lesson.md)\n';
+        }
+        writeFileSync(join(d, 'LESSONS.md'), index);
+        return spawnSync('node', [join(d, 'lessons-check.mjs')], { encoding: 'utf8', timeout: 60000 });
+      };
+      const red = hub(true);
+      const green = hub(false);
+      const failuresAt = red.stdout.indexOf('FAILURES (1):');
+      return h.assertAll([
+        ['a red run exits 1 and its first line says it is red', red.status === 1 && red.stdout.split('\n')[0] === '=== lessons gate: RED, 1 failure ===', red.stdout + red.stderr],
+        ['the failures come before anything else and name the lesson', failuresAt > 0 && failuresAt < 80 && /An undeclared lesson.*no "\*\*Enforced by:\*\*" line/.test(red.stdout), red.stdout],
+        ['a red run prints none of the lists of passes', !/JUDGEMENT — not checkable|GATED —|CHECKLIST —/.test(red.stdout), red.stdout],
+        ['a green run exits 0, prints the lists of passes and the closing line', green.status === 0 && /JUDGEMENT — not checkable/.test(green.stdout) && /^PASS — every lesson declares/m.test(green.stdout), green.stdout + green.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'step 119: a case filter cut at a space is refused, as stray words among the arguments and as a filter that selects more than half of the suite, --allow-wide runs the wide one on purpose, and a quoted value with a space is read whole',
+    guards: ['case_filter_stray', 'case_filter_wide'],
+    run(m, dir, h) {
+      const c = h.suiteCopy(dir);
+      const stray = c.run(['--case=the', 'dispatch', 'gate']);
+      const wide = c.run(['--case=a']);
+      const allowed = c.run(['--case=a', '--allow-wide', '--plants', '--dry', '--files=no-such-file.mjs']);
+      const quoted = c.run(['--case=no-such case name at all']);
+      return h.assertAll([
+        ['stray words are refused with exit 2, each named', stray.status === 2 && /CASE FILTER REFUSED: 2 words stand among the arguments that is no switch \("dispatch", "gate"\)/.test(stray.stdout) && !/passed$/m.test(stray.stdout), stray.stdout + stray.stderr],
+        ['a filter that selects more than half the suite is refused with exit 2', wide.status === 2 && /CASE FILTER REFUSED: it selects \d+ of \d+ cases, more than half of the suite/.test(wide.stdout) && !/passed$/m.test(wide.stdout), wide.stdout + wide.stderr],
+        ['--allow-wide lets the wide filter through', allowed.status === 0 && /^CASE FILTER: 1 substring: "a" matched \d+/m.test(allowed.stdout) && !/REFUSED/.test(allowed.stdout), allowed.stdout + allowed.stderr],
+        ['a quoted value with spaces is one substring and selects nothing here', quoted.status === 0 && /CASE FILTER: 1 substring: "no-such case name at all" matched 0; 0 of \d+ cases selected/.test(quoted.stdout), quoted.stdout + quoted.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'step 119: a plants run names every stale plant before it runs any, runs its plants in chunks of PLANT_CHUNK each in a new process, and ends with lines that repeat every plant missed and every plant stale',
+    guards: ['plants_stale_before', 'plants_chunk', 'plants_closing_missed', 'plants_closing_stale'],
+    run(m, dir, h) {
+      const c = h.suiteCopy(dir, { 'planted-target.mjs': PLANTED_TARGET, 'guard-cases/planted.mjs': PLANTED_CASE_FILE });
+      const one = c.run(['--plants', '--files=planted-target.mjs'], { PLANT_CHUNK: '1' });
+      const whole = c.run(['--plants', '--files=planted-target.mjs']);
+      const lines = one.stdout.split('\n');
+      const tail = lines.slice(-9).join('\n');
+      return h.assertAll([
+        ['the run fails, since one plant is missed and one is stale', one.status === 1 && whole.status === 1, `${one.status} ${whole.status}`],
+        ['the stale plant is named before any plant is run', /^STALE PLANTS BEFORE THE RUN \(1\): planted_stale in planted-target\.mjs\./m.test(one.stdout) && one.stdout.indexOf('STALE PLANTS BEFORE THE RUN') < one.stdout.indexOf('CAUGHT  plant'), one.stdout + one.stderr],
+        ['a chunk of one plant is a process of its own: two processes for two plants', /^PLANT PROCESSES: 2 of at most 1 plants each/m.test(one.stdout) && /PLANT PROCESSES: 1 of at most 25 plants each/.test(whole.stdout), `${one.stdout} | ${whole.stdout}`],
+        ['the chunks print their verdicts and none of their own end lines', /^CAUGHT  plant "planted_caught" in planted-target\.mjs$/m.test(one.stdout) && /^MISSED  plant "planted_missed" in planted-target\.mjs — its cases still passed$/m.test(one.stdout) && !/CHUNK-END/.test(one.stdout), one.stdout + one.stderr],
+        ['the count line still reads as before', /^PLANTS RUN: 3 of \d+ \(the plants of planted-target\.mjs; add the counts of the by-file runs against the total of \d+\)\.$/m.test(one.stdout), one.stdout],
+        ['the last lines repeat the plant missed and the plant stale', /^MISSED PLANTS \(1\): planted_missed$/m.test(tail) && /^STALE PLANTS \(1\): planted_stale$/m.test(tail), tail],
+      ]);
+    },
+  },
+  {
+    name: 'step 119: the plants of every guard file, counted by file in the run\'s own line, add up to the total, and a run narrowed to each file lists exactly that many',
+    guards: ['plants_by_file'],
+    run(m, dir, h) {
+      const dry = (...args) => spawnSync('node', [join(dir, 'session-guards.test.mjs'), '--plants', '--dry', ...args], { encoding: 'utf8', timeout: 120000 });
+      const full = dry();
+      const line = /^PLANTS BY FILE: (.*); (\d+) in all$/m.exec(full.stdout);
+      const perFile = line ? line[1].split(', ').map((x) => [x.slice(0, x.lastIndexOf(' ')), Number(x.slice(x.lastIndexOf(' ') + 1))]) : [];
+      const narrowed = perFile.map(([f, n]) => [f, n, Number(/^PLANTS TO RUN: (\d+) of/m.exec(dry(`--files=${f}`).stdout)?.[1] ?? -1)]);
+      const total = line ? Number(line[2]) : -1;
+      return h.assertAll([
+        ['the run prints its by-file line', Boolean(line) && perFile.length > 0, full.stdout],
+        ['the by-file counts add up to the total, which is the size of the plants map', perFile.reduce((s, [, n]) => s + n, 0) === total && total === Object.keys(PLANTS).length, `${total} ${Object.keys(PLANTS).length}`],
+        ['a run narrowed to each file lists the count the line gave', narrowed.length > 0 && narrowed.every(([, n, got]) => n === got) && narrowed.reduce((s, [, , got]) => s + got, 0) === total, JSON.stringify(narrowed.filter(([, n, got]) => n !== got))],
+      ]);
+    },
+  },
 ];
 
 // ---- fixtures of the plan seed's cases ----
@@ -10078,6 +10244,7 @@ const PLANTS = {
   app_auto_note: ["if (r?.outcome === 'under auto mode') process.stderr.write(`${AUTO_EXIT_NOTE}\\n`);", 'void r;', 'approved-plan-guard.mjs'],
   cfg_append: ["appendFileSync(join(pad, 'status', 'config-changes.jsonl'), JSON.stringify(rec) + '\\n');", 'void rec;', 'hook-dispatch.mjs'],
   cfg_install: ["'PostModelSwitch', 'ConfigChange'];", "'PostModelSwitch'];", 'hook-dispatch.mjs'],
+  install_path: ["command: `node \"${join(HUB, 'hook-dispatch.mjs')}\" ${ev}`", "command: `node \"${join(HUB, 'elsewhere', 'hook-dispatch.mjs')}\" ${ev}`", 'hook-dispatch.mjs'],
   cfg_status: ['    if (!(Number(r?.at) > stampAt)) continue;\n', '', 'report.mjs'],
   enqueue_count: ['        size++;\n', '\n', 'pending-guard.mjs'],
   dequeue_count: ["      } else if (e.operation === 'dequeue') {\n        size = Math.max(0, size - 1);", "      } else if (e.operation === 'dequeue') {\n", 'pending-guard.mjs'],
@@ -10883,7 +11050,7 @@ const PLANTS = {
   agent_fence_transcript: ['  return agentTranscriptPath(p);', '  return null;', 'plan-fence.mjs'],
 
   // The plants run narrowed (the plants of the test file itself are written across a line break, so no map entry holds its own target).
-  plants_files_flag: ["const todo = Object.entries(PLANTS).filter(([, [, , file]]) => !narrowTo || narrowTo.includes(file));\n  if (process.argv.includes('--dry')) {", "const todo = Object.entries(PLANTS);\n  if (process.argv.includes('--dry')) {", 'session-guards.test.mjs'],
+  plants_files_flag: ["const todo = Object.entries(PLANTS).filter(([, [, , file]]) => !narrowTo || narrowTo.includes(file));\n  // EVERY PLANT WHOSE LINE", "const todo = Object.entries(PLANTS);\n  // EVERY PLANT WHOSE LINE", 'session-guards.test.mjs'],
   plants_touched_flag: ["else if (process.argv.includes('--touched')) {\n    narrowTo = touchedFiles();", "else if (process.argv.includes('--touched')) {\n    narrowTo = [];", 'session-guards.test.mjs'],
   plants_dry: ["if (process.argv.includes('--dry')) {\n    console.log(`PLANTS TO RUN", "if (false) {\n    console.log(`PLANTS TO RUN", 'session-guards.test.mjs'],
 
@@ -11409,9 +11576,133 @@ const PLANTS = {
   seed_nomode: ["  if (!mode) return '';\n  const pad = 'pad' in opts", "  const pad = 'pad' in opts", 'hook-dispatch.mjs'],
   seed_prompt_print: ['try { const seedText = planEntrySeed(p); if (seedText) printed.push(seedText); }', 'try { void planEntrySeed; }', 'hook-dispatch.mjs'],
   seed_call_print: ["hookEventName: 'PreToolUse', additionalContext: seedText", "hookEventName: 'PreToolUse', additionalContext: ''", 'hook-dispatch.mjs'],
+  // Step 119 of the plan of 8 November: the case files, the runner's holds and the lessons check. Each line holds a newline, so the first match is the code and not this map.
+  case_files_load: ['    CASES.push(c);\n  }\n  for (const [k, v] of Object.entries(ps)) {', '    void c;\n  }\n  for (const [k, v] of Object.entries(ps)) {', 'session-guards.test.mjs'],
+  case_files_helpers: ['let ok = false, err;\n    try { ok = await c.run(m, dir, H); }', 'let ok = false, err;\n    try { ok = await c.run(m, dir); }', 'session-guards.test.mjs'],
+  case_files_dup_case: ['\n    if (CASES.some((x) => x.name === c.name)) throw', '\n    if (false) throw', 'session-guards.test.mjs'],
+  case_files_dup_plant: ['\n    if (PLANTS[k]) throw', '\n    if (false) throw', 'session-guards.test.mjs'],
+  case_files_plants_merge: ['    PLANTS[k] = v;\n  }\n}', '    void v;\n  }\n}', 'session-guards.test.mjs'],
+  touched_case_file: ['\n  return [...paths, ...paths.filter(', '\n  return [...paths, ...[].filter(', 'session-guards.test.mjs'],
+  no_assertion_text: ["\n    if (!ok && !err) err = 'the case returned false", "\n    if (false) err = 'the case returned false", 'session-guards.test.mjs'],
+  tracked_watch: ['\n        if (h !== b.sum) out.push(', '\n        if (false) out.push(', 'session-guards.test.mjs'],
+  tracked_watch_fail: ['\n    if (wrote.length) { ok = false; WROTE++;', '\n    if (false) { ok = false; WROTE++;', 'session-guards.test.mjs'],
+  lessons_red_first: ['\nif (failures.length) {\n  console.log(`=== lessons gate: RED', '\nif (false) {\n  console.log(`=== lessons gate: RED', 'lessons-check.mjs'],
+  case_filter_stray: ['\nif (strayWords.length) {\n', '\nif (false) {\n', 'session-guards.test.mjs'],
+  case_filter_wide: ["\n  if (selected * 2 > CASES.length && !process.argv.includes('--allow-wide')) {", '\n  if (false) {', 'session-guards.test.mjs'],
+  plants_stale_before: ['\n  if (stale.length) console.log(`STALE PLANTS BEFORE THE RUN', '\n  if (false) console.log(`STALE PLANTS BEFORE THE RUN', 'session-guards.test.mjs'],
+  plants_chunk: ['\nconst PLANT_CHUNK = Math.max(1, Math.floor(Number(process.env.PLANT_CHUNK)) || 25);', '\nconst PLANT_CHUNK = 25;', 'session-guards.test.mjs'],
+  plants_closing_missed: ['\n  console.log(missed.length ? `MISSED PLANTS (', '\n  console.log(false ? `MISSED PLANTS (', 'session-guards.test.mjs'],
+  plants_closing_stale: ['\n  console.log(stale.length ? `STALE PLANTS (', '\n  console.log(false ? `STALE PLANTS (', 'session-guards.test.mjs'],
+  plants_by_file: ['\n    console.log(plantsByFile());\n    rmSync(STATE', '\n    rmSync(STATE', 'session-guards.test.mjs'],
 };
 
-async function runAll(dir, only, filter) {
+/**
+ * Fail a case with every failed assertion named and the text the call returned beside it (Q-HUB-319): a case that
+ * ends in `return a && b && c` names nothing when it is red, and one red run could not be read.
+ * @param {Array<[string, boolean, unknown]>} rows label, whether it held, and what the call returned
+ * @returns {true} when every row held; else it throws
+ */
+const assertAll = (rows) => {
+  const failed = rows.filter(([, ok]) => !ok);
+  if (failed.length) throw new Error(failed.map(([label, , got]) => `${label}: got ${JSON.stringify(String(got ?? '').slice(0, 600))}`).join(' | '));
+  return true;
+};
+
+/**
+ * A copy of the suite and its guards as a git checkout under a temporary folder, with more files written into it
+ * (the case files and plants a case plants), for a case that runs the suite on a changed suite.
+ * @param {string} dir the folder the case was given
+ * @param {Record<string,string>} [extra] path in the copy -> text
+ * @returns {{dir: string, g: Function, write: Function, run: (args: string[], env?: object) => import('node:child_process').SpawnSyncReturns<string>}}
+ */
+function suiteCopy(dir, extra = {}) {
+  const c = repo({}, 'suite-copy');
+  for (const f of FILES) copyGuard(join(dir, f), join(c.dir, f));
+  for (const [f, text] of Object.entries(extra)) { mkdirSync(dirname(join(c.dir, f)), { recursive: true }); writeFileSync(join(c.dir, f), text); }
+  c.g('add', '-A'); c.g('commit', '-q', '-m', 'guards');
+  const run = (args, env = {}) => spawnSync('node', [join(c.dir, 'session-guards.test.mjs'), ...args], { encoding: 'utf8', timeout: 600000, maxBuffer: 256 * 1024 * 1024, env: { ...process.env, TMPDIR: REAL_TMP, ...env } });
+  return { ...c, run };
+}
+
+// A case file the step-119 cases plant in a copy of the suite, and the file its plants target. Three plants: one a case catches, one
+// whose case asserts too little (missed), one whose line the target no longer holds (stale).
+const PLANTED_TARGET = 'alpha-line\nsecond-line\nthird-line\n';
+const PLANTED_CASE_FILE = [
+  "import { readFileSync } from 'node:fs';",
+  "import { join } from 'node:path';",
+  'export const cases = [',
+  "  { name: 'planted-caught-case', guards: ['planted_caught'], run(m, dir, h) { return typeof h.tmp === 'function' && readFileSync(join(dir, 'planted-target.mjs'), 'utf8').includes('alpha-line'); } },",
+  "  { name: 'planted-missed-case', guards: ['planted_missed'], run() { return true; } },",
+  "  { name: 'planted-failing-case', run() { return false; } },",
+  '];',
+  'export const plants = {',
+  "  planted_caught: ['alpha-line', 'beta-line', 'planted-target.mjs'],",
+  "  planted_missed: ['second-line', 'other-line', 'planted-target.mjs'],",
+  "  planted_stale: ['no-such-text-anywhere', 'x', 'planted-target.mjs'],",
+  '};',
+  '',
+].join('\n');
+
+// ---- the case files under guard-cases/ (step 119 of the plan of 8 November) ----
+// Every `.mjs` file in the folder beside this one is loaded and its cases and plants join the ones above, so seven steps can write cases
+// at once, each in a file of its own. The helpers of this file reach a case file as the third argument of `run`.
+const H = { HERE, FILES, copyGuard, RULES_VERSION, rulesLine, GOALS_BLOCK, tmp, STATE, DECOY, DECOY_PAD, plantDecoy, decoyChanged, sid, ts, later, at, enq, deq, rem, turn, mid, tool, result, boundary,
+  summary, transcript, namedTranscript, fileReads, planPageRead, ASK, STOPMSG, GO, NOTE, repo, OWNER, QUOTED, OWN_WORDS, PLAN, LABELS, withLabels, STEPS_PLAN, fencePlan, ORDER_PLAN, reply, reviewPlan,
+  scopedPlan, endFor, putAgent, world, reviewWorld, judgedLine, whyLine, MANY_WHYS, judgedPad, notesPad, latched, rulesReadEntries, decideFence, owner, jsonl, waitRun, settle, uid, enterPlan, planOn,
+  exitPlan, exitEntry, buttonExit, appHome, SOURCE_MD, PLAN_TALK, QUEUE_NOTES, exitFor, sendingPlan, wholeGates, SCRIPT, scriptPlan, sha256, BT, afterPlanText, afterGatePlan, hookRepo, RULE_OWN,
+  rulesScopedPlan, hookAt, approvedEntries, workEntries, restartOf, approvalMarker, underPlanEnv, modelReply, SEED_PROGRAM, seedHub, seedRun, batchHub, batchRun, assertAll, suiteCopy };
+const CASE_DIR = join(HERE, 'guard-cases');
+const CASE_FILE_NAMES = existsSync(CASE_DIR) ? readdirSync(CASE_DIR).filter((f) => f.endsWith('.mjs')).sort() : [];
+for (const f of CASE_FILE_NAMES) {
+  FILES.push(`guard-cases/${f}`);
+  let mod;
+  try { mod = await import(pathToFileURL(join(CASE_DIR, f)).href); } catch (e) { throw new Error(`guard-cases/${f} could not be loaded: ${e?.message}`); }
+  const cs = mod.cases ?? [];
+  const ps = mod.plants ?? {};
+  if (!Array.isArray(cs) || typeof ps !== 'object' || ps === null || Array.isArray(ps)) throw new Error(`guard-cases/${f} must export cases (an array) and plants (an object)`);
+  for (const c of cs) {
+    if (typeof c?.name !== 'string' || typeof c?.run !== 'function') throw new Error(`guard-cases/${f} holds a case with no name or no run function`);
+    if (CASES.some((x) => x.name === c.name)) throw new Error(`guard-cases/${f}: a case named "${c.name}" already stands; case names are unique across the suite`);
+    CASES.push(c);
+  }
+  for (const [k, v] of Object.entries(ps)) {
+    if (!Array.isArray(v) || v.length !== 3 || !v.every((x) => typeof x === 'string')) throw new Error(`guard-cases/${f}: plant "${k}" must be [the line to take out, what replaces it, the guard file]`);
+    if (PLANTS[k]) throw new Error(`guard-cases/${f}: a plant named "${k}" already stands; plant names are unique across the suite`);
+    PLANTS[k] = v;
+  }
+}
+
+/**
+ * The tracked files of a checkout, watched for a rewrite or a removal by a case (Q-HUB-266, Q-HUB-319).
+ * @param {string} dir the checkout
+ * @returns {{count: number, changed: () => string[]}|null} null when `dir` is not a git checkout; `changed()` names each tracked
+ *   file whose content differs from what it held at the last call (or at this one), once.
+ */
+function trackedWatch(dir) {
+  const ls = spawnSync('git', ['-C', dir, 'ls-files', '-z'], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+  if (ls.status !== 0) return null;
+  const files = (ls.stdout ?? '').split('\0').filter(Boolean);
+  const stat = (f) => { try { const s = statSync(join(dir, f)); return `${s.size}:${s.mtimeMs}`; } catch { return null; } };
+  const sum = (f) => { try { return createHash('sha256').update(readFileSync(join(dir, f))).digest('hex'); } catch { return null; } };
+  const base = new Map(files.map((f) => [f, { stat: stat(f), sum: sum(f) }]));
+  return {
+    count: files.length,
+    changed() {
+      const out = [];
+      for (const [f, b] of base) {
+        const s = stat(f);
+        if (s === b.stat) continue;
+        const h = s === null ? null : sum(f);
+        if (h !== b.sum) out.push(`${f} ${h === null ? 'was removed' : b.sum === null ? 'was created' : 'was rewritten'}`);
+        b.stat = s; b.sum = h;
+      }
+      return out;
+    },
+  };
+}
+let WROTE = 0;
+
+async function runAll(dir, only, filter, watch = null) {
   const imp = (f) => import(pathToFileURL(join(dir, f)).href + `?v=${Math.random()}`);
   const m = { pending: await imp('pending-guard.mjs'), keep: await imp('keep-info-guard.mjs'), recall: await imp('compact-recall.mjs'), reply: await imp('reply-guard.mjs'),
     report: await imp('report.mjs'), dispatch: await imp('hook-dispatch.mjs'), push: await imp('push-guard.mjs'), fence: await imp('plan-fence.mjs'), doctrine: await imp('doctrine-read-guard.mjs') };
@@ -11420,7 +11711,11 @@ async function runAll(dir, only, filter) {
     if (only && !(c.guards ?? []).includes(only)) continue;
     if (filter && !filter.some((w) => c.name.includes(w))) continue;
     let ok = false, err;
-    try { ok = await c.run(m, dir); } catch (e) { ok = false; err = e?.message; }
+    try { ok = await c.run(m, dir, H); } catch (e) { ok = false; err = e?.message; }
+    if (!ok && !err) err = 'the case returned false and threw nothing, so it names no assertion; its conditions are read in order';
+    // A CASE NEVER WRITES INTO THE WORKING COPY: the tracked files of the checkout are compared after every case of a plain run.
+    const wrote = watch ? watch.changed() : [];
+    if (wrote.length) { ok = false; WROTE++; err = `${err ? `${err}; ` : ''}WROTE INTO THE WORKING COPY (${wrote.length}): ${wrote.slice(0, 6).join(', ')}${wrote.length > 6 ? ', ...' : ''}`; }
     // EVERY CASE IS HELD TO THE PLANTED LIVE SESSION: a case that changed its page or its notes reached a
     // session through the inherited variable, fails for it, and puts the planted bytes back so the next case is judged alone.
     const leak = decoyChanged();
@@ -11453,7 +11748,22 @@ function caseFilterHead(words) {
   return `CASE FILTER: ${words.length} substring${words.length === 1 ? '' : 's'}: ${words.map((w, i) => `"${w}" matched ${counts[i]}`).join(', ')}; ${total} of ${CASES.length} cases selected.${total === CASES.length ? ' THE FILTER MATCHED EVERY CASE: this is the whole suite.' : ''}`;
 }
 const caseList = caseWords(argValue('case'));
-if (caseList) console.log(caseFilterHead(caseList));
+// A FILTER CUT AT A SPACE IS REFUSED, NOT RUN (Q-HUB-312). An unquoted `--case=a name` reaches the suite as `--case=a` and a stray word
+// `name`, and a one-word substring such as `a` selected 281 of 293 cases in a run meant for one. The refusal names both faces: words that
+// stand after the switch, and a filter that selects more than half of the suite (`--allow-wide` runs that on purpose).
+const strayWords = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+if (strayWords.length) {
+  console.log(`CASE FILTER REFUSED: ${strayWords.length === 1 ? 'a word stands' : `${strayWords.length} words stand`} among the arguments that is no switch (${strayWords.map((w) => `"${w}"`).join(', ')}). A value with a space was cut at the space: quote the whole switch, as "--case=a name", or separate several names with commas and no space.`);
+  process.exit(2);
+}
+if (caseList) {
+  console.log(caseFilterHead(caseList));
+  const selected = CASES.filter((c) => caseList.some((w) => c.name.includes(w))).length;
+  if (selected * 2 > CASES.length && !process.argv.includes('--allow-wide')) {
+    console.log(`CASE FILTER REFUSED: it selects ${selected} of ${CASES.length} cases, more than half of the suite, where a name selects one. A value cut at a space does this; add --allow-wide to run so many on purpose.`);
+    process.exit(2);
+  }
+}
 /**
  * The guard files this checkout has changed.
  * @returns {string[]|null} the top-level file names `git status` shows modified, added or untracked in
@@ -11463,15 +11773,54 @@ if (caseList) console.log(caseFilterHead(caseList));
 function touchedFiles() {
   const r = spawnSync('git', ['-C', HERE, 'status', '--porcelain', '-uall'], { encoding: 'utf8' });
   if (r.status !== 0) return null;
-  return (r.stdout ?? '').split('\n').filter(Boolean).map((l) => l.slice(3).replace(/^.* -> /, '').trim());
+  const paths = (r.stdout ?? '').split('\n').filter(Boolean).map((l) => l.slice(3).replace(/^.* -> /, '').trim());
+  // A case file is named for the guard file it covers: touching guard-cases/X.mjs touches X.mjs for the plants.
+  return [...paths, ...paths.filter((p) => /^guard-cases\/[^/]+\.mjs$/.test(p)).map((p) => p.slice('guard-cases/'.length))];
 }
 
-if (process.argv.includes('--plants')) {
+// THE HEAP OF A PLANTS RUN (Q-HUB-315): every plant imports a fresh copy of nine guard modules, and a module stays in the process's
+// heap for good, so one process over three guard files passed two gigabytes near plant 680 and aborted. The plants run in chunks, each
+// chunk in a new process of its own, and the parent prints what the chunks print and adds up their verdicts.
+const PLANT_CHUNK = Math.max(1, Math.floor(Number(process.env.PLANT_CHUNK)) || 25);
+const plantsByFile = () => {
+  const n = new Map();
+  for (const [, , f] of Object.values(PLANTS)) n.set(f, (n.get(f) ?? 0) + 1);
+  return `PLANTS BY FILE: ${[...n].map(([f, c]) => `${f} ${c}`).join(', ')}; ${Object.keys(PLANTS).length} in all`;
+};
+/**
+ * Run one plant: the guards with its line taken out, and the cases that cite it.
+ * @param {string} key the plant's name
+ * @returns {Promise<'caught'|'missed'|'stale'>} stale when the file no longer holds the line to take out
+ */
+async function runPlant(key) {
+  const [from, to, file] = PLANTS[key];
+  const src = readFileSync(join(HERE, file), 'utf8');
+  if (!src.includes(from)) { console.log(`PLANT ${key}: the line to take out is not in ${file} — the plant is stale`); return 'stale'; }
+  const dir = mkdtempSync(join(tmpdir(), 'sg-plant-'));
+  for (const f of FILES) copyGuard(join(HERE, f), join(dir, f));
+  writeFileSync(join(dir, file), src.replace(from, to));
+  const r = await runAll(dir, key, caseList);
+  const caught = r.length > 0 && r.some((x) => !x.ok);
+  if (!r.length) console.log(`PLANT ${key}: no case names it in its guards`);
+  console.log(`${caught ? 'CAUGHT' : 'MISSED'}  plant "${key}" in ${file}${caught ? '' : ' — its cases still passed'}`);
+  rmSync(dir, { recursive: true, force: true });
+  return caught ? 'caught' : 'missed';
+}
+
+if (process.argv.includes('--plants') && argValue('plant-keys') !== undefined) {
+  // One chunk of a parent's run: run the plants named, print their lines, and end with the one line the parent reads.
+  let badInChunk = 0;
+  for (const key of argValue('plant-keys').split(',').filter(Boolean)) if ((await runPlant(key)) !== 'caught') badInChunk++;
+  console.log(`CHUNK-END bad=${badInChunk} leaks=${LEAKS}`);
+  rmSync(STATE, { recursive: true, force: true });
+  process.exit(0);
+} else if (process.argv.includes('--plants')) {
   let bad = 0;
+  const noPlant = [], missed = [], caughtKeys = new Set();
   // Every guard a case cites has a plant behind it: a cited name with none is
   // a check nobody has watched go red.
   for (const g of new Set(CASES.flatMap((c) => c.guards ?? []))) {
-    if (!PLANTS[g]) { console.log(`NO PLANT for "${g}": a case cites it, and nothing takes it out`); bad++; }
+    if (!PLANTS[g]) { console.log(`NO PLANT for "${g}": a case cites it, and nothing takes it out`); noPlant.push(g); bad++; }
   }
   let narrowTo = null;
   const filesFlag = argValue('files');
@@ -11481,34 +11830,62 @@ if (process.argv.includes('--plants')) {
     if (narrowTo === null) { console.log('--touched needs a git checkout of the guards; this directory is not one, so nothing is run.'); process.exit(1); }
   }
   const todo = Object.entries(PLANTS).filter(([, [, , file]]) => !narrowTo || narrowTo.includes(file));
+  // EVERY PLANT WHOSE LINE ITS FILE NO LONGER HOLDS IS NAMED BEFORE ANY IS RUN (Q-HUB-285): an edit that moves a plant's line is found
+  // here, in one line, where it used to be found one plant at a time in the middle of a long run.
+  const sources = new Map();
+  const sourceOf = (file) => { if (!sources.has(file)) sources.set(file, existsSync(join(HERE, file)) ? readFileSync(join(HERE, file), 'utf8') : null); return sources.get(file); };
+  const stale = todo.filter(([, [from, , file]]) => !(sourceOf(file) ?? '').includes(from)).map(([k]) => k);
+  if (stale.length) console.log(`STALE PLANTS BEFORE THE RUN (${stale.length}): ${stale.map((k) => `${k} in ${PLANTS[k][2]}`).join(', ')}. Each is skipped and counted as a failure; re-point its line to where the edit moved it.`);
   if (process.argv.includes('--dry')) {
     console.log(`PLANTS TO RUN: ${todo.length} of ${Object.keys(PLANTS).length}: ${todo.map(([k]) => k).join(', ')}`);
+    console.log(plantsByFile());
     rmSync(STATE, { recursive: true, force: true });
-    process.exit(0);
+    process.exit(stale.length || noPlant.length ? 1 : 0);
   }
   if (narrowTo) console.log(`NARROWED to ${narrowTo.length ? narrowTo.join(', ') : 'no guard file'}: ${todo.length} of ${Object.keys(PLANTS).length} plants. The plants of the other files were not run; the full run is the gate.`);
-  for (const [key, [from, to, file]] of todo) {
-    const src = readFileSync(join(HERE, file), 'utf8');
-    if (!src.includes(from)) { console.log(`PLANT ${key}: the line to take out is not in ${file} — the plant is stale`); bad++; continue; }
-    const dir = mkdtempSync(join(tmpdir(), 'sg-plant-'));
-    for (const f of FILES) copyGuard(join(HERE, f), join(dir, f));
-    writeFileSync(join(dir, file), src.replace(from, to));
-    const r = await runAll(dir, key, caseList);
-    const caught = r.length > 0 && r.some((x) => !x.ok);
-    if (!r.length) console.log(`PLANT ${key}: no case names it in its guards`);
-    console.log(`${caught ? 'CAUGHT' : 'MISSED'}  plant "${key}" in ${file}${caught ? '' : ' — its cases still passed'}`);
-    if (!caught) bad++;
-    rmSync(dir, { recursive: true, force: true });
+  bad += stale.length;
+  for (const k of stale) console.log(`PLANT ${k}: the line to take out is not in ${PLANTS[k][2]} — the plant is stale`);
+  const keys = todo.map(([k]) => k).filter((k) => !stale.includes(k));
+  const passThrough = process.argv.slice(2).filter((a) => a.startsWith('--case=') || a === '--allow-wide');
+  if (keys.length) console.log(`PLANT PROCESSES: ${Math.ceil(keys.length / PLANT_CHUNK)} of at most ${PLANT_CHUNK} plants each, a new process for each (Q-HUB-315).`);
+  let leaks = 0;
+  for (let i = 0; i < keys.length; i += PLANT_CHUNK) {
+    const chunk = keys.slice(i, i + PLANT_CHUNK);
+    const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), '--plants', `--plant-keys=${chunk.join(',')}`, ...passThrough],
+      { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, env: { ...process.env, TMPDIR: REAL_TMP } });
+    let end = null;
+    const reported = new Set();
+    for (const line of (r.stdout ?? '').split('\n')) {
+      if (!line) continue;
+      const e = /^CHUNK-END bad=(\d+) leaks=(\d+)$/.exec(line);
+      if (e) { end = e; continue; }
+      console.log(line);
+      const verdict = /^(CAUGHT|MISSED)  plant "(.+?)" in /.exec(line);
+      if (verdict) { reported.add(verdict[2]); if (verdict[1] === 'MISSED') missed.push(verdict[2]); else caughtKeys.add(verdict[2]); }
+    }
+    if (r.stderr) process.stderr.write(r.stderr);
+    if (end) { bad += Number(end[1]); leaks += Number(end[2]); continue; }
+    const lost = chunk.filter((k) => !reported.has(k));
+    console.log(`PLANT CHUNK ENDED EARLY: the process for ${chunk[0]} to ${chunk[chunk.length - 1]} ended with status ${r.status}${r.signal ? ` and signal ${r.signal}` : ''}${r.error ? ` (${r.error.message})` : ''} before its last line; ${lost.length} of its ${chunk.length} plants have no verdict and count as missed.`);
+    missed.push(...lost.map((k) => `${k} (no verdict)`));
+    bad += lost.length;
   }
   console.log(`PLANTS RUN: ${todo.length} of ${Object.keys(PLANTS).length}${narrowTo ? ` (the plants of ${narrowTo.join(', ') || 'no guard file'}; add the counts of the by-file runs against the total of ${Object.keys(PLANTS).length})` : ' (all of them)'}.`);
-  console.log(LEAKS ? `LEAK: the planted live session was changed in ${LEAKS} case run${LEAKS === 1 ? '' : 's'} of the plants` : 'planted live session unchanged by the plants');
+  console.log(plantsByFile());
+  // THE LAST LINES REPEAT EVERY PLANT MISSED OR STALE (Q-HUB-330): one missed plant in a long log took six searches to find.
+  console.log(missed.length ? `MISSED PLANTS (${missed.length}): ${missed.join(', ')}` : 'MISSED PLANTS: none');
+  console.log(stale.length ? `STALE PLANTS (${stale.length}): ${stale.join(', ')}` : 'STALE PLANTS: none');
+  if (noPlant.length) console.log(`CITED WITH NO PLANT (${noPlant.length}): ${noPlant.join(', ')}`);
+  console.log(leaks ? `LEAK: the planted live session was changed in ${leaks} case run${leaks === 1 ? '' : 's'} of the plants` : 'planted live session unchanged by the plants');
   rmSync(STATE, { recursive: true, force: true });
   process.exit(bad ? 1 : 0);
 } else {
-  const r = await runAll(HERE, undefined, caseList);
+  const watch = trackedWatch(HERE);
+  const r = await runAll(HERE, undefined, caseList, watch);
   for (const x of r) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.name}${x.err ? ` (${x.err})` : ''}`);
   const failedN = r.filter((x) => !x.ok).length;
   console.log(`${r.length - failedN}/${r.length} passed`);
+  console.log(watch ? (WROTE ? `TRACKED FILES: ${watch.count} watched; ${WROTE} case${WROTE === 1 ? '' : 's'} wrote into the working copy` : `TRACKED FILES: ${watch.count} watched; no case changed one`) : 'TRACKED FILES: not watched, this folder is not a git checkout');
   // A RUN OF THE CASES SAYS THE PLANTS WERE NOT RUN (finding 16 of the plan of 1 November): a green line here was reported as the whole
   // suite for nine hours, and the plants are the other half of it.
   console.log(`PLANTS NOT RUN: this run ran the cases only; the ${Object.keys(PLANTS).length} plants run with --plants, by guard file (--files=a.mjs), and the full suite is the cases and every plant.`);
