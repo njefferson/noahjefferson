@@ -1088,6 +1088,15 @@ number is only worth reading beside the build and device that produced it.
  identical, the engine is not distinguishing them and the number means something
  else — print both and say so rather than reporting the one that flatters.
 
+**Gather the details a judgement needs before a method is chosen.** Where a
+decision rests on how something looks or behaves, such as which of several methods
+suits the owner's own photographs, the session first has the test page print the
+facts the choice depends on, on the device, and runs the same gathering headless
+over the owner's frames, and chooses the method from what both print. The
+gathering is app-side work: it goes into the app's own instruction file by the
+app's next plan, with the test page that prints it, and not into the hub
+(Q-HUB-281).
+
 **When to build one, without asking:** any time an answer would otherwise be
 "that needs measuring on the device", any time a decision waits on a device
 capability (how large a texture, how many cores, whether a background thread can

@@ -385,12 +385,14 @@ tool's input, and a top-tier id is one carrying fable or mythos. While an
 approval marker is in force, the stop guard refuses the first reply after the
 serving model changes to a top-tier id unless its first line names the tier and
 says whether the work needs it, once for each change, with the words to use
-(LESSONS §434). `hook-dispatch.mjs` no longer holds a send on that line: step 58
-of the redesign plan removed `tierGate`, which refused an agent's send while the
-top tier served the main thread (LESSONS §459), because the plan's `## Cost`
-section names the tier of each step and the cost instrument prints tokens by
-tier at the plan's close (Design parts 9 and 11), which answers the reason
-that gate was written. A plan that sends
+(LESSONS §434). `hook-dispatch.mjs` still refuses a send while a top-tier id serves the main
+thread, in the dispatch gate (`dispatchGate`, `servingModel`), and that refusal
+sets no latch, because the owner's switch of model answers it (the plans page's
+list of refusals that set no latch names it). Step 58 of the redesign plan
+removed `tierGate`, the earlier gate that refused an agent's send on that line
+(LESSONS §459), because the plan's `## Cost` section names the tier of each step
+and the cost instrument prints tokens by tier at the plan's close (Design parts 9
+and 11), which answers the reason that gate was written. A plan that sends
 agents states its run in a `## Cost` section, the pushes, the sends and the tier
 of each step, and a plan that holds its commits for one push at its end names the
 turns the environment's git hook will force (LESSONS §458, §469).

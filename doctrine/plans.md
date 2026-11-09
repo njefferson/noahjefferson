@@ -499,6 +499,15 @@ every rule below while none of the hooks that enforce them was running
     The plan check (`node ~/.claude/hub/plan-guard.mjs --check <a plan of the
     record>`, rule 4) passes the manager fence and the latch the way the status
     command does, with nothing chained to it, and `readsGate` counts it as no send.
+    A step's Facts take a state from a read of the record made for the plan and
+    never from an agent's report of it: a report is an agent's claim, and a Fact
+    taken from one cost a review and an amendment when the review's own read showed
+    it false (Q-HUB-265). A call a gate must see goes in a turn of its own: a tool
+    result returned in the same assistant turn is not yet in the transcript when a
+    later call's hook in that turn runs, on the main thread and in an agent alike, so
+    a Read, a note or a Grep sent beside the call the gate judges is not seen by it
+    and the call is refused as unread; the refusal words of the gates that read an
+    earlier call say so (the sixth finding of the take-up of 8 November, Q-HUB-327).
 14. **A refusal latches until the owner's next message.** A refusal by any
     guard, family or repo, ends that route for the thread that was refused: the
     session when it was the main thread, and that agent alone when it was
@@ -599,6 +608,12 @@ every rule below while none of the hooks that enforce them was running
     plan mode before the session's `ExitPlanMode` call was answered, the call came
     back "not in plan mode", no approval was recorded, the session entered plan
     mode again, and the same plan was approved twice.
+    The plan fence's refusals and the dispatcher's list above are decided apart:
+    the fence refuses a call and the dispatcher then decides, by fixed refusal words
+    (`FENCE_NO_LATCH` and the marks beside it in `hook-dispatch.mjs`), whether that
+    refusal latches, so a step that adds a refusal to `plan-fence.mjs` lists
+    `hook-dispatch.mjs` among its files and adds the refusal's words to that list
+    where the refusal must set no latch (Q-HUB-320).
     Added 2026-10-02.
     *Enforced whole by:* `hook-dispatch.mjs` and `approved-plan-guard.mjs`.
     *Enforced by:* `hook-dispatch.mjs` (`releaseCommand`, `releaseLifts`): the

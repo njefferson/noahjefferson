@@ -27,7 +27,9 @@ whether it goes.
   nothing, and the dispatcher says so.
 - It changes nothing. It reads, runs the one script below, and hands back. The only
   command it runs is `node` on that script under `/tmp/claude-0/`; nothing else
-  runs.
+  runs. It never runs the reply guard's release command, `reply-guard.mjs --read`,
+  with or without a value: a review has no refusal of its own to read, and the
+  command run with no value latched a standing review agent (Q-HUB-277).
 
 ## What it reads
 
@@ -37,9 +39,12 @@ By path, never from a summary, because a summary is the paraphrase that drifted.
 - The report of the step judged, `progress/step-N-report.txt` in the session
   scratchpad, where N is the step of the newest end of an agent for a step in
   Order. The script below prints N with `--judged`, read the way the gate reads it.
-- The status page's source, `status/fix-run.html` in the same scratchpad. Its Next
-  line names M, the step whose route is read. Where it names none, M is the step on
-  its `next:` line.
+- The manager's notes, `status/manager.txt` in the same scratchpad. Its newest
+  `Next:` line with no number names M, the step whose route is read. Where it names
+  none, M is the step on the status's `next:` line. The status page's source,
+  `status/fix-run.html`, is not where M is read from, because only a status
+  rewrites its Next line, and a review that read it judged a step already cleared
+  (Q-HUB-289).
 - The step M's own text in the plan, and in it the three labels the review judges
   the aim by: its Facts (what the step is told it depends on, restated from the
   plan's asks), its Observe (what must be seen for the step to be done) and its Kill
