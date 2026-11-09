@@ -429,7 +429,8 @@ export function rulesFirst(p, plan = approvedPlan()) {
     + `${f ? 'Its own transcript holds no Read of that file that was not refused.' : 'No transcript of this agent was found to show that it was read.'} `
     + (first
       ? `This refusal sets no latch, and it is not the refusal the rules' line on refusals means: your next call is the Read tool on ${rulesPath}, and then you do the step with every file read through the Read or Grep tool.`
-      : 'Read the file, then do the step; at any refusal, stop and hand back REFUSED.');
+      : 'Read the file, then do the step; at any refusal, stop and hand back REFUSED.')
+    + ` ${OWN_TURN}`;
 }
 
 /**
@@ -498,6 +499,56 @@ function launchPrintedPath(text) {
 }
 
 /**
+ * THE SENTENCE EVERY REFUSAL THAT READS AN EARLIER CALL CARRIES (Q-HUB-318, and the sixth finding of the take-up of 8 November).
+ * The harness writes a tool call and its result into the transcript only when the turn ends, so a gate that reads an earlier call does
+ * not see one sent in the same turn; an agent that sends the calls together meets a refusal for a call it did make.
+ */
+export const OWN_TURN = 'A call a gate must see goes in a turn of its own, because a call and its result sent in the same turn are not yet in the transcript the gate reads.';
+
+/**
+ * The agent's own tool calls and results, in order, up to the call being judged.
+ * @param {object} p  a subagent's PreToolUse payload.
+ * @param {{entries?: object[]}} [opts]  the agent's transcript entries, for the test; the tail of its own transcript otherwise.
+ * @returns {{use?: object, result?: object, text: string, note?: boolean}[]} one item for each tool_use block (`use`), each tool_result block
+ *   (`result`, with its text) and each user message of plain text (`note`: a task notice the harness wrote), in file order, with the
+ *   judged call and everything after it left out (it may already be in the transcript).
+ */
+export function callEvents(p, opts = {}) {
+  const tool = String(p.tool_name ?? '');
+  const input = p.tool_input ?? {};
+  let entries = opts.entries;
+  if (!entries) {
+    let f = null;
+    try { f = agentTranscript(p); } catch { f = null; }
+    try { entries = f ? tailEntries(f, TAIL_BYTES) : []; } catch { entries = []; }
+  }
+  let events = [];
+  for (const e of entries ?? []) {
+    const c = e?.message?.content;
+    if (typeof c === 'string' && e.type === 'user') { events.push({ note: true, text: c }); continue; }
+    if (!Array.isArray(c)) continue;
+    for (const b of c) {
+      if (e.type === 'assistant' && b?.type === 'tool_use') events.push({ use: b, text: '' });
+      else if (e.type === 'user' && b?.type === 'tool_result') {
+        const text = typeof b.content === 'string' ? b.content : Array.isArray(b.content) ? b.content.map((x) => x?.text ?? '').join('\n') : '';
+        events.push({ result: b, text });
+      } else if (e.type === 'user' && b?.type === 'text' && typeof b.text === 'string') events.push({ note: true, text: b.text });
+    }
+  }
+  // The call being judged may already be in the transcript: leave it, and everything after it, out.
+  const id = String(p.tool_use_id ?? '');
+  if (id) {
+    const at = events.findIndex((x) => x.use?.id === id);
+    if (at >= 0) events = events.slice(0, at);
+  } else {
+    const last = events.findLastIndex((x) => x.use);
+    if (last >= 0 && events[last].use.name === tool && JSON.stringify(events[last].use.input ?? {}) === JSON.stringify(input)
+      && !events.some((x) => x.result?.tool_use_id === events[last].use.id)) events = events.slice(0, last);
+  }
+  return events;
+}
+
+/**
  * A background run is announced first, and written again once the launch prints its output file (Q-HUB-295).
  * @param {object} p  a subagent's PreToolUse payload.
  * @param {{entries?: object[]}} [opts]  the agent's transcript entries, for the test; read from its own transcript otherwise.
@@ -514,34 +565,7 @@ export function backgroundProblem(p, opts = {}) {
   const input = p.tool_input ?? {};
   const sid = p.session_id;
   const cwd = p.cwd;
-  let entries = opts.entries;
-  if (!entries) {
-    let f = null;
-    try { f = agentTranscript(p); } catch { f = null; }
-    try { entries = f ? tailEntries(f, TAIL_BYTES) : []; } catch { entries = []; }
-  }
-  let events = [];
-  for (const e of entries ?? []) {
-    const c = e?.message?.content;
-    if (!Array.isArray(c)) continue;
-    for (const b of c) {
-      if (e.type === 'assistant' && b?.type === 'tool_use') events.push({ use: b });
-      else if (e.type === 'user' && b?.type === 'tool_result') {
-        const text = typeof b.content === 'string' ? b.content : Array.isArray(b.content) ? b.content.map((x) => x?.text ?? '').join('\n') : '';
-        events.push({ result: b, text });
-      }
-    }
-  }
-  // The call being judged may already be in the transcript: leave it, and everything after it, out.
-  const id = String(p.tool_use_id ?? '');
-  if (id) {
-    const at = events.findIndex((x) => x.use?.id === id);
-    if (at >= 0) events = events.slice(0, at);
-  } else {
-    const last = events.findLastIndex((x) => x.use);
-    if (last >= 0 && events[last].use.name === tool && JSON.stringify(events[last].use.input ?? {}) === JSON.stringify(input)
-      && !events.some((x) => x.result?.tool_use_id === events[last].use.id)) events = events.slice(0, last);
-  }
+  const events = callEvents(p, opts);
   const launchAt = events.findLastIndex((x) => x.use?.name === 'Bash' && x.use.input?.run_in_background === true);
   // The next launch's note must come after the previous launch, and after that launch's second write where it was owed.
   let since = launchAt;
@@ -556,7 +580,7 @@ export function backgroundProblem(p, opts = {}) {
         if (wrote) since = wroteAt;
         const own = noteWriteText({ type: 'tool_use', name: tool, input }, cwd, sid);
         if (!wrote && !(own !== null && own.includes(printed))) {
-          return `${HEAD} BACKGROUND RUN, SECOND WRITE (Q-HUB-295): the launch printed its output file, ${printed}, and the agent's next call is its progress note written again with that full path, so ${tool || 'this call'} is refused. Write progress/step-N.txt in the scratchpad with a line opening with "label:" naming the run and ${printed}, with no time in it, then end the turn on the run with no wait of its own.`;
+          return `${HEAD} BACKGROUND RUN, SECOND WRITE (Q-HUB-295): the launch printed its output file, ${printed}, and the agent's next call is its progress note written again with that full path, so ${tool || 'this call'} is refused. Write progress/step-N.txt in the scratchpad with a line opening with "label:" naming the run and ${printed}, with no time in it, then end the turn on the run with no wait of its own. ${OWN_TURN} The note, the launch and the note's second write each stand alone in their turns, one call in each, and so does any report written after the run ends.`;
         }
       }
     }
@@ -569,7 +593,7 @@ export function backgroundProblem(p, opts = {}) {
   });
   if (announced) return null;
   return `${HEAD} BACKGROUND RUN ANNOUNCED FIRST (Q-HUB-295): a background run is announced first, with the agent's progress note progress/step-N.txt in the session scratchpad written, before the launch, with a line opening with "label:" naming the run and the output file's full path, and no time, because no agent reads a clock and the gate and the status read the note's time from the file's own write time`
-    + `${out ? ` (${out} here)` : ' (this command names no output file, so the note is written again with the path the launch prints, straight after the launch)'}. Write that note, then launch.`;
+    + `${out ? ` (${out} here)` : ' (this command names no output file, so the note is written again with the path the launch prints, straight after the launch)'}. Write that note, then launch. ${OWN_TURN} The note, the launch and the note's second write each stand alone in their turns, one call in each, so the note is the one call of this turn and the launch is the one call of the next.`;
 }
 
 /**
@@ -621,6 +645,95 @@ export function reviewWriteProblem(p, plan, opts = {}) {
   return out ? `${why} a redirect writes ${out}, outside it.` : null;
 }
 
+// ---- a red run of the suite ends the send, and a guard file is committed only after a run of the whole suite (Q-HUB-284, Q-HUB-311) ----
+const SUITE_FILE = 'session-guards.test.mjs';
+const SUITE_RUN = /session-guards\.test\.mjs/;
+const GUARD_NAME = /^(?:[a-z-]*-guard|hook-dispatch|plan-fence|report|plan-seed|session-brief|plan-scope-check|transcript-tail|session-guards\.test)\.mjs$/;
+export const RED_MARK = 'RED RUN, NOTHING WRITTEN AFTER (Q-HUB-284):';
+export const SUITE_MARK = 'WHOLE SUITE BEFORE A GUARD COMMIT (Q-HUB-311):';
+
+/**
+ * The agent's own red run of the suite, if it has made one.
+ * @param {{use?: object, result?: object, text: string, note?: boolean}[]} events  from `callEvents`.
+ * @returns {string|null} the command of the first Bash call that ran the suite (cases or plants, any switch) and whose result was an error or
+ *   began `Exit code` with a number other than 0, or whose launch the harness later reported as failed in a task notice naming the suite;
+ *   null when there is none.
+ */
+export function redSuiteRun(events) {
+  const ran = new Map();
+  for (const x of events ?? []) {
+    if (x.use?.name === 'Bash' && SUITE_RUN.test(String(x.use.input?.command ?? ''))) ran.set(x.use.id, String(x.use.input.command));
+    if (x.result && ran.has(x.result.tool_use_id) && (x.result.is_error === true || /^\s*Exit code [1-9]/.test(x.text))) return ran.get(x.result.tool_use_id);
+    if (x.note === true && SUITE_RUN.test(x.text) && /<status>(?:failed|killed)<\/status>|exit code [1-9]|\bfailed with\b/i.test(x.text)) {
+      return [...ran.values()].at(-1) ?? 'the suite';
+    }
+  }
+  return null;
+}
+
+/**
+ * A RED RUN ENDS THE SEND AND NOTHING IS WRITTEN AFTER IT (Q-HUB-284).
+ * A step wrote a restructure of a guard after its own red planted-fault run in the same send, against the plan's rule that a red run ends
+ * the send with the hand-back; no gate stopped it. A write of a file outside the session scratchpad (the progress note and the report are
+ * in it) is refused once the agent's own transcript holds a red run of the suite, whatever the Files list allows.
+ * @param {object} p  a subagent's PreToolUse payload.
+ * @param {{entries?: object[]}} [opts]  the agent's transcript entries, for the test.
+ * @returns {string|null} null for a main-thread call, for a call that is not a Write, Edit, MultiEdit or NotebookEdit, for a target in the
+ *   scratchpad, and when the agent has made no red run of the suite; otherwise the refusal, which opens with `RED_MARK`.
+ */
+export function writeAfterRedProblem(p, opts = {}) {
+  if (!p.agent_id) return null;
+  const tool = String(p.tool_name ?? '');
+  if (!WRITES.has(tool)) return null;
+  const f = String(p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '');
+  const abs = resolve(p.cwd || process.cwd(), f);
+  if (f && (HARMLESS.has(abs) || inScratchpad(abs, p.session_id))) return null;
+  const red = redSuiteRun(callEvents(p, opts));
+  if (!red) return null;
+  return `${HEAD} ${RED_MARK} this agent's own run of the suite ("${red.slice(0, 120)}") was red, and a red run ends the send: ${tool} to ${f || '(no path)'} is refused. Write what was seen into the report and the progress note in the scratchpad, hand back FAILED, and write nothing else; the next send starts from the report. ${OWN_TURN}`;
+}
+
+/**
+ * A GUARD FILE IS COMMITTED ONLY AFTER A RUN OF THE WHOLE SUITE (Q-HUB-311).
+ * A step that changed the status print ran only its own new cases by name, so the existing case asserting on the print went stale and was
+ * first seen red on the runner. The Bash line with a `git commit` is refused when the agent's own transcript holds an Edit or Write of a guard
+ * file of a folder that holds `session-guards.test.mjs` and no run of the suite without a switch (no case filter, no plants narrowing)
+ * whose result was not an error after the last such edit. A step that edited no guard file itself, as the landing steps that commit
+ * the edits of other steps, is not held here, and the cases of guard-cases/ are not guard files.
+ * @param {object} p  a subagent's PreToolUse payload.
+ * @param {{words: string[]}[]} segs  the line's commands.
+ * @param {{entries?: object[]}} [opts]  the agent's transcript entries, for the test.
+ * @returns {string|null} null when the line is no commit, no guard file was edited, or the whole suite ran after the last edit; else the refusal,
+ *   which opens with `SUITE_MARK` and names the file.
+ */
+export function suiteBeforeCommitProblem(p, segs, opts = {}) {
+  if (!p.agent_id || !isCommitLine(segs)) return null;
+  const cwd = resolve(p.cwd || process.cwd());
+  const events = callEvents(p, opts);
+  let editAt = -1;
+  let edited = '';
+  events.forEach((x, i) => {
+    if (!x.use || !WRITES.has(String(x.use.name ?? ''))) return;
+    const f = String(x.use.input?.file_path ?? x.use.input?.notebook_path ?? '');
+    if (!f) return;
+    const abs = resolve(cwd, f);
+    if (!GUARD_NAME.test(basename(abs)) || /\/guard-cases\//.test(abs) || !existsSync(join(dirname(abs), SUITE_FILE))) return;
+    editAt = i;
+    edited = abs;
+  });
+  if (editAt < 0) return null;
+  const whole = events.some((x, i) => {
+    if (i <= editAt || x.use?.name !== 'Bash') return false;
+    const c = String(x.use.input?.command ?? '');
+    const at = c.search(SUITE_RUN);
+    if (at < 0 || /\s--[A-Za-z]/.test(c.slice(at))) return false;
+    const r = events.find((y) => y.result?.tool_use_id === x.use.id);
+    return !(r && r.result.is_error === true);
+  });
+  if (whole) return null;
+  return `${HEAD} ${SUITE_MARK} this agent edited ${edited} and no run of the whole suite, with no switch, came after that edit in its transcript. Run \`node ${join(dirname(edited), SUITE_FILE)}\` once with no switch, read it whole, and commit only when every case passes; a run of the new cases by name leaves an existing case that asserts on the changed text stale until the runner finds it. ${OWN_TURN}`;
+}
+
 // ---- a commit message is plain, and a heredoc write is a redirect write (Doctrine 9b) ----
 // An agent committed twice with the harness's attribution trailer naming a model, and no hook refused either. A commit line whose text
 // carries a chat link, a trailer of the attribution kind or a model's name is refused here, before git runs; the repository's commit-msg
@@ -629,6 +742,18 @@ export function reviewWriteProblem(p, plan, opts = {}) {
 export const COMMIT_MARK = 'COMMIT MESSAGE RULE:';
 const COMMIT_TRAILERS = [/Co-Authored-By:/i, /Claude-Session:/i];
 const COMMIT_MODELS = [/(?<![\w./-])(?:Sonnet|Opus|Haiku|Fable|Mythos)(?![\w/-])/, /claude-(?:sonnet|opus|haiku)/i];
+
+/**
+ * Is any segment of the line a `git commit`?
+ * @param {{words: string[]}[]} segs  the line's commands, as `commandsIn` gives them.
+ * @returns {boolean} true when a segment, redirections taken out, begins `git` and holds the word `commit`.
+ */
+function isCommitLine(segs) {
+  return (segs ?? []).some((s) => {
+    const w = stripRedirects(s.words).words;
+    return w[0] === 'git' && w.slice(1).includes('commit');
+  });
+}
 
 /**
  * What a commit message holds that the rule refuses.
@@ -650,11 +775,7 @@ export function commitMessageFault(text) {
  * @returns {string|null} null when no segment is a `git commit`, or the text is plain; else the refusal, which opens with `COMMIT_MARK`.
  */
 export function commitProblem(command, segs) {
-  const isCommit = segs.some((s) => {
-    const w = stripRedirects(s.words).words;
-    return w[0] === 'git' && w.slice(1).includes('commit');
-  });
-  if (!isCommit) return null;
+  if (!isCommitLine(segs)) return null;
   const fault = commitMessageFault(command);
   return fault ? `${HEAD} ${COMMIT_MARK} this commit's text holds ${fault}. A commit message is plain and reader-facing, with no trailer, no chat link and no model's name, whatever the harness's attribution reminder asks (Doctrine 9b); write the message again without it.` : null;
 }
@@ -702,6 +823,9 @@ export function decide(p, opts = {}) {
   // A BACKGROUND RUN IS ANNOUNCED FIRST, AND WRITTEN AGAIN ONCE THE LAUNCH PRINTS ITS OUTPUT FILE (`backgroundProblem`, Q-HUB-295).
   const background = backgroundProblem(p, opts.entries ? { entries: opts.entries } : {});
   if (background) return background;
+  // A RED RUN OF THE SUITE ENDS THE SEND: NO FILE OUTSIDE THE SCRATCHPAD IS WRITTEN AFTER IT (`writeAfterRedProblem`, Q-HUB-284).
+  const afterRed = writeAfterRedProblem(p, opts.entries ? { entries: opts.entries } : {});
+  if (afterRed) return afterRed;
   // THE SWEEP'S DISPATCH, FOR THAT WORKFLOW ONLY: judged here and not left to the read check, which refuses the tool.
   if (tool === SWEEP_TOOL) return sweepDispatchProblem(p, plan, { ...('step' in opts ? { step: opts.step } : {}), ...(opts.repos ? { repos: opts.repos } : {}) });
   const where = plan ? `the plan at ${plan.path}` : 'no approved plan (so only readers and the scratchpad)';
@@ -739,6 +863,8 @@ export function decide(p, opts = {}) {
   }
   const commit = commitProblem(String(input.command ?? ''), segs);
   if (commit) return commit;
+  const suite = suiteBeforeCommitProblem(p, segs, opts.entries ? { entries: opts.entries } : {});
+  if (suite) return suite;
   const heredoc = heredocWriteProblem(String(input.command ?? ''));
   if (heredoc) return heredoc;
   const red = redirectTargets(shell);
