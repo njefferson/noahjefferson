@@ -21,7 +21,7 @@
 // other), the rules version read from the rules file, the standing text from `plans/seed-template.md`, the Files in the shape the plan guard
 // reads, the found keys as a ready "Found answered" section, the roadmap and shipped-check stubs from the notes, and last the reads another
 // session can move, each marked and timed, so a step that depends on one reads it at the time of use.
-import { readFileSync, readdirSync, existsSync, realpathSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, realpathSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { join, resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
@@ -386,6 +386,64 @@ export function putRightSentence(text) {
 }
 
 /**
+ * Every file a path of the repository stands for.
+ * @param {string} repo  the repository's full path.
+ * @param {string} rel  a path in it, a file or a folder (a trailing slash allowed).
+ * @returns {string[]} the path itself for a file, every file under it, at any depth, for a folder (`.git` and `node_modules` left out), and [] when it does not exist.
+ */
+export function filesUnder(repo, rel) {
+  const base = String(rel ?? '').replace(/\/+$/, '');
+  let st;
+  try { st = statSync(join(repo, base)); } catch { return []; }
+  if (!st.isDirectory()) return [base];
+  const out = [];
+  const walk = (d) => {
+    let es;
+    try { es = readdirSync(join(repo, d), { withFileTypes: true }); } catch { return; }
+    for (const e of es.sort((a, b) => (a.name < b.name ? -1 : 1))) {
+      if (e.name === '.git' || e.name === 'node_modules') continue;
+      if (e.isDirectory()) walk(`${d}/${e.name}`); else out.push(`${d}/${e.name}`);
+    }
+  };
+  walk(base);
+  return out;
+}
+
+/**
+ * The files the plants of a case file target.
+ * @param {string} text  a case file's text.
+ * @returns {string[]} the file named as the third element of a plant (`[find, replace, 'file']`), each once.
+ */
+export function plantTargets(text) {
+  return [...new Set([...String(text ?? '').matchAll(/,\s*'([\w./-]+\.(?:mjs|md|js|sh|json))'\s*\]/g)].map((m) => m[1]))];
+}
+
+/**
+ * Merge the groups that would share a file (Q-HUB-371).
+ * @param {{home: string, homes: string[], list: {rank: number}[]}[]} groups  the groups, in rank order.
+ * @param {(g: object) => Set<string>} claimsOf  the files a group owns: every file under its homes and the case file of each.
+ * @returns {object[]} the groups with any two of different homes whose claims meet made one (the homes of both, the findings of both in rank order, at the place of the
+ *   first); the runs of one cut group share a home list and are left apart, for the waves to keep in different waves.
+ */
+export function mergeSharing(groups, claimsOf) {
+  const cur = groups.map((g) => ({ ...g }));
+  for (let again = true; again;) {
+    again = false;
+    const cl = cur.map(claimsOf);
+    for (let i = 0; i < cur.length && !again; i++) {
+      for (let j = i + 1; j < cur.length && !again; j++) {
+        if (!cur[i].homes.length || !cur[j].homes.length || cur[i].homes.join('\n') === cur[j].homes.join('\n')) continue;
+        if (![...cl[i]].some((x) => cl[j].has(x))) continue;
+        cur[i] = { home: cur[i].home, homes: [...new Set([...cur[i].homes, ...cur[j].homes])], list: [...cur[i].list, ...cur[j].list].sort((a, b) => a.rank - b.rank) };
+        cur.splice(j, 1);
+        again = true;
+      }
+    }
+  }
+  return cur;
+}
+
+/**
  * The open findings of a repository, grouped by the file each is about.
  * @param {{entries: object[], repoName: string, repo: string, foundDir: string}} o  the program's entries, the repository's name as the program spells it, its path, and its found folder.
  * @returns {{key: string, item: string, rank: number, text: string, files: string[], home: string}[]} one per open entry of the repository whose title names a
@@ -434,12 +492,24 @@ export function batchSeed(o) {
   for (const f of findings) { if (f.putRight) continue; if (!byHome.has(f.home)) byHome.set(f.home, []); byHome.get(f.home).push(f); }
   const homes = [...byHome.keys()].sort((a, b) => (a === '') - (b === '') || byHome.get(a)[0].rank - byHome.get(b)[0].rank);
   let groups = [];
+  // A guard the suite covers has its own case file under the guard cases folder, named for the guard; a repository with no such folder has none.
+  const caseFileOf = (x) => (/\.mjs$/.test(x) && !x.includes('/') && x !== 'session-guards.test.mjs' && existsSync(join(repo, 'guard-cases')) ? `guard-cases/${x}` : '');
   // A finding that names no file goes to a step of its own, because no file can be given to a step it shares.
   for (const h of homes) {
     const fs = byHome.get(h);
     if (h === '') { for (const f of fs) groups.push({ home: '', list: [f] }); continue; }
     for (let i = 0; i < fs.length; i += size) groups.push({ home: h, list: fs.slice(i, i + size) });
   }
+  groups = groups.map((g) => ({ ...g, homes: g.home ? [g.home] : [] }));
+  // The files a group owns are every file under its homes (a folder is every file in it) and the case file of each; two groups that would own one file are
+  // one group, so no file belongs to two steps (Q-HUB-371).
+  const claimsOf = (g) => {
+    const s = new Set();
+    for (const h of g.homes) for (const y of filesUnder(repo, h)) { s.add(y); const c = caseFileOf(y); if (c) s.add(c); }
+    return s;
+  };
+  groups = mergeSharing(groups, claimsOf);
+  for (const g of groups) g.claims = claimsOf(g);
   const limit = Math.floor(Number(o.steps) || 0);
   if (limit > 0) groups = groups.slice(0, limit);
   // The file steps of a wave run at the same time in the one working copy, so a wave holds up to WAVE groups in rank order and never two groups of one
@@ -449,7 +519,9 @@ export function batchSeed(o) {
     const used = new Set();
     const w = [];
     const rest = [];
-    for (const g of pending) { if (w.length < WAVE && !(g.home && used.has(g.home))) { w.push(g); if (g.home) used.add(g.home); } else rest.push(g); }
+    for (const g of pending) {
+      if (w.length < WAVE && ![...g.claims].some((x) => used.has(x))) { w.push(g); for (const x of g.claims) used.add(x); } else rest.push(g);
+    }
     waves.push(w);
     pending = rest;
   }
@@ -505,26 +577,67 @@ export function batchSeed(o) {
   }).join(', ');
 
   // ---- the files each step of the wave owns: the first step to name a file owns it, and every other step naming it holds a seam written into both ----
+  // Every file has one owner (Q-HUB-371). First the files each group owns by its homes and their case files, which no two groups share; then the files the plants of
+  // those case files target, which belong to the step whose case file plants them (the seed's template is the seed step's, whoever else names it first); then a file
+  // a finding names that nobody owns, which goes to the first step to name it. A folder is every file under it.
   const owner = new Map();
-  groups.forEach((g, i) => { if (g.home && !owner.has(g.home)) owner.set(g.home, i); });
-  groups.forEach((g, i) => { for (const f of g.list) for (const x of f.files) if (!owner.has(x)) owner.set(x, i); });
+  groups.forEach((g, i) => { for (const x of g.claims) if (!owner.has(x)) owner.set(x, i); });
+  groups.forEach((g, i) => {
+    for (const c of new Set([...g.claims].map(caseFileOf).filter(Boolean))) {
+      for (const t of plantTargets(slurp(join(repo, c)))) if (existsSync(join(repo, t)) && !owner.has(t)) owner.set(t, i);
+    }
+  });
+  const namedFiles = new Set();
+  groups.forEach((g, i) => {
+    for (const f of g.list) {
+      for (const x of f.files) {
+        for (const y of filesUnder(repo, x)) {
+          namedFiles.add(y);
+          if (owner.has(y)) continue;
+          owner.set(y, i);
+          const c = caseFileOf(y);
+          if (c && !owner.has(c)) owner.set(c, i);
+        }
+      }
+    }
+  });
+  // A file a finding names that another step owns is a seam, written into both steps.
   const seamsOut = groups.map(() => new Set());
   const seamsIn = groups.map(() => new Set());
   groups.forEach((g, i) => {
     for (const f of g.list) {
       for (const x of f.files) {
-        const j = owner.get(x);
-        if (j === i) continue;
-        seamsOut[i].add(`${f.key} names \`${x}\` too, which step ${g1 + j} owns, so this step does not touch it and the part of ${f.key} that sits in \`${x}\` is made in that step`);
-        seamsIn[j].add(`step ${g1 + i} takes up ${f.key}, whose text names \`${x}\`, which this step owns, so the part of ${f.key} that sits in \`${x}\` is made here`);
+        for (const j of new Set(filesUnder(repo, x).map((y) => owner.get(y)).filter((o) => o !== undefined && o !== i))) {
+          seamsOut[i].add(`${f.key} names \`${x}\` too, which step ${g1 + j} owns, so this step does not touch it and the part of ${f.key} that sits in \`${x}\` is made in that step`);
+          seamsIn[j].add(`step ${g1 + i} takes up ${f.key}, whose text names \`${x}\`, which this step owns, so the part of ${f.key} that sits in \`${x}\` is made here`);
+        }
       }
     }
   });
-  const ownedBy = (i) => [...owner].filter(([, j]) => j === i).map(([x]) => x);
-  // A guard the suite covers has its own case file under the guard cases folder, named for the guard; a repository with no such folder has none.
-  const caseFileOf = (x) => (/\.mjs$/.test(x) && !x.includes('/') && x !== 'session-guards.test.mjs' && existsSync(join(repo, 'guard-cases')) ? `guard-cases/${x}` : '');
-  const caseFiles = [...new Set(groups.flatMap((_, i) => ownedBy(i).map(caseFileOf).filter(Boolean)))];
-  const guardFiles = [...new Set(groups.flatMap((_, i) => ownedBy(i).filter(caseFileOf)))];
+  const ownedFiles = (i) => [...owner].filter(([, j]) => j === i).map(([x]) => x);
+  // What a step's text says it owns: a folder it owns whole by its name, the other files each, and its case files apart from both.
+  const ownedView = (i) => {
+    const files = ownedFiles(i);
+    const mine = new Set(files);
+    const covered = new Set();
+    const names = [];
+    for (const f of groups[i].list) {
+      for (const x of f.files) {
+        const under = filesUnder(repo, x);
+        let isDir = false;
+        try { isDir = statSync(join(repo, x)).isDirectory(); } catch { /* not there */ }
+        if (isDir && under.length && under.every((y) => mine.has(y)) && !names.includes(x)) { names.push(x); for (const y of under) covered.add(y); }
+      }
+    }
+    const cases = [...new Set(files.map(caseFileOf).filter(Boolean))].filter((c) => !covered.has(c));
+    for (const y of files) if (!covered.has(y) && !cases.includes(y)) names.push(y);
+    return { names, cases };
+  };
+  const caseFiles = [...new Set(groups.flatMap((_, i) => ownedFiles(i).map(caseFileOf).filter(Boolean)))];
+  // The files the commit step runs the plants of: each guard file a step owns, and each file the plants of their case files target that a finding of the wave names
+  // (Q-HUB-363: the template's plants were left to the runner).
+  const guardFiles = [...new Set([...groups.flatMap((_, i) => ownedFiles(i).filter(caseFileOf)),
+    ...caseFiles.flatMap((c) => plantTargets(slurp(join(repo, c))).filter((t) => namedFiles.has(t)))])];
   const estOf = (s) => Number(/Estimate (\d+) min/.exec(s)?.[1] ?? 0);
   const takeupEst = estOf(fill(tpl['take-up'] ?? '', takeupVars));
   const closeEst = estOf(fill(tpl['close-step'] ?? '', vars));
@@ -597,9 +710,10 @@ export function batchSeed(o) {
     const n = g1 + i;
     const ks = g.list.map((f) => f.key);
     g.list.forEach((f) => stepOf.set(f.key, n));
-    const where = g.home ? `\`${g.home}\`` : 'the files each names';
-    const owned = ownedBy(i);
-    const cases = owned.map(caseFileOf).filter(Boolean);
+    const where = g.home ? g.homes.map((h) => `\`${h}\``).join(', ') : 'the files each names';
+    const view = ownedView(i);
+    const owned = view.names;
+    const cases = view.cases;
     const quote = (xs) => xs.map((x) => `\`${x}\``).join(', ');
     const ownedText = owned.length ? `${quote(owned)}${cases.length ? ` and its own case file${cases.length === 1 ? '' : 's'} ${cases.map((c) => `\`${c}\`${existsSync(join(repo, c)) ? '' : ' (new)'}`).join(', ')}` : ''}` : 'no file by name';
     const doEach = g.list.map((f) => `for ${f.key} (item ${f.item}) make the change its text names${f.files.length ? ` in ${f.files.map((x) => `\`${x}\``).join(', ')}` : ' in the files its text names'}`).join('; ');
@@ -608,7 +722,7 @@ export function batchSeed(o) {
     const seams = [...seamsOut[i], ...seamsIn[i]];
     const noFile = g.home ? '' : 'its finding\'s text names no file of the repository, so it reads the text to find the file it must edit, and a file it must edit that another step of this plan owns ends it EJECT naming the file, with nothing written; ';
     const caseDo = cases.length ? `write into ${quote(cases)} a case that fails on the old text and a plant for each fix, in the shape of the case files beside it; ` : '';
-    L(`${n}. **${g.home ? `Put right in ${where}` : 'Put right in the files each names'}: ${ks.join(', ')}.** ${isHub ? 'Hub' : basename(repo)}, one agent${together}. Facts: the step owns ${ownedText} and writes nothing else, commits nothing, stages nothing and runs no plants and no check; ${noFile}${seams.length ? `${seams.join('; ')}; ` : ''}the step takes up ${ks.length} filed ${ks.length === 1 ? 'finding' : 'findings'}, each read whole from its file; ${g.list.map((f) => `${f.key} (item ${f.item}): ${f.text}`).join(' ')} The commit step, step ${commit}, lands this step's edits and runs its plants. Do: \`git status\`, read as the rules of this plan allow; read with Read and Grep ${owned.length ? quote([...owned, ...cases.filter((c) => existsSync(join(repo, c)))]) : 'the files its findings name'}; ${doEach}; ${caseDo}run \`node ${vars.HUB}/session-guards.test.mjs\` with this step's cases by name once in the foreground, after the last edit; \`git status\`, read as the rules of this plan allow; write the report with the files changed and each case and plant added with the plant's find. Observe: this step's cases pass by name where a case was added, the files this step owns are changed and nothing else by this step, nothing is staged or committed. Kill: a red case ends the step FAILED with its lines and nothing written after, the report naming the file the error names and the step that owns it where that file is another step's; a change that needs a line in a file this step does not own ends it EJECT naming the lines, with nothing written; a refusal of a command by a guard or by the harness's permission check ends it REFUSED with the refusal's words, nothing further done and no other route tried. Report \`progress/step-${n}-report.txt\` (new); ${SEND_REPORT}. Estimate ${groupEst[i]} min.`);
+    L(`${n}. **${g.home ? `Put right in ${where}` : 'Put right in the files each names'}: ${ks.join(', ')}.** ${isHub ? 'Hub' : basename(repo)}, one agent${together}. Facts: the step owns ${ownedText} and writes nothing else, commits nothing, stages nothing and runs no plants and no check; ${noFile}${seams.length ? `${seams.join('; ')}; ` : ''}the step takes up ${ks.length} filed ${ks.length === 1 ? 'finding' : 'findings'}, each read whole from its file; ${g.list.map((f) => `${f.key} (item ${f.item}): ${f.text}`).join(' ')} The commit step, step ${commit}, lands this step's edits and runs its plants. Do: \`git status\`, read as the rules of this plan allow; read with Read and Grep ${owned.length ? quote([...owned, ...cases.filter((c) => existsSync(join(repo, c)))]) : 'the files its findings name'}; ${doEach}; ${caseDo}run \`node ${vars.HUB}/session-guards.test.mjs\` with this step's own cases by their exact names, each name as one quoted switch, once in the foreground, after the last edit; \`git status\`, read as the rules of this plan allow; write the report with the files changed and each case and plant added with the plant's find. Observe: this step's cases pass by name where a case was added, the files this step owns are changed and nothing else by this step, nothing is staged or committed. Kill: a red case ends the step FAILED with its lines and nothing written after, the report naming the file the error names and the step that owns it where that file is another step's; a red case of another step's file is named in the report with the step that owns it and is not acted on; a change that needs a line in a file this step does not own ends it EJECT naming the lines, with nothing written; a refusal of a command by a guard or by the harness's permission check ends it REFUSED with the refusal's words, nothing further done and no other route tried. Report \`progress/step-${n}-report.txt\` (new); ${SEND_REPORT}. Estimate ${groupEst[i]} min.`);
     L();
   });
   if (hasCommit) { L(fill(tpl['commit-step'] ?? '<plans/seed-template.md has no commit-step block>', cvars)); L(); }

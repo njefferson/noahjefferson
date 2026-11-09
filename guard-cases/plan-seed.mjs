@@ -28,7 +28,10 @@ export const cases = [
         has('a step adding a refusal lists the dispatcher', 'lists `hook-dispatch.mjs` among its files');
         has('a red gates run is read into the report', 'where it has concluded red its failing lines, read from the run\'s log through the connector and written into the report');
         has('the close reads the remote\'s head before filing', 'reads the remote\'s head with `git show origin/main:PROGRAM.md`');
-        has('the close report names each key', 'key by key and never as a range');
+        // The whole sentence of the close step, read from that step's line: the Verification line carries the same words, so a check on the whole print passed with the template's sentence gone.
+        const closeStep = /\n\d+\. \*\*Closed in the program[^\n]*/.exec(t)?.[0] ?? '';
+        rows.push([`${mode}: the close step's report names each key it filed beside the line it came from, key by key and never as a range`,
+          closeStep.includes("the step's report naming each key it filed beside the line it came from, key by key and never as a range"), closeStep.slice(0, 300)]);
         has('the close files the findings passed in', 'for each finding listed in the plan\'s section Findings passed in');
       }
       return h.assertAll(rows);
@@ -227,7 +230,143 @@ export const cases = [
       return h.assertAll(rows);
     },
   },
+  {
+    name: 'step 145: the batch print gives no file to two steps: a case file a finding names is merged into the step that owns the guard, a file the plants of a step\'s case file target is that step\'s and a seam to the step that names it first, and no name is owned twice',
+    guards: ['part_merge', 'part_case_claim', 'part_plant_owner', 'part_names_dedupe'],
+    run(m, dir, h) {
+      const hub = plantedHub(h, dir, {
+        files: ['seed.mjs', 'fence.mjs', 'other.mjs'],
+        caseFiles: {
+          'seed.mjs': "// a planted case file of the case\nexport const plants = { p1: ['a', 'b', 'plans/seed-template.md'], };\n",
+          'fence.mjs': "// a planted case file of the case\nexport const plants = { p2: ['a', 'b', 'fence.mjs'], };\n",
+          'other.mjs': '// a planted case file of the case\n',
+        },
+        findings: [
+          ['Q-HUB-21', 'a planted finding about `fence.mjs` and `plans/seed-template.md`.'],
+          ['Q-HUB-22', 'a planted finding about `seed.mjs` and `plans/seed-template.md`.'],
+          ['Q-HUB-23', 'a planted finding about `guard-cases/seed.mjs`.'],
+          ['Q-HUB-24', 'a planted finding about `other.mjs`.'],
+        ],
+      });
+      const t = `${h.batchRun(dir, hub, []).stdout}`;
+      const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
+      const [fence, seed, other] = [2, 3, 4].map(step);
+      const names = [2, 3, 4].flatMap((n) => ownedNames(step(n)));
+      return h.assertAll([
+        ['the finding that names the guard\'s case file is one step with the finding of the guard, the title naming both', seed.startsWith('Put right in `seed.mjs`, `guard-cases/seed.mjs`: Q-HUB-22, Q-HUB-23.') && other.startsWith('Put right in `other.mjs`: Q-HUB-24.'), seed.slice(0, 200)],
+        ['the file the plants of the seed step\'s case file target is owned by that step', ownedNames(seed).includes('plans/seed-template.md') && !ownedNames(fence).includes('plans/seed-template.md'), `${ownedNames(seed)} | ${ownedNames(fence)}`],
+        ['the step that names the template first holds it as a seam to the step whose file it is, in both steps', fence.includes('Q-HUB-21 names `plans/seed-template.md` too, which step 3 owns, so this step does not touch it')
+          && seed.includes('step 2 takes up Q-HUB-21, whose text names `plans/seed-template.md`, which this step owns'), `${fence.slice(0, 700)} | ${seed.slice(0, 700)}`],
+        ['no name is owned twice over the three steps, a case file named once as a case file', names.length === new Set(names).size && names.length === 7, names.join(', ')],
+        ['the case file of the seed step is named as its own case file and not among the files by name', seed.includes('and its own case file `guard-cases/seed.mjs`') && ownedNames(seed).filter((x) => x === 'guard-cases/seed.mjs').length === 1, seed.slice(0, 400)],
+      ]);
+    },
+  },
+  {
+    name: 'step 145: the batch print counts a folder a finding names as every file under it and a case file as a file its step owns, so a folder step and the steps whose case files sit in it are one step that names the folder once',
+    guards: ['part_folder', 'part_folder_name'],
+    run(m, dir, h) {
+      const hub = plantedHub(h, dir, {
+        files: ['fence.mjs', 'other.mjs'],
+        caseFiles: { 'fence.mjs': '// a planted case file of the case\n', 'other.mjs': '// a planted case file of the case\n' },
+        findings: [
+          ['Q-HUB-21', 'a planted finding about `fence.mjs`.'],
+          ['Q-HUB-22', 'a planted finding about the folder `guard-cases/`.'],
+          ['Q-HUB-23', 'a planted finding about `other.mjs`.'],
+        ],
+      });
+      const t = `${h.batchRun(dir, hub, []).stdout}`;
+      const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
+      const one = step(2);
+      return h.assertAll([
+        ['the three findings are one file step', t.split('\n')[0].includes('in 1 group step,') && t.includes('\nOrder: 1 2 3 4\n'), t.split('\n')[0]],
+        ['the step\'s title names the three homes', one.startsWith('Put right in `fence.mjs`, `guard-cases/`, `other.mjs`: Q-HUB-21, Q-HUB-22, Q-HUB-23.'), one.slice(0, 200)],
+        ['the step owns the folder by its name and each file once, and names no case file beside the folder', ownedNames(one).slice().sort().join(',') === 'fence.mjs,guard-cases/,other.mjs' && !one.includes('its own case file'), `${ownedNames(one)} | ${one.slice(0, 300)}`],
+      ]);
+    },
+  },
+  {
+    name: 'step 145: the commit step of the batch print runs the plants of every file a plant of the wave\'s case files targets that a finding of the wave names, the seed\'s template among them, and not a target no finding names',
+    guards: ['batch_plant_targets', 'batch_plant_named'],
+    run(m, dir, h) {
+      const hub = plantedHub(h, dir, {
+        files: ['seed.mjs', 'other.mjs'],
+        caseFiles: {
+          'seed.mjs': "// a planted case file of the case\nexport const plants = { p1: ['a', 'b', 'plans/seed-template.md'], p2: ['a', 'b', 'unnamed.md'], };\n",
+          'other.mjs': '// a planted case file of the case\n',
+        },
+        findings: [
+          ['Q-HUB-21', 'a planted finding about `seed.mjs` and `plans/seed-template.md`.'],
+          ['Q-HUB-22', 'a planted finding about `other.mjs`.'],
+        ],
+      });
+      writeFileSync(join(hub, 'unnamed.md'), 'a planted file no finding names\n');
+      const t = `${h.batchRun(dir, hub, []).stdout}`;
+      const commit = /\n\d+\. \*\*Committed, proved and landed[^\n]*/.exec(t)?.[0] ?? '';
+      const list = /the files being ([^;]*);/.exec(commit)?.[1] ?? '';
+      return h.assertAll([
+        ['the files being are the guard files and the template its plants target', list === '`seed.mjs`, `other.mjs`, `plans/seed-template.md`', list],
+        ['a plant target no finding names is not run here', !list.includes('unnamed.md'), list],
+      ]);
+    },
+  },
+  {
+    name: 'step 145: the commit step carries the four orders of a send: a red case or a missed plant is put right at the start of the next send, a check\'s find in a file a file step wrote is put right in that file at the start of the next send, a commit step that edits a gate file runs the whole suite after its last edit and before its first commit, and the stale-plant list comes from the suite\'s own report',
+    guards: ['tpl_commit_next_send', 'tpl_commit_find_file', 'tpl_commit_suite_first', 'tpl_commit_stale_report'],
+    run(m, dir, h) {
+      const t = `${h.batchRun(dir, h.batchHub(dir), []).stdout}`;
+      const commit = /\n\d+\. \*\*Committed, proved and landed[^\n]*/.exec(t)?.[0] ?? '';
+      const has = (label, s) => [label, commit.includes(s), s];
+      return h.assertAll([
+        has('a red case or a missed plant is put right at the start of the next send', 'a red case or a missed plant is put right at the start of the next send and never after a run in the same send'),
+        has('a check\'s find in a file a file step wrote is put right in that file at the start of the next send', "a check's find in a file a file step wrote is put right in that file at the start of the next send"),
+        has('a commit step that edits a gate file runs the whole suite before its first commit', 'a commit step that edits a gate file runs the whole suite after its last edit and before its first commit'),
+        has('the stale-plant list comes from the suite\'s own report', "the stale-plant list comes from the suite's own report before a run"),
+      ]);
+    },
+  },
+  {
+    name: 'step 145: a group step and the parallel rules run the step\'s cases by their exact names, each name as one quoted switch, and name a red case of another step\'s file in the report without acting on it',
+    guards: ['batch_exact_names', 'batch_other_red', 'tpl_exact_names', 'tpl_other_red'],
+    run(m, dir, h) {
+      const t = `${h.batchRun(dir, h.batchHub(dir), []).stdout}`;
+      const group = (/\n2\. \*\*Put right in[^\n]*/.exec(t)?.[0]) ?? '';
+      const rules = (/\n- The file steps, [^\n]*/.exec(t)?.[0]) ?? '';
+      const exact = 'own cases by their exact names, each name as one quoted switch';
+      const other = "a red case of another step's file is named in the report with the step that owns it and is not acted on";
+      return h.assertAll([
+        ['the group step runs its own cases by their exact names, each as one quoted switch', group.includes(`with this step's ${exact}`), group.slice(0, 200)],
+        ['the group step names a red case of another step\'s file without acting on it', group.includes(other), group.slice(-900)],
+        ['the parallel rules run the step\'s own cases by their exact names, each as one quoted switch', rules.includes(`its ${exact}`), rules.slice(0, 600)],
+        ['the parallel rules name a red case of another step\'s file without acting on it', rules.includes(other), rules.slice(0, 900)],
+      ]);
+    },
+  },
 ];
+
+/** The names a file step's text says it owns: the code spans between "the step owns" and "and writes nothing else", the case file's "(new)" mark left out. */
+function ownedNames(stepText) {
+  return [...(/Facts: the step owns (.*?) and writes nothing else/.exec(stepText)?.[1] ?? '').matchAll(/`([^`]+)`/g)].map((x) => x[1]);
+}
+
+/**
+ * A planted hub for the partition cases: the seed hub with the program's open findings, their found files, the files they name at the root and the case files in `guard-cases/`.
+ * @param {object} h  the suite's helpers.
+ * @param {string} dir  the folder the case was given.
+ * @param {{files: string[], caseFiles: Record<string,string>, findings: [string,string][]}} spec  the root files, the case files by name, and the findings by key and text, in rank order.
+ * @returns {string} the planted hub's path.
+ */
+function plantedHub(h, dir, spec) {
+  const hub = h.seedHub(dir);
+  const entry = (n, key) => [`### P-${n}. ${key}: planted finding ${n}`, '', 'Repository: hub. Goal: 6. State: open. Plan: none.', '', `Acceptance: Planted acceptance ${n}.`, '', 'Depends: none.', ''].join('\n');
+  const head = ['# The program', '', 'Intro line of the planted program.', '', '## Thesis', '', 'A planted thesis paragraph of the case, one paragraph only.', '', '## Items', '', `${spec.findings.length} items planted for the case.`, '', '## The harness', ''].join('\n');
+  writeFileSync(join(hub, 'PROGRAM.md'), `${head}\n${spec.findings.map(([key], i) => entry(i + 1, key)).join('\n')}`);
+  for (const f of spec.files) writeFileSync(join(hub, f), '// a planted file of the case\n');
+  mkdirSync(join(hub, 'guard-cases'), { recursive: true });
+  for (const [f, text] of Object.entries(spec.caseFiles)) writeFileSync(join(hub, 'guard-cases', f), text);
+  for (const [key, text] of spec.findings) writeFileSync(join(hub, 'found', `${key}.md`), `${key}: ${text}\n`);
+  return hub;
+}
 
 export const plants = {
   seed_passed_in: ["L(FINDINGS_PASSED_IN);\n  L();\n  L('## Item entry');", "L('- <none>');\n  L();\n  L('## Item entry');", 'plan-seed.mjs'],
@@ -272,7 +411,7 @@ export const plants = {
   batch_cost_wall: ['and the close, ${wallMin} min.', 'and the close, 0 min.', 'plan-seed.mjs'],
   batch_wave_cap: ['const WAVE = 7;', 'const WAVE = 99;', 'plan-seed.mjs'],
   batch_wave_header: ['and it leaves ${leaves} of the ${totalGroups} groups', 'and it leaves 0 of the ${totalGroups} groups', 'plan-seed.mjs'],
-  batch_wave_home: ['!(g.home && used.has(g.home))', 'true', 'plan-seed.mjs'],
+  batch_wave_home: ['![...g.claims].some((x) => used.has(x))', 'true', 'plan-seed.mjs'],
   batch_wave_switch: ['Math.floor(Number(o.wave) || 1)', '1', 'plan-seed.mjs'],
   tpl_close_index: ['add one index row for it in `LESSONS.md` in the shape the index\'s rows hold', 'add one row for it', 'plans/seed-template.md'],
   tpl_review_resend: ['A review for a resend of a file step is sent only when no agent is editing the working copy', 'A review for a resend of a file step may be sent while an agent is editing the working copy', 'plans/seed-template.md'],
@@ -281,5 +420,22 @@ export const plants = {
   tpl_bg_order: ['as the very next call after the launch and before any other call', 'as a later call', 'plans/seed-template.md'],
   tpl_device_line: ["names the app's test page as its instrument and never a container render", "names a container render as its instrument", 'plans/seed-template.md'],
   tpl_push_landing: ["Nothing is pushed except by the plan's landing steps, which are the take-up step, a commit step where the plan has one, and the close step", 'Nothing is pushed except by the take-up step', 'plans/seed-template.md'],
+  // step 145: the take-up's partition finding, Q-HUB-363, Q-HUB-364 and Q-HUB-368
+  part_merge: ['groups = mergeSharing(groups, claimsOf);', 'void mergeSharing;', 'plan-seed.mjs'],
+  part_folder: ['for (const h of g.homes) for (const y of filesUnder(repo, h)) {', 'for (const h of g.homes) for (const y of [h]) {', 'plan-seed.mjs'],
+  part_case_claim: ['s.add(y); const c = caseFileOf(y); if (c) s.add(c); }', 's.add(y); }', 'plan-seed.mjs'],
+  part_plant_owner: ['!owner.has(t)) owner.set(t, i);', 'false) owner.set(t, i);', 'plan-seed.mjs'],
+  part_names_dedupe: ['if (!covered.has(y) && !cases.includes(y)) names.push(y);', 'if (!covered.has(y)) names.push(y);', 'plan-seed.mjs'],
+  part_folder_name: ['under.every((y) => mine.has(y))', 'false', 'plan-seed.mjs'],
+  batch_plant_targets: ['...caseFiles.flatMap((c) => plantTargets(slurp(join(repo, c))).filter((t) => namedFiles.has(t)))', '', 'plan-seed.mjs'],
+  batch_plant_named: ['.filter((t) => namedFiles.has(t))', '', 'plan-seed.mjs'],
+  batch_exact_names: ["with this step's own cases by their exact names, each name as one quoted switch", "with this step's cases by name", 'plan-seed.mjs'],
+  batch_other_red: ["a red case of another step's file is named in the report with the step that owns it and is not acted on; ", '', 'plan-seed.mjs'],
+  tpl_exact_names: ['its own cases by their exact names, each name as one quoted switch', 'its own cases by name', 'plans/seed-template.md'],
+  tpl_other_red: ["a red case of another step's file is named in the report with the step that owns it and is not acted on", 'a red case of another step\'s file is acted on', 'plans/seed-template.md'],
+  tpl_commit_next_send: ['is put right at the start of the next send and never after a run in the same send', 'is put right in the same send, after the run', 'plans/seed-template.md'],
+  tpl_commit_find_file: ['is put right in that file at the start of the next send', 'is left to the close', 'plans/seed-template.md'],
+  tpl_commit_suite_first: ['a commit step that edits a gate file runs the whole suite after its last edit and before its first commit', 'a commit step that edits a gate file runs its own cases', 'plans/seed-template.md'],
+  tpl_commit_stale_report: ["the stale-plant list comes from the suite's own report before a run", 'the stale-plant list comes from reading the plants', 'plans/seed-template.md'],
   tpl_commit_step_text: ['one commit for each of steps {FIRSTGROUP} to {LASTGROUP} in that order, nothing staged beforehand', 'one commit for all of steps {FIRSTGROUP} to {LASTGROUP}', 'plans/seed-template.md'],
 };
