@@ -1,0 +1,1 @@
+Q-HUB-389: under the latch of Q-HUB-388 the dispatcher's check of a call was refused on 9 November, though the plans page lists the check as a call that passes a latch; the fix, in `hook-dispatch.mjs`, is that the check passes every latch the page's list says it passes, with a case on a check run under a standing latch (found on 9 November, filed in step 365).
