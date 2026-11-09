@@ -2274,7 +2274,7 @@ export function costProblem(text) {
  * @param {{page?: string}} [opts]  the plans page's path (`doctrine/plans.md` beside this file by default), for the test.
  * @returns {string|null} the refusal, or null (Q-HUB-309). In the plan's `## Steps`, a mention of `rule N` with the words plans page (or
  *   `doctrine/plans.md`) within 120 characters either side is read against the page's own numbering, the lines of the form `N. **` between the
- *   heading of 0e and the next heading: N has to be a number the page holds there, and where a span in double quotes of eight characters or
+ *   heading of 0e and the next heading of the first or second level (the numbered lines under a sub-heading count): N has to be a number the page holds there, and where a span in double quotes of eight characters or
  *   more follows the mention in the same sentence, rule N's text has to hold it (case and white space set aside). A step that put a line under
  *   a rule that was not where the plan said it was is the failure. It cannot judge a mention that quotes nothing beyond the number existing.
  *   A fault of the plan's shape: plan-guard.mjs refuses ExitPlanMode on it and sets no latch.
@@ -2290,7 +2290,9 @@ export function ruleNumberProblem(text, opts = {}) {
   let inside = false;
   for (const l of lines) {
     if (/^## 0e\b/.test(l)) { inside = true; continue; }
-    if (inside && /^#{1,3} /.test(l)) { if (/^## /.test(l)) break; cur = null; continue; }
+    // Q-HUB-351: a heading of the third level or deeper opens a sub-section of 0e, whose numbered lines are read like the section's own;
+    // only a heading of the first or second level ends the section.
+    if (inside && /^#{1,6} /.test(l)) { if (/^#{1,2} /.test(l)) break; cur = null; continue; }
     if (!inside) continue;
     const m = /^(\d+)\.\s+\*\*/.exec(l);
     if (m) { cur = Number(m[1]); rules.set(cur, l); continue; }
@@ -2938,11 +2940,12 @@ function bashOutsideRecord(command, cwd, of) {
  *   the connector's file contents and code search are never of the record.
  *   `managerFence` refuses on the answer and says to send an agent.
  */
-export function readOutsideRecord(p, planPath) {
+export function readOutsideRecord(p, planPath, alsoOf = undefined) {
   const tool = String(p.tool_name ?? '');
   const input = p.tool_input ?? {};
   const cwd = p.cwd ? String(p.cwd) : process.cwd();
-  const of = (w) => recordPath(absOf(w, cwd), p, planPath);
+  // `alsoOf` (Q-HUB-362) names one more kind of path that counts as read: a predicate on an absolute path, asked after `recordPath`.
+  const of = (w) => recordPath(absOf(w, cwd), p, planPath) || (alsoOf ? alsoOf(absOf(w, cwd)) : false);
   if (SOURCE_READS.has(tool)) return `${tool} reads a repository's file through the connector`;
   if (tool === 'Read') {
     const f = String(input.file_path ?? input.path ?? '');
@@ -2962,6 +2965,33 @@ export function readOutsideRecord(p, planPath) {
   }
   if (tool === 'Bash') return bashOutsideRecord(String(input.command ?? ''), cwd, of);
   return null;
+}
+
+/**
+ * Is a path inside a git repository's working tree?
+ * @param {string} abs  an absolute path.
+ * @returns {boolean} true for a path with a `.git` in an ancestor directory, or a repository's own root directory (it holds a `.git`).
+ *   The repository's files are the code a plan changes (Q-HUB-362); the path's existence is not asked.
+ */
+function inGitRepo(abs) {
+  const a = resolve(String(abs));
+  return existsSync(join(a, '.git')) || repoRootOf(a) !== null;
+}
+
+/**
+ * Is the call made in plan mode while no plan is in force?
+ * @param {object} p  a main-thread PreToolUse payload.
+ * @param {{plan?: object|null, pointer?: object|null}} [opts]  the test's plan and pointer, as `planPhase` takes them.
+ * @returns {boolean} true only when the harness is in plan mode (`permission_mode` plan) and `planPhase` reads no plan in force (Q-HUB-362):
+ *   no marker at all, or a marker whose plan has finished. A marker that gives no plan counts as in force, so it stays false. A failure
+ *   reading the state is false: the fence's refusal stands.
+ */
+function planModeNoPlan(p, opts = {}) {
+  if (p.agent_id || String(p.permission_mode ?? '') !== 'plan') return false;
+  const given = {};
+  if ('plan' in opts) given.plan = opts.plan;
+  if ('pointer' in opts) given.pointer = opts.pointer;
+  try { return planPhase(p, given).kind !== 'in force'; } catch { return false; }
 }
 
 /**
@@ -3380,7 +3410,10 @@ export function managerFence(p, opts = {}) {
   if (isRead(p, opts.classify ?? planGuardReads)) {
     // A READ PASSES ONLY OF THE RECORD (Doctrine §0e rule 13): the manager reads
     // what it manages by, and diagnosing from an app's source is an agent's work.
-    const outside = readOutsideRecord(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path);
+    let outside = readOutsideRecord(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path);
+    // Q-HUB-362: in plan mode with no plan in force nobody else can read the code a plan must change (the dispatch gate refuses every agent as
+    // a send with no plan), so the main thread's read of a file inside a git repository passes then, and only then.
+    if (outside !== null && planModeNoPlan(p, opts)) outside = readOutsideRecord(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path, inGitRepo);
     return outside === null ? null : `${READ_FENCE}${outside}. Send an agent with the approved plan's path and a step number to read it.${notOfRecord()}`;
   }
   return `${head} It is not a read; send an agent with the approved plan's path and a step number.${notOfRecord()}`;
@@ -3850,6 +3883,17 @@ export function configChange(p) {
   } catch { return null; /* the change goes ahead whatever the record does */ }
 }
 
+/**
+ * Bring the status page to the manager notes' newest unnumbered Next line.
+ * @param {string} raw  the hook payload as received (its `session_id` names the session).
+ * @param {string} root  the directory the command runs in.
+ * @returns {void} runs `report.mjs --page-next` of this hub and nothing else (Q-HUB-347); the command writes the page only when the line
+ *   differs from the page's, and a failure to run it is swallowed, because the refresh is a convenience and never a gate.
+ */
+function pageFollowsNext(raw, root) {
+  try { run(`node "${join(HUB, 'report.mjs')}" --page-next`, raw, root, 30); } catch { /* the page follows at the next status */ }
+}
+
 async function main(event, raw, p) {
   if (event === 'ConfigChange') {
     configChange(p);
@@ -3898,6 +3942,10 @@ async function main(event, raw, p) {
     // return, the latch, plan mode, a reply guard reading its words — leaves
     // the agent no way to hand back. Measured: a SubagentHandback was refused.
     if (p.agent_id && AGENT_RETURN.has(String(p.tool_name ?? ''))) return 0;
+    // Q-HUB-347: THE STATUS PAGE IS BROUGHT TO THE MANAGER NOTES' NEWEST NEXT LINE BEFORE THE MAIN THREAD'S SEND is judged, whichever gate then
+    // refuses it: the review reads its move from that line, and a write of the notes by another route than a Write (a shell redirect, an
+    // agent) runs no refresh after it. It writes the page only when the line differs from the page's, and nothing else.
+    if (!p.agent_id && /^(?:Agent|Task|SendMessage|Workflow)$/.test(String(p.tool_name ?? ''))) pageFollowsNext(raw, root);
     // An owner message waiting in the queue comes before everything, the
     // status command included: the session answers it and ends its turn,
     // which is what delivers it (LESSONS §376).
@@ -4178,6 +4226,13 @@ async function main(event, raw, p) {
   if (event === 'PostToolUse' && FILE_WRITES.has(String(p.tool_name ?? '')) && !p.agent_id) {
     const o = run(`node "${join(HUB, 'approved-plan-guard.mjs')}" --amend`, raw, root);
     if (o.deny || o.status !== 0) markFail = [markFail, o.reason || o.err.trim() || o.error || `--amend exited ${o.status}`].filter(Boolean).join('\n');
+  }
+  // Q-HUB-347: THE STATUS PAGE FOLLOWS THE MANAGER'S NOTES. A main-thread write of the notes can change their newest unnumbered Next line, and
+  // the review reads its move from that line, so the page is brought to it at once (`report.mjs --page-next` rewrites the page only when the
+  // line differs from the page's, and nothing else). A failure costs the refresh, never the call.
+  if (event === 'PostToolUse' && FILE_WRITES.has(String(p.tool_name ?? '')) && !p.agent_id) {
+    const f = String(p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '');
+    if (f && isManagerNotes(f, p.session_id)) pageFollowsNext(raw, root);
   }
   // What a call returned goes to reply-guard's ledger: a declining reply or a
   // failed call (LESSONS §374). A declining reply comes back as exit 2 so its

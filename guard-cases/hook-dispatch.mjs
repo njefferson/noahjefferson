@@ -3,7 +3,9 @@
 // approval (Q-HUB-290), an id a launch printed (Q-HUB-291), a rule named by number (Q-HUB-309), the wait for an agent paused on its run (Q-HUB-317),
 // the approval guard's route (Q-HUB-323), one file for a What is name (Q-HUB-325), the talk check past a refusal (Q-HUB-326), the words of the gates
 // that read an earlier call (Q-HUB-327), the check of a call asking both guards (Q-HUB-328), the seed at a resumed plan mode (Q-HUB-336), the
-// decisions check (Q-HUB-340) and a Verification read outside the record (Q-HUB-341). The shape of this file is guard-cases/shape.mjs.
+// decisions check (Q-HUB-340) and a Verification read outside the record (Q-HUB-341), and by step 141 of the plan of 9 November: the page
+// refresh after the notes (Q-HUB-347), the hook loop's identifier skip (Q-HUB-349), a rule under a sub-heading (Q-HUB-351) and the read in plan
+// mode with no plan (Q-HUB-362). The shape of this file is guard-cases/shape.mjs.
 import { mkdirSync, writeFileSync, utimesSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -317,6 +319,112 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'Q-HUB-347: the dispatcher runs the status page next-line refresh after a main-thread write of the manager notes and before a main-thread send is judged and runs nothing for an agent write or a write of another file or a send by an agent',
+    guards: ['page_next_after_notes', 'page_next_before_send'],
+    run(m, dir, h) {
+      const home = h.tmp('sg-home-');
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      const s = h.sid('pn');
+      const notes = h.notesPad(s, 'Next: the old move');
+      const page = join(notes, '..', 'fix-run.html');
+      const shown = () => /The next move: ([^<]*)</.exec(readFileSync(page, 'utf8'))?.[1] ?? 'no line';
+      const call = (event, payload) => spawnSync('node', [join(dir, 'hook-dispatch.mjs'), event], {
+        input: JSON.stringify({ cwd: home, session_id: s, hook_event_name: event, ...payload }), encoding: 'utf8',
+        env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: home },
+      });
+      writeFileSync(page, '<p class="next"><strong>next: none</strong><br>The next move: the old move</p>\n');
+      writeFileSync(notes, 'Next: the second move\n');
+      call('PostToolUse', { tool_name: 'Write', agent_id: 'a1', tool_input: { file_path: notes, content: 'Next: the second move\n' }, tool_response: {} });
+      const agentWrite = shown();
+      call('PostToolUse', { tool_name: 'Write', tool_input: { file_path: join(home, 'other.txt'), content: 'text\n' }, tool_response: {} });
+      const otherFile = shown();
+      call('PostToolUse', { tool_name: 'Write', tool_input: { file_path: notes, content: 'Next: the second move\n' }, tool_response: {} });
+      const afterWrite = shown();
+      writeFileSync(notes, 'Next: the third move\n');
+      call('PreToolUse', { tool_name: 'Agent', agent_id: 'a1', tool_input: { prompt: '/root/.claude/plans/none.md step 1', subagent_type: 'general-purpose' } });
+      const agentSend = shown();
+      call('PreToolUse', { tool_name: 'Agent', tool_input: { prompt: '/root/.claude/plans/none.md step 1', subagent_type: 'general-purpose' } });
+      const beforeSend = shown();
+      return h.assertAll([
+        ['an agent\'s write of the notes runs no refresh', agentWrite === 'the old move', agentWrite],
+        ['a write of another file runs no refresh', otherFile === 'the old move', otherFile],
+        ['the main thread\'s write of the notes brings the page to the newest Next line', afterWrite === 'the second move', afterWrite],
+        ['a send by an agent runs no refresh', agentSend === 'the second move', agentSend],
+        ['a send by the main thread brings the page to the Next line a write did not announce', beforeSend === 'the third move', beforeSend],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-349: the dispatcher hook loop skips the identifier shim of an app for the main thread TaskStop of an id a launch result printed and runs it for an id no result printed',
+    guards: ['ident_skip_loop'],
+    run(m, dir, h) {
+      const launch = [h.tool(0, 'l1', 'Bash', { command: 'node long.mjs' }), h.result(1, 'l1', 'Command running in background with ID: bk7x3q9zd. Output is being written to a file.')];
+      const stop = (id) => {
+        const w = h.world(dir, [h.turn(0, h.GO), ...launch]);
+        h.hookRepo(w, 'ident-guard.sh', null);
+        return w.call('PreToolUse', { session_id: h.sid('is'), tool_name: 'TaskStop', tool_input: { task_id: id } });
+      };
+      const printed = stop('bk7x3q9zd');
+      const unprinted = stop('zz9zz9zz9');
+      return h.assertAll([
+        ['the shim is not run for an id the launch result printed', !/planted refusal from ident-guard\.sh/.test(printed.stderr), printed.stderr],
+        ['the shim is run for an id no result printed, and refuses', unprinted.status === 2 && /planted refusal from ident-guard\.sh/.test(unprinted.stderr), `${unprinted.status} ${unprinted.stderr}`],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-351: a rule of the plans page named by number is found under the sub-headings of its section at the third level and deeper and a number after the next second-level heading is not found',
+    guards: ['rule_number_subheading'],
+    run(m, dir, h) {
+      const tmp = h.tmp('sg-rules-');
+      const page = join(tmp, 'plans.md');
+      writeFileSync(page, ['## 0e. PLAN MODE ONLY.', '', '1. **Tell the owner in the first line.** Say what is being done.', '2. **A status when an agent has ended.** The status says what changed.', '',
+        '### A sub-section of the rules', '', '3. **Reply to every point.** Answer each of them in the turn it arrives.', '',
+        '#### A deeper heading', '', '4. **Hold the plan to the record.** The record is the plan.', '', '## 0g. Next section', '', '5. **Not part of the section.** Outside it.', ''].join('\n'));
+      const plan = (line) => ['# A rule plan', '', '## Steps', `1. **One.** ${line}`, ''].join('\n');
+      const third = m.dispatch.ruleNumberProblem(plan('Put a line under rule 3 of the plans page ("answer each of them") for the new rule.'), { page });
+      const fourth = m.dispatch.ruleNumberProblem(plan('Put a line under rule 4 of the plans page ("the record is the plan") for the new rule.'), { page });
+      const wrong = m.dispatch.ruleNumberProblem(plan('Put a line under rule 3 of the plans page ("the record is the plan") for the new rule.'), { page });
+      const after = m.dispatch.ruleNumberProblem(plan('Put a line under rule 5 of the plans page for the new rule.'), { page });
+      return h.assertAll([
+        ['a rule under a third-level heading is found with its quoted phrase', third === null, third],
+        ['a rule under a fourth-level heading is found with its quoted phrase', fourth === null, fourth],
+        ['a phrase the sub-section\'s rule does not carry is refused', typeof wrong === 'string' && /does not hold "the record is the plan"/.test(wrong), wrong],
+        ['a number after the next second-level heading is not found', typeof after === 'string' && /rule 5 is not a rule/.test(after), after],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-362: in plan mode with no plan in force the manager fence passes the main thread read of a file inside a git repository and still refuses a file outside one and the connector file read and a write and a read outside plan mode and a read while a plan is in force and passes one once the plan has finished',
+    guards: ['planmode_read_pass', 'planmode_read_phase', 'planmode_read_mode', 'planmode_read_repo'],
+    run(m, dir, h) {
+      const r = h.repo({ 'app.js': 'source\n' });
+      const loose = join(h.tmp('sg-loose-'), 'loose.txt');
+      writeFileSync(loose, 'text\n');
+      const p = (extra) => ({ tool_name: 'Read', tool_input: { file_path: join(r.dir, 'app.js') }, session_id: h.sid('pm'), cwd: r.dir, permission_mode: 'plan', ...extra });
+      const fence = (call, opts) => m.dispatch.managerFence(call, { classify: () => true, ...opts });
+      const plan = { path: '/root/.claude/plans/fence-test.md', text: h.STEPS_PLAN };
+      const passed = fence(p(), { plan: null });
+      const grepped = fence(p({ tool_name: 'Grep', tool_input: { pattern: 'source', path: r.dir } }), { plan: null });
+      const outside = fence(p({ tool_input: { file_path: loose } }), { plan: null });
+      const connector = fence(p({ tool_name: 'mcp__github__get_file_contents', tool_input: { path: 'app.js' } }), { plan: null });
+      const write = fence(p({ tool_name: 'Edit', tool_input: { file_path: join(r.dir, 'app.js'), old_string: 'source', new_string: 'text' } }), { plan: null });
+      const notPlanMode = fence(p({ permission_mode: 'default' }), { plan: null });
+      const inForce = fence(p(), { plan, pointer: { next: 1 } });
+      const finished = fence(p(), { plan, pointer: { next: null } });
+      return h.assertAll([
+        ['a read of a repository file passes in plan mode with no plan', passed === null, passed],
+        ['a search of a repository passes', grepped === null, grepped],
+        ['a file outside any repository is refused', typeof outside === 'string', outside],
+        ['the connector\'s file read is refused', typeof connector === 'string', connector],
+        ['a write is refused', typeof write === 'string', write],
+        ['a read outside plan mode is refused', typeof notPlanMode === 'string', notPlanMode],
+        ['a read while a plan is in force is refused', typeof inForce === 'string', inForce],
+        ['a read after the plan has finished passes', finished === null, finished],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
@@ -339,4 +447,12 @@ export const plants = {
   seed_start_mode: ['    if (p.permission_mode && !p.plan_mode_forced) {', '    if (false) {', 'hook-dispatch.mjs'],
   decisions_check_named: ['    if (/decisions?[- ]check|check[- ]decisions?/i.test(b)) continue;', '    void 0;', 'hook-dispatch.mjs'],
   verification_read: ['      if (!ok) bad.push(n);', '      void 0;', 'hook-dispatch.mjs'],
+  page_next_after_notes: ['    if (f && isManagerNotes(f, p.session_id)) pageFollowsNext(raw, root);', '    void 0;', 'hook-dispatch.mjs'],
+  page_next_before_send: ["    if (!p.agent_id && /^(?:Agent|Task|SendMessage|Workflow)$/.test(String(p.tool_name ?? ''))) pageFollowsNext(raw, root);", '    void 0;', 'hook-dispatch.mjs'],
+  ident_skip_loop: ['        if (IDENT_SHIMS.has(shim) && idInLaunchResult(p)) continue;', '        void 0;', 'hook-dispatch.mjs'],
+  rule_number_subheading: ['if (/^#{1,2} /.test(l)) break;', 'if (true) break;', 'hook-dispatch.mjs'],
+  planmode_read_pass: ['if (outside !== null && planModeNoPlan(p, opts)) outside', 'if (false && outside !== null && planModeNoPlan(p, opts)) outside', 'hook-dispatch.mjs'],
+  planmode_read_phase: ["  try { return planPhase(p, given).kind !== 'in force'; } catch { return false; }", '  return true;', 'hook-dispatch.mjs'],
+  planmode_read_mode: ["  if (p.agent_id || String(p.permission_mode ?? '') !== 'plan') return false;", '  if (p.agent_id) return false;', 'hook-dispatch.mjs'],
+  planmode_read_repo: ["  return existsSync(join(a, '.git')) || repoRootOf(a) !== null;", '  return true;', 'hook-dispatch.mjs'],
 };
