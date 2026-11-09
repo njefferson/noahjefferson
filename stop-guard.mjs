@@ -94,10 +94,10 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { pendingMessages, startedAt } from './pending-guard.mjs';
-import { tailEntries, lastOwnerMessage } from './transcript-tail.mjs';
+import { tailEntries, lastOwnerMessage, ownerMode } from './transcript-tail.mjs';
 import { latchStanding, approvedPlan, planSteps, correctionStanding, stopStanding, foundQueue, queueRoots, planPhase } from './hook-dispatch.mjs';
 import { runningWork, stepsReturned, planOrder, pointerOf, reviewState, aimReviewSteps, readCompacted, setCompacted, compactedWords, californiaTime,
-  servingModel, isTopTier, readTier, setTier, tierWords, foundLines, managerNotes, sortOf, scratchpadOf, markerApprovalTime, runningForPlanStep } from './report.mjs';
+  servingModel, isTopTier, readTier, setTier, tierWords, foundLines, managerNotes, sortOf, scratchpadOf, markerApprovalTime, runningForPlanStep, taskLauncher } from './report.mjs';
 
 /** The transcript is JSONL; the last assistant text is the reply just written. */
 const lastAssistantText = (path) => {
@@ -379,8 +379,10 @@ if (hook.stop_hook_active) {
       // A line that carries an artifact link is never a repeat: Doctrine §7i puts the status page's link in every progress
       // reply. After a refusal for a choice not first, a numbered option line is never one either: that refusal asked for the
       // choice to be moved to the top, which is the same line written once more. Both are left out of what is judged.
+      // A line opening with the word State and a colon is the state line every reply ends with (Doctrine §0e rule 6), so a follow-up
+      // the hook forces carries it again and it is no repeat.
       const skipLine = (l) => /claude\.ai\/(?:code\/)?artifact\/\S/i.test(l) || (rec.kind === 'choice' && /^\s{0,3}\d{1,2}[.)]\s+\S/.test(l));
-      const refused = units(rec.reply, skipLine);
+      const refused = units(rec.reply, (l) => skipLine(l) || /^[#*_>\s-]*state\s*:/i.test(l));
       const again = [...units(textAfter(path, Number(rec.lines) || 0))].filter((u) => refused.has(u));
       if (again.length) {
         // THE HOLD (P-20): the repeat is the one refusal this guard adds to a chain, so it is the one held under the cap.
@@ -497,7 +499,13 @@ const holdsByInput = (e) => !!e && typeof e === 'object' && String(e.type ?? '')
 let running = [];
 let cronNote = '';
 if (Array.isArray(hook.background_tasks)) {
-  running = hook.background_tasks.filter(holdsByInput).map((e) => `${String(e.type ?? 'task')}: ${String(e.description ?? e.id ?? '').slice(0, 80)}`);
+  // A task a RUNNING agent launched holds nothing: that agent's end brings the session back, and the manager fence refuses the wait the
+  // hold would ask for. It holds when the main transcript holds its launch, when the agent that launched it has ended, or when no
+  // transcript of the session accounts for it (`taskLauncher`, report.mjs).
+  const heldByAgent = (e) => {
+    try { return taskLauncher({ session_id: hook.session_id, transcript_path: path }, String(e.id ?? '')) === 'running-agent'; } catch { return false; }
+  };
+  running = hook.background_tasks.filter((e) => holdsByInput(e) && !heldByAgent(e)).map((e) => `${String(e.type ?? 'task')}: ${String(e.description ?? e.id ?? '').slice(0, 80)}`);
   if (Array.isArray(hook.session_crons)) cronNote = ` ${hook.session_crons.length} scheduled task(s) stand beside them and hold nothing.`;
 } else {
   try { running = (runningWork({ session_id: hook.session_id, transcript_path: path }) ?? []).filter(HOLDS_STOP); } catch { running = []; }
@@ -967,7 +975,11 @@ function stateLineFaults(text) {
 // or a choice open at the top of the reply under a plan in force.
 let noPlanInForce = false;
 try { noPlanInForce = !approvedPlan(); } catch { noPlanInForce = false; }
-const pausedOnOwner = (String(hook.permission_mode ?? '') === 'plan' && noPlanInForce)
+// A Stop payload without the permission mode key reads the mode the way the status's plan-mode line does: from the owner's newest
+// message in the transcript (`ownerMode`), never as "not plan mode" by default (Q-HUB-369). A payload that carries the key is believed.
+let sessionMode = String(hook.permission_mode ?? '');
+if (!sessionMode) { try { sessionMode = ownerMode(tailEntries(path, 16 * 1024 * 1024)) ?? ''; } catch { sessionMode = ''; } }
+const pausedOnOwner = (sessionMode === 'plan' && noPlanInForce)
   || (underPlan && (!!correctionNow || opensWithChoice(reply)));
 const stateFaults = pausedOnOwner ? stateLineFaults(reply) : [];
 if (stateFaults.length) {

@@ -1,7 +1,7 @@
 // The cases and plants of stop-guard.mjs written by step 123 of the plan of 8 November (Q-HUB-338 and Q-HUB-343). The shape is shape.mjs.
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
 export const cases = [
   {
@@ -131,9 +131,96 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'the stop guard reads plan mode from the Stop payload\'s permission mode key and, where the payload carries no key, from the owner\'s newest message in the transcript as the status\'s plan-mode line does: with no plan in force a reply with no state line is refused in plan mode by either route, a key that says another mode is believed over the transcript, and a payload with no key and a transcript that records no plan mode is not refused for it',
+    guards: ['stop_mode_fallback', 'stop_state_planmode'],
+    run(m, dir, h) {
+      const bareEnv = { ...process.env, HOME: h.tmp('sg-home-') };
+      const body = 'The line is changed.';
+      const modeTurn = (mode) => ({ ...h.turn(0, h.GO), ...(mode ? { permissionMode: mode } : {}) });
+      const run = (payloadMode, ownerMode, text) => {
+        const input = { session_id: h.sid('pm'), transcript_path: h.transcript([modeTurn(ownerMode), h.reply(5, text)]) };
+        if (payloadMode) input.permission_mode = payloadMode;
+        return spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify(input), encoding: 'utf8', env: bareEnv });
+      };
+      const withKey = run('plan', 'default', body);
+      const noKeyPlanTranscript = run('', 'plan', body);
+      const noKeyWithState = run('', 'plan', `${body}\n\nState: paused, pending the button on the plan.`);
+      const keyOverrides = run('default', 'plan', body);
+      const noKeyNoPlan = run('', 'default', body);
+      const noKeyUnknown = run('', '', body);
+      return h.assertAll([
+        ['a payload whose key says plan is refused for the missing state line', withKey.status === 2 && /breaks the state line rule/.test(withKey.stderr), `exit ${withKey.status}: ${withKey.stderr}`],
+        ['a payload with no key and a transcript whose newest owner message records plan is refused for it', noKeyPlanTranscript.status === 2 && /breaks the state line rule/.test(noKeyPlanTranscript.stderr), `exit ${noKeyPlanTranscript.status}: ${noKeyPlanTranscript.stderr}`],
+        ['the same payload with the state line passes', noKeyWithState.status === 0, `exit ${noKeyWithState.status}: ${noKeyWithState.stderr}`],
+        ['a key that says another mode is believed over the transcript', keyOverrides.status === 0, `exit ${keyOverrides.status}: ${keyOverrides.stderr}`],
+        ['a payload with no key and a transcript that records another mode is not refused for it', noKeyNoPlan.status === 0, `exit ${noKeyNoPlan.status}: ${noKeyNoPlan.stderr}`],
+        ['a payload with no key and a transcript that records no mode is not refused for it', noKeyUnknown.status === 0, `exit ${noKeyUnknown.status}: ${noKeyUnknown.stderr}`],
+      ]);
+    },
+  },
+  {
+    name: 'the stop guard holds the main thread\'s stop for a background shell the Stop input lists only where the main transcript holds its launch, where the agent that launched it has ended, or where no transcript of the session accounts for it, and not while the agent that launched it is still running',
+    guards: ['stop_task_running_agent', 'stop_task_ended_agent', 'stop_task_main_launch'],
+    run(m, dir, h) {
+      const reply = h.reply(30, 'Stopping here: open for you is nothing new.');
+      const launch = (id) => [h.at(h.tool(0, `${id}-b`, 'Bash', {}), h.later(-120)), h.at(h.result(0, `${id}-b`, `Command running in background with ID: ${id}. Output is being written to: /tmp/x`), h.later(-119))];
+      const handed = [h.at(h.tool(0, 'ag-h', 'SubagentHandback', { message: 'DONE\nThe second line.' }), h.later(-100)), h.at(h.result(0, 'ag-h', 'Report delivered to your caller.'), h.later(-99))];
+      const task = { id: 'bshell1', type: 'shell', status: 'running', description: 'node long.mjs' };
+      const say = (mainEntries, agentEntries) => {
+        const main = h.transcript(mainEntries);
+        if (agentEntries) {
+          const subs = join(main.slice(0, -'.jsonl'.length), 'subagents');
+          mkdirSync(subs, { recursive: true });
+          writeFileSync(join(subs, 'agent-ashell1.jsonl'), h.jsonl(agentEntries));
+        }
+        return spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: h.sid('bt'), transcript_path: main, background_tasks: [task], session_crons: [] }), encoding: 'utf8' });
+      };
+      const ofRunningAgent = say([h.turn(0, 'start'), reply], launch('bshell1'));
+      const ofEndedAgent = say([h.turn(0, 'start'), reply], [...launch('bshell1'), ...handed]);
+      const ofMain = say([h.turn(0, 'start'), ...launch('bshell1'), reply]);
+      const ofMainBesideRunningAgent = say([h.turn(0, 'start'), ...launch('bshell1'), reply], launch('bother1'));
+      const unaccounted = say([h.turn(0, 'start'), reply]);
+      return h.assertAll([
+        ['a shell a running agent launched holds nothing', ofRunningAgent.status === 0, `exit ${ofRunningAgent.status}: ${ofRunningAgent.stderr}`],
+        ['a shell an ended agent launched holds the stop', ofEndedAgent.status === 2 && /still running/.test(ofEndedAgent.stderr), `exit ${ofEndedAgent.status}: ${ofEndedAgent.stderr}`],
+        ['a shell the main thread launched holds the stop', ofMain.status === 2 && /still running/.test(ofMain.stderr), `exit ${ofMain.status}: ${ofMain.stderr}`],
+        ['a shell the main thread launched holds the stop beside a running agent that launched another', ofMainBesideRunningAgent.status === 2, `exit ${ofMainBesideRunningAgent.status}: ${ofMainBesideRunningAgent.stderr}`],
+        ['a shell no transcript of the session accounts for holds the stop', unaccounted.status === 2, `exit ${unaccounted.status}: ${unaccounted.stderr}`],
+      ]);
+    },
+  },
+  {
+    name: 'the stop guard does not count the state line as a repeated line in a follow-up: a follow-up that ends with the same State line as the refused reply passes, and a follow-up that sends a long sentence of the refused reply again is still refused',
+    guards: ['stop_repeat_state_line'],
+    run(m, dir, h) {
+      const env = h.underPlanEnv();
+      const recDir = h.tmp('sr-rec-');
+      const session = h.sid('sx');
+      const STATE = 'State: running, step 5, nothing pending from the owner.';
+      const first = [h.turn(0, h.GO), h.reply(5, `I am waiting on you for the next decision.\n\n${STATE}`)];
+      const call = (entries, active) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: session, transcript_path: h.transcript(entries), ...(active ? { stop_hook_active: true } : {}) }), encoding: 'utf8', env: { ...env, STOP_REFUSED_DIR: recDir } });
+      const refused = call(first, false);
+      const withState = call([...first, h.reply(8, `The wording is corrected.\n\n${STATE}`)], true);
+      // The record is made again for the second case, because a repeat refusal marks it.
+      const refusedAgain = call(first, false);
+      const withRepeat = call([...first, h.reply(8, 'I am waiting on you for the next decision. That is the whole of it.')], true);
+      return h.assertAll([
+        ['the reply with a fault is refused and recorded', refused.status === 2, `exit ${refused.status}: ${refused.stderr}`],
+        ['a follow-up that carries the same State line passes', withState.status === 0, `exit ${withState.status}: ${withState.stderr}`],
+        ['the reply is refused again for the second reading', refusedAgain.status === 2, `exit ${refusedAgain.status}: ${refusedAgain.stderr}`],
+        ['a follow-up that sends a long sentence of the refused reply again is still refused', withRepeat.status === 2 && /sends the refused reply again/.test(withRepeat.stderr), `exit ${withRepeat.status}: ${withRepeat.stderr}`],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
+  stop_mode_fallback: ["if (!sessionMode) { try { sessionMode = ownerMode(tailEntries(path, 16 * 1024 * 1024)) ?? ''; } catch { sessionMode = ''; } }\n", '', 'stop-guard.mjs'],
+  stop_task_running_agent: ['filter((e) => holdsByInput(e) && !heldByAgent(e))', 'filter((e) => holdsByInput(e))', 'stop-guard.mjs'],
+  stop_task_ended_agent: ["return running.has(a.file) ? 'running-agent' : 'ended-agent';", "return 'running-agent';", 'report.mjs'],
+  stop_task_main_launch: ["if (holdsLaunch(raw, id)) return 'main';\n", "if (holdsLaunch(raw, id)) return 'running-agent';\n", 'report.mjs'],
+  stop_repeat_state_line: ["(l) => skipLine(l) || /^[#*_>\\s-]*state\\s*:/i.test(l));\n", '(l) => skipLine(l));\n', 'stop-guard.mjs'],
   stop_faults_listed: ['  FAULTS.push({ message, reply, kind });\n', '  FAULTS.push({ message, reply, kind });\n  flushFaults();\n', 'stop-guard.mjs'],
   stop_faults_before_declared: ['  finish();\n}\n\n// PARKING is judged', '  process.exit(0);\n}\n\n// PARKING is judged', 'stop-guard.mjs'],
   stop_faults_before_end: ["|| !underPlan) finish();\n", "|| !underPlan) process.exit(0);\n", 'stop-guard.mjs'],
@@ -145,7 +232,7 @@ export const plants = {
   stop_declared_old: ['const DECLARED = { test: (text) => DECLARED_NEW.test(text) || DECLARED_OLD.test(text) };\n', 'const DECLARED = { test: (text) => DECLARED_NEW.test(text) };\n', 'stop-guard.mjs'],
   stop_declared_old_note: ['is the older form, accepted for one release;', 'is accepted;', 'stop-guard.mjs'],
   stop_state_refusal: ['const stateFaults = pausedOnOwner ? stateLineFaults(reply) : [];\n', 'const stateFaults = [];\n', 'stop-guard.mjs'],
-  stop_state_planmode: ["const pausedOnOwner = (String(hook.permission_mode ?? '') === 'plan' && noPlanInForce)\n", "const pausedOnOwner = (false && noPlanInForce)\n", 'stop-guard.mjs'],
+  stop_state_planmode: ["const pausedOnOwner = (sessionMode === 'plan' && noPlanInForce)\n", "const pausedOnOwner = (false && noPlanInForce)\n", 'stop-guard.mjs'],
   stop_state_correction: ['  || (underPlan && (!!correctionNow || opensWithChoice(reply)));\n', '  || (underPlan && (opensWithChoice(reply)));\n', 'stop-guard.mjs'],
   stop_state_finished: ['else if (/^[#*_>\\s-]*state\\b[:,]?\\s*(?:then\\s+)?finished\\b/i.test(end)) faults.push(', 'else if (false) faults.push(', 'stop-guard.mjs'],
   stop_state_paused_nothing: ['faults.push(`the state line says the session is paused and nothing is pending', 'void (`the state line says the session is paused and nothing is pending', 'stop-guard.mjs'],

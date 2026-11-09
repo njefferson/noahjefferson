@@ -1704,6 +1704,58 @@ export function runningWork(p) {
 }
 
 /**
+ * Does a transcript's text hold the launch of a background task, as the harness writes it at the start of a tool result?
+ * @param {string} raw  a transcript as JSONL text.
+ * @param {string} id  the task's id.
+ * @returns {boolean} true when a tool result opens with "Command running in background with ID: <id>" or "Workflow launched in
+ *   background. Task ID: <id>"; the same words in a command's input or in a printed file are not a launch (as `runningTasks` reads it).
+ */
+function holdsLaunch(raw, id) {
+  const LAUNCH = /^(?:Workflow launched in background\. Task ID: |Command running in background with ID: )([a-z0-9]{6,})\b/;
+  for (const line of raw.split('\n')) {
+    if (!line || !line.includes(id) || !line.includes('tool_result')) continue;
+    let e; try { e = JSON.parse(line); } catch { continue; }
+    const c = e?.message?.content;
+    if (e?.type !== 'user' || !Array.isArray(c)) continue;
+    for (const blk of c) {
+      if (blk?.type !== 'tool_result') continue;
+      const t = typeof blk.content === 'string' ? blk.content
+        : Array.isArray(blk.content) ? blk.content.map((x) => (typeof x === 'string' ? x : x?.text ?? '')).join('\n') : '';
+      const m = LAUNCH.exec(t.trimStart());
+      if (m && m[1] === id) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Who launched a background task the Stop input lists, and is that launcher still running? * @param {object} p  a Stop payload: `transcript_path` and `session_id` say where the session's transcript and agents are.
+ * @param {string} id  the task's id.
+ * @returns {'main' | 'running-agent' | 'ended-agent' | 'none'} 'main' when the main transcript holds the launch; 'running-agent' when an
+ *   agent's transcript holds it and that agent has no end (its end brings the session back, so the task holds nothing meanwhile);
+ *   'ended-agent' when the agent that launched it has ended; 'none' when no transcript of the session accounts for it, or the session's
+ *   files cannot be read, which a caller reads as holding, as every doubt does.
+ */
+export function taskLauncher(p, id) {
+  const tr = String(p?.transcript_path ?? '');
+  const sid = String(p?.session_id ?? '');
+  if (!/^[a-z0-9]{6,}$/.test(String(id ?? ''))) return 'none';
+  let raw;
+  try { raw = readFileSync(tr, 'utf8'); } catch { return 'none'; }
+  if (holdsLaunch(raw, id)) return 'main';
+  const f = tr.endsWith('.jsonl') ? { main: tr, agents: join(tr.slice(0, -'.jsonl'.length), 'subagents') } : sessionFiles(sid);
+  if (!f) return 'none';
+  let running = new Set();
+  try { running = new Set((runningAgents(sid, f) ?? []).map((a) => a.path)); } catch { running = new Set(); }
+  for (const a of agentFiles(f.agents)) {
+    let text;
+    try { text = readFileSync(a.file, 'utf8'); } catch { continue; }
+    if (holdsLaunch(text, id)) return running.has(a.file) ? 'running-agent' : 'ended-agent';
+  }
+  return 'none';
+}
+
+/**
  * Every agent the session launched, by the plan step its prompt names.
  * @param {object} p  a Stop or PreToolUse payload: `transcript_path` and
  *   `session_id` say where the session's agents are, as `runningWork` finds them.
@@ -3305,7 +3357,7 @@ export function configChangesBlock(sid, stampAt) {
     let r = null;
     try { r = JSON.parse(l); } catch { continue; }
     if (!(Number(r?.at) > stampAt)) continue;
-    lines.push(`Configuration change: ${r.california ?? 'an unread time'} California, source ${r.source || 'not stated'}, ${r.file ? r.file : 'no path'}, ${r.baseline ? 'the baseline names it' : 'the baseline does not name it'}.`);
+    lines.push(`Configuration change: ${r.california ?? 'an unread time'} California, source ${r.source || 'not stated'}, ${r.file ? r.file : 'no path'}, ${r.harnessSync ? 'the harness\'s own sync of a skill file, which no hub file holds, and the baseline names that class' : (r.baseline ? 'the baseline names it' : 'the baseline does not name it')}.`);
   }
   return lines.join('\n');
 }

@@ -70,7 +70,9 @@ The hand-back is the whole of the report. Its first line is the verdict:
 - ON-AIM or OFF-AIM, then ROUTE-CLEAR or ROUTE-REFUSED, then `step N` for the
   hand-back judged and `next M` for the step whose route it read. For example, the
   words ON-AIM ROUTE-CLEAR step 12 next 13 clear step 13 after step 12. When no
-  step of Order has ended yet, N is the word none.
+  step of Order has ended yet, N is the word none. N is the step of the newest end in
+  Order of any kind, a DONE, a refusal, a failure or an eject, as the status print's
+  Order line shows it, and never the step before that end.
 
 Its second line, directly under the verdict, is the review's own wall line, which
 begins with the words `Wall line:` and is one sentence answering three questions:
