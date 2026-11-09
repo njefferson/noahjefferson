@@ -252,7 +252,7 @@ export function isPlanCheck(p, planPath = () => approvedPlan()?.path) {
 // the plan's own shape and writes nothing, so the manager fence, the check of a call and the status pass pass it as they pass the plan check, in plan
 // mode too, and the plan guard passes the same line (its own copy of this test).
 const SEED = new RegExp('^\\s*node\\s+"?' + join(HUB, 'plan-seed.mjs').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  + '"?(?=(?:\\s+--(?:item|repo|plan|steps)\\s+' + CAN_ARG + ')*\\s+--item\\s)(?:\\s+--(?:item|repo|plan|steps)\\s+' + CAN_ARG + ')+\\s*$');
+  + '"?(?=(?:\\s+--(?:item|repo|plan|steps|size|hub)\\s+' + CAN_ARG + '|\\s+--batch(?=\\s|$))*\\s+--(?:item\\s|batch(?:\\s|$)))(?:\\s+--(?:item|repo|plan|steps|size|hub)\\s+' + CAN_ARG + '|\\s+--batch(?=\\s|$))+\\s*$');
 
 /**
  * Is a Bash line the plan seed's command?
@@ -534,7 +534,10 @@ export function approvedPlan() {
     const bytes = readFileSync(mk.plan);
     if (createHash('sha256').update(bytes).digest('hex') !== String(mk.hash)) return null;
     const recorded = (v) => (v === undefined ? null : Array.isArray(v) && v.every((x) => Number.isInteger(x)) ? v : []);
-    return { path: String(mk.plan), text: bytes.toString('utf8'), scriptHash: typeof mk.scriptHash === 'string' ? mk.scriptHash : null, review: recorded(mk.review), steps: recorded(mk.steps), standing: recorded(mk.standing) };
+    // When the plan was approved, in ms (Q-HUB-290): `approvedAt` of the marker, else its `at`, as a number or a date string; null when neither reads.
+    const when = mk.approvedAt ?? mk.at;
+    const approvedAt = Number.isFinite(Number(when)) && when !== null && when !== '' ? Number(when) : Date.parse(String(when ?? ''));
+    return { path: String(mk.plan), text: bytes.toString('utf8'), approvedAt: Number.isFinite(approvedAt) ? approvedAt : null, scriptHash: typeof mk.scriptHash === 'string' ? mk.scriptHash : null, review: recorded(mk.review), steps: recorded(mk.steps), standing: recorded(mk.standing) };
   } catch { return null; }
 }
 
@@ -929,6 +932,33 @@ export const READ_SHAPE_NO_LATCH = 'READ SHAPE, NO LATCH:';
 const IDENT_SHIMS = new Set(['ident-guard.sh', 'ident-guard.mjs']);
 
 /**
+ * Is the id a main-thread stop names one a launch result of the session printed?
+ * @param {object} p  a PreToolUse payload.
+ * @param {object[]} [entries]  the main transcript's entries, for the test; read from the payload's transcript when undefined.
+ * @returns {boolean} true only for the main thread's TaskStop whose `task_id` (or `shell_id`) is a run of at least six letters, digits, hyphens
+ *   and underscores that occurs in the text of a tool result of the transcript: a launch prints the id, and a stop of that id names a value
+ *   the session was given. False for every other call and for an id no result printed.
+ */
+export function idInLaunchResult(p, entries = undefined) {
+  if (p?.agent_id || p?.tool_name !== 'TaskStop') return false;
+  const id = String(p.tool_input?.task_id ?? p.tool_input?.shell_id ?? '').trim();
+  if (!/^[A-Za-z0-9_-]{6,}$/.test(id)) return false;
+  try {
+    const list = entries ?? (p.transcript_path ? tailEntries(String(p.transcript_path), 16 * 1024 * 1024) : []);
+    for (const e of list) {
+      const c = e?.message?.content;
+      if (e?.type !== 'user' || !Array.isArray(c)) continue;
+      for (const b of c) {
+        if (b?.type !== 'tool_result') continue;
+        const t = typeof b.content === 'string' ? b.content : JSON.stringify(b.content ?? '');
+        if (t.includes(id)) return true;
+      }
+    }
+  } catch { return false; }
+  return false;
+}
+
+/**
  * Does a refusal by a repository's own hook leave the latch unset?
  * @param {string} shim  the hook command's file name, such as `plan-guard.sh` or `ident-guard.sh`.
  * @param {object} p  the PreToolUse payload of the refused call.
@@ -1316,7 +1346,13 @@ export function dispatchGate(p, plan = approvedPlan(), pointer = undefined, entr
   const refusal = (t) => `${t}\n${approvalBlock()}`;
   // NO SEND ON THE TOP TIER (P-21 plan, goal 2): the manager's turns need no more than a lesser tier, and a session cannot change its own model.
   let serving = null;
-  try { serving = servingModel(entries ?? (p.transcript_path ? tailEntries(String(p.transcript_path), 16 * 1024 * 1024) : [])); } catch { serving = null; }
+  try {
+    const list = entries ?? (p.transcript_path ? tailEntries(String(p.transcript_path), 16 * 1024 * 1024) : []);
+    serving = servingModel(list);
+    // Q-HUB-288: a switch counts at once. The reply the model is read from is older than a switch made after it, so the post-switch record
+    // (`modelSwitch`) is read too and wins while it is newer than the newest main-thread reply.
+    serving = switchedModel(p, list) ?? serving;
+  } catch { serving = null; }
   if (serving && isTopTier(serving)) {
     return refusal(`${head} The model serving the main thread is ${serving}, the top tier, and the manager's turns need no more than a lesser one, so no agent is sent while it serves. Say so in the first line of the reply and end the turn as a declared stop naming the switch of model, which the owner makes. ${FENCE_NO_LATCH} this refusal sets no latch, so the next call is judged on its own.`);
   }
@@ -1938,6 +1974,9 @@ export function readsGate(p, plan = approvedPlan(), open = undefined) {
     const refused = refusedReads(p.session_id);
     list = refused.length ? unreadRefusals(refused, tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024)) : [];
   }
+  // Q-HUB-290: only a refusal made since the plan in force was approved holds a step; refusals of earlier, closed plans stay in the record and
+  // hold nothing (thirty of them held one send).
+  if (plan && Number.isFinite(plan.approvedAt)) list = list.filter((x) => !(Number(x.at) < plan.approvedAt));
   if (!list.length) return null;
   const named = list.slice(0, 10).map((x) => `- ${x.path}, refused at ${californiaTime(new Date(x.at))} (California)`);
   return `READS GATE (Doctrine §0e rule 13): ${list.length === 1 ? 'a read' : `${list.length} reads`} of the record the main thread made ${list.length === 1 ? 'was' : 'were'} refused and no Read has returned since, so the main thread has not read what it needs and no step is sent on it:\n`
@@ -2017,7 +2056,9 @@ export function queueRoots(text, dir = process.env.CLAUDE_PROJECT_DIR || process
     if (r !== HUB && !existsSync(join(r, '.git'))) continue;
     if (labels.some((l) => labelNames(l, r))) roots.push(r);
   }
-  return roots;
+  // THE LIVE CLONE COMES LAST (Q-HUB-325): where the session's own repository is also a root, a name is resolved against it first, so the plan check
+  // and the approval call, which both resolve through `namedFileOf`, mean the same file.
+  return [...roots.filter((r) => r !== HUB), ...roots.filter((r) => r === HUB)];
 }
 
 /**
@@ -2099,6 +2140,17 @@ function namedFileCandidates(name, roots) {
 }
 
 /**
+ * The one file a name of the "What is" section means (Q-HUB-325).
+ * @param {string} name  as written in the plan.
+ * @param {string[]} roots  the repositories the plan's Files names (`queueRoots`, the session's repository before the live clone).
+ * @returns {string[]} [] when no file exists, else the first candidate of `namedFileCandidates` alone. The quote check and the read-after-compaction
+ *   check both resolve a name here, so a check that passes on a read of one copy of a page cannot be followed by an approval that wants another.
+ */
+export function namedFileOf(name, roots) {
+  return namedFileCandidates(name, roots).slice(0, 1);
+}
+
+/**
  * Does every "What is" line of a plan quote a line present in a file it names?
  * @param {string} text  the plan (its current block).
  * @param {{roots?: string[], dir?: string}} [opts]  the repositories to search, and the launch
@@ -2131,7 +2183,7 @@ export function whatIsProblem(text, opts = {}) {
     if (!spans.length) { bad.push(`- ${label}: it quotes nothing (a span in double quotes of twelve characters or more)`); continue; }
     const named = [...outside.matchAll(SOURCE_FILE)].map((m) => m[1]);
     if (!named.length) { bad.push(`- ${label}: it names no file outside the quote`); continue; }
-    const files = named.flatMap((n) => namedFileCandidates(n, roots));
+    const files = named.flatMap((n) => namedFileOf(n, roots));
     if (!files.length) { bad.push(`- ${label}: no repository the Files names holds ${named.join(' or ')}`); continue; }
     const stretches = spans.flatMap((s) => s.split(/\s*(?:\.{3}|…)\s*/)).map(flat).filter((s) => s.length >= 4);
     const held = files.some((f) => { let t = ''; try { t = flat(readFileSync(f, 'utf8')); } catch { return false; } return stretches.every((s) => t.includes(s)); });
@@ -2181,12 +2233,12 @@ export function readAfterCompactionProblem(text, opts = {}) {
   const missing = new Set();
   for (const line of lines) {
     const named = [...line.replace(QUOTED_SPAN, ' ').matchAll(SOURCE_FILE)].map((m) => m[1]);
-    const files = named.flatMap((n) => namedFileCandidates(n, roots));
+    const files = named.flatMap((n) => namedFileOf(n, roots));
     if (files.length && !files.some(covered)) for (const n of named) missing.add(n);
   }
   if (!missing.size) return null;
   return 'READ AFTER COMPACTION (Doctrine §0e rule 2): the session was compacted, and a plan written from its summary rests on files it has not opened since. '
-    + `The "## What is" section names ${[...missing].join(', ')}, and no Read or Grep of ${missing.size === 1 ? 'it' : 'them'} came back after the newest compaction. Read each, then put the plan up again.`;
+    + `The "## What is" section names ${[...missing].join(', ')}, and no Read or Grep of ${missing.size === 1 ? 'it' : 'them'} came back after the newest compaction. Read each, then put the plan up again.${OWN_TURN}`;
 }
 
 /**
@@ -2206,8 +2258,111 @@ export function costProblem(text) {
   const numberBeside = /\b(?:\d+|no|none|zero|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:\w+\s+){0,3}push(?:es)?\b|\bpush(?:es)?\b[^.\n]{0,40}\b(?:\d+|none|zero|one|two|three|four|five)\b/i.test(body);
   const sends = /\b(?:agents?|sends?|reviews?)\b/i.test(body);
   const tier = /\b(?:opus|sonnet|haiku|fable|mythos|tier)\b/i.test(body);
-  const lacks = [numberBeside ? '' : 'the number of pushes', sends ? '' : 'the agent sends or reviews', tier ? '' : 'the tier of each step'].filter(Boolean);
+  // Q-HUB-282: a plan whose Rules hold commits for a later landing counts the turns the environment's stop hook forces while a commit stands
+  // unpushed, in a number beside the words forced turns (or stop hook), because lesson 458's rule asks a plan that holds its commits to name them.
+  const rules = `${planSection(text, 'Rules')}\n${planSection(text, 'Rules of this plan')}`;
+  const holds = /\bhold(?:s|ing)?\b[^.\n]{0,60}\bcommits?\b|\bcommits?\b[^.\n]{0,60}\b(?:held|kept)\b/i.test(rules);
+  const forced = /\b(?:\d+|no|none|zero|one|two|three|four|five|six|seven|eight|nine|ten|about|up to)\s+(?:\w+\s+){0,3}(?:forced|stop[- ]hook)\b|\b(?:forced turns?|stop[- ]hook)\b[^.\n]{0,50}\b(?:\d+|none|zero|one|two|three|four|five|six|seven|eight|nine|ten)\b/i.test(body);
+  const lacks = [numberBeside ? '' : 'the number of pushes', sends ? '' : 'the agent sends or reviews', tier ? '' : 'the tier of each step',
+    !holds || forced ? '' : 'the number of turns the environment\'s stop hook forces while a commit stands unpushed (the plan\'s Rules hold its commits)'].filter(Boolean);
   return lacks.length ? `${head} The "## Cost" section does not state ${lacks.join(', ')}.` : null;
+}
+
+/**
+ * Does every rule of the plans page a step names by number exist there, and say what the step says it does?
+ * @param {string} text  the plan (its current block).
+ * @param {{page?: string}} [opts]  the plans page's path (`doctrine/plans.md` beside this file by default), for the test.
+ * @returns {string|null} the refusal, or null (Q-HUB-309). In the plan's `## Steps`, a mention of `rule N` with the words plans page (or
+ *   `doctrine/plans.md`) within 120 characters either side is read against the page's own numbering, the lines of the form `N. **` between the
+ *   heading of 0e and the next heading: N has to be a number the page holds there, and where a span in double quotes of eight characters or
+ *   more follows the mention in the same sentence, rule N's text has to hold it (case and white space set aside). A step that put a line under
+ *   a rule that was not where the plan said it was is the failure. It cannot judge a mention that quotes nothing beyond the number existing.
+ *   A fault of the plan's shape: plan-guard.mjs refuses ExitPlanMode on it and sets no latch.
+ */
+export function ruleNumberProblem(text, opts = {}) {
+  const steps = planSection(text, 'Steps');
+  if (!steps.trim()) return null;
+  let page = '';
+  try { page = readFileSync(opts.page ?? join(HUB, 'doctrine', 'plans.md'), 'utf8'); } catch { return null; }
+  const lines = page.split('\n');
+  const rules = new Map();
+  let cur = null;
+  let inside = false;
+  for (const l of lines) {
+    if (/^## 0e\b/.test(l)) { inside = true; continue; }
+    if (inside && /^#{1,3} /.test(l)) { if (/^## /.test(l)) break; cur = null; continue; }
+    if (!inside) continue;
+    const m = /^(\d+)\.\s+\*\*/.exec(l);
+    if (m) { cur = Number(m[1]); rules.set(cur, l); continue; }
+    if (cur !== null) rules.set(cur, `${rules.get(cur)}\n${l}`);
+  }
+  if (!rules.size) return null;
+  const bad = [];
+  for (const m of steps.matchAll(/\brules?\s+(\d+)\b/gi)) {
+    const around = steps.slice(Math.max(0, m.index - 120), m.index + m[0].length + 120);
+    if (!/plans page|doctrine\/plans\.md/i.test(around)) continue;
+    const n = Number(m[1]);
+    const tail = steps.slice(m.index + m[0].length).split(/(?<=[.!?])\s|\n/)[0].slice(0, 200);
+    if (!rules.has(n)) { bad.push(`rule ${n} is not a rule the plans page holds (it numbers ${Math.min(...rules.keys())} to ${Math.max(...rules.keys())})`); continue; }
+    const span = /"([^"\n]{8,})"/.exec(tail)?.[1];
+    if (span && !flat(rules.get(n)).toLowerCase().includes(flat(span).toLowerCase())) bad.push(`rule ${n} of the plans page does not hold "${span}"`);
+  }
+  if (!bad.length) return null;
+  return 'RULE NUMBER (Doctrine §0e rule 2, Q-HUB-309): a step names a rule of the plans page by its number and the page does not agree, and a line placed under the wrong rule is the plan\'s own mistake: '
+    + `${[...new Set(bad)].join('; ')}. Read the page's numbering and name the rule that holds the thing the step means.`;
+}
+
+/**
+ * Does every step of a plan that names the decision records folder also name the decisions check?
+ * @param {string} text  the plan (its current block).
+ * @returns {string|null} the refusal, or null (Q-HUB-340). A step is a block of `## Steps` opening with `N.`; one whose text holds `docs/decisions`
+ *   (its Files line or any code span) has to hold the words decisions check (or `check-decisions`) too, because a record edited without the
+ *   check landed a bare file name that the check refuses. A fault of the plan's shape: plan-guard.mjs refuses ExitPlanMode on it, no latch.
+ */
+export function decisionsCheckProblem(text) {
+  const steps = planSection(text, 'Steps');
+  if (!steps.trim()) return null;
+  const blocks = steps.split(/^(?=\s*\d+\.\s)/m).filter((b) => /^\s*\d+\.\s/.test(b));
+  const bad = [];
+  for (const b of blocks) {
+    if (!/docs\/decisions/.test(b)) continue;
+    if (/decisions?[- ]check|check[- ]decisions?/i.test(b)) continue;
+    bad.push(/^\s*(\d+)\./.exec(b)[1]);
+  }
+  if (!bad.length) return null;
+  return `DECISIONS CHECK (Q-HUB-340): step${bad.length === 1 ? '' : 's'} ${bad.join(', ')} of the plan name${bad.length === 1 ? 's' : ''} the decision records folder (docs/decisions) and the step's text does not name the decisions check. `
+    + 'A record edited without the check landed a bare file name the check refuses; name the check in the step\'s Do and its Observe.';
+}
+
+/**
+ * Does a Verification line promise the main thread a read of a path outside the record?
+ * @param {string} text  the plan (its current block).
+ * @param {{roots?: string[], session_id?: string, planPath?: string}} [opts]  the repositories a relative path is read against, the session and the plan file.
+ * @returns {string|null} the refusal, or null (Q-HUB-341). Of each line of `## Verification` that names a read by the main thread (the words main
+ *   thread within forty characters of read, either order), every path it holds (an absolute path, a `~/` path, or a code span with a file
+ *   extension, read against the first repository the Files names) has to be one `recordPath` calls of the record, because the manager fence
+ *   refuses the main thread any other read and the promise could not be kept. A fault of the plan's shape: no latch.
+ */
+export function verificationReadProblem(text, opts = {}) {
+  const body = planSection(text, 'Verification');
+  if (!body.trim()) return null;
+  const bad = [];
+  const p = { session_id: opts.session_id };
+  for (const line of body.split('\n')) {
+    if (!/main[- ]thread[^.\n]{0,40}\bread|\bread[^.\n]{0,40}main[- ]thread/i.test(line)) continue;
+    const named = new Set();
+    for (const m of line.matchAll(/(?<![\w./-])((?:~|\/)[\w.~/-]+)/g)) named.add(m[1]);
+    for (const m of line.matchAll(/`([^`\s]+\.[A-Za-z0-9]{1,6})`/g)) named.add(m[1]);
+    for (const n of named) {
+      const abs = n.startsWith('/') || n.startsWith('~') ? absOf(n, '/') : join(opts.roots?.[0] ?? process.cwd(), n);
+      let ok = false;
+      try { ok = recordPath(abs, p, () => opts.planPath); } catch { ok = false; }
+      if (!ok) bad.push(n);
+    }
+  }
+  if (!bad.length) return null;
+  return `VERIFICATION (Q-HUB-341): the plan's Verification promises the main thread a read of ${[...new Set(bad)].join(', ')}, and the manager fence refuses the main thread a read outside the record (the plans, the scratchpad, the doctrine and lessons, each repository's notes and decision records, the session's transcript). `
+    + 'Verify it with an agent\'s report, a status or a file of the record instead.';
 }
 
 /**
@@ -2445,8 +2600,12 @@ export function shippedCheckProblem(text, opts = {}) {
   }
   if (!problems.length) return null;
   return 'SHIPPED CHECK (Doctrine §0e rule 2, LESSONS §423): a plan that marks a roadmap item in names it as work to build, and a line in the notes is not the state of the app. '
-    + `The commit log of the repository's two branches is, so it is read first and the plan says what it showed, item by item:\n${problems.map((x) => `- ${x}`).join('\n')}`;
+    + `The commit log of the repository's two branches is, so it is read first and the plan says what it showed, item by item:\n${problems.map((x) => `- ${x}`).join('\n')}${OWN_TURN}`;
 }
+
+// Q-HUB-327: a result returned in the same assistant turn is not yet in the transcript when a later call's hook in that turn runs. The words of
+// every gate that reads an earlier call end with this sentence.
+const OWN_TURN = ' A call this gate has to see goes in a turn of its own: the result of a call sent in the same turn is not yet in the transcript when this gate reads it, so send the read alone, and the call that needs it in the next turn.';
 
 // ---- the state page is the main thread's first read after a compaction (Doctrine §0e rule 2) ----
 
@@ -2548,7 +2707,7 @@ export function pageGate(p, entries, opts = {}) {
   return `STATE PAGE GATE (Doctrine §0e rule 2): this session was compacted and the status page has not been read since. `
     + `Until a Read result on ${page} has returned, the main thread may only read and give the status. `
     + 'Read the whole page now: it holds the outcome, the explanations standing and ruled out, the decisions with their reasons, the next move and every Found line sorted, and a summary of it, or another copy, is not it. '
-    + 'This refusal does not latch: reading the page clears it.';
+    + `This refusal does not latch: reading the page clears it.${OWN_TURN}`;
 }
 
 // ---- the owner's messages are the main thread's read after a compaction (Doctrine §0e rule 2, LESSONS §416) ----
@@ -2602,7 +2761,7 @@ export function recallGate(p, entries, opts = {}) {
   return `RECALL GATE (Doctrine §0e rule 2): this session was compacted and the owner's messages since the previous compaction have not been read whole. `
     + `Until Read results covering every line of ${file} have returned, the main thread may only read and give the status. `
     + 'Read the whole file now, in parts if it is long: a summary of it, or the newest ten the start printed, is not it. '
-    + 'This refusal does not latch: reading the file clears it.';
+    + `This refusal does not latch: reading the file clears it.${OWN_TURN}`;
 }
 
 // ---- what a read on the main thread may be of (Doctrine §0e rule 13) ----
@@ -3167,6 +3326,10 @@ export function managerFence(p, opts = {}) {
     let flagged = [];
     try { flagged = 'flagged' in opts ? opts.flagged : flaggedAgents(String(p.session_id ?? '')); } catch { flagged = []; }
     if (!flagged.length) return null;
+    // Q-HUB-317: an agent paused on its own long background run has a stale note, which it cannot help, and its output file is the thing it
+    // waits on; the wait passes while EVERY flagged agent's note names an output file that exists and was written within five minutes.
+    const pad = scratchpadOf(String(p.session_id ?? ''));
+    if (flagged.every((a) => pausedOnRun(a, pad, opts.now ?? Date.now()))) return null;
     return `${head} The wait between statuses is refused while a running agent is flagged (${flagged.map((a) => `${a.id}, step ${a.step ?? 'unnamed'}`).join('; ')}): `
       + `its progress note is missing, empty or older than five minutes, so a wait would sit blind. Read where it is instead: the status command prints, for a flagged agent, `
       + `the last line of its output and its last tool result.${notOfRecord()}`;
@@ -3224,6 +3387,23 @@ export function managerFence(p, opts = {}) {
 }
 
 /**
+ * Is a flagged agent paused on a background run of its own?
+ * @param {{step: number|null}} a  a running agent `flaggedAgents` flagged.
+ * @param {string|null} pad  the session scratchpad.
+ * @param {number} [now]  the time in ms.
+ * @returns {boolean} true when the agent's progress note (`progress/step-N.txt`) names, by a full path ending .txt, .log, .out or .output, a file
+ *   that exists and was written within the last five minutes: the agent has launched a run and ended its turn on it, so the wait has something to
+ *   wait for. False for an agent whose prompt names no step, a missing note, a note naming no file, and a file older than that.
+ */
+export function pausedOnRun(a, pad, now = Date.now()) {
+  if (!pad || a?.step === null || a?.step === undefined) return false;
+  let note = '';
+  try { note = readFileSync(join(pad, 'progress', `step-${a.step}.txt`), 'utf8'); } catch { return false; }
+  const named = [...note.matchAll(/\/[^\s'"`;&|<>()$]+\.(?:txt|log|out|output)\b/g)].map((m) => m[0]);
+  return named.some((f) => { try { const s = statSync(f); return s.isFile() && now - s.mtimeMs <= 5 * 60 * 1000; } catch { return false; } });
+}
+
+/**
  * Put a main-thread call to the check before it is made.
  * @param {object} p  a payload shaped like a main-thread PreToolUse payload: `tool_name`, `tool_input`, `cwd`,
  *   and `session_id` and `transcript_path` when the session is known (no `agent_id`: the check is the main thread's).
@@ -3258,7 +3438,32 @@ export function canCall(p, opts = {}) {
   const latchKnown = !!p.session_id;
   let latch = null;
   if (latchKnown) { try { latch = latchStanding(p, opts.entries, true); } catch { latch = null; } }
-  return { free, fence, noLatch: !!fence && fence.includes(FENCE_NO_LATCH), latch, latchKnown, passesLatch, phase: phase.kind, skipped, passes: !fence && (passesLatch || !latch) };
+  // Q-HUB-328: the plan guard and the approval guard are asked as the call would meet them, so a check that passes the fence and the latch cannot
+  // hide the refusal of plan mode or of the approved plan's scope. `opts.guards` gives the test's judgement of each guard file, or false to ask none.
+  const guards = free || opts.guards === false || p.agent_id ? { plan: null, approval: null } : {
+    plan: guardRefusal('plan-guard.mjs', p, opts),
+    approval: guardRefusal('approved-plan-guard.mjs', p, opts),
+  };
+  return { free, fence, noLatch: !!fence && fence.includes(FENCE_NO_LATCH), latch, latchKnown, passesLatch, phase: phase.kind, skipped, guards, passes: !fence && (passesLatch || !latch) };
+}
+
+/**
+ * What one of the hub's PreToolUse guards would say to a call.
+ * @param {string} file  `plan-guard.mjs` or `approved-plan-guard.mjs`, run from this hub's folder.
+ * @param {object} p  the payload the guard would be handed.
+ * @param {{guards?: Record<string, (p: object) => string|null>}} [opts]  the test's judgement of a guard file, in place of running it.
+ * @returns {string|null} the refusal's reason when the guard exits 2 (the reason it printed, or its standard error), else null. The guard is run
+ *   as the harness runs it, the payload on its standard input, and its answer is read and nothing else is done with it.
+ */
+function guardRefusal(file, p, opts = {}) {
+  if (opts.guards && typeof opts.guards === 'object' && file in opts.guards) return opts.guards[file](p);
+  try {
+    const r = spawnSync(process.execPath, [join(HUB, file)], { encoding: 'utf8', timeout: 30000, input: JSON.stringify(p), env: process.env });
+    if (r.status !== 2) return null;
+    let why = '';
+    try { why = JSON.parse(String(r.stdout).trim().split('\n').pop()).hookSpecificOutput?.permissionDecisionReason ?? ''; } catch { why = ''; }
+    return String(why || r.stderr || `${file} refused the call`).trim();
+  } catch { return null; }
 }
 
 /**
@@ -3282,14 +3487,20 @@ export function canText(p, r, shown = '') {
   else lines.push(`LATCH: stands (set at ${californiaTime(new Date(r.latch.at))} California by a refusal of ${r.latch.tool || 'a call'}). `
     + (r.passesLatch ? 'This call passes it: the status command, this check, the plan check, the main thread\'s TaskStop and the reply guard\'s release command pass a latch.'
       : 'Every call but the status command, this check, the plan check, the main thread\'s TaskStop, the reply guard\'s release command and an agent\'s own return is refused until the owner writes again.'));
-  if (r.passes) lines.push('RESULT: the manager fence and the latch would pass this call.');
+  const g = r.guards ?? {};
+  if (g.plan) lines.push(`PLAN GUARD: would refuse. ${g.plan}`);
+  if (g.approval) lines.push(`APPROVAL GUARD: would refuse. ${g.approval}`);
+  if (r.passes && !g.plan && !g.approval) lines.push('RESULT: the manager fence and the latch would pass this call.');
+  else if (r.passes) lines.push(`RESULT: the manager fence and the latch would pass this call, and ${[g.plan ? 'the plan guard' : '', g.approval ? 'the approval guard' : ''].filter(Boolean).join(' and ')} would refuse it.`);
   else {
     const by = [];
     if (r.latch && !r.passesLatch) by.push('the latch');
     if (r.fence) by.push(`the manager fence, whose refusal ${r.noLatch ? 'sets no latch' : 'latches the main thread until the owner writes again'}`);
+    if (g.plan) by.push('the plan guard');
+    if (g.approval) by.push('the approval guard');
     lines.push(`RESULT: this call would be refused by ${by.join(' and ')}.`);
   }
-  lines.push('NOT JUDGED HERE: the stop and correction holds, the recall and page gates, the review, rules and reads gates that hold a step, plan mode, and the family guards (reply, keep-info, push, doctrine-read); a call this check passes can still be refused by one of them.');
+  lines.push('NOT JUDGED HERE: the stop and correction holds, the recall and page gates, the review, rules and reads gates that hold a step, and the family guards (reply, keep-info, push, doctrine-read); a call this check passes can still be refused by one of them.');
   return lines.join('\n');
 }
 
@@ -3551,6 +3762,28 @@ const REMINDER = [
 ].join('\n');
 
 /**
+ * The model a switch made after the newest main-thread reply names.
+ * @param {object} p  a payload naming the session.
+ * @param {object[]} entries  the main transcript's entries.
+ * @returns {string|null} the model of `status/model-switch.json` (written by the post-switch event) when its time is later than the newest
+ *   main-thread assistant entry's, else null: a reply after the switch shows the model itself, and `servingModel` reads it.
+ */
+export function switchedModel(p, entries) {
+  const pad = scratchpadOf(String(p?.session_id ?? ''));
+  if (!pad) return null;
+  let rec = null;
+  try { rec = JSON.parse(readFileSync(join(pad, 'status', 'model-switch.json'), 'utf8')); } catch { return null; }
+  if (!rec?.model || !Number.isFinite(Number(rec.at))) return null;
+  let last = 0;
+  for (const e of entries ?? []) {
+    if (e?.type !== 'assistant' || e.isSidechain) continue;
+    const t = Date.parse(e.timestamp ?? '');
+    if (Number.isFinite(t) && t > last) last = t;
+  }
+  return Number(rec.at) > last ? String(rec.model) : null;
+}
+
+/**
  * The two model-switch events (P-18). The pre-switch event shows what a switch costs and lets it go ahead; the post-switch event
  * gives the model its tier line with the next request. Neither blocks, whatever the payload says.
  * @param {string} event  PreModelSwitch or PostModelSwitch.
@@ -3578,6 +3811,11 @@ export function modelSwitch(event, p) {
       hookSpecificOutput: { hookEventName: 'PreModelSwitch', permissionDecision: 'allow', permissionDecisionReason: 'A switch is shown with its cost and never held.' },
     });
   }
+  // THE SWITCH IS RECORDED AS DATA (Q-HUB-288): `switchedModel` reads it, so the tier hold sees the new model before any reply shows it.
+  try {
+    const pad = scratchpadOf(String(p?.session_id ?? ''));
+    if (pad) writeFileSync(join(pad, 'status', 'model-switch.json'), `${JSON.stringify({ model: to, at: Date.now() })}\n`);
+  } catch { /* the hold then reads the model from the newest reply */ }
   const text = isTopTier(to)
     ? tierWords(to)
     : `Serving model: ${to}, not the top tier. The work is on this model and not on the top tier (Doctrine §11b).`;
@@ -4006,6 +4244,18 @@ async function main(event, raw, p) {
   // restored from one the owner enters by hand later (Q-HUB-105); a failure costs the mark, never the start.
   if (event === 'SessionStart' && !p.agent_id) {
     try { writeStartMode(p); } catch { /* no mode recorded for this start */ }
+    // Q-HUB-336: a plan mode the start itself carries (a resume restored it) is recorded as seen for the seed, so the first call or prompt of the
+    // resumed session does not print the seed at a mode nobody entered; a plan mode entered after the start still gets its one print.
+    if (p.permission_mode && !p.plan_mode_forced) {
+      try {
+        const pad0 = scratchpadOf(String(p.session_id ?? ''));
+        if (pad0) {
+          const seen = join(pad0, 'status', 'mode-seen.json');
+          mkdirSync(dirname(seen), { recursive: true });
+          writeFileSync(seen, `${JSON.stringify({ mode: String(p.permission_mode), at: new Date().toISOString() })}\n`);
+        }
+      } catch { /* the seed may print once at the resumed mode */ }
+    }
     const due = run(`node "${join(HUB, 'doctrine-read-guard.mjs')}" --due`, raw, root);
     dueLine = due.out.trim().split('\n')[0] ?? '';
   }
@@ -4057,6 +4307,10 @@ async function main(event, raw, p) {
       for (const h of g.hooks ?? []) {
         if (h.type !== 'command' || !h.command) continue;
         const shim = basename(String(h.command).split(/\s+/)[0]);
+        // Q-HUB-291: the app's identifier ledger does not count an id printed in a launch result as read, so it refused the manager's stop of a
+        // task or agent the session itself launched, and the refusal latched the main thread. An id a launch result of this session printed is a
+        // value the session was given, and the guard is not asked about it.
+        if (IDENT_SHIMS.has(shim) && idInLaunchResult(p)) continue;
         let command = h.command;
         if (SHARED_SHIMS.has(shim)) {
           // Run the hub's canonical script, never a repo's copy of the shim: a

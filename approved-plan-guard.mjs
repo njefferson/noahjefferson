@@ -660,7 +660,8 @@ function amendProblem(mk) {
   for (const n of scopeUnrecorded(mk.scope)) if (was[n] !== now[n]) moved.push(n);
   if (moved.length) {
     return `This edit would change ${moved.join(', ')} in ${mk.plan}. ${moved.length === 1 ? 'That section is' : 'Those sections are'} what the owner approved, and an edit to ${moved.length === 1 ? 'it' : 'them'} voids the approval: `
-      + 'the plan goes back through plan mode and the owner\'s button. An edit to the Steps or the Order keeps the approval.';
+      + 'the plan goes back through plan mode and the owner\'s button. The route the session has is its own plan-mode tool: enter plan mode with EnterPlanMode, make the edit there, and put the plan up with ExitPlanMode. '
+      + 'A restart of the harness may have ended plan mode since the plan was written, so a refusal here does not mean the mode was misread. An edit to the Steps or the Order keeps the approval.';
   }
   return null;
 }

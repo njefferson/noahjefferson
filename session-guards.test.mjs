@@ -5592,7 +5592,9 @@ const CASES = [
         ['the heading, the title and the updated line in California time', page.includes('<h1>Plan run status</h1>') && page.includes('<title>Plan run status</title>')
           && page.includes('A plan about &lt;b&gt;things&lt;/b&gt; · updated 2026-10-19 07:15 (California): Status 07:15 — the shape test')],
         ['the next line the reviewer reads', page.includes('<strong>next: step 2</strong>') && page.includes('The next move: step 5, after the review')],
-        ['Versions in file order, escaped', at1('<h2>Versions</h2>', 'Production carries the first build, &lt;b&gt;marked&lt;/b&gt;.') && at1('Production carries the first build', 'Staging carries the second build.') && !page.includes('<b>marked</b>')],
+        // Q-HUB-331: the newest Version line is shown and the earlier ones sit under a disclosure that counts them, newest of the earlier ones first, escaped.
+        ['Versions: the newest first, the earlier folded under a count, escaped', at1('<h2>Versions</h2>', 'Staging carries the second build.') && at1('Staging carries the second build.', '1 earlier Version line')
+          && at1('1 earlier Version line', 'Production carries the first build, &lt;b&gt;marked&lt;/b&gt;.') && !page.includes('<b>marked</b>')],
         ['a chip for each state, in colour and in words', page.includes(h1) && page.includes(head(2, 'wait', 'running', 'Check')) && page.includes(h3) && page.includes(h4)
           && page.includes(head(5, 'wait', 'under review', 'Reviewed next')) && page.includes(h6) && page.includes(head(8, 'held', 'held, sent at any time', 'Timer')) && page.includes(head(9, 'wait', 'running', 'Timer two'))],
         ['a step counted done by decision shows green and says so, past its refusal', at1(h3, '<li>Counted done: counted done by decision, its change is in the tree</li>') && at1('<li>Counted done: counted done', h4)
@@ -5604,7 +5606,9 @@ const CASES = [
           && page.includes('<li>Where it stands: REFUSED</li>') && page.includes('<li>Where it stands: not sent</li>')
           && page.includes('<li>Where it stands: ended by an interruption, with no hand-back</li>') && !page.includes('the tool use was rejected')],
         ['the Why and Next lines of a step, and the unnumbered Next on no step', page.includes('<li>Why: The roadmap asks for it.</li>') && page.includes('<li>Next: The scope verdict.</li>') && (page.match(/<li>Next: /g) ?? []).length === 1],
-        ['Open for you from the Open lines', at1('<h2>Open for you</h2>', 'Your device pass on staging.') && at1('Your device pass on staging.', 'A choice between two pictures.')],
+        // Q-HUB-331: the newest Open line is shown and the earlier ones are folded under a count.
+        ['Open for you from the Open lines: the newest first, the earlier folded under a count', at1('<h2>Open for you</h2>', 'A choice between two pictures.') && at1('A choice between two pictures.', '1 earlier Open line')
+          && at1('1 earlier Open line', 'Your device pass on staging.')],
         ['Found and not fixed: stopping, then queued, tagged in words, and the lines with no sort yet counted and not listed', page.includes('<span class="tag">queued</span> Step 4 #2: a queued &lt;i&gt;thing&lt;/i&gt;')
           && page.includes('<span class="tag">stopping the plan</span> Step 4 #3: a thing that stops the plan') && at1('class="tag">stopping the plan<', 'class="tag">queued<')
           && page.includes('<li>1 Found line is not sorted yet by the manager; the status print lists it.</li>') && !page.includes('a thing with no sort yet')],
@@ -10260,8 +10264,8 @@ const PLANTS = {
   plan_key_filter: ['    if (end && ours && prompt && !ours.has(resolvePath(prompt.plan))) continue;\n', '', 'report.mjs'],
   plan_key_prompt: ["return m ? { plan: m[1], step: Number(m[2]) } : null;", "return m ? { plan: '', step: Number(m[2]) } : null;", 'report.mjs'],
   plan_key_time: ['  const approvedFrom = markerApprovalTime();\n', '  const approvedFrom = NaN;\n', 'report.mjs'],
-  plan_key_since: ['    if (end && ours && Number.isFinite(startAt) && startAt < approvedFrom) continue;\n', '', 'report.mjs'],
-  plan_key_found: ["    try { if (statSync(join(dir, n)).mtimeMs < since) continue; } catch { continue; }\n", '', 'report.mjs'],
+  plan_key_since: ['    if (end && ours && Number.isFinite(startAt) && startAt < approvedFrom && !(step !== null && approvedSteps?.has(step))) continue;\n', '', 'report.mjs'],
+  plan_key_found: ["      try { if (statSync(r.file).mtimeMs < since) continue; } catch { continue; }\n", '', 'report.mjs'],
   harness_handback: ['agent-message\\b|', '', 'transcript-tail.mjs'],
   harness_bare_handback: ['|^\\s*\\[Subagent hand-back\\]/i;', '/i;', 'transcript-tail.mjs'],
   remove_text: ['        if (c) take((x) => x.key === norm(c));\n', '\n', 'pending-guard.mjs'],
@@ -10341,7 +10345,7 @@ const PLANTS = {
   // The Stop input's list is read first; a subagent entry never holds (P-19).
   input_read: ["if (Array.isArray(hook.background_tasks)) {", "if (false) {", 'stop-guard.mjs'],
   input_type: ["String(e.type ?? '').toLowerCase() !== 'subagent'", "String(e.type ?? '').toLowerCase() !== 'subagent-never'", 'stop-guard.mjs'],
-  stop_follow_up: ['  process.stderr.write(message + FOLLOW_UP);', '  process.stderr.write(message);', 'stop-guard.mjs'],
+  stop_follow_up: ['  process.stderr.write(text + FOLLOW_UP);', '  process.stderr.write(text);', 'stop-guard.mjs'],
   stop_repeat: ['      if (again.length) {', '      if (false) {', 'stop-guard.mjs'],
   stop_repeat_once: ['!rec.repeated && ', '', 'stop-guard.mjs'],
   stop_repeat_record: ['writeFileSync(refusedFile(), JSON.stringify({ at: Date.now(), lines, reply, repeated: false, kind }));', 'void 0;', 'stop-guard.mjs'],
@@ -10668,7 +10672,7 @@ const PLANTS = {
   pointer_found: ['    for (const f of st.found) {\n      const s = sortOf(st.manager, f);', '    for (const f of []) {\n      const s = sortOf(st.manager, f);', 'report.mjs'],
   mgr_step_wildcard: ["?? notes?.sorts?.get(`${f.step}.*`) ?? null;", '?? null;', 'report.mjs'],
   mgr_specific_first: ["return notes?.sorts?.get(f.key) ?? notes?.sorts?.get(`${f.step}.*`) ?? null;", "return notes?.sorts?.get(`${f.step}.*`) ?? notes?.sorts?.get(f.key) ?? null;", 'report.mjs'],
-  pointer_found_read: ["if (/^Found:/.test(l.trim())) { k++;", 'if (true) { k++;', 'report.mjs'],
+  pointer_found_read: ["if (!/^Found:/.test(t) || NO_FINDING.test(t)) continue;", 'if (false) continue;', 'report.mjs'],
   pointer_page: ["      writeFileSync(join(pad, 'status', 'fix-run.html'), statusPage(state, status));", '      void 0;', 'report.mjs'],
   pointer_escape: [".replace(/</g, '&lt;')", '', 'report.mjs'],
   // The dispatch gate sends only N and a Standing step, and the stop guard reads N.
@@ -10918,7 +10922,7 @@ const PLANTS = {
   page_handback_owner: ['  return /^\\s*<task-notification\\b', '  return true || /^\\s*<task-notification\\b', 'hook-dispatch.mjs'],
   page_flag_no_stamp: ['    let wrote = null;\n    try { wrote = writeStatusPage(who); }', "    writeFileSync(CLOCK, JSON.stringify({ at: Date.now(), status: 'stamped' }));\n    let wrote = null;\n    try { wrote = writeStatusPage(who); }", 'report.mjs'],
   page_flag_header: ["statusPage(state, clock.status || 'no status has been given yet', clock.at ? new Date(clock.at) : new Date())", "statusPage(state, 'x', new Date())", 'report.mjs'],
-  page_flag_session: ["const who = String(hook.session_id || process.env.CLAUDE_CODE_SESSION_ID || '');", "const who = String(process.env.CLAUDE_CODE_SESSION_ID || '');", 'report.mjs'],
+  page_flag_session: ["const who = String(hook.session_id || process.env.CLAUDE_CODE_SESSION_ID || '');\n    let wrote = null;\n    try { wrote = writeStatusPage(who);", "const who = String(process.env.CLAUDE_CODE_SESSION_ID || '');\n    let wrote = null;\n    try { wrote = writeStatusPage(who);", 'report.mjs'],
   // A plan's own script may run its steps, behind one constant that is off.
   workflow_const: ['export const WORKFLOW_SCRIPTS_ACCEPTED = false;', 'export const WORKFLOW_SCRIPTS_ACCEPTED = true;', 'hook-dispatch.mjs'],
   workflow_off: ["  if (!('scripts' in opts ? opts.scripts : WORKFLOW_SCRIPTS_ACCEPTED)) return off;", '  if (false) return off;', 'hook-dispatch.mjs'],
@@ -11079,9 +11083,9 @@ const PLANTS = {
   page_why_line: ['...(m.why.has(x.step) ?', '...(false ?', 'report.mjs'],
   page_next_line: ['...(m.nexts.has(x.step) ?', '...(false ?', 'report.mjs'],
   page_counted_done: ['...(m.done.get(x.step) ? [li(', '...(false ? [li(', 'report.mjs'],
-  page_versions: ['m.versions.map((v) => li(escapeHtml(v)))', '[]', 'report.mjs'],
-  page_escape_versions: ['m.versions.map((v) => li(escapeHtml(v)))', 'm.versions.map((v) => li(v))', 'report.mjs'],
-  page_open_lines: ['const open = m.open.length ? m.open : openForOwner(st);', 'const open = openForOwner(st);', 'report.mjs'],
+  page_versions: ["newestAndFolded(m.versions, 'Version')", "newestAndFolded([], 'Version')", 'report.mjs'],
+  page_escape_versions: ['older.slice().reverse().map((v) => li(escapeHtml(v)))', 'older.slice().reverse().map((v) => li(v))', 'report.mjs'],
+  page_open_lines: ["const openList = m.open.length ? newestAndFolded(m.open, 'Open')", "const openList = false ? newestAndFolded(m.open, 'Open')", 'report.mjs'],
   page_found_stopping: ["...groups.stopping.map((f) => ['stopping the plan', f]), ", '', 'report.mjs'],
   page_found_unsorted: ['const unsortedLine = un ? [li(', 'const unsortedLine = false ? [li(', 'report.mjs'],
   page_found_queued: [", ...groups.queued.map((f) => ['queued', f])]", ']', 'report.mjs'],
@@ -11299,7 +11303,7 @@ const PLANTS = {
   tier_serving_main: ["if (e?.type !== 'assistant' || e.isSidechain || e.agentId) continue;", "if (e?.type !== 'assistant') continue;", 'report.mjs'],
   tier_serving_field: ['const m = e.message?.model;', 'const m = e.message?.model ?? e.message?.content?.find?.((b) => b?.input?.model)?.input?.model;', 'report.mjs'],
   tier_serving_synthetic: [' && !/^<.*>$/.test(m.trim())) return m.trim();', ') return m.trim();', 'report.mjs'],
-  tier_status_line: ["  console.log(model);\n  console.log('');\n  console.log(status);", "  console.log('');\n  console.log(status);", 'report.mjs'],
+  tier_status_line: ["  console.log(model);\n", '', 'report.mjs'],
   tier_line_top: ['  return isTopTier(id)\n    ? `Serving model: ${id}, the top tier.', '  return false\n    ? `Serving model: ${id}, the top tier.', 'report.mjs'],
   tier_stop_refuse: ['if (isTopTier(serving) && !tier.told && planInForce) {', 'if (false) {', 'stop-guard.mjs'],
   tier_stop_marker: ['if (isTopTier(serving) && !tier.told && planInForce) {', 'if (isTopTier(serving) && !tier.told) {', 'stop-guard.mjs'],
@@ -11463,7 +11467,7 @@ const PLANTS = {
   eject_declares_step: ['return !!m && !!ejected && ejected.has(Number(m[1]));', 'return !!m;', 'stop-guard.mjs'],
   eject_declares_what: ['\\bwaits?\\s+on\\b[ \\t]*(\\S[^\\n]{6,})', '\\bwaits?\\s+on\\b[ \\t]*(\\S[^\\n]{0,})', 'stop-guard.mjs'],
   eject_lets_through: [' && !ejectDeclared', '', 'stop-guard.mjs'],
-  eject_exit_declared: ['if (DECLARED.test(reply) || ejectDeclared) process.exit(0);', 'if (DECLARED.test(reply)) process.exit(0);', 'stop-guard.mjs'],
+  eject_exit_declared: ['if (DECLARED.test(reply) || ejectDeclared) finish();', 'if (DECLARED.test(reply)) finish();', 'stop-guard.mjs'],
   eject_closed_stop: ['    if (pointer.closed) return [];\n', '', 'stop-guard.mjs'],
   eject_pointer_notes: [`  try { notes = managerNotes(scratchpadOf(String(hook.session_id ?? ''))); } catch { notes = null; }\n  return pointerOf(plan.text, state.ends, notes, plan.path);`, '  return pointerOf(plan.text, state.ends, null);', 'stop-guard.mjs'],
   eject_hint: ['${ejectedNow.size ? ` Step${', '${false ? ` Step${', 'stop-guard.mjs'],
@@ -11499,7 +11503,7 @@ const PLANTS = {
   plan_only_next: ['if (underPlan && (nextHit || dropHit)) {', 'if (nextHit || dropHit) {', 'stop-guard.mjs'],
   plan_only_template: ['if (underPlan && (longestRun >= 4 || headers >= 3)) {', 'if (longestRun >= 4 || headers >= 3) {', 'stop-guard.mjs'],
   plan_only_choice: ['const choiceHit = underPlan ? misplacedChoice(reply) : null;', 'const choiceHit = misplacedChoice(reply);', 'stop-guard.mjs'],
-  plan_only_wait: ['if ((!waitHit && !parkHit) || !underPlan) process.exit(0);', 'if (!waitHit && !parkHit) process.exit(0);', 'stop-guard.mjs'],
+  plan_only_wait: ['if ((!waitHit && !parkHit) || !underPlan) finish();', 'if (!waitHit && !parkHit) finish();', 'stop-guard.mjs'],
   // ---- step 58: the review clears only the moves that need it; the three loosenings; the check of a call outside a plan ----
   review_due_first: ["  if (!starts.length) return { due: true, why: 'it is the first send of the plan' };", "  if (!starts.length) return { due: false, why: '' };", 'hook-dispatch.mjs'],
   review_due_trigger: ["    const bad = e.how !== 'a report' || /^(?:EJECT|FAILED|REFUSED)\\b/.test(first);", "    const bad = e.how !== 'a report';", 'hook-dispatch.mjs'],
@@ -11525,7 +11529,7 @@ const PLANTS = {
   can_skip_text: ['no plan is in force (conversation), so the dispatcher asks the fence of a send only', 'nothing', 'hook-dispatch.mjs'],
   // The plan seed: what it prints from the record, and where the dispatcher prints it and passes its command.
   seed_depends: ["const depends = /^Depends:\\s*(.*)$/m.exec(block)?.[1]?.trim() ?? '';", "const depends = /^Depends:\\s*(.*)$/m.exec(lines.slice(Math.max(0, h.i - 8), end).join('\\n'))?.[1]?.trim() ?? '';", 'plan-seed.mjs'],
-  seed_first_open: ["e.state === 'open'", "e.state !== 'done'", 'plan-seed.mjs'],
+  seed_first_open: ["const openAll = entries.filter((e) => e.state === 'open');", "const openAll = entries.filter((e) => e.state !== 'done');", 'plan-seed.mjs'],
   seed_runs: ['if (last && n === last[1] + 1) last[1] = n; else out.push([n, n]);', 'out.push([n, n]);', 'plan-seed.mjs'],
   seed_mark: ["const MOVABLE = '[movable: another session can move this before a step runs]';", "const MOVABLE = '';", 'plan-seed.mjs'],
   seed_rules_version: ['`Rules: ${rulesPath}, version ${rules.version}.`', '`Rules: ${rulesPath}, version 0.`', 'plan-seed.mjs'],

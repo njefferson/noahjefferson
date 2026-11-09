@@ -321,8 +321,8 @@ if (tool === 'Bash') {
   // the manager fence reads too); `node` with no --check is refused below, and so is any other line. The test is spelled here and not
   // imported, like the mark above, and a case holds it equal to `isSeedCommand` in hook-dispatch.mjs.
   const seedArg = '(?:"[^"`$\\\\]*"|\'[^\']*\'|[^\\s"\'`$\\\\;&|<>(){}*?\\[\\]!#]+)';
-  const seedFlag = `\\s+--(?:item|repo|plan|steps)\\s+${seedArg}`;
-  const seedLine = new RegExp(`^\\s*node\\s+"?${join(dirname(fileURLToPath(import.meta.url)), 'plan-seed.mjs').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"?(?=(?:${seedFlag})*\\s+--item\\s)(?:${seedFlag})+\\s*$`);
+  const seedFlag = `(?:\\s+--(?:item|repo|plan|steps|size|hub)\\s+${seedArg}|\\s+--batch(?=\\s|$))`;
+  const seedLine = new RegExp(`^\\s*node\\s+"?${join(dirname(fileURLToPath(import.meta.url)), 'plan-seed.mjs').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"?(?=${seedFlag}*\\s+--(?:item\\s|batch(?:\\s|$)))${seedFlag}+\\s*$`);
   if (seedLine.test(cmd)) process.exit(0);
   const parts = commands(cmd);
 
@@ -585,7 +585,8 @@ function talkedThrough(path, planWrittenAt = 0) {
       // recorded with the same toolDenialKind as the owner's own rejection
       // ("permission-rule"), so only its content tells them apart. Counting it
       // made every gate refusal cost the owner a message.
-      if (/PreToolUse:ExitPlanMode hook error: \[/.test(text)) continue;
+      // Q-HUB-326: a refusal that sets no latch (a fault of the plan's shape, a name, an approved plan) is a gate's too, and carries its mark.
+      if (/PreToolUse:ExitPlanMode hook error: \[/.test(text) || /PreToolUse:ExitPlanMode hook/.test(text) || /\bNO LATCH:/.test(text)) continue;
       anchor = i;
     }
   });
@@ -858,7 +859,7 @@ if (tool === 'ExitPlanMode') {
   // Loaded here only, because this file runs on every tool call and the plan parsing lives in hook-dispatch.mjs. They are loaded
   // before the sections are looked at, so that the refusal for a missing one carries the mark that sets no latch as well.
   const { goalsProblem, aimStandingProblem, reviewCommandProblem, commandsGitDirProblem, filesSpanProblem, stepShapeProblem, afterProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem, shippedCheckProblem,
-    readAfterCompactionProblem, costProblem, lessonCitedProblem, queueRoots, inScratchpad, NAMES_NO_LATCH, SHAPE_NO_LATCH } = await import('./hook-dispatch.mjs');
+    readAfterCompactionProblem, costProblem, lessonCitedProblem, ruleNumberProblem, decisionsCheckProblem, verificationReadProblem, queueRoots, inScratchpad, NAMES_NO_LATCH, SHAPE_NO_LATCH } = await import('./hook-dispatch.mjs');
   const { scratchpadOf } = await import('./report.mjs');
   // EVERY FAULT IS COLLECTED, AND THE APPROVAL CALL STOPS AT THE FIRST (LESSONS §435). `fault` is where a check's finding lands. At the
   // approval call it refuses at once, as each check did, so nothing a check does is run for a plan an earlier check has refused. In the
@@ -920,12 +921,16 @@ if (tool === 'ExitPlanMode') {
   // A PLAN ANSWERS WHAT THE LAST ONE LEFT (Doctrine §0e rule 2): every finding
   // queued in the NOTES.md of a repository its Files names has a line in a
   // "## Found answered" section, with its key and a verdict.
-  const queued = foundAnsweredProblem(top);
+  // THE REPOSITORIES ARE FOUND ONCE (Q-HUB-325): the queue check, the What is check and the read after a compaction all take the roots
+  // `queueRoots` finds from the launch directory (CLAUDE_PROJECT_DIR, else the payload's cwd), so the check mode and the approval call mean the same files.
+  const rootsDir = String(process.env.CLAUDE_PROJECT_DIR || p.cwd || process.cwd());
+  const planRoots = queueRoots(top, rootsDir);
+  const queued = foundAnsweredProblem(top, { roots: planRoots });
   if (queued) fault(queued);
   // A PLAN RESTS ON QUOTED EVIDENCE AND SAYS WHAT BECOMES OF THE ROADMAP (Doctrine §0e rule 2):
   // each "## What is" bullet quotes a line present in a file it names, and each open roadmap
   // item of a repository the Files names has a line in "## Roadmap", in or out and why.
-  const what = whatIsProblem(top);
+  const what = whatIsProblem(top, { roots: planRoots });
   if (what) fault(what);
   const road = roadmapProblem(top);
   if (road) fault(road);
@@ -935,6 +940,14 @@ if (tool === 'ExitPlanMode') {
   // A PLAN THAT NAMES A GATE FUNCTION CITES THE LESSONS THAT RECORD FIXES FOR IT (Doctrine §11e, §11f, Q-HUB-306): its Design carries each by number.
   const cited = lessonCitedProblem(top);
   if (cited) fault(cited);
+  // A STEP THAT NAMES A RULE OF THE PLANS PAGE BY NUMBER IS READ AGAINST THE PAGE (Q-HUB-309), A STEP THAT EDITS A DECISION RECORD NAMES THE
+  // DECISIONS CHECK (Q-HUB-340), AND A VERIFICATION READ BY THE MAIN THREAD IS OF THE RECORD (Q-HUB-341): each a fault of the plan's shape.
+  const ruleNo = ruleNumberProblem(top);
+  if (ruleNo) fault(ruleNo);
+  const decisions = decisionsCheckProblem(top);
+  if (decisions) fault(decisions);
+  const verifyRead = verificationReadProblem(top, { roots: planRoots, session_id: String(p.session_id ?? ''), planPath: planFile });
+  if (verifyRead) fault(verifyRead);
   // A PLAN THAT MARKS A ROADMAP ITEM IN RESTS ON A READ OF THE APP'S COMMIT LOG (Doctrine §0e rule 2, LESSONS §423): a line in
   // the notes is not the state of the app. The session's transcript has to hold a git log of the repository's production and
   // staging branches read after this plan file was first written, and the plan's "## Shipped check" says what it showed, item by
@@ -949,7 +962,7 @@ if (tool === 'ExitPlanMode') {
     if (shipped) fault(shipped);
     // THE FILES THE EVIDENCE NAMES WERE READ AFTER THE NEWEST COMPACTION (Doctrine §0e rule 2): a plan written from the summary quotes
     // files nobody opened since.
-    const readAfter = readAfterCompactionProblem(top, { entries: tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024) });
+    const readAfter = readAfterCompactionProblem(top, { roots: planRoots, entries: tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024) });
     if (readAfter) fault(readAfter);
   }
   const asked = askedProblem(top, p.transcript_path);
@@ -966,7 +979,7 @@ if (tool === 'ExitPlanMode') {
   // folder and against each repository the plan's Files names. Its refusals open with the mark the dispatcher reads as "no latch":
   // the remedy is a read, and a latch would refuse the read. The check mode records no refused name.
   const sid = String(p.session_id ?? '');
-  const ctx = { sid, pad: scratchpadOf(sid), roots: queueRoots(top), inScratchpad, mark: NAMES_NO_LATCH, readOnly: CHECK };
+  const ctx = { sid, pad: scratchpadOf(sid), roots: planRoots, inScratchpad, mark: NAMES_NO_LATCH, readOnly: CHECK };
   const names = inventedNames(plan, top, ctx);
   if (names) fault(names, false);
   const held = heldNames(plan, ctx);
