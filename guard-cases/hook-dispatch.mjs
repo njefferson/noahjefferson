@@ -6,8 +6,9 @@
 // decisions check (Q-HUB-340) and a Verification read outside the record (Q-HUB-341), and by step 141 of the plan of 9 November: the page
 // refresh after the notes (Q-HUB-347), the hook loop's identifier skip (Q-HUB-349), a rule under a sub-heading (Q-HUB-351) and the read in plan
 // mode with no plan (Q-HUB-362). The shape of this file is guard-cases/shape.mjs.
-import { mkdirSync, writeFileSync, utimesSync, readFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, utimesSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir, tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 
 const FABLE = 'claude-fable-1';
@@ -425,6 +426,108 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'Q-HUB-373: in plan mode with no plan in force the manager fence passes the main thread read of an agent transcript under this session\'s own folder, reads only, and still refuses another session\'s folder, a path that steps out of the session\'s folder, a write, a read outside plan mode and a read while a plan is in force',
+    guards: ['planmode_transcript_pass', 'planmode_transcript_sid'],
+    run(m, dir, h) {
+      const s = h.sid('tr');
+      const proj = join(homedir(), '.claude', 'projects', '-home-user-fence-test');
+      const mine = join(proj, s, 'subagents', 'agent-a1.jsonl');
+      const other = join(proj, h.sid('tr-other'), 'subagents', 'agent-a1.jsonl');
+      const stepOut = join(proj, s, '..', 'loose.jsonl');
+      const p = (extra) => ({ tool_name: 'Read', tool_input: { file_path: mine }, session_id: s, cwd: '/', permission_mode: 'plan', ...extra });
+      const fence = (call, opts) => m.dispatch.managerFence(call, { classify: () => true, ...opts });
+      const plan = { path: '/root/.claude/plans/fence-test.md', text: h.STEPS_PLAN };
+      const read = fence(p(), { plan: null });
+      const searched = fence(p({ tool_name: 'Grep', tool_input: { pattern: 'x', path: join(proj, s, 'subagents') } }), { plan: null });
+      const shell = fence(p({ tool_name: 'Bash', tool_input: { command: `cat ${mine}` } }), { plan: null });
+      const another = fence(p({ tool_input: { file_path: other } }), { plan: null });
+      const stepped = fence(p({ tool_input: { file_path: stepOut } }), { plan: null });
+      const write = fence(p({ tool_name: 'Edit', tool_input: { file_path: mine, old_string: 'a', new_string: 'b' } }), { plan: null });
+      const notPlanMode = fence(p({ permission_mode: 'default' }), { plan: null });
+      const inForce = fence(p(), { plan, pointer: { next: 1 } });
+      return h.assertAll([
+        ['a read of an agent transcript under the session\'s own folder passes in plan mode with no plan', read === null, read],
+        ['a search of the agents\' folder passes', searched === null, searched],
+        ['a shell read of the transcript passes', shell === null, shell],
+        ['another session\'s transcript is refused', typeof another === 'string', another],
+        ['a path that steps out of the session\'s folder is refused', typeof stepped === 'string', stepped],
+        ['a write of the transcript is refused', typeof write === 'string', write],
+        ['a read outside plan mode is refused', typeof notPlanMode === 'string', notPlanMode],
+        ['a read while a plan is in force is refused', typeof inForce === 'string', inForce],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-376: an agent met by the plan fence\'s refusal for a plan file being re-recorded is refused with those words and is not latched, while the generic refusal of the same call once the marker is current still latches it',
+    guards: ['rerecord_nolatch', 'rerecord_mark'],
+    run(m, dir, h) {
+      // The dispatcher runs in a copy of the suite whose plan fence is a stand-in, so the approval guard does not answer first: the stand-in
+      // refuses a write of a file named moment.txt with the re-recording words and every other write with generic fence words.
+      const stand = "let s = '';\nprocess.stdin.on('data', (d) => { s += d; });\nprocess.stdin.on('end', () => {\n  let f = '';\n  try { f = JSON.parse(s).tool_input.file_path || ''; } catch { f = ''; }\n  process.stderr.write(f.endsWith('moment.txt') ? 'PLAN FILE BEING RE-RECORDED, send the same call again.' : 'PLAN FENCE refuses this call.');\n  process.exit(2);\n});\n";
+      const copy = h.suiteCopy(dir, { 'plan-fence.mjs': stand });
+      const w = h.world(copy.dir);
+      const r = h.repo({ 'keep.mjs': 'x\n' });
+      const call = (s, name) => w.call('PreToolUse', { session_id: s, agent_id: 'ax', tool_name: 'Write', tool_input: { file_path: join(r.dir, name), content: 'y\n' }, cwd: r.dir });
+      const s1 = h.sid('rr');
+      const moment = call(s1, 'moment.txt');
+      const s2 = h.sid('rr');
+      const generic = call(s2, 'other.txt');
+      return h.assertAll([
+        ['the call is refused with the re-recording words', moment.status === 2 && /PLAN FILE BEING RE-RECORDED/.test(moment.stderr), moment.stderr],
+        ['the agent is not latched by it', !h.latched(`${s1}.agent-ax`), moment.stderr],
+        ['the generic refusal of the same call is a refusal', generic.status === 2 && !/PLAN FILE BEING RE-RECORDED/.test(generic.stderr), generic.stderr],
+        ['the generic refusal latches the agent', h.latched(`${s2}.agent-ax`), generic.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-370: a configuration change with the source skills is recorded as the harness\'s own sync, which the baseline names as a class, and a change of another source to a path the baseline does not name is not',
+    guards: ['cfg_harness_sync', 'cfg_harness_field'],
+    run(m, dir, h) {
+      const record = (source, file_path) => {
+        const s = h.sid('hs');
+        const pad = join(process.env.TMPDIR, 'claude-0', '-home-user', s, 'scratchpad');
+        mkdirSync(pad, { recursive: true });
+        const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'ConfigChange'], { encoding: 'utf8', env: { ...process.env }, input: JSON.stringify({ session_id: s, hook_event_name: 'ConfigChange', source, file_path }) });
+        let rec = {};
+        try { rec = JSON.parse(readFileSync(join(pad, 'status', 'config-changes.jsonl'), 'utf8').trim().split('\n')[0]); } catch { /* the rows below name it */ }
+        return { status: r.status, rec };
+      };
+      const skill = record('skills', '/planted/skills/planted-browser-reference.md');
+      const other = record('user_settings', '/planted/elsewhere/planted-unnamed-file.json');
+      return h.assertAll([
+        ['a skills change exits zero and is recorded as a harness sync', skill.status === 0 && skill.rec.harnessSync === true, JSON.stringify(skill.rec)],
+        ['a skills change reads as named by the baseline', skill.rec.baseline === true, JSON.stringify(skill.rec)],
+        ['a change of another source to an unnamed path is no harness sync', other.rec.harnessSync === false, JSON.stringify(other.rec)],
+        ['a change of another source to an unnamed path stays unnamed', other.rec.baseline === false, JSON.stringify(other.rec)],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-370: the status print names a configuration change recorded as the harness\'s sync as the harness\'s own sync of a skill file, and a record without that mark keeps the baseline wording',
+    guards: ['cfg_print_harness'],
+    run(m, dir, h) {
+      const home = mkdtempSync(join(tmpdir(), 'sg-cfgprint-'));
+      try {
+        const s = h.sid('cp');
+        const pad = join(home, 'claude-0', '-home-user', s, 'scratchpad');
+        mkdirSync(join(pad, 'status'), { recursive: true });
+        mkdirSync(join(home, '.claude'), { recursive: true });
+        const rec = (file, harnessSync) => JSON.stringify({ at: Date.now() - 30000, time: 'x', california: '2026-11-05 10:00', source: 'skills', file, baseline: true, harnessSync });
+        writeFileSync(join(pad, 'status', 'config-changes.jsonl'), `${rec('/planted/synced-skill.md', true)}\n${rec('/planted/plain-record.md', false)}\n`);
+        const out = spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 - the configuration print test'], { encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: s, TMPDIR: home } }).stdout ?? '';
+        const synced = out.split('\n').find((l) => l.includes('/planted/synced-skill.md')) ?? '';
+        const plain = out.split('\n').find((l) => l.includes('/planted/plain-record.md')) ?? '';
+        return h.assertAll([
+          ['a record marked as the harness\'s sync is printed as the harness\'s own sync of a skill file', /harness's own sync of a skill file/.test(synced), synced],
+          ['a record without the mark keeps the baseline wording', /the baseline names it\./.test(plain) && !/harness's own sync/.test(plain), plain],
+        ]);
+      } finally {
+        rmSync(home, { recursive: true, force: true });
+      }
+    },
+  },
 ];
 
 export const plants = {
@@ -455,4 +558,11 @@ export const plants = {
   planmode_read_phase: ["  try { return planPhase(p, given).kind !== 'in force'; } catch { return false; }", '  return true;', 'hook-dispatch.mjs'],
   planmode_read_mode: ["  if (p.agent_id || String(p.permission_mode ?? '') !== 'plan') return false;", '  if (p.agent_id) return false;', 'hook-dispatch.mjs'],
   planmode_read_repo: ["  return existsSync(join(a, '.git')) || repoRootOf(a) !== null;", '  return true;', 'hook-dispatch.mjs'],
+  planmode_transcript_pass: ['(a) => inGitRepo(a) || inSessionFolder(a, p.session_id));', 'inGitRepo);', 'hook-dispatch.mjs'],
+  planmode_transcript_sid: ["parts[0] !== '..' && parts[1] === String(sid) && !parts.includes('..');", "parts[0] !== '..' && !parts.includes('..');", 'hook-dispatch.mjs'],
+  rerecord_nolatch: ["if (o.deny && g.includes('plan-fence.mjs') && o.reason.includes(RERECORD_MARK)) return refuse(reason, false);", 'void 0;', 'hook-dispatch.mjs'],
+  rerecord_mark: ["export const RERECORD_MARK = 'PLAN FILE BEING RE-RECORDED';", "export const RERECORD_MARK = 'PLAN FILE BEING REWRITTEN';", 'hook-dispatch.mjs'],
+  cfg_harness_sync: ['    if (harnessSync) baseline = true;', '    void 0;', 'hook-dispatch.mjs'],
+  cfg_harness_field: ["source: String(p?.source ?? ''), file, baseline, harnessSync };", "source: String(p?.source ?? ''), file, baseline };", 'hook-dispatch.mjs'],
+  cfg_print_harness: ["${r.harnessSync ? 'the harness", "${false ? 'the harness", 'report.mjs'],
 };

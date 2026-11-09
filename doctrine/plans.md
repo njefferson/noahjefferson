@@ -548,7 +548,7 @@ every rule below while none of the hooks that enforce them was running
     second route §0d names, not a fresh start. While the latch stands, the main
     thread says in plain text what was refused and stops; an agent returns what
     it has, with the refusal's text.
-    Twenty-four refusals are not ends of a route, and set no latch, because
+    Twenty-five refusals are not ends of a route, and set no latch, because
     something other than the owner's next message answers each and a latch would
     only add a wait for the owner to a miss that changed nothing. The list is read
     from the code (`main` in `hook-dispatch.mjs`), each item with the name that
@@ -635,7 +635,10 @@ every rule below while none of the hooks that enforce them was running
     - an end of plan mode made under auto mode with no exit call from the session,
       which records no approval and is said to be no approval, answered by a new
       plan through plan mode with the session out of auto mode
-      (`recordAppExit`, `AUTO_EXIT_NOTE`, `approved-plan-guard.mjs`).
+      (`recordAppExit`, `AUTO_EXIT_NOTE`, `approved-plan-guard.mjs`);
+    - the plan fence's refusal of an agent's call made at the moment the plan file
+      is being re-recorded and no plan is in force, which says to send the same call
+      again (`RERECORD_MARK`, `plan-fence.mjs`, Q-HUB-376).
     The latch's own refusal repeats the original and writes no new latch
     (`latchMessage`). Measured 2026-10-03: the exit from plan mode in the app ended
     plan mode before the session's `ExitPlanMode` call was answered, the call came

@@ -5902,31 +5902,45 @@ const CASES = [
   // ---- the pruning rule: a replacement line names a gate the hub has (lesson 396) ----
   {
     name: 'a line of the doctrine that says a gate enforces a paragraph whole names a gate file the hub has: a fixture naming a missing gate is found first, and the real doctrine, its three files read together, holds at least one such line and passes',
-    run() {
-      const hubHas = (f) => [join(HERE, f), join(HERE, '.github', 'workflows', f), join(HERE, '.claude', 'hooks', f)].some((x) => existsSync(x));
+    run(m, dir) {
+      const hubHas = (f) => [join(dir, f), join(dir, '.github', 'workflows', f), join(dir, '.claude', 'hooks', f)].some((x) => existsSync(x));
       const fixture = ['## Fixture', '1. **A rule.** It was pruned.', '   *Enforced whole by:* `no-such-gate.mjs`.', '   *Enforced whole by:* `plan-guard.mjs` and `hook-dispatch.mjs`.', 'A line that only mentions `*Enforced whole by:*` in prose.'].join('\n');
       // The control: the instrument must find the missing gate and only that one before the real doctrine is trusted to pass it.
       const found = wholeGates(fixture);
       const missing = found.filter((f) => !hubHas(f));
       // The doctrine is the three files of doctrine/ and DOCTRINE.md is their index: the lines are read from the files that hold them.
-      const real = ['never.md', 'plans.md', 'apps.md'].flatMap((n) => wholeGates(readFileSync(join(HERE, 'doctrine', n), 'utf8')));
+      const real = ['never.md', 'plans.md', 'apps.md'].flatMap((n) => wholeGates(readFileSync(join(dir, 'doctrine', n), 'utf8')));
       return found.length === 3 && missing.length === 1 && missing[0] === 'no-such-gate.mjs' && real.length > 0 && real.every(hubHas);
     },
   },
   {
     name: 'the hub\'s own found/ folder holds one .md file for each finding, named by its key and opening with it, foundQueue reads exactly those files as findings with a key of the form Q-HUB-N used once, and the NOTES.md section under "Found queue" holds no keyed line, which the folder would shadow',
-    run(m) {
-      const q = m.dispatch.foundQueue(HERE);
-      const files = readdirSync(join(HERE, 'found')).filter((n) => n.endsWith('.md'));
-      const notes = readFileSync(join(HERE, 'NOTES.md'), 'utf8');
+    run(m, dir) {
+      const q = m.dispatch.foundQueue(dir);
+      const files = readdirSync(join(dir, 'found')).filter((n) => n.endsWith('.md'));
+      const notes = readFileSync(join(dir, 'NOTES.md'), 'utf8');
       const section = (/^## Found queue[^\n]*\n([\s\S]*?)(?=^## |^# |$(?![\s\S]))/m.exec(notes) ?? [, ''])[1];
       const keyed = section.split('\n').filter((l) => /^\s*(?:[-*]\s+)?\**Q-/.test(l));
       const keys = q.map((x) => x.key);
       const named = files.map((n) => basename(n, '.md'));
       return q.length > 0 && files.length === q.length && keys.every((k) => /^Q-HUB-\d+$/.test(k)) && new Set(keys).size === keys.length
         && [...keys].sort().join() === [...named].sort().join() && q.every((x) => x.text.length >= 20)
-        && files.every((n) => readFileSync(join(HERE, 'found', n), 'utf8').startsWith(`${basename(n, '.md')}:`))
+        && files.every((n) => readFileSync(join(dir, 'found', n), 'utf8').startsWith(`${basename(n, '.md')}:`))
         && keyed.length === 0;
+    },
+  },
+  {
+    name: 'Q-HUB-372: the cases that read the hub\'s own files (the doctrine pages, the found folder, NOTES.md, the settings file, the workflows and the session-start hook) read the copy the run was made in, through the folder a case is given, and none reads the live working copy through the suite\'s own home path, so a file another step edits during the run is not read as a case\'s own',
+    guards: ['live_copy_doctrine', 'live_copy_found', 'live_copy_settings', 'live_copy_hook'],
+    run(m, dir, h) {
+      const source = readFileSync(join(dir, 'session-guards.test.mjs'), 'utf8');
+      const live = [...source.matchAll(/join\(HERE, '(?:found|doctrine|NOTES\.md|\.claude|\.github)'|foundQueue\(HERE\)/g)].map((x) => x[0]);
+      // The control: the instrument must find a planted live read before the file is judged by it.
+      const planted = [...`const a = join(HE${'RE'}, 'found', x); foundQueue(HE${'RE'});`.matchAll(/join\(HERE, '(?:found|doctrine|NOTES\.md|\.claude|\.github)'|foundQueue\(HERE\)/g)].length;
+      return h.assertAll([
+        ['the instrument finds the two planted live reads', planted === 2, planted],
+        ['no case reads the found folder, the doctrine, NOTES.md, the settings, the workflows or the hook through the live home path', live.length === 0, live.join(' | ')],
+      ]);
     },
   },
 
@@ -6346,7 +6360,7 @@ const CASES = [
   // ---- the allow rules that keep an agent's commands out of the harness's own judgement (step 108) ----
   {
     name: 'the hub\'s own .claude/settings.json parses, keeps its hooks, and allows only Artifact and rules that each name one command shape: a bare Bash, a wildcard alone and a rule for a whole program are found first in a planted list, before the real file is trusted to pass',
-    run() {
+    run(m, dir) {
       const broad = (list) => list.filter((r) => {
         if (r === 'Artifact') return false;
         const m = /^Bash\((.+)\)$/.exec(r);
@@ -6358,7 +6372,7 @@ const CASES = [
       const planted = ['Artifact', 'Bash', 'Bash(*)', 'Bash(:*)', 'Bash(node:*)', 'Bash(git:*)', 'Bash(npm:*)', 'Bash(python3:*)', 'Bash(git status:*)', 'Bash(node --check:*)'];
       const found = broad(planted);
       let real = null;
-      try { real = JSON.parse(readFileSync(join(HERE, '.claude', 'settings.json'), 'utf8')); } catch { return false; }
+      try { real = JSON.parse(readFileSync(join(dir, '.claude', 'settings.json'), 'utf8')); } catch { return false; }
       const allow = real?.permissions?.allow;
       return found.join('|') === 'Bash|Bash(*)|Bash(:*)|Bash(node:*)|Bash(git:*)|Bash(npm:*)|Bash(python3:*)'
         && Array.isArray(allow) && allow.every((r) => typeof r === 'string') && broad(allow).length === 0 && new Set(allow).size === allow.length
@@ -8274,7 +8288,7 @@ const CASES = [
         && /readsGate` counts it as no send/.test(rule13);
       const noAmend = !/amending the Rules line/.test(rule14) && !/amend the Rules line/.test(rule14) && /answered by a new plan through plan mode with the current version pinned/.test(rule14);
       // The count in words equals the bullets, and each bullet names something the guards hold.
-      const WORDS = { Eleven: 11, Twelve: 12, Thirteen: 13, Fourteen: 14, Fifteen: 15, Sixteen: 16, Seventeen: 17, Eighteen: 18, Nineteen: 19, Twenty: 20, 'Twenty-one': 21, 'Twenty-four': 24 };
+      const WORDS = { Eleven: 11, Twelve: 12, Thirteen: 13, Fourteen: 14, Fifteen: 15, Sixteen: 16, Seventeen: 17, Eighteen: 18, Nineteen: 19, Twenty: 20, 'Twenty-one': 21, 'Twenty-four': 24, 'Twenty-five': 25 };
       const said = WORDS[/\n\s+([A-Z][a-z-]+) refusals are not ends of a route/.exec(raw14)?.[1] ?? ''];
       const items = raw14.split(/\n {4}- /).slice(1).map((x) => x.split(/\n {4}(?! )\S/)[0]);
       const source = ['hook-dispatch.mjs', 'plan-guard.mjs', 'report.mjs', 'plan-fence.mjs', 'approved-plan-guard.mjs', 'stop-guard.mjs', 'reply-guard.mjs', 'pending-guard.mjs', 'doctrine-read-guard.mjs']
@@ -8287,7 +8301,7 @@ const CASES = [
       const passes = /refused except five kinds/.test(rule14) && /the plan check \(rule 4\)/.test(rule14) && /the reply guard's release command/.test(rule14)
         && /`agentReportWrite`/.test(rule14) && source.includes('function agentReportWrite');
       const claude = flat(readFileSync(join(dir, 'CLAUDE.md'), 'utf8'));
-      const index = /(?:Twenty-one|Twenty-four) refusals set no latch, each because something other than the owner's next message answers it/.test(claude) && /lands only when no plan is in force, as the last step of the plan that makes it/.test(claude)
+      const index = /Twenty-five refusals set no latch, each because something other than the owner's next message answers it/.test(claude) && /lands only when no plan is in force, as the last step of the plan that makes it/.test(claude)
         && /plan-guard\.mjs --check <the plan's path>` prints every fault the approval call would refuse on/.test(claude) && !/amend the Rules line/.test(claude);
       const rules = flat(readFileSync(join(dir, 'agent-rules.md'), 'utf8'));
       const header = /lands only when no plan is in force, as the last step of the plan that makes it; no plan is moved to a new rules version without the button/.test(rules)
@@ -9281,11 +9295,11 @@ const CASES = [
   // ---- step 67: the session-start hook clones the hub and installs the dispatcher when the clone is absent ----
   {
     name: 'the session-start hook clones an absent hub clone and prints the install line without running it',
-    run() {
+    run(m, dir) {
       const work = tmp('sg-start-');
       const clone = join(work, 'clone');
       const project = tmp('sg-start-project-');
-      const r = spawnSync('bash', [join(HERE, '.claude', 'hooks', 'session-start.sh')], { encoding: 'utf8', timeout: 120000,
+      const r = spawnSync('bash', [join(dir, '.claude', 'hooks', 'session-start.sh')], { encoding: 'utf8', timeout: 120000,
         env: { ...process.env, CLAUDE_PROJECT_DIR: project, HUB_CLONE_PATH: clone, HUB_CLONE_SOURCE: HERE, HUB_CLONE_DRY: '1' } });
       const out = r.stdout ?? '';
       return r.status === 0 && out.includes(`cloned it from ${HERE} into ${clone}`)
@@ -9295,11 +9309,11 @@ const CASES = [
   },
   {
     name: 'the session-start hook prints nothing of a clone when the hub clone is present',
-    run() {
+    run(m, dir) {
       const clone = tmp('sg-start-present-');
       writeFileSync(join(clone, 'hook-dispatch.mjs'), '// a clone is here\n');
       const project = tmp('sg-start-project-');
-      const r = spawnSync('bash', [join(HERE, '.claude', 'hooks', 'session-start.sh')], { encoding: 'utf8', timeout: 120000,
+      const r = spawnSync('bash', [join(dir, '.claude', 'hooks', 'session-start.sh')], { encoding: 'utf8', timeout: 120000,
         env: { ...process.env, CLAUDE_PROJECT_DIR: project, HUB_CLONE_PATH: clone, HUB_CLONE_SOURCE: HERE, HUB_CLONE_DRY: '1' } });
       const out = r.stdout ?? '';
       return r.status === 0 && !/clone/.test(out) && !/install line/.test(out);
@@ -10856,7 +10870,7 @@ const PLANTS = {
   amend_hash: ['if (hashOf(mk.plan) !== mk.hash) return `The plan file', 'if (false) return `The plan file', 'approved-plan-guard.mjs'],
   amend_multi: ['for (const e of Array.isArray(input?.edits) ? input.edits : []) {', 'for (const e of Array.isArray(input?.edits) ? input.edits.slice(0, 1) : []) {', 'approved-plan-guard.mjs'],
   amend_ambiguous: ['if (n === 0 || (n > 1 && !e.replace_all)) return null;', 'if (n === 0) return null;', 'approved-plan-guard.mjs'],
-  amend_post: ['  if (moved.length) {\n    unmarked();\n    process.stderr.write(`approved-plan-guard --amend:', '  if (false) {\n    unmarked();\n    process.stderr.write(`approved-plan-guard --amend:', 'approved-plan-guard.mjs'],
+  amend_post: ['  if (moved.length) {\n    process.stderr.write(`approved-plan-guard --amend:', '  if (false) {\n    process.stderr.write(`approved-plan-guard --amend:', 'approved-plan-guard.mjs'],
   amend_rehash: ['{ ...mk, hash: snap.hash, scope: snap.scope, amendedAt:', '{ ...mk, hash: mk.hash, scope: snap.scope, amendedAt:', 'approved-plan-guard.mjs'],
   amend_post_agent: ['if (p.agent_id || !AMENDING.includes(tool)) process.exit(0);', 'if (!AMENDING.includes(tool)) process.exit(0);', 'approved-plan-guard.mjs'],
   amend_wired: ["const o = run(`node \"${join(HUB, 'approved-plan-guard.mjs')}\" --amend`, raw, root);", 'const o = { deny: false, status: 0 };', 'hook-dispatch.mjs'],
@@ -11390,7 +11404,7 @@ const PLANTS = {
   doctrine_check_first: ['**The plan is checked whole before the talk turn.**', '**The plan is checked.**', 'doctrine/plans.md'],
   doctrine_rules_rule: ['**A change to the agent rules file lands only when no plan is in force, as the', '**A change to the agent rules file lands at any time, as the', 'doctrine/plans.md'],
   doctrine_no_amend: ['    - a send the rules gate refuses, because the plan pins a rules version the file\n', '    - a send the rules gate refuses, answered by amending the Rules line; a rules version the file\n', 'doctrine/plans.md'],
-  doctrine_count: ['    Twenty-four refusals are not ends of a route, and set no latch, because', '    Twenty-five refusals are not ends of a route, and set no latch, because', 'doctrine/plans.md'],
+  doctrine_count: ['    Twenty-five refusals are not ends of a route, and set no latch, because', '    Twenty-six refusals are not ends of a route, and set no latch, because', 'doctrine/plans.md'],
   doctrine_passes: ['    PreToolUse call on the main thread and in agents is refused except five\n', '    PreToolUse call on the main thread and in agents is refused except three\n', 'doctrine/plans.md'],
   brief_shapes_file: ["const f = join(hub, 'doctrine', 'plans.md');", "const f = join(hub, 'DOCTRINE.md');", 'session-brief.mjs'],
   brief_shapes_end: ["i < lines.length && !lines[i].startsWith('## '); i++", 'i < lines.length && !lines[i].startsWith(`## ${n + 1}.`); i++', 'session-brief.mjs'],
@@ -11406,7 +11420,7 @@ const PLANTS = {
   plans_compaction: ['readInFull(afterLastExit(afterLastCompaction(entries)), 0, plans, n)', 'readInFull(afterLastExit(entries), 0, plans, n)', 'doctrine-read-guard.mjs'],
   plans_start_first: ['  return startGate(p, entries, opts) ?? planGate(p, entries, opts);', '  return planGate(p, entries, opts) ?? startGate(p, entries, opts);', 'doctrine-read-guard.mjs'],
   plans_dispatch_nolatch: ["      if (o.deny) return refuse(reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));", "      if (o.deny) return refuse(reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')));", 'hook-dispatch.mjs'],
-  claude_latch_line: [" clears the main thread's latch, by when it was typed. Twenty-one refusals set no", " clears the main thread's latch, by when it was typed. Ten refusals set no", 'CLAUDE.md'],
+  claude_latch_line: [" clears the main thread's latch, by when it was typed. Twenty-five refusals set no"," clears the main thread's latch, by when it was typed. Ten refusals set no", 'CLAUDE.md'],
   rules_header: ['lands only when no plan is in force, as the last step of the plan that makes it; no plan is moved', 'is amended to the new one after the change has been read; no plan is moved', 'agent-rules.md'],
 
   // Step 229, change 4: a plan-mode write to the manager's notes passes (LESSONS §435).
@@ -11650,6 +11664,12 @@ const PLANTS = {
   bare_detect: ['\n    else if (ok === true) bare = true;\n', '\n', 'session-guards.test.mjs'],
   bare_list: ["\n  if (process.argv.includes('--bare-list')) for", "\n  if (false) for", 'session-guards.test.mjs'],
   asserted_mark: ['\n  return ASSERTED;\n};', '\n  return true;\n};', 'session-guards.test.mjs'],
+  // Q-HUB-372: the cases that read the hub's own files read the copy the run was made in.
+  // The replacements are built from the lines they replace, so no line of this file spells the live read the case looks for.
+  live_copy_doctrine: ["wholeGates(readFileSync(join(dir, 'doctrine', n), 'utf8')));", "wholeGates(readFileSync(join(dir, 'doctrine', n), 'utf8')));".replace('(dir,', '(HERE,'), 'session-guards.test.mjs'],
+  live_copy_found: ['const q = m.dispatch.foundQueue(dir);', 'const q = m.dispatch.foundQueue(dir);'.replace('(dir)', '(HERE)'), 'session-guards.test.mjs'],
+  live_copy_settings: ["try { real = JSON.parse(readFileSync(join(dir, '.claude', 'settings.json'), 'utf8')); }", "try { real = JSON.parse(readFileSync(join(dir, '.claude', 'settings.json'), 'utf8')); }".replace('(dir,', '(HERE,'), 'session-guards.test.mjs'],
+  live_copy_hook: ["const clone = join(work, 'clone');\n      const project = tmp('sg-start-project-');\n      const r = spawnSync('bash', [join(dir, '.claude', 'hooks', 'session-start.sh')]", "const clone = join(work, 'clone');\n      const project = tmp('sg-start-project-');\n      const r = spawnSync('bash', [join(dir, '.claude', 'hooks', 'session-start.sh')]".replace('[join(dir,', '[join(HERE,'), 'session-guards.test.mjs'],
 };
 
 /**

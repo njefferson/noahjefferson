@@ -994,6 +994,11 @@ export const FINISHED_PLAN_NOTE = 'FINISHED PLAN, NO LATCH: this plan has finish
  * second latches as every refusal does.
  */
 export const SHAPE_FAULT_MARK = 'SHELL SHAPE, NO LATCH:';
+/**
+ * The words the plan fence's refusal of a call made while the plan file is being re-recorded carries (Q-HUB-352, Q-HUB-376). `main` reads them as
+ * "this refusal sets no latch": the refusal says to send the same call again, and a latch would refuse that call.
+ */
+export const RERECORD_MARK = 'PLAN FILE BEING RE-RECORDED';
 export const SHAPE_FAULT_NOTE = `${SHAPE_FAULT_MARK} this is the first refusal of a shell line's shape, so it sets no latch. Rewrite the line as one command from the step's Commands, with every path written in full, no cd, no variable `
   + 'assignment in front, no semicolon, no && and no pipe, and any file read with the Read or Grep tool and written with the Edit or Write tool; an agent has no wait tool, so a run that may pass ten minutes goes in the '
   + 'background and the agent ends its turn. A second refusal of a shell line\'s shape latches this agent.';
@@ -2979,6 +2984,19 @@ function inGitRepo(abs) {
 }
 
 /**
+ * Is a path inside this session's own folder under the harness's projects folder, where an agent's transcript is kept?
+ * @param {string} abs  an absolute path.
+ * @param {string|undefined} sid  the session's id.
+ * @returns {boolean} true for `~/.claude/projects/<project>/<session>` and anything below it (`subagents/` holds each agent's transcript),
+ *   false for another session's folder, a path with a `..` and a call with no session id (Q-HUB-373).
+ */
+function inSessionFolder(abs, sid) {
+  if (!sid) return false;
+  const parts = relative(join(homedir(), '.claude', 'projects'), resolve(String(abs))).split('/');
+  return parts.length >= 2 && parts[0] !== '..' && parts[1] === String(sid) && !parts.includes('..');
+}
+
+/**
  * Is the call made in plan mode while no plan is in force?
  * @param {object} p  a main-thread PreToolUse payload.
  * @param {{plan?: object|null, pointer?: object|null}} [opts]  the test's plan and pointer, as `planPhase` takes them.
@@ -3413,7 +3431,8 @@ export function managerFence(p, opts = {}) {
     let outside = readOutsideRecord(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path);
     // Q-HUB-362: in plan mode with no plan in force nobody else can read the code a plan must change (the dispatch gate refuses every agent as
     // a send with no plan), so the main thread's read of a file inside a git repository passes then, and only then.
-    if (outside !== null && planModeNoPlan(p, opts)) outside = readOutsideRecord(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path, inGitRepo);
+    // Q-HUB-373: the same pass reaches an agent's transcript under the session's own folder, reads only, in plan mode only, with no plan in force only.
+    if (outside !== null && planModeNoPlan(p, opts)) outside = readOutsideRecord(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path, (a) => inGitRepo(a) || inSessionFolder(a, p.session_id));
     return outside === null ? null : `${READ_FENCE}${outside}. Send an agent with the approved plan's path and a step number to read it.${notOfRecord()}`;
   }
   return `${head} It is not a read; send an agent with the approved plan's path and a step number.${notOfRecord()}`;
@@ -3874,9 +3893,13 @@ export function configChange(p) {
       try { text = readFileSync(join(HUB, 'CONFIG.md'), 'utf8'); } catch { text = ''; }
       baseline = text.includes(file) || (!!basename(file) && text.includes(basename(file)));
     }
+    // Q-HUB-370: a skill file the harness syncs is the harness's own and no hub file; the baseline names the class (CONFIG.md 1.2a), so the record
+    // reads it as named, as a harness sync, and not as a file the baseline does not name.
+    const harnessSync = String(p?.source ?? '') === 'skills';
+    if (harnessSync) baseline = true;
     const now = new Date();
     const rec = { at: now.getTime(), time: now.toISOString(), california: `${now.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })} ${californiaTime(now)}`,
-      source: String(p?.source ?? ''), file, baseline };
+      source: String(p?.source ?? ''), file, baseline, harnessSync };
     mkdirSync(join(pad, 'status'), { recursive: true });
     appendFileSync(join(pad, 'status', 'config-changes.jsonl'), JSON.stringify(rec) + '\n');
     return rec;
@@ -3923,7 +3946,7 @@ async function main(event, raw, p) {
   // and the in-app approval check's, and the restored plan mode gate's (LESSONS §460), and the dispatch gate's hold of a send while the
   // top tier serves, the plan gate's refusal of the approval call while the owner's newest message is recorded under auto mode, and the
   // approval guard's end of plan mode under auto, which records no approval. The status and judgement gates are gone (step 58). Doctrine
-  // §0e rule 14 lists them all, twenty-four, and a case holds its count to the list. A Stop event and the other events never latch.
+  // §0e rule 14 lists them all, twenty-five (the plan fence's refusal for a plan file being re-recorded, `RERECORD_MARK`), and a case holds its count to the list. A Stop event and the other events never latch.
   const refuse = (why, latch = true) => {
     process.stderr.write(why + '\n');
     // A refused Read of a file of the record is recorded, so it is read again before a step goes (`readsGate`).
@@ -4189,6 +4212,8 @@ async function main(event, raw, p) {
         try { shape = shapeFaultFirst(p, o.reason); } catch { shape = false; }
         if (shape) return refuse(`${o.reason} ${SHAPE_FAULT_NOTE}`, false);
       }
+      // THE PLAN FENCE'S REFUSAL FOR A PLAN FILE BEING RE-RECORDED SETS NO LATCH (Q-HUB-376): it says to send the same call again, and the moment passes.
+      if (o.deny && g.includes('plan-fence.mjs') && o.reason.includes(RERECORD_MARK)) return refuse(reason, false);
       if (o.deny) return refuse(reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));
       // THE PLAN FENCE'S LINE TO AN AGENT'S FIRST CALL UNDER A RESTORED PLAN MODE passes as added context beside the call (Q-HUB-303).
       if (g.includes('plan-fence.mjs') && p.agent_id && o.status === 0 && o.out.trim().startsWith('{')) fenceContext = o.out.trim();

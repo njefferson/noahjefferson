@@ -42,6 +42,7 @@ The file is written by `node /root/.claude/hub/hook-dispatch.mjs --install`, run
 - The harness syncs skill reference files into the user-level skills folder under `/root/.claude/`, outside the repository and untracked, and rewrites them without any item of the program making the change. The status of 21:32 California on 6 November read one that had been synced at 17:17 the same day, which this file did not name (Q-HUB-283).
 - The synced skill reference files are baseline items of this file: the skill files under the user-level skills folder that a session reads, which the ConfigChange record reports with the source `skills`. Their state is the files as the harness last synced them.
 - A recorded change to one of them (a ConfigChange line with the source `skills`) that no item of the program made is a drift, and is filed as a finding like any other difference between this file and the tree.
+- A skill file the harness syncs is the harness's own and is no hub file: it stands in this section as a member of that class, whatever skill it belongs to (the built-in browser's, for one, which a configuration change at 08:10 California on 9 November touched, Q-HUB-370), and is not listed by name. The ConfigChange record names a change with the source `skills` as a harness sync, and reads it as named by this baseline and not as a file the baseline does not name.
 - Changed by: no item names them; a change enters as an item under P-6.
 
 ### 1.3 Git hooks
