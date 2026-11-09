@@ -54,7 +54,7 @@ The list is the rank. The items the redesign plan builds come first, then the pa
 
 ## Items
 
-406 items (P-401 to P-406 the keys Q-HUB-357 to Q-HUB-362, filed by step 130 of the plan of the planning method of 9 November; P-389 to P-400 the keys Q-HUB-345 to Q-HUB-356, filed by step 128 of the plan of the standing problems of the gates; P-366 to P-388 the keys Q-HUB-322 to Q-HUB-344, filed by step 118 of the plan of the standing problems of the gates; P-365 the infrared app's populations measured by place, entered by step 339 of that plan and not from the Found queue; P-358 to P-364 the keys Q-HUB-315 to Q-HUB-321, filed by the second send of step 108 of the same plan; P-352 to P-357 the keys Q-HUB-309 to Q-HUB-314, filed by step 108 of the plan of the four gates of 7 November; P-351 the key Q-HUB-308, filed by step 337 of the plan of the infrared app's separation measure; P-350 the infrared app's separation measure of 9 November, entered by step 331 of that plan and not from the Found queue; P-349 the key Q-HUB-307, filed by step 330 of the plan that fixes the sweep and regathers the separation research; P-348 the infrared app's test page work of 8 November, entered by step 329 of that plan and not from the Found queue; P-344 to P-347 the keys Q-HUB-303 to Q-HUB-306, filed by step 103 of the plan of the four gates of 7 November; P-343 the key Q-HUB-302, filed by step 102 of the first batch plan; P-317 to P-319 the keys Q-HUB-276 to Q-HUB-278, filed by step 85 of the plan that closed P-21 after the lock of 6 November; P-320 to P-342 the keys Q-HUB-279 to Q-HUB-301, filed by step 99 of the first batch plan, whose first three keys moved past the keys of the remote's, so P-340 to P-342 are the keys Q-HUB-299 to Q-HUB-301; P-309 the batch seed, named by the owner on 5 November, and P-310 to P-316 the keys Q-HUB-269 to Q-HUB-275, filed by step 92 of the plan that wrote it; P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 321 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
+414 items (P-407 to P-414 the keys Q-HUB-363 to Q-HUB-370, filed by step 136 of the plan of the planning method of 9 November; P-401 to P-406 the keys Q-HUB-357 to Q-HUB-362, filed by step 130 of the plan of the planning method of 9 November; P-389 to P-400 the keys Q-HUB-345 to Q-HUB-356, filed by step 128 of the plan of the standing problems of the gates; P-366 to P-388 the keys Q-HUB-322 to Q-HUB-344, filed by step 118 of the plan of the standing problems of the gates; P-365 the infrared app's populations measured by place, entered by step 339 of that plan and not from the Found queue; P-358 to P-364 the keys Q-HUB-315 to Q-HUB-321, filed by the second send of step 108 of the same plan; P-352 to P-357 the keys Q-HUB-309 to Q-HUB-314, filed by step 108 of the plan of the four gates of 7 November; P-351 the key Q-HUB-308, filed by step 337 of the plan of the infrared app's separation measure; P-350 the infrared app's separation measure of 9 November, entered by step 331 of that plan and not from the Found queue; P-349 the key Q-HUB-307, filed by step 330 of the plan that fixes the sweep and regathers the separation research; P-348 the infrared app's test page work of 8 November, entered by step 329 of that plan and not from the Found queue; P-344 to P-347 the keys Q-HUB-303 to Q-HUB-306, filed by step 103 of the plan of the four gates of 7 November; P-343 the key Q-HUB-302, filed by step 102 of the first batch plan; P-317 to P-319 the keys Q-HUB-276 to Q-HUB-278, filed by step 85 of the plan that closed P-21 after the lock of 6 November; P-320 to P-342 the keys Q-HUB-279 to Q-HUB-301, filed by step 99 of the first batch plan, whose first three keys moved past the keys of the remote's, so P-340 to P-342 are the keys Q-HUB-299 to Q-HUB-301; P-309 the batch seed, named by the owner on 5 November, and P-310 to P-316 the keys Q-HUB-269 to Q-HUB-275, filed by step 92 of the plan that wrote it; P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 329 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
 
 ## Items the redesign plan builds
 
@@ -339,6 +339,16 @@ Close entry of the plan of the standing problems of the gates, fixed by file and
 - Compactions: 1 (22:32 California time on 8 November). Resumes: 0. Pushes: the instrument does not count them; step 118, step 127 and this step push once each.
 - The whole session over two approved plans: 15 owner messages (11 go-words, 4 without, 2 carrying the whole word stop), 57 stop-hook messages, 291 agents, 2 compactions, 6 resumes.
 - The harness's own running cost entry, the last of 4, reads 797.33 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252).
+
+Close entry of the plan of the planning method (steps 130 to 136, step 136 the writer), from the cost instrument run on this session's transcript, so far and before this step's push. The instrument numbers it plan 3 and reads no item for it; it was approved 07:26 California time on 9 November:
+- The owner's messages: 0 in the plan; the session's totals are below.
+- Stop-hook messages: 27 in 25 stops (command hook 3, 25; command hook 2, 2).
+- Main-thread refusals: 0.
+- Agents: 29, all on the sonnet tier, with 253,818 output tokens, 69,271,703 cache-read tokens and 2,766,182 cache-written tokens; 15 hook refusals, all plan fence.
+- Main-thread turns: 141 on the opus tier with 62,815 output tokens.
+- Compactions: 0. Resumes: 0. Pushes: the instrument does not count them; step 130, step 135 and this step push once each.
+- The whole session over three approved plans: 22 owner messages (13 go-words, 9 without, 2 carrying the whole word stop), 89 stop-hook messages, 322 agents, 2 compactions, 7 resumes.
+- The harness's own running cost entry, the last of 5, reads 850.88 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252).
 
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
@@ -3764,7 +3774,9 @@ Depends: none.
 
 ### P-397. Q-HUB-353: the seed does not say a resend's review goes only after every parallel step has handed back
 
-Repository: hub. Goal: 5. State: planned. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+Repository: hub. Goal: 5. State: done. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+
+Done: step 131 of that plan put the review-timing line into the template's parallel-batch block, landed by step 135.
 
 Acceptance: the standing text of a parallel batch in `plans/seed-template.md` says it, with a case on the printed line.
 
@@ -3772,7 +3784,9 @@ Depends: none.
 
 ### P-398. Q-HUB-354: the seed's batch print does not say who puts right an existing case a parallel step turned red
 
-Repository: hub. Goal: 5. State: planned. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+Repository: hub. Goal: 5. State: done. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+
+Done: step 131 of that plan gave the batch print's commit step the rule for an existing case a parallel step turned red, landed by step 135.
 
 Acceptance: the batch print's commit step says where the code and where the case is put right, with a case on the print.
 
@@ -3788,7 +3802,9 @@ Depends: none.
 
 ### P-400. Q-HUB-356: the commit step stages every file before its per-step commits and the Commands hold no unstage
 
-Repository: hub. Goal: 5. State: planned. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+Repository: hub. Goal: 5. State: done. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+
+Done: step 131 of that plan put commits by path with nothing staged beforehand into the template's landing text, landed by step 135.
 
 Acceptance: the landing text of `plans/seed-template.md` has a step with several commits stage nothing beforehand and name each commit's own files after the message, with a case on the printed text.
 
@@ -3796,7 +3812,9 @@ Depends: none.
 
 ### P-401. Q-HUB-357: the seed's batch print runs every step in sequence with a commit from each, and groups by file only the findings of one phrase
 
-Repository: hub. Goal: 1. State: planned. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+Repository: hub. Goal: 1. State: done. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+
+Done: step 131 of that plan rewrote the batch print to group by file, one wave of up to seven group steps, one commit step and a computed Cost, with its cases; landed by step 135.
 
 Acceptance: the batch print groups every finding by the files its text names, prints one wave of up to seven group steps at once, one commit step, a header naming the groups that remain and a Cost computed from the estimates, with a case on a planted queue.
 
@@ -3804,7 +3822,9 @@ Depends: none.
 
 ### P-402. Q-HUB-358: the plans page states no procedure a plan is drafted by and no shape it arrives in
 
-Repository: hub. Goal: 1. State: planned. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+Repository: hub. Goal: 1. State: done. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+
+Done: step 132 of that plan added the planning procedure and the plan shape under rule 4 of the plans page, landed by step 135.
 
 Acceptance: `doctrine/plans.md` carries the planning procedure and the plan shape under its rule 4, read by the owner in the plan's own diff.
 
@@ -3812,7 +3832,9 @@ Depends: none.
 
 ### P-403. Q-HUB-359: every reply's end said nothing was open while the session was paused on the owner
 
-Repository: hub. Goal: 3. State: planned. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+Repository: hub. Goal: 3. State: done. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+
+Done: steps 132 to 134 of that plan put the state line's fixed words into rule 6, the dispatcher's reminder and the stop guard, with cases on each; landed by step 135.
 
 Acceptance: the plans page's rule 6, the dispatcher's reminder and the stop guard carry the state line's fixed words, with a case on the reminder's print and a case on each refusal and pass of the guard.
 
@@ -3820,7 +3842,9 @@ Depends: none.
 
 ### P-404. Q-HUB-360: verification ran against staging builds and test pages as steps of app plans
 
-Repository: hub. Goal: 2. State: planned. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+Repository: hub. Goal: 2. State: done. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+
+Done: steps 131 and 132 of that plan moved the verification boundary to the promotion to main in both pages and the template; landed by step 135.
 
 Acceptance: `doctrine/plans.md` and `doctrine/apps.md` put the verification boundary at the promotion to main and name the test page as the instrument for a number from the device.
 
@@ -3828,7 +3852,9 @@ Depends: none.
 
 ### P-405. Q-HUB-361: the close step names no index row in LESSONS.md for a new lesson
 
-Repository: hub. Goal: 1. State: planned. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+Repository: hub. Goal: 1. State: done. Plan: Every plan drafted in its optimized shape: the seed's batch print by file and at once with one commit step and a close that indexes its lessons, the plans page's planning procedure with the test-page and staging rules, and the end-of-reply state line in the rule, the reminder and the stop guard.
+
+Done: step 131 of that plan put the index-row sentence into the close step of both prints, landed by step 135.
 
 Acceptance: the close step of the batch print and of the single print says an index row is written for each lesson in the shape the index's rows hold, with a case on the printed text.
 
@@ -3839,5 +3865,69 @@ Depends: none.
 Repository: hub. Goal: 1. State: open. Plan: none.
 
 Acceptance: `hook-dispatch.mjs` passes the main thread's read of the repository's own files in plan mode while no plan is in force, with a case on the fence's answer.
+
+Depends: none.
+
+### P-407. Q-HUB-363: the plant tpl_close_keys is missed and the Doctrine gates run ends red on it
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the case behind the plant asserts the whole sentence the plant removes, the Doctrine gates run for the pushed commit concludes success, and the batch print's commit step runs the plants of every file a plant targets.
+
+Depends: none.
+
+### P-408. Q-HUB-364: the commit step's text states none of four orders a plan had to amend by hand
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the commit step block of `plan-seed.mjs` and `plans/seed-template.md` carries the four sentences of the finding, with a case on the printed text.
+
+Depends: none.
+
+### P-409. Q-HUB-365: the plan fence reads the suite's dry listing of stale plants as a red run
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: `plan-fence.mjs` does not read the dry listing as a red run, with a case on the fence's answer.
+
+Depends: none.
+
+### P-410. Q-HUB-366: the plan fence reads the suite's usage refusal as a red run
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: `plan-fence.mjs` does not read exit 2 of the suite as a red run and still reads exit 1 as one, with a case on each.
+
+Depends: none.
+
+### P-411. Q-HUB-367: a Files line worded read only holds no agent off the file it names
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: the fence reads such a line as no write, or the plan check refuses the wording, with a case on a planted plan.
+
+Depends: none.
+
+### P-412. Q-HUB-368: a file step ran its cases under a filter wider than its own names and read other cases red
+
+Repository: hub. Goal: 1. State: open. Plan: none.
+
+Acceptance: the group step's text in `plan-seed.mjs` and `plans/seed-template.md` has it run its cases by exact names, one quoted switch each, with a case on the printed text.
+
+Depends: none.
+
+### P-413. Q-HUB-369: the stop guard's plan-mode condition rests on a payload key no case measures
+
+Repository: hub. Goal: 3. State: open. Plan: none.
+
+Acceptance: a case on a captured real Stop payload in plan mode, and the guard's reading put right if it is red.
+
+Depends: none.
+
+### P-414. Q-HUB-370: a synced skill file of the built-in browser changed and the baseline does not name it
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: `CONFIG.md` says where such a harness-synced file stands.
 
 Depends: none.
