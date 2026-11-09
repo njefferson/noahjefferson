@@ -30,6 +30,11 @@ import { foundQueue, roadmapItems, repoBranches } from './hook-dispatch.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MOVABLE = '[movable: another session can move this before a step runs]';
+// Placeholders and sentences the seed prints in both modes.
+const SEND_REPORT = 'a send after the first writes its own file, named for the step number, a hyphen, the send\'s number and -report.txt';
+const FINDINGS_PASSED_IN = '- <Each finding the owner passed in from another session, in the session\'s own words, one line each, which the close step files in the found folder with its program item; write that none was passed in where none was.>';
+const FORCED_TURNS = '<Where the plan\'s Rules hold its commits for a later landing: the number of turns the environment\'s stop hook forces while a commit stands unpushed, written as a number beside the words forced turns.>';
+const CLOSE_KEYS_LINE = '- The close step\'s report names each key it filed beside the line it came from, key by key and never as a range.';
 
 /** The text of a file, or '' when it cannot be read. */
 const slurp = (f) => { try { return readFileSync(f, 'utf8'); } catch { return ''; } };
@@ -87,8 +92,53 @@ function git(args, cwd) {
 }
 
 /**
+ * The highest keys the remote's main holds, as last fetched (Q-HUB-302: another session can land filings while a plan is typed, and the keys a close files
+ * must be the next free ones past the remote's, not past the working copy's).
+ * @param {string} hub  the hub's working copy.
+ * @returns {{found: number, lesson: number, program: number, read: boolean}} the highest `Q-HUB-N` file, the highest lesson number and the highest `P-N`
+ *   entry on `origin/main`; zeros and `read: false` where the hub has no such ref (a folder that is not a clone, a clone never fetched).
+ */
+export function remoteHead(hub) {
+  const out = { found: 0, lesson: 0, program: 0, read: false };
+  const f = git(['ls-tree', '--name-only', 'origin/main', 'found/'], hub);
+  if (!f.ok) return out;
+  out.read = true;
+  for (const n of f.out.split('\n')) { const m = /Q-HUB-(\d+)\.md$/.exec(n); if (m) out.found = Math.max(out.found, Number(m[1])); }
+  const l = git(['ls-tree', '--name-only', 'origin/main', 'lessons/'], hub);
+  if (l.ok) for (const n of l.out.split('\n')) { const m = /lessons\/(\d+)-/.exec(n); if (m) out.lesson = Math.max(out.lesson, Number(m[1])); }
+  const p = git(['show', 'origin/main:PROGRAM.md'], hub);
+  if (p.ok) for (const e of programEntries(p.out)) out.program = Math.max(out.program, e.n);
+  return out;
+}
+
+/**
+ * The program item the session's approval marker names (Q-HUB-336: a seed printed at a resume took the program's next open item, which is not always the
+ * session's).
+ * @param {string} marker  the approval marker's path.
+ * @param {{key: string, state: string}[]} entries  the program's entries.
+ * @param {string} sid  the session id of this print ('' when none is known).
+ * @returns {string} the P-key the marker's plan names (its `item` field when the marker has one, else the first P-key in the plan file's title line or its
+ *   Item entry heading) when that item is open or planned and the marker names this session; '' otherwise (no session id known included), and every
+ *   doubt reads as ''.
+ */
+export function markerItem(marker, entries, sid) {
+  let mk;
+  try { mk = JSON.parse(readFileSync(marker, 'utf8')); } catch { return ''; }
+  if (!mk || typeof mk !== 'object') return '';
+  if (!sid || mk.session !== sid) return '';
+  const usable = (k) => (entries.find((e) => e.key === k && (e.state === 'open' || e.state === 'planned')) ? k : '');
+  if (typeof mk.item === 'string' && /^P-\d+$/.test(mk.item)) return usable(mk.item);
+  const planText = typeof mk.plan === 'string' && mk.plan ? slurp(mk.plan) : '';
+  if (!planText) return '';
+  const title = planText.split('\n').find((l) => /^#\s/.test(l)) ?? '';
+  const heading = /^###\s+(P-\d+)\./m.exec(planSection(planText, 'Item entry'))?.[1] ?? '';
+  const fromTitle = /\bP-\d+\b/.exec(title)?.[0] ?? '';
+  return usable(fromTitle) || usable(heading);
+}
+
+/**
  * Print the seed.
- * @param {{item: string, repo?: string, plan?: string, steps?: number, hub?: string, now?: Date}} o
+ * @param {{item: string, repo?: string, plan?: string, steps?: number, hub?: string, now?: Date, marker?: string}} o
  * @returns {{ok: boolean, text: string}} the print, or the error naming the next free key and the next ranked open item.
  */
 export function seed(o) {
@@ -110,7 +160,9 @@ export function seed(o) {
   const firstOpen = openAll.find((e) => e.repository.toLowerCase() === repoName.toLowerCase());
   const passedOver = firstOpen ? openAll.indexOf(firstOpen) : openAll.length;
   const want = String(o.item ?? '').trim();
-  const entry = want === 'next' ? firstOpen : entries.find((e) => e.key === want);
+  // `next` takes the item the session's approval marker names where one does, and the program's first open item of the repository otherwise.
+  const markedKey = want === 'next' ? markerItem(o.marker ?? join(homedir(), '.claude', 'APPROVED-PLAN.json'), entries, String(process.env.CLAUDE_CODE_SESSION_ID ?? '').trim()) : '';
+  const entry = want === 'next' ? (entries.find((e) => e.key === markedKey) ?? firstOpen) : entries.find((e) => e.key === want);
   if (!entry) {
     return { ok: false, text: `plan-seed: the key ${want || '(none given)'} is not in PROGRAM.md. The next free program key is P-${nextP}`
       + `${firstOpen ? ` and the next ranked open item is ${firstOpen.key}, ${firstOpen.title}` : ' and no entry is open'}.\n` };
@@ -123,9 +175,12 @@ export function seed(o) {
   const parts = keys.map((k) => /^Q-([A-Za-z0-9]+)-(\d+)$/.exec(k)).filter(Boolean);
   let fileMax = 0;
   try { for (const n of readdirSync(join(hub, 'found'))) { const m = /^Q-HUB-(\d+)\.md$/.exec(n); if (m) fileMax = Math.max(fileMax, Number(m[1])); } } catch { /* no folder */ }
-  const hubMax = Math.max(fileMax, ...parts.filter((m) => m[1] === 'HUB').map((m) => Number(m[2])), 0);
-  let lessonMax = 0;
+  const remote = remoteHead(hub);
+  const hubMax = Math.max(fileMax, remote.found, ...parts.filter((m) => m[1] === 'HUB').map((m) => Number(m[2])), 0);
+  let lessonMax = remote.lesson;
   try { for (const n of readdirSync(join(hub, 'lessons'))) { const m = /^(\d+)-/.exec(n); if (m) lessonMax = Math.max(lessonMax, Number(m[1])); } } catch { /* no folder */ }
+  const nextPk = Math.max(nextP, remote.program + 1);
+  const remoteNote = remote.read ? ` (counted past the remote's main as last fetched, which holds up to P-${remote.program}, Q-HUB-${remote.found} and lesson ${remote.lesson})` : '';
   const planText = o.plan ? slurp(resolve(o.plan)) : '';
   const stepNums = [...planSection(planText, 'Steps').matchAll(/^(\d+)\.\s/gm)].map((m) => Number(m[1]));
   const first = (stepNums.length ? Math.max(...stepNums) : 0) + 1;
@@ -142,7 +197,7 @@ export function seed(o) {
   const tpl = templateBlocks(slurp(join(hub, 'plans', 'seed-template.md')));
   // HUB in the standing text is where an agent edits and tests: the working copy when the print is for the hub, never the live clone the
   // script may run out of.
-  const vars = { HUB: isHub ? repo : hub, ITEM: entry.key, TAKEUP: takeup, CLOSE: close, REVIEW: review, NEXTP: `P-${nextP}`, NEXTQ: `Q-HUB-${hubMax + 1}`, NEXTL: lessonMax + 1,
+  const vars = { HUB: isHub ? repo : hub, ITEM: entry.key, TAKEUP: takeup, CLOSE: close, REVIEW: review, NEXTP: `P-${nextPk}`, NEXTQ: `Q-HUB-${hubMax + 1}`, NEXTL: lessonMax + 1,
     TRANSCRIPT: transcript, REVIEWFILE: join(homedir(), '.claude', 'hub', 'aim-review.md'), PUTRIGHT: '' };
   vars.LANDING = fill(tpl.landing ?? '<plans/seed-template.md has no landing block>', vars);
 
@@ -176,6 +231,10 @@ export function seed(o) {
   L();
   L(`The wall line of every report reads against this: the item is <${entry.title}>, whose acceptance is goal 1 above. <The owner's asks it serves, and the program's goal it serves.>`);
   L();
+  L('## Findings passed in');
+  L();
+  L(FINDINGS_PASSED_IN);
+  L();
   L('## Item entry');
   L();
   L(`The entry as PROGRAM.md holds it now, from its heading to the next; its dependency line is ${entry.depends ? `"${entry.depends}"` : 'not in the block'} and no other line stands for it.`);
@@ -207,7 +266,7 @@ export function seed(o) {
   L(fill(tpl['take-up'] ?? '<plans/seed-template.md has no take-up block>', vars));
   L();
   for (const n of nums) {
-    L(`${n}. **<the item's step ${n}, one result>.** <Repository>, one agent. Facts: <the asks and the facts the step depends on, restated>. Do: <the exact actions and nothing outside them>. Observe: <the observation that means it is done>. Kill: <what ends the step with nothing further written>. Report \`progress/step-${n}-report.txt\` (new). Estimate <minutes> min.`);
+    L(`${n}. **<the item's step ${n}, one result>.** <Repository>, one agent. Facts: <the asks and the facts the step depends on, restated>. Do: <the exact actions and nothing outside them>. Observe: <the observation that means it is done>. Kill: <what ends the step with nothing further written>. Report \`progress/step-${n}-report.txt\` (new); ${SEND_REPORT}. Estimate <minutes> min.`);
     L();
   }
   L(fill(tpl['close-step'] ?? '<plans/seed-template.md has no close-step block>', vars));
@@ -280,11 +339,12 @@ export function seed(o) {
   L();
   L('## Cost');
   L();
-  L(`Each of the ${count + 2} steps runs on the sonnet tier with one agent for each, and a review is sent at the plan's first send and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move. <The runs and checks the plan makes.> Two pushes are made, one by the take-up step and one by the close step, each rebased onto the remote's head. <The main thread's tier for the writing and for the management.>`);
+  L(`Each of the ${count + 2} steps runs on the sonnet tier with one agent for each, and a review is sent at the plan's first send and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move. <The runs and checks the plan makes.> Two pushes are made, one by the take-up step and one by the close step, each rebased onto the remote's head. ${FORCED_TURNS} <The main thread's tier for the writing and for the management.>`);
   L();
   L('## Verification');
   L();
   L('- <What is observed at the end that shows the item\'s acceptance, each as one line.>');
+  L(CLOSE_KEYS_LINE);
   L();
 
   // ---- the movable reads, outside the plan ----
@@ -299,9 +359,9 @@ export function seed(o) {
   L(`- ${MOVABLE} the working copy's head: ${head.ok ? head.out : `not read (${head.out})`}`);
   const st = git(['status', '--short'], repo);
   L(`- ${MOVABLE} the working copy's changed lines: ${st.ok ? (st.out ? st.out.split('\n').length : 0) : `not read (${st.out})`}`);
-  L(`- ${MOVABLE} the next free program key: P-${nextP}`);
+  L(`- ${MOVABLE} the next free program key: P-${nextPk}`);
   L(`- ${MOVABLE} the items count line as PROGRAM.md prints it: ${/^\d+ items\b[^\n]*/m.exec(planSection(programText, 'Items'))?.[0] ?? 'not read'}`);
-  L(`- ${MOVABLE} the next free found key: Q-HUB-${hubMax + 1}`);
+  L(`- ${MOVABLE} the next free found key: Q-HUB-${hubMax + 1}${remoteNote}`);
   L(`- ${MOVABLE} the next free lesson number: ${lessonMax + 1}`);
   return { ok: true, text: `${out.join('\n')}\n` };
 }
@@ -383,10 +443,12 @@ export function batchSeed(o) {
   const parts = keys.map((k) => /^Q-([A-Za-z0-9]+)-(\d+)$/.exec(k)).filter(Boolean);
   let fileMax = 0;
   try { for (const n of readdirSync(join(hub, 'found'))) { const m = /^Q-HUB-(\d+)\.md$/.exec(n); if (m) fileMax = Math.max(fileMax, Number(m[1])); } } catch { /* no folder */ }
-  const hubMax = Math.max(fileMax, ...parts.filter((m) => m[1] === 'HUB').map((m) => Number(m[2])), 0);
-  let lessonMax = 0;
+  const remote = remoteHead(hub);
+  const hubMax = Math.max(fileMax, remote.found, ...parts.filter((m) => m[1] === 'HUB').map((m) => Number(m[2])), 0);
+  let lessonMax = remote.lesson;
   try { for (const n of readdirSync(join(hub, 'lessons'))) { const m = /^(\d+)-/.exec(n); if (m) lessonMax = Math.max(lessonMax, Number(m[1])); } } catch { /* no folder */ }
-  const nextP = (entries.reduce((m, e) => Math.max(m, e.n), 0)) + 1;
+  const nextP = Math.max((entries.reduce((m, e) => Math.max(m, e.n), 0)) + 1, remote.program + 1);
+  const remoteNote = remote.read ? ` (counted past the remote's main as last fetched, which holds up to P-${remote.program}, Q-HUB-${remote.found} and lesson ${remote.lesson})` : '';
   const planText = o.plan ? slurp(resolve(o.plan)) : '';
   const stepNums = [...planSection(planText, 'Steps').matchAll(/^(\d+)\.\s/gm)].map((m) => Number(m[1]));
   const takeup = (stepNums.length ? Math.max(...stepNums) : 0) + 1;
@@ -409,7 +471,12 @@ export function batchSeed(o) {
     ? `; in the entry of each of these items, whose finding's own text says it was put right, set State to done with the sentence after its key as what changed: ${putRight.map((f) => `${f.item} (${f.key}): ${f.putRight}`).join(' ')}`
     : '';
   const takeupVars = { ...vars, ITEM: planned.map((f) => f.item).join(', ') };
-  const checks =['docs-check', 'privacy-check', 'quote-check', 'third-person-check', 'lessons-check', 'example-check', 'pin-check'].map((c) => `\`node ${vars.HUB}/${c}.mjs\``).join(', ');
+  // Each check is spelled as its own usage gives (Q-HUB-308): the docs check takes the repository's path bare, the lessons check none, and the quote,
+  // privacy, third-person, example and pin checks take it after the repo flag.
+  const checks = ['docs-check', 'privacy-check', 'quote-check', 'third-person-check', 'lessons-check', 'example-check', 'pin-check'].map((c) => {
+    const base = `node ${vars.HUB}/${c}.mjs`;
+    return `\`${c === 'docs-check' ? `${base} ${repo}` : c === 'lessons-check' ? base : `${base} --repo ${repo}`}\``;
+  }).join(', ');
 
   const out = [];
   const L = (s = '') => out.push(s);
@@ -435,6 +502,10 @@ export function batchSeed(o) {
   L('## Design');
   L();
   L(`The wall line of every report reads against this: the item is the batch of ${batch.length} findings, whose acceptance is goal 1 above. <The owner's asks it serves, and the program's goal it serves.>`);
+  L();
+  L('## Findings passed in');
+  L();
+  L(FINDINGS_PASSED_IN);
   L();
   L('## Thesis');
   L();
@@ -470,7 +541,7 @@ export function batchSeed(o) {
     const where = g.home ? `\`${g.home}\`` : 'the files each names';
     const named = [...new Set(g.list.flatMap((f) => f.files))];
     const doEach = g.list.map((f) => `for ${f.key} (item ${f.item}) make the change its text names${f.files.length ? ` in ${f.files.map((x) => `\`${x}\``).join(', ')}` : ' in the files its text names'}`).join('; ');
-    L(`${n}. **${g.home ? `Put right in ${where}` : 'Put right in the files each names'}: ${ks.join(', ')}.** ${isHub ? 'Hub' : basename(repo)}, one agent. Facts: the step takes up ${ks.length} filed ${ks.length === 1 ? 'finding' : 'findings'}, each read whole from its file; ${g.list.map((f) => `${f.key} (item ${f.item}): ${f.text}`).join(' ')} The remote's main moves under this session, so it is fetched at the time and this step's commit goes on top of it. Do: \`git status\`, read clean; read with Read and Grep ${where}${named.length > 1 ? ` and ${named.filter((x) => x !== g.home).map((x) => `\`${x}\``).join(', ')}` : ''}; ${doEach}; where the home is a gate file the suite covers, add a case that fails on the old text and a plant for the fix in \`session-guards.test.mjs\`, and run \`node ${vars.HUB}/session-guards.test.mjs\` with the new cases by name, then the plants narrowed to the files touched; after \`git add\`, run ${checks} once each, each exit code read; make one local commit whose subject names ${ks.join(', ')}; then the landing acts: ${vars.LANDING}. Observe: the cases named pass where one was added, every plant is caught, the seven checks exit 0, and the remote's main is the pushed commit with this step's commit above the fetched head. Kill: a red check ends the step FAILED with its lines; a conflict in the rebase or a push refused as not a fast-forward ends it EJECT with nothing pushed and the rebase ended; a refusal of the fetch, the rebase, the push or the pull ends it REFUSED, nothing further done and no other route tried. Report \`progress/step-${n}-report.txt\` (new). Estimate ${15 + 5 * g.list.length} min.`);
+    L(`${n}. **${g.home ? `Put right in ${where}` : 'Put right in the files each names'}: ${ks.join(', ')}.** ${isHub ? 'Hub' : basename(repo)}, one agent. Facts: the step takes up ${ks.length} filed ${ks.length === 1 ? 'finding' : 'findings'}, each read whole from its file; ${g.list.map((f) => `${f.key} (item ${f.item}): ${f.text}`).join(' ')} The remote's main moves under this session, so it is fetched at the time and this step's commit goes on top of it. Do: \`git status\`, read clean; read with Read and Grep ${where}${named.length > 1 ? ` and ${named.filter((x) => x !== g.home).map((x) => `\`${x}\``).join(', ')}` : ''}; ${doEach}; where the home is a gate file the suite covers, add a case that fails on the old text and a plant for the fix in \`session-guards.test.mjs\`, and run \`node ${vars.HUB}/session-guards.test.mjs\` with the new cases by name, then the plants narrowed to the files touched; after \`git add\`, run ${checks} once each, each exit code read; make one local commit whose subject names ${ks.join(', ')}; then the landing acts: ${vars.LANDING}. Observe: the cases named pass where one was added, every plant is caught, the seven checks exit 0, and the remote's main is the pushed commit with this step's commit above the fetched head. Kill: a red check ends the step FAILED with its lines; a conflict in the rebase or a push refused as not a fast-forward ends it EJECT with nothing pushed and the rebase ended; a refusal of the fetch, the rebase, the push or the pull ends it REFUSED, nothing further done and no other route tried. Report \`progress/step-${n}-report.txt\` (new); ${SEND_REPORT}. Estimate ${15 + 5 * g.list.length} min.`);
     L();
   });
   L(fill(tpl['close-step'] ?? '<plans/seed-template.md has no close-step block>', vars));
@@ -554,11 +625,12 @@ export function batchSeed(o) {
   L();
   L('## Cost');
   L();
-  L(`The ${groups.length + 2} steps (${groups.length} group ${groups.length === 1 ? 'step' : 'steps'} with the take-up and the close) run on the sonnet tier with one agent for each, and a review is sent at the plan's first send and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move. ${groups.length + 2} pushes are made, one for each group step and two more for the take-up and the close, each rebased onto the remote's head. <The main thread's tier for the writing and for the management.>`);
+  L(`The ${groups.length + 2} steps (${groups.length} group ${groups.length === 1 ? 'step' : 'steps'} with the take-up and the close) run on the sonnet tier with one agent for each, and a review is sent at the plan's first send and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move. ${groups.length + 2} pushes are made, one for each group step and two more for the take-up and the close, each rebased onto the remote's head. ${FORCED_TURNS} <The main thread's tier for the writing and for the management.>`);
   L();
   L('## Verification');
   L();
   L('- <What is observed at the end that shows the batch\'s acceptance, each as one line.>');
+  L(CLOSE_KEYS_LINE);
   L();
   L('==== THE PLAN ENDS ABOVE THIS LINE ====');
   L();
@@ -568,7 +640,7 @@ export function batchSeed(o) {
   const head = git(['rev-parse', 'HEAD'], repo);
   L(`- ${MOVABLE} the working copy's head: ${head.ok ? head.out : `not read (${head.out})`}`);
   L(`- ${MOVABLE} the next free program key: P-${nextP}`);
-  L(`- ${MOVABLE} the next free found key: Q-HUB-${hubMax + 1}`);
+  L(`- ${MOVABLE} the next free found key: Q-HUB-${hubMax + 1}${remoteNote}`);
   L(`- ${MOVABLE} the next free lesson number: ${lessonMax + 1}`);
   return { ok: true, text: `${out.join('\n')}\n` };
 }
