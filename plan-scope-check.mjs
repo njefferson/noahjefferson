@@ -176,7 +176,9 @@ export function diffForScope(repo) {
   // computes this hash BEFORE it writes `.plan-scope`. Once that file is
   // tracked — which it must be, so the verdict travels with the commit it
   // covers — including it would make every recorded verdict self-invalidating.
-  const status = run('git status --porcelain=v1 -z');
+  // UNTRACKED FILES ARE LISTED ONE BY ONE (Q-HUB-307). Without the flag git reports a new folder as the folder alone until its files are
+  // staged, a folder path reads as `deleted` here, and a verdict recorded before staging was void at the commit that staged the files.
+  const status = run('git status --porcelain=v1 -z --untracked-files=all');
   const paths = new Set();
   for (const rec of status.split('\0')) {
     if (!rec) continue;

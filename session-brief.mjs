@@ -105,7 +105,17 @@ for (const [label, dir] of [[name, repo], ['the hub', hub]]) {
     say('    build a merge on it, and do not number anything off the end of a file');
     say('    in it. Catch up first:');
     say('');
-    say(`      git -C ${dir} reset --hard origin/${br}`);
+    // A HARD RESET DESTROYS WHAT IS UNCOMMITTED, AND THE ADVICE WAS PRINTED TWICE WHILE FOUR FILES OF A STEP SAT IN THE TREE (Q-HUB-322).
+    // Where the tree holds anything uncommitted the brief names the landing step's own way up (a fetch, then a rebase of the commits
+    // onto the remote's head) and prints no reset at all.
+    if (sh('git status --porcelain', dir)) {
+      say(`      UNCOMMITTED WORK SITS IN ${label.toUpperCase()}: no reset is offered, because it would destroy it.`);
+      say('      Commit it as the plan\'s landing step does, then put the commits on top of the remote:');
+      say(`      git -C ${dir} fetch origin ${br}`);
+      say(`      git -C ${dir} rebase origin/${br}`);
+    } else {
+      say(`      git -C ${dir} reset --hard origin/${br}`);
+    }
     say('');
   }
 }

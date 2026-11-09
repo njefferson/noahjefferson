@@ -327,6 +327,32 @@ function skippedFile(p) {
   return join(dir, `${String(p.session_id || 'no-session').replace(/[^A-Za-z0-9_-]/g, '_')}.json`);
 }
 
+/** The record key of one owner message: its typed time and its words. @param {{text: string, at: number}} m @returns {string} */
+const keyOf = (m) => createHash('sha256').update(`${m.at}:${norm(m.text)}`).digest('hex');
+
+/**
+ * Record the messages a refusal has just printed as printed (Q-HUB-342): the refusal carries each pending message word for word and the
+ * session answers it in that turn, and a later prompt that overtakes the message printed it a second time as never given, so it was
+ * answered twice. A message printed here is in the same record `releaseSkipped` keeps, so it is not printed again once the turn that
+ * answered it has ended; the next prompt is the first thing that can read the record.
+ * @param {object} p  the refused PreToolUse payload.
+ * @param {object[]} [entries]  the transcript's entries, for the test.
+ * @returns {number} how many messages were recorded.
+ */
+export function markPrinted(p, entries) {
+  const list = entries ?? (p.transcript_path ? tailEntries(p.transcript_path, 16 * 1024 * 1024) : []);
+  const pending = pendingMessages(list, startedAt(p));
+  if (!pending.length) return 0;
+  const f = skippedFile(p);
+  let seen = [];
+  try { const r = JSON.parse(readFileSync(f, 'utf8')); seen = Array.isArray(r?.keys) ? r.keys : []; } catch { seen = []; }
+  const add = pending.map(keyOf).filter((k) => !seen.includes(k));
+  if (!add.length) return 0;
+  mkdirSync(dirname(f), { recursive: true });
+  writeFileSync(f, JSON.stringify({ keys: [...seen, ...add] }));
+  return add.length;
+}
+
 /**
  * The messages the harness never delivered, printed once, when a later one arrives.
  * @param {object} p  the UserPromptSubmit payload: `prompt` is what arrived and
@@ -352,7 +378,6 @@ export function releaseSkipped(p, entries) {
   const f = skippedFile(p);
   let seen = [];
   try { const r = JSON.parse(readFileSync(f, 'utf8')); seen = Array.isArray(r?.keys) ? r.keys : []; } catch { seen = []; }
-  const keyOf = (m) => createHash('sha256').update(`${m.at}:${norm(m.text)}`).digest('hex');
   const fresh = skipped.filter((m) => !seen.includes(keyOf(m)));
   if (!fresh.length) return '';
   mkdirSync(dirname(f), { recursive: true });
@@ -392,6 +417,7 @@ if (process.argv[1] && resolve(process.argv[1]) === SELF) {
   try { why = decide(p); } catch (e) { process.stderr.write(`pending-guard: ${e?.message ?? e}\n`); process.exit(1); }
   if (why) {
     try { holdCall(p); } catch { /* the refusal stands either way */ }
+    try { markPrinted(p); } catch { /* the refusal stands either way */ }
     process.stderr.write(why + '\n');
     process.exit(2);
   }
