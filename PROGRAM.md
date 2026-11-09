@@ -320,6 +320,16 @@ Close entry of the plan of the four gates of 7 November (P-334, steps 103 to 117
 - Compactions: 0 in the plan (1 before it, at 14:50 California time on 8 November). Resumes: 0. Pushes: the instrument does not count them; each landing step pushed once and this step pushes once.
 - The harness's own running cost entry, the last of 1, reads 731.275678600003 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252).
 
+Close entry of the plan of the four populations measured by place (P-365, steps 339 to 345, step 345 the writer), from the cost instrument run on this session's transcript, so far and before this step's push. The instrument numbers it plan 4 and reads its item as P-352, approved 21:09 California time on 8 November:
+- The owner's messages: 0 in the plan; the session's totals are below.
+- Stop-hook messages: 0.
+- Main-thread refusals: 3 (review gate 1, manager fence 1, reads gate 1).
+- Agents: 14, all on the sonnet tier, with 198,753 output tokens, 47,406,873 cache-read tokens and 2,080,204 cache-written tokens; 3 hook refusals (plan fence 1, unnamed in its text 2).
+- Main-thread turns: 72 on the opus tier with 51,303 output tokens.
+- Compactions: 0. Resumes: 0. Pushes: the instrument does not count them; step 339 pushed the hub once, step 344 pushed the app's staging once and this step pushes the hub once.
+- The whole session over four approved plans: 64 owner messages (26 go-words, 38 without, 3 carrying the whole word stop), 28 stop-hook messages, 68 agents, 4 compactions, 11 resumes.
+- The harness's own running cost entry, the last of 22, reads 4,974.60 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252).
+
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
 ## Parked settings
@@ -3273,11 +3283,18 @@ Depends: none.
 
 ### P-365. The four populations measured by place: sky, foliage, water and man-made things on three of the owner's marina frames, labelled from the owner's own pictures, counted through the app's own computed path at the opening balance and the mixer presets, with the gather's labelling read against the places and its caveat written into the record
 
-Repository: Jefferson-Photography-Studio. Goal: 5. State: planned. Plan: the four populations measured by place: sky, foliage, water and man-made things on three of the owner's marina frames, labelled from the owner's own pictures, counted through the app's own computed path at the opening balance and the mixer presets, with the gather's labelling read against the places and its caveat written into the record.
+Repository: Jefferson-Photography-Studio. Goal: 5. State: done. Plan: the four populations measured by place: sky, foliage, water and man-made things on three of the owner's marina frames, labelled from the owner's own pictures, counted through the app's own computed path at the opening balance and the mixer presets, with the gather's labelling read against the places and its caveat written into the record.
 
 Acceptance: sky, foliage, water and man-made things, with the shore and the dead wood beside them, are labelled by place from the owner's own pictures on three frames, counted through the app's computed path at the opening balance, the five mixer presets and one far balance, and the measure of 8 November is written for every pair of places with the docks as the control into places.md and places.json; the gather's labelling rule is read against the places; the caveat stands in the science file, the measure file and record 084; the commit stands on staging with Gates and Deploy green and main unmoved.
 
 Depends: P-350.
+
+Done: steps 339 to 345 of the plan of 8 November. Step 339 took the item up as this key and landed it on the hub; step 340 entered the owner's folder and the three raws in the app's image index and fetched them; step 341 drew the eight places on the three pictures and wrote and planted the harness; step 342 ran it and wrote the digest and its figures under the app's separation research folder; step 343 wrote the caveat into the science file, the measure file and record 084 and queued the findings; step 344 landed the index, the digest and the records as one commit on the app's staging, whose subject is "Docs: the four populations measured by place on three marina frames, with the labelling's caveat", with Gates and Deploy for it in progress when last read and main unmoved. The doctrine marker was left as committed, because adopting it needs the calling workflow's hub pin moved in the same commit (queued in the app's notes). The cost instrument numbers this plan under the key P-352, the key the seed printed at the plan's entry before step 339 took the next free one.
+
+Hub findings of the plan, carried to the next plan for their own files and not written as finding files by this step:
+- Step 339's first push was refused by the plan fence as outside any approved plan although the plan's Commands listed it, and the same push passed on the second send. Carried; no program item carries it yet.
+- Step 341's first send was refused by the harness guard at a syntax check of a new scratch build script that carried no block of planted figures, while the step's Commands named the check on every new script; every scratch script should carry the block from its first write, or the plan seed's standing text should say so. Carried; no program item carries it yet.
+- The plan's item key moved between the seed print and the take-up (P-352 printed, P-365 entered), so the cost instrument and the plan's own title name different keys for one item. Carried; related to P-351 on spelling what a seed prints.
 
 ### P-352. Q-HUB-309: the plan named a line of the plans page that does not exist
 
