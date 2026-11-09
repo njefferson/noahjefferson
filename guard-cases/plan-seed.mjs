@@ -50,7 +50,10 @@ export const cases = [
         const verification = section('Verification');
         const placeholder = (s) => (s.match(/<[^<>\n]*>/g) ?? []).length;
         rows.push([`${mode}: the Findings passed in section holds a placeholder for the findings the owner passed in`, /Each finding the owner passed in from another session/.test(passed) && placeholder(passed) === 1, passed]);
-        rows.push([`${mode}: the Cost has a place for the forced turns of the stop hook`, /the number of turns the environment's stop hook forces while a commit stands unpushed, written as a number beside the words forced turns/.test(cost), cost]);
+        // The single print keeps the placeholder; the batch print computes the number from its file steps (step 131).
+        rows.push([`${mode}: the Cost has a place for the forced turns of the stop hook`, mode === 'single'
+          ? /the number of turns the environment's stop hook forces while a commit stands unpushed, written as a number beside the words forced turns/.test(cost)
+          : /\b\d+ forced turns of the stop hook are spent while a commit stands unpushed/.test(cost), cost]);
         const stepLine = (mode === 'single' ? /\n2\. \*\*<the item's step 2[^\n]*/ : /\n2\. \*\*Put right in[^\n]*/).exec(body)?.[0] ?? '';
         rows.push([`${mode}: the step shape names a report file for each send after the first`, stepLine.includes('(new); a send after the first writes its own file, named for the step number, a hyphen, the send\'s number and -report.txt. Estimate '), stepLine.slice(-300)]);
         rows.push([`${mode}: the Verification names each filed key beside its line`, /key by key and never as a range/.test(verification), verification]);
@@ -65,7 +68,8 @@ export const cases = [
       const hub = h.batchHub(dir);
       const r = h.batchRun(dir, hub, []);
       const t = `${r.stdout}${r.stderr}`;
-      const step = /\n2\. \*\*Put right in[^\n]*/.exec(t)?.[0] ?? '';
+      // The checks run once, in the commit step of the batch (step 131), and no longer in a file step.
+      const step = /\n\d+\. \*\*Committed, proved and landed[^\n]*/.exec(t)?.[0] ?? '';
       return h.assertAll([
         ['the docs check carries the path bare', step.includes(`\`node ${hub}/docs-check.mjs ${hub}\``), step.slice(-900)],
         ['the quote check carries the repo flag', step.includes(`\`node ${hub}/quote-check.mjs --repo ${hub}\``), step.slice(-900)],
@@ -152,15 +156,86 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'step 131: the batch print groups the findings by file with a seam in both steps, gives a finding that names no file a step of its own, runs the file steps after the take-up and together, adds one commit step, computes the Cost from the estimates, and carries the standing lines of a parallel batch, the index row of the close and the device line',
+    guards: ['batch_after_parallel', 'batch_no_file_own', 'batch_seam_out', 'batch_seam_in', 'batch_case_file', 'batch_commit_step', 'batch_parallel_rules', 'batch_cost_agent', 'batch_cost_wall',
+      'batch_wave_cap', 'batch_wave_header', 'batch_wave_home', 'batch_wave_switch',
+      'tpl_close_index', 'tpl_review_resend', 'tpl_commit_red_case', 'tpl_commit_by_path', 'tpl_bg_order', 'tpl_device_line', 'tpl_push_landing', 'tpl_commit_step_text'],
+    run(m, dir, h) {
+      const hub = h.batchHub(dir);
+      mkdirSync(join(hub, 'guard-cases'), { recursive: true });
+      writeFileSync(join(hub, 'guard-cases', 'alpha.mjs'), '// a planted case file of the case\n');
+      const r = h.batchRun(dir, hub, []);
+      const t = `${r.stdout}${r.stderr}`;
+      const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
+      const [alpha, beta, none, commit, close] = [2, 3, 4, 5, 6].map(step);
+      const cost = (t.split('\n## Cost\n\n')[1] ?? '').split('\n')[0];
+      const single = `${h.seedRun(dir, h.seedHub(dir), ['--item', 'P-3']).stdout}`;
+      const rows = [
+        ['the Order and the After line run the three file steps after the take-up and together, the commit step after all three and the close after it', t.includes('\nOrder: 1 2 3 4 5 6\n') && t.includes('\nStanding: 7\n')
+          && t.includes('\nAfter: 2 after 1; 3 after 1; 4 after 1; 5 after 2 3 4; 6 after 5\n'), t.slice(t.indexOf('## Order'), t.indexOf('## Order') + 300)],
+        ['the findings are grouped by file, and the finding that names no file has a step of its own', alpha.startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13, Q-HUB-15.') && beta.startsWith('Put right in `beta.mjs`: Q-HUB-14.')
+          && none.startsWith('Put right in the files each names: Q-HUB-12.'), `${alpha.slice(0, 80)} | ${beta.slice(0, 80)} | ${none.slice(0, 80)}`],
+        ['the seam of a finding naming a second file is written into the Facts of the step that holds the finding', beta.includes('Q-HUB-14 names `alpha.mjs` too, which step 2 owns, so this step does not touch it'), beta.slice(0, 900)],
+        ['the seam is written into the Facts of the step that owns the second file as well', alpha.includes('step 3 takes up Q-HUB-14, whose text names `alpha.mjs`, which this step owns'), alpha.slice(0, 900)],
+        ['the step of the finding that names no file ends EJECT when a file it must edit is another step\'s, in its Facts and in its Kill', none.includes('names no file of the repository') && none.includes('another step of this plan owns ends it EJECT naming the file')
+          && (none.split('Kill:')[1] ?? '').includes('a change that needs a line in a file this step does not own ends it EJECT'), none.slice(0, 900)],
+        ['a guard file has its own case file named for it, new where the folder has none', alpha.includes('its own case file `guard-cases/alpha.mjs`') && !alpha.includes('`guard-cases/alpha.mjs` (new)') && beta.includes('`guard-cases/beta.mjs` (new)'), `${alpha.slice(0, 300)} | ${beta.slice(0, 300)}`],
+        ['no file step commits, stages, pushes or runs a plant or a check', [alpha, beta, none].every((s) => s.includes('commits nothing, stages nothing and runs no plants and no check') && !s.includes('git push origin main')), alpha.slice(0, 400)],
+        ['one commit step follows the file steps and names their number, their guard files and one commit for each', t.split('Committed, proved and landed').length === 2 && commit.startsWith('Committed, proved and landed')
+          && commit.includes('steps 2 to 4 left their edits uncommitted') && commit.includes('the files being `alpha.mjs`, `beta.mjs`') && commit.includes('one commit for each of steps 2 to 4 in that order, nothing staged beforehand'), commit.slice(0, 700)],
+        ['the close step is the one after the commit step and writes an index row for each lesson in the shape the index\'s rows hold', close.startsWith('Closed in the program') && close.includes('add one index row for it in `LESSONS.md` in the shape the index\'s rows hold'), close.slice(0, 200)],
+        ['the Cost counts the steps and the pushes, and the forced turns are the file steps plus two', cost.includes('The 6 steps (3 file steps run at the same time') && cost.includes('3 pushes are made') && cost.includes('5 forced turns of the stop hook'), cost],
+        ['the Cost sums the estimates for the agent time', cost.includes('Agent time is the sum of the steps\' estimates, 170 min'), cost],
+        ['the Cost takes the wall time as the take-up, the longest file step, the commit step and the close', cost.includes('and the close, 130 min.'), cost],
+      ];
+      const lines = [
+        ['the file steps run at the same time in the one working copy', 'The file steps, 2 to 4, run at the same time in the one working copy'],
+        ['a review for a resend goes only when no agent edits the working copy', 'A review for a resend of a file step is sent only when no agent is editing the working copy'],
+        ['the commit step puts an existing case turned red right in the owning step\'s file', 'the commit step puts the code right in the owning step\'s file and keeps the finding\'s fix'],
+        ['commits name their own files after the message with nothing staged beforehand', 'stages nothing beforehand and names each commit\'s own files after the message'],
+        ['the second write of the background note is the very next call after the launch', 'as the very next call after the launch and before any other call'],
+        ['a number from the device comes from the test page and never a container render', 'names the app\'s test page as its instrument and never a container render'],
+        ['nothing is pushed except by the plan\'s landing steps', 'Nothing is pushed except by the plan\'s landing steps, which are the take-up step, a commit step where the plan has one, and the close step'],
+      ];
+      for (const [label, s] of lines) rows.push([`batch: ${label}`, t.includes(s), s]);
+      for (const [label, s] of lines.slice(4)) rows.push([`single: ${label}`, single.includes(s), s]);
+      rows.push(['single: the close step writes the index row too', single.includes('add one index row for it in `LESSONS.md` in the shape the index\'s rows hold'), 'index row']);
+
+      // A wave holds up to seven file steps; the groups it leaves are named in the header and printed by the next wave; two groups of one file never share a wave.
+      const wv = h.seedHub(dir);
+      const entry = (n) => [`### P-${n}. Q-HUB-2${n}: planted finding ${n}`, '', 'Repository: hub. Goal: 6. State: open. Plan: none.', '', `Acceptance: Planted acceptance ${n}.`, '', 'Depends: none.', ''].join('\n');
+      const head = ['# The program', '', 'Intro line of the planted program.', '', '## Thesis', '', 'A planted thesis paragraph of the case, one paragraph only.', '', '## Items', '', '9 items planted for the case.', '', '## The harness', ''].join('\n');
+      writeFileSync(join(wv, 'PROGRAM.md'), `${head}\n${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(entry).join('\n')}`);
+      for (let n = 1; n <= 8; n++) writeFileSync(join(wv, `f${n}.mjs`), '// a planted file of the case\n');
+      for (let n = 1; n <= 8; n++) writeFileSync(join(wv, 'found', `Q-HUB-2${n}.md`), `Q-HUB-2${n}: a planted finding about \`f${n}.mjs\`.\n`);
+      writeFileSync(join(wv, 'found', 'Q-HUB-29.md'), 'Q-HUB-29: a planted finding about `f1.mjs` and `f2.mjs`.\n');
+      const w1 = h.batchRun(dir, wv, []).stdout;
+      const w2 = h.batchRun(dir, wv, ['--wave', '2']).stdout;
+      const sz = h.batchRun(dir, wv, ['--size', '1']).stdout;
+      const titles = (s) => [...s.matchAll(/^\d+\. \*\*Put right in `(f\d)\.mjs`/gm)].map((x) => x[1]);
+      rows.push(['wave 1 holds seven file steps at once and the header names the group it leaves and the switch that prints it', titles(w1).length === 7 && w1.split('\n')[0].includes('in 7 group steps')
+        && w1.split('\n')[1].includes('leaves 1 of the 8 groups') && w1.split('\n')[1].includes('--wave 2') && !w1.includes('Put right in `f8.mjs`') && w1.includes('\nOrder: 1 2 3 4 5 6 7 8 9 10\n'), w1.split('\n').slice(0, 2).join(' | ')]);
+      rows.push(['wave 2 prints the group wave 1 left', titles(w2).join(',') === 'f8' && w2.split('\n')[0].includes('in 1 group step,') && w2.split('\n')[1].includes('leaves 0 of the 8 groups'), w2.split('\n').slice(0, 2).join(' | ')]);
+      rows.push(['two groups of one file never share a wave: a size of one leaves the second run of the file for the next wave', titles(sz).filter((x) => x === 'f1').length === 1 && titles(sz).length === 7 && sz.split('\n')[1].includes('leaves 2 of the 9 groups'), `${titles(sz)} ${sz.split('\n')[1]}`]);
+      // Two findings that name no file are two steps, never one step that holds both.
+      const nf = h.seedHub(dir);
+      writeFileSync(join(nf, 'PROGRAM.md'), `${head}\n${[1, 2].map(entry).join('\n')}`);
+      for (const n of [1, 2]) writeFileSync(join(nf, 'found', `Q-HUB-2${n}.md`), `Q-HUB-2${n}: a planted finding that names no file of the repository.\n`);
+      const nfo = h.batchRun(dir, nf, []).stdout;
+      rows.push(['two findings naming no file are two steps of their own', [...nfo.matchAll(/^\d+\. \*\*Put right in the files each names: (Q-HUB-2\d)\./gm)].map((x) => x[1]).join(',') === 'Q-HUB-21,Q-HUB-22', nfo.split('\n')[0]]);
+      return h.assertAll(rows);
+    },
+  },
 ];
 
 export const plants = {
   seed_passed_in: ["L(FINDINGS_PASSED_IN);\n  L();\n  L('## Item entry');", "L('- <none>');\n  L();\n  L('## Item entry');", 'plan-seed.mjs'],
   batch_passed_in: ["L(FINDINGS_PASSED_IN);\n  L();\n  L('## Thesis');", "L('- <none>');\n  L();\n  L('## Thesis');", 'plan-seed.mjs'],
   seed_step_report_file: ['(new); ${SEND_REPORT}. Estimate <minutes> min.', '(new). Estimate <minutes> min.', 'plan-seed.mjs'],
-  batch_step_report_file: ['(new); ${SEND_REPORT}. Estimate ${15 + 5 * g.list.length} min.', '(new). Estimate ${15 + 5 * g.list.length} min.', 'plan-seed.mjs'],
+  batch_step_report_file: ['(new); ${SEND_REPORT}. Estimate ${groupEst[i]} min.', '(new). Estimate ${groupEst[i]} min.', 'plan-seed.mjs'],
   seed_cost_forced: ["one by the close step, each rebased onto the remote's head. ${FORCED_TURNS} ", "one by the close step, each rebased onto the remote's head. ", 'plan-seed.mjs'],
-  batch_cost_forced: ["and the close, each rebased onto the remote's head. ${FORCED_TURNS} ", "and the close, each rebased onto the remote's head. ", 'plan-seed.mjs'],
+  batch_cost_forced: ['${groups.length + 2} forced turns of the stop hook are spent while a commit stands unpushed, the file steps plus two. ', '', 'plan-seed.mjs'],
   seed_close_keys: ["L(CLOSE_KEYS_LINE);\n  L();\n\n  // ---- the movable", "L();\n\n  // ---- the movable", 'plan-seed.mjs'],
   batch_close_keys: ["L(CLOSE_KEYS_LINE);\n  L();\n  L('==== THE PLAN ENDS", "L();\n  L('==== THE PLAN ENDS", 'plan-seed.mjs'],
   batch_docs_bare: ["c === 'docs-check' ? `${base} ${repo}`", "c === 'docs-check' ? base", 'plan-seed.mjs'],
@@ -185,4 +260,26 @@ export const plants = {
   tpl_close_remote: ["reads the remote's head with `git show origin/main:PROGRAM.md`", "reads the remote's head with `git show main:PROGRAM.md`", 'plans/seed-template.md'],
   tpl_close_keys: ['key by key and never as a range', 'as a range', 'plans/seed-template.md'],
   tpl_passed_in: ["for each finding listed in the plan's section Findings passed in", "for each finding listed in the plan's section Notes", 'plans/seed-template.md'],
+  // step 131: the batch print's parallel shape
+  batch_after_parallel: ['const after = [...gnums.map((n) => `${n} after ${takeup}`),', 'const after = [...gnums.map((n, i) => `${n} after ${i ? gnums[i - 1] : takeup}`),', 'plan-seed.mjs'],
+  batch_no_file_own: ["if (h === '') { for (const f of fs) groups.push({ home: '', list: [f] }); continue; }", '', 'plan-seed.mjs'],
+  batch_seam_out: ['seamsOut[i].add(', 'seamsOut[i].has(', 'plan-seed.mjs'],
+  batch_seam_in: ['seamsIn[j].add(', 'seamsIn[j].has(', 'plan-seed.mjs'],
+  batch_case_file: ["? `guard-cases/${x}` : '');", "? '' : '');", 'plan-seed.mjs'],
+  batch_commit_step: ["if (hasCommit) { L(fill(tpl['commit-step']", "if (false) { L(fill(tpl['commit-step']", 'plan-seed.mjs'],
+  batch_parallel_rules: ["if (hasCommit) L(fill(tpl['parallel-rules']", "if (false) L(fill(tpl['parallel-rules']", 'plan-seed.mjs'],
+  batch_cost_agent: ["Agent time is the sum of the steps' estimates, ${agentMin} min", "Agent time is the sum of the steps' estimates, 0 min", 'plan-seed.mjs'],
+  batch_cost_wall: ['and the close, ${wallMin} min.', 'and the close, 0 min.', 'plan-seed.mjs'],
+  batch_wave_cap: ['const WAVE = 7;', 'const WAVE = 99;', 'plan-seed.mjs'],
+  batch_wave_header: ['and it leaves ${leaves} of the ${totalGroups} groups', 'and it leaves 0 of the ${totalGroups} groups', 'plan-seed.mjs'],
+  batch_wave_home: ['!(g.home && used.has(g.home))', 'true', 'plan-seed.mjs'],
+  batch_wave_switch: ['Math.floor(Number(o.wave) || 1)', '1', 'plan-seed.mjs'],
+  tpl_close_index: ['add one index row for it in `LESSONS.md` in the shape the index\'s rows hold', 'add one row for it', 'plans/seed-template.md'],
+  tpl_review_resend: ['A review for a resend of a file step is sent only when no agent is editing the working copy', 'A review for a resend of a file step may be sent while an agent is editing the working copy', 'plans/seed-template.md'],
+  tpl_commit_red_case: ["the commit step puts the code right in the owning step's file and keeps the finding's fix", 'the commit step leaves the case red', 'plans/seed-template.md'],
+  tpl_commit_by_path: ["stages nothing beforehand and names each commit's own files after the message", 'stages everything beforehand', 'plans/seed-template.md'],
+  tpl_bg_order: ['as the very next call after the launch and before any other call', 'as a later call', 'plans/seed-template.md'],
+  tpl_device_line: ["names the app's test page as its instrument and never a container render", "names a container render as its instrument", 'plans/seed-template.md'],
+  tpl_push_landing: ["Nothing is pushed except by the plan's landing steps, which are the take-up step, a commit step where the plan has one, and the close step", 'Nothing is pushed except by the take-up step', 'plans/seed-template.md'],
+  tpl_commit_step_text: ['one commit for each of steps {FIRSTGROUP} to {LASTGROUP} in that order, nothing staged beforehand', 'one commit for all of steps {FIRSTGROUP} to {LASTGROUP}', 'plans/seed-template.md'],
 };

@@ -3223,19 +3223,21 @@ const CASES = [
       const say = (text, e = env) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('cf'), transcript_path: transcript([turn(0, 'Which way?'), reply(5, text)]) }), encoding: 'utf8', env: e });
       const choice = '1. (Recommended) Land the gates as they are built.\n2. Hold them for a second review.';
       const report = 'The fence gained a check for every cd.\nThe guard gained a test for each plant.\nThe suite covers each check named in the plan.';
-      const opens = say(`Open for you, one choice:\n${choice}\n\n${report}`);
-      const declared = say(`Stopping here: open for you is one choice.\nWhich comes first?\n1. **Land now (recommended).** The gates go in as built.\n2. **Review first.** A second reviewer reads them.\n\n${report}`);
-      const plainList = say(`${report}\n\nWhat changed:\n1. The fence gained a check.\n2. The guard gained a test.`);
+      const state = '\n\nState: paused, pending the owner\'s answer to the choice above';
+      const opens = say(`Open for you, one choice:\n${choice}\n\n${report}${state}`);
+      const declared = say(`Stopping here, then paused, pending the owner's answer to one choice.\nWhich comes first?\n1. **Land now (recommended).** The gates go in as built.\n2. **Review first.** A second reviewer reads them.\n\n${report}${state}`);
+      const plainList = say(`${report}\n\nWhat changed:\n1. The fence gained a check.\n2. The guard gained a test.${state}`);
       const under = say(`${report}\n\nOpen for you:\n${choice}`);
-      const nested = say(`${report}\n\n1. Which comes first?\n   - Land now (recommended).\n   - Review first.`);
-      const twice = say(`Open for you:\n${choice}\n\n${report}\n\nThe same choice again:\n${choice}`);
+      const nested = say(`${report}\n\n1. Which comes first?\n   - Land now (recommended).\n   - Review first.${state}`);
+      const twice = say(`Open for you:\n${choice}\n\n${report}\n\nThe same choice again:\n${choice}${state}`);
       // The same reply, with no approval marker: a choice under a report is not refused in conversation.
       const bareHome = tmp('sg-home-');
       mkdirSync(join(bareHome, '.claude'), { recursive: true });
       const conversation = say(`${report}\n\nOpen for you:\n${choice}`, { ...process.env, HOME: bareHome });
       return opens.status === 0 && declared.status === 0 && plainList.status === 0
         && under.status === 2 && /choice is not the first thing/.test(under.stderr) && under.stderr.includes('Land the gates')
-        && nested.status === 2 && twice.status === 2 && conversation.status === 0;
+        && nested.status === 2 && /choice is not the first thing/.test(nested.stderr)
+        && twice.status === 2 && /choice is not the first thing/.test(twice.stderr) && !/state line/i.test(twice.stderr) && conversation.status === 0;
     },
   },
 
@@ -3903,7 +3905,7 @@ const CASES = [
     run(m, dir) {
       const w = world(dir);
       const out = w.call('UserPromptSubmit', { session_id: sid('rm'), prompt: 'go' }).stdout ?? '';
-      return /First line: what you are doing now\./.test(out) && !/what comes next/i.test(out) && !/five minutes/i.test(out) && /OWNER MESSAGE/.test(out) && /open for the owner/.test(out);
+      return /First line: what you are doing now;/.test(out) && !/what comes next/i.test(out) && !/five minutes/i.test(out) && /OWNER MESSAGE/.test(out) && /open for the owner/.test(out);
     },
   },
 
@@ -4013,13 +4015,14 @@ const CASES = [
       const running = say(REPORT);
       // From here step 2 is open again.
       clear(); returned('a1', 1);
-      const choice = say('Open for you, one choice:\n1. (Recommended) Land the gates as they are built.\n2. Hold them for a second review.\n\n' + REPORT);
+      const choice = say('Open for you, one choice:\n1. (Recommended) Land the gates as they are built.\n2. Hold them for a second review.\n\n' + REPORT + '\n\nState: paused, pending the owner\'s answer to the choice above');
       const declared = say('Stopping here: open for you is the order of the two remaining changes.\n\n' + REPORT);
       // A declaration that says nothing about what is open is not one.
       const bare = say('Stopping here: open for you\n\n' + REPORT);
       const short = say('Stopping here: open for you is it.\n\n' + REPORT);
-      const queued = say(REPORT, [turn(0, GO), enq(2, 'Where is the release?')]);
-      const correction = say(REPORT, [turn(0, GO), turn(3, 'That was done wrong, so answer me before anything else.')]);
+      const paused = REPORT + '\n\nState: paused, pending the owner\'s go-word';
+      const queued = say(paused, [turn(0, GO), enq(2, 'Where is the release?')]);
+      const correction = say(paused, [turn(0, GO), turn(3, 'That was done wrong, so answer me before anything else.')]);
       // No plan in force: a home with no approval marker.
       const bare0 = tmp('sg-home-'); mkdirSync(join(bare0, '.claude'), { recursive: true });
       const noPlan = say(REPORT, undefined, bare0);
@@ -4135,7 +4138,7 @@ const CASES = [
       agent('b2', [sent(2), at(tool(0, 'b2-b', 'Bash', { command: 'node build.mjs' }), later(-20)), at(result(0, 'b2-b', 'built'), later(-19))]);
       const running = say(REPORT);
       rmSync(join(subs, 'agent-b2.jsonl')); rmSync(join(subs, 'agent-b2.meta.json'));
-      const choice = say('Open for you, one choice:\n1. (Recommended) Land the gates as they are built.\n2. Hold them for a second review.\n\n' + REPORT);
+      const choice = say('Open for you, one choice:\n1. (Recommended) Land the gates as they are built.\n2. Hold them for a second review.\n\n' + REPORT + '\n\nState: paused, pending the owner\'s answer to the choice above');
       const declared = say('Stopping here: open for you is the order of the two remaining changes.\n\n' + REPORT);
       handed('d2', 2, 'DONE');
       const both = say(REPORT);
@@ -5274,9 +5277,10 @@ const CASES = [
       w.agent('d1', 1, -900, -800, 'DONE');
       w.agent('r1', 3, -700, -600, 'ON-AIM ROUTE-CLEAR step 1 next 2');
       const cleared = say(REPORT);
-      const correction = say(REPORT, WRONG);
-      const stopped = say(REPORT, STOPPED);
-      const choice = say('Open for you, one choice:\n1. (Recommended) Land the gates as they are built.\n2. Hold them for a second review.\n\n' + REPORT);
+      const paused = REPORT + '\n\nState: paused, pending the owner\'s go-word';
+      const correction = say(paused, WRONG);
+      const stopped = say(paused, STOPPED);
+      const choice = say('Open for you, one choice:\n1. (Recommended) Land the gates as they are built.\n2. Hold them for a second review.\n\n' + REPORT + '\n\nState: paused, pending the owner\'s answer to the choice above');
       const declared = say('Stopping here: open for you is the order of the two remaining changes.\n\n' + REPORT);
       // Step 2 REFUSED after the review began: the review is stale, so the review step is the move again.
       w.agent('d2', 2, -500, -400, 'REFUSED');
@@ -6507,7 +6511,7 @@ const CASES = [
       const promise = [say('The fence refused the read. From now on I will read the record first.'), say('This will not happen again.'), say('I promise the record is read.')];
       const goAsk = say('Say go when you want the step sent.', correction);
       const goAskTwo = say('You can type go to continue.', correction);
-      const goLater = say('The page lists the open steps.\n\nSay go to continue.', correction);
+      const goLater = say('The page lists the open steps.\n\nSay go to continue.\n\nState: paused, pending the owner\'s go-word', correction);
       const goNoCorrection = say('Say go when you want the step sent.');
       const fenced = say('The refusal said:\n\n```\nFrom now on I will read the record. I understand your frustration.\n```\nThat is all it said.');
       const honest = say('The fence passes the plan read now, and the suite reports its cases.');
@@ -6531,10 +6535,11 @@ const CASES = [
     run(m, dir) {
       const correction = 'The page shows the wrong step and the list is out of date';
       const env = underPlanEnv();
-      const say = (text, ownerText = correction) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('go'), transcript_path: transcript([turn(0, ownerText), reply(5, text)]) }), encoding: 'utf8', env });
+      // Under a correction the reply ends with the state line (Q-HUB-359); the sentence under test is the reply's first line.
+      const say = (text, ownerText = correction) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('go'), transcript_path: transcript([turn(0, ownerText), reply(5, `${text}\n\nState: paused, pending the owner's go-word`)]) }), encoding: 'utf8', env });
       // Under a correction these were refused before, on the word go-word or on a verb and a go within fifty characters. None instructs the owner.
       const passes = [
-        'Stopping here: open for you is nothing; the review gate holds step 190 until a message ends with a go-word.',
+        'Stopping here, then paused, pending the owner\'s go-word; the review gate holds step 190 until a message ends with a go-word.',
         'Stopping here: open for you is the choice below. You say go and the gate sends the step.',
         'The review gate holds the next step until a message carries a go-word.',
         'The next step stays held by the gate until a message ends with a go-word.',
@@ -6563,7 +6568,8 @@ const CASES = [
     run(m, dir) {
       const correction = 'The page shows the wrong step and the list is out of date';
       const env = underPlanEnv();
-      const say = (text, ownerText = correction) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('gp'), transcript_path: transcript([turn(0, ownerText), reply(5, text)]) }), encoding: 'utf8', env });
+      // Under a correction the reply ends with the state line (Q-HUB-359); the sentence under test comes before it.
+      const say = (text, ownerText = correction) => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('gp'), transcript_path: transcript([turn(0, ownerText), reply(5, `${text}\n\nState: paused, pending the owner's go-word`)]) }), encoding: 'utf8', env });
       const goRefused = (r) => r.status === 2 && /LESSONS §406/.test(r.stderr) && /opens by asking for a go-word/.test(r.stderr);
       const verbs = ['Say go.', 'Send ok.', 'Type approved.', 'Write yes.', 'Say okay.', 'Send the go-word.', 'You may write go.', 'Give me a yes.', 'You can say continue.'].map((t) => [t, goRefused(say(t))]);
       const missed = verbs.filter(([, ok]) => !ok).map(([t]) => JSON.stringify(t));
@@ -9863,12 +9869,14 @@ const CASES = [
       if (r.status !== 0) throw new Error(`the batch print exited ${r.status}: ${String(r.stderr).slice(0, 200)}`);
       const t = r.stdout;
       const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
-      const takeup = step(1), alpha = step(2), beta = step(3), none = step(4), close = step(5);
+      // The file steps 2 to 4 run together after the take-up, one commit step (5) follows them and the close (6) follows it.
+      const takeup = step(1), alpha = step(2), beta = step(3), none = step(4), commit = step(5), close = step(6);
       const items = ['P-1', 'P-2', 'P-3', 'P-4', 'P-5'];
       const okTakeup = takeup.startsWith('Taken up: ') && items.every((i) => takeup.split(' set to planned')[0].includes(i));
       const okGroups = alpha.startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13, Q-HUB-15.') && beta.startsWith('Put right in `beta.mjs`: Q-HUB-14.') && none.startsWith('Put right in the files each names: Q-HUB-12.')
-        && !/Q-QK-3/.test(alpha + beta + none) && t.includes('\nOrder: 1 2 3 4 5\n') && t.includes('\nStanding: 6\n') && t.includes('\n6. **Review.**');
-      const okClose = items.every((i) => close.includes(i)) && close.startsWith('Closed in the program');
+        && !/Q-QK-3/.test(alpha + beta + none) && t.includes('\nOrder: 1 2 3 4 5 6\n') && t.includes('\nStanding: 7\n') && t.includes('\n7. **Review.**')
+        && t.includes('\nAfter: 2 after 1; 3 after 1; 4 after 1; 5 after 2 3 4; 6 after 5\n');
+      const okClose = items.every((i) => close.includes(i)) && close.startsWith('Closed in the program') && commit.startsWith('Committed, proved and landed');
       const files = t.split('\n').find((l) => l.startsWith('- Hub, edited:')) ?? '';
       const okFiles = files.startsWith('- Hub, edited: `PROGRAM.md`, `NOTES.md`, `found/`, `lessons/`, `LESSONS.md`') && files.includes('`alpha.mjs`') && files.includes('`beta.mjs`') && files.includes('`session-guards.test.mjs`');
       const fa = (t.split('\n## Found answered\n')[1] ?? '').split('\n## ')[0];
@@ -9876,12 +9884,12 @@ const CASES = [
         && fa.includes('- Q-QK-3 still queued: ') && fa.includes('- Q-HUB-16 to Q-HUB-17 still queued: ') && !/Q-QK-3 fixed/.test(fa);
       const head = t.split('\n')[0];
       const okHead = head.startsWith('PLAN SEED for the batch of 5 open findings of hub, in 3 group steps');
-      if (!(okTakeup && okGroups && okClose && okFiles && okFound && okHead)) throw new Error(`takeup ${okTakeup}, groups ${okGroups}, close ${okClose}, files ${okFiles} (${files.slice(0, 200)}), found ${okFound} (${fa.slice(0, 700)}), head ${okHead}`);
+      if (!(okTakeup && okGroups && okClose && okFiles && okFound && okHead)) throw new Error(`takeup ${okTakeup}, groups ${okGroups} (${t.slice(t.indexOf('## Order'), t.indexOf('## Order') + 260)}), close ${okClose}, files ${okFiles} (${files.slice(0, 200)}), found ${okFound} (${fa.slice(0, 700)}), head ${okHead}`);
       return true;
     },
   },
   {
-    name: 'the plan seed batch print cuts a group past the size into runs of the size, one step each, numbers its steps after the plan file given, limits the group steps to --steps, and prints one push for each group step in the Cost line',
+    name: 'the plan seed batch print cuts a group past the size into runs of the size, one step each, leaves the second run of a file for a later wave, numbers its steps after the plan file given, limits the group steps to --steps, and prints three pushes in the Cost line',
     guards: ['batch_size', 'batch_cost', 'batch_steps_limit'],
     run(m, dir) {
       const hub = batchHub(dir);
@@ -9889,14 +9897,17 @@ const CASES = [
       writeFileSync(planFile, '# A planted plan\n\n## Steps\n\n7. **One.** planted text of the case.\n');
       const r = batchRun(dir, hub, ['--size', '2', '--plan', planFile]);
       const t = r.stdout;
+      // The cut of alpha makes two groups of one file; two groups of one file never share a wave, so wave 1 holds the first run of alpha, beta and the
+      // finding that names no file, the commit step and the close follow them, and the second run of alpha (Q-HUB-15) is left for wave 2.
       const cut = r.status === 0 && t.includes('\nOrder: 8 9 10 11 12 13\n') && t.includes('\n9. **Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13.')
-        && t.includes('\n10. **Put right in `alpha.mjs`: Q-HUB-15.') && t.includes('\n11. **Put right in `beta.mjs`: Q-HUB-14.') && t.includes('\n12. **Put right in the files each names: Q-HUB-12.')
-        && t.includes('\n13. **Closed in the program') && t.includes('\n14. **Review.**');
+        && t.includes('\n10. **Put right in `beta.mjs`: Q-HUB-14.') && t.includes('\n11. **Put right in the files each names: Q-HUB-12.')
+        && t.includes('\n12. **Committed, proved and landed') && t.includes('\n13. **Closed in the program') && t.includes('\n14. **Review.**')
+        && !t.includes('Q-HUB-15 fixed') && t.split('\n')[1].includes('leaves 1 of the 4 groups');
       const cost = (t.split('\n## Cost\n\n')[1] ?? '').split('\n')[0];
-      const pushes = cost.includes('one for each group step and two more for the take-up and the close') && cost.includes('and at no other move') && cost.includes('The 6 steps (4 group steps');
+      const pushes = cost.includes('3 pushes are made, one each by the take-up, the commit step and the close') && cost.includes('and at no other move') && cost.includes('The 6 steps (3 file steps run at the same time');
       const lim = batchRun(dir, hub, ['--steps', '1']);
-      const limited = lim.status === 0 && lim.stdout.includes('\nOrder: 1 2 3\n') && lim.stdout.includes('batch of 3 open findings') && !lim.stdout.includes('Q-HUB-14 fixed');
-      if (!(cut && pushes && limited)) throw new Error(`cut ${cut}, pushes ${pushes}, limited ${limited}`);
+      const limited = lim.status === 0 && lim.stdout.includes('\nOrder: 1 2 3 4\n') && lim.stdout.includes('batch of 3 open findings') && !lim.stdout.includes('Q-HUB-14 fixed');
+      if (!(cut && pushes && limited)) throw new Error(`cut ${cut}, pushes ${pushes} (${cost.slice(0, 300)}), limited ${limited} (${lim.stdout.slice(lim.stdout.indexOf('## Order'), lim.stdout.indexOf('## Order') + 200)})`);
       return true;
     },
   },
@@ -10620,7 +10631,7 @@ const PLANTS = {
   correction_read_record: ["  return readOutsideRecord(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path) === null;", '  return true;', 'hook-dispatch.mjs'],
   correction_read_only: ['  if (!isRead(p, opts.classify ?? planGuardReads)) return false;\n  return readOutsideRecord(', '  return readOutsideRecord(', 'hook-dispatch.mjs'],
   correction_says: ['the status command and TaskStop pass; every other call is held', 'every other call is held', 'hook-dispatch.mjs'],
-  reminder_wording: ["  'First line: what you are doing now.',\n", "  'First line: what you are doing now and what comes next. A status at least every five minutes',\n", 'hook-dispatch.mjs'],
+  reminder_wording: ["  'First line: what you are doing now; a stop", "  'First line: what you are doing now and what comes next. A status at least every five minutes; a stop", 'hook-dispatch.mjs'],
   // The talk before a plan is judged against the plan file's last write.
   talk_after_edit: ['    if (planWrittenAt && Number.isFinite(at) && at < planWrittenAt) {', '    if (false) {', 'plan-guard.mjs'],
   talk_asks_nothing: ['    if (said.length > 40 && asksNothing(said)) talk = i;', '    if (said.length > 40) talk = i;', 'plan-guard.mjs'],
@@ -11467,7 +11478,7 @@ const PLANTS = {
   eject_declares_step: ['return !!m && !!ejected && ejected.has(Number(m[1]));', 'return !!m;', 'stop-guard.mjs'],
   eject_declares_what: ['\\bwaits?\\s+on\\b[ \\t]*(\\S[^\\n]{6,})', '\\bwaits?\\s+on\\b[ \\t]*(\\S[^\\n]{0,})', 'stop-guard.mjs'],
   eject_lets_through: [' && !ejectDeclared', '', 'stop-guard.mjs'],
-  eject_exit_declared: ['if (DECLARED.test(reply) || ejectDeclared) finish();', 'if (DECLARED.test(reply)) finish();', 'stop-guard.mjs'],
+  eject_exit_declared: ['if (DECLARED.test(reply) || ejectDeclared) {', 'if (DECLARED.test(reply)) {', 'stop-guard.mjs'],
   eject_closed_stop: ['    if (pointer.closed) return [];\n', '', 'stop-guard.mjs'],
   eject_pointer_notes: [`  try { notes = managerNotes(scratchpadOf(String(hook.session_id ?? ''))); } catch { notes = null; }\n  return pointerOf(plan.text, state.ends, notes, plan.path);`, '  return pointerOf(plan.text, state.ends, null);', 'stop-guard.mjs'],
   eject_hint: ['${ejectedNow.size ? ` Step${', '${false ? ` Step${', 'stop-guard.mjs'],
@@ -11555,7 +11566,7 @@ const PLANTS = {
   batch_found: ['`- ${f.key} fixed in step ${stepOf.get(f.key)}', '`- ${f.key} dropped in step ${stepOf.get(f.key)}', 'plan-seed.mjs'],
   batch_close: ["const itemKeys = batch.map((f) => f.item).join(', ');", "const itemKeys = batch.map((f) => f.item).slice(0, 1).join(', ');", 'plan-seed.mjs'],
   batch_size: ['for (let i = 0; i < fs.length; i += size) groups.push({ home: h, list: fs.slice(i, i + size) });', 'groups.push({ home: h, list: fs });', 'plan-seed.mjs'],
-  batch_cost: ['one for each group step and two more for the take-up and the close', 'one for the whole plan', 'plan-seed.mjs'],
+  batch_cost: ['one each by the take-up, the commit step and the close', 'one for the whole plan', 'plan-seed.mjs'],
   batch_steps_limit: ['if (limit > 0) groups = groups.slice(0, limit);', 'void limit;', 'plan-seed.mjs'],
   batch_shape: ['L(`Served by: step ${takeup} serves goals 5 and 6; step${gnums.length', 'L(`Served: step ${takeup} serves goals 5 and 6; step${gnums.length', 'plan-seed.mjs'],
   batch_none: ['if (!findings.length) return { ok: false', 'if (false) return { ok: false', 'plan-seed.mjs'],
