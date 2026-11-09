@@ -3958,7 +3958,7 @@ Depends: none.
 
 ### P-413. Q-HUB-369: the stop guard's plan-mode condition rests on a payload key no case measures
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: planned. Plan: The batch's second wave in the shape the first wave's run priced: a claim-only take-up, three file steps at once that prove their own new plants, and one landing step that proves in the foreground, closes and pushes once.
 
 Acceptance: a case on a captured real Stop payload in plan mode, and the guard's reading put right if it is red.
 
@@ -3966,7 +3966,7 @@ Depends: none.
 
 ### P-414. Q-HUB-370: a synced skill file of the built-in browser changed and the baseline does not name it
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The batch's second wave in the shape the first wave's run priced: a claim-only take-up, three file steps at once that prove their own new plants, and one landing step that proves in the foreground, closes and pushes once.
 
 Acceptance: `CONFIG.md` says where such a harness-synced file stands.
 
@@ -3992,7 +3992,7 @@ Depends: P-365.
 
 ### P-417. Q-HUB-372: the suite's copy leaves cases reading the live working copy and loads only the case files present at the start
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The batch's second wave in the shape the first wave's run priced: a claim-only take-up, three file steps at once that prove their own new plants, and one landing step that proves in the foreground, closes and pushes once.
 
 Acceptance: the cases that read the live working copy read the copy or are listed by the suite, with a case on a new case file written during a run.
 
@@ -4000,7 +4000,7 @@ Depends: none.
 
 ### P-418. Q-HUB-373: the plan-mode read pass does not open an agent's transcript
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: planned. Plan: The batch's second wave in the shape the first wave's run priced: a claim-only take-up, three file steps at once that prove their own new plants, and one landing step that proves in the foreground, closes and pushes once.
 
 Acceptance: `hook-dispatch.mjs` passes that read too if a case shows a plan-mode session needing it, with a case on the fence's answer.
 
@@ -4008,7 +4008,7 @@ Depends: none.
 
 ### P-419. Q-HUB-374: the button-approval recovery's write of the plan identity has no case
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's second wave in the shape the first wave's run priced: a claim-only take-up, three file steps at once that prove their own new plants, and one landing step that proves in the foreground, closes and pushes once.
 
 Acceptance: a case on a recovered button approval reads the title and first approval time from the marker, with a plant on the recovery's write.
 
@@ -4016,7 +4016,7 @@ Depends: none.
 
 ### P-420. Q-HUB-375: the approval guard writes a re-recording mark that the fence does not read
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's second wave in the shape the first wave's run priced: a claim-only take-up, three file steps at once that prove their own new plants, and one landing step that proves in the foreground, closes and pushes once.
 
 Acceptance: the fence reads the mark, or the approval guard stops writing it and its cases and plants go.
 
@@ -4024,7 +4024,7 @@ Depends: none.
 
 ### P-421. Q-HUB-376: the fence's re-recording refusal is not on the dispatcher's no-latch list
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's second wave in the shape the first wave's run priced: a claim-only take-up, three file steps at once that prove their own new plants, and one landing step that proves in the foreground, closes and pushes once.
 
 Acceptance: its words are on the list and every counted line of the list is changed in the same step, with the rule 14 case and the `doctrine_count` plant passing.
 
