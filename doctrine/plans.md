@@ -231,9 +231,11 @@ every rule below while none of the hooks that enforce them was running
    background run with no progress note, and the main thread answered the
    status's flag by waiting. `plan-fence.mjs` (`backgroundProblem`) refuses an
    agent's background run until its progress note, written before the launch,
-   names the clock time, a label and the output file's full path, and, where
-   the command names no output file, until the note is written again with the
-   path the launch printed, refusing every other call of that agent meanwhile;
+   names a label and the output file's full path and carries no time, because
+   no agent reads a clock and the gate and the status read the note's time from
+   the file's own write time, and, where the command names no output file,
+   until the note is written again with the path the launch printed, refusing
+   every other call of that agent meanwhile;
    `report.mjs` prints for a flagged running agent the last line of the newest
    file in the step's scratch folder, else of the output file its note names,
    and its last tool result; `hook-dispatch.mjs` refuses the wait between
@@ -317,15 +319,40 @@ every rule below while none of the hooks that enforce them was running
    the approval marker's hash matches the plan file and the harness's plan mode
    began at a compaction or a resume after that approval. The refusal says the plan
    is approved and its step is the next move, opens `PLAN ALREADY APPROVED, NO
-   LATCH:` and sets no latch. While it holds, `plan-guard.mjs` passes the plan's
-   other calls and `approved-plan-guard.mjs` judges them as calls made outside plan
-   mode. A plan mode entered after the approval, the `.claude/PLAN-LOCK` marker,
-   and a mode a caller forced (`plan_mode_forced`) leave both halves alone
-   (LESSONS §432). A finished plan holds nothing against the next one:
-   `restartedPlanMode` answers nothing once every step in the Order of the
-   marker's plan has a hand-back opening DONE, read the way `pointerOf` reads
-   them, so a plan mode that comes on after it is the owner's and the next
+   LATCH:` and sets no latch. A plan mode entered after the approval, the
+   `.claude/PLAN-LOCK` marker, and a mode a caller forced (`plan_mode_forced`)
+   leave both halves alone (LESSONS §432). A finished plan holds nothing against
+   the next one: `restartedPlanMode` answers nothing once every step in the Order
+   of the marker's plan has a hand-back opening DONE, read the way `pointerOf`
+   reads them, so a plan mode that comes on after it is the owner's and the next
    plan's write passes (LESSONS §435).
+   **The plan mode the harness brings back after an approval, for every actor.**
+   A container restart can bring plan mode back to the main thread and to every
+   agent sent after it while the approval marker still matches the plan file;
+   `restartedPlanMode` is the one question all of them ask, and what holds for each
+   is stated here once and run through once in `session-guards.test.mjs`. The main
+   thread's calls are judged as outside plan mode: `plan-guard.mjs` passes the
+   plan's other calls and `approved-plan-guard.mjs` judges them as calls made
+   outside plan mode. Its approval call is refused as already approved (`APPROVED_NO_LATCH`,
+   LESSONS §432) and passes on a go-word the owner types after the restore
+   (`endsWithGoWord`). The marker is recovered from the transcript's approved exit
+   when none is on disk (LESSONS §439). A publish is refused until a reply says the
+   plan mode began at a restart (`restartPublishGate`, LESSONS §460). The owner's exit
+   in the app, and an exit under auto mode, write no marker (`recordAppExit`,
+   `AUTO_EXIT_NOTE`, `AUTO_EXIT_NO_LATCH`). Each agent's first call carries the plan
+   fence's added-context line (`restartContext` in `plan-fence.mjs`), naming the
+   approval's time in California time and saying that a restart brought this plan mode
+   back, that the approved plan is in force, that the harness's read-only notice is no
+   stop for the step, and that a call the harness itself refuses ends the step REFUSED
+   with the harness's words. THE AGENTS' HALF IS UNDER TEST: whether a hook's added
+   context moves an agent past the harness's own notice is shown only by an agent sent
+   under a restored plan mode with the line live, and is recorded under Q-HUB-304; where
+   it does not, the fence is not the fix. The dispatcher's start handler prints one line
+   to the main thread at a resume or a compaction while the restore holds
+   (`restoredModeLine`), saying only what is established. Four fixes of this one state
+   were made at four walls before it was stated whole, and one session's step had the
+   app's exit record the approval while another's commit wrote no marker from it
+   (Q-HUB-305, Q-HUB-303).
    **The plan is checked whole before the talk turn.** `node
    /root/.claude/hub/plan-guard.mjs --check <the plan's path>` runs every check
    the approval call runs on the plan file and prints every fault it finds, all

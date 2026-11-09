@@ -883,6 +883,37 @@ export const APPROVED_NO_LATCH = 'PLAN ALREADY APPROVED, NO LATCH:';
  */
 export const AUTO_EXIT_NO_LATCH = 'AUTO MODE EXIT, NO LATCH:';
 /**
+ * The time of the approval the marker records, in California time.
+ * @param {string} [marker]  the approval marker's path; `~/.claude/APPROVED-PLAN.json` by default.
+ * @returns {string} "YYYY-MM-DD HH:MM California time" for the owner's exit in the app when the marker records one (the time its `via`
+ *   line ends with), else for the marker's own time; "an unreadable time" when neither is an instant (every doubt reads as that).
+ */
+export function approvalStamp(marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) {
+  try {
+    const mk = JSON.parse(readFileSync(marker, 'utf8'));
+    const viaAt = typeof mk.appExit === 'string' ? /\bat (\d{4}-\d{2}-\d{2}T[0-9:.]+Z)\s*$/.exec(String(mk.via ?? ''))?.[1] : undefined;
+    const t = Date.parse(viaAt ?? mk.at ?? '');
+    if (!Number.isFinite(t)) return 'an unreadable time';
+    const d = new Date(t);
+    const day = d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+    const hm = d.toLocaleTimeString('en-GB', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    return `${day} ${hm} California time`;
+  } catch { return 'an unreadable time'; }
+}
+/**
+ * The line the dispatcher's start handler prints to the main thread when the harness has brought plan mode back after an approval
+ * (`restartedPlanMode`, LESSONS §432, §439, §460). It says only what is established: it names no owner action, and says where the effect
+ * of the agents' line is recorded (Q-HUB-304), because that effect is shown only by an agent's transcript.
+ * @param {string} plan  the approved plan's path.
+ * @param {string} stamp  `approvalStamp`'s answer.
+ * @returns {string} the line.
+ */
+export function restoredModeLine(plan, stamp) {
+  return `PLAN MODE RESTORED BY THE HARNESS: the approval of ${plan} is recorded at ${stamp}, and the plan mode shown now is the harness's restore at a restart and not the owner's entry. `
+    + 'The plan is in force and the main thread is not held. Each agent sent under it is given the plan fence\'s line at its first call, saying so; '
+    + 'whether that line moves an agent past the harness\'s read-only plan-mode notice is read from the first such agent\'s transcript and recorded under Q-HUB-304.';
+}
+/**
  * The words plan-guard.mjs's refusal of the approval call opens with when the fault is one of the plan's SHAPE: a section missing, short or
  * wrongly shaped, or a line not of its form (`denyShape` in plan-guard.mjs, LESSONS §435). `noLatchRepoRefusal` reads them as "this refusal
  * sets no latch": a write of the plan file answers it, and a latch only stops the reads and writes that do.
@@ -3583,6 +3614,9 @@ async function main(event, raw, p) {
     return 2;
   };
 
+  // The plan fence's added context for an agent's first call under a restored plan mode (`restartContext` in plan-fence.mjs), written
+  // beside the call that passed every guard.
+  let fenceContext = '';
   // ---- family guards ----
   if (event === 'PreToolUse') {
     // AN AGENT'S OWN RETURN PASSES EVERY GUARD, whatever its text names: it
@@ -3834,6 +3868,8 @@ async function main(event, raw, p) {
         if (shape) return refuse(`${o.reason} ${SHAPE_FAULT_NOTE}`, false);
       }
       if (o.deny) return refuse(reason, !(g.includes('plan-fence.mjs') && o.reason.includes('RULES FIRST, NO LATCH:')) && !g.includes('doctrine-read-guard.mjs'));
+      // THE PLAN FENCE'S LINE TO AN AGENT'S FIRST CALL UNDER A RESTORED PLAN MODE passes as added context beside the call (Q-HUB-303).
+      if (g.includes('plan-fence.mjs') && p.agent_id && o.status === 0 && o.out.trim().startsWith('{')) fenceContext = o.out.trim();
       // A family guard that crashed or timed out has not said yes. The header's
       // promise — a crash refuses everything but reads — held only for a crash
       // of THIS file; a guard exiting 1 was read as a pass.
@@ -3954,6 +3990,11 @@ async function main(event, raw, p) {
       + await toolCensus(p.transcript_path));
   }
   if (dueLine) printed.push(dueLine);
+  // THE HARNESS'S RESTORE OF PLAN MODE AFTER AN APPROVAL IS SAID TO THE MAIN THREAD AT A RESUME OR A COMPACTION (Q-HUB-303): one line of
+  // what is established, and nothing at a start where `restartedPlanMode` does not hold.
+  if (event === 'SessionStart' && !p.agent_id && (p.source === 'resume' || p.source === 'compact')) {
+    try { const plan = restartedPlanMode(p); if (plan) printed.push(restoredModeLine(plan, approvalStamp())); } catch { /* the start prints without the line */ }
+  }
   // A compaction also makes the state page due: it is the first thing the main
   // thread reads afterwards (Doctrine §0e rule 2). A failure writing the marker
   // costs the line and the gate, never the start.
@@ -4008,6 +4049,7 @@ async function main(event, raw, p) {
       if (seedText) process.stdout.write(`${JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: seedText } })}\n`);
     } catch { /* the plan is typed from the manager's own run of the command */ }
   }
+  if (fenceContext) process.stdout.write(`${fenceContext}\n`);
   const post = [markFail, replyNote].filter(Boolean).join('\n');
   if (post) { process.stderr.write(post + '\n'); return 2; }
   return 0;

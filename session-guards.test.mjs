@@ -2966,8 +2966,8 @@ const CASES = [
 
   // ---- a background run announced first, a flagged agent read, the wait refused while one is flagged, the wait ended by an owner message (Q-HUB-295, Q-HUB-296) ----
   {
-    name: 'Q-HUB-295: an agent\'s background run is refused until its progress note, written before the launch, names a clock time, a label and, where the command names its output file, that path; a run naming no output file is then held to a second write of the note with the path the launch printed, every other call is refused until it is made, and the next launch needs its own note',
-    guards: ['bg_announce', 'bg_note_time', 'bg_note_label', 'bg_note_path', 'bg_second_write', 'bg_second_write_pass', 'bg_next_launch'],
+    name: 'Q-HUB-295: an agent\'s background run is refused until its progress note, written before the launch, carries a label line and no time, and, where the command names its output file, that path; a run naming no output file is then held to a second write of the note with the path the launch printed, every other call is refused until it is made, and the next launch needs its own note',
+    guards: ['bg_announce', 'bg_note_label', 'bg_note_path', 'bg_second_write', 'bg_second_write_pass', 'bg_next_launch'],
     run(m) {
       const r = repo({ 'keep.mjs': 'x\n' });
       const plan = fencePlan(basename(r.dir));
@@ -2984,22 +2984,22 @@ const CASES = [
       const said = (x, re) => typeof x === 'string' && /^PLAN FENCE/.test(x) && re.test(x);
       const noNote = call('Bash', named, []);
       const noTime = call('Bash', named, [wrote('w1', `label: the suite run, output ${outFile}`)]);
-      const noLabel = call('Bash', named, [wrote('w2', `10:05 the suite run, output ${outFile}`)]);
-      const noPath = call('Bash', named, [wrote('w3', '10:05 label: the suite run')]);
-      const otherNote = call('Bash', named, [tool(0, 'w4', 'Write', { file_path: join(pad, 'progress', 'step-2-report.txt'), content: `10:05 label: the suite run, output ${outFile}` })]);
-      const fine = call('Bash', named, [wrote('w5', `10:05 label: the suite run, output ${outFile}`)]);
+      const noLabel = call('Bash', named, [wrote('w2', `the suite run, output ${outFile}`)]);
+      const noPath = call('Bash', named, [wrote('w3', 'label: the suite run')]);
+      const otherNote = call('Bash', named, [tool(0, 'w4', 'Write', { file_path: join(pad, 'progress', 'step-2-report.txt'), content: `label: the suite run, output ${outFile}` })]);
+      const fine = call('Bash', named, [wrote('w5', `label: the suite run, output ${outFile}`)]);
       const bareNoNote = call('Bash', bare, []);
-      const bareFine = call('Bash', bare, [wrote('w6', '10:05 label: the suite run')]);
+      const bareFine = call('Bash', bare, [wrote('w6', 'label: the suite run')]);
       const plain = call('Bash', { command: 'git status' }, []);
-      const launched = [wrote('w7', '10:05 label: the suite run'), tool(0, 'L1', 'Bash', bare), result(0, 'L1', `Command running in background. Output is being written to: ${printed}`)];
+      const launched = [wrote('w7', 'label: the suite run'), tool(0, 'L1', 'Bash', bare), result(0, 'L1', `Command running in background. Output is being written to: ${printed}`)];
       const read = call('Read', { file_path: join(r.dir, 'keep.mjs') }, launched);
       const shell = call('Bash', { command: 'git status' }, launched);
-      const second = call('Write', { file_path: note, content: `10:09 label: the suite run, output ${printed}` }, launched);
-      const after = [...launched, wrote('w8', `10:09 label: the suite run, output ${printed}`)];
+      const second = call('Write', { file_path: note, content: `label: the suite run, output ${printed}` }, launched);
+      const after = [...launched, wrote('w8', `label: the suite run, output ${printed}`)];
       const readAfter = call('Read', { file_path: join(r.dir, 'keep.mjs') }, after);
       const again = call('Bash', bare, after);
-      const againFine = call('Bash', bare, [...after, wrote('w9', '10:20 label: the second run')]);
-      const checks = { noNote: said(noNote, announced) && noNote.includes(outFile), noTime: said(noTime, announced), noLabel: said(noLabel, announced),
+      const againFine = call('Bash', bare, [...after, wrote('w9', 'label: the second run')]);
+      const checks = { noNote: said(noNote, announced) && noNote.includes(outFile), noTimeFine: noTime === null, noLabel: said(noLabel, announced),
         noPath: said(noPath, announced), otherNote: said(otherNote, announced), fine: fine === null,
         bareNoNote: String(bareNoNote).includes('written again with the path the launch prints'), bareFine: bareFine === null, plain: plain === null,
         read: said(read, /SECOND WRITE/) && read.includes(printed), shell: said(shell, /SECOND WRITE/), second: second === null,
@@ -8255,6 +8255,89 @@ const CASES = [
     },
   },
 
+  // ---- step 112: the plan mode the harness brings back after an approval, run through once for every actor (Q-HUB-303, Q-HUB-305) ----
+  {
+    name: 'step112: one plan mode the harness brought back at a resume after the approval, run through for every actor: the main thread\'s exit call is refused as already approved with the no-latch mark and passes on a go typed after the restore, its write is judged as outside plan mode, an exit made under auto mode writes no marker, the dispatcher\'s start handler prints one line of what is established, and an agent\'s first call carries the plan fence\'s added context (the approval\'s time in California time and four statements) through the fence and through the dispatcher while its later call carries none; with no restore the fence and the start handler say nothing',
+    guards: ['restore_line_off', 'restore_always', 'restore_first_call', 'restore_cli', 'restore_dispatch_pass', 'restore_start_print', 'restore_stamp'],
+    run(m, dir) {
+      const A = appHome(dir);
+      writeFileSync(A.plan, ORDER_PLAN);
+      const marker = approvalMarker(A.home, A.plan, ORDER_PLAN);
+      const s = sid('rs');
+      const cwdDir = tmp('sg-cwd-');
+      const head = [...approvedEntries(A.plan), ...workEntries(-650, 'w1')];
+      const T = transcript([...head, ...restartOf('resume', A.plan)]);
+      const T0 = transcript(head);
+      const Tgo = transcript([...head, ...restartOf('resume', A.plan), at(turn(0, 'Go.'), later(-100))]);
+      // The approval's time as the marker holds it, read here by another route than the code under test.
+      const want = new Date(Date.parse(JSON.parse(readFileSync(marker, 'utf8')).at)).toLocaleString('sv-SE', { timeZone: 'America/Los_Angeles' }).slice(0, 16);
+      const env = { ...process.env, HOME: A.home, CLAUDE_PROJECT_DIR: cwdDir };
+      // The main thread.
+      const pg = (tr, payload) => spawnSync('node', [join(dir, 'plan-guard.mjs')], { input: JSON.stringify({ session_id: s, transcript_path: tr, cwd: A.home, permission_mode: 'plan', ...payload }), encoding: 'utf8', env });
+      const EXIT = { tool_name: 'ExitPlanMode', tool_input: { plan: '# x' } };
+      const WRITE = { tool_name: 'Write', tool_input: { file_path: join(A.home, 'src.txt'), content: 'x' } };
+      const NAMES = { tool_name: 'Bash', tool_input: { command: 'echo x > ~/.claude/APPROVED-PLAN.json' } };
+      const refusedExit = pg(T, EXIT);
+      const reason = (() => { try { return JSON.parse(refusedExit.stdout).hookSpecificOutput.permissionDecisionReason; } catch { return ''; } })();
+      const exitRefused = refusedExit.status === 2 && reason.includes(m.dispatch.APPROVED_NO_LATCH) && m.dispatch.noLatchRepoRefusal('plan-guard.sh', { tool_name: 'ExitPlanMode' }, reason) === true;
+      const goExit = pg(Tgo, EXIT);
+      const exitOnGo = goExit.status === 0 && /exit goes up on the owner's go/.test(goExit.stdout);
+      const asOutside = pg(T, WRITE).status === 0 && A.guard(T, { permission_mode: 'plan', ...NAMES }).status === 2;
+      // An exit made under auto mode writes no marker.
+      const B = appHome(dir);
+      const u = uid();
+      const trB = transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-22, false), { ...turn(-21, 'Go.'), permissionMode: 'auto' }, exitEntry(-19, B.plan, u)]);
+      B.guard(trB, { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
+      const appNoMarker = B.mk() === null && B.outcome(u) === 'under auto mode';
+      // The start handler.
+      const start = (tr) => spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'SessionStart'], { input: JSON.stringify({ session_id: s, transcript_path: tr, cwd: cwdDir, hook_event_name: 'SessionStart', source: 'resume', permission_mode: 'plan' }), encoding: 'utf8', env });
+      const said = start(T);
+      const startLine = said.status === 0 && said.stdout.includes('PLAN MODE RESTORED BY THE HARNESS') && said.stdout.includes(A.plan) && said.stdout.includes(want)
+        && /not the owner's entry/.test(said.stdout) && said.stdout.includes('Q-HUB-304') && !/\b(?:please|you must|ask the owner)\b/i.test(said.stdout);
+      const startNone = !start(T0).stdout.includes('PLAN MODE RESTORED');
+      // The agent.
+      const prompt = at({ type: 'user', message: { role: 'user', content: `${A.plan} step 1` } }, later(-290));
+      const readRules = [at(tool(0, 'ag-r', 'Read', { file_path: join(dir, 'agent-rules.md') }), later(-289)), at(result(0, 'ag-r', '1\tRules version: 5'), later(-288))];
+      const second = [at(tool(0, 'ag-b', 'Bash', { command: 'git status' }), later(-280)), at(result(0, 'ag-b', 'clean'), later(-279))];
+      const callAs = (tr, entries, via) => {
+        const subs = join(tr.slice(0, -'.jsonl'.length), 'subagents');
+        mkdirSync(subs, { recursive: true });
+        writeFileSync(join(subs, 'agent-ag1.jsonl'), jsonl([prompt, ...entries]));
+        return spawnSync('node', via === 'fence' ? [join(dir, 'plan-fence.mjs')] : [join(dir, 'hook-dispatch.mjs'), 'PreToolUse'], {
+          input: JSON.stringify({ session_id: s, agent_id: 'ag1', transcript_path: tr, cwd: via === 'fence' ? A.home : cwdDir, hook_event_name: 'PreToolUse', permission_mode: 'plan', tool_name: 'Bash', tool_input: { command: 'git status' } }),
+          encoding: 'utf8', env });
+      };
+      const ctx = (r) => (r.stdout ?? '').split('\n').filter((l) => l.startsWith('{')).map((l) => { try { return JSON.parse(l)?.hookSpecificOutput?.additionalContext ?? ''; } catch { return ''; } }).filter(Boolean).join('\n');
+      const whole = (c) => c.includes(want) && c.includes(A.plan) && /restart brought this plan mode back/.test(c) && /approved plan is in force/.test(c)
+        && /no stop for this step/.test(c) && /end the step REFUSED/.test(c) && /harness's words/.test(c);
+      const f1 = callAs(T, readRules, 'fence');
+      const f2 = callAs(T, [...readRules, ...second], 'fence');
+      const f0 = callAs(T0, readRules, 'fence');
+      const fenceFirst = f1.status === 0 && whole(ctx(f1));
+      const fenceLater = f2.status === 0 && ctx(f2) === '';
+      const fenceNone = f0.status === 0 && ctx(f0) === '';
+      const d1 = callAs(T, readRules, 'dispatch');
+      const d2 = callAs(T, [...readRules, ...second], 'dispatch');
+      const d0 = callAs(T0, readRules, 'dispatch');
+      const dispFirst = d1.status === 0 && whole(ctx(d1));
+      const dispLater = d2.status === 0 && ctx(d2) === '' && d0.status === 0 && ctx(d0) === '';
+      const out = [];
+      if (!exitRefused) out.push(`the exit call was not refused as already approved with the mark: ${refusedExit.status} ${reason.slice(0, 80)}`);
+      if (!exitOnGo) out.push(`the exit call did not pass on a go typed after the restore: ${goExit.status} ${goExit.stdout.slice(0, 80)}`);
+      if (!asOutside) out.push('a main-thread write was not judged as outside plan mode');
+      if (!appNoMarker) out.push('an exit made under auto mode wrote a marker or was not judged as under auto mode');
+      if (!startLine) out.push(`the start handler did not print the line of what is established: ${said.stdout.slice(0, 120)}`);
+      if (!startNone) out.push('the start handler printed the line with no restore');
+      if (!fenceFirst) out.push(`the fence gave no whole line to the first call: ${f1.status} ${ctx(f1).slice(0, 120)}`);
+      if (!fenceLater) out.push('the fence gave a line to a later call');
+      if (!fenceNone) out.push('the fence gave a line with no restore');
+      if (!dispFirst) out.push(`the dispatcher did not carry the fence's line beside the first call: ${d1.status} ${d1.stdout.slice(0, 120)} ${d1.stderr.slice(0, 120)}`);
+      if (!dispLater) out.push('the dispatcher carried a line beside a later call, or beside a call with no restore');
+      if (out.length) throw new Error(out.join('; '));
+      return true;
+    },
+  },
+
   // ---- step 229, change 6: a DONE hand-back counts after a refusal (LESSONS §436) ----
   {
     name: 'step229f: an agent\'s end whose hand-back opens DONE, FAILED or REFUSED is a report whatever hook refusal came before it, carrying the word and that a call was refused before it, and the pointer and the steps-left check count it as they count any report; the status says the hand-back\'s word and that a call of the agent was refused before it, and prints the refusal beside it; a hand-back that opens any other way after a refusal still reads as a refusal',
@@ -9841,7 +9924,6 @@ const PLANTS = {
   host_declined_norule: ['matchAll(/\\bno rule allows host:?', 'matchAll(/\\bno rule never host:?', 'reply-guard.mjs'],
   host_declined_status: ['try { const declined = declinedHostsBlock(sid, previous); if (declined) console.log(declined); }', "try { const declined = ''; if (declined) console.log(declined); }", 'report.mjs'],
   bg_announce: ["if (!(tool === 'Bash' && input.run_in_background === true)) return null;", 'if (true) return null;', 'plan-fence.mjs'],
-  bg_note_time: ['CLOCK_TIME.test(t) && ', '', 'plan-fence.mjs'],
   bg_note_label: ['LABEL_WORDS.test(t) && ', '', 'plan-fence.mjs'],
   bg_note_path: ['(!out || t.includes(out))', 'true', 'plan-fence.mjs'],
   bg_second_write: ['if (!wrote && !(own !== null && own.includes(printed))) {', 'if (false) {', 'plan-fence.mjs'],
@@ -10893,6 +10975,13 @@ const PLANTS = {
   restart_apg_standdown: ["if (p.permission_mode === 'plan' && !(!p.plan_mode_forced && restartedPlanMode(p))) process.exit(0);", "if (p.permission_mode === 'plan') process.exit(0);", 'approved-plan-guard.mjs'],
   restart_apg_forced: ["if (p.permission_mode === 'plan' && !(!p.plan_mode_forced && restartedPlanMode(p))) process.exit(0);", "if (p.permission_mode === 'plan' && !restartedPlanMode(p)) process.exit(0);", 'approved-plan-guard.mjs'],
   restart_classifier_apg: ["JSON.stringify({ ...p, permission_mode: 'plan', plan_mode_forced: true }), encoding: 'utf8', cwd: p.cwd || process.cwd() });", "JSON.stringify({ ...p, permission_mode: 'plan' }), encoding: 'utf8', cwd: p.cwd || process.cwd() });", 'approved-plan-guard.mjs'],
+  restore_line_off: ['  if (!plan) return null;\n  const stamp = approvalStamp(', '  return null;\n  const stamp = approvalStamp(', 'plan-fence.mjs'],
+  restore_always: ['  if (!plan) return null;\n  const stamp = approvalStamp(', '  void plan;\n  const stamp = approvalStamp(', 'plan-fence.mjs'],
+  restore_first_call: ['  if (!firstCall(p)) return null;', '  void firstCall;', 'plan-fence.mjs'],
+  restore_cli: ['    const line = restartContext(p);', '    const line = null;', 'plan-fence.mjs'],
+  restore_dispatch_pass: ["if (g.includes('plan-fence.mjs') && p.agent_id && o.status === 0 && o.out.trim().startsWith('{')) fenceContext = o.out.trim();", 'void 0;', 'hook-dispatch.mjs'],
+  restore_start_print: ['if (plan) printed.push(restoredModeLine(plan, approvalStamp()));', 'void plan;', 'hook-dispatch.mjs'],
+  restore_stamp: ['return `${day} ${hm} California time`;', 'return `${day} ${hm} UTC`;', 'hook-dispatch.mjs'],
 
   // Step 220, change 3: the reply guard's release command passes the manager fence and the latch, and lifts the latch the reply guard set (LESSONS §432).
   release_parse_bad: ['return r && !r.bad ? r : null;', 'return r;', 'hook-dispatch.mjs'],

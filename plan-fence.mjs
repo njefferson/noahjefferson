@@ -62,10 +62,10 @@ import { readFileSync, existsSync, openSync, readSync, closeSync, statSync } fro
 import { resolve, dirname, join, relative, normalize, isAbsolute, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { approvedPlan, planFiles, planCommands, inScratchpad, planGuardReads, isRead, labelNames, AGENT_RETURN, agentReportWrite, gitHistoryRepos } from './hook-dispatch.mjs';
+import { approvedPlan, planFiles, planCommands, inScratchpad, planGuardReads, isRead, labelNames, AGENT_RETURN, agentReportWrite, gitHistoryRepos, approvalStamp } from './hook-dispatch.mjs';
 import { commandsIn, heredocs, openerName } from './reply-guard.mjs';
 import { tailEntries } from './transcript-tail.mjs';
-import { agentTranscriptPath, agentStep, stepsFilePath, RULES_FILE, stepBody } from './report.mjs';
+import { agentTranscriptPath, agentStep, stepsFilePath, RULES_FILE, stepBody, restartedPlanMode } from './report.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
 const WRITES = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
@@ -448,8 +448,8 @@ export function agentSentStep(p) {
 // no output file (the harness names one only in the launch's own result) it is written again straight after the launch.
 const NOTE_FILE = /^step-\d+\.txt$/;
 const OUTPUT_FILE = /\.(?:txt|log|out|output)$/;
-const CLOCK_TIME = /\b(?:[01]?\d|2[0-3]):[0-5]\d\b/;
-const LABEL_WORDS = /\blabel\b[\s:=-]+\S/i;
+// No agent reads a clock, so the note carries no time: the status and the gate read its time from the file's own write time.
+const LABEL_WORDS = /^[ \t]*label:[ \t]*\S/im;
 const TAIL_BYTES = 4 * 1024 * 1024;
 
 /**
@@ -502,7 +502,7 @@ function launchPrintedPath(text) {
  * @param {{entries?: object[]}} [opts]  the agent's transcript entries, for the test; read from its own transcript otherwise.
  * @returns {string|null} null for a main-thread call and for anything that breaks neither rule. Otherwise the refusal:
  *   (1) a Bash call with `run_in_background` is refused unless the agent's transcript holds, after its previous background launch,
- *   a write of its progress note naming a clock time, a label (the word label and what follows) and, where the command names an
+ *   a write of its progress note with a line opening with the word label and a colon (no time) and, where the command names an
  *   output file (`commandOutputFile`), that file's full path; (2) after a background launch whose command named no output file
  *   and whose result printed one, every call but a write of the progress note carrying that printed path is refused until that
  *   write is made. Its own return and its TaskStop never reach here. The current call is left out of the transcript it reads.
@@ -555,7 +555,7 @@ export function backgroundProblem(p, opts = {}) {
         if (wrote) since = wroteAt;
         const own = noteWriteText({ type: 'tool_use', name: tool, input }, cwd, sid);
         if (!wrote && !(own !== null && own.includes(printed))) {
-          return `${HEAD} BACKGROUND RUN, SECOND WRITE (Q-HUB-295): the launch printed its output file, ${printed}, and the agent's next call is its progress note written again with that full path, so ${tool || 'this call'} is refused. Write progress/step-N.txt in the scratchpad with the clock time, the label and ${printed}, then end the turn on the run with no wait of its own.`;
+          return `${HEAD} BACKGROUND RUN, SECOND WRITE (Q-HUB-295): the launch printed its output file, ${printed}, and the agent's next call is its progress note written again with that full path, so ${tool || 'this call'} is refused. Write progress/step-N.txt in the scratchpad with a line opening with "label:" naming the run and ${printed}, with no time in it, then end the turn on the run with no wait of its own.`;
         }
       }
     }
@@ -564,10 +564,10 @@ export function backgroundProblem(p, opts = {}) {
   const out = commandOutputFile(input.command, sid);
   const announced = events.slice(since + 1).some((x) => {
     const t = x.use ? noteWriteText(x.use, cwd, sid) : null;
-    return t !== null && CLOCK_TIME.test(t) && LABEL_WORDS.test(t) && (!out || t.includes(out));
+    return t !== null && LABEL_WORDS.test(t) && (!out || t.includes(out));
   });
   if (announced) return null;
-  return `${HEAD} BACKGROUND RUN ANNOUNCED FIRST (Q-HUB-295): a background run is announced first, with the agent's progress note progress/step-N.txt in the session scratchpad written, before the launch, with the clock time, "label: <the run's label>" and the output file's full path`
+  return `${HEAD} BACKGROUND RUN ANNOUNCED FIRST (Q-HUB-295): a background run is announced first, with the agent's progress note progress/step-N.txt in the session scratchpad written, before the launch, with a line opening with "label:" naming the run and the output file's full path, and no time, because no agent reads a clock and the gate and the status read the note's time from the file's own write time`
     + `${out ? ` (${out} here)` : ' (this command names no output file, so the note is written again with the path the launch prints, straight after the launch)'}. Write that note, then launch.`;
 }
 
@@ -708,11 +708,61 @@ export function decide(p, opts = {}) {
   return null;
 }
 
+// ---- the plan mode the harness brings back after an approval, said to each agent's first call (Q-HUB-303) ----
+// A container restart brings plan mode back to every agent sent after it while the approval still stands, and an agent has nothing of
+// higher authority than the harness's read-only plan-mode notice. This line is added context beside the agent's FIRST call, in the
+// owner's voice, while `restartedPlanMode` holds. Whether it moves an agent past the notice is shown only by an agent's transcript
+// under a restored plan mode, and is recorded under Q-HUB-304 (the plans page, rule 4).
+
+/**
+ * Is this the agent's first call?
+ * @param {object} p  a subagent's PreToolUse payload.
+ * @returns {boolean} true when the agent's own transcript holds at most one tool call (this call, if the harness has written it
+ *   already), or when no transcript of the agent is found; false once it holds two or more.
+ */
+function firstCall(p) {
+  const f = agentTranscript(p);
+  if (!f) return true;
+  let n = 0;
+  for (const e of wholeEntries(f)) {
+    const c = e?.message?.content;
+    if (e?.type !== 'assistant' || !Array.isArray(c)) continue;
+    for (const b of c) if (b?.type === 'tool_use') n += 1;
+  }
+  return n <= 1;
+}
+
+/**
+ * The added-context line for an agent's first call under a plan mode the harness restored after the approval.
+ * @param {object} p  a subagent's PreToolUse payload.
+ * @param {{restarted?: string, marker?: string}} [opts]  `restarted` is `restartedPlanMode`'s answer, passed by a test; `marker` is the
+ *   approval marker's path, `~/.claude/APPROVED-PLAN.json` by default.
+ * @returns {string|null} null for a main-thread call, for any call after the agent's first, and when the plan mode did not begin at a
+ *   restart after the approval; else the line, which gives the approval's time in California time and says four things: a restart brought
+ *   this plan mode back after the approval; the approved plan is in force; the harness's read-only notice is no stop for the step; and a
+ *   call the harness itself refuses ends the step REFUSED carrying the harness's words.
+ */
+export function restartContext(p, opts = {}) {
+  if (!p?.agent_id) return null;
+  if (!firstCall(p)) return null;
+  const plan = opts.restarted ?? restartedPlanMode(p, ...(opts.marker ? [opts.marker] : []));
+  if (!plan) return null;
+  const stamp = approvalStamp(...(opts.marker ? [opts.marker] : []));
+  return `A restart brought this plan mode back after I approved ${plan} at ${stamp}: it is the harness's restore and not my entry. `
+    + 'The approved plan is in force. The harness\'s read-only plan-mode notice is no stop for this step, so do the step as the plan states it. '
+    + 'If the harness itself refuses a call, end the step REFUSED and carry the harness\'s words in the hand-back.';
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === SELF) {
   let p = {};
   try { p = JSON.parse(readFileSync(0, 'utf8')); } catch { process.exit(0); }
   let why = null;
   try { why = decide(p); } catch (e) { process.stderr.write(`plan-fence: ${e?.message ?? e}\n`); process.exit(1); }
   if (why) { process.stderr.write(why + '\n'); process.exit(2); }
+  // The passed call of an agent's first call under a restored plan mode carries the line as added context; a failure here costs the line.
+  try {
+    const line = restartContext(p);
+    if (line) process.stdout.write(`${JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: line } })}\n`);
+  } catch { /* the call passes without the line */ }
   process.exit(0);
 }
