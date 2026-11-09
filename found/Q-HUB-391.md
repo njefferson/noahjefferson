@@ -1,0 +1,1 @@
+Q-HUB-391: the stop guard refused a follow-up that repeated a line of the reply before it, while every reply ends with the state line, so a turn the environment's hook forces could not carry the state line it must; put right by step 151: a line opening with the word State and a colon is not counted as a repeated line (found on 9 November, filed in step 153).

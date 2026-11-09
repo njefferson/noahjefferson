@@ -1,0 +1,1 @@
+Q-HUB-400: the plan check asks every plan whose Files names the hub to answer the found file of a finding whose program item is done, because the folder keeps the file after the item closes; the fix, in `plan-guard.mjs`, is that a finding whose item reads done is not asked for, with a case on a done item and a queued one (found on 9 November, filed in step 153).
