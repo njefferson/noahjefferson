@@ -3801,7 +3801,7 @@ Depends: none.
 
 ### P-390. Q-HUB-346: a case that returns a bare false names no assertion
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The batch's fifth wave: the seed and its two command tests, the suite's cases moved to the helper, and every open finding of the hub read once and given its line, so the waves after it are grouped by file.
 
 Left: step 140 of the plan of the batch's first wave made the assertion helper return a mark, made the run count a case that ends in a bare true and print the list with `--bare-list`, and changed the five cases of the stop guard's case file; 304 of the 367 cases of `session-guards.test.mjs` still end in a bare true, and each needs its own labelled rows, which is a rewrite of most of an 11,000-line file and not a mechanical edit.
 
@@ -4661,7 +4661,7 @@ Depends: none.
 
 ### P-481. Q-HUB-434: the seed's usage and the two tests that recognise a seed command do not list the rounds switch
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's fifth wave: the seed and its two command tests, the suite's cases moved to the helper, and every open finding of the hub read once and given its line, so the waves after it are grouped by file.
 
 Acceptance: the usage text and both tests accept the rounds switch, with a case on a seed command that carries it.
 
@@ -4669,7 +4669,7 @@ Depends: none.
 
 ### P-482. Q-HUB-435: a case made stale by a fix is found only by the whole suite at the landing
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's fifth wave: the seed and its two command tests, the suite's cases moved to the helper, and every open finding of the hub read once and given its line, so the waves after it are grouped by file.
 
 Acceptance: a file step that changes a refusal names each case of the suite file and the case files that asserts the old refusal, found with Grep, for the landing step, with a case on a planted stale case.
 
