@@ -19,7 +19,10 @@
 //
 // `--out <path>` (either mode) writes the whole print to that file and prints one line naming the path and the print's first line, so a print too long
 // for the conversation (the batch print for the hub's queue ran to 246 KB) is read whole from the file. A finding whose own text has a sentence that
-// opens with the words put right is set done at the batch's take-up with that sentence and is left out of every group.
+// opens with the words put right is set done at the batch's take-up with that sentence and is left out of every group. The LAST line of a finding's file that opens with
+// Put right already, Fix in, Not the repository's or Not placed, each with a colon, is read: a Fix in line's code spans are the finding's files, ahead of any other name in its
+// text; a Put right already or Not the repository's line leaves the finding out of every batch, counted and named in the header; a Not placed line, or no line and no file in
+// the text, gives the finding no step, and its key is listed after the plan's end as not placed.
 //
 // Without `--out` it READS and PRINTS and writes nothing, so the manager fence and the plan guard pass it as they pass the plan check. The print is the plan
 // in its own shape: the Goals with the item's acceptance as goal 1, the item's own entry (its dependency line from its own block and no
@@ -462,11 +465,28 @@ export function mergeSharing(groups, claimsOf) {
 }
 
 /**
+ * The line a finding's file ends with, one of four kinds told by its opening words (Put right already, Fix in, Not the repository's, Not placed, each followed by a colon).
+ * @param {string} raw  the finding's file, with its line breaks.
+ * @returns {{kind: 'put-right'|'fix-in'|'not-repo'|'not-placed', rest: string}|null} the LAST line of the file that opens with one of the four, its kind and the words after
+ *   the colon; null when no line opens that way.
+ */
+export function findingLine(raw) {
+  let found = null;
+  for (const l of String(raw ?? '').split('\n')) {
+    const m = /^(Put right already|Fix in|Not the repository(?:'|’)s|Not placed):\s*(.*)$/.exec(l.trim());
+    if (m) found = { kind: m[1] === 'Put right already' ? 'put-right' : m[1] === 'Fix in' ? 'fix-in' : m[1] === 'Not placed' ? 'not-placed' : 'not-repo', rest: m[2] };
+  }
+  return found;
+}
+
+/**
  * The open findings of a repository, grouped by the file each is about.
  * @param {{entries: object[], repoName: string, repo: string, foundDir: string}} o  the program's entries, the repository's name as the program spells it, its path, and its found folder.
- * @returns {{key: string, item: string, rank: number, text: string, files: string[], home: string}[]} one per open entry of the repository whose title names a
- *   finding key with a file in the found folder, in the program's rank order. `files` are the code spans of the finding's text that name a path existing in the
- *   repository, and `home` is the first of them, '' when none.
+ * @returns {{key: string, item: string, rank: number, text: string, files: string[], home: string, line: string, left: boolean, unplaced: boolean}[]} one per open entry of the
+ *   repository whose title names a finding key with a file in the found folder, in the program's rank order. `files` are the code spans of the finding's text that name a path
+ *   existing in the repository, those of a Fix in line first, and `home` is the first of them, '' when none. `line` is the kind of the file's last line of the four ('' when none).
+ *   `left` is true for a finding whose line is Put right already or Not the repository's, which no batch takes; `unplaced` is true for one with a Not placed line, or with no line
+ *   and no file in its text (and not one whose own text says it was put right), which no step takes.
  */
 export function openFindings(o) {
   const out = [];
@@ -474,13 +494,21 @@ export function openFindings(o) {
     if (e.state !== 'open' || e.repository.toLowerCase() !== o.repoName.toLowerCase()) return;
     const key = /\bQ-[A-Za-z0-9]+-\d+\b/.exec(e.title)?.[0];
     if (!key || !existsSync(join(o.foundDir, `${key}.md`))) return;
-    const text = slurp(join(o.foundDir, `${key}.md`)).replace(/\s+/g, ' ').trim();
+    const raw = slurp(join(o.foundDir, `${key}.md`));
+    const text = raw.replace(/\s+/g, ' ').trim();
+    const line = findingLine(raw);
     const files = [];
-    for (const m of text.matchAll(/`([^`\n]+)`/g)) {
-      const s = m[1].trim().replace(/[.,;:]+$/, '');
+    const take = (s0) => {
+      const s = s0.trim().replace(/[.,;:]+$/, '');
       if (s && !/\s/.test(s) && !files.includes(s) && existsSync(join(o.repo, s))) files.push(s);
-    }
-    out.push({ key, item: e.key, rank, text, files, home: files[0] ?? '', putRight: putRightSentence(text), counts: countsList(text) });
+    };
+    // The files a Fix in line names are the finding's files, ahead of any other name in its text.
+    if (line?.kind === 'fix-in') for (const m of line.rest.matchAll(/`([^`\n]+)`/g)) take(m[1]);
+    for (const m of text.matchAll(/`([^`\n]+)`/g)) take(m[1]);
+    const putRight = line ? '' : putRightSentence(text);
+    const left = line?.kind === 'put-right' || line?.kind === 'not-repo';
+    const unplaced = !left && !putRight && (line?.kind === 'not-placed' || files.length === 0);
+    out.push({ key, item: e.key, rank, text, files, home: files[0] ?? '', putRight, counts: countsList(text), line: line?.kind ?? '', left, unplaced });
   });
   return out;
 }
@@ -530,20 +558,22 @@ function batchWave(o) {
   // Group by home, in the order of the lowest-ranked item of each group, the group with no file last; a group past the size is cut into runs of it.
   // A finding whose own text says it was put right is set done at the take-up with that sentence and is left out of every group.
   const putRight = findings.filter((f) => f.putRight);
+  // A finding whose file ends with a Put right already line or a Not the repository's line is in no batch, and one with a Not placed line, or with no line and no file in its
+  // text, gets no step because no file can be given to it: the first kind is counted and named in the header, the second after the plan's end.
+  const leftOut = findings.filter((f) => f.left);
+  const notPlaced = findings.filter((f) => f.unplaced);
   const byHome = new Map();
-  for (const f of findings) { if (f.putRight) continue; if (!byHome.has(f.home)) byHome.set(f.home, []); byHome.get(f.home).push(f); }
-  const homes = [...byHome.keys()].sort((a, b) => (a === '') - (b === '') || byHome.get(a)[0].rank - byHome.get(b)[0].rank);
+  for (const f of findings) { if (f.putRight || f.left || f.unplaced) continue; if (!byHome.has(f.home)) byHome.set(f.home, []); byHome.get(f.home).push(f); }
+  const homes = [...byHome.keys()].sort((a, b) => byHome.get(a)[0].rank - byHome.get(b)[0].rank);
   let groups = [];
   // A guard the suite covers has its own case file under the guard cases folder, named for the guard; a repository with no such folder has none.
   const caseFileOf = (x) => (/\.mjs$/.test(x) && !x.includes('/') && x !== 'session-guards.test.mjs' && existsSync(join(repo, 'guard-cases')) ? `guard-cases/${x}` : '');
-  // A finding that names no file goes to a step of its own, because no file can be given to a step it shares.
   for (const h of homes) {
     const fs = byHome.get(h);
-    if (h === '') { for (const f of fs) groups.push({ home: '', list: [f] }); continue; }
     for (let i = 0; i < fs.length; i += size) groups.push({ home: h, list: fs.slice(i, i + size) });
   }
   // A finding whose fix counts a list owns every file it names, because each is a place of that list and the step that counts it must change them all (Q-HUB-397).
-  groups = groups.map((g) => ({ ...g, homes: g.home ? [...new Set([g.home, ...g.list.filter((f) => f.counts).flatMap((f) => f.files)])] : [] }));
+  groups = groups.map((g) => ({ ...g, homes: [...new Set([g.home, ...g.list.filter((f) => f.counts).flatMap((f) => f.files)])] }));
   // The files a group owns are every file under its homes (a folder is every file in it) and the case file of each; two groups that would own one file are
   // one group, so no file belongs to two steps (Q-HUB-371).
   const claimsOf = (g) => {
@@ -555,6 +585,9 @@ function batchWave(o) {
   for (const g of groups) g.claims = claimsOf(g);
   const limit = Math.floor(Number(o.steps) || 0);
   if (limit > 0) groups = groups.slice(0, limit);
+  if (!o.part && !groups.length && !putRight.length) {
+    return { ok: false, text: `plan-seed: every open finding of ${repoName} is left out of every batch (${leftOut.map((f) => f.key).join(', ') || 'none'}) or is not placed (${notPlaced.map((f) => f.key).join(', ') || 'none'}), so there is no batch to print.\n` };
+  }
   // The file steps of a wave run at the same time in the one working copy, so a wave holds up to WAVE groups in rank order and never two groups of one
   // file (the second run of a cut group waits for a later wave); the groups the wave leaves are printed by the next wave.
   const waves = [];
@@ -724,6 +757,7 @@ function batchWave(o) {
   L(`PLAN SEED for the batch of ${batch.length} open findings of ${repoName}, in ${nGroups} group ${nGroups === 1 ? 'step' : 'steps'}, repository ${basename(repo)}, printed ${stamp}.`);
   if (R > 1) L(`This is ${R} rounds of one plan, waves ${waveNo} to ${waveNo + R - 1} of ${waves.length}: each round's file steps run at the same time, the most a wave holds being ${WAVE}, and the print leaves ${leaves} of the ${totalGroups} groups${leaves ? `, which \`node plan-seed.mjs --batch --wave ${waveNo + R}\` prints once these rounds have landed` : ' for no later wave'}.`);
   else L(`This is wave ${waveNo} of ${waves.length || 1}: its ${groups.length} file ${groups.length === 1 ? 'step runs' : 'steps run'} at the same time, the most a wave holds being ${WAVE}, and it leaves ${leaves} of the ${totalGroups} groups${leaves ? `, which \`node plan-seed.mjs --batch --wave ${waveNo + 1}\` prints once this wave has landed` : ' for no later wave'}.`);
+  if (leftOut.length) L(`${leftOut.length} open ${leftOut.length === 1 ? 'finding is' : 'findings are'} left out of every batch, because the last line of ${leftOut.length === 1 ? 'its file' : 'each file'} says ${leftOut.length === 1 ? 'it is' : 'the finding is'} put right already or not the repository's: ${leftOut.map((f) => f.key).join(', ')}.`);
   L(`Every line of the plan below was read from a file at this time. The lines under the movable reads at the end can be moved by another session before a step runs, so a step that depends on one reads it at the time of use.`);
   L('The plan starts at the line of equals signs. Fill each angle-bracket placeholder, delete this header, and keep the rest as printed.');
   L('==== THE PLAN STARTS BELOW THIS LINE ====');
@@ -793,7 +827,7 @@ function batchWave(o) {
     const n = g1 + i;
     const ks = g.list.map((f) => f.key);
     g.list.forEach((f) => stepOf.set(f.key, n));
-    const where = g.home ? g.homes.map((h) => `\`${h}\``).join(', ') : 'the files each names';
+    const where = g.homes.map((h) => `\`${h}\``).join(', ');
     const view = ownedView(i);
     const owned = view.names;
     const cases = view.cases;
@@ -803,10 +837,9 @@ function batchWave(o) {
     const others = groups.map((_, j) => g1 + j).filter((m) => m !== n);
     const together = others.length ? `, run at the same time as step${others.length === 1 ? '' : 's'} ${others.join(', ')}` : '';
     const seams = [...seamsOut[i], ...seamsIn[i]];
-    const noFile = g.home ? '' : 'its finding\'s text names no file of the repository, so it reads the text to find the file it must edit, and a file it must edit that another step of this plan owns ends it EJECT naming the file, with nothing written; ';
     const caseDo = cases.length ? `write into ${quote(cases)} a case that fails on the old text and a plant for each fix, in the shape of the case files beside it; ` : '';
     // The six parts of the order are the plan's rule for a file step, and the step's text points at it (Q-HUB-399).
-    L(`${n}. **${g.home ? `Put right in ${where}` : 'Put right in the files each names'}: ${ks.join(', ')}.** ${isHub ? 'Hub' : basename(repo)}, one agent${together}. Facts: the step owns ${ownedText} and writes nothing else, commits nothing and stages nothing; ${noFile}${seams.length ? `${seams.join('; ')}; ` : ''}the step takes up ${ks.length} filed ${ks.length === 1 ? 'finding' : 'findings'}, each read whole from its file at the time of use; ${g.list.map((f) => `${f.key} (item ${f.item}): ${f.text}`).join(' ')} The landing step, step ${landing}, lands this step's edits. Do: \`git status\`, read as the rules of this plan allow; read with Read and Grep ${owned.length ? quote([...owned, ...cases.filter((c) => existsSync(join(repo, c)))]) : 'the files its findings name'}; ${doEach}; ${caseDo}then the six parts of the order the rules of this plan give a file step; a line a fix needs in a file another step of this plan owns is named in the report with the file, the place and the exact words, for the landing step, and is not written by this step; \`git status\`, read as the rules of this plan allow; write the report with the files changed, each case added, each new plant with its key and its CAUGHT line, each check's exit code and any find reworded, each stale plant re-pointed or named with its file, each line named for the landing step, and each finding's change in one line. Observe: the step's cases pass, each in a run of its own, every new plant reads CAUGHT, the three checks name no find in a line the step wrote, the files this step owns are changed and nothing else by this step, nothing is staged or committed. Kill: a red run of a case of its own ends it FAILED with its lines and nothing written after but the report; a part of its own that cannot be made or proved without a line in a file it does not own ends it EJECT naming the lines; a refusal of a command by a guard or by the harness's permission check ends it REFUSED with the refusal's words, nothing further done and no other route tried. Report \`progress/step-${n}-report.txt\` (new); ${SEND_REPORT}. Estimate ${groupEst[i]} min.`);
+    L(`${n}. **Put right in ${where}: ${ks.join(', ')}.** ${isHub ? 'Hub' : basename(repo)}, one agent${together}. Facts: the step owns ${ownedText} and writes nothing else, commits nothing and stages nothing; ${seams.length ? `${seams.join('; ')}; ` : ''}the step takes up ${ks.length} filed ${ks.length === 1 ? 'finding' : 'findings'}, each read whole from its file at the time of use; ${g.list.map((f) => `${f.key} (item ${f.item}): ${f.text}`).join(' ')} The landing step, step ${landing}, lands this step's edits. Do: \`git status\`, read as the rules of this plan allow; read with Read and Grep ${owned.length ? quote([...owned, ...cases.filter((c) => existsSync(join(repo, c)))]) : 'the files its findings name'}; ${doEach}; ${caseDo}then the six parts of the order the rules of this plan give a file step; a line a fix needs in a file another step of this plan owns is named in the report with the file, the place and the exact words, for the landing step, and is not written by this step; \`git status\`, read as the rules of this plan allow; write the report with the files changed, each case added, each new plant with its key and its CAUGHT line, each check's exit code and any find reworded, each stale plant re-pointed or named with its file, each line named for the landing step, and each finding's change in one line. Observe: the step's cases pass, each in a run of its own, every new plant reads CAUGHT, the three checks name no find in a line the step wrote, the files this step owns are changed and nothing else by this step, nothing is staged or committed. Kill: a red run of a case of its own ends it FAILED with its lines and nothing written after but the report; a part of its own that cannot be made or proved without a line in a file it does not own ends it EJECT naming the lines; a refusal of a command by a guard or by the harness's permission check ends it REFUSED with the refusal's words, nothing further done and no other route tried. Report \`progress/step-${n}-report.txt\` (new); ${SEND_REPORT}. Estimate ${groupEst[i]} min.`);
     L();
   });
   // The plan's last landing step pulls the live clone; a landing step of an earlier round leaves it as it is and does not record the measure.
@@ -926,6 +959,10 @@ function batchWave(o) {
   L(`- ${MOVABLE} the next free program key: P-${nextP}`);
   L(`- ${MOVABLE} the next free found key: Q-HUB-${hubMax + 1}${remoteNote}`);
   L(`- ${MOVABLE} the next free lesson number: ${lessonMax + 1}`);
+  if (notPlaced.length) {
+    L();
+    L(`NOT PLACED, for the plan's writer to place, because no step of this print owns a file for ${notPlaced.length === 1 ? 'it' : 'them'}: ${notPlaced.map((f) => `${f.key} (item ${f.item})`).join(', ')}.`);
+  }
   return { ok: true, text: `${out.join('\n')}\n` };
 }
 

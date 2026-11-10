@@ -169,7 +169,7 @@ export const cases = [
     },
   },
   {
-    name: 'step 131: the batch print groups the findings by file with a seam in both steps, gives a finding that names no file a step of its own, runs the file steps after the take-up and together, adds one commit step, computes the Cost from the estimates, and carries the standing lines of a parallel batch, the index row of the close and the device line',
+    name: 'step 131: the batch print groups the findings by file with a seam in both steps, gives a finding that names no file no step and lists its key after the plan\'s end, runs the file steps after the take-up and together, adds one commit step, computes the Cost from the estimates, and carries the standing lines of a parallel batch, the index row of the close and the device line',
     guards: ['batch_after_parallel', 'batch_landing_after', 'batch_order_landing', 'batch_no_file_own', 'batch_seam_out', 'batch_seam_in', 'batch_case_file', 'batch_landing_step', 'batch_parallel_rules', 'batch_cost_agent', 'batch_cost_wall',
       'batch_wave_cap', 'batch_wave_header', 'batch_wave_home', 'batch_wave_switch',
       'tpl_close_index', 'tpl_review_resend', 'tpl_commit_red_case', 'tpl_commit_by_path', 'tpl_rule_no_bg', 'tpl_device_line', 'tpl_push_landing', 'tpl_commit_step_text'],
@@ -180,29 +180,29 @@ export const cases = [
       const r = h.batchRun(dir, hub, []);
       const t = `${r.stdout}${r.stderr}`;
       const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
-      const [alpha, beta, none, landing] = [2, 3, 4, 5].map(step);
+      const [alpha, beta, landing] = [2, 3, 4].map(step);
+      const afterEnd = t.split('==== THE PLAN ENDS ABOVE THIS LINE ====')[1] ?? '';
       const cost = (t.split('\n## Cost\n\n')[1] ?? '').split('\n')[0];
       const single = `${h.seedRun(dir, h.seedHub(dir), ['--item', 'P-3']).stdout}`;
       const rows = [
-        ['the Order and the After line run the three file steps after the take-up and together and the one landing step after all three, with no commit step and no close step apart from it', t.includes('\nOrder: 1 2 3 4 5\n') && t.includes('\nStanding: 6\n')
-          && t.includes('\nAfter: 2 after 1; 3 after 1; 4 after 1; 5 after 2 3 4\n') && !t.includes('Committed, proved and landed') && !/\n\d+\. \*\*Closed in the program/.test(t), t.slice(t.indexOf('## Order'), t.indexOf('## Order') + 300)],
-        ['the findings are grouped by file, and the finding that names no file has a step of its own', alpha.startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13, Q-HUB-15.') && beta.startsWith('Put right in `beta.mjs`: Q-HUB-14.')
-          && none.startsWith('Put right in the files each names: Q-HUB-12.'), `${alpha.slice(0, 80)} | ${beta.slice(0, 80)} | ${none.slice(0, 80)}`],
+        ['the Order and the After line run the two file steps after the take-up and together and the one landing step after both, with no commit step and no close step apart from it', t.includes('\nOrder: 1 2 3 4\n') && t.includes('\nStanding: 5\n')
+          && t.includes('\nAfter: 2 after 1; 3 after 1; 4 after 2 3\n') && !t.includes('Committed, proved and landed') && !/\n\d+\. \*\*Closed in the program/.test(t), t.slice(t.indexOf('## Order'), t.indexOf('## Order') + 300)],
+        ['the findings are grouped by file, and the finding that names no file has no step, its key and item listed after the plan\'s end as not placed', alpha.startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13, Q-HUB-15.') && beta.startsWith('Put right in `beta.mjs`: Q-HUB-14.')
+          && [...t.matchAll(/^\d+\. \*\*Put right in /gm)].length === 2 && /NOT PLACED[^\n]*Q-HUB-12 \(item P-2\)/.test(afterEnd) && !t.split('==== THE PLAN ENDS')[0].includes('NOT PLACED'),
+          `${alpha.slice(0, 80)} | ${beta.slice(0, 80)} | ${afterEnd.slice(-300)}`],
         ['the seam of a finding naming a second file is written into the Facts of the step that holds the finding', beta.includes('Q-HUB-14 names `alpha.mjs` too, which step 2 owns, so this step does not touch it'), beta.slice(0, 900)],
         ['the seam is written into the Facts of the step that owns the second file as well', alpha.includes('step 3 takes up Q-HUB-14, whose text names `alpha.mjs`, which this step owns'), alpha.slice(0, 900)],
-        ['the step of the finding that names no file ends EJECT when a file it must edit is another step\'s, in its Facts and in its Kill', none.includes('names no file of the repository') && none.includes('another step of this plan owns ends it EJECT naming the file')
-          && (none.split('Kill:')[1] ?? '').includes('a part of its own that cannot be made or proved without a line in a file it does not own ends it EJECT'), none.slice(0, 900)],
         ['a guard file has its own case file named for it, new where the folder has none', alpha.includes('its own case file `guard-cases/alpha.mjs`') && !alpha.includes('`guard-cases/alpha.mjs` (new)') && beta.includes('`guard-cases/beta.mjs` (new)'), `${alpha.slice(0, 300)} | ${beta.slice(0, 300)}`],
-        ['no file step commits, stages or pushes', [alpha, beta, none].every((s) => s.includes('commits nothing and stages nothing') && !s.includes('git push origin main')), alpha.slice(0, 400)],
+        ['no file step commits, stages or pushes', [alpha, beta].every((s) => s.includes('commits nothing and stages nothing') && !s.includes('git push origin main')), alpha.slice(0, 400)],
         ['one landing step follows the file steps and names their number, their guard files and one commit for each, and no step is titled as a commit step', t.split('Landed once').length === 2 && landing.startsWith('Landed once')
-          && landing.includes('steps 2 to 4 left their edits uncommitted') && landing.includes('the files being `alpha.mjs`, `beta.mjs`') && landing.includes('one commit for each of steps 2 to 4 in that order, nothing staged beforehand'), landing.slice(0, 700)],
+          && landing.includes('steps 2 to 3 left their edits uncommitted') && landing.includes('the files being `alpha.mjs`, `beta.mjs`') && landing.includes('one commit for each of steps 2 to 3 in that order, nothing staged beforehand'), landing.slice(0, 700)],
         ['the landing step writes an index row for each lesson in the shape the index\'s rows hold', landing.includes('add one index row for it in `LESSONS.md` in the shape the index\'s rows hold'), landing.slice(0, 200)],
-        ['the Cost counts the steps and the pushes, and the forced turns are the file steps plus two', cost.includes('The 5 steps (3 file steps run at the same time') && cost.includes('2 pushes are made, one each by the take-up and the landing step') && cost.includes('5 forced turns of the stop hook'), cost],
-        ['the Cost sums the estimates for the agent time', cost.includes('Agent time is the sum of the steps\' estimates, 110 min'), cost],
-        ['the Cost takes the wall time as the take-up, the longest file step and the landing step', cost.includes('the longest file step and the landing step, 70 min.'), cost],
+        ['the Cost counts the steps and the pushes, and the forced turns are the file steps plus two', cost.includes('The 4 steps (2 file steps run at the same time') && cost.includes('2 pushes are made, one each by the take-up and the landing step') && cost.includes('4 forced turns of the stop hook'), cost],
+        ['the Cost sums the estimates for the agent time', cost.includes('Agent time is the sum of the steps\' estimates, 85 min'), cost],
+        ['the Cost takes the wall time as the take-up, the longest file step and the landing step', cost.includes('the longest file step and the landing step, 65 min.'), cost],
       ];
       const lines = [
-        ['the file steps run at the same time in the one working copy', 'The file steps, 2 to 4, run at the same time in the one working copy'],
+        ['the file steps run at the same time in the one working copy', 'The file steps, 2 to 3, run at the same time in the one working copy'],
         ['a review for a resend goes only when no agent edits the working copy', 'A review for a resend of a file step is sent only when no agent is editing the working copy'],
         ['the landing step puts an existing case turned red right in the owning step\'s file', 'the landing step puts the code right in the owning step\'s file and keeps the finding\'s fix'],
         ['commits name their own files after the message with nothing staged beforehand', 'stages nothing beforehand and names each commit\'s own files after the message'],
@@ -230,12 +230,12 @@ export const cases = [
         && w1.split('\n')[1].includes('leaves 1 of the 8 groups') && w1.split('\n')[1].includes('--wave 2') && !w1.includes('Put right in `f8.mjs`') && w1.includes('\nOrder: 1 2 3 4 5 6 7 8 9\n'), w1.split('\n').slice(0, 2).join(' | ')]);
       rows.push(['wave 2 prints the group wave 1 left', titles(w2).join(',') === 'f8' && w2.split('\n')[0].includes('in 1 group step,') && w2.split('\n')[1].includes('leaves 0 of the 8 groups'), w2.split('\n').slice(0, 2).join(' | ')]);
       rows.push(['two groups of one file never share a wave: a size of one leaves the second run of the file for the next wave', titles(sz).filter((x) => x === 'f1').length === 1 && titles(sz).length === 7 && sz.split('\n')[1].includes('leaves 2 of the 9 groups'), `${titles(sz)} ${sz.split('\n')[1]}`]);
-      // Two findings that name no file are two steps, never one step that holds both.
+      // Findings that name no file get no step, and a batch of nothing else prints no plan and names them.
       const nf = h.seedHub(dir);
       writeFileSync(join(nf, 'PROGRAM.md'), `${head}\n${[1, 2].map(entry).join('\n')}`);
       for (const n of [1, 2]) writeFileSync(join(nf, 'found', `Q-HUB-2${n}.md`), `Q-HUB-2${n}: a planted finding that names no file of the repository.\n`);
-      const nfo = h.batchRun(dir, nf, []).stdout;
-      rows.push(['two findings naming no file are two steps of their own', [...nfo.matchAll(/^\d+\. \*\*Put right in the files each names: (Q-HUB-2\d)\./gm)].map((x) => x[1]).join(',') === 'Q-HUB-21,Q-HUB-22', nfo.split('\n')[0]]);
+      const nfr = h.batchRun(dir, nf, []);
+      rows.push(['findings naming no file get no step: a batch of nothing else prints no plan and names them', nfr.status === 1 && !nfr.stdout.includes('PLAN STARTS') && nfr.stdout.includes('is not placed (Q-HUB-21, Q-HUB-22)'), nfr.stdout]);
       return h.assertAll(rows);
     },
   },
@@ -367,7 +367,7 @@ export const cases = [
         ['batch: the take-up only claims, adds no entry, runs no check and leaves the live clone as it is', b.includes('it adds no entry, touches no count line, runs no check and leaves the live clone as it is'), b.slice(0, 900)],
         ['batch: the take-up carries no pull of the live clone and no read of its head', !b.includes('pull origin main') && !b.includes('rev-parse HEAD') && b.includes(left), b.slice(-900)],
         ['batch: the take-up names in its report the key each entry carries wherever it is not the printed one', b.includes('so the step names in its report the key each entry carries wherever it is not the printed one'), b.slice(0, 900)],
-        ['batch: the take-up finds the entries by the five finding keys', keys.split(', ').sort().join(',') === 'Q-HUB-11,Q-HUB-12,Q-HUB-13,Q-HUB-14,Q-HUB-15', keys],
+        ['batch: the take-up finds the entries by the four finding keys', keys.split(', ').sort().join(',') === 'Q-HUB-11,Q-HUB-13,Q-HUB-14,Q-HUB-15', keys],
         ['batch: the take-up says the plan\'s title is written with no phrase the third-person check refuses', b.includes('the plan\'s title is copied whole into each entry, so the title is written with no phrase the third-person check refuses'), b.slice(0, 900)],
         ['single: the take-up carries no pull of the live clone and no read of its head', !s.includes('pull origin main') && !s.includes('rev-parse HEAD') && s.includes(left), s.slice(-900)],
         ['single: the take-up names in its report the key the entry carries wherever it is not the printed one', s.includes('so the step reads the key the entry carries and names it in its report wherever it is not the printed one'), s.slice(0, 900)],
@@ -397,7 +397,7 @@ export const cases = [
         ['single: the close step reads the item\'s key from the program at the time of use', close.includes("the item's key is read from the program at the time of use and not from this plan's text"), close.slice(0, 1500)],
         ['batch: the landing step runs the plants of every file the steps edited, the suite file and each doctrine page among them', landing.includes('the plants of every file the steps edited are run here, the suite file and each doctrine page among them'), landing.slice(0, 1500)],
         ['batch: the landing step runs the new plants of a long file by key', landing.includes('then the new plants of the long files that the reports name, by key in one run'), landing.slice(0, 2500)],
-        ['batch: the landing step runs the checks before the first commit and again over the close', landing.includes('then the checks again, once each, each exit code read') && landing.includes('then one commit for each of steps 2 to 4 in that order'), landing.slice(0, 2500)],
+        ['batch: the landing step runs the checks before the first commit and again over the close', landing.includes('then the checks again, once each, each exit code read') && landing.includes('then one commit for each of steps 2 to 3 in that order'), landing.slice(0, 2500)],
         ['batch: the landing step makes one close commit naming the close\'s files', landing.includes('one commit made with `git commit -m` naming the close\'s files after a reader-facing message saying the wave is closed'), landing.slice(-900)],
       ]);
     },
@@ -498,9 +498,9 @@ export const cases = [
       const [s, b] = [body(single), body(batch)];
       return h.assertAll([
         ['single: the Findings passed in line names step 3 as the close step', section(s, 'Findings passed in').includes('which step 3, the close step, files in the found folder'), section(s, 'Findings passed in')],
-        ['batch: the Findings passed in line names step 5 as the landing step and no close step', section(b, 'Findings passed in').includes('which step 5, the landing step, files in the found folder') && !section(b, 'Findings passed in').includes('close step'), section(b, 'Findings passed in')],
+        ['batch: the Findings passed in line names step 4 as the landing step and no close step', section(b, 'Findings passed in').includes('which step 4, the landing step, files in the found folder') && !section(b, 'Findings passed in').includes('close step'), section(b, 'Findings passed in')],
         ['single: the Verification line names step 3 as the close step', section(s, 'Verification').includes('The report of step 3, the close step, names each key it filed beside the line it came from'), section(s, 'Verification')],
-        ['batch: the Verification line names step 5 as the landing step and no close step', section(b, 'Verification').includes('The report of step 5, the landing step, names each key it filed beside the line it came from') && !section(b, 'Verification').includes('close step'), section(b, 'Verification')],
+        ['batch: the Verification line names step 4 as the landing step and no close step', section(b, 'Verification').includes('The report of step 4, the landing step, names each key it filed beside the line it came from') && !section(b, 'Verification').includes('close step'), section(b, 'Verification')],
         ['single: the Cost names the take-up step and the close step by number', section(s, 'Cost').includes("one by step 1, the take-up step, and one by step 3, the close step, each rebased onto the remote's head"), section(s, 'Cost')],
         ['batch: no step of the print is titled as the close', !/\n\d+\. \*\*Closed in the program/.test(b), b.slice(0, 200)],
       ]);
@@ -538,7 +538,7 @@ export const cases = [
       const r2 = h.batchRun(dir, hub, ['--size', '2', '--rounds', '2']);
       const t = `${r2.stdout}${r2.stderr}`;
       const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
-      const [takeup, alpha1, beta, none, land1, alpha2, land2] = [1, 2, 3, 4, 5, 6, 7].map(step);
+      const [takeup, alpha1, beta, land1, alpha2, land2] = [1, 2, 3, 4, 5, 6].map(step);
       const plan = (args) => { const x = h.batchRun(dir, hub, args).stdout; return (x.split('==== THE PLAN STARTS BELOW THIS LINE ====')[1] ?? x).split('==== THE PLAN ENDS ABOVE THIS LINE ====')[0]; };
       const base = plan(['--size', '2']);
       const one = plan(['--size', '2', '--rounds', '1']);
@@ -566,27 +566,109 @@ export const cases = [
       const names = h.repo({ 'names.txt': 'node --format --pretty Next:\n' });
       const checked = spawnSync('node', [join(hub, 'plan-guard.mjs'), '--check', planFile], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: names.dir } });
       return h.assertAll([
-        ['one take-up claims the items of both rounds', t.split('Taken up: ').length === 2 && ['P-1', 'P-2', 'P-3', 'P-4', 'P-5'].every((i) => takeup.split(' set to planned')[0].includes(i)) && takeup.includes('Q-HUB-15'), takeup.slice(0, 500)],
-        ['the Order runs the second round after the landing step of the first, and the Standing step follows both', t.includes('\nOrder: 1 2 3 4 5 6 7\n') && t.includes('\nStanding: 8\n')
-          && t.includes('\nAfter: 2 after 1; 3 after 1; 4 after 1; 5 after 2 3 4; 6 after 5; 7 after 6\n'), t.slice(t.indexOf('## Order'), t.indexOf('## Order') + 300)],
-        ['the Served by line names the file steps and the landing step of each round', served.includes('steps 2 to 4 serve goal 1; step 5 serves goals 1, 5 and 6; step 6 serves goal 1; step 7 serves goals 1, 5 and 6; step 8 serves goals 3, 5 and 6.'), served],
-        ['each round holds its own file steps and landing step, the numbers running on', alpha1.startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13.') && beta.startsWith('Put right in `beta.mjs`: Q-HUB-14.') && none.startsWith('Put right in the files each names: Q-HUB-12.')
+        ['one take-up claims the items of both rounds and not the item of the finding that names no file', t.split('Taken up: ').length === 2 && ['P-1', 'P-3', 'P-4', 'P-5'].every((i) => takeup.split(' set to planned')[0].includes(i)) && !takeup.split(' set to planned')[0].includes('P-2') && takeup.includes('Q-HUB-15'), takeup.slice(0, 500)],
+        ['the Order runs the second round after the landing step of the first, and the Standing step follows both', t.includes('\nOrder: 1 2 3 4 5 6\n') && t.includes('\nStanding: 7\n')
+          && t.includes('\nAfter: 2 after 1; 3 after 1; 4 after 2 3; 5 after 4; 6 after 5\n'), t.slice(t.indexOf('## Order'), t.indexOf('## Order') + 300)],
+        ['the Served by line names the file steps and the landing step of each round', served.includes('steps 2 to 3 serve goal 1; step 4 serves goals 1, 5 and 6; step 5 serves goal 1; step 6 serves goals 1, 5 and 6; step 7 serves goals 3, 5 and 6.'), served],
+        ['each round holds its own file steps and landing step, the numbers running on', alpha1.startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13.') && beta.startsWith('Put right in `beta.mjs`: Q-HUB-14.')
           && alpha2.startsWith('Put right in `alpha.mjs`: Q-HUB-15.') && land1.startsWith('Landed once for its round') && land2.startsWith('Landed once: every edit'), `${alpha1.slice(0, 60)} | ${alpha2.slice(0, 60)} | ${land1.slice(0, 60)} | ${land2.slice(0, 60)}`],
-        ['each step names the steps of its own round', alpha1.includes('run at the same time as steps 3, 4') && alpha1.includes("The landing step, step 5, lands this step's edits") && alpha2.includes("The landing step, step 7, lands this step's edits")
-          && !alpha2.includes('run at the same time as') && land1.includes('steps 2 to 4 left their edits uncommitted') && land2.includes('steps 6 to 6 left their edits uncommitted'), alpha2.slice(0, 300)],
-        ['only the last landing step pulls the live clone, and the earlier one says it is left as it is', [takeup, alpha1, beta, none, land1, alpha2].every((s) => !s.includes('pull origin main')) && land2.includes('git -C /root/.claude/hub pull origin main')
+        ['each step names the steps of its own round', alpha1.includes('run at the same time as step 3') && alpha1.includes("The landing step, step 4, lands this step's edits") && alpha2.includes("The landing step, step 6, lands this step's edits")
+          && !alpha2.includes('run at the same time as') && land1.includes('steps 2 to 3 left their edits uncommitted') && land2.includes('steps 5 to 5 left their edits uncommitted'), alpha2.slice(0, 300)],
+        ['only the last landing step pulls the live clone, and the earlier one says it is left as it is', [takeup, alpha1, beta, land1, alpha2].every((s) => !s.includes('pull origin main')) && land2.includes('git -C /root/.claude/hub pull origin main')
           && land1.includes("the live clone is left as it is, because the plan's last landing step brings it forward when no other step is running"), land1.slice(-500)],
-        ['the Found answered section names the step of each round', ['Q-HUB-11 fixed in step 2:', 'Q-HUB-14 fixed in step 3:', 'Q-HUB-12 fixed in step 4:', 'Q-HUB-15 fixed in step 6:'].every((x) => fa.includes(`- ${x}`)), fa],
-        ['the Cost counts each round and one push for the take-up and one for each round', cost.includes('The 7 steps (4 file steps, run at the same time within their 2 rounds, with the take-up and the 2 landing steps)')
-          && cost.includes('round 1 sends its 3 file steps at once and then its landing step, step 5; round 2 sends its 1 file step at once and then its landing step, step 7')
-          && cost.includes('3 pushes are made, one by the take-up and one by the landing step of each round') && cost.includes('7 forced turns of the stop hook'), cost],
-        ['the standing rules name the file steps of each round', t.includes('The file steps, 2 to 4, run at the same time in the one working copy') && t.includes('The file steps, 6 to 6, run at the same time in the one working copy'), t.slice(0, 300)],
-        ['the header names the rounds and the groups of both', t.split('\n')[0].includes('in 4 group steps') && t.split('\n')[1].includes('This is 2 rounds of one plan, waves 1 to 2 of 2') && t.split('\n')[1].includes('leaves 0 of the 4 groups'), t.split('\n').slice(0, 2).join(' | ')],
-        ['with the rounds switch absent or one the print is the print of one wave', one === base && base.includes('\nOrder: 1 2 3 4 5\n') && !base.includes('Landed once for its round'), base.slice(0, 200)],
+        ['the Found answered section names the step of each round and marks the finding that names no file as no fix of this plan', ['Q-HUB-11 fixed in step 2:', 'Q-HUB-14 fixed in step 3:', 'Q-HUB-15 fixed in step 5:'].every((x) => fa.includes(`- ${x}`)) && !fa.includes('Q-HUB-12 fixed'), fa],
+        ['the Cost counts each round and one push for the take-up and one for each round', cost.includes('The 6 steps (3 file steps, run at the same time within their 2 rounds, with the take-up and the 2 landing steps)')
+          && cost.includes('round 1 sends its 2 file steps at once and then its landing step, step 4; round 2 sends its 1 file step at once and then its landing step, step 6')
+          && cost.includes('3 pushes are made, one by the take-up and one by the landing step of each round') && cost.includes('6 forced turns of the stop hook'), cost],
+        ['the standing rules name the file steps of each round', t.includes('The file steps, 2 to 3, run at the same time in the one working copy') && t.includes('The file steps, 5 to 5, run at the same time in the one working copy'), t.slice(0, 300)],
+        ['the header names the rounds and the groups of both', t.split('\n')[0].includes('in 3 group steps') && t.split('\n')[1].includes('This is 2 rounds of one plan, waves 1 to 2 of 2') && t.split('\n')[1].includes('leaves 0 of the 3 groups'), t.split('\n').slice(0, 2).join(' | ')],
+        ['with the rounds switch absent or one the print is the print of one wave', one === base && base.includes('\nOrder: 1 2 3 4\n') && !base.includes('Landed once for its round'), base.slice(0, 200)],
         ...bad.map(([v, x]) => [`a rounds value of ${v} prints no plan`, x.status === 1 && x.stdout.includes('--rounds takes a whole number from one to five') && !x.stdout.includes('PLAN STARTS'), x.stdout]),
         ['more rounds than waves print no plan', few.status === 1 && few.stdout.includes('3 rounds are asked for and 2 waves remain from wave 1') && !few.stdout.includes('PLAN STARTS'), few.stdout],
         ['rounds from a later wave print no plan when too few waves remain', late.status === 1 && late.stdout.includes('2 rounds are asked for and 1 wave remains from wave 2'), late.stdout],
         ['the print of two rounds with its placeholders filled passes the plan check', checked.status === 0, `check status ${checked.status}: ${String(checked.stdout).split('\n').filter((l) => /^\d+\. [A-Z]/.test(l)).map((l) => l.slice(0, 260)).join(' // ')}`],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-434 (the seed\'s half): the seed\'s usage text names every switch the seed reads, the item switch with its three values and the rounds switch with its values among them',
+    guards: ['seed_usage_rounds', 'seed_usage_item'],
+    run(m, dir, h) {
+      const r = spawnSync('node', [join(dir, 'plan-seed.mjs')], { encoding: 'utf8', timeout: 60000, env: { ...process.env, CLAUDE_CODE_SESSION_ID: '' } });
+      const u = `${r.stdout}${r.stderr}`;
+      const code = readFileSync(join(dir, 'plan-seed.mjs'), 'utf8');
+      const read = [...new Set([...code.matchAll(/\bval\('(--[a-z]+)'\)/g)].map((x) => x[1]))];
+      const missing = read.filter((s) => !u.includes(s));
+      return h.assertAll([
+        ['no switch prints the usage and exits 1', r.status === 1 && u.startsWith('usage: node plan-seed.mjs'), u],
+        ['the usage names the item switch with its three values', u.includes('--item <P-key | next | new>'), u],
+        ['the usage names the rounds switch with its values', u.includes('[--rounds <1 to 5>]'), u],
+        ['the usage names each other switch of the batch print', ['--size <n>', '--steps <n>', '--wave <n>', '--repo <full path>', '--plan <path>', '--hub <full path>', '--out <path>'].every((s) => u.includes(`[${s}]`)), u],
+        ['every switch the seed reads is named in the usage', read.length >= 8 && missing.length === 0, `read ${read.join(' ')}; missing ${missing.join(' ')}`],
+      ]);
+    },
+  },
+  {
+    name: 'the four lines of a finding\'s file: the batch print reads the last line that opens with Put right already, Fix in, Not the repository\'s or Not placed, takes the files a Fix in line names first, leaves a finding with the first or the third out of every batch and names it in the header, gives a finding with the fourth or with no file no step and lists its key after the plan\'s end, and prints no plan when nothing else is left',
+    guards: ['seed_line_last', 'seed_fixin_files', 'seed_left_out', 'seed_left_header', 'seed_unplaced', 'batch_no_file_own', 'seed_not_placed_list', 'seed_all_left_refused'],
+    run(m, dir, h) {
+      const keys = ['Q-HUB-21', 'Q-HUB-22', 'Q-HUB-23', 'Q-HUB-24', 'Q-HUB-25', 'Q-HUB-26'];
+      const hub = plantedHub(h, dir, { files: ['a.mjs', 'b.mjs', 'c.mjs', 'd.mjs'], caseFiles: {}, findings: keys.map((k) => [k, 'a planted finding']) });
+      const texts = {
+        'Q-HUB-21': 'a planted finding about `a.mjs`.\n\nFix in: `b.mjs`, `c.mjs`. A planted change.\n',
+        'Q-HUB-22': 'a planted finding about `a.mjs`.\n\nPut right already: "a planted line" in `a.mjs`. A planted holder.\n',
+        'Q-HUB-23': 'a planted finding about `d.mjs`.\n\nNot the repository\'s: a planted behaviour of the harness.\n',
+        'Q-HUB-24': 'a planted finding about `d.mjs`.\n\nNot placed: a planted search found no file.\n',
+        'Q-HUB-25': 'a planted finding that names no file at all.\n',
+        'Q-HUB-26': 'a planted finding about `a.mjs`.\n\nFix in: `d.mjs`. A first planted change.\nFix in: `a.mjs`. A second planted change.\n',
+      };
+      for (const [k, v] of Object.entries(texts)) writeFileSync(join(hub, 'found', `${k}.md`), `${k}: ${v}`);
+      const r = h.batchRun(dir, hub, []);
+      const t = `${r.stdout}${r.stderr}`;
+      const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
+      const head = t.split('\n');
+      const [takeup, first, second, landing] = [1, 2, 3, 4].map(step);
+      const afterEnd = t.split('==== THE PLAN ENDS ABOVE THIS LINE ====')[1] ?? '';
+      const body = t.split('==== THE PLAN ENDS ABOVE THIS LINE ====')[0];
+      const onlyLeft = plantedHub(h, dir, { files: ['a.mjs'], caseFiles: {}, findings: [['Q-HUB-21', 'x'], ['Q-HUB-22', 'x']] });
+      writeFileSync(join(onlyLeft, 'found', 'Q-HUB-21.md'), 'Q-HUB-21: a planted finding about `a.mjs`.\n\nPut right already: "a planted line" in `a.mjs`. A planted holder.\n');
+      writeFileSync(join(onlyLeft, 'found', 'Q-HUB-22.md'), 'Q-HUB-22: a planted finding about `a.mjs`.\n\nNot placed: a planted search found no file.\n');
+      const none = h.batchRun(dir, onlyLeft, []);
+      return h.assertAll([
+        ['the print is made', r.status === 0, t.slice(0, 300)],
+        ['the Fix in line of the first finding makes its file the home, ahead of the file its text names first', first.startsWith('Put right in `b.mjs`: Q-HUB-21.'), first.slice(0, 200)],
+        ['the last of two Fix in lines is the one read', second.startsWith('Put right in `a.mjs`: Q-HUB-26.'), second.slice(0, 200)],
+        ['the file steps are the two groups and the landing step follows them', t.includes('\nOrder: 1 2 3 4\n') && landing.startsWith('Landed once'), t.slice(t.indexOf('## Order'), t.indexOf('## Order') + 200)],
+        ['the take-up claims the two findings of the two steps and no other', takeup.split(' set to planned')[0] === 'Taken up: P-1, P-6', takeup.slice(0, 200)],
+        ['no file step holds a finding left out or given no step', ![22, 23, 24, 25].some((n) => `${first}${second}`.includes(`Q-HUB-${n}`)), `${first.slice(0, 120)} | ${second.slice(0, 120)}`],
+        ['the header counts and names the findings left out as put right already or not the repository\'s', head[1].startsWith('This is wave 1 of 1') && head[2].startsWith('2 open findings are left out of every batch') && head[2].includes('Q-HUB-22, Q-HUB-23.'), head.slice(0, 3).join(' | ')],
+        ['no finding left out or given no step is marked fixed in this plan', !/- Q-HUB-2[2345] fixed/.test(t), t.slice(t.indexOf('## Found answered'), t.indexOf('## Found answered') + 500)],
+        ['the findings with a Not placed line and with no file are listed after the plan\'s end as not placed, and nowhere in the plan', /NOT PLACED[^\n]*Q-HUB-24 \(item P-4\), Q-HUB-25 \(item P-5\)/.test(afterEnd) && !body.includes('NOT PLACED'), afterEnd.slice(-300)],
+        ['a batch of findings all left out or not placed prints no plan and names them', none.status === 1 && !none.stdout.includes('PLAN STARTS') && none.stdout.includes('left out of every batch (Q-HUB-21) or is not placed (Q-HUB-22), so there is no batch to print'), none.stdout],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-435 (the seed\'s half): every print carries the rule that a step changing what a guard refuses or passes searches the suite file and the case files for the cases that hold the old behaviour and names each for the landing step, the landing steps bring each case so named to the fix before the whole suite runs, and the steps that file findings end each file in the found folder with the finding\'s line',
+    guards: ['tpl_rule_changed_guard', 'tpl_land_cases_first', 'tpl_found_line'],
+    run(m, dir, h) {
+      const single = `${h.seedRun(dir, h.seedHub(dir), ['--item', 'P-3']).stdout}`;
+      const batch = `${h.batchRun(dir, h.batchHub(dir), []).stdout}`;
+      const rounds = `${h.batchRun(dir, h.batchHub(dir), ['--size', '2', '--rounds', '2']).stdout}`;
+      const line = (t, re) => re.exec(t)?.[0] ?? '';
+      const rule = 'A step that changes what a guard refuses or passes, or what the seed prints, searches `session-guards.test.mjs` and the files under `guard-cases/` with Grep for the words and the status codes the old behaviour produced and for the cases that assert it; a case it finds in a file it owns is brought to the fix there, and one in another file is named in its report, with the file and the exact edit, for the landing step.';
+      const brought = 'each case a report names as holding the old behaviour of a guard or a print a step changed brought to the fix there before the whole suite runs';
+      const ends = 'each file written in the found folder ends, after one empty line, with one line of the finding\'s own kind, told by its opening words and a colon: Fix in, then the names in code spans of the files of the repository the fix sits in, the guard or the page first and four at most, a full stop and one sentence saying the change; or Not the repository\'s, then one sentence saying whose the behaviour is; or, where the Found line names no file and none can be told, Not placed, then one sentence saying what was searched for';
+      const close = line(single, /\n\d+\. \*\*Closed in the program[^\n]*/);
+      const land = line(batch, /\n\d+\. \*\*Landed once: every[^\n]*/);
+      const round = line(rounds, /\n\d+\. \*\*Landed once for its round[^\n]*/);
+      return h.assertAll([
+        ['single: the rules of the plan carry the rule on a changed guard', single.includes(rule), single.slice(0, 300)],
+        ['batch: the rules of the plan carry the rule on a changed guard', batch.includes(rule), batch.slice(0, 300)],
+        ['single: the close step ends each file in the found folder with the finding\'s line', close.includes(ends), close.slice(0, 300)],
+        ['batch: the landing step brings each case so named to the fix before the whole suite runs', land.includes(brought), land.slice(0, 300)],
+        ['batch: the landing step ends each file in the found folder with the finding\'s line', land.includes(ends), land.slice(0, 300)],
+        ['rounds: the landing step of a round brings each case so named to the fix and ends each file in the found folder with the finding\'s line', round.includes(brought) && round.includes(ends), round.slice(0, 300)],
       ]);
     },
   },
@@ -649,7 +731,7 @@ export const plants = {
   tpl_passed_in: ["for each finding listed in the plan's section Findings passed in", "for each finding listed in the plan's section Notes", 'plans/seed-template.md'],
   // step 131: the batch print's parallel shape
   batch_after_parallel: ['const after = [...gnums.map((n) => `${n} after ${takeup}`),', 'const after = [...gnums.map((n, i) => `${n} after ${i ? gnums[i - 1] : takeup}`),', 'plan-seed.mjs'],
-  batch_no_file_own: ["if (h === '') { for (const f of fs) groups.push({ home: '', list: [f] }); continue; }", '', 'plan-seed.mjs'],
+  batch_no_file_own: ['if (f.putRight || f.left || f.unplaced) continue;', 'if (f.putRight || f.left) continue;', 'plan-seed.mjs'],
   batch_seam_out: ['seamsOut[i].add(', 'seamsOut[i].has(', 'plan-seed.mjs'],
   batch_seam_in: ['seamsIn[j].add(', 'seamsIn[j].has(', 'plan-seed.mjs'],
   batch_case_file: ["? `guard-cases/${x}` : '');", "? '' : '');", 'plan-seed.mjs'],
@@ -740,4 +822,17 @@ export const plants = {
   rounds_review: ['const review = lastLanding + 1;', 'const review = landing + 1;', 'plan-seed.mjs'],
   tpl_landing_round_live: ["the live clone is left as it is, because the plan's last landing step brings it forward when no other step is running, and the measure is recorded there and not here", 'the live clone is pulled', 'plans/seed-template.md'],
   tpl_landing_round_title: ['**Landed once for its round: every edit left', '**Landed once: every edit left', 'plans/seed-template.md'],
+  // the four lines of a finding's file, the seed's usage text and the changed-guard rule of the template: Q-HUB-434 and Q-HUB-435
+  seed_usage_rounds: ['[--wave <n>] [--rounds <1 to 5>] [--repo <full path>] [--plan <path>] [--hub <full path>] [--out <path>]\\n\');', '[--wave <n>] [--repo <full path>] [--plan <path>] [--hub <full path>] [--out <path>]\\n\');', 'plan-seed.mjs'],
+  seed_usage_item: ['--item <P-key | next | new> | --batch', '--item <P-key | next> | --batch', 'plan-seed.mjs'],
+  seed_line_last: ['if (m) found = { kind:', 'if (m && !found) found = { kind:', 'plan-seed.mjs'],
+  seed_fixin_files: ["if (line?.kind === 'fix-in') for (const m of line.rest.matchAll(", "if (false) for (const m of line.rest.matchAll(", 'plan-seed.mjs'],
+  seed_left_out: ["const left = line?.kind === 'put-right' || line?.kind === 'not-repo';", 'const left = false;', 'plan-seed.mjs'],
+  seed_left_header: ['if (leftOut.length) L(', 'if (false) L(', 'plan-seed.mjs'],
+  seed_unplaced: ["const unplaced = !left && !putRight && (line?.kind === 'not-placed' || files.length === 0);", 'const unplaced = false;', 'plan-seed.mjs'],
+  seed_not_placed_list: ['if (notPlaced.length) {\n    L();', 'if (false) {\n    L();', 'plan-seed.mjs'],
+  seed_all_left_refused: ['if (!o.part && !groups.length && !putRight.length) {', 'if (false) {', 'plan-seed.mjs'],
+  tpl_rule_changed_guard: ['searches `session-guards.test.mjs` and the files under `guard-cases/` with Grep for the words and the status codes the old behaviour produced', 'searches `session-guards.test.mjs` for the words the old behaviour produced', 'plans/seed-template.md'],
+  tpl_land_cases_first: ['each case a report names as holding the old behaviour of a guard or a print a step changed brought to the fix there before the whole suite runs', 'nothing else before the whole suite runs', 'plans/seed-template.md'],
+  tpl_found_line: ["each file written in the found folder ends, after one empty line, with one line of the finding's own kind", 'each file written in the found folder holds the finding', 'plans/seed-template.md'],
 };
