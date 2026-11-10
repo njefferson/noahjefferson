@@ -745,7 +745,9 @@ Every item below has actually happened.
  session's page (LESSONS §412). `--plants --files=a.mjs,b.mjs` or `--plants
  --touched` runs only the plants of those guard files, `--dry` lists them, and
  `--case=` narrows the cases; the full run, once, over the integrated change, is
- the gate (LESSONS §413).
+ the gate (LESSONS §413). A case returns through the helper that names the failed
+ assertion, never a bare boolean, and one case lists any that does and is not on
+ its declared list.
 - **A PLAN COMES TO THE BUTTON IN ITS OPTIMIZED SHAPE, AND IS NEVER RESHAPED BY
  THE OWNER'S ASK.** The seed prints the shape and the plans page states the
  procedure: a take-up that only claims and runs alone and first, file steps
@@ -1270,9 +1272,9 @@ existing.
 
 - [`PROGRAM.md`](PROGRAM.md) — the ranked list of every item of work across the hub and the apps, with each item's goal, acceptance, dependencies, state and plan; a plan serves one item and its close writes the item's state.
 - [`CONFIG.md`](CONFIG.md) — the baseline of every configuration item with its state and the item of the program that may change it; a drift found is a finding.
-- [`found/`](found/) — one file per finding, keyed `Q-HUB-N`, so two sessions never edit one file; the closing check reads its keys.
+- [`found/`](found/) — one file per finding, keyed `Q-HUB-N`, so two sessions never edit one file; the closing check reads its keys. A file may end with one line of four kinds, told by its opening words and a colon: Put right already, Fix in, Not the repository's, Not placed.
 - [`doctrine/`](doctrine/) — the doctrine in three files: `never.md` read at every start, `plans.md` read at the entry to plan mode, `apps.md` read where an item points at it; `DOCTRINE.md` is their index.
-- [`plan-seed.mjs`](plan-seed.mjs) — prints the record into a plan at the write, in the plan's own shape (item entry and its own dependency line, goals, rules version, standing text from `plans/seed-template.md`, found keys, movable reads marked); `node plan-seed.mjs --item <P-key or next>`, run once by the dispatcher at the entry to plan mode (the word new in place of the key prints the entry's form under the next free key, for work with no entry yet); `--batch` (new) prints the repository's open findings as one plan grouped by the file each names, and the dispatcher prints it when the next open item is a finding; `--batch --rounds <1 to 5>` prints that many waves as rounds of one plan, and the manager notes name the item and the rounds (Doctrine §0e rule 4).
+- [`plan-seed.mjs`](plan-seed.mjs) — prints the record into a plan at the write, in the plan's own shape (item entry and its own dependency line, goals, rules version, standing text from `plans/seed-template.md`, found keys, movable reads marked); `node plan-seed.mjs --item <P-key or next>`, run once by the dispatcher at the entry to plan mode (the word new in place of the key prints the entry's form under the next free key, for work with no entry yet); `--batch` (new) prints the repository's open findings as one plan grouped by the file each names, and the dispatcher prints it when the next open item is a finding; `--batch --rounds <1 to 5>` prints that many waves as rounds of one plan, and the manager notes name the item and the rounds (Doctrine §0e rule 4). The seed reads a finding's last line of the four kinds: Fix in groups it by the files named, Put right already and Not the repository's leave it out of the batch, and Not placed gets no step and is listed as not placed.
 
 **AND THE WIRING IS SHARED NOW TOO, WHICH IT WAS NOT.**
 [`.github/workflows/hub-gates.yml`](.github/workflows/hub-gates.yml) is a

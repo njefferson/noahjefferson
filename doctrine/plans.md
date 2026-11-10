@@ -399,7 +399,9 @@ every rule below while none of the hooks that enforce them was running
    move, each marked, so a step reads those at the time of use; the hub's open
    findings are printed as a batch grouped by file (`--batch`). The manager notes
    may name the item to seed, a program key or the word `new` for work with no
-   entry yet, and a number of rounds from one to five (Q-HUB-404).
+   entry yet, and a number of rounds from one to five (Q-HUB-404). The seed run
+   by hand takes the batch print with `--rounds` and one digit from one to five,
+   and the manager fence and the plan guard pass that line (Q-HUB-434).
    **The planning procedure a session follows before any plan goes up.** (a) What
    is: read from the record, the files and the remote's head, never remembered.
    (b) What should be: the owner's goal in the program's rank. (c) Why: the cause
@@ -415,7 +417,9 @@ every rule below while none of the hooks that enforce them was running
    at once (up to seven, and the After line says so), each makes its edits, checks
    each new assertion against the code it calls, runs the third-person, privacy and
    quote checks, its own cases, its new plants by key and the dry listing of its
-   files, and commits nothing. Each guard a step edits has its own case file under
+   files, and commits nothing. A file step that changes what a guard refuses or
+   passes searches the suite file and the case files for the cases that hold the
+   old behaviour and names each for the landing step. Each guard a step edits has its own case file under
    the guard cases folder. One landing step proves in the foreground, with no run
    in the background: every case, the plants of each edited file (a long file's new
    plants by key, its other plants proved by the runner), the checks, one commit
@@ -831,7 +835,12 @@ made in a container; the comparison stays by hand.
 **One file for each finding, and several sessions on one hub.** A finding is its
 own file in `found/`, keyed `Q-HUB-N`, so two sessions never edit one file, and
 the closing check and the plan check take keys from the folder where it exists.
-The program is appended per app with a pull before every write and an eject on
+A finding's file may end with one line of four kinds, told by its opening words:
+Put right already, Fix in, Not the repository's, or Not placed, each with a colon.
+The seed reads the last such line: Fix in groups the finding by the files it names,
+Put right already and Not the repository's leave it out of every batch, and Not
+placed, or no line and no file named, gives it no step and lists its key as not
+placed. A landing step ends each finding it files with one. The program is appended per app with a pull before every write and an eject on
 conflict, and a newer hub is taken up at the next plan and never in the middle of
 one; those two are not built by the redesign plan, and the next plan's first act,
 the pull of the live clone, begins them. *Held by:* `foundQueue` in

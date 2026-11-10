@@ -36,6 +36,29 @@ export const cases = [
     },
   },
   {
+    name: 'Q-HUB-434: the dispatcher\'s test of the plan seed\'s command and the plan guard\'s copy of it pass the batch print with the rounds switch and one digit from one to five, and refuse a value outside one to five, a value with anything joined to it, no value, a switch spelled another way, and the line chained or with an extra word',
+    guards: ['seed_rounds_dispatch_range', 'seed_rounds_dispatch_accepts'],
+    run(m, dir, h) {
+      const seed = join(dir, 'plan-seed.mjs');
+      const good = [`node ${seed} --batch --rounds 1`, `node ${seed} --batch --rounds 5`, `node ${seed} --rounds 3 --batch`, `node "${seed}" --batch --rounds 2 --size 3 --repo /home/user/x --hub /home/user/y`];
+      const bad = [`node ${seed} --batch --rounds 6`, `node ${seed} --batch --rounds 0`, `node ${seed} --batch --rounds 35`, `node ${seed} --batch --rounds 3x`, `node ${seed} --batch --rounds=3`,
+        `node ${seed} --batch --rounds`, `node ${seed} --batch --rounds three`, `node ${seed} --batch --round 3`, `node ${seed} --rounds 3`, `node ${seed} --batch --rounds 3 extra`,
+        `node ${seed} --batch --rounds 3 && touch /tmp/x`, `node ${seed} --batch --rounds $(touch x)`, `node ${seed} --batch --rounds "3 --out /tmp/x"`];
+      const planMode = (c) => spawnSync('node', [join(dir, 'plan-guard.mjs')], { encoding: 'utf8', env: process.env,
+        input: JSON.stringify({ session_id: 'sd', permission_mode: 'plan', tool_name: 'Bash', tool_input: { command: c }, cwd: h.tmp('sg-cwd-') }) }).status;
+      const bash = (command) => ({ tool_name: 'Bash', tool_input: { command }, session_id: 'sd', cwd: '/' });
+      const opts = { plan: null, classify: () => false, guards: false };
+      return h.assertAll([
+        ['the dispatcher\'s test passes each batch command with the rounds switch', good.every((c) => m.dispatch.isSeedCommand(c)), good.map((c) => m.dispatch.isSeedCommand(c))],
+        ['the dispatcher\'s test refuses each other line', bad.every((c) => !m.dispatch.isSeedCommand(c)), bad.map((c) => m.dispatch.isSeedCommand(c))],
+        ['the plan guard in plan mode passes each batch command with the rounds switch', good.every((c) => planMode(c) === 0), good.map(planMode)],
+        ['the plan guard in plan mode refuses each other line', bad.every((c) => planMode(c) === 2), bad.map(planMode)],
+        ['the check of a call frees each batch command with the rounds switch', good.every((c) => m.dispatch.canCall(bash(c), opts).free === true), good.map((c) => m.dispatch.canCall(bash(c), opts).free)],
+        ['the check of a call does not free any other line', bad.every((c) => m.dispatch.canCall(bash(c), opts).free === false), bad.map((c) => m.dispatch.canCall(bash(c), opts).free)],
+      ]);
+    },
+  },
+  {
     name: 'Q-HUB-282: a plan whose Rules hold its commits for a later landing has to count, in its Cost, the turns the environment\'s stop hook forces; a plan that holds none, and a Cost that counts them, pass',
     guards: ['cost_forced_turns'],
     run(m, dir, h) {
@@ -760,6 +783,8 @@ export const plants = {
   reminder_stop_first_line: ['a stop\\\'s first line is "Stopping here", then paused, pending what lifts it, or finished, nothing pending.', 'what you are doing now.', 'hook-dispatch.mjs'],
   seed_batch_dispatch: [String.raw`--(?:item\\s|batch(?:\\s|$))`, String.raw`--(?:item\\s)`, 'hook-dispatch.mjs'],
   seed_batch_planguard: [String.raw`--(?:item\\s|batch(?:\\s|$))`, String.raw`--(?:item\\s)`, 'plan-guard.mjs'],
+  seed_rounds_dispatch_range: [String.raw`|\\s+--rounds\\s+[1-5](?=\\s|$))+\\s*$`, String.raw`|\\s+--rounds\\s+[1-9](?=\\s|$))+\\s*$`, 'hook-dispatch.mjs'],
+  seed_rounds_dispatch_accepts: [String.raw`|\\s+--rounds\\s+[1-5](?=\\s|$))+\\s*$`, String.raw`)+\\s*$`, 'hook-dispatch.mjs'],
   cost_forced_turns: ["!holds || forced ? ''", "true ? ''", 'hook-dispatch.mjs'],
   tier_switch_record: ['    serving = switchedModel(p, list) ?? serving;', '    void 0;', 'hook-dispatch.mjs'],
   reads_since_approval: ['if (plan && Number.isFinite(plan.approvedAt)) list = list.filter(', 'if (false) list = list.filter(', 'hook-dispatch.mjs'],

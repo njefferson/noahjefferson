@@ -333,7 +333,7 @@ if (tool === 'Bash') {
   // the manager fence reads too); `node` with no --check is refused below, and so is any other line. The test is spelled here and not
   // imported, like the mark above, and a case holds it equal to `isSeedCommand` in hook-dispatch.mjs.
   const seedArg = '(?:"[^"`$\\\\]*"|\'[^\']*\'|[^\\s"\'`$\\\\;&|<>(){}*?\\[\\]!#]+)';
-  const seedFlag = `(?:\\s+--(?:item|repo|plan|steps|size|hub)\\s+${seedArg}|\\s+--batch(?=\\s|$))`;
+  const seedFlag = `(?:\\s+--(?:item|repo|plan|steps|size|hub)\\s+${seedArg}|\\s+--batch(?=\\s|$)|\\s+--rounds\\s+[1-5](?=\\s|$))`;
   const seedLine = new RegExp(`^\\s*node\\s+"?${join(dirname(fileURLToPath(import.meta.url)), 'plan-seed.mjs').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"?(?=${seedFlag}*\\s+--(?:item\\s|batch(?:\\s|$)))${seedFlag}+\\s*$`);
   if (seedLine.test(cmd)) process.exit(0);
   // THE CHECK OF A CALL passes in plan mode (Q-HUB-389 and the refusal of 9 November): `hook-dispatch.mjs --can <tool> <one argument>`, alone, is the

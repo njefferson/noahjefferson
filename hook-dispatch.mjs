@@ -272,12 +272,12 @@ export function isPlanCheck(p, planPath = () => approvedPlan()?.path) {
   return recordPath(absOf(target, p.cwd ? String(p.cwd) : process.cwd()), p, planPath);
 }
 
-// THE PLAN SEED (`plan-seed.mjs`): this hub's script, `--item <key or next>` and the optional `--repo`, `--plan` and `--steps`, each with ONE argument that is a
+// THE PLAN SEED (`plan-seed.mjs`): this hub's script, `--item <key or next>` or `--batch` (with `--rounds` and one digit from 1 to 5, nothing joined to it) and the optional `--repo`, `--plan` and `--steps`, each with ONE argument that is a
 // word of path characters or a quoted string with nothing in it for the shell to expand, and nothing chained. It reads files and prints the record in
 // the plan's own shape and writes nothing, so the manager fence, the check of a call and the status pass pass it as they pass the plan check, in plan
 // mode too, and the plan guard passes the same line (its own copy of this test).
 const SEED = new RegExp('^\\s*node\\s+"?' + join(HUB, 'plan-seed.mjs').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  + '"?(?=(?:\\s+--(?:item|repo|plan|steps|size|hub)\\s+' + CAN_ARG + '|\\s+--batch(?=\\s|$))*\\s+--(?:item\\s|batch(?:\\s|$)))(?:\\s+--(?:item|repo|plan|steps|size|hub)\\s+' + CAN_ARG + '|\\s+--batch(?=\\s|$))+\\s*$');
+  + '"?(?=(?:\\s+--(?:item|repo|plan|steps|size|hub)\\s+' + CAN_ARG + '|\\s+--batch(?=\\s|$)|\\s+--rounds\\s+[1-5](?=\\s|$))*\\s+--(?:item\\s|batch(?:\\s|$)))(?:\\s+--(?:item|repo|plan|steps|size|hub)\\s+' + CAN_ARG + '|\\s+--batch(?=\\s|$)|\\s+--rounds\\s+[1-5](?=\\s|$))+\\s*$');
 
 /**
  * Is a Bash line the plan seed's command?

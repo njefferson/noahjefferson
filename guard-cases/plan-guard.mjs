@@ -204,6 +204,28 @@ export const cases = [
     },
   },
   {
+    name: 'Q-HUB-434: in plan mode the plan guard passes the plan seed\'s batch print with the rounds switch and one digit from one to five, and refuses a value outside one to five, a value with anything joined to it, no value, a switch spelled another way, and the line chained or with an extra word',
+    guards: ['pg_seed_rounds_range', 'pg_seed_rounds_accepts'],
+    run(m, dir, h) {
+      const hub = hubCopy(dir, h);
+      const home = h.tmp('pg-seed-');
+      const bash = (command) => spawnSync('node', [join(hub, 'plan-guard.mjs')], {
+        input: JSON.stringify({ session_id: h.sid('ps'), permission_mode: 'plan', tool_name: 'Bash', tool_input: { command }, cwd: home }),
+        encoding: 'utf8', env: { ...process.env, HOME: home } });
+      const seed = join(hub, 'plan-seed.mjs');
+      const good = [`node ${seed} --batch --rounds 1`, `node ${seed} --batch --rounds 5`, `node ${seed} --rounds 3 --batch`, `node "${seed}" --batch --rounds 2 --size 3 --repo /home/user/x`];
+      const bad = [`node ${seed} --batch --rounds 6`, `node ${seed} --batch --rounds 0`, `node ${seed} --batch --rounds 35`, `node ${seed} --batch --rounds 3x`, `node ${seed} --batch --rounds=3`,
+        `node ${seed} --batch --rounds`, `node ${seed} --batch --rounds three`, `node ${seed} --batch --round 3`, `node ${seed} --rounds 3`, `node ${seed} --batch --rounds 3 extra`,
+        `node ${seed} --batch --rounds 3 && touch /tmp/x`, `node ${seed} --batch --rounds $(touch x)`];
+      const goodRuns = good.map((c) => bash(c));
+      const badRuns = bad.map((c) => bash(c));
+      return h.assertAll([
+        ['each batch print with the rounds switch passes in plan mode', goodRuns.every((r) => r.status === 0), goodRuns.map((r) => `${r.status}: ${r.stdout}`)],
+        ['each other line is refused in plan mode', badRuns.every((r) => r.status === 2), badRuns.map((r) => r.status)],
+      ]);
+    },
+  },
+  {
     name: 'Q-HUB-387: a Files line worded read only that also names a write (changed, edited, written, owned, new) is refused at the approval call with the mark that sets no latch and printed by the check mode, and a line of unchanged files worded read only, or changed files on a line of their own, passes',
     guards: ['pg_files_ro_wired', 'pg_files_ro_words', 'pg_files_ro_unchanged'],
     run(m, dir, h) {
@@ -338,4 +360,6 @@ export const plants = {
   pg_tier_file: ['resolve(b.input.file_path) === want', 'true', 'plan-guard.mjs'],
   pg_can_wired: ['    if (isCanCommand(cmd)) process.exit(0);\n', '\n', 'plan-guard.mjs'],
   pg_can_chained: ['if (isCanCommand(cmd)) process.exit(0);', 'process.exit(0);', 'plan-guard.mjs'],
+  pg_seed_rounds_range: [String.raw`--rounds\\s+[1-5]`, String.raw`--rounds\\s+[1-9]`, 'plan-guard.mjs'],
+  pg_seed_rounds_accepts: [String.raw`|\\s+--rounds\\s+[1-5](?=\\s|$))`, String.raw`)`, 'plan-guard.mjs'],
 };
