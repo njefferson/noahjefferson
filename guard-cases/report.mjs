@@ -3,7 +3,7 @@
 // amendment's approval (Q-HUB-344), the page following the manager's Next line (Q-HUB-289) and the wait's read of a paused agent (Q-HUB-317).
 // The shape of this file is the one guard-cases/shape.mjs describes.
 import { mkdirSync, writeFileSync, rmSync, utimesSync, appendFileSync, readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 // A scratchpad where `scratchpadOf` finds it for this process (the suite's TMPDIR), and a main transcript where `sessionFiles` finds it.
@@ -275,9 +275,131 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'step 191: the pointer counts a step done by decision where the manager notes hold a Done line for a step of the Order whose newest end is a hand-back that does not open DONE or an interruption, and counts none for a step no agent was sent for, a step with an agent running, a step outside the Order or a step with no Done line; the status line of states says done by decision',
+    guards: ['decided_count', 'decided_running', 'decided_state', 'decided_order'],
+    run(m, dir, h) {
+      const text = '# Decided plan\n\n## Steps\n1. **One.** x\n2. **Two.** y\n3. **Three.** z\n\n## Order\nOrder: 1 2 3\n';
+      const end = (step, how, last, at) => ({ id: `e${step}-${at}`, step, how, last, at });
+      const ends = [end(1, 'a report', 'FAILED\nwall', 100), end(2, 'an interruption', '', 100), end(9, 'a report', 'FAILED\nwall', 100)];
+      const notes = (...steps) => ({ done: new Map(steps.map((n) => [n, 'counted'])) });
+      const decided = m.report.pointerOf(text, ends, notes(1, 2, 3, 9));
+      const plain = m.report.pointerOf(text, ends, null);
+      const running = m.report.pointerOf(text, ends, notes(1, 2), null, new Set([1]));
+      const win = m.report.pointerOf(text, [end(1, 'a report', 'DONE\nwall', 100), end(1, 'a report', 'FAILED\nwall', 200)], notes(1));
+      const noLine = m.report.pointerOf(text, ends, notes());
+      // The status's line of states, read for a session from its agents and its notes.
+      const x = session(h, 'dd');
+      const planPath = join(x.pad, 'plan.md');
+      const sent = (prompt, s) => h.at({ type: 'user', message: { role: 'user', content: prompt } }, h.later(s));
+      const handed = (id, s, word) => [h.at(h.tool(0, `${id}-h`, 'SubagentHandback', { message: `${word}\nThe second line.` }), h.later(s)), h.at(h.result(0, `${id}-h`, 'Report delivered to your caller.'), h.later(s + 1))];
+      writeFileSync(join(x.subs, 'agent-dd1.jsonl'), h.jsonl([sent(`${planPath} step 1`, -300), ...handed('dd1', -200, 'FAILED')]));
+      writeFileSync(join(x.subs, 'agent-dd1.meta.json'), JSON.stringify({ agentType: 'general-purpose', description: 'Plan step 1' }));
+      writeFileSync(join(x.pad, 'status', 'manager.txt'), 'Done 1: counted by decision\n');
+      const st = m.report.pointerState(x.s, { path: planPath, text });
+      const row = st.steps.find((r) => r.step === 1);
+      const printed = m.report.pointerBlock(st);
+      return h.assertAll([
+        ['steps 1 and 2 are done by decision and step 3, with no agent sent, is not', decided.done.has(1) && decided.done.has(2) && !decided.done.has(3) && decided.next === 3 && [...decided.decided].join(',') === '1,2', JSON.stringify([...decided.done])],
+        ['without the notes the same ends count nothing', plain.done.size === 0 && plain.next === 1 && plain.decided.size === 0, JSON.stringify([...plain.done])],
+        ['a step with an agent running is not counted, and the other still is', !running.done.has(1) && running.done.has(2) && running.next === 1, JSON.stringify([...running.done])],
+        ['a step outside the Order is not counted', !decided.done.has(9) && !decided.decided.has(9), JSON.stringify([...decided.done])],
+        ['a step with a DONE hand-back is done and not by decision', win.done.has(1) && win.decided.size === 0, JSON.stringify([...win.decided])],
+        ['a Done line for no step leaves the pointer as it was', noLine.done.size === 0 && noLine.next === 1, JSON.stringify([...noLine.done])],
+        ['the status row says done by decision and the pointer moves past it', row?.state === 'done by decision' && st.pointer.next === 2, JSON.stringify(row)],
+        ['the printed line of states says it', /Order, each step's state: 1 done by decision; 2 not sent; 3 not sent\./.test(printed) && /^next: step 2$/m.test(printed), printed],
+      ]);
+    },
+  },
+  {
+    name: 'step 191: a plan mode the harness began at a restart is not the plan\'s once the manager notes count every step that ended other than DONE by a Done line, and not once they hold an Eject line naming the plan\'s file; with a step left it still is',
+    guards: ['decided_finished', 'decided_restart_notes'],
+    run(m, dir, h) {
+      const base = h.tmp('sg-dec-');
+      const plan = join(base, 'ordered-plan.md');
+      const text = '# An ordered plan\n\n## Steps\n1. **One.** x\n2. **Two.** y\n\n## Order\nOrder: 1 2\n';
+      writeFileSync(plan, text);
+      const marker = join(base, 'marker.json');
+      writeFileSync(marker, JSON.stringify({ plan, hash: h.sha256(text), at: h.ts(-10) }));
+      const planTurn = { ...h.turn(-5, 'Go.'), permissionMode: 'plan' };
+      const x = session(h, 'df', [h.turn(-20, 'start'), planTurn, h.boundary(10), h.planOn(11, plan)]);
+      const sent = (prompt, s) => h.at({ type: 'user', message: { role: 'user', content: prompt } }, h.later(s));
+      const handed = (id, s, word) => [h.at(h.tool(0, `${id}-h`, 'SubagentHandback', { message: `${word}\nThe second line.` }), h.later(s)), h.at(h.result(0, `${id}-h`, 'Report delivered to your caller.'), h.later(s + 1))];
+      const put = (id, step, s, word) => {
+        writeFileSync(join(x.subs, `agent-${id}.jsonl`), h.jsonl([sent(`${plan} step ${step}`, s), ...handed(id, s + 100, word)]));
+        writeFileSync(join(x.subs, `agent-${id}.meta.json`), JSON.stringify({ agentType: 'general-purpose', description: `Plan step ${step}` }));
+      };
+      put('df1', 1, -600, 'REFUSED');
+      put('df2', 2, -500, 'DONE');
+      const rm = () => m.report.restartedPlanMode({ transcript_path: x.main, session_id: x.s }, marker);
+      const notes = (t) => writeFileSync(join(x.pad, 'status', 'manager.txt'), t);
+      const open = rm();
+      notes('Done 2: not the step that ended other than DONE\n');
+      const wrongStep = rm();
+      notes('Done 1: counted by decision\n');
+      const decided = rm();
+      // A resend of step 1 is running: the step no longer counts as done by decision, so the restart's plan mode is the plan's again.
+      writeFileSync(join(x.subs, 'agent-df1b.jsonl'), h.jsonl([sent(`${plan} step 1`, -50)]));
+      writeFileSync(join(x.subs, 'agent-df1b.meta.json'), JSON.stringify({ agentType: 'general-purpose', description: 'Plan step 1' }));
+      const runningAgain = rm();
+      rmSync(join(x.subs, 'agent-df1b.jsonl'), { force: true });
+      notes('Eject: P-12 an-earlier-plan.md a stale line\n');
+      const stale = rm();
+      notes(`Eject: P-12 ${basename(plan)} the plan went to the program\n`);
+      const ejected = rm();
+      return h.assertAll([
+        ['with a step ended other than DONE and no line the plan mode is the restart\'s', open === plan, open],
+        ['a Done line for another step changes nothing', wrongStep === plan, wrongStep],
+        ['a Done line for the step that ended other than DONE reads the plan as finished', decided === '', decided],
+        ['a step with a resend running is not counted done by decision, so the plan mode is the plan\'s', runningAgain === plan, runningAgain],
+        ['an Eject line naming another plan changes nothing', stale === plan, stale],
+        ['an Eject line naming this plan\'s file reads it as finished', ejected === '', ejected],
+      ]);
+    },
+  },
+  {
+    name: 'step 191: where the status prints the plan mode as a restart\'s and the plan stands, the line names the way forward: the next step, the Done line for each step that ended other than DONE, and the Eject line naming the plan\'s file, after which the session\'s own entry call makes the mode its own',
+    guards: ['way_forward_line', 'way_forward_steps'],
+    run(m, dir, h) {
+      const base = h.tmp('sg-way-');
+      const plan = join(base, 'way-plan.md');
+      const text = '# A way plan\n\n## Steps\n1. **One.** x\n2. **Two.** y\n3. **Three.** z\n\n## Order\nOrder: 1 2 3\n';
+      writeFileSync(plan, text);
+      const marker = join(base, 'marker.json');
+      writeFileSync(marker, JSON.stringify({ plan, hash: h.sha256(text), at: h.ts(-10) }));
+      const planTurn = { ...h.turn(-5, 'Go.'), permissionMode: 'plan' };
+      const x = session(h, 'wf', [h.turn(-20, 'start'), planTurn, h.boundary(10), h.planOn(11, plan)]);
+      const sent = (prompt, s) => h.at({ type: 'user', message: { role: 'user', content: prompt } }, h.later(s));
+      const handed = (id, s, word) => [h.at(h.tool(0, `${id}-h`, 'SubagentHandback', { message: `${word}\nThe second line.` }), h.later(s)), h.at(h.result(0, `${id}-h`, 'Report delivered to your caller.'), h.later(s + 1))];
+      const put = (id, step, s, word) => {
+        writeFileSync(join(x.subs, `agent-${id}.jsonl`), h.jsonl([sent(`${plan} step ${step}`, s), ...handed(id, s + 100, word)]));
+        writeFileSync(join(x.subs, `agent-${id}.meta.json`), JSON.stringify({ agentType: 'general-purpose', description: `Plan step ${step}` }));
+      };
+      put('wf1', 1, -600, 'DONE');
+      put('wf2', 2, -500, 'REFUSED');
+      const line = m.report.modeLine(x.s, marker);
+      put('wf3', 3, -400, 'FAILED');
+      const two = m.report.modeLine(x.s, marker);
+      return h.assertAll([
+        ['the line still says the mode is a restart\'s', /Plan mode: on, and the gates read it as a restart's/.test(line), line],
+        ['it names the next step', /The way forward: step 2 is next;/.test(line), line],
+        ['it names the Done line for the one step that ended other than DONE', /a Done line for each of step 2 \(ended other than DONE\)/.test(line), line],
+        ['it names the Eject line with the plan\'s file', line.includes('an Eject line naming way-plan.md') && /after which the session's own entry call makes the mode its own\.$/.test(line), line],
+        ['two such steps are named together', /a Done line for each of steps 2, 3 \(ended other than DONE\)/.test(two), two],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
+  decided_count: ['    if ((ends ?? []).some((e) => e.step === step)) { done.add(step); decided.add(step); }', '    { done.add(step); decided.add(step); }', 'report.mjs'],
+  decided_running: ['if (!o.order.includes(step) || done.has(step) || running?.has?.(step)) continue;', 'if (!o.order.includes(step) || done.has(step)) continue;', 'report.mjs'],
+  decided_order: ['if (!o.order.includes(step) || done.has(step) ||', 'if (done.has(step) ||', 'report.mjs'],
+  decided_state: ["const state = decided?.has(step) ? 'done by decision'", "const state = false ? 'done by decision'", 'report.mjs'],
+  decided_finished: ['managerNotes(scratchpadOf(String(p?.session_id ?? \'\'))), planPath, s.runningSteps) : null;', 'managerNotes(scratchpadOf(String(p?.session_id ?? \'\'))), planPath, null) : null;', 'report.mjs'],
+  decided_restart_notes: ["managerNotes(scratchpadOf(String(p?.session_id ?? ''))), planPath, s.runningSteps) : null;", "null, planPath, s.runningSteps) : null;", 'report.mjs'],
+  way_forward_line: ["so the plan stands and the mode is not the plan's. ${restartWay(sid, f.main, restart)}`", "so the plan stands and the mode is not the plan's.`", 'report.mjs'],
+  way_forward_steps: ["const ended = ptr.order.filter((n) => !ptr.done.has(n) && s.ends.some((e) => e.step === n));", "const ended = [];", 'report.mjs'],
   mode_line_restart: ["  const restart = restartedPlanMode({ transcript_path: f.main, session_id: sid }, marker);\n", "  const restart = '';\n", 'report.mjs'],
   mode_line_off: ["  if (mode !== 'plan') return `Plan mode: off.", "  if (false) return `Plan mode: off.", 'report.mjs'],
   mode_line_unknown: ['  if (!mode) return "Plan mode: unknown', '  if (false) return "Plan mode: unknown', 'report.mjs'],

@@ -536,7 +536,7 @@ function planFinished(p, planPath) {
   try {
     const s = stepEnds(p);
     // A PLAN EJECTED TO THE PROGRAM IS CLOSED, AND A CLOSED PLAN HOLDS NOTHING AGAINST THE NEXT: the manager's `Eject:` line closes the pointer.
-    const pointer = s ? pointerOf(readFileSync(planPath, 'utf8'), s.ends, managerNotes(scratchpadOf(String(p?.session_id ?? ''))), planPath) : null;
+    const pointer = s ? pointerOf(readFileSync(planPath, 'utf8'), s.ends, managerNotes(scratchpadOf(String(p?.session_id ?? ''))), planPath, s.runningSteps) : null;
     return !!pointer && pointer.next === null;
   } catch { return false; }
 }
@@ -1172,6 +1172,31 @@ export function planModeState(entries, before = Infinity) {
 }
 
 /**
+ * The way forward the status names where the plan mode is a restart's and the plan stands.
+ * @param {string} sid  the session id.
+ * @param {string} main  the main transcript's path.
+ * @param {string} planPath  the approved plan's path (`restartedPlanMode`'s answer).
+ * @returns {string} one sentence: the next step where the pointer has one open; and, for writing a new plan, the manager-notes lines that
+ *   end the plan (a `Done N:` line for each step of the Order that ended other than DONE, or an `Eject: P-N` line naming the plan's file),
+ *   after which the session's own entry call makes the mode its own. A plan the pointer cannot be read for says so and names the same lines.
+ */
+function restartWay(sid, main, planPath) {
+  const eject = `an Eject line naming ${basename(String(planPath))}`;
+  try {
+    const s = stepEnds({ transcript_path: main, session_id: sid });
+    if (!s) return `The way forward: the plan's steps could not be read; to write a new plan instead, the manager notes need ${eject}, after which the session's own entry call makes the mode its own.`;
+    const notes = managerNotes(scratchpadOf(String(sid)));
+    const text = readFileSync(planPath, 'utf8');
+    const ptr = pointerOf(text, s.ends, notes, planPath, s.runningSteps);
+    if (!ptr) return `The way forward: the plan defines no pointer; to write a new plan instead, the manager notes need ${eject}, after which the session's own entry call makes the mode its own.`;
+    const ended = ptr.order.filter((n) => !ptr.done.has(n) && s.ends.some((e) => e.step === n));
+    const next = ptr.next === null ? 'no step is open' : `step ${ptr.next} is next`;
+    const dones = ended.length ? `a Done line for each of step${ended.length === 1 ? '' : 's'} ${ended.join(', ')} (ended other than DONE)` : 'a Done line for each step that ended other than DONE (none has)';
+    return `The way forward: ${next}; to write a new plan instead, the manager notes need ${dones} or ${eject}, after which the session's own entry call makes the mode its own.`;
+  } catch { return `The way forward: the plan could not be read; to write a new plan instead, the manager notes need ${eject}, after which the session's own entry call makes the mode its own.`; }
+}
+
+/**
  * The status print's line for the harness's plan mode (Q-HUB-329).
  * @param {string} sid  the session id.
  * @param {string} [marker]  the approval marker's path; `~/.claude/APPROVED-PLAN.json` by default.
@@ -1189,7 +1214,7 @@ export function modeLine(sid, marker = join(homedir(), '.claude', 'APPROVED-PLAN
   if (mode !== 'plan') return `Plan mode: off. The owner's newest message carried permission mode ${mode}, so the gates judge a call as outside plan mode.`;
   const restart = restartedPlanMode({ transcript_path: f.main, session_id: sid }, marker);
   return restart
-    ? `Plan mode: on, and the gates read it as a restart's: it came with a compaction or a resume after ${restart} was approved, so the plan stands and the mode is not the plan's.`
+    ? `Plan mode: on, and the gates read it as a restart's: it came with a compaction or a resume after ${restart} was approved, so the plan stands and the mode is not the plan's. ${restartWay(sid, f.main, restart)}`
     : by === 'enter'
       ? "Plan mode: on, and the gates read it as the owner's: the session's newest EnterPlanMode call was answered after the owner's newest message and no restart began it."
       : "Plan mode: on, and the gates read it as the owner's: the owner's newest message carried permission mode plan and no restart began it.";
@@ -2100,12 +2125,23 @@ export function missingParts(text, parts) {
  *   path's last component), `closed` is `{item, reason}` and `next` is
  *   null, so the plan in force holds no step and the stop guard has none left. A line that does not
  *   name the plan is a stale one and closes nothing.
+ *   A STEP COUNTED DONE BY DECISION: a `Done N:` line in the notes puts step N in `done` and in `decided` when N is in Order, it has an end
+ *   that did not open DONE, and `running`, the set of steps with a running agent, does not hold it; a step no agent was sent for, or one
+ *   an agent of which is running, is never counted so.
  */
-export function pointerOf(text, ends, notes = null, planPath = null) {
+export function pointerOf(text, ends, notes = null, planPath = null, running = null) {
   const o = planOrder(text);
   if (!o) return null;
   const done = new Set();
   for (const e of ends ?? []) if (e.how === 'a report' && e.step !== null && DONE.test(firstLineOf(e.last))) done.add(e.step);
+  // A STEP COUNTED DONE BY DECISION: the manager's `Done N:` line counts a step of the Order whose newest end is a hand-back that does not
+  // open DONE or an interruption. It never counts a step no agent was sent for (no end), a step an agent of which is running (`running`,
+  // `stepEnds`' `runningSteps`; none known reads as none running), or a step of the Standing line. `decided` lists them, and they are in `done`.
+  const decided = new Set();
+  for (const step of notes?.done?.keys?.() ?? []) {
+    if (!o.order.includes(step) || done.has(step) || running?.has?.(step)) continue;
+    if ((ends ?? []).some((e) => e.step === step)) { done.add(step); decided.add(step); }
+  }
   const newest = new Map();
   for (const e of ends ?? []) if (e.how === 'a report' && e.step !== null && (!newest.has(e.step) || e.at >= newest.get(e.step).at)) newest.set(e.step, e);
   const ejected = new Set();
@@ -2115,7 +2151,7 @@ export function pointerOf(text, ends, notes = null, planPath = null) {
   // has to carry the path's last component, the way the plan's own file is named; with no path given (a unit of the pointer alone) any line closes.
   const named = notes?.eject && (!planPath || String(notes.eject.line ?? '').includes(basename(String(planPath))));
   const closed = named ? { item: notes.eject.item, reason: notes.eject.reason } : null;
-  const pointer = { order: o.order, standing: o.standing, done, ejected, closed, next: o.order.find((n) => !done.has(n)) ?? null };
+  const pointer = { order: o.order, standing: o.standing, done, decided, ejected, closed, next: o.order.find((n) => !done.has(n)) ?? null };
   if (closed) pointer.next = null;
   return pointer;
 }
@@ -2135,7 +2171,7 @@ export function pointerFor(p, text) {
   if (!s) return null;
   let notes = null;
   try { notes = managerNotes(scratchpadOf(String(p?.session_id ?? ''))); } catch { notes = null; }
-  return pointerOf(text, s.ends, notes, markerPlanPath());
+  return pointerOf(text, s.ends, notes, markerPlanPath(), s.runningSteps);
 }
 
 // ---- the review: a fresh agent clears every move before it goes ----
@@ -2721,9 +2757,9 @@ export function pointerState(sid, plan = planInForce()) {
   }
   const s = sid ? stepEnds({ session_id: sid }) : null;
   if (!s) return { ...base, why: `no transcript was found for the session${sid ? ` ${sid}` : ' (no CLAUDE_CODE_SESSION_ID in this shell)'}` };
-  const pointer = pointerOf(plan.text, s.ends, base.manager, plan.path);
+  const pointer = pointerOf(plan.text, s.ends, base.manager, plan.path, s.runningSteps);
   const steps = [...pointer.order.map((step) => ({ step, standing: false })), ...pointer.standing.filter((n) => !pointer.order.includes(n)).map((step) => ({ step, standing: true }))]
-    .map(({ step, standing }) => stepRow(step, standing, pointer.done, s, pad));
+    .map(({ step, standing }) => stepRow(step, standing, pointer.done, s, pad, pointer.decided));
   return { ...base, read: true, pointer, steps, found: foundLines(pad, markerApprovalTime()) };
 }
 
@@ -2742,12 +2778,13 @@ export function pointerState(sid, plan = planInForce()) {
  *   `stepTimeChips` relies on: `doneAt` is the end of an agent that handed back DONE and of no
  *   other, so a duration measured to it is the duration of the work that was counted done.
  */
-function stepRow(step, standing, done, s, pad) {
+function stepRow(step, standing, done, s, pad, decided = null) {
   const mine = s.ends.filter((e) => e.step === step).sort((a, b) => a.at - b.at);
   const newest = mine.at(-1) ?? null;
   const lines = newest ? String(newest.last ?? '').split('\n').map((l) => l.trim()).filter(Boolean) : [];
   const back = newest ? { id: newest.id, how: newest.how, at: newest.at, lines, path: newest.path, word: newest.word, refusedBefore: newest.refusedBefore } : null;
-  const state = done.has(step) ? 'DONE'
+  const state = decided?.has(step) ? 'done by decision'
+    : done.has(step) ? 'DONE'
     : s.runningSteps.has(step) ? 'running'
       : !newest ? 'not sent'
         : newest.how !== 'a report' ? `ended by ${newest.how}, no hand-back to count`
