@@ -1,1 +1,3 @@
 Q-HUB-422: the plan rules gate asked for the whole plan rules page, 1190 lines, three times in one afternoon on the top tier: at a second entry to plan mode after a pull had changed three of its lines, at a third entry, and again when a compaction fell at 15:48 California on 9 November inside the turn that had just read it (met by the main thread, filed in step 382); the fix is for the gate to ask for the lines that changed since the last full read, or to count a read made in the same turn as the entry, with a case on a pull that changes three lines.
+
+Fix in: `doctrine-read-guard.mjs`. The plan rules gate asks for the lines changed since the last full read, or counts a read made in the turn of the entry, with a case on a pull that changes three lines.

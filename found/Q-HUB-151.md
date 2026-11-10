@@ -1,1 +1,3 @@
 Q-HUB-151: the record's section 5 notes the in-container user-level settings file ran the dispatcher (status gate and manager fence refusals were counted) while the documentation says user-level settings are not read in the cloud; the record does not reconcile the two and the design session must not rely on either without testing (found in step 33 of the research plan of 2 November, filed in step 54 of the redesign plan).
+
+Fix in: `plans/redesign-record.md`. The record's section on the in-container settings file is made to state both the run of the dispatcher and the documentation's statement, and to mark the question as untested until a test in a cloud session settles it.

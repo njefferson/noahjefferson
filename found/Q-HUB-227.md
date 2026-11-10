@@ -1,1 +1,3 @@
 Q-HUB-227: the published status page lags the work, because its source is rewritten only at a status or an agent's end and the main thread publishes it only when it calls the publish tool; its versions section carried lines from earlier plans, and until a gate holds it the main thread republishes after every send and every status (found in the reviews of steps 55 to 58 of the redesign plan of 2 November, filed in step 60 of the same plan).
+
+Fix in: `hook-dispatch.mjs`, `report.mjs`. A gate holds the main thread to republishing the status page after every send and every status, because the page source is rewritten only at those two moments.

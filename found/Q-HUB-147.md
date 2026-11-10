@@ -1,1 +1,3 @@
 Q-HUB-147: CLAUDE.md is 1477 lines and one section of it, the rules that get broken anyway, is 777 of them, loaded into every session; 0e of the doctrine is 593 lines read whole at every start (found in step 32 of the research plan of 2 November, filed in step 54 of the redesign plan).
+
+Fix in: `CLAUDE.md`, `doctrine/never.md`. The rules that get broken anyway and rule 0e are cut to what a gate does not already enforce, with each cut paragraph replaced by an enforced-whole line.

@@ -1,1 +1,3 @@
 Q-HUB-414: the reply guard's release command refuses a host that a fetcher saw declined (the tunnel answered forbidden) as not on record, so a host declined to a script has no record the rules can use, and the plan's Commands entry for the command has no form that passes for such a refusal (met by step 372, first send, 9 November, and again in its second send; filed in step 382); the fix is for the guard to accept a said line carrying the fetcher's own words as the record of a declined host, with a case on a host no earlier hook saw.
+
+Fix in: `reply-guard.mjs`. The release command's check of the said words accepts no fetcher's own words as the record of a host that was declined to a script; it should accept them, with a case on a host no earlier hook saw.

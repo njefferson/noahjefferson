@@ -637,7 +637,9 @@ Depends: the harness version this container runs; P-6.
 
 ### P-345. Q-HUB-304: whether the fence's line moves an agent past the harness's notice is not yet shown
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The effect of the fence's added-context line on a restored plan mode is shown only after a harness restart restores plan mode, an event no step can make.
 
 Acceptance: an agent is sent under a plan mode a restart restored, with the fence's line live, and its transcript is read and the effect recorded under this key; where the line does not move the agent, the start handler's print carries a tested owner action instead.
 
@@ -889,7 +891,9 @@ Depends: P-3; Q-HUB-129.
 
 ### P-46. Q-HUB-113: the harness's words for a stop of a lost task were never observed
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: parked. Plan: none.
+
+Parked: The harness's exact words for a stop of a lost task have never appeared in a transcript, so the phrase can be confirmed only once a real one occurs.
 
 Acceptance: the words the harness gives for a stop of a lost task are observed once in a transcript, the matcher for running tasks is set to them, and a case holds the real words.
 
@@ -967,7 +971,9 @@ Depends: P-3, whose agent rules keep that line.
 
 ### P-54. Q-HUB-84: the plants runner ran out of heap and a run of the gates can end with no verdict
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: A plants run now starts a new process for each chunk, so the heap is bounded. Found held in `session-guards.test.mjs` by the triage of the plan of 10 November.
 
 Acceptance: a run of all plants ends with a verdict in this container, or the run by guard file with its counts added is the written route and the run says so in its last line.
 
@@ -975,7 +981,9 @@ Depends: Q-HUB-129.
 
 ### P-55. Q-HUB-127: the harness names the session's plan file from the words of an owner message
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The harness names the session's plan file from the words of a message, and the path reached no tracked file.
 
 Acceptance: no path an agent is sent carries words of an owner message, observed in the plan file's name in the agent prompts of the next plan.
 
@@ -1019,7 +1027,9 @@ Depends: P-4; the pending-message guard is read only in the redesign plan.
 
 ### P-60. Q-HUB-4: the stop word holds the session even in a message that only discusses it
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The hold on the stop word anywhere in a message is the owner's standing rule in the doctrine, recorded as a cost and not a defect, so no step changes that hold without the owner's word.
 
 Acceptance: the owner has chosen between the word anywhere and a reading by meaning, the hold implements the choice, and a case covers a message that discusses the word without ordering a stop.
 
@@ -1035,7 +1045,9 @@ Depends: none.
 
 ### P-62. Q-HUB-6: the harness guard and the identifier guard the plan's rules lean on are hooks of Jefferson-Photography-Studio
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The harness guard and the identifier guard are hooks of the Jefferson-Photography-Studio repository, so the rule holds only in a session that has that repository checked out beside the hub.
 
 Acceptance: the rule that every file under the scratchpad is run through a harness is refused by a hub gate in a session holding the hub alone; a case.
 
@@ -1127,7 +1139,9 @@ Depends: none.
 
 ### P-73. Q-HUB-19: that the plan guard runs in every repository is read for two of eight
 
-Repository: the six repositories the line says are unread, which it does not name; the siblings are listed in REPOS.md. Goal: 6. State: open. Plan: none.
+Repository: the six repositories the line says are unread, which it does not name; the siblings are listed in REPOS.md. Goal: 6. State: parked. Plan: none.
+
+Parked: The read needs a session in each of the six sibling repositories, an event no step of a hub plan can make.
 
 Acceptance: a read of each sibling's settings shows the plan guard wired, or the entry names where it is not.
 
@@ -1143,7 +1157,9 @@ Depends: P-7, whose rule is a pull before every write.
 
 ### P-75. Q-HUB-21: the status page's published link stays behind its source
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: done. Plan: none.
+
+Done: The release command now passes the fence and the latch, and the status page publish is keyed by its content so an edited page is no repeat. Found held in `CLAUDE.md` by the triage of the plan of 10 November.
 
 Acceptance: the published page equals its source at each status; a failed publish does not hold the next publish of a changed page, and the reply guard's read command passes the fence and the latch; a case each way.
 
@@ -1159,7 +1175,9 @@ Depends: none.
 
 ### P-77. Q-HUB-23: an agent cannot wait on a CI run except by repeated reads
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: parked. Plan: none.
+
+Parked: The harness gives an agent no wait on a CI run, so the run is read by the main thread after the step ends.
 
 Acceptance: a land step's report holds the concluded state of the run for its commit, or the plan names the main thread's single read as the step after; a run is read by one query once it has concluded.
 
@@ -1183,7 +1201,9 @@ Depends: none.
 
 ### P-80. Q-HUB-26: a stash entry stays in the hub repository because the classifier refused its drop
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The stash entry and the refusal of its drop belong to the harness's classifier and the checkout, and the hub's checkout holds no stash ref now.
 
 Acceptance: a read of the stash list shows no entry of that plan, because the owner dropped it or a plan that names the drop did, or the entry's contents are confirmed on main and recorded.
 
@@ -1191,7 +1211,9 @@ Depends: P-13, since the classifier is what refused the drop.
 
 ### P-81. Q-HUB-27: the scope check prints the owner's messages on every commit, so captured commit output holds them
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The captures sit as files in the session scratchpad, which the environment holds outside the repository, and the check's print of the messages is its declared design.
 
 Acceptance: the scope check prints no owner message, and the five captures of earlier plans are removed from the scratchpad; a read of the scratchpad finds none.
 
@@ -1209,7 +1231,9 @@ Depends: none.
 
 ### P-83. Q-HUB-30: a long status print saved beside the transcript is not counted as the record by the live fence
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: done. Plan: none.
+
+Done: The manager fence passes the session's saved tool-results folder as part of the record. Found held in `hook-dispatch.mjs` by the triage of the plan of 10 November.
 
 Acceptance: a read of a saved tool result beside the transcript passes the manager fence on the main thread, as the instruction file says it does, so a print too long for the conversation is read whole; a case exists and passes.
 
@@ -1225,7 +1249,9 @@ Depends: P-3, because the agent rules change lands in the redesign plan's last s
 
 ### P-85. Q-HUB-32: the main thread's latch refuses a held agent's report write
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The refusal latch lets an agent write its own report and progress note for the step its prompt names. Found held in `hook-dispatch.mjs` by the triage of the plan of 10 November.
 
 Acceptance: a latched agent's own progress note and report pass its latch (lesson 404), as the instruction file states; done when the case that proves it is read and the line is dropped.
 
@@ -1243,7 +1269,9 @@ Depends: none.
 
 ### P-87. Q-HUB-34: standing reviews ran a shell line before reading their rules file and no guard refused it
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The case calls rulesFirst with a Bash call and no read of the rules and fails when that call is not refused. Found held in `guard-cases/plan-fence.mjs` by the triage of the plan of 10 November.
 
 Acceptance: a review agent's shell call made before its read of the rules file is refused; a case.
 
@@ -1309,7 +1337,9 @@ Depends: P-3, since the agent rules say shell runs only a command the step names
 
 ### P-95. Q-HUB-42: the status page's renderer drew step sections only for a plan with an Order line
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: done. Plan: none.
+
+Done: The status page draws a section for every step when the plan has no Order line, with Start and Estimate chips from the manager's notes. Found held in `report.mjs` by the triage of the plan of 10 November.
 
 Acceptance: the page for a plan with no Order line draws a section for each step of its Steps and time chips from the Start and Estimate lines. The instruction file records this as built, so it is done when the case for it passes in a full run and the line is dropped.
 
@@ -1335,7 +1365,9 @@ Depends: none.
 
 ### P-98. Q-HUB-45: the reply guard matched a publish of an edited page against an identical publish that failed earlier
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: done. Plan: none.
+
+Done: The call hash keys a page publish by the file's content and marks a page edited since a failure as changed. Found held in `reply-guard.mjs` by the triage of the plan of 10 November.
 
 Acceptance: the line records this as put right in step 138: a publish of a page edited since a failed one is not a repeat, and an identical publish of unchanged content after a failure still is. Done when the case for it passes in a full run over the next integrated change and the next plan's Found answered section drops the line.
 
@@ -1343,7 +1375,9 @@ Depends: none.
 
 ### P-99. Q-HUB-46: the fence's rules-first check read only the first 512 KB of an agent's transcript
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The case plants a first message larger than the start window with the rules Read after it, and the code reads the whole transcript when the window does not show the Read. Found held in `session-guards.test.mjs` by the triage of the plan of 10 November.
 
 Acceptance: the line records this as put right in step 138: the check keeps the window as the fast path and reads the whole transcript when the window does not show the rules read. Done when the case for it passes in a full run over the next integrated change and the next plan's Found answered section drops the line.
 
@@ -1367,7 +1401,9 @@ Depends: Q-HUB-22.
 
 ### P-102. Q-HUB-49: a step that ended REFUSED or FAILED draws no time chip
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: parked. Plan: none.
+
+Parked: The absent chip on an open step is stated by the docstring of stepTimeChips in report.mjs as by design, and the chip returns once a resend writes a new Start line, an event no step can make.
 
 Acceptance: an open step draws a time chip from the start of its newest send; a case. The effect is display only.
 
@@ -1375,7 +1411,9 @@ Depends: none.
 
 ### P-103. Q-HUB-50: after the live clone is pulled the doctrine file has a different length, so a later resume owes the whole doctrine again
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: parked. Plan: none.
+
+Parked: The doctrine file changing length at a pull and a resume owing the read again is how the harness's resume works, a cost the finding itself calls expected.
 
 Acceptance: after the doctrine is grouped, a resume owes the short page of never-rules whole, and the line is dropped as no longer applying. It was recorded as a cost to expect and not a fault.
 
@@ -1383,7 +1421,9 @@ Depends: P-5.
 
 ### P-104. Q-HUB-51: a backtick pair or a dollar-parenthesis group inside a quoted commit message is read as a command
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The case holds that text in single quotes never opens a command, so a commit message with a backtick pair passes the plan fence. Found held in `session-guards.test.mjs` by the triage of the plan of 10 November.
 
 Acceptance: a commit message with such characters inside quotes is not opened as a command by the fence; a case. The cheap route, wording that avoids them, stays in use until then.
 
@@ -1399,7 +1439,9 @@ Depends: Q-HUB-129.
 
 ### P-106. Q-HUB-53: the check command a refusal prints names a hook path that reads the live clone's copy only after a pull
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The path a refusal prints is the live clone's copy, which holds the working copy's code only after the landing step has pulled the clone, so the event that must come first is that pull.
 
 Acceptance: the printed check command names the file the gates actually run from, or the print says the clone is behind the working copy; a case.
 
@@ -1407,7 +1449,9 @@ Depends: P-7, whose rule is that a newer hub is taken up at the next plan.
 
 ### P-107. Q-HUB-54: the check command passes the stop hold and the correction hold and says they are not judged
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The check of a call prints that those holds are not judged. Found held in `hook-dispatch.mjs` by the triage of the plan of 10 November.
 
 Acceptance: the check command judges both holds, or its output says so in the refusal text; a case.
 
@@ -1443,7 +1487,9 @@ Depends: none.
 
 ### P-111. Q-HUB-58: a step added to a plan's Standing line after approval went with no review
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The approval marker records the step numbers and the gate refuses a step outside them, and only a marker written before the lists existed is not held. Found held in `session-guards.test.mjs` by the triage of the plan of 10 November.
 
 Acceptance: a step outside the marker's recorded lists is refused, and a marker written before the lists were recorded is rewritten at the next approval, with the status saying it carries none until then; a case each way.
 
@@ -1483,7 +1529,9 @@ Depends: none.
 
 ### P-116. Q-HUB-63: the plan gate keeps holding a name the plan has dropped until a tool result prints it
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: HeldNames in plan-guard.mjs holds a dropped name on purpose and its refusal says so under Doctrine section 0d, which is the owner's rule.
 
 Acceptance: a name dropped from the plan is no longer held on the next approval call; a case.
 
@@ -1491,7 +1539,9 @@ Depends: none.
 
 ### P-117. Q-HUB-64: the decisions check of Jefferson-Photography-Studio reads a three-digit percentage in prose as a citation of a decision record
 
-Repository: Jefferson-Photography-Studio. Goal: 6. State: open. Plan: none.
+Repository: Jefferson-Photography-Studio. Goal: 6. State: parked. Plan: none.
+
+Parked: The decisions check named sits in the Jefferson-Photography-Studio repository, not in the hub.
 
 Acceptance: that repository's decisions check does not read a three-digit percentage as a citation, and a case there shows it.
 
@@ -1507,7 +1557,9 @@ Depends: none.
 
 ### P-119. Q-HUB-66: a scratch harness of an earlier plan takes no absolute path
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The harness named lives in a past session's scratchpad, outside the repository.
 
 Acceptance: the harness is retired or takes an absolute path, and a plan that reuses one names it.
 
@@ -1515,7 +1567,9 @@ Depends: none.
 
 ### P-120. Q-HUB-67: the tools of the app repositories need their repository flag when run from any other directory
 
-Repository: the app repositories. Goal: 6. State: open. Plan: none.
+Repository: the app repositories. Goal: 6. State: parked. Plan: none.
+
+Parked: The tools in question belong to the app repositories, and each usage line is read and put right in that app's own session, as P-120 states.
 
 Acceptance: each app tool names its repository flag in its usage line and runs from another directory with it, read in that app's own session.
 
@@ -1547,7 +1601,9 @@ Depends: P-3; the agent rules change lands in the redesign plan's last step.
 
 ### P-124. Q-HUB-71: the hub working copy stood on a session branch with eight modified tracked files and five untracked lessons
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: parked. Plan: none.
+
+Parked: The working copy's branch and its uncommitted files are the state of the container, and landing them waits on an event no step can make, the collisions Q-HUB-2 names being settled first.
 
 Acceptance: a read of the checkout shows main and no modified tracked file or untracked lesson of that stretch, and the line is dropped with that read as the reason; or the work is landed under Q-HUB-2.
 
@@ -1579,7 +1635,9 @@ Depends: P-4, since the stop guard's refusals on prose run only under an approve
 
 ### P-128. Q-HUB-75: the shipped check cannot tell that a line is true, and the read it demands is of commit subjects
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: Whether a commit subject names an item and whether a shipped-check line is true is an agent's read that no script can make, as the finding states.
 
 Acceptance: each line of the shipped check names the file or commit that shows the item unshipped, and the plan check refuses a line that names neither.
 
@@ -1595,7 +1653,9 @@ Depends: P-3.
 
 ### P-130. Q-HUB-77: the Doctrine gates run for the commit that landed step 186's work was still in progress when read
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: parked. Plan: none.
+
+Parked: The conclusion of a CI run for a pushed commit is an event that must come first, and no step can make it arrive before the step ends.
 
 Acceptance: the close of a landing step reads the conclusion of every run for its commit (the Doctrine gates, the Deploy run, the Accessibility gate, the code scan), or says which were still running.
 
@@ -1647,7 +1707,9 @@ Depends: P-4.
 
 ### P-136. Q-HUB-83: the Doctrine gates run and the code scan for a hub commit were still in progress at two reads
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: parked. Plan: none.
+
+Parked: A run still in progress at a read is the CI service's timing, and only a later read of the run can show its conclusion.
 
 Acceptance: a landing step's report states each run for the commit as concluded or in progress, and the status reads the in-progress ones again at the next status.
 
@@ -1691,7 +1753,9 @@ Depends: P-17; Q-HUB-105.
 
 ### P-141. Q-HUB-89: a whole read of the manager notes was sent again unchanged after its error said to read in parts
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The main thread's own call, recorded in lesson 432, and not a gate's behaviour.
 
 Acceptance: the line records a call of the main thread that lesson 432 holds and not a defect of a gate, so no change is owed; the plan that answers the queue drops the line with that reason.
 
@@ -1699,7 +1763,9 @@ Depends: none.
 
 ### P-142. Q-HUB-90: a status page publish was sent again unchanged because a harness message asked for one repeat
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The repeat of an identical call was asked for by a harness tool message, which is the harness's behaviour, and lesson 432 already records the rule that the doctrine and the hooks outrank such notices.
 
 Acceptance: the line records a harness line followed over a gate, which lesson 432 holds, so no change is owed; the plan that answers the queue drops the line with that reason.
 
@@ -1717,7 +1783,9 @@ Depends: P-17.
 
 ### P-144. Q-HUB-92: the harness turned back a publish of the status page to its link, and the lookup answered not found
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: parked. Plan: none.
+
+Parked: The turning back of the publish with a not found answer for the artifact lookup came from the harness and the connector, not from a file here.
 
 Acceptance: a status page whose lookup answers not found is published again at a new link, and the status names the new link; a case.
 
@@ -1759,7 +1827,9 @@ Depends: none.
 
 ### P-149. Q-HUB-97: the first push of a lessons commit hung past the shell's two-minute limit with no output
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: parked. Plan: none.
+
+Parked: The two-minute limit on a foreground command is the environment's, and the plan that pushes names a time limit for the push in its own step.
 
 Acceptance: a step that pushes names the push's time limit and runs the push in the background with its output in a file, as the redesign plan's step 61 does.
 
@@ -1799,7 +1869,9 @@ Depends: Q-HUB-98; Q-HUB-104.
 
 ### P-154. Q-HUB-102: a status named a step as the next move because it read the notes before an edit in the same message landed
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: parked. Plan: none.
+
+Parked: Calls sent in one message run together, which is the harness's behaviour, so a status read of a notes line must be sent in the message after the edit.
 
 Acceptance: the status command run in the same message as a notes edit prints that the notes changed after its read, or a gate orders the two; until then a status that must read a fresh line runs in the message after the edit.
 
@@ -1823,7 +1895,9 @@ Depends: Q-HUB-98; Q-HUB-101.
 
 ### P-157. Q-HUB-105: the restart gate reads a plan mode the person enters by hand as the first act after a resume as the restart's
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: parked. Plan: none.
+
+Parked: The session-start input at harness version 2.1.316 carries no permission mode (Q-HUB-244), so only a route the harness supplies can tell a restart's plan mode from the person's.
 
 Note: the marker route of the plan of 4 November (step 68) is inert at harness version 2.1.316, because a session start's input carries no permission mode; the next route is the harness supplying the mode or a transcript shape that tells the two apart.
 
@@ -1857,7 +1931,9 @@ Depends: none.
 
 ### P-161. Q-HUB-109: the plan of 29 October left recorded items to the plan after it
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: parked. Plan: none.
+
+Parked: The finding records which hub items the plan of 29 October left to the plan after it, and each of those items stands as a finding of its own.
 
 Acceptance: each item the line names is an item of this file or is dropped with a reason: the pre-approval review of a plan by an agent, the cost test, the asked-for clause, the Drive guard's link, the plan kind line, the corrections count, and the reach of the main-thread latch.
 
@@ -1865,7 +1941,9 @@ Depends: Q-HUB-79; Q-HUB-98; Q-HUB-101; Q-HUB-104; P-10, which prints correction
 
 ### P-162. Q-HUB-110: two scratch harnesses fix their target to an app's working copy, which holds an older build than the commit under test
 
-Repository: the app the line names without a repository; the neighbouring lines of the queue name Jefferson-Photography-Studio. Goal: 6. State: open. Plan: none.
+Repository: the app the line names without a repository; the neighbouring lines of the queue name Jefferson-Photography-Studio. Goal: 6. State: parked. Plan: none.
+
+Parked: The step 130 server and the step 159 build harness are scratch files of an earlier plan, and the housekeeping item that retargets them sits in the app's own repository.
 
 Acceptance: the harness files take the folder they serve and build as an argument, so a plan that reuses them for a worktree serves the build under test; read in that app's own session.
 
@@ -1897,7 +1975,9 @@ Depends: none.
 
 ### P-166. Q-HUB-116: an approval marked by an older command has no button record, so the done command could recover it once more
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The gap exists only for an approval marked by an older version of the marking command, and the current command files its own record, so only a session that ran under the replaced gates is affected.
 
 Acceptance: a marker with no button record is not recovered by the done command from a still-reachable transcript tail; a case. The line affects only a session that ran under the old gates and finished a plan in the same transcript, and is dropped when no such session remains.
 
@@ -1923,7 +2003,9 @@ Depends: the owner's choice.
 
 ### P-169. Q-HUB-129: the plants runner imports a fresh copy of every guard for each plant and grows in memory
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The case runs the plants in chunks and a plant takes the chunk size out. Found held in `session-guards.test.mjs` by the triage of the plan of 10 November.
 
 Acceptance: the runner loads each guard module once for a file or releases it, a run of all plants ends with a verdict in this container, and memory after many plants is flat in a read; the by-file count lines of step 21 of the plan of 1 November 2026 already stand.
 
@@ -1939,7 +2021,9 @@ Depends: P-10.
 
 ### P-171. Q-HUB-131: the cost instrument merges two plans that share a title
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: done. Plan: none.
+
+Done: The cost script merges approvals that carry one title into one plan. Found held in `session-cost.mjs` by the triage of the plan of 10 November.
 
 Acceptance: the instrument tells a resumed plan from a different plan with the same title, and an approval with no title line is counted as its own plan; a case with two approvals of one title and two different plans shows each count.
 
@@ -1947,7 +2031,9 @@ Depends: P-10.
 
 ### P-172. Q-HUB-132: the cost instrument derives no dollars by plan
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: parked. Plan: none.
+
+Parked: The harness's cost entry is cumulative, lags the transcript and carries no price list, so dollars cannot be derived here and the count by plan stays in tokens.
 
 Acceptance: a price list is held in a file the owner approves and the instrument prints dollars by plan from tokens by tier, or the plans are judged in tokens only and the choice is written in the instrument's output. The harness's cost entry is cumulative and lags the transcript, so it cannot be split by plan.
 
@@ -1955,7 +2041,9 @@ Depends: P-10.
 
 ### P-173. Q-HUB-133: a refusal printed at prompt time or by a hook of another shape is not counted
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: parked. Plan: none.
+
+Parked: A refusal shape printed outside the transcript's known shapes is unobservable until one occurs, and no event of that kind has been seen.
 
 Acceptance: the instrument's list of refusal shapes is checked against the harness's documented hook output shapes, and a shape no transcript has shown is either counted or named in the output as unseen.
 
@@ -1971,7 +2059,9 @@ Depends: P-10.
 
 ### P-175. Q-HUB-135: a resume whose start hook did not run is not counted
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: parked. Plan: none.
+
+Parked: The instrument counts resumes from the start hooks the harness runs, and a resume whose hook did not run leaves nothing in the transcript to count.
 
 Acceptance: resumes and compaction starts are counted from a source that does not depend on the start hook running, or the output says the count is a floor.
 
@@ -1987,7 +2077,9 @@ Depends: P-10, P-15.
 
 ### P-177. Q-HUB-137: pages read through the fetch tool arrived as saved files and were read by Grep
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: parked. Plan: none.
+
+Parked: The fetch tool is the harness's, and the size of what it returns and how it is saved are its own.
 
 Acceptance: the record states for each quoted passage whether it was read whole or by matching lines, so a caveat beside a quoted line is not lost; a page read in full is marked as such.
 
@@ -2003,7 +2095,9 @@ Depends: Q-HUB-158, Q-HUB-160.
 
 ### P-179. Q-HUB-139: the version of the harness this container runs was not read
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The version of the harness this container runs is a fact of the environment that a read of the container settles, and the documentation pages state versions of their own.
 
 Acceptance: the harness version is read once and written in the baseline, and each documented behaviour that names a first version is marked as applying or not applying to this container.
 
@@ -2021,7 +2115,9 @@ Depends: P-20.
 
 ### P-181. Q-HUB-141: the preface of the lessons carries a counted claim that is stale by two orders of magnitude
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The preface count has been brought to the lesson files' totals. Found held in `LESSONS.md` by the triage of the plan of 10 November.
 
 Acceptance: the preface's counts are generated from the lesson files, and a check fails when the stated count differs from the files. Step 59 of the redesign plan regenerates them once; a gate that holds them is the open part.
 
@@ -2029,7 +2125,9 @@ Depends: none.
 
 ### P-182. Q-HUB-142: some gate citations are not of the form repo-colon-path
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: Every lesson named in the finding now cites its gate as a repository, a colon and a path. Found held in `lessons/271-a-control-that-arrives-as-text-is-not-a-control.md` by the triage of the plan of 10 November.
 
 Acceptance: every lesson's gate citation is of the form the lessons check reads, and a case plants one that is not and sees the check name it. Step 59 of the redesign plan puts seven in that form; the open part is whether the check accepts a citation that opens with a backtick.
 
@@ -2053,7 +2151,9 @@ Depends: P-6, P-31 to P-34.
 
 ### P-185. Q-HUB-145: a session branch for the algebra trainer sits on the hub's remote
 
-Repository: hub. Goal: 4. State: open. Plan: none.
+Repository: hub. Goal: 4. State: parked. Plan: none.
+
+Parked: The branch sits on the remote, and only a dispatch of the sweep workflow from a step of an approved plan, which must come first, removes it.
 
 Acceptance: answered by P-168; this key repeats Q-HUB-119 (Q-HUB-192) and is answered as dropped, naming it, in the next plan's Found answered section.
 
@@ -2077,7 +2177,9 @@ Depends: P-268.
 
 ### P-188. Q-HUB-148: main on the hub is unprotected in the connector's listing
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: Branch protection on main is a GitHub setting only the owner can switch on, as SECURITY.md records.
 
 Acceptance: answered by P-11.
 
@@ -2109,7 +2211,9 @@ Depends: P-17.
 
 ### P-192. Q-HUB-152: the Doctrine gates conclusion for an earlier commit of the record is not known
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: parked. Plan: none.
+
+Parked: The conclusion of the named run is a fact of the remote that a later read of the run settles, an event that comes after this finding.
 
 Acceptance: the run for that commit is read through the connector and its conclusion written here; step 61 reads the run for the pushed commit.
 
@@ -2125,7 +2229,9 @@ Depends: P-13.
 
 ### P-194. Q-HUB-154: the research plan's local checks were fewer than the Doctrine gates job runs in CI
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The seed's list of checks now includes the quote check beside the others the CI job runs. Found held in `plans/seed-template.md` by the triage of the plan of 10 November.
 
 Acceptance: a plan's checks list is the CI job's checks for the files it changes, and the quote check's refusal of a blockquote shape is named in the agent rules; step 61 runs seven checks once over the whole.
 
@@ -2141,7 +2247,9 @@ Depends: none.
 
 ### P-196. Q-HUB-156: nothing reads a commit message before the commit is made
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The commit-message hook it generates refuses a chat link, a trailer or a model's name in a message. Found held in `branch-guard.mjs` by the triage of the plan of 10 November.
 
 Acceptance: a check refuses a message carrying a trailer, a chat link or a model's name at commit time, and the history check stays as it is; a case plants each. Step 61's rebuild removes the trailers from the pushed commits of this plan.
 
@@ -2157,7 +2265,9 @@ Depends: the owner; P-10.
 
 ### P-198. Q-HUB-158: three windows of the settings reference were cut short inside an entry
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: parked. Plan: none.
+
+Parked: The cut windows were the harness's fetch tool ending a window inside an entry, which no file here controls.
 
 Acceptance: the entries cut short (`claudeMdExcludes`, a strict marketplace example and the sub-keys of `strictPluginOnlyCustomization`) are read whole, and the record's statements about them are checked.
 
@@ -2165,7 +2275,9 @@ Depends: Q-HUB-138.
 
 ### P-199. Q-HUB-159: some settings entries were returned whole and one was cut inside its entry
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: done. Plan: none.
+
+Done: The record states that the cut entries are unread and makes no claim about them. Found held in `plans/redesign-record.md` by the triage of the plan of 10 November.
 
 Acceptance: as P-198; the record does not say the settings reference documents nothing about the cut entry.
 
@@ -2191,7 +2303,9 @@ Depends: P-20.
 
 ### P-202. Q-HUB-162: whether plan mode's blocks are enforced in this container's session was not read
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: Whether plan mode's blocks hold in an interactive session with bypass permissions is the harness's behaviour, read only by a live session in that mode.
 
 Acceptance: a test shows whether a write in plan mode is blocked here with the session's permission mode, and the record states it; the lost-at-compaction boundary is tested the same way.
 
@@ -2199,7 +2313,9 @@ Depends: P-17.
 
 ### P-203. Q-HUB-163: the fetch tool's account of some pages is its own and not the page's text
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: parked. Plan: none.
+
+Parked: The fetch tool is the harness's, and the size of what it returns and how it is saved are its own.
 
 Acceptance: each quoted passage is marked as the fetch tool's return or as read from a saved file, which the redesign plan's rule on web pages now requires; the pages whose return was an account are read again in a way that gives the text.
 
@@ -2207,7 +2323,9 @@ Depends: Q-HUB-137.
 
 ### P-204. Q-HUB-164: the records disagree on how three siblings wire the gates
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The fix is a read of the workflow files in the sibling repositories, which needs a session in each of those repositories.
 
 Acceptance: the siblings' workflows are read by the call, as `hub-pin-check.mjs` reads them, and the instruction file's census and REPOS.md are made to say the same; P-35 to P-43 carry the reads.
 
@@ -2279,7 +2397,9 @@ Depends: P-6.
 
 ### P-213. Q-HUB-173: the hub's allow list holds the bare tool name Artifact
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The bare Artifact entry still stands at the top of the allow list in `.claude/settings.json`, and the harness's classifier refuses a session's edit of that list, so only the owner can remove it.
 
 Acceptance: answered by P-13 and P-16, the owner's choice; a session cannot edit the list (lesson 370).
 
@@ -2311,7 +2431,9 @@ Depends: P-3.
 
 ### P-217. Q-HUB-177: EJECT is a hand-back word the gates did not read when step 50 ran
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The stop guard and the report now read EJECT as a state apart and a case holds that. Found held in `session-guards.test.mjs` by the triage of the plan of 10 November.
 
 Acceptance: answered by step 55's state and step 58's narrowed review gate; the first plan run under them shows an EJECT read as a state of its own.
 
@@ -2319,7 +2441,9 @@ Depends: P-2.
 
 ### P-218. Q-HUB-178: the harness's auto-mode paragraph and the plan's file-access rules disagree
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The auto-mode paragraph is the harness's text, and the plan's rules win over it by the plan's own statement.
 
 Acceptance: a guard holds the plan's rule against the harness's wording, or the rule is changed to the one a guard can hold; the plan's rules win until then.
 
@@ -2351,7 +2475,9 @@ Depends: P-195.
 
 ### P-222. Q-HUB-182: the baseline names items by title only because step 53 ran beside step 52
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The baseline now names each item that may change a configuration item by its program key. Found held in `CONFIG.md` by the triage of the plan of 10 November.
 
 Acceptance: CONFIG.md names each item by its key from this file, and a check fails on a key that is not here.
 
@@ -2383,7 +2509,9 @@ Depends: P-195.
 
 ### P-226. Q-HUB-186: the plan's Call chain names a function the amended step no longer builds
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: parked. Plan: none.
+
+Parked: The redesign plan's Call chain section sits in the plan file of the session's plans folder, outside the repository.
 
 Acceptance: the next plan's Call chain is written from the amended steps; the redesign plan's own section is outside its approved scope and stays as it is.
 
@@ -2391,7 +2519,9 @@ Depends: none.
 
 ### P-227. Q-HUB-187: a step orders a narrowed run of several cases and the case filter takes one substring
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The usage text and a case hold that the switch takes a comma-separated list of substrings, so one run covers several cases. Found held in `session-guards.test.mjs` by the triage of the plan of 10 November.
 
 Acceptance: answered with P-228 by a filter that takes several substrings, or the step text says one run per substring.
 
@@ -2399,7 +2529,9 @@ Depends: P-228.
 
 ### P-228. Q-HUB-198: the case filter of the suite takes one substring
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The case fails when the switch takes one substring only, and a step names many cases in one run. Found held in `session-guards.test.mjs` by the triage of the plan of 10 November.
 
 Acceptance: the filter takes a list of substrings, and the several hundred cases that build a plan without calling the plan guard can each be run by name; the same defect as Q-HUB-187, met in step 55 as nineteen narrowed runs.
 
@@ -2407,7 +2539,9 @@ Depends: none.
 
 ### P-229. Q-HUB-188: the record's section on the owner's requirements was written from the session's replies
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: done. Plan: none.
+
+Done: The section was replaced by the plan's later step and says it rests on the owner's messages listed in the intent map. Found held in `plans/redesign-record.md` by the triage of the plan of 10 November.
 
 Acceptance: answered by step 50 and step 59 of the redesign plan; done when the record's section 1 rests on the map and its commit lands.
 
@@ -2431,7 +2565,9 @@ Depends: the owner.
 
 ### P-232. Q-HUB-191: the research plan's reports and the design conversation exist only in the session's files
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: parked. Plan: none.
+
+Parked: The research plan's reports and the design conversation are files of the session's scratchpad and transcript, which are outside every repository.
 
 Acceptance: what a later plan needs of them is in the record or in a found file, and the owner chooses whether the rest is kept; the map stays in the scratchpad by design.
 
@@ -2479,7 +2615,9 @@ Depends: P-2.
 
 ### P-238. Q-HUB-197: a plant quotes the exact source text it takes out, so a nearby edit stales it
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The plants run lists each stale plant before any is run, so an edit beside a plant is found in one line. Found held in `session-guards.test.mjs` by the triage of the plan of 10 November.
 
 Acceptance: a plant is held to its guard by a check that runs at edit time, or the plants run reports a stale plant by name on the first run; step 55 needed three runs each for the stop guard's and the status file's plants.
 
@@ -2511,7 +2649,9 @@ Depends: none.
 
 ### P-242. Q-HUB-202: an existing stop-guard case never exercised the waiting refusal
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The sub-case added by step 56 now exercises the waiting refusal. Found held in `session-guards.test.mjs` by the triage of the plan of 10 November.
 
 Acceptance: the repeat follow-up case is given a state that reaches the waiting refusal, and a plant shows it; the state claim, an always-on refusal, refused it first.
 
@@ -2535,7 +2675,9 @@ Depends: P-4.
 
 ### P-245. Q-HUB-205: a finished plan's approval marker stays until the next plan mode
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: That case holds the main thread's repository writes refused after a plan has finished. Found held in `session-guards.test.mjs` by the triage of the plan of 10 November.
 
 Acceptance: the case that keeps the main thread's repository writes refused outside a plan stays with its plant, and a second case holds it from the marker's side.
 
@@ -2543,7 +2685,9 @@ Depends: P-4.
 
 ### P-246. Q-HUB-206: the existing stop-guard cases turn red under the skip unless each is given a marker
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The stop-guard cases are given the marker through that helper. Found held in `guard-cases/stop-guard.mjs` by the triage of the plan of 10 November.
 
 Acceptance: the cases that spawn the guard with a home holding no marker are counted by a method that sees multi-line spawns and helpers; fourteen of twenty-two were found by the first Grep.
 
@@ -2551,7 +2695,9 @@ Depends: none.
 
 ### P-247. Q-HUB-207: skipping the whole manager fence under a finished plan's marker would pass a free-text agent send
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The manager fence is run for a send in every state, a finished plan included. Found held in `hook-dispatch.mjs` by the triage of the plan of 10 November.
 
 Acceptance: recorded by design; step 56 keeps the send branch in every state, and a case holds it.
 
@@ -2607,7 +2753,9 @@ Depends: P-5.
 
 ### P-254. Q-HUB-214: the test file's copy loops copied guard files flat
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The copy helper makes the destination's folder before each copy. Found held in `session-guards.test.mjs` by the triage of the plan of 10 November.
 
 Acceptance: answered by step 57, which made the folder before each copy; a case plants a nested guard-copy path and sees it copied.
 
@@ -2655,7 +2803,9 @@ Depends: P-3.
 
 ### P-260. Q-HUB-220: an agent put a model-name trailer on a commit from the harness's attribution reminder
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The fence refuses a commit line carrying a trailer before git runs. Found held in `plan-fence.mjs` by the triage of the plan of 10 November.
 
 Acceptance: the plan's rules name the reminder and say it does not apply, and step 61's rebuild leaves the line out of the pushed commits; the settings that would remove it are in P-15.
 
@@ -2671,7 +2821,9 @@ Depends: P-2.
 
 ### P-262. Q-HUB-222: a reword send's Observe names git log and git status and not git show
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: parked. Plan: none.
+
+Parked: The reword send is a step of a plan already closed, held in the plans folder outside the repository, and its Kill line already ends the send on a changed file.
 
 Acceptance: a send that rewords text lists git show in its Observe, which confirms that the tree is unchanged; its Kill line already ends the send FAILED on a changed file.
 
@@ -2727,7 +2879,9 @@ Depends: P-268.
 
 ### P-270. Q-HUB-229: an agent cannot wait on a background run, and a latched agent returns its report each time a run ends
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: parked. Plan: none.
+
+Parked: Waking a resent agent when an earlier agent's background run ends is behaviour of the harness, which no plan command can wait on.
 
 Acceptance: the agent rules or the plan fence say what an agent does while a run is in the background, and a resend reads the output files first; a case where a latched agent's run ending does not bring back a second identical report.
 
@@ -2769,7 +2923,9 @@ Depends: P-273.
 
 ### P-275. Q-HUB-234: a plan carries both rules files whole to satisfy two gates
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: done. Plan: none.
+
+Done: The rules check and the pin check read the pointer from one place. Found held in `hook-dispatch.mjs` by the triage of the plan of 10 November.
 
 Acceptance: a plan's Rules section is the pointer line again, because the gates agree on one file.
 
@@ -2793,7 +2949,9 @@ Depends: none.
 
 ### P-278. Q-HUB-237: a change of directory before git happened because no step said the shell starts at the repository's root
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: That line of the template's rules now says the shell starts at the repository's root. Found held in `plans/seed-template.md` by the triage of the plan of 10 November.
 
 Acceptance: a step that runs git carries the sentence that the shell already starts at the repository's root, or the plan's rules say it once.
 
@@ -2825,7 +2983,9 @@ Depends: none.
 
 ### P-282. Q-HUB-241: the four dependency branches stand on the remote after their changes landed on main
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: parked. Plan: none.
+
+Parked: The dependency branches stand on the remote until GitHub closes their pull requests, an event that must come first and that no step can make.
 
 Acceptance: the four branches are read once; each is gone or its pull request is closed, and what remains is recorded.
 
@@ -2833,7 +2993,9 @@ Depends: none.
 
 ### P-283. Q-HUB-242: the Doctrine gates run for the commit pushed by step 65 was in progress when read
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: parked. Plan: none.
+
+Parked: The conclusion of the CI run for a pushed commit is an event that must come first, and no step can make it arrive before the step ends.
 
 Acceptance: the run for that commit is read through the connector and its conclusion is recorded.
 
@@ -2869,7 +3031,9 @@ Depends: none.
 
 ### P-289. Q-HUB-249: the fax deploy workflow runs npx without its no-install flag in a job that handles secrets
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The workflow that runs npx without its no-install flag is in the fax repository, and pin-check only prints the note.
 
 Acceptance: the step runs the tool through a pinned install or with the no-install flag, and pin-check prints no note for the file.
 
@@ -2929,7 +3093,9 @@ Depends: none.
 
 ### P-296. Q-HUB-256: the seed's added context at a tool call has not been shown to reach the model
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: parked. Plan: none.
+
+Parked: Whether the harness delivers a PreToolUse hook's added context to the model is the harness's behaviour, shown only by a live entry to plan mode.
 
 Acceptance: a live entry to plan mode shows the seed's print in the model's context from the tool call's added context, read from the transcript, or the print is moved to the route that does reach it.
 
@@ -2937,7 +3103,9 @@ Depends: P-288.
 
 ### P-297. Q-HUB-257: a prompt's payload carries no permission mode, so the seed's print at a prompt may never fire
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: parked. Plan: none.
+
+Parked: The harness's session start and prompt payloads carry no permission mode at harness 2.1.316, so the seed prints at the first call that carries one.
 
 Acceptance: the route by which the dispatcher learns the entry to plan mode is read from a live entry, and the seed prints once at that entry by that route.
 
@@ -2945,7 +3113,9 @@ Depends: P-288.
 
 ### P-298. Q-HUB-258: all the suite's plants in one process exit 134 with the heap out of memory
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The plants runner splits a run into chunks of plants in new processes so one process no longer holds every plant's modules. Found held in `session-guards.test.mjs` by the triage of the plan of 10 November.
 
 Acceptance: the whole suite's plants run in one command without exhausting the heap, or the full run is split by file by the suite itself and its count is printed whole.
 
@@ -3041,7 +3211,9 @@ Depends: none.
 
 ### P-308. Q-HUB-268: a read taken at once after a change does not see the ConfigChange record
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: The harness writes its configuration-change record some seconds after the change, so a read taken at once cannot see it.
 
 Acceptance: the record is read after a stated wait on its own file, or the hook's write is shown to land before the harness applies the change, and the plan that plants a change reads the record once after the wait.
 
@@ -3181,7 +3353,9 @@ Depends: P-341.
 
 ### P-321. Q-HUB-280: the stop hold takes an ordinary sentence carrying the word stop as a stop order
 
-Repository: hub. Goal: 4. State: open. Plan: none.
+Repository: hub. Goal: 4. State: parked. Plan: none.
+
+Parked: The owner's word on the stop word's shape must come first, and the finding records that the go of 6 November kept the shape as written.
 
 Acceptance: the owner has chosen the stop word's shape between a message whose last word is stop and the word alone, and the stop hold reads the chosen shape, with a case for an ordinary sentence carrying the word.
 
@@ -3521,7 +3695,9 @@ Depends: none.
 
 ### P-359. Q-HUB-316: the restored-plan-mode lines rest on two unmeasured orderings of the harness's writes
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: parked. Plan: none.
+
+Parked: Both assumptions are settled only by the first real restart after the line is live, an event no step can make.
 
 Acceptance: at the first real restart after the line is live, the start handler's print and the fence's first-call reading are read from the first agent's transcript and recorded under Q-HUB-304, and a read that came before the harness's write is moved to the point after it.
 
@@ -3597,7 +3773,9 @@ Depends: none.
 
 ### P-368. Q-HUB-324: a worker restart after an idle gap ends the harness's plan mode and each exit call then costs a re-entry
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: parked. Plan: none.
+
+Parked: A worker restart ending plan mode is the harness's behaviour, and the remedies touch a rule only the owner can change.
 
 Acceptance: the owner has chosen whether the rule that approval is only the button gives way to a restart, and the chosen remedy is built and held by a case.
 
@@ -3725,7 +3903,9 @@ Depends: none.
 
 ### P-381. Q-HUB-337: reviews after a refusal whose only remedy was the same calls in separate turns cost a minute and a half each
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: parked. Plan: none.
+
+Parked: The rule that a fresh agent clears every move after a refusal is the owner's, and the cost is filed for the owner to weigh against it.
 
 Acceptance: the owner has chosen whether the rule that a fresh agent clears every move after a refusal gives way where the refusal set no latch and the plan is unchanged, and the chosen remedy is built and held by a case.
 
@@ -3743,7 +3923,9 @@ Depends: none.
 
 ### P-383. Q-HUB-339: a plan's dates were written from a UTC stamp and not the California clock
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: parked. Plan: none.
+
+Parked: Whether a check of a step's date against the California clock is worth code is the owner's decision, filed open for it.
 
 Acceptance: the owner has chosen whether a check of a step's date against the California clock is worth code, and where it is the check is built with a plant watched failing.
 
@@ -4519,7 +4701,9 @@ Depends: none.
 
 ### P-462. Q-HUB-415: the container's fetcher eats the text between a less-than sign and a following greater-than sign in a raw-text page
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: parked. Plan: none.
+
+Parked: The container's page fetcher is the environment's, and the span it drops from a raw-text page is its own behaviour.
 
 Acceptance: the fetcher writes such a span, or names the saved file that lost one, with a case on a page that holds a span.
 
@@ -4527,7 +4711,9 @@ Depends: none.
 
 ### P-463. Q-HUB-416: the harness's permission check refused a fetch batch with a reason that names no rule and no host
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: parked. Plan: none.
+
+Parked: The refusal and its missing rule name belong to the harness's permission check, which no file of the repository controls.
 
 Acceptance: a fetch runner takes one host to a call so a refusal names its host, and the refusal names the rule that made it.
 
@@ -4543,7 +4729,9 @@ Depends: none.
 
 ### P-465. Q-HUB-418: the container's fetcher records no redirect
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: parked. Plan: none.
+
+Parked: The container's fetcher is the environment's, and the hub holds no code that saves a fetched page or records its hops.
 
 Acceptance: the fetcher writes the final address and every hop beside each saved page, with a case on a page that redirects.
 
@@ -4559,7 +4747,9 @@ Depends: none.
 
 ### P-467. Q-HUB-420: the stop guard refused three stops on branches no session pushed
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: parked. Plan: none.
+
+Parked: The three refused stops came from the environment's git stop hook, and neither stop-guard.mjs nor the files under .claude/hooks counts remote branches.
 
 Acceptance: the stop guard counts only branches the session pushed, or the remote holds none that is not the session's, with a case on a remote that lists a branch no session pushed.
 
@@ -4639,7 +4829,9 @@ Depends: none.
 
 ### P-477. Q-HUB-430: a review for a second send was made stale by the end of a sibling step
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The review gate's After line narrows what stales a review to steps the cleared step follows. Found held in `hook-dispatch.mjs` by the triage of the plan of 10 November.
 
 Acceptance: the review gate judges staleness against steps that share a file or a dependency with the step cleared, with a case on two steps that share nothing.
 

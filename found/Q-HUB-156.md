@@ -1,1 +1,3 @@
 Q-HUB-156: the harness reminder appended to a session asks for an attribution trailer and a session link on commits; the repository's instruction and the plan's rules forbid both, and the pre-commit privacy check does not read the message that is being written, so the commit message stays plain only by the agent's reading (found in the reviews of step 34 of the research plan of 2 November, filed in step 54 of the redesign plan).
+
+Put right already: "A commit message is plain and reader-facing" in `branch-guard.mjs`. The commit-message hook it generates refuses a chat link, a trailer or a model's name in a message.

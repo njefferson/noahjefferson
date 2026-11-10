@@ -1,1 +1,3 @@
 Q-HUB-106: the manager fence refused the main thread's scheduled check-in for reading a run that was still in progress, with no latch, so a run that outlasts a plan's last step has no reader until the next message arrives; for the plan after this one, the closing of a plan gets a way to read a run that is still going (Found 221.2, recorded by step 232).
+
+Fix in: `hook-dispatch.mjs`. The manager fence should pass a scheduled check-in that only reads a run still in progress, so a run outlasting the plan's last step has a reader.

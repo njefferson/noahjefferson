@@ -1,1 +1,3 @@
 Q-HUB-139: the documentation pages state versions ("v2.1.283", "v2.1.304" and similar) as the first release carrying a behaviour; the version of the harness this container runs was not read, so which documented behaviour applies to this session is not established by step 31 (found in step 31 of the research plan of 2 November, filed in step 54 of the redesign plan).
+
+Not the repository's: the version of the harness this container runs is a fact of the environment that a read of the container settles, and the documentation pages state versions of their own.

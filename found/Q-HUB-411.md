@@ -1,1 +1,3 @@
 Q-HUB-411: the suite's dry listing with the files switch prints a count of plants to run, 1091 of 1501 for twelve named files, that is more than those files hold, so the listing does not narrow the way the narrowed run does (found by the first send of step 160 of the batch's third wave of 9 November, filed in step 160); the fix is for the listing to count the same plants the narrowed run runs, with a case that compares the two counts for one file.
+
+Fix in: `session-guards.test.mjs`. A case compares the count the dry listing prints with the number of plants a narrowed run runs for one file, so the two cannot differ unseen.

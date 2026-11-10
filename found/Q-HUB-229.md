@@ -1,1 +1,3 @@
 Q-HUB-229: an agent cannot wait on a background run by any command a plan lists, and the rule to end its turn on the run is the only route; a resend's agent is not woken by an earlier agent's runs, and a latched agent returns the same report each time one of its runs ends; step 61 of the redesign plan was amended to start its next send from the output files (found in step 61 of the redesign plan of 2 November, filed in step 63 of the plan of 3 November).
+
+Not the repository's: waking a resent agent when an earlier agent's background run ends is behaviour of the harness, which no plan command can wait on.

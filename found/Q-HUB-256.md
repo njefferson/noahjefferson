@@ -1,1 +1,3 @@
 Q-HUB-256: the plan seed's print is added as PreToolUse added context beside a passed call, and no run of the harness has shown that string reaching the model, since the saved hooks reference holds only the second half of the page and no PreToolUse section; the dispatcher emits it and a case reads the JSON, and only a live entry to plan mode shows delivery (found in steps 81 and 82 of the plan that wrote the seed, filed in step 83).
+
+Not the repository's: whether the harness delivers a PreToolUse hook's added context to the model is the harness's behaviour, shown only by a live entry to plan mode.

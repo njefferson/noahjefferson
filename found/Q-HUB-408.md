@@ -1,1 +1,3 @@
 Q-HUB-408: the batch print's landing step, when the batch has no file step, prints the group range as steps 1 to 1, because the first and last group are both the take-up (found by step 159 of the batch's third wave of 9 November, filed in step 160); the fix is wording for a batch of put-right findings only, with a case on such a batch.
+
+Not placed: searched plan-seed.mjs for the batch print's group range for the landing step and found only the group count in the header line.

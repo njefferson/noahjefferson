@@ -1,1 +1,3 @@
 Q-HUB-168: P-49 (Q-HUB-125) and P-52 (Q-HUB-128) are marked answered by an item on a reading of the Design, while the plan's Found answered section lists Q-HUB-125 to 130 as still queued with nothing fixed; the finding stays in its file and the item records the Design part that answers it, so the two do not conflict, but the reading is the agent's and the review can overturn it (found in step 52 of the redesign plan of 2 November, filed in step 54 of the same plan).
+
+Not placed: Searched PROGRAM.md and found P-49 and P-52 and the review item at line 2234 that reads them, with no file left to change.

@@ -1,1 +1,3 @@
 Q-HUB-172: the refusal-site counts of seven files (plan-fence, pending-guard, keep-info-guard, doctrine-read-guard, push-guard, reply-guard, drive-guard) have no method a second reader can reproduce: a Grep of push-guard.mjs's returned refusal lines finds 10 against the carried 18. The baseline carries the step 32 figures and says so; a drift in those seven cannot be detected mechanically until a method is written (found in step 53 of the redesign plan of 2 November, filed in step 54 of the same plan).
+
+Fix in: `CONFIG.md`. A written method for counting the refusal sites of the seven carried files, one a second reader can repeat, replaces the carried figures of step 32.

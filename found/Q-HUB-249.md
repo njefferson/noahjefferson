@@ -1,1 +1,3 @@
 Q-HUB-249: the fax deploy workflow runs npx without its no-install flag in a job that handles secrets, which pin-check prints as a note and does not fail (found in step 78 of the plan of 5 November, filed in step 83 of the plan that wrote the seed).
+
+Not the repository's: the workflow that runs npx without its no-install flag is in the fax repository, and pin-check only prints the note.

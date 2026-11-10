@@ -1,1 +1,3 @@
 Q-HUB-419: the close of the infrared panel's rim plan handed back two lines that no step of a finished plan could record, and the hub's Doctrine gates run for that close commit had not concluded when the main thread read it at 14:37 California on 9 November (met by the main thread, filed in step 382); the fix is for the plan's close to carry a final line that records what it could not read, such as a run still in progress, in the program's next plan, with a case on a close read before its runs end.
+
+Fix in: `plans/seed-template.md`, `guard-cases/plan-seed.mjs`. The close carries a final line recording what could not be read, such as a run still in progress, with a case on a close read before its runs end.

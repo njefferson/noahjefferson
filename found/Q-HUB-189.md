@@ -1,1 +1,3 @@
 Q-HUB-189: a refused approval call resets the talk that the plan gate requires before the call, and each reset costs the owner a go-word before the call can be made again (recorded by step 54 of the redesign plan of 2 November from the plan's own list).
+
+Not placed: plan-guard.mjs was searched for the reset of the talk by a refused approval call; the check mode now finds faults before the talk turn but no code was found settling whether a refusal still resets it.

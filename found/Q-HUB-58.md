@@ -1,1 +1,3 @@
 Q-HUB-58: a step added to a plan's Standing line after its approval went with no review, because an edit of the Steps or the Order keeps the approval and a Standing step passes both the dispatch gate and the review gate; step 149 records the plan's step numbers in the marker at approval and refuses a step outside them, and a marker written before the lists were recorded carries no such check (found in the session of 23 October, recorded by step 149).
+
+Put right already: "the dispatch gate refuses a step that was not in the plan" in `session-guards.test.mjs`. The approval marker records the step numbers and the gate refuses a step outside them, and only a marker written before the lists existed is not held.

@@ -1,1 +1,3 @@
 Q-HUB-110: the step 130 server and the step 159 build harness both fix their target to the app's working copy, which holds a 2.66 build older than the commit under test, so a plan that reuses them for a worktree serves the wrong build unless its scratch copies are retargeted; for the app's housekeeping item, the harness files take the folder they serve and build as an argument (Found 223.0, recorded by step 232).
+
+Not the repository's: the step 130 server and the step 159 build harness are scratch files of an earlier plan, and the housekeeping item that retargets them sits in the app's own repository.

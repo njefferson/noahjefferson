@@ -1,1 +1,3 @@
 Q-HUB-152: the Doctrine gates conclusion for the remote's commit that added the redesign record and the cost instrument is not known; the owner or a later turn should read run 557 once it completes (found in step 33 of the research plan of 2 November, filed in step 54 of the redesign plan).
+
+Not the repository's: the conclusion of the named run is a fact of the remote that a later read of the run settles, an event that comes after this finding.

@@ -1,1 +1,3 @@
 Q-HUB-138: five sections of pages were not read (the tail of the hooks reference, the tail of the subagents page, the tail of the permission-modes page, the tail of the model-config page including the default auto-compact thresholds, and the whole of the checkpointing, prompt-caching, features-overview, managed-settings, agent-teams, headless, env-vars and settings-reference pages); the record must not say the maker documents nothing there (found in step 31 of the research plan of 2 November, filed in step 54 of the redesign plan).
+
+Fix in: `plans/redesign-record.md`. The named pages are read and the record says what each documents, or says for each why it was not read, before any line says the maker documents nothing there.

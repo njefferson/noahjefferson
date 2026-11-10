@@ -1,1 +1,3 @@
 Q-HUB-239: package.json's browser note pairs the sandbox chromium with playwright-core 1.56.0 and says another version hangs, and the npm group applied in step 64 moved it to 1.64.1; the Accessibility gate succeeded in CI at 1.64.1, so only the note's sandbox claim is open; the next plan runs the gate in the sandbox once and rewrites the note or pins the pair (found in step 64 and step 65 of the plan of 3 November).
+
+Fix in: `package.json`. The browser note pairs the sandbox chromium with the version 1.56.0 while the dependency is 1.64.1, and the note is rewritten, or the pair pinned, after the gate is run once in the sandbox.

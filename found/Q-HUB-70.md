@@ -1,1 +1,3 @@
 Q-HUB-70: the scope record's refusal of a verdict that shares eight words with an owner message cannot be warned of through an agent's prompt, because the prompt is only the plan's path and a step number, so an agent learns of the limit when the record is refused and the verdict is written again (found in the session of 23 October, recorded by step 153).
+
+Fix in: `agent-rules.md`, `plan-scope-check.mjs`. A rule line and the refusal's text say that a verdict sharing eight words with an owner message is refused, so an agent learns the limit before it writes.

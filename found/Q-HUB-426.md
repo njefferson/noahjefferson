@@ -1,1 +1,3 @@
 Q-HUB-426: a choice put to the owner at 15:45 California on 9 November named a route, archived copies read through the web fetch tool, that had not been tried, and the first try showed the tool refuses that host (met by the main thread, filed in step 382); the fix is for a route named in a choice to be one a step has already tried, and the stop guard or the reply guard to refuse a choice that names an untried route as an option, with a case on a choice that does.
+
+Fix in: `stop-guard.mjs`, `reply-guard.mjs`. Neither guard refuses a choice that names a route no step has tried; one of them should refuse it, with a case on a choice that does.

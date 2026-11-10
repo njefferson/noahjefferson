@@ -1,1 +1,3 @@
 Q-HUB-431: the main thread read the session's environment at 18:05 California on 9 November outside every step of an approved plan, and the call held the session; its answer changed nothing in the plan (met by the main thread, filed in step 382); the fix is for the manager fence to name, in the refusal of an environment read, the step whose text may carry it, so that a check of the environment is a step's work and not the main thread's, with a case on the read.
+
+Fix in: `hook-dispatch.mjs`. The manager fence's refusal of an environment read names the step whose text may carry it, with a case on the read.

@@ -1,1 +1,3 @@
 Q-HUB-300: the seed printed a hub item into an app session, because it takes an item only from the hub's program; the fix is that the seed takes an app's item by its roadmap key and prints the app's requirements, its roadmap bullets with their keys, its Found queue keys and the section list of its research file for the item's topic (found in a message from an app session of 7 November, filed in step 99 of the first batch plan).
+
+Fix in: `plan-seed.mjs`, `guard-cases/plan-seed.mjs`. The seed takes an app's item by its roadmap key and prints the app's requirements, roadmap bullets, Found queue keys and research file sections.

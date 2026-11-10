@@ -1,1 +1,3 @@
 Q-HUB-350: the plan check's new reads of 8 November, a file of the What is section resolved by one function, a refused step that names the decision records folder without the decisions check, and a Verification line that names a main-thread read outside the record, are judged by cases that run the functions and the guard, and `plan-guard.mjs --check` was never run against a real plan; the fix is a case that runs the check mode on a planted plan carrying each fault and reads each refusal's words, under a temporary folder (found on 8 November, filed in step 128).
+
+Fix in: `guard-cases/plan-guard.mjs`, `session-guards.test.mjs`. A case runs the check mode on a planted plan carrying each of the three new faults, under a temporary folder, and reads each refusal's words.

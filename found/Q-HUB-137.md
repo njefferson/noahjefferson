@@ -1,1 +1,3 @@
 Q-HUB-137: the fetch tool returns a model's account, and its returns for the memory, permissions, hooks-guide, best-practices and cloud-environments pages were too large for the conversation and arrived as saved files; passages from them were read with Grep and Read ranges and so are the fetch tool's return, but a Grep reads only the lines that matched, so a nearby caveat on the page may sit outside what the step 31 report quotes (found in step 31 of the research plan of 2 November, filed in step 54 of the redesign plan).
+
+Not the repository's: the fetch tool is the harness's, and the size of what it returns and how it is saved are its own.

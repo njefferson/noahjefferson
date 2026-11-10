@@ -1,1 +1,3 @@
 Q-HUB-279: a session's own research file was not read whole for the topic before outside sources were named from memory, though the manager fence lets the main thread read it; the fix is a lesson in the shape of lesson 472 and the seed's print of the research file's section list as the exposure, so the file is in front of the writer at the write (found in a message from an app session of 7 November, filed in step 99 of the first batch plan).
+
+Fix in: `plan-seed.mjs`. The seed prints the research file's section list at the write, so the file is in front of the plan's writer before outside sources are named.

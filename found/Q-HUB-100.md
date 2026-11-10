@@ -1,1 +1,3 @@
 Q-HUB-100: privacy-check and third-person-check list tracked files, so at the end of step 213 they read LESSONS.md and NOTES.md and not the eight new lesson files; the commit hook runs privacy-check on staged files and third-person-check reads no lesson body, so the green at 213 covered the two edited files only; the hub plan gives the text checks the untracked files, or a git add before them (found in step 218, recorded by step 219).
+
+Fix in: `privacy-check.mjs`, `third-person-check.mjs`. Both list files with git ls-files and are given the untracked files that are not ignored as well.

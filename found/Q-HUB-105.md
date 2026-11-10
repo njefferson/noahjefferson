@@ -3,3 +3,5 @@ Q-HUB-105: the restart gate reads a plan mode that the person enters by hand as 
 Built: step 68 of the plan that took up the remainder of the plan of 3 November records the permission mode the session-start payload carries in `status/start-mode.json` of the scratchpad, and `restartedPlanMode` reads a plan mode as the restart's only when that marker does not say another mode stood at the start. It takes effect only where a session start's input carries the permission mode, which no start has yet shown (Q-HUB-244).
 
 Step 72 of the plan of 4 November: the marker route of step 68 is inert at harness version 2.1.316, because a session start's input carries no permission mode (Q-HUB-244); the item stays open for a route the harness supplies, the mode itself or a transcript shape that tells the two apart.
+
+Not the repository's: the session-start input at harness version 2.1.316 carries no permission mode (Q-HUB-244), so only a route the harness supplies can tell a restart's plan mode from the person's.

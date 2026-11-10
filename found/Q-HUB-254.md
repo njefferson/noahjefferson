@@ -1,1 +1,3 @@
 Q-HUB-254: the plan guard's name check asks for a new-file mark on a Commands entry that names a file the plan creates, and the plan fence then reads the mark as a word of the command and refuses every run of it; the review of 5 November found it and the plan passed the guard only with the mark written in a form the fence reads away (found by the review of that plan, filed in step 83 of the plan that wrote the seed).
+
+Fix in: `plan-fence.mjs`, `hook-dispatch.mjs`, `plan-guard.mjs`. The new-file mark on a Commands entry is read away before the fence matches the entry, in the plain form the plan check asks for.

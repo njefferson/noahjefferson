@@ -1,1 +1,3 @@
 Q-HUB-424: the first writing of the instrument's plan put a measure of photographs in the container, where the doctrine's rule on test pages puts it on the device, which cost a writing and a message (met by the main thread on 9 November; filed in step 382); the fix is for the plan check to refuse a plan whose Files or steps draw or measure a picture in the container unless the plan names the device as the place of the measure.
+
+Fix in: `plan-guard.mjs`. The plan check refuses a plan whose Files or steps draw or measure a picture in the container unless the plan names the device as the place of the measure.

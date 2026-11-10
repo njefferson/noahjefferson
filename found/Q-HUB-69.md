@@ -1,1 +1,3 @@
 Q-HUB-69: a plan's Rules line that forbids reaching any host stands beside the plan's own git commands that fetch and push, and no guard reads the line, so the contradiction is met only when an agent runs a command that the line seems to forbid (found in the session of 23 October, recorded by step 153).
+
+Not placed: searched plan-guard.mjs and doctrine/plans.md for a check of a Rules line that forbids reaching a host and found none.

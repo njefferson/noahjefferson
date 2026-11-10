@@ -1,1 +1,3 @@
 Q-HUB-41: plan-fence.mjs passes any Bash segment that plan-guard.mjs classifies as a reader (ls, grep and tail among them) whether or not the step's Commands names it, while the shared rules say Bash runs only a command the step names; such lines ran in three steps of the last plan, no gate refused them and nothing was changed by them, and the same allowance may be why the lines of Q-HUB-34 went unrefused, which was not checked (from the app's Q-JPS-39, found in steps 57, 59 and 60).
+
+Fix in: `plan-fence.mjs`. A Bash segment that plan-guard classifies as a reader passes whether or not the step's Commands names it; readers pass only where the Commands names them.

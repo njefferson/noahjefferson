@@ -1,1 +1,3 @@
 Q-HUB-72: plan mode's own list of readers in plan-guard.mjs carries neither git ls-remote nor git show-ref, and refuses git branch with -r, so in plan mode the manager fence's history forms for ls-remote and show-ref pass the fence and are refused by plan mode, while git log and git branch -a pass both; outside plan mode an approved plan passes all four (found in the session of 24 October, recorded by step 186).
+
+Fix in: `plan-guard.mjs`. Its list of git readers now holds ls-remote but not show-ref, and branch with the remote flag is still refused, so plan mode and the manager fence still differ on those forms.

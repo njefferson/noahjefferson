@@ -1,1 +1,3 @@
 Q-HUB-417: two hosts added to the session's allowed list before 16:55 California on 9 November stood on the environment's list when the main thread read it at 18:05, yet did not resolve to the web fetch tool at 18:00 (step 379), so an allowed-hosts change made during a session did not reach that tool's fetches in the same session (filed in step 382); the fix is for the doctrine's rule on a denied host to say that such a change is read by a new session or by a probe of the tool, and for a plan that waits on a host to carry that probe as a step.
+
+Fix in: `doctrine/plans.md`. The doctrine's rule on a denied host says an allowed-hosts change made during a session is read by a new session or by a probe of the tool, and a plan that waits on a host carries the probe as a step.

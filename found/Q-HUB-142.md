@@ -1,1 +1,3 @@
 Q-HUB-142: two gate citations are not of the form repo-colon-path: lesson 271 reads "plan-guard:noahjefferson/plan-guard.mjs" and lesson 269 reads "gates-audit:quietkeep:tools/gate-audit.mjs"; and five open with a backtick (lessons 322, 321, 320, 314, 309) so the path is not machine-read by the pattern used in step 32; whether lessons-check.mjs accepts them was not run (found in step 32 of the research plan of 2 November, filed in step 54 of the redesign plan).
+
+Put right already: "GATE hub:plan-guard.mjs" in `lessons/271-a-control-that-arrives-as-text-is-not-a-control.md`. Every lesson named in the finding now cites its gate as a repository, a colon and a path.

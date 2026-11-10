@@ -1,1 +1,3 @@
 Q-HUB-218: step 58's Observe runs no docs check, third-person check or findings count though the step edits the plans page; step 61 runs them over the whole before the push (found in the review of step 58 of the redesign plan of 2 November, filed in step 60 of the same plan).
+
+Not placed: Searched the plans page and the program for step 58's Observe and found it only in the finding's own file.

@@ -1,1 +1,3 @@
 Q-HUB-158: the fetch tool cut three windows of the settings reference short inside the window: window 100000 to 200000 ended inside the `claudeMdExcludes` entry, window 200000 to 300000 ended inside a `strictKnownMarketplaces` example, and window 300000 to 400000 ended inside the sub-keys of `strictPluginOnlyCustomization`; the entries between each cut and the start of the next window were not read, so the settings reference is read in full only for the entries quoted in section 12 of the step 51 report and the page index rows (found in step 51 of the redesign plan of 2 November, filed in step 54 of the same plan).
+
+Not the repository's: the cut windows were the harness's fetch tool ending a window inside an entry, which no file here controls.

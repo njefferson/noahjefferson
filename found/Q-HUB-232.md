@@ -1,1 +1,3 @@
 Q-HUB-232: the send gate reads the live clone's rules file, version 4, and the exit gate reads the working copy's, version 5, so a plan pinned at 4 cannot be put up and a plan pinned at 5 cannot send; the landed plan's last step wrote version 5 into the working copy and left the clone at 4, and no call of the main thread can move either copy; the gates should read one copy, or the landed plan's last step should pull the clone (found when the plan of 3 November was put up, filed in step 63 of that plan).
+
+Fix in: `hook-dispatch.mjs`, `plan-guard.mjs`. The send gate and the exit gate read one copy of the rules file, the live clone's, so a plan pinned at the file's version can be put up and sent.

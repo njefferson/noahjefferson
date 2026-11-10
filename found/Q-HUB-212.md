@@ -1,1 +1,3 @@
 Q-HUB-212: the keep-info guard judges each Markdown file alone and has no notion of a move, so any split of a file that names a web domain is refused unless the original keeps the domain; steps 57, 59 and 60 count its findings for the staged files before they commit (found in the reviews of step 57 of the redesign plan of 2 November, filed in step 60 of the same plan).
+
+Fix in: `keep-info-guard.mjs`. The guard compares each Markdown file alone, treating only a change of wrapping as no change, so a domain moved to a new file is read as dropped; a pair of files from one move should be compared together.

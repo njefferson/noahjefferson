@@ -1,1 +1,3 @@
 Q-HUB-432: the plan check's pull fault reads a step's Do part for a writer by a code span with a verb of writing, so a reader step that names a file and says changes without saying nothing after it counts as a writer and can raise a false pull-order fault (found by step 164 of the batch's fourth wave of 10 November, filed in step 167); it errs toward refusing and the words writes nothing lift it; the fix is to read a step's Do part for the commands it runs and the tools it names, not for a verb beside a file name, with a case on a reader step that says changes.
+
+Fix in: `plan-guard.mjs`. Read a step's Do part for the commands it runs and the tools it names, not for a verb beside a file name, in the pull-order check at line 890.

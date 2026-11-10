@@ -1,1 +1,3 @@
 Q-HUB-79: the main thread's latch ends agents that are already running: a refusal on the main thread latches the session, every agent's calls are refused with it, and a review or a step that had begun is lost, so one miss of the main thread costs the run; whether a main-thread refusal should reach reviews already cleared and agents already running is a design choice for the owner, and the suggestion is that it should not (found in the last plan's run, recorded by step 199).
+
+Fix in: `hook-dispatch.mjs`. A refusal on the main thread stops reaching reviews already cleared and agents already running, so the one miss no longer ends the run.

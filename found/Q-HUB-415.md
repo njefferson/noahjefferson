@@ -1,1 +1,3 @@
 Q-HUB-415: the container's page fetcher strips tags in a way that eats the text between a less-than sign and a following greater-than sign in a raw-text page, so a passage of a saved text file can read broken while its html file holds it (seen on the segmenter's documentation page, 9 November, step 372 second send; filed in step 382); the fix is for the fetcher to write the page's text without eating that span, or to say in its output which saved files lost a span, with a case on a page that holds such a span.
+
+Not the repository's: the container's page fetcher is the environment's, and the span it drops from a raw-text page is its own behaviour.

@@ -1,1 +1,3 @@
 Q-HUB-188: the record of the design, plans/redesign-record.md, held its section on the owner's requirements written from the session's replies and checked for shape only, so nothing showed that the section rested on the owner's messages; step 50 of the redesign plan rebuilds the ground from the messages and step 59 replaces the section (recorded by step 54 of the redesign plan of 2 November from the plan's own list).
+
+Put right already: "This section is now the design's requirements" in `plans/redesign-record.md`. The section was replaced by the plan's later step and says it rests on the owner's messages listed in the intent map.

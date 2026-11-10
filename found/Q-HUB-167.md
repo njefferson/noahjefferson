@@ -1,1 +1,3 @@
 Q-HUB-167: Q-HUB-115 applies to the redesign plan itself: its What is section quotes a line of the record's section 1 that step 59 replaces, so the plan check will print an evidence fault on the running plan after step 59; the entry P-165 records it as the first plan to meet it (found in step 52 of the redesign plan of 2 November, filed in step 54 of the same plan).
+
+Not placed: the plan check and the What is check in the plan guard were searched for a rule that spares a running plan whose quoted line a step replaces, and none was found.

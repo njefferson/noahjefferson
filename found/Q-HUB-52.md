@@ -1,1 +1,3 @@
 Q-HUB-52: the narrowed plants run of step 138 ran only the three guard files it edited, 304 of 713 plants, so the cases it changed that the plants of other files cite were not run; the full plants run is the gate over the integrated change if one is wanted (found in step 138).
+
+Not placed: Searched the guards and the plans page for a rule or gate on a narrowed plants run and found only the finding's own account of step 138.

@@ -1,1 +1,3 @@
 Q-HUB-310: the pin check passes but prints a note that a deploy workflow runs `npx` without `--no-install` in a workflow that handles secrets (the note names line 155 of the myfax deploy workflow); a note every run prints and nobody has judged is read as part of the green output and teaches that notes are ignorable; the fix is to put that line right in its workflow or to record it as accepted with its reason where the check can read it (found in step 115, filed in step 108).
+
+Fix in: `pin-check.mjs`. The note on a deploy workflow that runs npx without --no-install beside secrets is either put right in that workflow or recorded as accepted with its reason where the check reads it, so the note stops printing on every run.

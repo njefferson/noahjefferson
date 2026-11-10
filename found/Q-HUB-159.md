@@ -1,1 +1,3 @@
 Q-HUB-159: for `idleCompaction`, `includeGitInstructions`, `attribution`, `disableAllHooks`, `allowManagedHooksOnly`, `hooks`, `plansDirectory` and `env` the full entries of the settings reference were returned; `claudeMdExcludes` was cut inside its entry and the entries after it in that window were not returned, so the record must not say the settings reference documents nothing about them (found in step 51 of the redesign plan of 2 November, filed in step 54 of the same plan).
+
+Put right already: "This record must not be read as saying the maker documents nothing in the unread entries" in `plans/redesign-record.md`. The record states that the cut entries are unread and makes no claim about them.

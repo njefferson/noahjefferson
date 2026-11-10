@@ -1,1 +1,3 @@
 Q-HUB-149: one line of the record was attribution under the privacy gate, caught only because the gate was re-run after git add; the research plan's order (checks before commit) ran the privacy gate before the new file was tracked, so it could not see it. A plan that lists the checks first should list git add before them (found in step 33 of the research plan of 2 November, filed in step 54 of the redesign plan).
+
+Fix in: `plans/seed-template.md`. The template's landing step lists the checks before the staging of a new file, so the privacy gate cannot see the new file; the staging of new files is listed before the checks.

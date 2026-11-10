@@ -1,1 +1,3 @@
 Q-HUB-222: the reword send's Observe names git log and git status and not git show, which would confirm that the tree is unchanged; its Kill line already ends the send FAILED on a changed file (found in the reviews of step 58 of the redesign plan of 2 November, filed in step 60 of the same plan).
+
+Not the repository's: the reword send is a step of a plan already closed, held in the plans folder outside the repository, and its Kill line already ends the send on a changed file.

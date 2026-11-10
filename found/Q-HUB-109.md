@@ -1,1 +1,3 @@
 Q-HUB-109: the plan of 29 October leaves these recorded hub items to the plan after it, as its Asked section says: the pre-approval review of a plan by an agent, the cost test, the asked-for clause, the Drive guard's link (Q-HUB-98, Q-HUB-101 and Q-HUB-104), the plan kind line and the corrections count; a change to how a main-thread latch reaches running agents is a design choice that is still open (Q-HUB-79) (the Asked section of that plan, recorded by step 232).
+
+Not the repository's: the finding records which hub items the plan of 29 October left to the plan after it, and each of those items stands as a finding of its own.

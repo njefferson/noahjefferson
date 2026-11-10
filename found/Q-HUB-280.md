@@ -1,1 +1,3 @@
 Q-HUB-280: the stop hold took an ordinary sentence carrying the word stop as a stop order and held a log read and a notes write; the fix waits on the owner's choice of the stop word's shape between the two narrower ones the app session names, a message whose last word is stop or the word alone; the owner's go of 21:31 California on 6 November kept the shape as written, and the file records that a word from the owner changes it (found in a message from an app session of 7 November, filed in step 99 of the first batch plan).
+
+Not the repository's: The owner's word on the stop word's shape must come first, and the finding records that the go of 6 November kept the shape as written.

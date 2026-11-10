@@ -1,1 +1,3 @@
 Q-HUB-198: the case filter of the suite takes one substring, so a step that runs many cases by name makes many narrowed runs, nineteen for the plan guard's cases in step 55, and the several hundred cases that build a plan without calling the plan guard were not each run by name; it is the same defect as Q-HUB-187 met in another step, and step 61's full run is what covers them (found in step 55 of the redesign plan of 2 November, filed in step 60 of the same plan).
+
+Put right already: "--case= takes a comma-separated list of substrings" in `session-guards.test.mjs`. The case fails when the switch takes one substring only, and a step names many cases in one run.

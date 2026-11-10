@@ -1,1 +1,3 @@
 Q-HUB-425: the reading step of the instrument's plan named the container's fetcher as its only route and wrote each refused page down as unread, so the other routes, the web fetch tool and the pages on disk, were tried only after a message, which cost an amendment and a second send (met by the main thread on 9 November; filed in step 382); the fix is for the seed's reading step to list every route a page can be reached by and to say that a refusal on one route sends the page to the next, with a case on a reading step that names one route.
+
+Fix in: `plans/seed-template.md`, `guard-cases/plan-seed.mjs`. The seed's reading step lists every route a page can be reached by and sends a page refused on one route to the next, with a case on a step that names one route.

@@ -1,1 +1,3 @@
 Q-HUB-231: the plan of 3 November was approved with a Rules line that pins version 5 because the guard that judges the exit reads the working copy's rules file, and the first send was to find which copy the send gate reads; the choice of pin is a meeting of two gates over two copies of one file (found when the plan of 3 November was put up, filed in step 63 of that plan).
+
+Not placed: Searched plan-guard.mjs for the rules version pin and found no line that chooses between the two copies of the rules file.

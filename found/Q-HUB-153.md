@@ -1,1 +1,3 @@
 Q-HUB-153: the hub's settings allow-list has no prefix rules for session-cost.mjs, docs-check.mjs, privacy-check.mjs, git show or git rev-parse, which the research plan's later steps use; no hub gate refuses that and the plan's Files does not let an agent edit the settings file, so the commands meet the harness's own judgement in automatic mode (lesson 405's stated risk); a wider allow-list was not made inside that plan (found in the reviews of step 34 of the research plan of 2 November, filed in step 54 of the redesign plan).
+
+Fix in: `.claude/settings.json`. The allow-list holds no prefix rules for the cost, docs, privacy, show and rev-parse commands the plan used.

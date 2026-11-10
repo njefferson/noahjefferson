@@ -1,1 +1,3 @@
 Q-HUB-201: the plan phase reads the pointer on each main-thread call while a plan with an Order is in force, which reads the main transcript and the tail of every agent's transcript; the status gate did a comparable read on each call, and the added cost was not measured (found in step 56 of the redesign plan of 2 November, filed in step 60 of the same plan).
+
+Not placed: the pointer read on each main-thread call was searched for a timing measure and none was found, so the added cost stays unmeasured.

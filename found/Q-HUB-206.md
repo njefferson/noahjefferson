@@ -1,1 +1,3 @@
 Q-HUB-206: the existing stop-guard cases spawn the guard with a home that holds no marker and so turn red under the skip unless each is given one; a Grep that did not count multi-line spawns or helpers found fourteen of twenty-two (found in the reviews of step 56 of the redesign plan of 2 November, filed in step 60 of the same plan).
+
+Put right already: "const env = h.underPlanEnv();" in `guard-cases/stop-guard.mjs`. The stop-guard cases are given the marker through that helper.

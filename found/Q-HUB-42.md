@@ -1,1 +1,3 @@
 Q-HUB-42: the status page's renderer draws step sections only for a plan whose Order section has an Order line, so a plan without one gets none and its chips were added by hand at every publish of the last plan; it is to draw a section for every step of the plan's Steps section when there is no Order line, and a chip for when a step started and a chip for its estimate, from two keys in the manager's notes, Start N and Estimate N (found in the last plan's run of 19 October).
+
+Put right already: "still a section for every step of the plan's Steps section" in `report.mjs`. The status page draws a section for every step when the plan has no Order line, with Start and Estimate chips from the manager's notes.
