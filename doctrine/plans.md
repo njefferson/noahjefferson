@@ -83,7 +83,9 @@ every rule below while none of the hooks that enforce them was running
    hand-back opening none of the three, an interruption or a failure; a hand-back
    opening DONE counts whatever call of the agent was refused before it, and the
    status says the word and that a call was refused (`agentEnd`, LESSONS §436).
-   A Standing step is never N. Under it the
+   A manager's Done line counts a step whose newest end is other than DONE, never
+   a step no agent was sent for or one still running, and the status prints it as
+   done by decision. A Standing step is never N. Under it the
    print gives each step's state, the newest hand-back of each step with every
    line it carries and the path of its report file
    (`progress/step-N-report.txt` in the session scratchpad), and the `Found:`
@@ -180,7 +182,9 @@ every rule below while none of the hooks that enforce them was running
    unless it has a `## Found answered` section with a line for each, opening with
    the key and then `fixed in step N`, `carried to step N`, `still queued` or
    `dropped`, the last two with a reason of ten characters or more. It forces an
-   answer and cannot judge that the answer is true. A repository with no queue,
+   answer and cannot judge that the answer is true. A fix is code that runs or a
+   case that fails when the mistake returns, and a paragraph, a lesson or a check
+   on wording is no fix. A repository with no queue,
    or a plan whose Files names none, is not judged. The queue is written by an
    agent, in a step of a plan whose Files names the file, because the main
    thread writes no repository file.
@@ -292,6 +296,9 @@ every rule below while none of the hooks that enforce them was running
    The entry to plan mode passes the hold, and so, while plan mode is on, do a
    write of the plan file and the plan check, as the status command does; a
    correction that asks for a plan would otherwise hold the call that makes it.
+   The line printed at each message says what passes in the form that fits it:
+   after a go-word held work may go, under a correction the list above, and under
+   the word stop with no go-word at its end only what the stop refusal lists.
    *Enforced whole by:* `hook-dispatch.mjs` and `pending-guard.mjs`.
    Held work (LESSONS §376) is sent again only in a turn that follows a go-word. A
    task notification, a scheduled message and an agent's hand-back are not
@@ -330,7 +337,9 @@ every rule below while none of the hooks that enforce them was running
    the next one: `restartedPlanMode` answers nothing once every step in the Order
    of the marker's plan has a hand-back opening DONE, read the way `pointerOf`
    reads them, so a plan mode that comes on after it is the owner's and the next
-   plan's write passes (LESSONS §435).
+   plan's write passes (LESSONS §435). A plan closed by a manager's Done line for
+   each step that ended other than DONE, or ejected by an Eject note naming its
+   file, holds nothing against the next either.
    **The plan mode the harness brings back after an approval, for every actor.**
    A container restart can bring plan mode back to the main thread and to every
    agent sent after it while the approval marker still matches the plan file;
@@ -388,7 +397,9 @@ every rule below while none of the hooks that enforce them was running
    error after the newest compaction (`readAfterCompactionProblem`), and the
    `## Cost` section states the pushes, the agent sends or reviews and the tier of
    each step (`costProblem`); both are faults of the plan's shape and set no latch
-   (LESSONS §458). A plan does not edit `permissions.allow` of the session's own
+   (LESSONS §458). The plan's own rules hold a line `Sends priced: N`, the dispatcher
+refuses the send past N and prints the count at each prompt, and raising N needs
+the button. A plan does not edit `permissions.allow` of the session's own
    settings: the auto-mode classifier refuses that edit whatever the plan says
    (LESSONS §370).
    *Enforced by:* `plan-guard.mjs` and `hook-dispatch.mjs`
@@ -409,7 +420,7 @@ every rule below while none of the hooks that enforce them was running
    walls: each removed inside the plan, or named with what follows it. (f)
    Optimize: fewer steps, no waits, the cheapest model, steps run together where
    they share no file and no dependency, one landing where one is enough, and the
-   cost said. (g) Permanent: everything agreed is in the plan file before the
+   cost said; it binds the session's own turns as well as a plan's steps. (g) Permanent: everything agreed is in the plan file before the
    button, so nothing rests on a chat turn.
    **The shape a plan arrives in.** A take-up step only claims: it sets the items
    to planned, runs no check, pulls nothing, and runs alone and first. The file
@@ -610,7 +621,10 @@ every rule below while none of the hooks that enforce them was running
       more, each answered by a new plan through plan mode and the owner's button
       (`FENCE_NO_LATCH`, `approvalSetProblem`, `reviewRecordProblem`, rule 13);
       with it the dispatch gate's refusal of a send while no approved plan is in
-      force, answered by entering plan mode (`dispatchGate`, Q-HUB-123);
+      force, answered by entering plan mode (`dispatchGate`, Q-HUB-123); with it
+      the dispatch gate's refusal of a send past the plan's priced count, answered
+      by a new plan through plan mode that raises the line with the causes named
+      (`dispatchGate`, `FENCE_NO_LATCH`);
     - a move the review gate refuses (the plan's first send and the first after an
       eject, a failure, a refusal or a correction), answered by sending the review
       step, by amending the plan's Steps or Order, or by entering plan mode
@@ -786,7 +800,7 @@ acceptance, whether the item still serves the thesis, and whether what was just
 seen moved either. It stands in each agent's report after the verdict word and
 in the review's hand-back. A no is an eject. *Held by:* no gate; a gate that
 judged the sentence would be the kind of gate Design part 9 replaces. The agent
-rules at version 5 and `aim-review.md` carry the rule.
+rules at version 6 and `aim-review.md` carry the rule.
 
 **The three ejects.** A step ejects to the plan: it hands back EJECT with what it
 saw and the files it names, and writes nothing after. A plan ejects to the
@@ -799,10 +813,11 @@ in force by its file name, so a stale line cannot close a later plan's pointer.
 the status and the page, and reads the Eject note by the plan's name.
 
 **The step as a list that cannot be done wrong.** Every step carries Facts, Do,
-Observe and Kill. A red check ends the step with nothing written after it, and
-an observation the step did not name ends it as EJECT. The rule that let a failed
-command run again after a write is gone from the agent rules at version 5; the
-code in `reply-guard.mjs` that implements it stays until a later plan changes it.
+Observe and Kill. An agent repairs its own red check once, in a file it wrote in
+that send, and a second red check ends the step with nothing written after it,
+and an observation the step did not name ends it as EJECT. The rule that let a
+failed command run again after any write is replaced at version 6 by that one
+repair, and the code in `reply-guard.mjs` already passes the run after it.
 *Held by:* `plan-guard.mjs`, which refuses a plan whose step lacks a label, with
 no latch.
 
@@ -841,9 +856,10 @@ The seed reads the last such line: Fix in groups the finding by the files it nam
 Put right already and Not the repository's leave it out of every batch, and Not
 placed, or no line and no file named, gives it no step and lists its key as not
 placed. A landing step ends each finding it files with one. The program is appended per app with a pull before every write and an eject on
-conflict, and a newer hub is taken up at the next plan and never in the middle of
-one; those two are not built by the redesign plan, and the next plan's first act,
-the pull of the live clone, begins them. *Held by:* `foundQueue` in
+conflict, which the redesign plan did not build, and a newer hub is taken up at a
+startup or a resume and never in the middle of a plan: with no plan of the session
+open the dispatcher brings the gates' copy and each clean checkout on main forward
+by a fast-forward and prints a line for each. *Held by:* `foundQueue` in
 `hook-dispatch.mjs`, read by `plan-guard.mjs` and `stop-guard.mjs`.
 
 **The measure.** At each plan's close `session-cost.mjs` prints tokens by tier,

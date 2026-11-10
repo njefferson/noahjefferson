@@ -379,7 +379,7 @@ Every item below has actually happened.
  directory from an agent's line, so the entry is written bare), and a plan with
  Steps whose Files has no code span (LESSONS §443, §444, §445). A status is due when an agent has ended
  since the last one, its time read from the clock (`report.mjs`), and at no
- other time.
+ other time. A plan that sends agents holds a `Sends priced: N` rule line, and the dispatch gate refuses a send past N.
  **Background work is the work:** while a background command or workflow the
  session started is still running, it does not end its turn (`stop-guard.mjs`
  refuses the stop; LESSONS §381). A task a `TaskStop` answered as not found, and
@@ -423,7 +423,7 @@ Every item below has actually happened.
  A slash command's entry (its name, its message, its local output) is the
  harness's own text and not a typed message, so it is not a correction and clears
  no latch; one tag pattern in `transcript-tail.mjs` serves every reader
- (LESSONS §441). (Doctrine §0e rule 3.)
+ (LESSONS §441). The line printed at each message says what passes in the form that fits it. (Doctrine §0e rule 3.)
 - **EVERY TIME GIVEN TO THE OWNER IS CALIFORNIA LOCAL TIME.** (Doctrine §2;
  LESSONS §378.)
 - **DO WHAT THE OWNER ASKED, AND NOTHING MORE.** No additions on the theory of
@@ -534,7 +534,7 @@ Every item below has actually happened.
  with no hand-back whose first line opens DONE (`next: none` when all have
  one). A REFUSED or FAILED hand-back leaves N where it is, and a hand-back
  opening DONE counts whatever call of the agent was refused before it (`agentEnd`,
- LESSONS §436). The dispatch gate
+ LESSONS §436). A manager's Done line counts a step that ended other than DONE. The dispatch gate
  refuses any step but N and a Standing step and prints N in the refusal, and
  `stop-guard.mjs` refuses a stop while N is not none, which replaces the count
  of `## Steps` above for a plan that has an Order. The status also prints each
@@ -617,7 +617,7 @@ Every item below has actually happened.
  starts keeps its transcript below `subagents/workflows/<run>/`, and is found
  there as well (`agentFiles` in `report.mjs`, which the status, the pointer, the
  stop guard and the fence all read through). The main thread can read it.
- The first such refusal sets no latch and says so in its text, and tells the agent to read the rules and go on; a second one latches (LESSONS §415).
+ The first such refusal sets no latch and says so in its text, and tells the agent to read the rules and go on; a second one latches (LESSONS §415). An agent repairs its own red check once, in a file it wrote in that send, and a second red check ends the step.
  (Doctrine §0e rule 13; LESSONS §404, §410, §415.)
 - **A PLAN'S RULES ARE PART OF WHAT IS APPROVED, SO AN EDIT OF THEM AFTER THE BUTTON
  NEEDS THE BUTTON AGAIN.** The approved scope is the plan's Goals, Asked, Files
@@ -755,7 +755,8 @@ Every item below has actually happened.
  they call and run their own cases and new plants, one landing step that proves in
  the foreground, commits once for each file step, closes in the program and pushes
  once with the live clone pulled last, no run in the background, the cost said, and
- no walk against a staging build. (Doctrine §0e rule 4.)
+ no walk against a staging build. It binds the session's own turns as well as a
+ plan's steps. (Doctrine §0e rule 4.)
 - **THE PLAN CHECK REFUSES A TITLE, A PULL, A TIER AND A FILES LINE, AND THE CHECK OF
  A CALL PASSES IN PLAN MODE.** `plan-guard.mjs` faults, as faults of shape that set no
  latch, a plan whose title holds a phrase `third-person-check.mjs` refuses (the

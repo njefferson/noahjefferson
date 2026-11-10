@@ -4,6 +4,7 @@ The owner edits these words and `plan-seed.mjs` reads them: each block opens wit
 
 @@ rules-of-this-plan
 - Every step runs on the sonnet tier; the main thread manages and does no step.
+- Sends priced: N, the whole number of agent sends the plan costs, the review's sends among them, written in place of the letter; past it the plan stops and goes back through plan mode with the causes named.
 - The agent's first call is the Read tool on `/root/.claude/hub/agent-rules.md`, made alone, with no other call in the same turn; a first call sent beside another was refused and latched an agent on 3 November.
 - Each step has four parts the agent reads before acting: Facts, what the step depends on, restated; Do, the exact actions; Observe, what must be seen for the step to be DONE; Kill, what ends the step with nothing further written. On a red check or an observation that is not the one named, the agent writes what it saw into its report, hands back FAILED naming it, and writes nothing after. An observation the step did not foresee, or a judgement the step does not settle, hands back EJECT with what was seen and the files named, and writes nothing after.
 - Every report's first line after its verdict word is the wall line: one sentence answering whether the step still serves this plan's goal 1, whether that goal still serves the program's thesis, and whether what was seen moved either.

@@ -100,7 +100,9 @@ Under it:
   OFF-AIM: the main thread handles it and the plan goes on. ON-AIM otherwise.
 - Route: every command and write that step M orders, read against the Rules, the
   doctrine, the gate list and the guards' code. ROUTE-REFUSED names each command or
-  write a guard would refuse, the guard, and the line that refuses it. The guards
+  write a guard would refuse, the guard, and the line that refuses it. After a step
+  ended other than DONE, it also reads each unsent step of the Order for the same
+  cause and names in a refused route each that carries it. The guards
   are not only the hub's:
   - In a session with the Jefferson-Photography-Studio repository checked out, an
     agent that runs commands there meets two hooks of that repository's own, which
