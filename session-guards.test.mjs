@@ -3789,7 +3789,7 @@ const CASES = [
 
   // ---- a correction from the owner ends the turn (hook-dispatch.mjs) ----
   {
-    name: 'while the owner\'s newest message does not end with a go-word, every main-thread action is refused except the status command and TaskStop, without latching and without quoting it, and the refusal says what passes; a message whose last word is a go-word lifts it, and agents are not held by it',
+    name: 'while the owner\'s newest message does not end with a go-word, every main-thread action is refused except the status command, TaskStop and the entry to plan mode, without latching and without quoting it, and the refusal says what passes; a message whose last word is a go-word lifts it, and agents are not held by it',
     guards: ['correction_refuse', 'correction_go', 'correction_status', 'correction_taskstop', 'correction_no_latch', 'correction_agents', 'correction_midturn', 'go_words', 'go_last_word', 'correction_says'],
     run(m, dir) {
       const WRONG = 'That was done wrong, so answer me before anything else.';
@@ -3802,7 +3802,10 @@ const CASES = [
       const send = { tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } };
       const refused = call(send);
       const write = call({ tool_name: 'Write', tool_input: { file_path: join(w.cwd, 'x.txt'), content: 'x' } });
+      // Q-HUB-403: the main thread's entry to plan mode passes a standing correction, so the plan the message asked for can be made.
       const enter = call({ tool_name: 'EnterPlanMode', tool_input: {} });
+      // A read of a file outside the record is still held by the correction (the case after this one asserts it at length).
+      const outside = call({ tool_input: { file_path: '/etc/hostname' } });
       const noLatch = !latched(s);
       const status = call({ tool_name: 'Bash', tool_input: { command: `node "${join(dir, 'report.mjs')}" "Status 10:00 — a correction stands"` } });
       const stop = call({ tool_name: 'TaskStop', tool_input: { task_id: 'bxyz789' } });
@@ -3832,7 +3835,7 @@ const CASES = [
       return refused.status === 2 && /CORRECTION \(Doctrine §0e rule 3\)/.test(said) && said.includes('go, ok, continue, approved, yes')
         && /a read of the record \(/.test(said) && /the status command and TaskStop pass/.test(said)
         && !said.includes('done wrong') && !said.includes('answer me before')
-        && write.status === 2 && /CORRECTION/.test(write.stderr) && enter.status === 2 && /CORRECTION/.test(enter.stderr) && noLatch
+        && write.status === 2 && /CORRECTION/.test(write.stderr) && enter.status === 0 && outside.status === 2 && /CORRECTION/.test(outside.stderr) && noLatch
         && status.status === 0 && stop.status === 0 && agent.status === 0 && wait.status === 2 && /CORRECTION/.test(wait.stderr)
         && afterGo === 0 && midWrong === 2 && midGo === 0 && goAhead === 2 && goInside === 2 && words.every((x) => x === 0)
         && longer.every((x) => x === 0) && notOwner;
@@ -11667,7 +11670,7 @@ const PLANTS = {
   seed_work_path: ['HUB: isHub ? repo : hub,', 'HUB: hub,', 'plan-seed.mjs'],
   seed_next_repo: ['e.repository.toLowerCase() === repoName.toLowerCase()', 'true', 'plan-seed.mjs'],
   seed_passed: ['it passed over ${passedOver} open', 'it passed over 0 open', 'plan-seed.mjs'],
-  seed_takeup: ["L(fill(tpl['take-up']", "void (fill(tpl['take-up']", 'plan-seed.mjs'],
+  seed_takeup: ["L(fill(tpl[isNew ? 'take-up-new' : 'take-up']", "void (fill(tpl[isNew ? 'take-up-new' : 'take-up']", 'plan-seed.mjs'],
   seed_cost: ["and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move.", 'for each move.', 'plan-seed.mjs'],
   seed_state: ['done where every step in Order handed back DONE', 'done', 'plans/seed-template.md'],
   seed_landing: ['`git push origin main`, and where the remote refuses it as not a fast-forward', '`git push origin main`, and where it fails', 'plans/seed-template.md'],
@@ -11675,7 +11678,7 @@ const PLANTS = {
   seed_resend: ['This step is never a resend', 'This step may be a resend', 'plans/seed-template.md'],
   seed_planfile_marker: ['    if (mk?.plan && existsSync(String(mk.plan))) return String(mk.plan);\n', '\n', 'hook-dispatch.mjs'],
   seed_planfile_newest: ['files.sort((a, b) => b.at - a.at);', 'files.sort((a, b) => a.at - b.at);', 'hook-dispatch.mjs'],
-  seed_planfile_wired: ['const planFile = opts.args ? \'\' : seedPlanFile(opts);', "const planFile = '';", 'hook-dispatch.mjs'],
+  seed_planfile_wired: ['const planFile = seedPlanFile(opts);', "const planFile = '';", 'hook-dispatch.mjs'],
   // The batch print: which findings it takes, how it groups and cuts them, what it marks fixed, and where the dispatcher prints it.
   batch_select: ["if (e.state !== 'open' || e.repository.toLowerCase() !== o.repoName.toLowerCase()) return;", "if (e.state !== 'open') return;", 'plan-seed.mjs'],
   batch_group: ["(a === '') - (b === '') || byHome.get(a)[0].rank - byHome.get(b)[0].rank", 'byHome.get(a)[0].rank - byHome.get(b)[0].rank', 'plan-seed.mjs'],
@@ -11685,9 +11688,9 @@ const PLANTS = {
   batch_size: ['for (let i = 0; i < fs.length; i += size) groups.push({ home: h, list: fs.slice(i, i + size) });', 'groups.push({ home: h, list: fs });', 'plan-seed.mjs'],
   batch_cost: ['one each by the take-up and the landing step', 'one for the whole plan', 'plan-seed.mjs'],
   batch_steps_limit: ['if (limit > 0) groups = groups.slice(0, limit);', 'void limit;', 'plan-seed.mjs'],
-  batch_shape: ['L(`Served by: step ${takeup} serves goals 5 and 6; step${gnums.length', 'L(`Served: step ${takeup} serves goals 5 and 6; step${gnums.length', 'plan-seed.mjs'],
+  batch_shape: ["L(`Served by: ${servedBy.join('; ')}.`);", "L(`Served: ${servedBy.join('; ')}.`);", 'plan-seed.mjs'],
   batch_none: ['if (!findings.length) return { ok: false', 'if (false) return { ok: false', 'plan-seed.mjs'],
-  batch_dispatch: ["(mode0 === 'batch' ? ['--batch'", "(mode0 === 'never' ? ['--batch'", 'hook-dispatch.mjs'],
+  batch_dispatch: ["if (mode0 === 'batch') return { args: ['--batch'", "if (mode0 === 'never') return { args: ['--batch'", 'hook-dispatch.mjs'],
   batch_mode: ["return key && existsSync(join(isHub ? hub : cwd, 'found', `${key}.md`)) ? 'batch' : 'single';", "return 'batch';", 'hook-dispatch.mjs'],
   seed_out_write: ['writeFileSync(path, r.text);', 'void path;', 'plan-seed.mjs'],
   seed_out_line: ['`plan-seed: wrote ${path} (', '`plan-seed: wrote ${"it"} (', 'plan-seed.mjs'],

@@ -155,7 +155,7 @@ import { recallParts } from './compact-recall.mjs';
 import { tailEntries, isOwnerMessage, textOf, ownerMode } from './transcript-tail.mjs';
 import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
   planScript, noteRefusedRead, refusedReads, unreadRefusals, standingRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, stepEnds, stepBody, markCompacted, sessionFiles,
-  planAfter, SCOPE_SECTIONS, restartedPlanMode, writeStartMode, isTopTier, tierWords, servingModel, flaggedAgents } from './report.mjs';
+  planAfter, planModeState, SCOPE_SECTIONS, restartedPlanMode, writeStartMode, isTopTier, tierWords, servingModel, flaggedAgents } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
 import { HARNESS_TAG } from './pending-guard.mjs';
@@ -203,8 +203,33 @@ export const isWaitCommand = (cmd) => WAIT.test(String(cmd ?? ''));
 // for the shell to expand, and nothing chained. It changes nothing, so the main thread's gates pass it as they
 // pass the status command, a latch included, and a line with anything chained to it is not it.
 const CAN_ARG = '(?:"[^"`$\\\\]*"|\'[^\']*\'|[^\\s"\'`$\\\\;&|<>(){}*?\\[\\]!#]+)';
-const CAN = new RegExp('^\\s*node\\s+"?' + join(HUB, 'hook-dispatch.mjs').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  + '"?\\s+--can\\s+[A-Za-z][A-Za-z0-9_]*\\s+' + CAN_ARG + '\\s*$');
+/**
+ * The spellings of the check's command that are accepted (Q-HUB-405).
+ * @param {string} [hub]  the folder holding this `hook-dispatch.mjs` (the live clone, or a copy a test runs).
+ * @param {string} [home]  the home folder the tilde spelling stands for.
+ * @returns {{full: string, tilde: string|null}} `full`: the script's full path; `tilde`: `~/` and its path below the home folder, only where the
+ *   hub sits below the home folder, since the shell then expands that spelling to the same file; null otherwise.
+ */
+export function canSpellings(hub = HUB, home = homedir()) {
+  const full = join(hub, 'hook-dispatch.mjs');
+  const rel = relative(home, hub);
+  const below = rel !== '' && !rel.startsWith('..') && resolve(home, rel) === resolve(hub);
+  return { full, tilde: below ? `~/${join(rel, 'hook-dispatch.mjs')}` : null };
+}
+
+/**
+ * The test of a check's command line for a hub and a home folder.
+ * @param {string} [hub]  the folder holding `hook-dispatch.mjs`.
+ * @param {string} [home]  the home folder the tilde spelling stands for.
+ * @returns {RegExp} `node`, then the full path (quoted or not) or the unquoted tilde spelling, `--can`, a tool name and ONE argument, nothing chained.
+ */
+export function canRegex(hub = HUB, home = homedir()) {
+  const esc1 = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const { full, tilde } = canSpellings(hub, home);
+  const path = tilde ? `(?:"?${esc1(full)}"?|${esc1(tilde)})` : `"?${esc1(full)}"?`;
+  return new RegExp(`^\\s*node\\s+${path}\\s+--can\\s+[A-Za-z][A-Za-z0-9_]*\\s+${CAN_ARG}\\s*$`);
+}
+const CAN = canRegex();
 
 /**
  * Is a Bash line the check of a call (`hook-dispatch.mjs --can`)?
@@ -312,6 +337,61 @@ export function seedMode(cwd, hub = HUB) {
 }
 
 /**
+ * What the manager's notes ask of the seed (Q-HUB-404).
+ * @param {string|null} pad  the session scratchpad; its `status/manager.txt` is read.
+ * @returns {{item: string|null, rounds: number|null, notes: string[]}} `item`: the value of the newest line opening `Seed item:` when it is a program
+ *   key (`P-` and a number) or the word `new`; `rounds`: the value of the newest line opening `Seed rounds:` when it is a whole number from one to five.
+ *   A line with any other value is passed over and `notes` says so, one sentence for each; with neither line (or no notes file) all are empty.
+ */
+export function seedWishes(pad) {
+  const none = { item: null, rounds: null, notes: [] };
+  if (!pad) return none;
+  let text = '';
+  try { text = readFileSync(join(pad, MANAGER_NOTES), 'utf8'); } catch { return none; }
+  const newest = (key) => { let v = null; for (const l of text.split('\n')) { const m = new RegExp(`^${key}:\\s*(.*?)\\s*$`).exec(l); if (m) v = m[1]; } return v; };
+  const out = { item: null, rounds: null, notes: [] };
+  const item = newest('Seed item');
+  if (item !== null) {
+    if (/^(?:P-\d+|new)$/.test(item)) out.item = item;
+    else out.notes.push(`SEED ITEM LINE PASSED OVER: "${item.slice(0, 40)}" is neither a program key nor the word new, so the seed is printed as if the notes had no such line.`);
+  }
+  const rounds = newest('Seed rounds');
+  if (rounds !== null) {
+    if (/^[1-5]$/.test(rounds)) out.rounds = Number(rounds);
+    else out.notes.push(`SEED ROUNDS LINE PASSED OVER: "${rounds.slice(0, 40)}" is not a whole number from one to five, so the seed is printed as if the notes had no such line.`);
+  }
+  return out;
+}
+
+/**
+ * The arguments the dispatcher gives the seed at the entry to plan mode, and what it says about the notes' lines.
+ * @param {object} p  the hook payload (`cwd` is read).
+ * @param {string|null} pad  the session scratchpad.
+ * @param {string} outFile  the file the seed writes its whole print to.
+ * @param {{args?: string[], hub?: string, marker?: string, plansDir?: string}} [opts]  `args` replaces the whole list (a test); `hub`, `marker` and `plansDir` as `seedMode` and `seedPlanFile` take them.
+ * @returns {{args: string[], notes: string[]}} the list: `--item <key or new>` when the notes name an item, else `--batch` (with `--rounds <n>` when the notes
+ *   give rounds) when the first open entry is a filed finding, else `--item next`; each with `--hub`, `--plan` and `--out`. `notes` holds the sentences
+ *   of `seedWishes` and one for a rounds line that cannot be used (an item is named, or the print is not a batch print). Nothing is run or written.
+ */
+export function seedArguments(p, pad, outFile, opts = {}) {
+  if (opts.args) return { args: opts.args, notes: [] };
+  // The seed numbers its steps from the plan file's highest, so it is handed the plan file: the one the approval marker names, else the newest
+  // file directly under the plans folder (a plan not yet approved is the newest one written).
+  const planFile = seedPlanFile(opts);
+  const tail = [...(opts.hub ? ['--hub', String(opts.hub)] : []), ...(planFile ? ['--plan', planFile] : []), '--out', outFile];
+  const w = seedWishes(pad);
+  const notes = [...w.notes];
+  if (w.item) {
+    if (w.rounds) notes.push('SEED ROUNDS LINE PASSED OVER: the notes name an item, and rounds apply to the batch print only.');
+    return { args: ['--item', w.item, ...tail], notes };
+  }
+  const mode0 = seedMode(p?.cwd ? String(p.cwd) : process.cwd(), opts.hub);
+  if (mode0 === 'batch') return { args: ['--batch', ...(w.rounds ? ['--rounds', String(w.rounds)] : []), ...tail], notes };
+  if (w.rounds) notes.push('SEED ROUNDS LINE PASSED OVER: the print is for one item, and rounds apply to the batch print only.');
+  return { args: ['--item', 'next', ...tail], notes };
+}
+
+/**
  * The plan seed, printed once at the entry to plan mode.
  * @param {object} p  a main-thread hook payload: `permission_mode`, `session_id` and `cwd` are read; an agent's payload prints nothing.
  * @param {{pad?: string|null, args?: string[], script?: string}} [opts]  the session scratchpad, the seed's arguments (`--item next` by
@@ -334,16 +414,11 @@ export function planEntrySeed(p, opts = {}) {
     try { mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, `${JSON.stringify({ mode, at: new Date().toISOString() })}\n`); } catch { return ''; }
   }
   if (mode !== 'plan' || before === 'plan') return '';
-  // The seed numbers its steps from the plan file's highest, so it is handed the plan file: the one the approval marker names, else the newest
-  // file directly under the plans folder (a plan not yet approved is the newest one written).
-  const planFile = opts.args ? '' : seedPlanFile(opts);
-  const planArgs = planFile ? ['--plan', planFile] : [];
-  const mode0 = opts.args ? null : seedMode(p?.cwd ? String(p.cwd) : process.cwd(), opts.hub);
   // The print is written WHOLE to `status/seed-print.txt` of the scratchpad by the seed's own `--out`, and the added context carries the path and the
   // first forty lines, because the harness cuts a hook's added context at a cap and a print of 143 KB lost its steps past the 25th group.
   const outFile = join(pad, 'status', 'seed-print.txt');
-  const args = opts.args ?? (mode0 === 'batch' ? ['--batch', ...(opts.hub ? ['--hub', String(opts.hub)] : []), ...planArgs, '--out', outFile]
-    : ['--item', 'next', ...(opts.hub ? ['--hub', String(opts.hub)] : []), ...planArgs, '--out', outFile]);
+  const { args, notes } = seedArguments(p, pad, outFile, opts);
+  const said = notes.length ? `${notes.join('\n')}\n` : '';
   try { rmSync(outFile, { force: true }); } catch { /* a stale print is read as new only if the seed writes it */ }
   const r = spawnSync(process.execPath, [opts.script ?? join(HUB, 'plan-seed.mjs'), ...args], {
     encoding: 'utf8', timeout: 30000, cwd: p?.cwd ? String(p.cwd) : undefined, env: { ...process.env, CLAUDE_CODE_SESSION_ID: String(p?.session_id ?? '') },
@@ -351,9 +426,9 @@ export function planEntrySeed(p, opts = {}) {
   if (r.status !== 0) return '';
   let whole = '';
   try { whole = readFileSync(outFile, 'utf8'); } catch { whole = ''; }
-  if (!whole.trim()) return String(r.stdout).trim();
+  if (!whole.trim()) return said + String(r.stdout).trim();
   const lines = whole.replace(/\s+$/, '').split('\n');
-  return [`PLAN SEED WRITTEN WHOLE to ${outFile} (${lines.length} lines): read it whole with the Read tool, because the harness cuts added context at a cap. Its first ${Math.min(40, lines.length)} lines follow.`,
+  return [...notes, `PLAN SEED WRITTEN WHOLE to ${outFile} (${lines.length} lines): read it whole with the Read tool, because the harness cuts added context at a cap. Its first ${Math.min(40, lines.length)} lines follow.`,
     ...lines.slice(0, 40)].join('\n');
 }
 
@@ -2852,7 +2927,17 @@ function notOfRecord() {
     + 'an agent sent with the approved plan\'s path and a step number; TaskStop; the status command; the wait between statuses (report.mjs --wait); '
     + 'a write to its plan file under ~/.claude/plans/, to the status page\'s source or to its manager notes; Artifact publishing the status page, or reading, listing or opening a page; '
     + 'SendUserFile of files in the session scratchpad; EnterPlanMode and ExitPlanMode. '
-    + `To check a call before making it, run: node ${join(HUB, 'hook-dispatch.mjs')} --can <tool> "<path or command line>". It says whether the manager fence and the latch would pass the call, and changes nothing.`;
+    + `To check a call before making it, run: node ${join(HUB, 'hook-dispatch.mjs')} --can <tool> "<path or command line>". It says whether the manager fence and the latch would pass the call, and changes nothing. `
+    + `The check is accepted spelled with ${canSpellingsText()}; a check spelled any other way, the working copy's path or a quoted tilde among them, is not the check and is refused.`;
+}
+
+/**
+ * The accepted spellings of the check, in words for a refusal.
+ * @returns {string} the full path form, and the unquoted tilde form where the hub sits below the home folder.
+ */
+function canSpellingsText() {
+  const { full, tilde } = canSpellings();
+  return tilde ? `node ${full} or node ${tilde}, the tilde unquoted` : `node ${full}`;
 }
 
 /**
@@ -3673,6 +3758,21 @@ export function stopWritePass(p, planMode) {
 }
 
 /**
+ * The calls a standing correction lets through for the plan to be made (Q-HUB-403).
+ * @param {object} p  a PreToolUse payload.
+ * @param {boolean} planMode  whether the harness is in plan mode.
+ * @returns {boolean} true for the main thread's entry to plan mode (`EnterPlanMode`), which writes nothing, and, while plan mode is on, for a
+ *   write of the plan file (`planFileWrite`) and the plan check (`isPlanCheck`). The message that asks for a plan is a correction until a
+ *   go-word, and held the entry to the mode it asked for. Every other call stays held, and an agent's call is none of these.
+ */
+export function correctionPass(p, planMode) {
+  if (p.agent_id) return false;
+  if (String(p.tool_name ?? '') === 'EnterPlanMode') return true;
+  if (!planMode) return false;
+  return planFileWrite(p) || isPlanCheck(p);
+}
+
+/**
  * The manager fence for a call made after a plan has finished.
  * @param {object} p  a main-thread PreToolUse payload.
  * @param {object} [opts]  what `managerFence` takes.
@@ -3730,7 +3830,7 @@ export function canMain(args, env = process.env, cwd = process.cwd()) {
   // reads a repository's files with no plan in force), so the check carries the mode the owner's newest message recorded, the same
   // reading the status print gives (`modeLine`), and judges the call as the dispatcher will.
   let mode = null;
-  if (files) { try { mode = ownerMode(tailEntries(files.main, 16 * 1024 * 1024)); } catch { mode = null; } }
+  if (files) { try { mode = planModeState(tailEntries(files.main, 16 * 1024 * 1024)).mode; } catch { mode = null; } }
   const p = { ...(sid ? { session_id: sid } : {}), ...(files ? { transcript_path: files.main } : {}), ...(mode ? { permission_mode: mode } : {}), cwd, tool_name: tool, tool_input: inputFor(tool, arg) };
   return canText(p, canCall(p), arg);
 }
@@ -4146,6 +4246,8 @@ async function main(event, raw, p) {
       // `stopWritePass` passes the plan file in either state and the manager's notes under an approved plan outside plan mode; a repository
       // write is neither and stays held. The plan check passes before this point, as the status command does.
       try { if (correction && stopWritePass(p, phase.planMode)) correction = null; } catch { /* a write that cannot be judged stays held */ }
+      // Q-HUB-403: THE ENTRY TO PLAN MODE PASSES A CORRECTION, and in plan mode so do the plan file's write and the plan check (`correctionPass`).
+      try { if (correction && correctionPass(p, phase.planMode)) correction = null; } catch { /* a call that cannot be judged stays held */ }
       try { if (correction && correctionLifts(p, correction)) correction = null; } catch { /* a send that cannot be judged stays held */ }
       if (correction) {
         let reviewed = false;
@@ -4243,6 +4345,12 @@ async function main(event, raw, p) {
       const ax = run(`node "${join(HUB, 'approved-plan-guard.mjs')}" --app-exit`, raw, root);
       if (ax.deny) return refuse(ax.reason, false);
     }
+    // Q-HUB-389, Q-HUB-410: THE CHECK OF A CALL IS THE MAIN THREAD'S. The plan guard passes it in plan mode, so the plan fence's reader test passes an
+    // agent's call of it as well; an agent's own check stays refused, as the latch list and `canCall`'s free flag say, and the refusal latches that
+    // agent only. It is made BEFORE the family guards are asked, so no guard's answer, and no order of the list below, can lift it.
+    if (p.agent_id && String(p.tool_name ?? '') === 'Bash' && CAN.test(String(p.tool_input?.command ?? ''))) {
+      return refuse('PLAN FENCE (Doctrine §0e): the check of a call (hook-dispatch.mjs --can) is the main thread\'s, and an agent\'s call of it is refused.');
+    }
     for (const g of [`node "${join(HUB, 'drive-guard.mjs')}" "${root}"`,
       `node "${join(HUB, 'approved-plan-guard.mjs')}"`, `node "${join(HUB, 'reply-guard.mjs')}"`, `node "${join(HUB, 'keep-info-guard.mjs')}"`,
       `node "${join(HUB, 'push-guard.mjs')}"`, `node "${join(HUB, 'plan-fence.mjs')}"`, `node "${join(HUB, 'doctrine-read-guard.mjs')}"`]) {
@@ -4284,11 +4392,6 @@ async function main(event, raw, p) {
       if (o.status !== 0 && !READS.has(p.tool_name ?? '')) {
         return refuse(`${g.split('"')[1] ?? g} did not run cleanly (${o.error ?? `exit ${o.status}`}${o.err ? `: ${o.err.trim().split('\n')[0]}` : ''}); only reads run until it is fixed.`);
       }
-    }
-    // Q-HUB-389: THE CHECK OF A CALL IS THE MAIN THREAD'S. The plan guard passes it in plan mode, so the plan fence's reader test passes an agent's
-    // call of it as well; an agent's own check stays refused, as the latch list and `canCall`'s free flag say, and the refusal latches that agent only.
-    if (p.agent_id && String(p.tool_name ?? '') === 'Bash' && CAN.test(String(p.tool_input?.command ?? ''))) {
-      return refuse('PLAN FENCE (Doctrine §0e): the check of a call (hook-dispatch.mjs --can) is the main thread\'s, and an agent\'s call of it is refused.');
     }
     // A RELEASE OF THE CALL THE LATCH WAS SET BY LIFTS THE LATCH (`releaseLifts`, LESSONS §432): the reply guard has just checked the
     // reading and recorded it, so the repeat of the call it refused is no longer a repeat. Only a latch the reply guard set is lifted,

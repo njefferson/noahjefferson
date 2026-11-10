@@ -636,6 +636,123 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'Q-HUB-403: a standing correction lets the main thread\'s entry to plan mode through and, in plan mode, the plan file\'s write and the plan check, and still holds a repository write, the exit from plan mode and an agent\'s entry',
+    guards: ['correction_enter_hold', 'correction_enter_unit'],
+    run(m, dir, h) {
+      const WRONG = 'That was done wrong, so answer me before anything else.';
+      const w = h.world(dir, [h.turn(0, h.GO), h.turn(5, WRONG)]);
+      const call = (extra) => w.call('PreToolUse', { session_id: h.sid('ce'), ...extra });
+      const enter = call({ tool_name: 'EnterPlanMode', tool_input: {} });
+      const planFile = join(w.home, '.claude', 'plans', 'new-plan.md');
+      const unitPlanFile = join(homedir(), '.claude', 'plans', 'new-plan.md');
+      const planWrite = call({ tool_name: 'Write', tool_input: { file_path: planFile, content: '# Plan\n' }, permission_mode: 'plan' });
+      const repoWrite = call({ tool_name: 'Write', tool_input: { file_path: join(w.cwd, 'x.txt'), content: 'x\n' }, permission_mode: 'plan' });
+      const exit = call({ tool_name: 'ExitPlanMode', tool_input: { planFilePath: planFile }, permission_mode: 'plan' });
+      const unit = (extra, mode) => m.dispatch.correctionPass({ tool_name: 'EnterPlanMode', tool_input: {}, ...extra }, mode);
+      return h.assertAll([
+        ['the entry to plan mode is not held by the correction', enter.status === 0 && !/CORRECTION/.test(enter.stderr), enter.stderr],
+        ['the plan file\'s write in plan mode is not held by the correction', !/CORRECTION/.test(planWrite.stderr), planWrite.stderr],
+        ['a repository write in plan mode is held by the correction', repoWrite.status === 2 && /CORRECTION/.test(repoWrite.stderr), repoWrite.stderr],
+        ['the exit from plan mode is held by the correction', exit.status === 2 && /CORRECTION/.test(exit.stderr), exit.stderr],
+        ['the unit passes the main thread\'s entry in either state', unit({}, false) === true && unit({}, true) === true, [unit({}, false), unit({}, true)]],
+        ['the unit refuses an agent\'s entry', unit({ agent_id: 'a1' }, true) === false, unit({ agent_id: 'a1' }, true)],
+        ['the unit passes the plan file\'s write in plan mode only', m.dispatch.correctionPass({ tool_name: 'Write', tool_input: { file_path: unitPlanFile } }, true) === true && m.dispatch.correctionPass({ tool_name: 'Write', tool_input: { file_path: join(w.cwd, 'x.txt') } }, true) === false, 'write'],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-405: the check of a call is accepted spelled with the hub\'s full path, quoted or not, and with the tilde spelling where the hub sits below the home folder, and refused with the working copy\'s path, a quoted tilde, a hub outside the home folder, anything chained or another file; the manager fence\'s refusal names the accepted spellings',
+    guards: ['can_tilde_spelling', 'can_spellings_words'],
+    run(m, dir, h) {
+      const below = m.dispatch.canRegex('/home/sample/.claude/hub', '/home/sample');
+      const outside = m.dispatch.canRegex('/srv/hub', '/home/sample');
+      const spell = m.dispatch.canSpellings('/home/sample/.claude/hub', '/home/sample');
+      const none = m.dispatch.canSpellings('/srv/hub', '/home/sample');
+      const live = m.dispatch.canSpellings();
+      const refusal = m.dispatch.managerFence({ session_id: h.sid('cs'), cwd: '/', tool_name: 'Bash', tool_input: { command: 'node /tmp/elsewhere/hook-dispatch.mjs --can Read x' } }, { plan: null, classify: () => true });
+      return h.assertAll([
+        ['the full path passes', below.test('node /home/sample/.claude/hub/hook-dispatch.mjs --can Read x'), 'full'],
+        ['the quoted full path passes', below.test('node "/home/sample/.claude/hub/hook-dispatch.mjs" --can Bash "git status"'), 'quoted'],
+        ['the tilde spelling passes', below.test('node ~/.claude/hub/hook-dispatch.mjs --can Read /tmp/x'), 'tilde'],
+        ['a quoted tilde is refused', !below.test('node "~/.claude/hub/hook-dispatch.mjs" --can Read x'), 'quoted tilde'],
+        ['the working copy\'s path is refused', !below.test('node /home/sample/noahjefferson/hook-dispatch.mjs --can Read x'), 'working copy'],
+        ['a hub outside the home folder has no tilde spelling', !outside.test('node ~/.claude/hub/hook-dispatch.mjs --can Read x') && outside.test('node /srv/hub/hook-dispatch.mjs --can Read x'), 'outside'],
+        ['a chained line and another file are refused', !below.test('node ~/.claude/hub/hook-dispatch.mjs --can Read x; touch y') && !below.test('node ~/.claude/hub/report.mjs --can Read x'), 'chained'],
+        ['the spellings are the full path and the tilde below the home folder', spell.full === '/home/sample/.claude/hub/hook-dispatch.mjs' && spell.tilde === '~/.claude/hub/hook-dispatch.mjs' && none.tilde === null, JSON.stringify([spell, none])],
+        ['the live hub\'s test accepts its own tilde spelling where it has one', live.tilde === null || m.dispatch.isCanCommand(`node ${live.tilde} --can Read x`), JSON.stringify(live)],
+        ['the fence\'s refusal of another spelling names the accepted ones', typeof refusal === 'string' && refusal.includes(`node ${live.full}`) && /the working copy's path or a quoted tilde among them/.test(refusal), refusal],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-410: an agent\'s check of a call is refused with the check\'s own words whatever the family guards before it answer, when the first of them refuses with words of its own and when every one of them passes',
+    guards: ['agent_check_before_guards'],
+    run(m, dir, h) {
+      const PASS = "process.stdin.resume();\nprocess.stdin.on('end', () => process.exit(0));\n";
+      const DENY = "process.stdin.resume();\nprocess.stdin.on('end', () => { process.stderr.write('A FAMILY GUARD refuses this call in words of its own.'); process.exit(2); });\n";
+      const run = (stands) => {
+        const copy = h.suiteCopy(dir, stands);
+        const w = h.world(copy.dir);
+        const s = h.sid('ac');
+        const r = w.call('PreToolUse', { session_id: s, agent_id: 'ax', tool_name: 'Bash', tool_input: { command: `node ${join(copy.dir, 'hook-dispatch.mjs')} --can Read x` } });
+        return { r, latched: h.latched(`${s}.agent-ax`) };
+      };
+      const firstDenies = run({ 'drive-guard.mjs': DENY, 'plan-fence.mjs': PASS });
+      const allPass = run({ 'drive-guard.mjs': PASS, 'plan-fence.mjs': PASS });
+      const own = (x) => x.r.status === 2 && /the check of a call \(hook-dispatch\.mjs --can\) is the main thread's/.test(x.r.stderr) && !/FAMILY GUARD/.test(x.r.stderr);
+      return h.assertAll([
+        ['with the first guard refusing in its own words the check\'s words are the refusal', own(firstDenies), firstDenies.r.stderr],
+        ['with the guards passing the check is refused with its words', own(allPass), allPass.r.stderr],
+        ['the refusal latches that agent only, as before', firstDenies.latched === true && allPass.latched === true, [firstDenies.latched, allPass.latched]],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-404: the arguments the dispatcher builds for the seed at the entry to plan mode follow the newest Seed item and Seed rounds lines of the manager\'s notes: a program key or the word new names the item, a number from one to five gives the batch print its rounds, any other value is passed over and said, rounds with an item or on a print for one item are said to be passed over, and with neither line the arguments are as before; the case builds the arguments and runs no seed',
+    guards: ['seed_wish_item', 'seed_wish_rounds', 'seed_wish_valid_item', 'seed_wish_valid_rounds', 'seed_wish_newest'],
+    run(m, dir, h) {
+      const hub = h.batchHub(dir);
+      const single = h.batchHub(dir);
+      writeFileSync(join(single, 'PROGRAM.md'), readFileSync(join(single, 'PROGRAM.md'), 'utf8').replace('### P-1. Q-HUB-11: ', '### P-1. A planted item with no key: '));
+      const out = '/planted/seed-print.txt';
+      const opts = (hubDir) => ({ hub: hubDir, marker: join(h.tmp('sg-wishmk-'), 'none.json'), plansDir: h.tmp('sg-wishplans-') });
+      const args = (lines, hubDir = hub) => {
+        const pad = h.tmp('sg-wishpad-');
+        mkdirSync(join(pad, 'status'), { recursive: true });
+        if (lines) writeFileSync(join(pad, 'status', 'manager.txt'), `${lines.join('\n')}\n`);
+        return m.dispatch.seedArguments({ cwd: hubDir }, pad, out, opts(hubDir));
+      };
+      const flat = (r) => r.args.join(' ');
+      const bare = args(null);
+      const bareSingle = args(['Version: x'], single);
+      const item = args(['Seed item: P-460']);
+      const fresh = args(['Seed item: new']);
+      const newest = args(['Seed item: P-12', 'Open: nothing', 'Seed item: P-13']);
+      const junk = args(['Seed item: banana']);
+      const rounds = args(['Seed rounds: 3']);
+      const newestRounds = args(['Seed rounds: 2', 'Seed rounds: 4']);
+      const high = args(['Seed rounds: 6']);
+      const word = args(['Seed rounds: two']);
+      const both = args(['Seed item: P-460', 'Seed rounds: 2']);
+      const onSingle = args(['Seed rounds: 2'], single);
+      const said = (r, re) => r.notes.some((n) => re.test(n));
+      return h.assertAll([
+        ['with neither line a batch hub gets the batch print as before', bare.args[0] === '--batch' && !flat(bare).includes('--rounds') && bare.notes.length === 0 && flat(bare).endsWith(`--out ${out}`), flat(bare)],
+        ['with neither line a hub whose first open item is no finding gets --item next as before', flat(bareSingle).startsWith('--item next') && bareSingle.notes.length === 0, flat(bareSingle)],
+        ['a program key is passed as the item', flat(item).startsWith('--item P-460 ') && item.notes.length === 0, flat(item)],
+        ['the word new is passed as the item', flat(fresh).startsWith('--item new '), flat(fresh)],
+        ['the newest Seed item line is the one used', flat(newest).startsWith('--item P-13 '), flat(newest)],
+        ['a value that is neither is passed over and said, and the default stands', flat(junk).startsWith('--batch') && said(junk, /SEED ITEM LINE PASSED OVER: "banana"/), JSON.stringify(junk)],
+        ['rounds from one to five go to the batch print', flat(rounds).startsWith('--batch --rounds 3 ') && rounds.notes.length === 0, flat(rounds)],
+        ['the newest Seed rounds line is the one used', flat(newestRounds).startsWith('--batch --rounds 4 '), flat(newestRounds)],
+        ['a six is passed over and said', !flat(high).includes('--rounds') && said(high, /SEED ROUNDS LINE PASSED OVER: "6"/), JSON.stringify(high)],
+        ['a word is passed over and said', !flat(word).includes('--rounds') && said(word, /"two"/), JSON.stringify(word)],
+        ['rounds with an item are passed over and said', !flat(both).includes('--rounds') && flat(both).startsWith('--item P-460 ') && said(both, /name an item/), JSON.stringify(both)],
+        ['rounds on a print for one item are passed over and said', !flat(onSingle).includes('--rounds') && flat(onSingle).startsWith('--item next') && said(onSingle, /print is for one item/), JSON.stringify(onSingle)],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
@@ -673,7 +790,7 @@ export const plants = {
   cfg_harness_sync: ['    if (harnessSync) baseline = true;', '    void 0;', 'hook-dispatch.mjs'],
   cfg_harness_field: ["source: String(p?.source ?? ''), file, baseline, harnessSync };", "source: String(p?.source ?? ''), file, baseline };", 'hook-dispatch.mjs'],
   cfg_print_harness: ["${r.harnessSync ? 'the harness", "${false ? 'the harness", 'report.mjs'],
-  can_mode_read: ['  if (files) { try { mode = ownerMode(tailEntries(files.main, 16 * 1024 * 1024)); } catch { mode = null; } }', '  if (files) { mode = null; }', 'hook-dispatch.mjs'],
+  can_mode_read: ['  if (files) { try { mode = planModeState(tailEntries(files.main, 16 * 1024 * 1024)).mode; } catch { mode = null; } }', '  if (files) { mode = null; }', 'hook-dispatch.mjs'],
   search_pattern_skip: ['      if (asPattern && !patternSeen) { patternSeen = true; continue; }', '      if (false) { patternSeen = true; continue; }', 'hook-dispatch.mjs'],
   search_pattern_flags: ['.every((x) => SEARCH_FLAG.test(x));', '.every(() => true);', 'hook-dispatch.mjs'],
   search_pattern_e: ['      if (asPattern && SEARCH_E_FLAG.test(raw)) { patternSeen = true; patternNext = true; continue; }', '      void 0;', 'hook-dispatch.mjs'],
@@ -681,4 +798,14 @@ export const plants = {
   latch_passes_report: ['    try { reportWrite = !!latch && agentReportWrite(p); } catch { reportWrite = false; }', '    reportWrite = false;', 'hook-dispatch.mjs'],
   found_done_skip: ['!queued.has(q.key) && !done.has(q.key)', '!queued.has(q.key)', 'hook-dispatch.mjs'],
   found_done_state: [String.raw`State:\s*done\b/m.test(entry)`, String.raw`State:\s*\w+\b/m.test(entry)`, 'hook-dispatch.mjs'],
+  correction_enter_hold: ['      try { if (correction && correctionPass(p, phase.planMode)) correction = null; } catch', '      try { if (false) correction = null; } catch', 'hook-dispatch.mjs'],
+  correction_enter_unit: ["  if (String(p.tool_name ?? '') === 'EnterPlanMode') return true;\n  if (!planMode) return false;", '  if (!planMode) return false;', 'hook-dispatch.mjs'],
+  can_tilde_spelling: ["return { full, tilde: below ? `~/${join(rel, 'hook-dispatch.mjs')}` : null };", 'return { full, tilde: null };', 'hook-dispatch.mjs'],
+  can_spellings_words: ['a check spelled any other way, the working copy\'s path or a quoted tilde among them, is not the check and is refused.', 'a check spelled any other way is refused.', 'hook-dispatch.mjs'],
+  agent_check_before_guards: ["    if (p.agent_id && String(p.tool_name ?? '') === 'Bash' && CAN.test(String(p.tool_input?.command ?? ''))) {", '    if (false) {', 'hook-dispatch.mjs'],
+  seed_wish_item: ["return { args: ['--item', w.item, ...tail], notes };", "return { args: ['--item', 'next', ...tail], notes };", 'hook-dispatch.mjs'],
+  seed_wish_rounds: ["...(w.rounds ? ['--rounds', String(w.rounds)] : [])", '...[]', 'hook-dispatch.mjs'],
+  seed_wish_valid_item: ['if (/^(?:P-\\d+|new)$/.test(item)) out.item = item;', 'if (/^.+$/.test(item)) out.item = item;', 'hook-dispatch.mjs'],
+  seed_wish_valid_rounds: ['if (/^[1-5]$/.test(rounds)) out.rounds = Number(rounds);', 'if (/^\\d+$/.test(rounds)) out.rounds = Number(rounds);', 'hook-dispatch.mjs'],
+  seed_wish_newest: ['if (m) v = m[1]; }', 'if (m && v === null) v = m[1]; }', 'hook-dispatch.mjs'],
 };
