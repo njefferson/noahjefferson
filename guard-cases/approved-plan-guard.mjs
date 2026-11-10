@@ -2,7 +2,8 @@
 // and the amendment that follows a write of the plan (Q-HUB-352, Q-HUB-375: the guard leaves no mark of its own; the plan fence reads the
 // write times). Step 152 adds the recovered button approval's identity (Q-HUB-374).
 // The shape of this file is the one guard-cases/shape.mjs describes.
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
 
 const titled = (h, title) => `# ${title}\n\n${h.STEPS_PLAN.replace(/^# .*\n+/, '')}`;
 
@@ -100,9 +101,65 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'Q-HUB-395: a plan approved again after a marker written before the identity fields keeps the first approval time that marker recorded, whichever marker it replaces; a changed title still starts afresh',
+    guards: ['keep_identity'],
+    run(m, dir, h) {
+      const A = h.appHome(dir);
+      const tr = h.transcript([h.turn(0, 'start')]);
+      const text = titled(h, 'Plan of the old marker');
+      writeFileSync(A.plan, text);
+      const OLD = '2026-11-01T10:00:00.000Z';
+      const lineage = join(A.home, '.claude', 'APPROVED-PLAN-lineage.json');
+      const enter = () => A.guard(tr, { hook_event_name: 'PostToolUse', tool_name: 'EnterPlanMode' }, '--mark');
+      const approve = (body) => {
+        writeFileSync(A.plan, body);
+        A.guard(tr, { hook_event_name: 'PostToolUse', tool_name: 'ExitPlanMode', tool_response: { plan: body, isAgent: false, filePath: A.plan } }, '--mark');
+        return A.mk();
+      };
+      // A marker as it was written before a marker held the plan's title and first approval time: no `title`, no `firstApprovedAt`.
+      writeFileSync(A.marker, JSON.stringify({ plan: A.plan, hash: 'written-before-the-identity-fields', at: OLD, approvedAt: OLD, steps: [5] }));
+      enter();
+      const again = approve(text);
+      // The same, with a marker that records its own time only as `at`.
+      rmSync(lineage, { force: true });
+      writeFileSync(A.marker, JSON.stringify({ plan: A.plan, hash: 'written-before-the-identity-fields', at: OLD, steps: [5] }));
+      enter();
+      const viaAt = approve(text);
+      // A different title on the path after such a marker is a different plan.
+      rmSync(lineage, { force: true });
+      writeFileSync(A.marker, JSON.stringify({ plan: A.plan, hash: 'written-before-the-identity-fields', at: OLD, approvedAt: OLD, steps: [5] }));
+      enter();
+      const other = approve(titled(h, 'A different plan after the old marker'));
+      return h.assertAll([
+        ['the approval after an old marker keeps that marker\'s approval time as the first', again?.firstApprovedAt === OLD && again?.approvedAt !== OLD, JSON.stringify(again)],
+        ['a marker with only an `at` time hands on that time', viaAt?.firstApprovedAt === OLD, JSON.stringify(viaAt)],
+        ['a changed title starts at its own approval time', other?.firstApprovedAt === other?.approvedAt && other?.firstApprovedAt !== OLD, JSON.stringify(other)],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-388: the approval guard reads the mode of an end of plan mode through the status print\'s function, so a session\'s own EnterPlanMode call after an owner message under auto is a plan mode of the session\'s and not an end under auto mode',
+    guards: ['mode_shared'],
+    run(m, dir, h) {
+      const B = h.appHome(dir);
+      const u = h.uid();
+      const tr = h.transcript([h.turn(0, 'start'), { ...h.turn(-80, 'Go.'), permissionMode: 'auto' }, ...h.enterPlan(-60), h.exitEntry(-19, B.plan, u)]);
+      B.guard(tr, { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
+      const entries = [h.turn(0, 'start'), { ...h.turn(-80, 'Go.'), permissionMode: 'auto' }, ...h.enterPlan(-60)];
+      const state = m.report.planModeState(entries);
+      return h.assertAll([
+        ['the shared function reads the session\'s newer entry call as plan mode', state.mode === 'plan' && state.by === 'enter', JSON.stringify(state)],
+        ['the guard judges that end as one the session\'s call did not make, not as one under auto mode', B.outcome(u) === 'no exit call', B.outcome(u)],
+        ['no marker is written from it', B.mk() === null, JSON.stringify(B.mk())],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
+  keep_identity: ['{ keepIdentity(MARKER); rmSync(', '{ rmSync(', 'approved-plan-guard.mjs'],
+  mode_shared: ['mode: planModeState(entries, i).mode }', "mode: 'auto' }", 'approved-plan-guard.mjs'],
   identity_carry: ['title && was.title === title && ', '', 'approved-plan-guard.mjs'],
   identity_title: ['...identityOf(plan, approvedNow), ', '', 'approved-plan-guard.mjs'],
   recover_identity: ["approvedAt: new Date(x.at).toISOString(), ...identityOf(x.plan, new Date(x.at).toISOString()), ", 'approvedAt: new Date(x.at).toISOString(), ', 'approved-plan-guard.mjs'],

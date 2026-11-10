@@ -47,6 +47,29 @@ export const cases = [
     },
   },
   {
+    name: 'Q-HUB-385: the status print reads the plan mode from the newest approval or entry call and takes a typed message\'s mode only where no later approval stands; an approval followed by a typed message gives that message\'s mode, an error result counts for neither call, and a plan mode entered after an approval reads as on',
+    guards: ['mode_state_approval', 'mode_state_order', 'mode_state_enter'],
+    run(m, dir, h) {
+      const plan = join(h.tmp('sg-mode-'), 'plan.md');
+      writeFileSync(plan, '# A plan\n');
+      const marker = join(dirname(plan), 'marker.json');
+      const line = (entries) => { const x = session(h, 'ms', entries); return m.report.modeLine(x.s, marker); };
+      const planTurn = { ...h.turn(-90, 'Go.'), permissionMode: 'plan' };
+      const approved = line([h.turn(-100, 'start'), planTurn, ...h.enterPlan(-80), ...h.exitPlan(-60, true)]);
+      const typed = line([h.turn(-100, 'start'), planTurn, ...h.enterPlan(-80), ...h.exitPlan(-60, true), { ...h.turn(-40, 'Next.'), permissionMode: 'auto' }]);
+      const refused = line([h.turn(-100, 'start'), planTurn, ...h.exitPlan(-60, false)]);
+      const entered = line([h.turn(-100, 'start'), { ...planTurn, permissionMode: 'auto' }, ...h.enterPlan(-80)]);
+      const again = line([h.turn(-100, 'start'), planTurn, ...h.enterPlan(-80), ...h.exitPlan(-60, true), ...h.enterPlan(-30, 'ep2')]);
+      return h.assertAll([
+        ['an approval after the plan-mode message ends plan mode in the print', /^Plan mode: off\. The newest approval/.test(approved), approved],
+        ['a message typed after the approval gives its own mode', /^Plan mode: off\./.test(typed) && typed.includes('permission mode auto'), typed],
+        ['an exit that was not an approval leaves the typed message\'s plan mode', /^Plan mode: on/.test(refused), refused],
+        ['an entry call answered after a message typed under auto reads as plan mode, the session\'s', /^Plan mode: on/.test(entered) && entered.includes('EnterPlanMode'), entered],
+        ['a plan mode entered after an approval reads as on', /^Plan mode: on/.test(again), again],
+      ]);
+    },
+  },
+  {
     name: 'Q-HUB-329: report.mjs prints the plan-mode line in a status, under the serving model',
     guards: ['mode_line_printed'],
     run(m, dir, h) {
@@ -259,7 +282,10 @@ export const plants = {
   mode_line_off: ["  if (mode !== 'plan') return `Plan mode: off.", "  if (false) return `Plan mode: off.", 'report.mjs'],
   mode_line_unknown: ['  if (!mode) return "Plan mode: unknown', '  if (false) return "Plan mode: unknown', 'report.mjs'],
   mode_line_owner: ['    : "Plan mode: on, and the gates read it as the owner\'s:', '    : "Plan mode: on, and the gates read it as nobody\'s:', 'report.mjs'],
-  mode_line_printed: ['  console.log(planMode);\n', '', 'report.mjs'],
+  mode_state_approval: ["else if (n === 'ExitPlanMode') { call = i; kind = 'approval'; }", "else if (n === 'ExitPlanMode') { /* planted */ }", 'report.mjs'],
+  mode_state_order: ['if (call > msg) return', 'if (false) return', 'report.mjs'],
+  mode_state_enter: ["if (n === 'EnterPlanMode') { call = i; kind = 'enter'; }", "if (n === 'EnterPlanMode') { /* planted */ }", 'report.mjs'],
+  mode_line_printed:['  console.log(planMode);\n', '', 'report.mjs'],
   page_folded_version: ['    if (lines.length < 2) return lines.map((v) => li(escapeHtml(v)))', '    if (true) return lines.map((v) => li(escapeHtml(v)))', 'report.mjs'],
   page_folded_open: ["newestAndFolded(m.open, 'Open')", "m.open.map((o) => li(escapeHtml(o))).join(' ')", 'report.mjs'],
   page_folded_count: ['    const older = lines.slice(0, -1);\n', '    const older = lines.slice(1);\n', 'report.mjs'],

@@ -125,7 +125,7 @@ import { join, dirname, basename, resolve as resolvePath } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { tailEntries, textOf, ownerMessagesSince, ownerMode } from './transcript-tail.mjs';
+import { tailEntries, textOf, ownerMessagesSince, isOwnerMessage } from './transcript-tail.mjs';
 import { startedAt } from './pending-guard.mjs';
 import { load as loadLedger } from './reply-guard.mjs';
 
@@ -1135,6 +1135,43 @@ export function modelLine(sid) {
 }
 
 /**
+ * The permission mode in force at a point of the transcript: the ONE reading the status print and the approval guard share (Q-HUB-385, Q-HUB-388).
+ * @param {object[]} entries  from `tailEntries`, in file order.
+ * @param {number} [before]  only entries at an index below this are looked at (the whole tail when omitted).
+ * @returns {{mode: string|null, by: 'message'|'enter'|'approval'}} the newest of three things in range, main thread only: the permission mode
+ *   on the owner's newest typed message (`by` is 'message'; `mode` is null where the message records none or none is in range), a
+ *   successful EnterPlanMode result after it (`by` 'enter', `mode` 'plan'), or an accepted ExitPlanMode result after it (`by` 'approval',
+ *   `mode` null: the approval ended plan mode, and the mode on the message before it is the stale one). A typed message after the call
+ *   puts the message's mode back in force. An error result counts for neither call.
+ */
+export function planModeState(entries, before = Infinity) {
+  const end = Math.min(before, entries?.length ?? 0);
+  const names = new Map();
+  let msg = -1, msgMode = null, call = -1, kind = 'message';
+  for (let i = 0; i < end; i++) {
+    const e = entries[i];
+    if (e?.isSidechain || e?.agentId) continue;
+    const c = e?.message?.content;
+    if (e?.type === 'assistant' && Array.isArray(c)) for (const b of c) if (b?.type === 'tool_use') names.set(b.id, b.name);
+    if (e?.type === 'user' && Array.isArray(c)) {
+      for (const b of c) {
+        if (b?.type !== 'tool_result' || b.is_error) continue;
+        const n = names.get(b.tool_use_id);
+        if (n === 'EnterPlanMode') { call = i; kind = 'enter'; }
+        else if (n === 'ExitPlanMode') { call = i; kind = 'approval'; }
+      }
+    }
+    if (isOwnerMessage(e)) {
+      msg = i;
+      const m = e.permissionMode ?? e.attachment?.permissionMode;
+      msgMode = typeof m === 'string' && m ? m : null;
+    }
+  }
+  if (call > msg) return { mode: kind === 'enter' ? 'plan' : null, by: kind };
+  return { mode: msgMode, by: 'message' };
+}
+
+/**
  * The status print's line for the harness's plan mode (Q-HUB-329).
  * @param {string} sid  the session id.
  * @param {string} [marker]  the approval marker's path; `~/.claude/APPROVED-PLAN.json` by default.
@@ -1146,13 +1183,16 @@ export function modelLine(sid) {
 export function modeLine(sid, marker = join(homedir(), '.claude', 'APPROVED-PLAN.json')) {
   const f = sid ? sessionFiles(sid) : null;
   if (!f) return `Plan mode: not read (${sid ? `no transcript found for session ${sid}` : 'no CLAUDE_CODE_SESSION_ID in this shell'}).`;
-  const mode = ownerMode(tailEntries(f.main, 16 * 1024 * 1024));
+  const { mode, by } = planModeState(tailEntries(f.main, 16 * 1024 * 1024));
+  if (by === 'approval') return 'Plan mode: off. The newest approval of a plan ended it and no message of the owner\'s has carried a mode since, so the gates judge a call as outside plan mode.';
   if (!mode) return "Plan mode: unknown (the owner's newest message in the transcript records no permission mode).";
   if (mode !== 'plan') return `Plan mode: off. The owner's newest message carried permission mode ${mode}, so the gates judge a call as outside plan mode.`;
   const restart = restartedPlanMode({ transcript_path: f.main, session_id: sid }, marker);
   return restart
     ? `Plan mode: on, and the gates read it as a restart's: it came with a compaction or a resume after ${restart} was approved, so the plan stands and the mode is not the plan's.`
-    : "Plan mode: on, and the gates read it as the owner's: the owner's newest message carried permission mode plan and no restart began it.";
+    : by === 'enter'
+      ? "Plan mode: on, and the gates read it as the owner's: the session's newest EnterPlanMode call was answered after the owner's newest message and no restart began it."
+      : "Plan mode: on, and the gates read it as the owner's: the owner's newest message carried permission mode plan and no restart began it.";
 }
 
 const refusedFile = (sid) => join(process.env.REFUSED_READS_DIR || join(homedir(), '.claude', 'refused-reads'), `${safeKey(sid)}.json`);

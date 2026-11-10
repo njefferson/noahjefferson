@@ -145,8 +145,8 @@ import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { tailEntries, isOwnerMessage, ownerMode } from './transcript-tail.mjs';
-import { californiaTime, scopeHashes, scopeChanged, scopeUnrecorded, SCOPE_SECTIONS, scriptHashOf, stepsFilePath, stepsFileText, approvedStepSet, restartedPlanMode } from './report.mjs';
+import { tailEntries, isOwnerMessage } from './transcript-tail.mjs';
+import { californiaTime, scopeHashes, scopeChanged, scopeUnrecorded, SCOPE_SECTIONS, scriptHashOf, stepsFilePath, stepsFileText, approvedStepSet, restartedPlanMode, planModeState } from './report.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MARKER = join(homedir(), '.claude', 'APPROVED-PLAN.json');
@@ -178,6 +178,27 @@ function identityOf(plan, approvedAt) {
   } catch { /* no lineage: this approval is the first */ }
   try { mkdirSync(dirname(LINEAGE), { recursive: true }); writeFileSync(LINEAGE, JSON.stringify({ plan, title, firstApprovedAt: first })); } catch { /* the marker stands without it */ }
   return { firstApprovedAt: first, title };
+}
+/**
+ * Keep the identity of the plan a marker stands for before the marker is removed (Q-HUB-395).
+ * @param {string} markerPath  the approval marker's path.
+ * @returns {boolean} true when the lineage file was written from a marker that lacked the identity fields (written before a marker held the
+ *   plan's title and first approval time): the lineage then names that marker's plan, the title line of the plan file as it stands, and the
+ *   marker's own approval time as the first approval, so the same plan approved again keeps its sends. A marker that holds both fields
+ *   already has its lineage, and an unreadable marker or plan writes nothing; every doubt reads as false.
+ */
+function keepIdentity(markerPath) {
+  try {
+    const mk = JSON.parse(readFileSync(markerPath, 'utf8'));
+    if (!mk?.plan) return false;
+    if (typeof mk.title === 'string' && mk.title && Number.isFinite(Date.parse(String(mk.firstApprovedAt ?? '')))) return false;
+    const first = [mk.approvedAt, mk.at].find((t) => Number.isFinite(Date.parse(String(t ?? ''))));
+    const title = titleOf(readFileSync(mk.plan, 'utf8'));
+    if (!first || !title) return false;
+    mkdirSync(dirname(LINEAGE), { recursive: true });
+    writeFileSync(LINEAGE, JSON.stringify({ plan: mk.plan, title, firstApprovedAt: first }));
+    return true;
+  } catch { return false; }
 }
 // What is said when plan mode ended under auto mode with no exit call from the session (`recordAppExit`'s outcome 'under auto mode'). The
 // transcript records no mark that tells the owner's press from another answer, but it records the mode on the owner's typed message
@@ -359,7 +380,7 @@ function appExit(entries) {
     if (a?.type === 'plan_mode_exit') {
       const at = Date.parse(e.timestamp ?? '');
       found = inPlan && !approved && a.planExists !== false && typeof a.planFilePath === 'string' && e.uuid && Number.isFinite(at)
-        ? { plan: a.planFilePath, at, uuid: String(e.uuid), index: i, mode: ownerMode(entries, i) } : null;
+        ? { plan: a.planFilePath, at, uuid: String(e.uuid), index: i, mode: planModeState(entries, i).mode } : null;
       inPlan = false; approved = false;
     }
   });
@@ -576,7 +597,7 @@ if (process.argv.includes('--app-exit')) {
 }
 
 if (process.argv.includes('--mark')) {
-  if (tool === 'EnterPlanMode') { rmSync(MARKER, { force: true }); process.exit(0); }
+  if (tool === 'EnterPlanMode') { keepIdentity(MARKER); rmSync(MARKER, { force: true }); process.exit(0); }
   if (tool !== 'ExitPlanMode') process.exit(0);
   const plan = approvedPlanPath(p);
   const r = p.tool_response;
