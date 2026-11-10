@@ -24,10 +24,17 @@
 //
 //   node plan-scope-check.mjs --repo=<path>              check (exit 1 on drift)
 //   node plan-scope-check.mjs --repo=<path> --record \
-//     --verdict="IN-SCOPE: <one line>" < finding.txt      accept a watcher's
+//     --verdict="IN-SCOPE: <one line>" --lines-read=<N> < finding.txt
+//                                                          accept a watcher's
 //                                                          verdict, reading its
 //                                                          full finding from
-//                                                          stdin
+//                                                          stdin; N is the count
+//                                                          of diff lines the
+//                                                          watcher read, and a
+//                                                          count under the
+//                                                          diff's (printed on
+//                                                          every run) is refused
+//                                                          (Q-HUB-381)
 //
 // THE LOAD-BEARING RULE, same shape as preview-version-check's `--proven` and
 // handoff-check's `--ack`: an assertion a session can fake is only worth
@@ -205,7 +212,35 @@ export function diffForScope(repo) {
     : '';
   h.update('branch\n').update(branchOnly);
 
-  return { hash: h.digest('hex').slice(0, 16), promote, promoteFound };
+  return { hash: h.digest('hex').slice(0, 16), promote, promoteFound, lines: diffLineCount(run, repo, promoteFound ? promote : null) };
+}
+
+/**
+ * How many lines the diff a judge has to read holds (Q-HUB-381): the lines added and removed against HEAD in every tracked path, the
+ * lines of every untracked file the status lists, and the lines of the commits the promote branch lacks. INDEX-INDEPENDENT, like the
+ * hash: `git diff HEAD` holds a staged new file by its content and an untracked one is read from disk, so `git add` moves neither
+ * count. `.plan-scope` is left out for the reason it is left out of the hash. A binary file counts no lines.
+ *
+ * @param {(cmd: string) => string} run - runs a shell command in the repository and returns what it printed.
+ * @param {string} repo - the repository's working tree.
+ * @param {string|null} promote - the promote branch, or null when it is not in this clone.
+ * @returns {number} the diff's line count.
+ */
+function diffLineCount(run, repo, promote) {
+  const numstat = (text) => text.split('\n').reduce((n, l) => {
+    const m = /^(\d+)\t(\d+)\t/.exec(l);
+    return m ? n + Number(m[1]) + Number(m[2]) : n;
+  }, 0);
+  let lines = numstat(run(`git diff HEAD --numstat -- . ':(exclude).plan-scope'`));
+  for (const path of run('git ls-files --others --exclude-standard -z').split('\0')) {
+    if (!path || path === '.plan-scope') continue;
+    let text = '';
+    try { text = readFileSync(join(repo, path), 'utf8'); } catch { continue; }
+    if (!text || text.includes('\0')) continue;
+    lines += text.split('\n').length - (text.endsWith('\n') ? 1 : 0);
+  }
+  if (promote) lines += numstat(run(`git diff ${JSON.stringify(`${promote}...HEAD`)} --numstat -- . ':(exclude).plan-scope'`));
+  return lines;
 }
 
 /**
@@ -322,11 +357,12 @@ if (!tx) {
   console.log('--- end of the owner\'s messages ---\n');
 }
 
-const { hash: diffhash, promote, promoteFound } = diffForScope(REPO);
+const { hash: diffhash, promote, promoteFound, lines: diffLines } = diffForScope(REPO);
 if (!promoteFound) {
   console.log(`  · promote branch "${promote}" not found locally — hashing the working tree`);
   console.log('    and the index only, not this branch\'s unmerged commits\n');
 }
+console.log(`  · the diff holds ${diffLines} lines; a record names how many of them the judge read, and a count under this is refused\n`);
 
 const fixCommand = (verdictHint) =>
   `      node plan-scope-check.mjs --repo=${GIVEN} --record --verdict="${verdictHint}" < finding.txt`;
@@ -359,6 +395,21 @@ if (argv.includes('--record')) {
     process.exit(1);
   }
 
+  // THE RECORD SAYS HOW MUCH OF THE DIFF WAS READ (Q-HUB-381). A landing judged 417 of 1405 staged lines whole and the rest from the
+  // stat and the green gates, and its verdict opened IN-SCOPE all the same; nothing in the record could tell. The judge states the
+  // count of diff lines it read, and a count under the diff's, or none, is refused and nothing is written.
+  const readArg = argv.find((a) => a.startsWith('--lines-read='));
+  const readValue = readArg ? readArg.slice('--lines-read='.length) : '';
+  if (!/^\d+$/.test(readValue)) {
+    console.error(`REFUSED  the record needs --lines-read=<N>, the number of diff lines the judge read; the diff holds ${diffLines}. Nothing was written.`);
+    process.exit(1);
+  }
+  if (Number(readValue) < diffLines) {
+    console.error(`REFUSED  the judge read ${readValue} of the diff's ${diffLines} lines. A verdict over a diff it read in part is not recorded; nothing was written.`);
+    console.error('  Read the rest of the diff, then record the verdict with the count of the lines read.');
+    process.exit(1);
+  }
+
   if (!tx) {
     console.error('REFUSED  no session transcript, so nothing can show this verdict is free of the');
     console.error('  owner\'s words. Nothing was written.');
@@ -382,6 +433,8 @@ if (argv.includes('--record')) {
     `plan=${planPathRaw}`,
     `planhash=${planhash}`,
     `diffhash=${diffhash}`,
+    `difflines=${diffLines}`,
+    `linesread=${readValue}`,
     `verdict=${verdict}`,
     ...(findingLines.length ? findingLines.map((l) => `# ${l}`) : []),
   ];
@@ -421,6 +474,21 @@ if (rec.diffhash !== diffhash) {
   console.error('      The verdict covers a diff this commit no longer matches.');
   console.error('      Fix: have a watcher re-read the owner\'s messages printed above and the current diff, then —');
   console.error(fixCommand('IN-SCOPE: <why>'));
+  process.exit(1);
+}
+
+if (!/^\d+$/.test(rec.linesread ?? '')) {
+  console.error('FAIL  the recorded verdict carries no count of the diff lines the judge read, so it cannot show how much of the diff it judged.');
+  console.error('      Fix: have a watcher read the whole diff, then —');
+  console.error(`${fixCommand('IN-SCOPE: <why>')} --lines-read=<N>`);
+  process.exit(1);
+}
+
+if (Number(rec.linesread) < diffLines) {
+  console.error(`FAIL  the recorded verdict read ${rec.linesread} of the diff's ${diffLines} lines.`);
+  console.error('      A verdict over a diff it read in part does not cover the diff.');
+  console.error('      Fix: have a watcher read the whole diff, then —');
+  console.error(`${fixCommand('IN-SCOPE: <why>')} --lines-read=<N>`);
   process.exit(1);
 }
 

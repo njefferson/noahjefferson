@@ -46,6 +46,17 @@ const gitOk = (hub, ...args) => {
   try { execFileSync('git', ['-C', hub, ...args], { stdio: 'ignore' }); return true; } catch { return false; }
 };
 
+// The subject line of a commit, as ` ("subject")`, or '' where the hub has no such commit (Q-HUB-378). Every commit this check prints
+// carries its subject beside it, because a log that masks long runs of hex characters blanks a bare id and leaves nothing to say which
+// commit is meant. Only a hex id of seven to forty characters is looked up, so a ref that is a branch word or an option is never handed to git.
+const subjectOf = (hub, ref) => {
+  if (!/^[0-9a-f]{7,40}$/.test(ref)) return '';
+  try {
+    const s = gitIn(hub, 'log', '-1', '--format=%s', ref, '--');
+    return s ? ` ("${s}")` : '';
+  } catch { return ''; }
+};
+
 // A hub checkout is a git work tree that holds this file's siblings.
 const isHub = (p) => !!p && existsSync(join(p, 'DOCTRINE.md')) && existsSync(join(p, 'branch-guard.mjs'))
   && gitOk(p, 'rev-parse', '--git-dir');
@@ -127,8 +138,8 @@ const main = () => {
   if (!pins.length) console.log('  --    no workflow of this repo names the hub, so there is no pin to read.');
   for (const p of pins) {
     const why = judgePin(hub, p.ref);
-    if (why) { bad++; console.log(`  FAIL  ${p.file}:${p.line} pin ${p.ref.slice(0, 12)} ${why}`); }
-    else console.log(`  ok    ${p.file}:${p.line} pin ${p.ref} is a commit the hub's ${mainRef(hub)} reaches`);
+    if (why) { bad++; console.log(`  FAIL  ${p.file}:${p.line} pin ${p.ref.slice(0, 12)}${subjectOf(hub, p.ref)} ${why}`); }
+    else console.log(`  ok    ${p.file}:${p.line} pin ${p.ref}${subjectOf(hub, p.ref)} is a commit the hub's ${mainRef(hub)} reaches`);
   }
 
   const marker = join(REPO, '.doctrine-sync');
@@ -136,10 +147,10 @@ const main = () => {
     const since = readFileSync(marker, 'utf8').trim().split(/\s+/)[0] ?? '';
     if (!since || !gitOk(hub, 'cat-file', '-e', `${since}^{commit}`)) {
       bad++;
-      console.log(`  FAIL  .doctrine-sync names ${since.slice(0, 12) || '(nothing)'}, which is not a commit this hub has; the drift since it cannot be listed`);
+      console.log(`  FAIL  .doctrine-sync names ${since.slice(0, 12) || '(nothing)'}${subjectOf(hub, since)}, which is not a commit this hub has; the drift since it cannot be listed`);
       console.log('        read the doctrine whole, then: node doctrine-sync.mjs --repo <this repo> --adopt');
     } else {
-      console.log(`  ok    .doctrine-sync names ${since.slice(0, 7)}, a commit the hub has`);
+      console.log(`  ok    .doctrine-sync names ${since.slice(0, 7)}${subjectOf(hub, since)}, a commit the hub has`);
     }
   } else {
     console.log('  --    no .doctrine-sync marker in this repo.');

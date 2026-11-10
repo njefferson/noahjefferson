@@ -94,7 +94,7 @@ export const cases = [
       r.write('newdir/f.txt', 'one\n');
       const run = (...a) => spawnSync('node', [join(dir, 'plan-scope-check.mjs'), `--repo=${r.dir}`, ...a],
         { input: 'The diff adds one new file in a new folder and nothing else.', encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: 't' } });
-      const recorded = run('--record', '--verdict=IN-SCOPE: one new file in a new folder');
+      const recorded = run('--record', '--verdict=IN-SCOPE: one new file in a new folder', '--lines-read=2');
       const before = run();
       r.stage();
       const staged = run();

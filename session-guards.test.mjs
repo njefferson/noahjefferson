@@ -16,6 +16,9 @@
  *                                          more than half of the suite, which is the
  *                                          cut filter's other face: `--allow-wide`
  *                                          runs it anyway.
+ *                                          Every --case= switch of a run is read and the
+ *                                          names are joined, so two switches select the
+ *                                          cases of both (Q-HUB-401).
  *   --plants --files=a.mjs,b.mjs | --touched | --dry   narrow or list the plants
  *
  * CASE FILES. Beside the cases and the plants below, the suite loads every `.mjs` file in
@@ -128,7 +131,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const FILES = ['pending-guard.mjs', 'keep-info-guard.mjs', 'compact-recall.mjs', 'reply-guard.mjs', 'transcript-tail.mjs',
   'plan-guard.mjs', 'hook-dispatch.mjs', 'report.mjs', 'drive-guard.mjs', 'approved-plan-guard.mjs', 'plan-scope-check.mjs', 'stop-guard.mjs',
   'push-guard.mjs', 'plan-fence.mjs', 'doctrine-read-guard.mjs', 'session-brief.mjs', 'CLAUDE.md', 'agent-rules.md', 'DOCTRINE.md',
-  'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-cost.mjs', 'plan-seed.mjs', 'plans/seed-template.md', 'session-guards.test.mjs', 'CONFIG.md', 'privacy-patterns.mjs', 'branch-guard.mjs', 'lessons-check.mjs'];
+  'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-cost.mjs', 'plan-seed.mjs', 'plans/seed-template.md', 'session-guards.test.mjs', 'CONFIG.md', 'privacy-patterns.mjs', 'branch-guard.mjs', 'lessons-check.mjs',
+  'hub-pin-check.mjs', 'gate-args.mjs', 'third-person-check.mjs', 'binary-files.mjs'];
 // Every copy of the guards makes a file's folder before it copies it: the doctrine's three pages sit in doctrine/.
 const copyGuard = (from, to) => { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to); };
 // The shared rules file the guards read beside themselves: its version, and the pointer line a plan writes for the hub
@@ -429,7 +433,8 @@ function notesPad(s, text, ageSeconds = 0, base = tmpdir()) {
   if (ageSeconds) { const t = (Date.now() - ageSeconds * 1000) / 1000; utimesSync(file, t, t); }
   return file;
 }
-const latched = (s) => existsSync(join(process.env.REFUSAL_LATCH_DIR, `${s}.json`));
+// The session's own latch file, or with an agent id that agent's file, named the way the dispatcher names it (Q-HUB-402).
+const latched = (s, agent = '') => existsSync(join(process.env.REFUSAL_LATCH_DIR, `${s}${agent ? `.agent-${String(agent).replace(/[^A-Za-z0-9_-]/g, '_')}` : ''}.json`));
 // An agent that read the shared rules first, as an agent's own transcript shows it: a prompt that names no step, the Read of the
 // hub copy's agent-rules.md and its result, and a hand-back (so the agent is not counted as one still running).
 const rulesReadEntries = (dir, id) => [at({ type: 'user', message: { role: 'user', content: 'Read the rules.' } }, later(-300)),
@@ -1219,7 +1224,7 @@ const CASES = [
       const r = repo({ 'a.txt': 'x\n' });
       mkdirSync(join(r.dir, '.claude'));
       writeFileSync(join(r.dir, '.claude', 'PLAN'), plan + '\n');
-      const rec = (verdict, finding) => spawnSync('node', [join(dir, 'plan-scope-check.mjs'), `--repo=${r.dir}`, '--record', `--verdict=${verdict}`],
+      const rec = (verdict, finding) => spawnSync('node', [join(dir, 'plan-scope-check.mjs'), `--repo=${r.dir}`, '--record', `--verdict=${verdict}`, '--lines-read=100'],
         { input: finding, encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: 't' } });
       const written = () => existsSync(join(r.dir, '.plan-scope'));
       const inVerdict = rec(`IN-SCOPE: ${QUOTED}`, 'The diff moves one control.');
@@ -1808,11 +1813,10 @@ const CASES = [
     run(m, dir) {
       const w = world(dir);
       const s = sid('la');
-      const agentFile = (id) => join(process.env.REFUSAL_LATCH_DIR, `${s}.agent-${id}.json`);
       const call = (extra) => w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan }, ...extra });
       // Agent a1 writes outside the plan's Files: the plan fence refuses it.
       const refused = call({ agent_id: 'a1', tool_name: 'Write', tool_input: { file_path: join(w.cwd, 'stray.txt'), content: 'x' } });
-      const own = existsSync(agentFile('a1')) && !latched(s);
+      const own = latched(s, 'a1') && !latched(s);
       const next = call({ agent_id: 'a1' });
       const back = call({ agent_id: 'a1', tool_name: 'SubagentHandback', tool_input: { message: 'Refused by the plan fence; nothing was written.' } });
       const second = call({ agent_id: 'a2' });
@@ -7091,8 +7095,8 @@ const CASES = [
   },
   {
     name: 'hook-dispatch.mjs --can <tool> <path or command line> prints whether the manager fence and the latch would pass the call on the main thread now, and why, and changes nothing; the main thread\'s gates pass it as they pass the status command, a latch included, and refuse it with anything chained to it or when an agent makes it',
-    guards: ['can_cli', 'can_fence', 'can_latch_read', 'can_latch', 'can_readonly', 'can_chained', 'can_agent', 'fence_can_pass'],
-    run(m, dir) {
+    guards: ['can_cli', 'can_fence', 'can_latch_read', 'can_latch', 'can_readonly', 'can_chained', 'can_agent', 'can_agent_refused', 'fence_can_pass'],
+    run(m, dir, h) {
       const w = world(dir);
       const s = sid('cn');
       const src = repo({ 'app.ts': 'x\n' }, 'appcan');
@@ -7145,8 +7149,28 @@ const CASES = [
       const fenceOthers = [`node /tmp/hook-dispatch.mjs --can Read x`, `node ${hookFile} --can Read a b`, `node ${hookFile} --can Read $(date)`, `node ${hookFile} --can Read "$HOME"`, `node ${hookFile} --can`, `node ${hookFile} Read x`,
         `node ${hookFile} --can Read x; touch y`, `node ${hookFile} --can Read x && touch y`].every((c) => /^MANAGER FENCE/.test(f(c) ?? ''));
       const isCan = m.dispatch.isCanCommand(line('Read', 'x')) && !m.dispatch.isCanCommand(`${line('Read', 'x')} ; touch y`) && !m.dispatch.isCanCommand('node report.mjs --can Read x');
-      return noLatch && refusal && bashMiss && sendOk && dispatchWords && unknown && usage && wrote && standing && kept && removed
-        && latchedAgain && passesLatch && chainedLatched && freshPass && chainedRefused && agentRefused && fenceLine && fenceOthers && isCan;
+      return h.assertAll([
+        ['noLatch: a read of the plan passes the fence with no latch standing', noLatch, okPlan.stdout],
+        ['refusal: a read of a source file is refused by the fence and the refusal sets no latch', refusal, missSrc.stdout],
+        ['bashMiss: a bare git status is refused by the fence', bashMiss, ''],
+        ['sendOk: a send of the plan step passes the fence', sendOk, ''],
+        ['dispatchWords: a send with extra words is refused and the refusal latches', dispatchWords, sendBad],
+        ['unknown: no session id means the latch is not read', unknown, ''],
+        ['usage: a check with no argument prints the usage line', usage, ''],
+        ['wrote: the check set no latch', wrote, ''],
+        ['standing: under a latch the check says so and the status command and TaskStop pass it', standing, `${underLatch.stdout} | ${status.stdout} | ${stops.stdout}`],
+        ['kept: the read-only latch read leaves the file', kept, ''],
+        ['removed: the real latch read removes it', removed, ''],
+        ['latchedAgain: the dispatch refusal set the latch again', latchedAgain, ''],
+        ['passesLatch: the check passes the hook under a latch', passesLatch, ''],
+        ['chainedLatched: the check with a command chained to it is refused under a latch', chainedLatched, ''],
+        ['freshPass: the check passes the hook with no latch', freshPass, ''],
+        ['chainedRefused: every chained form is refused by the fence', chainedRefused, chained.map((r) => r.status).join(',')],
+        ['agentRefused: the check made by an agent is refused by the plan fence', agentRefused, `exit ${agent.status} | stderr: ${agent.stderr} | stdout: ${agent.stdout}`],
+        ['fenceLine: the fence passes the exact line', fenceLine, ''],
+        ['fenceOthers: the fence refuses every other line', fenceOthers, ''],
+        ['isCan: the check command is recognised and nothing chained to it is', isCan, ''],
+      ]);
     },
   },
   // ---- the main thread reads a repository's history, and nothing else of git (step 186, LESSONS §423) ----
@@ -9816,7 +9840,7 @@ const CASES = [
       const r = seedRun(dir, hub, ['--item', 'P-3']);
       const up = (r.stdout.split('\n1. **Taken up: P-3')[1] ?? '').split('\n2. **<')[0];
       return up.includes('read `PROGRAM.md` whole') && up.includes('set State to planned and Plan to this plan\'s title') && up.includes('`git push origin main`, and where the remote refuses it as not a fast-forward')
-        && up.includes('`git -C /root/.claude/hub pull origin main`') && up.includes('`git rebase --abort`') && up.includes('Report `progress/step-1-report.txt` (new)');
+        && !up.includes('`git -C /root/.claude/hub pull origin main`') && up.includes('`git rebase --abort`') && up.includes('Report `progress/step-1-report.txt` (new)');
     },
   },
   {
@@ -9884,13 +9908,15 @@ const CASES = [
       const t = r.stdout;
       const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
       // The file steps 2 to 4 run together after the take-up, one commit step (5) follows them and the close (6) follows it.
-      const takeup = step(1), alpha = step(2), beta = step(3), none = step(4), commit = step(5), close = step(6);
+      const takeup = step(1), alpha = step(2), beta = step(3), none = step(4), landing = step(5);
       const items = ['P-1', 'P-2', 'P-3', 'P-4', 'P-5'];
       const okTakeup = takeup.startsWith('Taken up: ') && items.every((i) => takeup.split(' set to planned')[0].includes(i));
       const okGroups = alpha.startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13, Q-HUB-15.') && beta.startsWith('Put right in `beta.mjs`: Q-HUB-14.') && none.startsWith('Put right in the files each names: Q-HUB-12.')
-        && !/Q-QK-3/.test(alpha + beta + none) && t.includes('\nOrder: 1 2 3 4 5 6\n') && t.includes('\nStanding: 7\n') && t.includes('\n7. **Review.**')
-        && t.includes('\nAfter: 2 after 1; 3 after 1; 4 after 1; 5 after 2 3 4; 6 after 5\n');
-      const okClose = items.every((i) => close.includes(i)) && close.startsWith('Closed in the program') && commit.startsWith('Committed, proved and landed');
+        && !/Q-QK-3/.test(alpha + beta + none) && t.includes('\nOrder: 1 2 3 4 5\n') && t.includes('\nStanding: 6\n') && t.includes('\n6. **Review.**')
+        && t.includes('\nAfter: 2 after 1; 3 after 1; 4 after 1; 5 after 2 3 4\n');
+      // Goal 1 names every item of the batch, read from the printed goal line (the landing step takes its items from the planned ones, so it cannot show a dropped key).
+      const goal1 = t.split('\n').find((l) => l.startsWith('1. Each of the 5 findings of the batch')) ?? '';
+      const okClose = items.every((i) => landing.includes(i)) && landing.startsWith('Landed once') && items.every((i) => goal1.includes(i));
       const files = t.split('\n').find((l) => l.startsWith('- Hub, edited:')) ?? '';
       const okFiles = files.startsWith('- Hub, edited: `PROGRAM.md`, `NOTES.md`, `found/`, `lessons/`, `LESSONS.md`') && files.includes('`alpha.mjs`') && files.includes('`beta.mjs`') && files.includes('`session-guards.test.mjs`');
       const fa = (t.split('\n## Found answered\n')[1] ?? '').split('\n## ')[0];
@@ -9913,14 +9939,14 @@ const CASES = [
       const t = r.stdout;
       // The cut of alpha makes two groups of one file; two groups of one file never share a wave, so wave 1 holds the first run of alpha, beta and the
       // finding that names no file, the commit step and the close follow them, and the second run of alpha (Q-HUB-15) is left for wave 2.
-      const cut = r.status === 0 && t.includes('\nOrder: 8 9 10 11 12 13\n') && t.includes('\n9. **Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13.')
+      const cut = r.status === 0 && t.includes('\nOrder: 8 9 10 11 12\n') && t.includes('\n9. **Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13.')
         && t.includes('\n10. **Put right in `beta.mjs`: Q-HUB-14.') && t.includes('\n11. **Put right in the files each names: Q-HUB-12.')
-        && t.includes('\n12. **Committed, proved and landed') && t.includes('\n13. **Closed in the program') && t.includes('\n14. **Review.**')
+        && t.includes('\n12. **Landed once') && t.includes('\n13. **Review.**')
         && !t.includes('Q-HUB-15 fixed') && t.split('\n')[1].includes('leaves 1 of the 4 groups');
       const cost = (t.split('\n## Cost\n\n')[1] ?? '').split('\n')[0];
-      const pushes = cost.includes('3 pushes are made, one each by the take-up, the commit step and the close') && cost.includes('and at no other move') && cost.includes('The 6 steps (3 file steps run at the same time');
+      const pushes = cost.includes('2 pushes are made, one each by the take-up and the landing step') && cost.includes('and at no other move') && cost.includes('The 5 steps (3 file steps run at the same time');
       const lim = batchRun(dir, hub, ['--steps', '1']);
-      const limited = lim.status === 0 && lim.stdout.includes('\nOrder: 1 2 3 4\n') && lim.stdout.includes('batch of 3 open findings') && !lim.stdout.includes('Q-HUB-14 fixed');
+      const limited = lim.status === 0 && lim.stdout.includes('\nOrder: 1 2 3\n') && lim.stdout.includes('batch of 3 open findings') && !lim.stdout.includes('Q-HUB-14 fixed');
       if (!(cut && pushes && limited)) throw new Error(`cut ${cut}, pushes ${pushes} (${cost.slice(0, 300)}), limited ${limited} (${lim.stdout.slice(lim.stdout.indexOf('## Order'), lim.stdout.indexOf('## Order') + 200)})`);
       return true;
     },
@@ -10179,6 +10205,45 @@ const CASES = [
         ['a filter that selects more than half the suite is refused with exit 2', wide.status === 2 && /CASE FILTER REFUSED: it selects \d+ of \d+ cases, more than half of the suite/.test(wide.stdout) && !/passed$/m.test(wide.stdout), wide.stdout + wide.stderr],
         ['--allow-wide lets the wide filter through', allowed.status === 0 && /^CASE FILTER: 1 substring: "a" matched \d+/m.test(allowed.stdout) && !/REFUSED/.test(allowed.stdout), allowed.stdout + allowed.stderr],
         ['a quoted value with spaces is one substring and selects nothing here', quoted.status === 0 && /CASE FILTER: 1 substring: "no-such case name at all" matched 0; 0 of \d+ cases selected/.test(quoted.stdout), quoted.stdout + quoted.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-401: a run that names two --case= switches runs the cases of both, the filter line counts two substrings, and a run with one switch is read as before',
+    guards: ['case_switches_all'],
+    run(m, dir, h) {
+      const c = h.suiteCopy(dir, { 'planted-target.mjs': PLANTED_TARGET, 'guard-cases/planted.mjs': PLANTED_CASE_FILE });
+      const two = c.run(['--case=planted-caught-case', '--case=planted-failing-case']);
+      const one = c.run(['--case=planted-caught-case']);
+      const commas = c.run(['--case=planted-caught-case,planted-failing-case']);
+      return h.assertAll([
+        ['both named cases ran: the first passed and the second failed', /^PASS  planted-caught-case$/m.test(two.stdout) && /^FAIL  planted-failing-case /m.test(two.stdout) && /^1\/2 passed$/m.test(two.stdout), two.stdout + two.stderr],
+        ['the filter line counts two substrings', /^CASE FILTER: 2 substrings: "planted-caught-case" matched 1, "planted-failing-case" matched 1; 2 of \d+ cases selected\./m.test(two.stdout), two.stdout],
+        ['the run with two switches reads as the run with one comma-joined switch', /^1\/2 passed$/m.test(commas.stdout) && /^CASE FILTER: 2 substrings:/m.test(commas.stdout), commas.stdout],
+        ['a single switch still selects one case', one.status === 0 && /^1\/1 passed$/m.test(one.stdout) && !/planted-failing-case/.test(one.stdout.replace(/^CASE FILTER:.*$/m, '')), one.stdout + one.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-402: the latch helper takes an agent id and reads that agent\'s own latch file, named the way the dispatcher names it, while a call with a session id alone reads the session\'s file',
+    guards: ['latched_agent'],
+    run(m, dir, h) {
+      const body = [
+        "  { name: 'planted-agent-latch', run(m, d, h) {",
+        "    const latchDir = process.env.REFUSAL_LATCH_DIR;",
+        "    mkdirSync(latchDir, { recursive: true });",
+        "    writeFileSync(join(latchDir, 'pl-1.agent-a_1.json'), '{}');",
+        "    return h.assertAll([",
+        "      ['the agent\\'s file is read by its id, the id cleaned as the dispatcher cleans it', h.latched('pl-1', 'a.1') === true, ''],",
+        "      ['the session\\'s own file is not that file', h.latched('pl-1') === false, ''],",
+        "      ['another agent has no latch', h.latched('pl-1', 'a2') === false, ''],",
+        "    ]);",
+        "  } },",
+      ].join('\n');
+      const c = h.suiteCopy(dir, { 'guard-cases/planted-agent-latch.mjs': `import { mkdirSync, writeFileSync } from 'node:fs';\nimport { join } from 'node:path';\nexport const cases = [\n${body}\n];\n` });
+      const r = c.run(['--case=planted-agent-latch']);
+      return h.assertAll([
+        ['a planted case reading an agent\'s latch through the helper passes', r.status === 0 && /^PASS  planted-agent-latch$/m.test(r.stdout), r.stdout + r.stderr],
       ]);
     },
   },
@@ -11347,7 +11412,7 @@ const PLANTS = {
   // Step 220, change 3: the reply guard's release command passes the manager fence and the latch, and lifts the latch the reply guard set (LESSONS §432).
   release_parse_bad: ['return r && !r.bad ? r : null;', 'return r;', 'hook-dispatch.mjs'],
   release_fence: ["if (tool === 'Bash' && releaseCommand(input.command)) return null;", 'void 0;', 'hook-dispatch.mjs'],
-  release_can: [" || (tool === 'Bash' && !!releaseCommand(cmd));", ';', 'hook-dispatch.mjs'],
+  release_can: ["    const releaseCall = p.tool_name === 'Bash' ? releaseCommand(p.tool_input?.command) : null;", '    const releaseCall = null;', 'hook-dispatch.mjs'],
   release_latch: ['if (latch && !status && !mainStop && !release && !reportWrite) return refuse(latchMessage(latch), false);', 'if (latch && !status && !mainStop && !reportWrite) return refuse(latchMessage(latch), false);', 'hook-dispatch.mjs'],
   release_lift: ['if (release && latch && releaseLifts(latch, release)) {', 'if (false) {', 'hook-dispatch.mjs'],
   release_lifts_target: ["return named.some((t) => (t.startsWith('call:') || want.startsWith('call:') ? t === want : site(t) === site(want)));", 'return true;', 'hook-dispatch.mjs'],
@@ -11386,7 +11451,8 @@ const PLANTS = {
   check_mode_unjudged: ['  if (CHECK && !p.transcript_path) {\n    notJudged.push(', '  if (false) {\n    notJudged.push(', 'plan-guard.mjs'],
   check_fence: ["  if (isPlanCheck(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path)) return null;", '  void 0;', 'hook-dispatch.mjs'],
   check_status_pass: [' || (!p.agent_id && isPlanCheck(p)) ||', ' || false ||', 'hook-dispatch.mjs'],
-  check_can: [" || CAN.test(cmd) || isPlanCheck(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path) ||", ' || CAN.test(cmd) || false ||', 'hook-dispatch.mjs'],
+  can_agent_refused: ["if (p.agent_id && String(p.tool_name ?? '') === 'Bash' && CAN.test(", "if (false && String(p.tool_name ?? '') === 'Bash' && CAN.test(", 'hook-dispatch.mjs'],
+  check_can: [" || (!p.agent_id && CAN.test(cmd)) || isPlanCheck(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path) ||", ' || (!p.agent_id && CAN.test(cmd)) || false ||', 'hook-dispatch.mjs'],
   check_record: ['  return recordPath(absOf(target, p.cwd ? String(p.cwd) : process.cwd()), p, planPath);', '  return true;', 'hook-dispatch.mjs'],
   check_message: [' (the check of a call and the plan check pass as it does), the main thread', ', the main thread', 'hook-dispatch.mjs'],
 
@@ -11617,7 +11683,7 @@ const PLANTS = {
   batch_found: ['`- ${f.key} fixed in step ${stepOf.get(f.key)}', '`- ${f.key} dropped in step ${stepOf.get(f.key)}', 'plan-seed.mjs'],
   batch_close: ["const itemKeys = batch.map((f) => f.item).join(', ');", "const itemKeys = batch.map((f) => f.item).slice(0, 1).join(', ');", 'plan-seed.mjs'],
   batch_size: ['for (let i = 0; i < fs.length; i += size) groups.push({ home: h, list: fs.slice(i, i + size) });', 'groups.push({ home: h, list: fs });', 'plan-seed.mjs'],
-  batch_cost: ['one each by the take-up, the commit step and the close', 'one for the whole plan', 'plan-seed.mjs'],
+  batch_cost: ['one each by the take-up and the landing step', 'one for the whole plan', 'plan-seed.mjs'],
   batch_steps_limit: ['if (limit > 0) groups = groups.slice(0, limit);', 'void limit;', 'plan-seed.mjs'],
   batch_shape: ['L(`Served by: step ${takeup} serves goals 5 and 6; step${gnums.length', 'L(`Served: step ${takeup} serves goals 5 and 6; step${gnums.length', 'plan-seed.mjs'],
   batch_none: ['if (!findings.length) return { ok: false', 'if (false) return { ok: false', 'plan-seed.mjs'],
@@ -11655,6 +11721,9 @@ const PLANTS = {
   lessons_red_first: ['\nif (failures.length) {\n  console.log(`=== lessons gate: RED', '\nif (false) {\n  console.log(`=== lessons gate: RED', 'lessons-check.mjs'],
   case_filter_stray: ['\nif (strayWords.length) {\n', '\nif (false) {\n', 'session-guards.test.mjs'],
   case_filter_wide: ["\n  if (selected * 2 > CASES.length && !process.argv.includes('--allow-wide')) {", '\n  if (false) {', 'session-guards.test.mjs'],
+  // Q-HUB-401 and Q-HUB-402. Each line opens with a newline, so the first match is the code and not this map.
+  case_switches_all: ["\nconst caseList = caseWords(argValues('case').join(','));", "\nconst caseList = caseWords(argValue('case'));", 'session-guards.test.mjs'],
+  latched_agent: ["\nconst latched = (s, agent = '') => existsSync(join(process.env.REFUSAL_LATCH_DIR, `${s}${agent ?", "\nconst latched = (s, agent = '') => existsSync(join(process.env.REFUSAL_LATCH_DIR, `${s}${false ?", 'session-guards.test.mjs'],
   plants_stale_before: ['\n  if (stale.length) console.log(`STALE PLANTS BEFORE THE RUN', '\n  if (false) console.log(`STALE PLANTS BEFORE THE RUN', 'session-guards.test.mjs'],
   plants_chunk: ['\nconst PLANT_CHUNK = Math.max(1, Math.floor(Number(process.env.PLANT_CHUNK)) || 25);', '\nconst PLANT_CHUNK = 25;', 'session-guards.test.mjs'],
   plants_closing_missed: ['\n  console.log(missed.length ? `MISSED PLANTS (', '\n  console.log(false ? `MISSED PLANTS (', 'session-guards.test.mjs'],
@@ -11856,7 +11925,10 @@ function caseFilterHead(words) {
   const total = CASES.filter((c) => words.some((w) => c.name.includes(w))).length;
   return `CASE FILTER: ${words.length} substring${words.length === 1 ? '' : 's'}: ${words.map((w, i) => `"${w}" matched ${counts[i]}`).join(', ')}; ${total} of ${CASES.length} cases selected.${total === CASES.length ? ' THE FILTER MATCHED EVERY CASE: this is the whole suite.' : ''}`;
 }
-const caseList = caseWords(argValue('case'));
+// EVERY --case= SWITCH OF A RUN IS READ (Q-HUB-401): `argValue` returns the first switch only, so a run naming two cases dropped the second
+// without a word. The values of all the switches are joined with the comma that separates names inside one switch.
+const argValues = (name) => process.argv.filter((x) => x.startsWith(`--${name}=`)).map((x) => x.slice(name.length + 3));
+const caseList = caseWords(argValues('case').join(','));
 // A FILTER CUT AT A SPACE IS REFUSED, NOT RUN (Q-HUB-312). An unquoted `--case=a name` reaches the suite as `--case=a` and a stray word
 // `name`, and a one-word substring such as `a` selected 281 of 293 cases in a run meant for one. The refusal names both faces: words that
 // stand after the switch, and a filter that selects more than half of the suite (`--allow-wide` runs that on purpose).
