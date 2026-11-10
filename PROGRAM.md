@@ -54,7 +54,7 @@ The list is the rank. The items the redesign plan builds come first, then the pa
 
 ## Items
 
-478 items (P-461 to P-478 the keys Q-HUB-414 to Q-HUB-431, filed by step 382 of the plan that closed the separation instrument of 9 November, five found in that plan's reports and thirteen the main thread's own; P-460 the infrared app's separation instrument, entered by step 382 of that plan and not from the Found queue; P-451 to P-459 the keys Q-HUB-405 to Q-HUB-413, filed by step 160 of the plan of the batch's third wave of 9 November, seven found in that wave's run and two met by the main thread; P-448 the infrared app's colour panel's rim, entered by step 370 of the plan of the panel's rim of 9 November and not from the Found queue; P-449 and P-450 the keys Q-HUB-403 and Q-HUB-404, filed by step 370 of that plan from the main thread's own findings; P-435 to P-447 the keys Q-HUB-390 to Q-HUB-402, filed by step 153 of the plan of the batch's second wave of 9 November, eleven found in the first wave's run and two in this plan's own; P-422 to P-434 the keys Q-HUB-377 to Q-HUB-389, filed by step 365 of the plan of the infrared app's colour panel of 9 November, four of them carried from the plans of 8 and 9 November and nine found in that plan's own run; P-417 to P-421 the keys Q-HUB-372 to Q-HUB-376, filed by step 147 of the plan of the batch's first wave of 9 November; P-416 the infrared app's colour panel for making a look, entered by the second send of step 357 of the plan of 9 November and not from the Found queue; P-415 the key Q-HUB-371, filed by step 138 of the plan of the batch's first wave of 9 November; P-407 to P-414 the keys Q-HUB-363 to Q-HUB-370, filed by step 136 of the plan of the planning method of 9 November; P-401 to P-406 the keys Q-HUB-357 to Q-HUB-362, filed by step 130 of the plan of the planning method of 9 November; P-389 to P-400 the keys Q-HUB-345 to Q-HUB-356, filed by step 128 of the plan of the standing problems of the gates; P-366 to P-388 the keys Q-HUB-322 to Q-HUB-344, filed by step 118 of the plan of the standing problems of the gates; P-365 the infrared app's populations measured by place, entered by step 339 of that plan and not from the Found queue; P-358 to P-364 the keys Q-HUB-315 to Q-HUB-321, filed by the second send of step 108 of the same plan; P-352 to P-357 the keys Q-HUB-309 to Q-HUB-314, filed by step 108 of the plan of the four gates of 7 November; P-351 the key Q-HUB-308, filed by step 337 of the plan of the infrared app's separation measure; P-350 the infrared app's separation measure of 9 November, entered by step 331 of that plan and not from the Found queue; P-349 the key Q-HUB-307, filed by step 330 of the plan that fixes the sweep and regathers the separation research; P-348 the infrared app's test page work of 8 November, entered by step 329 of that plan and not from the Found queue; P-344 to P-347 the keys Q-HUB-303 to Q-HUB-306, filed by step 103 of the plan of the four gates of 7 November; P-343 the key Q-HUB-302, filed by step 102 of the first batch plan; P-317 to P-319 the keys Q-HUB-276 to Q-HUB-278, filed by step 85 of the plan that closed P-21 after the lock of 6 November; P-320 to P-342 the keys Q-HUB-279 to Q-HUB-301, filed by step 99 of the first batch plan, whose first three keys moved past the keys of the remote's, so P-340 to P-342 are the keys Q-HUB-299 to Q-HUB-301; P-309 the batch seed, named by the owner on 5 November, and P-310 to P-316 the keys Q-HUB-269 to Q-HUB-275, filed by step 92 of the plan that wrote it; P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 357 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
+483 items (P-479 to P-483 the keys Q-HUB-432 to Q-HUB-436, filed by step 167 of the plan of the batch's fourth wave of 10 November, four found in that plan's reports and one the defect its Design names and step 166 put right; P-461 to P-478 the keys Q-HUB-414 to Q-HUB-431, filed by step 382 of the plan that closed the separation instrument of 9 November, five found in that plan's reports and thirteen the main thread's own; P-460 the infrared app's separation instrument, entered by step 382 of that plan and not from the Found queue; P-451 to P-459 the keys Q-HUB-405 to Q-HUB-413, filed by step 160 of the plan of the batch's third wave of 9 November, seven found in that wave's run and two met by the main thread; P-448 the infrared app's colour panel's rim, entered by step 370 of the plan of the panel's rim of 9 November and not from the Found queue; P-449 and P-450 the keys Q-HUB-403 and Q-HUB-404, filed by step 370 of that plan from the main thread's own findings; P-435 to P-447 the keys Q-HUB-390 to Q-HUB-402, filed by step 153 of the plan of the batch's second wave of 9 November, eleven found in the first wave's run and two in this plan's own; P-422 to P-434 the keys Q-HUB-377 to Q-HUB-389, filed by step 365 of the plan of the infrared app's colour panel of 9 November, four of them carried from the plans of 8 and 9 November and nine found in that plan's own run; P-417 to P-421 the keys Q-HUB-372 to Q-HUB-376, filed by step 147 of the plan of the batch's first wave of 9 November; P-416 the infrared app's colour panel for making a look, entered by the second send of step 357 of the plan of 9 November and not from the Found queue; P-415 the key Q-HUB-371, filed by step 138 of the plan of the batch's first wave of 9 November; P-407 to P-414 the keys Q-HUB-363 to Q-HUB-370, filed by step 136 of the plan of the planning method of 9 November; P-401 to P-406 the keys Q-HUB-357 to Q-HUB-362, filed by step 130 of the plan of the planning method of 9 November; P-389 to P-400 the keys Q-HUB-345 to Q-HUB-356, filed by step 128 of the plan of the standing problems of the gates; P-366 to P-388 the keys Q-HUB-322 to Q-HUB-344, filed by step 118 of the plan of the standing problems of the gates; P-365 the infrared app's populations measured by place, entered by step 339 of that plan and not from the Found queue; P-358 to P-364 the keys Q-HUB-315 to Q-HUB-321, filed by the second send of step 108 of the same plan; P-352 to P-357 the keys Q-HUB-309 to Q-HUB-314, filed by step 108 of the plan of the four gates of 7 November; P-351 the key Q-HUB-308, filed by step 337 of the plan of the infrared app's separation measure; P-350 the infrared app's separation measure of 9 November, entered by step 331 of that plan and not from the Found queue; P-349 the key Q-HUB-307, filed by step 330 of the plan that fixes the sweep and regathers the separation research; P-348 the infrared app's test page work of 8 November, entered by step 329 of that plan and not from the Found queue; P-344 to P-347 the keys Q-HUB-303 to Q-HUB-306, filed by step 103 of the plan of the four gates of 7 November; P-343 the key Q-HUB-302, filed by step 102 of the first batch plan; P-317 to P-319 the keys Q-HUB-276 to Q-HUB-278, filed by step 85 of the plan that closed P-21 after the lock of 6 November; P-320 to P-342 the keys Q-HUB-279 to Q-HUB-301, filed by step 99 of the first batch plan, whose first three keys moved past the keys of the remote's, so P-340 to P-342 are the keys Q-HUB-299 to Q-HUB-301; P-309 the batch seed, named by the owner on 5 November, and P-310 to P-316 the keys Q-HUB-269 to Q-HUB-275, filed by step 92 of the plan that wrote it; P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 357 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
 
 ## Items the redesign plan builds
 
@@ -409,6 +409,16 @@ Close entry of the plan that closed the separation instrument (P-460, steps 379 
 - Compactions: 0 in the plan. Resumes: 0. Pushes: the instrument does not count them; step 381 pushed the app's staging once and this step pushes the hub's main once.
 - The whole transcript over this one approved plan: 8 owner messages (4 go-words, 4 without, 0 carrying the whole word stop), 124 agents with 1,722,385 output tokens, 1 compaction, 1 resume.
 - The harness's own running cost entry, the last of 1, reads 5291.845202144977 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252).
+
+Close entry of the plan of the batch's fourth wave (steps 162 to 167, step 167 the writer), from the cost instrument run on this session's transcript, so far and before this step's push. The instrument numbers it plan 7 and reads no item for it; it was approved 19:07 California time on 9 November:
+- The owner's messages: 1, which ends in a go-word; none carries the word stop.
+- Stop-hook messages: 9 in 8 stops (command hook 3, 8; command hook 2, 1).
+- Main-thread refusals: 0.
+- Agents: 12, all on the sonnet tier, with 289,391 output tokens, 64,329,903 cache-read tokens and 2,355,626 cache-written tokens; 2 hook refusals, both plan fence.
+- Main-thread turns: 44 on the opus tier with 22,901 output tokens, and 4 on the fable tier with 1,299 output tokens.
+- Compactions: 0. Resumes: 0. Pushes: the instrument does not count them; step 162 pushed once and this step pushes once.
+- The whole session over seven approved plans: 41 owner messages (28 go-words, 13 without, 2 carrying the whole word stop), 146 stop-hook messages, 382 agents, 4 compactions, 14 resumes.
+- The harness's own running cost entry, the last of 13, reads 1109.0019543999979 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252): the agents of this step's own sends and the second and third sends of steps 165, 166 and 167 are not in it.
 
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
@@ -4189,7 +4199,9 @@ Depends: none.
 
 ### P-430. Q-HUB-385: the status print names a plan mode a typed message carried after an approval had ended it
 
-Repository: hub. Goal: 3. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+Repository: hub. Goal: 3. State: done. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+
+Done: step 163 of that plan made the status print read the plan mode through the function the approval guard reads, with a case on an approval followed by a typed message and the plants mode_state_approval, mode_state_order and mode_state_enter; landed by step 167.
 
 Acceptance: the print reads the mode from the newest approval or entry call and takes a typed message's mode only where no later approval stands, with a case on an approval followed by a typed message.
 
@@ -4207,7 +4219,9 @@ Depends: none.
 
 ### P-432. Q-HUB-387: the plan check passes a Files line the fence reads as wholly unwritable
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+Repository: hub. Goal: 5. State: done. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+
+Done: step 164 of that plan added the plan check's fault for a Files line that says read only and also carries a word of writing, a shape fault that sets no latch, with a case on the line that passed; landed by step 167.
 
 Acceptance: the plan check refuses a Files line that carries the words read only beside a name a step writes, with a case on the line that passed.
 
@@ -4215,7 +4229,9 @@ Depends: none.
 
 ### P-433. Q-HUB-388: the approval guard and the status read one plan mode two ways
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+Repository: hub. Goal: 5. State: done. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+
+Done: step 163 of that plan made the approval guard and the status print read the mode through one function, and step 167 made the dispatcher's check of a call read it through the same function, with a case on a plan mode entered after an approval; landed by step 167.
 
 Acceptance: both read the mode through one function, with a case on a plan mode entered after an approval.
 
@@ -4283,7 +4299,9 @@ Depends: none.
 
 ### P-440. Q-HUB-395: a plan approved again through plan mode read every step of its Order as not sent
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+Repository: hub. Goal: 5. State: done. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+
+Done: step 163 of that plan made a re-approval of the same plan keep its sends whichever marker it replaces, with a case on a marker written before the title and first approval time were recorded; landed by step 167.
 
 Acceptance: a re-approval of the same plan keeps its sends whichever marker it replaces, with a case on a marker written before the title and first approval time were recorded.
 
@@ -4369,7 +4387,9 @@ Depends: P-416.
 
 ### P-449. Q-HUB-403: the correction hold held the call that enters plan mode, which writes nothing but the plan file
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+Repository: hub. Goal: 5. State: done. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+
+Done: step 165 of that plan made the correction hold pass the main thread's entry to plan mode and, in plan mode, the plan file's write and the plan check, with a case on a correction that asks for a plan and the plants correction_enter_hold and correction_enter_unit; step 167 brought the older correction case to the new behaviour; landed by step 167.
 
 Acceptance: the correction hold passes the entry to plan mode as it passes the status command, with a case on a correction that asks for a plan and a plant on the hold.
 
@@ -4377,7 +4397,9 @@ Depends: none.
 
 ### P-450. Q-HUB-404: the plan seed printed for the next open item while the work was a defect with no entry
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+Repository: hub. Goal: 5. State: done. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+
+Done: step 165 made the dispatcher read the manager notes' lines opening Seed item and Seed rounds at the entry to plan mode and pass them to the seed, and step 166 taught the seed the word new, which prints the entry form under the next free key, with cases and the plants seed_wish_item, seed_new_word, seed_new_takeup, seed_new_form and tpl_takeup_new; landed by step 167.
 
 Acceptance: the seed takes an item the session names and prints the item entry's form with the next free key where the work has no entry, with a case on a session that names no item.
 
@@ -4385,7 +4407,9 @@ Depends: none.
 
 ### P-451. Q-HUB-405: the incident behind the check of a call refused under a latch was not reproduced, and the check's pattern matches one spelling of the command
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+Repository: hub. Goal: 5. State: done. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+
+Done: step 165 of that plan made the check of a call accept the tilde spelling beside the clone's full path and name the accepted spellings when it refuses another, with a case on each spelling and the plants can_spellings_words, can_tilde_spelling and can_mode_read; landed by step 167.
 
 Acceptance: the refused command is read from the session's transcript and the check either passes every spelling the owner's tools produce or names the accepted spelling in its refusal, with a case on each spelling.
 
@@ -4393,7 +4417,9 @@ Depends: none.
 
 ### P-452. Q-HUB-406: the plan check's pull fault reads a step's text for words
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+Repository: hub. Goal: 5. State: done. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+
+Done: step 164 of that plan made the pull fault read each step's Files and Do parts for writers by their structure, with a case on a writer described in other words; landed by step 167.
 
 Acceptance: the fault reads each step's Files and Do parts for writers by their structure, with a case on a writer described in other words.
 
@@ -4401,7 +4427,9 @@ Depends: none.
 
 ### P-453. Q-HUB-407: the single print's Cost line and two shared constants of the seed still say the close step
 
-Repository: hub. Goal: 6. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+Repository: hub. Goal: 6. State: done. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+
+Done: step 166 of that plan made the item print and the batch print each name the step that closes in them, with a case that reads both prints; landed by step 167.
 
 Acceptance: each print names the step that closes in it, with a case that reads both prints.
 
@@ -4425,7 +4453,9 @@ Depends: none.
 
 ### P-456. Q-HUB-410: an agent's check of a call stays refused only by the order of the family guards
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+Repository: hub. Goal: 5. State: done. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+
+Done: step 165 of that plan added a case that drives an agent's check of a call through the whole dispatcher with the family guards in their other orders, with the plant agent_check_before_guards; landed by step 167.
 
 Acceptance: a case drives an agent's check through the whole dispatcher with the guards in their other orders, or one refusal holds it independent of order.
 
@@ -4441,7 +4471,9 @@ Depends: none.
 
 ### P-458. Q-HUB-412: the tier fault takes an amendment of a running plan for a new plan
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+Repository: hub. Goal: 5. State: done. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+
+Done: step 164 of that plan made the tier fault read the plan the session's marker names and its open steps whether or not the marker's hash still matches the plan file, with a case on an amendment whose write has voided the approval; landed by step 167.
 
 Acceptance: an amendment of an approved section by a reply served below the top tier is not a fault, read from the plan's hand-backs and its previous approval, with a case on it.
 
@@ -4449,7 +4481,9 @@ Depends: none.
 
 ### P-459. Q-HUB-413: the plan-mode hook judges a plan with the working copy's plan check
 
-Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+Repository: hub. Goal: 5. State: done. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+
+Done: step 164 of that plan took the second of the two fixes the finding offers: the plan check's refusal names which copy of the plan check ran, with a case that plants a differing working copy; landed by step 167.
 
 Acceptance: the plan check runs from the live clone only, or its refusal names the copy that ran, with a case that plants a differing working copy.
 
@@ -4606,5 +4640,47 @@ Depends: none.
 Repository: hub. Goal: 2. State: open. Plan: none.
 
 Acceptance: the refusal of an environment read names the step whose text may carry it, with a case on the read.
+
+Depends: none.
+
+### P-479. Q-HUB-432: the plan check's pull fault takes a reader step that says changes for a writer
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the fault reads a step's Do part for the commands it runs and the tools it names and not for a verb beside a file name, with a case on a reader step that says changes.
+
+Depends: none.
+
+### P-480. Q-HUB-433: the tier fault's lineage fallback compares only the plan's title
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the fallback compares the approval time or the first step's text as well as the title, with a case on a new plan that carries a running plan's title.
+
+Depends: none.
+
+### P-481. Q-HUB-434: the seed's usage and the two tests that recognise a seed command do not list the rounds switch
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the usage text and both tests accept the rounds switch, with a case on a seed command that carries it.
+
+Depends: none.
+
+### P-482. Q-HUB-435: a case made stale by a fix is found only by the whole suite at the landing
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: a file step that changes a refusal names each case of the suite file and the case files that asserts the old refusal, found with Grep, for the landing step, with a case on a planted stale case.
+
+Depends: none.
+
+### P-483. Q-HUB-436: the seed printed one wave to a plan
+
+Repository: hub. Goal: 6. State: done. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
+
+Done: step 166 of that plan gave the batch print a rounds switch from one to five that prints that many waves as rounds of one plan, with one take-up, each round's file steps and landing, and the live clone pulled only by the last round's landing, and step 165 made the dispatcher pass the number from the manager notes; with cases for each point of the print, a two-round print that passes the plan check, and the plants rounds_refuse, rounds_waves, rounds_loop, rounds_after, rounds_last_pull, rounds_cost, rounds_takeup_all, rounds_served, rounds_order, rounds_parallel, rounds_lines, rounds_stepof and rounds_review; landed by step 167.
+
+Acceptance: the batch print takes a rounds switch and prints that many waves as rounds of one plan, a two-round print passes the plan check, and with the switch absent or one the print is as before.
 
 Depends: none.
