@@ -1,5 +1,6 @@
 // Cases and plants for plan-seed.mjs and plans/seed-template.md (step 124 of the plan of 8 November: Q-HUB-278, Q-HUB-282, Q-HUB-286,
-// Q-HUB-302, Q-HUB-308, Q-HUB-311, Q-HUB-313, Q-HUB-320, Q-HUB-330, Q-HUB-332, Q-HUB-334 and Q-HUB-336). Shape: guard-cases/shape.mjs.
+// Q-HUB-302, Q-HUB-308, Q-HUB-311, Q-HUB-313, Q-HUB-320, Q-HUB-330, Q-HUB-332, Q-HUB-334 and Q-HUB-336; step 159 of the plan of 9 November: Q-HUB-377,
+// Q-HUB-379, Q-HUB-380, Q-HUB-386, Q-HUB-396, Q-HUB-397 and Q-HUB-399). Shape: guard-cases/shape.mjs.
 // Every hub, program, marker and repository a case needs is written under a temporary folder from `h`, never into the working copy.
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
@@ -27,9 +28,13 @@ export const cases = [
         has('a step editing a guard file runs every case', 'runs every case of the suite, with no case filter, once after its last edit');
         has('a step adding a refusal lists the dispatcher', 'lists `hook-dispatch.mjs` among its files');
         has('a red gates run is read into the report', 'where it has concluded red its failing lines, read from the run\'s log through the connector and written into the report');
-        has('the close reads the remote\'s head before filing', 'reads the remote\'s head with `git show origin/main:PROGRAM.md`');
+        // The sentence stands in the landing acts of the step that lands the work, read from that step's own line: the take-up of the single print carries the same words, so a check on the whole print passed with the landing's copy gone.
+        const landStep = /\n\d+\. \*\*(?:Closed in the program|Landed once)[^\n]*/.exec(t)?.[0] ?? '';
+        rows.push([`${mode}: the landing step reads a red gates run into the report`,
+          landStep.includes('where it has concluded red its failing lines, read from the run\'s log through the connector and written into the report'), landStep.slice(0, 300)]);
+        has('the close reads the remote\'s head before filing','reads the remote\'s head with `git show origin/main:PROGRAM.md`');
         // The whole sentence of the close step, read from that step's line: the Verification line carries the same words, so a check on the whole print passed with the template's sentence gone.
-        const closeStep = /\n\d+\. \*\*Closed in the program[^\n]*/.exec(t)?.[0] ?? '';
+        const closeStep = /\n\d+\. \*\*(?:Closed in the program|Landed once)[^\n]*/.exec(t)?.[0] ?? '';
         rows.push([`${mode}: the close step's report names each key it filed beside the line it came from, key by key and never as a range`,
           closeStep.includes("the step's report naming each key it filed beside the line it came from, key by key and never as a range"), closeStep.slice(0, 300)]);
         has('the close files the findings passed in', 'for each finding listed in the plan\'s section Findings passed in');
@@ -71,8 +76,8 @@ export const cases = [
       const hub = h.batchHub(dir);
       const r = h.batchRun(dir, hub, []);
       const t = `${r.stdout}${r.stderr}`;
-      // The checks run once, in the commit step of the batch (step 131), and no longer in a file step.
-      const step = /\n\d+\. \*\*Committed, proved and landed[^\n]*/.exec(t)?.[0] ?? '';
+      // The checks run in the landing step of the batch (step 131, then step 159 of the plan of 9 November), and not in a file step.
+      const step = /\n\d+\. \*\*Landed once[^\n]*/.exec(t)?.[0] ?? '';
       return h.assertAll([
         ['the docs check carries the path bare', step.includes(`\`node ${hub}/docs-check.mjs ${hub}\``), step.slice(-900)],
         ['the quote check carries the repo flag', step.includes(`\`node ${hub}/quote-check.mjs --repo ${hub}\``), step.slice(-900)],
@@ -161,9 +166,9 @@ export const cases = [
   },
   {
     name: 'step 131: the batch print groups the findings by file with a seam in both steps, gives a finding that names no file a step of its own, runs the file steps after the take-up and together, adds one commit step, computes the Cost from the estimates, and carries the standing lines of a parallel batch, the index row of the close and the device line',
-    guards: ['batch_after_parallel', 'batch_no_file_own', 'batch_seam_out', 'batch_seam_in', 'batch_case_file', 'batch_commit_step', 'batch_parallel_rules', 'batch_cost_agent', 'batch_cost_wall',
+    guards: ['batch_after_parallel', 'batch_landing_after', 'batch_order_landing', 'batch_no_file_own', 'batch_seam_out', 'batch_seam_in', 'batch_case_file', 'batch_landing_step', 'batch_parallel_rules', 'batch_cost_agent', 'batch_cost_wall',
       'batch_wave_cap', 'batch_wave_header', 'batch_wave_home', 'batch_wave_switch',
-      'tpl_close_index', 'tpl_review_resend', 'tpl_commit_red_case', 'tpl_commit_by_path', 'tpl_bg_order', 'tpl_device_line', 'tpl_push_landing', 'tpl_commit_step_text'],
+      'tpl_close_index', 'tpl_review_resend', 'tpl_commit_red_case', 'tpl_commit_by_path', 'tpl_rule_no_bg', 'tpl_device_line', 'tpl_push_landing', 'tpl_commit_step_text'],
     run(m, dir, h) {
       const hub = h.batchHub(dir);
       mkdirSync(join(hub, 'guard-cases'), { recursive: true });
@@ -171,35 +176,35 @@ export const cases = [
       const r = h.batchRun(dir, hub, []);
       const t = `${r.stdout}${r.stderr}`;
       const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
-      const [alpha, beta, none, commit, close] = [2, 3, 4, 5, 6].map(step);
+      const [alpha, beta, none, landing] = [2, 3, 4, 5].map(step);
       const cost = (t.split('\n## Cost\n\n')[1] ?? '').split('\n')[0];
       const single = `${h.seedRun(dir, h.seedHub(dir), ['--item', 'P-3']).stdout}`;
       const rows = [
-        ['the Order and the After line run the three file steps after the take-up and together, the commit step after all three and the close after it', t.includes('\nOrder: 1 2 3 4 5 6\n') && t.includes('\nStanding: 7\n')
-          && t.includes('\nAfter: 2 after 1; 3 after 1; 4 after 1; 5 after 2 3 4; 6 after 5\n'), t.slice(t.indexOf('## Order'), t.indexOf('## Order') + 300)],
+        ['the Order and the After line run the three file steps after the take-up and together and the one landing step after all three, with no commit step and no close step apart from it', t.includes('\nOrder: 1 2 3 4 5\n') && t.includes('\nStanding: 6\n')
+          && t.includes('\nAfter: 2 after 1; 3 after 1; 4 after 1; 5 after 2 3 4\n') && !t.includes('Committed, proved and landed') && !/\n\d+\. \*\*Closed in the program/.test(t), t.slice(t.indexOf('## Order'), t.indexOf('## Order') + 300)],
         ['the findings are grouped by file, and the finding that names no file has a step of its own', alpha.startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13, Q-HUB-15.') && beta.startsWith('Put right in `beta.mjs`: Q-HUB-14.')
           && none.startsWith('Put right in the files each names: Q-HUB-12.'), `${alpha.slice(0, 80)} | ${beta.slice(0, 80)} | ${none.slice(0, 80)}`],
         ['the seam of a finding naming a second file is written into the Facts of the step that holds the finding', beta.includes('Q-HUB-14 names `alpha.mjs` too, which step 2 owns, so this step does not touch it'), beta.slice(0, 900)],
         ['the seam is written into the Facts of the step that owns the second file as well', alpha.includes('step 3 takes up Q-HUB-14, whose text names `alpha.mjs`, which this step owns'), alpha.slice(0, 900)],
         ['the step of the finding that names no file ends EJECT when a file it must edit is another step\'s, in its Facts and in its Kill', none.includes('names no file of the repository') && none.includes('another step of this plan owns ends it EJECT naming the file')
-          && (none.split('Kill:')[1] ?? '').includes('a change that needs a line in a file this step does not own ends it EJECT'), none.slice(0, 900)],
+          && (none.split('Kill:')[1] ?? '').includes('a part of its own that cannot be made or proved without a line in a file it does not own ends it EJECT'), none.slice(0, 900)],
         ['a guard file has its own case file named for it, new where the folder has none', alpha.includes('its own case file `guard-cases/alpha.mjs`') && !alpha.includes('`guard-cases/alpha.mjs` (new)') && beta.includes('`guard-cases/beta.mjs` (new)'), `${alpha.slice(0, 300)} | ${beta.slice(0, 300)}`],
-        ['no file step commits, stages, pushes or runs a plant or a check', [alpha, beta, none].every((s) => s.includes('commits nothing, stages nothing and runs no plants and no check') && !s.includes('git push origin main')), alpha.slice(0, 400)],
-        ['one commit step follows the file steps and names their number, their guard files and one commit for each', t.split('Committed, proved and landed').length === 2 && commit.startsWith('Committed, proved and landed')
-          && commit.includes('steps 2 to 4 left their edits uncommitted') && commit.includes('the files being `alpha.mjs`, `beta.mjs`') && commit.includes('one commit for each of steps 2 to 4 in that order, nothing staged beforehand'), commit.slice(0, 700)],
-        ['the close step is the one after the commit step and writes an index row for each lesson in the shape the index\'s rows hold', close.startsWith('Closed in the program') && close.includes('add one index row for it in `LESSONS.md` in the shape the index\'s rows hold'), close.slice(0, 200)],
-        ['the Cost counts the steps and the pushes, and the forced turns are the file steps plus two', cost.includes('The 6 steps (3 file steps run at the same time') && cost.includes('3 pushes are made') && cost.includes('5 forced turns of the stop hook'), cost],
-        ['the Cost sums the estimates for the agent time', cost.includes('Agent time is the sum of the steps\' estimates, 170 min'), cost],
-        ['the Cost takes the wall time as the take-up, the longest file step, the commit step and the close', cost.includes('and the close, 130 min.'), cost],
+        ['no file step commits, stages or pushes', [alpha, beta, none].every((s) => s.includes('commits nothing and stages nothing') && !s.includes('git push origin main')), alpha.slice(0, 400)],
+        ['one landing step follows the file steps and names their number, their guard files and one commit for each, and no step is titled as a commit step', t.split('Landed once').length === 2 && landing.startsWith('Landed once')
+          && landing.includes('steps 2 to 4 left their edits uncommitted') && landing.includes('the files being `alpha.mjs`, `beta.mjs`') && landing.includes('one commit for each of steps 2 to 4 in that order, nothing staged beforehand'), landing.slice(0, 700)],
+        ['the landing step writes an index row for each lesson in the shape the index\'s rows hold', landing.includes('add one index row for it in `LESSONS.md` in the shape the index\'s rows hold'), landing.slice(0, 200)],
+        ['the Cost counts the steps and the pushes, and the forced turns are the file steps plus two', cost.includes('The 5 steps (3 file steps run at the same time') && cost.includes('2 pushes are made, one each by the take-up and the landing step') && cost.includes('5 forced turns of the stop hook'), cost],
+        ['the Cost sums the estimates for the agent time', cost.includes('Agent time is the sum of the steps\' estimates, 110 min'), cost],
+        ['the Cost takes the wall time as the take-up, the longest file step and the landing step', cost.includes('the longest file step and the landing step, 70 min.'), cost],
       ];
       const lines = [
         ['the file steps run at the same time in the one working copy', 'The file steps, 2 to 4, run at the same time in the one working copy'],
         ['a review for a resend goes only when no agent edits the working copy', 'A review for a resend of a file step is sent only when no agent is editing the working copy'],
-        ['the commit step puts an existing case turned red right in the owning step\'s file', 'the commit step puts the code right in the owning step\'s file and keeps the finding\'s fix'],
+        ['the landing step puts an existing case turned red right in the owning step\'s file', 'the landing step puts the code right in the owning step\'s file and keeps the finding\'s fix'],
         ['commits name their own files after the message with nothing staged beforehand', 'stages nothing beforehand and names each commit\'s own files after the message'],
-        ['the second write of the background note is the very next call after the launch', 'as the very next call after the launch and before any other call'],
+        ['no run of the plan goes in the background', 'No run of this plan goes in the background'],
         ['a number from the device comes from the test page and never a container render', 'names the app\'s test page as its instrument and never a container render'],
-        ['nothing is pushed except by the plan\'s landing steps', 'Nothing is pushed except by the plan\'s landing steps, which are the take-up step, a commit step where the plan has one, and the close step'],
+        ['nothing is pushed except by the take-up step and the landing step', 'Nothing is pushed except by the take-up step and by the landing step, which is the close step in a plan for one item'],
       ];
       for (const [label, s] of lines) rows.push([`batch: ${label}`, t.includes(s), s]);
       for (const [label, s] of lines.slice(4)) rows.push([`single: ${label}`, single.includes(s), s]);
@@ -218,7 +223,7 @@ export const cases = [
       const sz = h.batchRun(dir, wv, ['--size', '1']).stdout;
       const titles = (s) => [...s.matchAll(/^\d+\. \*\*Put right in `(f\d)\.mjs`/gm)].map((x) => x[1]);
       rows.push(['wave 1 holds seven file steps at once and the header names the group it leaves and the switch that prints it', titles(w1).length === 7 && w1.split('\n')[0].includes('in 7 group steps')
-        && w1.split('\n')[1].includes('leaves 1 of the 8 groups') && w1.split('\n')[1].includes('--wave 2') && !w1.includes('Put right in `f8.mjs`') && w1.includes('\nOrder: 1 2 3 4 5 6 7 8 9 10\n'), w1.split('\n').slice(0, 2).join(' | ')]);
+        && w1.split('\n')[1].includes('leaves 1 of the 8 groups') && w1.split('\n')[1].includes('--wave 2') && !w1.includes('Put right in `f8.mjs`') && w1.includes('\nOrder: 1 2 3 4 5 6 7 8 9\n'), w1.split('\n').slice(0, 2).join(' | ')]);
       rows.push(['wave 2 prints the group wave 1 left', titles(w2).join(',') === 'f8' && w2.split('\n')[0].includes('in 1 group step,') && w2.split('\n')[1].includes('leaves 0 of the 8 groups'), w2.split('\n').slice(0, 2).join(' | ')]);
       rows.push(['two groups of one file never share a wave: a size of one leaves the second run of the file for the next wave', titles(sz).filter((x) => x === 'f1').length === 1 && titles(sz).length === 7 && sz.split('\n')[1].includes('leaves 2 of the 9 groups'), `${titles(sz)} ${sz.split('\n')[1]}`]);
       // Two findings that name no file are two steps, never one step that holds both.
@@ -279,7 +284,7 @@ export const cases = [
       const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
       const one = step(2);
       return h.assertAll([
-        ['the three findings are one file step', t.split('\n')[0].includes('in 1 group step,') && t.includes('\nOrder: 1 2 3 4\n'), t.split('\n')[0]],
+        ['the three findings are one file step', t.split('\n')[0].includes('in 1 group step,') && t.includes('\nOrder: 1 2 3\n'), t.split('\n')[0]],
         ['the step\'s title names the three homes', one.startsWith('Put right in `fence.mjs`, `guard-cases/`, `other.mjs`: Q-HUB-21, Q-HUB-22, Q-HUB-23.'), one.slice(0, 200)],
         ['the step owns the folder by its name and each file once, and names no case file beside the folder', ownedNames(one).slice().sort().join(',') === 'fence.mjs,guard-cases/,other.mjs' && !one.includes('its own case file'), `${ownedNames(one)} | ${one.slice(0, 300)}`],
       ]);
@@ -302,7 +307,7 @@ export const cases = [
       });
       writeFileSync(join(hub, 'unnamed.md'), 'a planted file no finding names\n');
       const t = `${h.batchRun(dir, hub, []).stdout}`;
-      const commit = /\n\d+\. \*\*Committed, proved and landed[^\n]*/.exec(t)?.[0] ?? '';
+      const commit = /\n\d+\. \*\*Landed once[^\n]*/.exec(t)?.[0] ?? '';
       const list = /the files being ([^;]*);/.exec(commit)?.[1] ?? '';
       return h.assertAll([
         ['the files being are the guard files and the template its plants target', list === '`seed.mjs`, `other.mjs`, `plans/seed-template.md`', list],
@@ -311,34 +316,170 @@ export const cases = [
     },
   },
   {
-    name: 'step 145: the commit step carries the four orders of a send: a red case or a missed plant is put right at the start of the next send, a check\'s find in a file a file step wrote is put right in that file at the start of the next send, a commit step that edits a gate file runs the whole suite after its last edit and before its first commit, and the stale-plant list comes from the suite\'s own report',
+    name: 'step 145: the landing step carries the four orders of a send: a red case or a missed plant is put right at the start of the next send, a check\'s find in a file a file step wrote is put right in that file at the start of the next send, a landing step that edits a gate file runs the whole suite after its last edit and before its first commit, and the stale-plant list comes from the suite\'s own report',
     guards: ['tpl_commit_next_send', 'tpl_commit_find_file', 'tpl_commit_suite_first', 'tpl_commit_stale_report'],
     run(m, dir, h) {
       const t = `${h.batchRun(dir, h.batchHub(dir), []).stdout}`;
-      const commit = /\n\d+\. \*\*Committed, proved and landed[^\n]*/.exec(t)?.[0] ?? '';
+      const commit = /\n\d+\. \*\*Landed once[^\n]*/.exec(t)?.[0] ?? '';
       const has = (label, s) => [label, commit.includes(s), s];
       return h.assertAll([
         has('a red case or a missed plant is put right at the start of the next send', 'a red case or a missed plant is put right at the start of the next send and never after a run in the same send'),
         has('a check\'s find in a file a file step wrote is put right in that file at the start of the next send', "a check's find in a file a file step wrote is put right in that file at the start of the next send"),
-        has('a commit step that edits a gate file runs the whole suite before its first commit', 'a commit step that edits a gate file runs the whole suite after its last edit and before its first commit'),
+        has('a landing step that edits a gate file runs the whole suite before its first commit', 'a landing step that edits a gate file runs the whole suite after its last edit and before its first commit'),
         has('the stale-plant list comes from the suite\'s own report', "the stale-plant list comes from the suite's own report before a run"),
       ]);
     },
   },
   {
-    name: 'step 145: a group step and the parallel rules run the step\'s cases by their exact names, each name as one quoted switch, and name a red case of another step\'s file in the report without acting on it',
-    guards: ['batch_exact_names', 'batch_other_red', 'tpl_exact_names', 'tpl_other_red'],
+    name: 'step 159 of the plan of 9 November: a file step points at the six parts of the order the rules give it and names a line it needs in another step\'s file in its report without writing it, and the parallel rules give the order, each case in a run of its own with one case switch to a run, and the same line for another step\'s file',
+    guards: ['batch_six_parts', 'batch_other_line', 'tpl_six_order', 'tpl_own_runs', 'tpl_other_line'],
     run(m, dir, h) {
       const t = `${h.batchRun(dir, h.batchHub(dir), []).stdout}`;
       const group = (/\n2\. \*\*Put right in[^\n]*/.exec(t)?.[0]) ?? '';
       const rules = (/\n- The file steps, [^\n]*/.exec(t)?.[0]) ?? '';
-      const exact = 'own cases by their exact names, each name as one quoted switch';
-      const other = "a red case of another step's file is named in the report with the step that owns it and is not acted on";
+      const other = 'a line a fix needs in a file another step of this plan owns is named in the report with the file, the place and the exact words, for the landing step, and is not written by this step';
       return h.assertAll([
-        ['the group step runs its own cases by their exact names, each as one quoted switch', group.includes(`with this step's ${exact}`), group.slice(0, 200)],
-        ['the group step names a red case of another step\'s file without acting on it', group.includes(other), group.slice(-900)],
-        ['the parallel rules run the step\'s own cases by their exact names, each as one quoted switch', rules.includes(`its ${exact}`), rules.slice(0, 600)],
-        ['the parallel rules name a red case of another step\'s file without acting on it', rules.includes(other), rules.slice(0, 900)],
+        ['the group step points at the six parts of the order the rules of the plan give a file step', group.includes('then the six parts of the order the rules of this plan give a file step'), group.slice(0, 200)],
+        ['the group step names a line it needs in another step\'s file in the report and does not write it', group.includes(other), group.slice(-900)],
+        ['the group step\'s Kill ends a red run of a case of its own FAILED with nothing written after but the report', group.includes('Kill: a red run of a case of its own ends it FAILED with its lines and nothing written after but the report'), group.slice(-900)],
+        ['the parallel rules give the six parts in their order, from the edits to the dry listing', rules.includes('It works in this order and no other. First, every edit its findings ask for') && rules.includes('Sixth, the suite\'s dry listing'), rules.slice(0, 600)],
+        ['the parallel rules run each case in a run of its own with one case switch to a run', rules.includes('Fourth, its own cases, each in a run of its own with one case switch to a run'), rules.slice(0, 900)],
+        ['the rules of the plan name a line in another step\'s file in the report for the landing step', t.includes('A line a fix needs in a file another step owns is named in the report with the file, the place and the exact words, for the landing step, and is not written by the step'), 'rule'],
+      ]);
+    },
+  },
+  {
+    name: 'step 159 of the plan of 9 November: the batch print\'s take-up only claims, it adds no entry, runs no check, carries no pull and leaves the live clone as it is, finds each entry by its finding key and names the key each carries where it is not the printed one, and says the plan\'s title is written with no phrase the third-person check refuses; the item print\'s take-up carries no pull and says the same of the key and the title',
+    guards: ['tpl_takeup_claim', 'tpl_takeup_no_pull', 'tpl_takeup_key_batch', 'tpl_takeup_key_single', 'tpl_takeup_title_batch', 'tpl_takeup_title_single', 'batch_findkeys'],
+    run(m, dir, h) {
+      const batch = `${h.batchRun(dir, h.batchHub(dir), []).stdout}`;
+      const single = `${h.seedRun(dir, h.seedHub(dir), ['--item', 'P-3']).stdout}`;
+      const up = (t) => (t.split('\n1. **Taken up')[1] ?? '').split(/\n2\. \*\*/)[0];
+      const b = up(batch);
+      const s = up(single);
+      const keys = /found by their finding keys, (Q-HUB-\d+(?:, Q-HUB-\d+)*)/.exec(b)?.[1] ?? '';
+      const left = "the live clone is left as it is, because the plan's last step brings it forward when no other step is running";
+      return h.assertAll([
+        ['batch: the take-up only claims, adds no entry, runs no check and leaves the live clone as it is', b.includes('it adds no entry, touches no count line, runs no check and leaves the live clone as it is'), b.slice(0, 900)],
+        ['batch: the take-up carries no pull of the live clone and no read of its head', !b.includes('pull origin main') && !b.includes('rev-parse HEAD') && b.includes(left), b.slice(-900)],
+        ['batch: the take-up names in its report the key each entry carries wherever it is not the printed one', b.includes('so the step names in its report the key each entry carries wherever it is not the printed one'), b.slice(0, 900)],
+        ['batch: the take-up finds the entries by the five finding keys', keys.split(', ').sort().join(',') === 'Q-HUB-11,Q-HUB-12,Q-HUB-13,Q-HUB-14,Q-HUB-15', keys],
+        ['batch: the take-up says the plan\'s title is written with no phrase the third-person check refuses', b.includes('the plan\'s title is copied whole into each entry, so the title is written with no phrase the third-person check refuses'), b.slice(0, 900)],
+        ['single: the take-up carries no pull of the live clone and no read of its head', !s.includes('pull origin main') && !s.includes('rev-parse HEAD') && s.includes(left), s.slice(-900)],
+        ['single: the take-up names in its report the key the entry carries wherever it is not the printed one', s.includes('so the step reads the key the entry carries and names it in its report wherever it is not the printed one'), s.slice(0, 900)],
+        ['single: the take-up says the plan\'s title is written with no phrase the third-person check refuses', s.includes('the plan\'s title is copied whole into the entry, so the title is written with no phrase the third-person check refuses'), s.slice(0, 900)],
+      ]);
+    },
+  },
+  {
+    name: 'step 159 of the plan of 9 November: the landing step of the batch print and the close step of the item print carry the marker-and-pin sentence, the pull of the live clone as the last act after the push, and the item\'s key read from the program; the landing step runs the plants of every file the steps edited, a long file\'s new plants by key, and the checks before the first commit and again over the close',
+    guards: ['tpl_marker_pin', 'tpl_pull_last', 'tpl_close_pull_last', 'tpl_land_pull_last', 'tpl_key_from_program', 'tpl_land_key_program', 'tpl_land_plants_all', 'tpl_land_long_files', 'tpl_land_checks_twice', 'tpl_land_close_commit'],
+    run(m, dir, h) {
+      const batch = `${h.batchRun(dir, h.batchHub(dir), []).stdout}`;
+      const single = `${h.seedRun(dir, h.seedHub(dir), ['--item', 'P-3']).stdout}`;
+      const landing = /\n\d+\. \*\*Landed once[^\n]*/.exec(batch)?.[0] ?? '';
+      const close = /\n\d+\. \*\*Closed in the program[^\n]*/.exec(single)?.[0] ?? '';
+      const marker = "an app's doctrine marker and the calling workflow's hub pin move together or not at all";
+      const pulled = (s) => s.indexOf('`git push origin main`') > 0 && s.indexOf('`git -C /root/.claude/hub pull origin main`') > s.indexOf('`git push origin main`')
+        && s.includes("the pull being the last act that changes anything because it changes the gates under every agent");
+      return h.assertAll([
+        ['batch: the landing step says the marker and the pin move together or not at all', landing.includes(marker), landing.slice(-500)],
+        ['single: the close step says the marker and the pin move together or not at all', close.includes(marker), close.slice(-500)],
+        ['batch: the landing step pushes once and then pulls the live clone as the last act', pulled(landing), landing.slice(-700)],
+        ['single: the close step pushes and then pulls the live clone as the last act', pulled(close), close.slice(-700)],
+        ['batch: the landing step says the pull is its last act, when no other step is running', landing.includes("the pull of the live clone is this step's last act, when no other step is running, because it changes the gates under every agent; the remote's main moves under this session. Do: read the reports"), landing.slice(0, 900)],
+        ['single: the close step says the pull is its last act, when no other step is running', close.includes("the pull of the live clone is this step's last act, when no other step is running, because it changes the gates under every agent; the remote's main moves under this session, so it is fetched"), close.slice(0, 900)],
+        ['batch: the landing step reads each item\'s key from the program and not from the plan\'s text', landing.includes("each item's key is read from the program and not from this plan's text"), landing.slice(0, 1500)],
+        ['single: the close step reads the item\'s key from the program at the time of use', close.includes("the item's key is read from the program at the time of use and not from this plan's text"), close.slice(0, 1500)],
+        ['batch: the landing step runs the plants of every file the steps edited, the suite file and each doctrine page among them', landing.includes('the plants of every file the steps edited are run here, the suite file and each doctrine page among them'), landing.slice(0, 1500)],
+        ['batch: the landing step runs the new plants of a long file by key', landing.includes('then the new plants of the long files that the reports name, by key in one run'), landing.slice(0, 2500)],
+        ['batch: the landing step runs the checks before the first commit and again over the close', landing.includes('then the checks again, once each, each exit code read') && landing.includes('then one commit for each of steps 2 to 4 in that order'), landing.slice(0, 2500)],
+        ['batch: the landing step makes one close commit naming the close\'s files', landing.includes('one commit made with `git commit -m` naming the close\'s files after a reader-facing message saying the wave is closed'), landing.slice(-900)],
+      ]);
+    },
+  },
+  {
+    name: 'step 159 of the plan of 9 November: the rules of the plan carry no background run, the rule for a string a case writes, the rule for a conflict in the program alone, the rule for the long files and the continue command, in the item print and in the batch print',
+    guards: ['tpl_rule_case_string', 'tpl_rule_conflict', 'tpl_rule_long_files', 'tpl_cmd_continue', 'tpl_rule_foreground'],
+    run(m, dir, h) {
+      const rows = [];
+      for (const [mode, r] of [['single', h.seedRun(dir, h.seedHub(dir), ['--item', 'P-3'])], ['batch', h.batchRun(dir, h.batchHub(dir), [])]]) {
+        const t = `${r.stdout}`;
+        const has = (label, s) => rows.push([`${mode}: ${label}`, t.includes(s), s]);
+        has('every run of the suite and of a check is made in the foreground', "Every run of the suite and of a check is made in the foreground with the Bash tool's timeout set to ten minutes, and a run that ends on that timeout ends the step EJECT naming it");
+        rows.push([`${mode}: no paragraph sends a run to the background and no note is written around one`, !t.includes('A run that may pass ten minutes goes in the background') && !t.includes('then the note written again with the full path the launch printed'), 'background']);
+        has('a string a case writes holds no word the third-person check reads as a pronoun', 'A string a case writes holds no word the third-person check reads as a pronoun, whole or as the first part of a word split across a template.');
+        has('a conflict in the program alone is resolved so both sessions\' items stand', "Where the last rebase of the landing step stops on a conflict in `PROGRAM.md` alone, the step resolves it with the Edit tool so both sessions' items stand");
+        has('a conflict in any other file ends the rebase', 'a conflict in any other file, or in any other rebase of this plan, ends the rebase with `git rebase --abort` and the step ejects with nothing pushed');
+        has('only the new plants of a long file run, by key', "of a long file only the new plants run, by key, and its other plants are proved by the runner's doctrine gates run after the push");
+        has('the continue command is among the Commands', '- `git rebase --continue`\n- `git push origin main`');
+      }
+      return h.assertAll(rows);
+    },
+  },
+  {
+    name: 'step 159 of the plan of 9 November: the batch print gives the plants of the suite file and of a doctrine page the wave\'s steps edit to the landing step, and not a target no finding names (Q-HUB-396)',
+    guards: ['batch_suite_targets'],
+    run(m, dir, h) {
+      const hub = plantedHub(h, dir, {
+        files: ['seed.mjs'],
+        caseFiles: { 'seed.mjs': '// a planted case file of the case\n' },
+        findings: [['Q-HUB-21', 'a planted finding about `seed.mjs`, `session-guards.test.mjs` and `doctrine/plans.md`.']],
+      });
+      mkdirSync(join(hub, 'doctrine'), { recursive: true });
+      writeFileSync(join(hub, 'doctrine', 'plans.md'), 'a planted page of the case\n');
+      writeFileSync(join(hub, 'unnamed.md'), 'a planted file no finding names\n');
+      writeFileSync(join(hub, 'session-guards.test.mjs'), "// a planted suite file of the case\nconst PLANTS = {\n  p1: ['a', 'b', 'session-guards.test.mjs'],\n  p2: ['a', 'b', 'doctrine/plans.md'],\n  p3: ['a', 'b', 'unnamed.md'],\n};\n");
+      const t = `${h.batchRun(dir, hub, []).stdout}`;
+      const landing = /\n\d+\. \*\*Landed once[^\n]*/.exec(t)?.[0] ?? '';
+      const list = /the files being ([^;]*);/.exec(landing)?.[1] ?? '';
+      return h.assertAll([
+        ['the files being are the guard file, the suite file and the doctrine page, each a plant targets and a finding names', list === '`seed.mjs`, `session-guards.test.mjs`, `doctrine/plans.md`', list],
+        ['a target of the suite file\'s plants that no finding names is not run here', !list.includes('unnamed.md'), list],
+      ]);
+    },
+  },
+  {
+    name: 'step 159 of the plan of 9 November: a finding whose fix counts a list owns every file it names, so the step that takes it and the step of the list\'s other place are one step (Q-HUB-397)',
+    guards: ['batch_counts_list'],
+    run(m, dir, h) {
+      const hub = plantedHub(h, dir, {
+        files: ['hook.mjs', 'plans.md'],
+        caseFiles: { 'hook.mjs': '// a planted case file of the case\n' },
+        findings: [
+          ['Q-HUB-21', 'a planted finding whose fix counts a list in `hook.mjs` and in `plans.md`.'],
+          ['Q-HUB-22', 'a planted finding about `plans.md`.'],
+        ],
+      });
+      const t = `${h.batchRun(dir, hub, []).stdout}`;
+      const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
+      const one = step(2);
+      return h.assertAll([
+        ['the two findings are one file step', t.split('\n')[0].includes('in 1 group step,') && t.includes('\nOrder: 1 2 3\n'), t.split('\n')[0]],
+        ['the step\'s title names both places of the list and both findings', one.startsWith('Put right in `hook.mjs`, `plans.md`: Q-HUB-21, Q-HUB-22.'), one.slice(0, 200)],
+        ['the step owns both places and the guard\'s case file', ownedNames(one).slice().sort().join(',') === 'guard-cases/hook.mjs,hook.mjs,plans.md', `${ownedNames(one)}`],
+      ]);
+    },
+  },
+  {
+    name: 'step 159 of the plan of 9 November: a case file a finding names goes to the step that owns its guard file and to no other step, and the step left with nothing owns no file by name (Q-HUB-397)',
+    guards: ['batch_case_guard_only'],
+    run(m, dir, h) {
+      const hub = plantedHub(h, dir, {
+        files: ['a.mjs', 'b.mjs'],
+        caseFiles: { 'a.mjs': '// a planted case file of the case\n', 'b.mjs': '// a planted case file of the case\n' },
+        findings: [
+          ['Q-HUB-21', 'a planted finding about `a.mjs` and `b.mjs`.'],
+          ['Q-HUB-22', 'a planted finding about `guard-cases/b.mjs`.'],
+        ],
+      });
+      const t = `${h.batchRun(dir, hub, []).stdout}`;
+      const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
+      const [first, second] = [step(2), step(3)];
+      const listed = [...ownedNames(first), ...ownedNames(second)].filter((x) => x === 'guard-cases/b.mjs');
+      return h.assertAll([
+        ['the case file of b.mjs is named by the step that owns b.mjs', ownedNames(first).includes('guard-cases/b.mjs') && ownedNames(first).includes('b.mjs'), `${ownedNames(first)}`],
+        ['the case file of b.mjs is named by no other step', listed.length === 1 && ownedNames(second).length === 0, `${listed} | ${ownedNames(second)} | ${second.slice(0, 300)}`],
       ]);
     },
   },
@@ -405,37 +546,66 @@ export const plants = {
   batch_seam_out: ['seamsOut[i].add(', 'seamsOut[i].has(', 'plan-seed.mjs'],
   batch_seam_in: ['seamsIn[j].add(', 'seamsIn[j].has(', 'plan-seed.mjs'],
   batch_case_file: ["? `guard-cases/${x}` : '');", "? '' : '');", 'plan-seed.mjs'],
-  batch_commit_step: ["if (hasCommit) { L(fill(tpl['commit-step']", "if (false) { L(fill(tpl['commit-step']", 'plan-seed.mjs'],
-  batch_parallel_rules: ["if (hasCommit) L(fill(tpl['parallel-rules']", "if (false) L(fill(tpl['parallel-rules']", 'plan-seed.mjs'],
+  batch_landing_after: ["`${landing} after ${gnums.length ? gnums.join(' ') : takeup}`", '`${landing} after ${takeup}`', 'plan-seed.mjs'],
+  batch_order_landing: ['const order = [takeup, ...gnums, landing];', 'const order = [takeup, ...gnums, landing, landing + 1];', 'plan-seed.mjs'],
+  batch_landing_step: ["L(fill(tpl['landing-step']", "void (fill(tpl['landing-step']", 'plan-seed.mjs'],
+  batch_parallel_rules: ["if (groups.length) L(fill(tpl['parallel-rules']", "if (false) L(fill(tpl['parallel-rules']", 'plan-seed.mjs'],
   batch_cost_agent: ["Agent time is the sum of the steps' estimates, ${agentMin} min", "Agent time is the sum of the steps' estimates, 0 min", 'plan-seed.mjs'],
-  batch_cost_wall: ['and the close, ${wallMin} min.', 'and the close, 0 min.', 'plan-seed.mjs'],
+  batch_cost_wall: ['and the landing step, ${wallMin} min.', 'and the landing step, 0 min.', 'plan-seed.mjs'],
   batch_wave_cap: ['const WAVE = 7;', 'const WAVE = 99;', 'plan-seed.mjs'],
   batch_wave_header: ['and it leaves ${leaves} of the ${totalGroups} groups', 'and it leaves 0 of the ${totalGroups} groups', 'plan-seed.mjs'],
   batch_wave_home: ['![...g.claims].some((x) => used.has(x))', 'true', 'plan-seed.mjs'],
   batch_wave_switch: ['Math.floor(Number(o.wave) || 1)', '1', 'plan-seed.mjs'],
   tpl_close_index: ['add one index row for it in `LESSONS.md` in the shape the index\'s rows hold', 'add one row for it', 'plans/seed-template.md'],
   tpl_review_resend: ['A review for a resend of a file step is sent only when no agent is editing the working copy', 'A review for a resend of a file step may be sent while an agent is editing the working copy', 'plans/seed-template.md'],
-  tpl_commit_red_case: ["the commit step puts the code right in the owning step's file and keeps the finding's fix", 'the commit step leaves the case red', 'plans/seed-template.md'],
+  tpl_commit_red_case: ["the landing step puts the code right in the owning step's file and keeps the finding's fix", 'the landing step leaves the case red', 'plans/seed-template.md'],
   tpl_commit_by_path: ["stages nothing beforehand and names each commit's own files after the message", 'stages everything beforehand', 'plans/seed-template.md'],
-  tpl_bg_order: ['as the very next call after the launch and before any other call', 'as a later call', 'plans/seed-template.md'],
+  tpl_rule_no_bg: ['No run of this plan goes in the background.', 'A run of this plan may go in the background.', 'plans/seed-template.md'],
   tpl_device_line: ["names the app's test page as its instrument and never a container render", "names a container render as its instrument", 'plans/seed-template.md'],
-  tpl_push_landing: ["Nothing is pushed except by the plan's landing steps, which are the take-up step, a commit step where the plan has one, and the close step", 'Nothing is pushed except by the take-up step', 'plans/seed-template.md'],
+  tpl_push_landing: ['Nothing is pushed except by the take-up step and by the landing step, which is the close step in a plan for one item', 'Nothing is pushed except by the take-up step', 'plans/seed-template.md'],
   // step 145: the take-up's partition finding, Q-HUB-363, Q-HUB-364 and Q-HUB-368
   part_merge: ['groups = mergeSharing(groups, claimsOf);', 'void mergeSharing;', 'plan-seed.mjs'],
   part_folder: ['for (const h of g.homes) for (const y of filesUnder(repo, h)) {', 'for (const h of g.homes) for (const y of [h]) {', 'plan-seed.mjs'],
   part_case_claim: ['s.add(y); const c = caseFileOf(y); if (c) s.add(c); }', 's.add(y); }', 'plan-seed.mjs'],
-  part_plant_owner: ['!owner.has(t)) owner.set(t, i);', 'false) owner.set(t, i);', 'plan-seed.mjs'],
+  part_plant_owner: ['if (!existsSync(join(repo, t)) || owner.has(t)) continue;', 'if (!existsSync(join(repo, t)) || true) continue;', 'plan-seed.mjs'],
   part_names_dedupe: ['if (!covered.has(y) && !cases.includes(y)) names.push(y);', 'if (!covered.has(y)) names.push(y);', 'plan-seed.mjs'],
   part_folder_name: ['under.every((y) => mine.has(y))', 'false', 'plan-seed.mjs'],
   batch_plant_targets: ['...caseFiles.flatMap((c) => plantTargets(slurp(join(repo, c))).filter((t) => namedFiles.has(t)))', '', 'plan-seed.mjs'],
   batch_plant_named: ['.filter((t) => namedFiles.has(t))', '', 'plan-seed.mjs'],
-  batch_exact_names: ["with this step's own cases by their exact names, each name as one quoted switch", "with this step's cases by name", 'plan-seed.mjs'],
-  batch_other_red: ["a red case of another step's file is named in the report with the step that owns it and is not acted on; ", '', 'plan-seed.mjs'],
-  tpl_exact_names: ['its own cases by their exact names, each name as one quoted switch', 'its own cases by name', 'plans/seed-template.md'],
-  tpl_other_red: ["a red case of another step's file is named in the report with the step that owns it and is not acted on", 'a red case of another step\'s file is acted on', 'plans/seed-template.md'],
+  batch_six_parts: ['then the six parts of the order the rules of this plan give a file step; a line a fix needs', 'then run the suite; a line a fix needs', 'plan-seed.mjs'],
+  batch_other_line: ['a line a fix needs in a file another step of this plan owns is named in the report with the file, the place and the exact words, for the landing step, and is not written by this step; ', '', 'plan-seed.mjs'],
+  tpl_six_order: ['It works in this order and no other. First, every edit its findings ask for', 'It works in any order. First, every edit its findings ask for', 'plans/seed-template.md'],
+  tpl_own_runs: ['Fourth, its own cases, each in a run of its own with one case switch to a run', 'Fourth, its own cases, all in one run', 'plans/seed-template.md'],
+  tpl_other_line: ['A line a fix needs in a file another step owns is named in the report with the file, the place and the exact words, for the landing step, and is not written by the step', 'A line a fix needs in a file another step owns is written by the step', 'plans/seed-template.md'],
   tpl_commit_next_send: ['is put right at the start of the next send and never after a run in the same send', 'is put right in the same send, after the run', 'plans/seed-template.md'],
   tpl_commit_find_file: ['is put right in that file at the start of the next send', 'is left to the close', 'plans/seed-template.md'],
-  tpl_commit_suite_first: ['a commit step that edits a gate file runs the whole suite after its last edit and before its first commit', 'a commit step that edits a gate file runs its own cases', 'plans/seed-template.md'],
+  tpl_commit_suite_first: ['a landing step that edits a gate file runs the whole suite after its last edit and before its first commit', 'a landing step that edits a gate file runs its own cases', 'plans/seed-template.md'],
   tpl_commit_stale_report: ["the stale-plant list comes from the suite's own report before a run", 'the stale-plant list comes from reading the plants', 'plans/seed-template.md'],
   tpl_commit_step_text: ['one commit for each of steps {FIRSTGROUP} to {LASTGROUP} in that order, nothing staged beforehand', 'one commit for all of steps {FIRSTGROUP} to {LASTGROUP}', 'plans/seed-template.md'],
+  // step 159 of the plan of 9 November: the shape the last wave ran, Q-HUB-377, Q-HUB-379, Q-HUB-380, Q-HUB-386, Q-HUB-396, Q-HUB-397 and Q-HUB-399
+  batch_findkeys: ["takeupVars.FINDKEYS = planned.map((f) => f.key).join(', ');", "takeupVars.FINDKEYS = '';", 'plan-seed.mjs'],
+  batch_suite_targets: ['...plantTargets(suiteText).filter((t) => namedFiles.has(t))', '...[]', 'plan-seed.mjs'],
+  batch_counts_list: ['g.list.filter((f) => f.counts).flatMap((f) => f.files)', '[]', 'plan-seed.mjs'],
+  batch_case_guard_only: ['if (c && owner.has(c) && owner.get(c) !== i) owner.set(c, i); }', 'if (c && owner.has(c) && owner.get(c) !== i) void c; }', 'plan-seed.mjs'],
+  tpl_takeup_claim: ['it adds no entry, touches no count line, runs no check and leaves the live clone as it is', 'it adds an entry', 'plans/seed-template.md'],
+  tpl_takeup_no_pull: ["the live clone is left as it is, because the plan's last step brings it forward when no other step is running", "`git -C /root/.claude/hub pull origin main` and `git -C /root/.claude/hub rev-parse HEAD`, read equal to the remote's main", 'plans/seed-template.md'],
+  tpl_takeup_key_batch: ['so the step names in its report the key each entry carries wherever it is not the printed one', 'so the step writes the key it printed', 'plans/seed-template.md'],
+  tpl_takeup_key_single: ['so the step reads the key the entry carries and names it in its report wherever it is not the printed one', 'so the step keeps the key it printed', 'plans/seed-template.md'],
+  tpl_takeup_title_batch: ["the plan's title is copied whole into each entry, so the title is written with no phrase the third-person check refuses", "the plan's title is copied whole into each entry", 'plans/seed-template.md'],
+  tpl_takeup_title_single: ["the plan's title is copied whole into the entry, so the title is written with no phrase the third-person check refuses", "the plan's title is copied whole into the entry", 'plans/seed-template.md'],
+  tpl_marker_pin: ["an app's doctrine marker and the calling workflow's hub pin move together or not at all", "an app's doctrine marker moves", 'plans/seed-template.md'],
+  tpl_pull_last: ['the pull being the last act that changes anything because it changes the gates under every agent', 'the pull being one act among others', 'plans/seed-template.md'],
+  tpl_close_pull_last: ["the pull of the live clone is this step's last act, when no other step is running, because it changes the gates under every agent; the remote's main moves under this session, so it is fetched", "the remote's main moves under this session, so it is fetched", 'plans/seed-template.md'],
+  tpl_land_pull_last: ["the pull of the live clone is this step's last act, when no other step is running, because it changes the gates under every agent; the remote's main moves under this session. Do: read the reports", "the remote's main moves under this session. Do: read the reports", 'plans/seed-template.md'],
+  tpl_key_from_program: ["the item's key is read from the program at the time of use and not from this plan's text", "the item's key is read from this plan's text", 'plans/seed-template.md'],
+  tpl_land_key_program: ["and each item's key is read from the program and not from this plan's text", "and each item's key is read from this plan's text", 'plans/seed-template.md'],
+  tpl_land_plants_all: ['the plants of every file the steps edited are run here, the suite file and each doctrine page among them', 'the plants of the guard files are run here', 'plans/seed-template.md'],
+  tpl_land_long_files: ['then the new plants of the long files that the reports name, by key in one run', 'then the plants of the long files', 'plans/seed-template.md'],
+  tpl_land_checks_twice: ['then the checks again, once each, each exit code read', 'then nothing again', 'plans/seed-template.md'],
+  tpl_land_close_commit: ["one commit made with `git commit -m` naming the close's files after a reader-facing message saying the wave is closed", 'one commit made with `git commit -m`', 'plans/seed-template.md'],
+  tpl_rule_foreground: ["Every run of the suite and of a check is made in the foreground with the Bash tool's timeout set to ten minutes", 'Every run of the suite and of a check may be made in the background', 'plans/seed-template.md'],
+  tpl_rule_case_string: ['A string a case writes holds no word the third-person check reads as a pronoun', 'A string a case writes holds any word', 'plans/seed-template.md'],
+  tpl_rule_conflict: ['Where the last rebase of the landing step stops on a conflict in `PROGRAM.md` alone', 'Where the last rebase of the landing step stops on a conflict', 'plans/seed-template.md'],
+  tpl_rule_long_files: ["of a long file only the new plants run, by key, and its other plants are proved by the runner's doctrine gates run after the push", 'of a long file all plants run', 'plans/seed-template.md'],
+  tpl_cmd_continue: ['- `git rebase --continue`\n', '', 'plans/seed-template.md'],
 };

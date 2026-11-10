@@ -10,7 +10,8 @@
 //
 // `--batch` prints the open findings of the repository as ONE plan, grouped by the file each names: a take-up step, one WAVE of up to seven file steps
 // run at the same time (each a group of up to `--size` findings, eight by default, owning its files and its guard's case file, committing nothing;
-// `--steps` limits the groups printed and `--wave` prints a later wave), one commit step that proves and lands them once with a computed Cost, and a close.
+// `--steps` limits the groups printed and `--wave` prints a later wave), after a take-up that only claims, and one landing step that proves in the foreground,
+// commits once for each file step, closes in the program, pushes once and pulls the live clone last, with a computed Cost.
 //
 // `--out <path>` (either mode) writes the whole print to that file and prints one line naming the path and the print's first line, so a print too long
 // for the conversation (the batch print for the hub's queue ran to 246 KB) is read whole from the file. A finding whose own text has a sentence that
@@ -203,6 +204,8 @@ export function seed(o) {
   const vars = { HUB: isHub ? repo : hub, ITEM: entry.key, TAKEUP: takeup, CLOSE: close, REVIEW: review, NEXTP: `P-${nextPk}`, NEXTQ: `Q-HUB-${hubMax + 1}`, NEXTL: lessonMax + 1,
     TRANSCRIPT: transcript, REVIEWFILE: join(homedir(), '.claude', 'hub', 'aim-review.md'), PUTRIGHT: '' };
   vars.LANDING = fill(tpl.landing ?? '<plans/seed-template.md has no landing block>', vars);
+  // The take-up lands too, but leaves the live clone alone: the close pulls it last (Q-HUB-386).
+  vars.TAKEUPLANDING = fill(tpl['landing-takeup'] ?? '<plans/seed-template.md has no landing-takeup block>', vars);
 
   const out = [];
   const L = (s = '') => out.push(s);
@@ -462,9 +465,19 @@ export function openFindings(o) {
       const s = m[1].trim().replace(/[.,;:]+$/, '');
       if (s && !/\s/.test(s) && !files.includes(s) && existsSync(join(o.repo, s))) files.push(s);
     }
-    out.push({ key, item: e.key, rank, text, files, home: files[0] ?? '', putRight: putRightSentence(text) });
+    out.push({ key, item: e.key, rank, text, files, home: files[0] ?? '', putRight: putRightSentence(text), counts: countsList(text) });
   });
   return out;
+}
+
+/**
+ * Whether a finding's fix counts a list (Q-HUB-397).
+ * @param {string} text  the finding's file, its whitespace collapsed to single spaces.
+ * @returns {boolean} true when the text says the fix counts a list, or that a counted list changes, in the words "counts a list", "count the list" or "counted list".
+ *   Every file such a finding names is a place of that list, so the step that takes the finding owns all of them.
+ */
+export function countsList(text) {
+  return /\bcounts?\s+(?:a|the|one|each|every)\s+(?:\w+\s+){0,2}list\b|\bcounted\s+(?:\w+\s+){0,2}list\b/i.test(String(text ?? ''));
 }
 
 /**
@@ -500,7 +513,8 @@ export function batchSeed(o) {
     if (h === '') { for (const f of fs) groups.push({ home: '', list: [f] }); continue; }
     for (let i = 0; i < fs.length; i += size) groups.push({ home: h, list: fs.slice(i, i + size) });
   }
-  groups = groups.map((g) => ({ ...g, homes: g.home ? [g.home] : [] }));
+  // A finding whose fix counts a list owns every file it names, because each is a place of that list and the step that counts it must change them all (Q-HUB-397).
+  groups = groups.map((g) => ({ ...g, homes: g.home ? [...new Set([g.home, ...g.list.filter((f) => f.counts).flatMap((f) => f.files)])] : [] }));
   // The files a group owns are every file under its homes (a folder is every file in it) and the case file of each; two groups that would own one file are
   // one group, so no file belongs to two steps (Q-HUB-371).
   const claimsOf = (g) => {
@@ -548,11 +562,10 @@ export function batchSeed(o) {
   const stepNums = [...planSection(planText, 'Steps').matchAll(/^(\d+)\.\s/gm)].map((m) => Number(m[1]));
   const takeup = (stepNums.length ? Math.max(...stepNums) : 0) + 1;
   const g1 = takeup + 1;
-  // The commit step comes after the last file step of the wave and holds every commit and the proof; a wave of no file step has none.
-  const hasCommit = groups.length > 0;
-  const commit = g1 + groups.length;
-  const close = hasCommit ? commit + 1 : commit;
-  const review = close + 1;
+  // The landing step comes after the last file step of the wave and holds the proof, every commit, the close and the push; it is also the close, so there is no commit step apart from it.
+  const landing = g1 + groups.length;
+  const close = landing;
+  const review = landing + 1;
   const rules = agentRules(join(hub, 'agent-rules.md'));
   const rulesPath = join(homedir(), '.claude', 'hub', 'agent-rules.md');
   const sid = String(process.env.CLAUDE_CODE_SESSION_ID ?? '').trim();
@@ -568,7 +581,9 @@ export function batchSeed(o) {
   vars.PUTRIGHT = putRight.length
     ? `; in the entry of each of these items, whose finding's own text says it was put right, set State to done with the sentence after its key as what changed: ${putRight.map((f) => `${f.item} (${f.key}): ${f.putRight}`).join(' ')}`
     : '';
+  vars.TAKEUPLANDING = fill(tpl['landing-takeup'] ?? '<plans/seed-template.md has no landing-takeup block>', vars);
   const takeupVars = { ...vars, ITEM: planned.map((f) => f.item).join(', ') };
+  takeupVars.FINDKEYS = planned.map((f) => f.key).join(', ');
   // Each check is spelled as its own usage gives (Q-HUB-308): the docs check takes the repository's path bare, the lessons check none, and the quote,
   // privacy, third-person, example and pin checks take it after the repo flag.
   const checks = ['docs-check', 'privacy-check', 'quote-check', 'third-person-check', 'lessons-check', 'example-check', 'pin-check'].map((c) => {
@@ -584,7 +599,12 @@ export function batchSeed(o) {
   groups.forEach((g, i) => { for (const x of g.claims) if (!owner.has(x)) owner.set(x, i); });
   groups.forEach((g, i) => {
     for (const c of new Set([...g.claims].map(caseFileOf).filter(Boolean))) {
-      for (const t of plantTargets(slurp(join(repo, c)))) if (existsSync(join(repo, t)) && !owner.has(t)) owner.set(t, i);
+      for (const t of plantTargets(slurp(join(repo, c)))) {
+        if (!existsSync(join(repo, t)) || owner.has(t)) continue;
+        owner.set(t, i);
+        const tc = caseFileOf(t);
+        if (tc && !owner.has(tc)) owner.set(tc, i);
+      }
     }
   });
   const namedFiles = new Set();
@@ -601,6 +621,8 @@ export function batchSeed(o) {
       }
     }
   });
+  // A case file belongs to the step that owns its guard file and to that step only (Q-HUB-397): a step that named the case file first loses it to the guard's step.
+  for (const [x, i] of [...owner]) { const c = caseFileOf(x); if (c && owner.has(c) && owner.get(c) !== i) owner.set(c, i); }
   // A file a finding names that another step owns is a seam, written into both steps.
   const seamsOut = groups.map(() => new Set());
   const seamsIn = groups.map(() => new Set());
@@ -634,18 +656,19 @@ export function batchSeed(o) {
     return { names, cases };
   };
   const caseFiles = [...new Set(groups.flatMap((_, i) => ownedFiles(i).map(caseFileOf).filter(Boolean)))];
-  // The files the commit step runs the plants of: each guard file a step owns, and each file the plants of their case files target that a finding of the wave names
-  // (Q-HUB-363: the template's plants were left to the runner).
+  // The files the landing step runs the plants of: each guard file a step owns, and each file that a plant of the wave's case files or of the suite file targets and a finding
+  // of the wave names (Q-HUB-363: the template's plants were left to the runner; Q-HUB-396: so were the suite file's and a doctrine page's).
+  const suiteText = slurp(join(repo, 'session-guards.test.mjs'));
   const guardFiles = [...new Set([...groups.flatMap((_, i) => ownedFiles(i).filter(caseFileOf)),
-    ...caseFiles.flatMap((c) => plantTargets(slurp(join(repo, c))).filter((t) => namedFiles.has(t)))])];
+    ...caseFiles.flatMap((c) => plantTargets(slurp(join(repo, c))).filter((t) => namedFiles.has(t))),
+    ...plantTargets(suiteText).filter((t) => namedFiles.has(t))])];
   const estOf = (s) => Number(/Estimate (\d+) min/.exec(s)?.[1] ?? 0);
-  const takeupEst = estOf(fill(tpl['take-up'] ?? '', takeupVars));
-  const closeEst = estOf(fill(tpl['close-step'] ?? '', vars));
+  const takeupEst = estOf(fill(tpl['take-up-batch'] ?? '', takeupVars));
   const groupEst = groups.map((g) => 15 + 5 * g.list.length);
-  const commitEst = hasCommit ? 30 + 5 * groups.length : 0;
-  const agentMin = takeupEst + groupEst.reduce((s, x) => s + x, 0) + commitEst + closeEst;
-  const wallMin = takeupEst + Math.max(0, ...groupEst) + commitEst + closeEst;
-  const cvars = { ...vars, COMMIT: commit, FIRSTGROUP: g1, LASTGROUP: g1 + groups.length - 1, COMMITEST: commitEst, CHECKS: checks,
+  const landEst = 20 + 5 * groups.length;
+  const agentMin = takeupEst + groupEst.reduce((s, x) => s + x, 0) + landEst;
+  const wallMin = takeupEst + Math.max(0, ...groupEst) + landEst;
+  const cvars = { ...vars, LANDSTEP: landing, FIRSTGROUP: groups.length ? g1 : takeup, LASTGROUP: groups.length ? g1 + groups.length - 1 : takeup, LANDEST: landEst, CHECKS: checks,
     GUARDFILES: guardFiles.length ? guardFiles.map((x) => `\`${x}\``).join(', ') : 'none, since no file of this wave is a guard file' };
 
   const out = [];
@@ -664,7 +687,7 @@ export function batchSeed(o) {
   L(goalsBlock(join(hub, 'CLAUDE.md')) || '<the hub CLAUDE.md goals block could not be read>');
   L();
   const gnums = groups.map((_, i) => g1 + i);
-  L(`Served by: step ${takeup} serves goals 5 and 6; step${gnums.length === 1 ? '' : 's'} ${gnums.length === 1 ? g1 : `${g1} to ${g1 + gnums.length - 1}`} ${gnums.length === 1 ? 'serves' : 'serve'} goal 1; ${hasCommit ? `step ${commit} serves goals 1, 5 and 6; ` : ''}step ${close} serves goals 5 and 6; step ${review} serves goals 3, 5 and 6.`);
+  L(`Served by: step ${takeup} serves goals 5 and 6; step${gnums.length === 1 ? '' : 's'} ${gnums.length === 1 ? g1 : `${g1} to ${g1 + gnums.length - 1}`} ${gnums.length === 1 ? 'serves' : 'serve'} goal 1; step ${landing} serves goals 1, 5 and 6; step ${review} serves goals 3, 5 and 6.`);
   L();
   L('## Asked');
   L();
@@ -690,20 +713,20 @@ export function batchSeed(o) {
   L();
   L(fill(tpl['rules-of-this-plan'] ?? '<plans/seed-template.md has no rules-of-this-plan block>', vars));
   // The file steps of the wave run together and commit nothing, so the standing text of a parallel batch follows.
-  if (hasCommit) L(fill(tpl['parallel-rules'] ?? '<plans/seed-template.md has no parallel-rules block>', cvars));
+  if (groups.length) L(fill(tpl['parallel-rules'] ?? '<plans/seed-template.md has no parallel-rules block>', cvars));
   L();
-  const order = [takeup, ...gnums, ...(hasCommit ? [commit] : []), close];
+  // The take-up is first and alone, every file step comes after it and the one landing step after every file step; no commit step and no close step stand apart from the landing step.
+  const order = [takeup, ...gnums, landing];
   L('## Order');
   L();
   L(`Order: ${order.join(' ')}`);
   L(`Standing: ${review}`);
-  // Every file step is after the take-up and after nothing else, so they run together; the commit step is after all of them and the close after it.
-  const after = [...gnums.map((n) => `${n} after ${takeup}`), ...(hasCommit ? [`${commit} after ${gnums.join(' ')}`] : []), `${close} after ${hasCommit ? commit : takeup}`];
+  const after = [...gnums.map((n) => `${n} after ${takeup}`), `${landing} after ${gnums.length ? gnums.join(' ') : takeup}`];
   L(`After: ${after.join('; ')}`);
   L();
   L('## Steps');
   L();
-  L(fill(tpl['take-up'] ?? '<plans/seed-template.md has no take-up block>', takeupVars));
+  L(fill(tpl['take-up-batch'] ?? '<plans/seed-template.md has no take-up-batch block>', takeupVars));
   L();
   const stepOf = new Map();
   groups.forEach((g, i) => {
@@ -722,11 +745,11 @@ export function batchSeed(o) {
     const seams = [...seamsOut[i], ...seamsIn[i]];
     const noFile = g.home ? '' : 'its finding\'s text names no file of the repository, so it reads the text to find the file it must edit, and a file it must edit that another step of this plan owns ends it EJECT naming the file, with nothing written; ';
     const caseDo = cases.length ? `write into ${quote(cases)} a case that fails on the old text and a plant for each fix, in the shape of the case files beside it; ` : '';
-    L(`${n}. **${g.home ? `Put right in ${where}` : 'Put right in the files each names'}: ${ks.join(', ')}.** ${isHub ? 'Hub' : basename(repo)}, one agent${together}. Facts: the step owns ${ownedText} and writes nothing else, commits nothing, stages nothing and runs no plants and no check; ${noFile}${seams.length ? `${seams.join('; ')}; ` : ''}the step takes up ${ks.length} filed ${ks.length === 1 ? 'finding' : 'findings'}, each read whole from its file; ${g.list.map((f) => `${f.key} (item ${f.item}): ${f.text}`).join(' ')} The commit step, step ${commit}, lands this step's edits and runs its plants. Do: \`git status\`, read as the rules of this plan allow; read with Read and Grep ${owned.length ? quote([...owned, ...cases.filter((c) => existsSync(join(repo, c)))]) : 'the files its findings name'}; ${doEach}; ${caseDo}run \`node ${vars.HUB}/session-guards.test.mjs\` with this step's own cases by their exact names, each name as one quoted switch, once in the foreground, after the last edit; \`git status\`, read as the rules of this plan allow; write the report with the files changed and each case and plant added with the plant's find. Observe: this step's cases pass by name where a case was added, the files this step owns are changed and nothing else by this step, nothing is staged or committed. Kill: a red case ends the step FAILED with its lines and nothing written after, the report naming the file the error names and the step that owns it where that file is another step's; a red case of another step's file is named in the report with the step that owns it and is not acted on; a change that needs a line in a file this step does not own ends it EJECT naming the lines, with nothing written; a refusal of a command by a guard or by the harness's permission check ends it REFUSED with the refusal's words, nothing further done and no other route tried. Report \`progress/step-${n}-report.txt\` (new); ${SEND_REPORT}. Estimate ${groupEst[i]} min.`);
+    // The six parts of the order are the plan's rule for a file step, and the step's text points at it (Q-HUB-399).
+    L(`${n}. **${g.home ? `Put right in ${where}` : 'Put right in the files each names'}: ${ks.join(', ')}.** ${isHub ? 'Hub' : basename(repo)}, one agent${together}. Facts: the step owns ${ownedText} and writes nothing else, commits nothing and stages nothing; ${noFile}${seams.length ? `${seams.join('; ')}; ` : ''}the step takes up ${ks.length} filed ${ks.length === 1 ? 'finding' : 'findings'}, each read whole from its file at the time of use; ${g.list.map((f) => `${f.key} (item ${f.item}): ${f.text}`).join(' ')} The landing step, step ${landing}, lands this step's edits. Do: \`git status\`, read as the rules of this plan allow; read with Read and Grep ${owned.length ? quote([...owned, ...cases.filter((c) => existsSync(join(repo, c)))]) : 'the files its findings name'}; ${doEach}; ${caseDo}then the six parts of the order the rules of this plan give a file step; a line a fix needs in a file another step of this plan owns is named in the report with the file, the place and the exact words, for the landing step, and is not written by this step; \`git status\`, read as the rules of this plan allow; write the report with the files changed, each case added, each new plant with its key and its CAUGHT line, each check's exit code and any find reworded, each stale plant re-pointed or named with its file, each line named for the landing step, and each finding's change in one line. Observe: the step's cases pass, each in a run of its own, every new plant reads CAUGHT, the three checks name no find in a line the step wrote, the files this step owns are changed and nothing else by this step, nothing is staged or committed. Kill: a red run of a case of its own ends it FAILED with its lines and nothing written after but the report; a part of its own that cannot be made or proved without a line in a file it does not own ends it EJECT naming the lines; a refusal of a command by a guard or by the harness's permission check ends it REFUSED with the refusal's words, nothing further done and no other route tried. Report \`progress/step-${n}-report.txt\` (new); ${SEND_REPORT}. Estimate ${groupEst[i]} min.`);
     L();
   });
-  if (hasCommit) { L(fill(tpl['commit-step'] ?? '<plans/seed-template.md has no commit-step block>', cvars)); L(); }
-  L(fill(tpl['close-step'] ?? '<plans/seed-template.md has no close-step block>', vars));
+  L(fill(tpl['landing-step'] ?? '<plans/seed-template.md has no landing-step block>', { ...cvars, ITEM: planned.map((f) => f.item).join(', ') }));
   L();
   L(fill(tpl['review-step'] ?? '<plans/seed-template.md has no review-step block>', vars));
   L();
@@ -807,8 +830,8 @@ export function batchSeed(o) {
   L();
   L('## Cost');
   L();
-  const nSteps = groups.length + (hasCommit ? 3 : 2);
-  L(`The ${nSteps} steps (${groups.length} file ${groups.length === 1 ? 'step' : 'steps'} run at the same time, with the take-up${hasCommit ? ', the commit step' : ''} and the close) run on the sonnet tier with one agent for each, and a review is sent at the plan's first send and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move. Agent time is the sum of the steps' estimates, ${agentMin} min; wall time is the take-up, the longest file step, ${hasCommit ? 'the commit step ' : ''}and the close, ${wallMin} min. ${hasCommit ? '3' : '2'} pushes are made, ${hasCommit ? 'one each by the take-up, the commit step and the close' : 'one each by the take-up and the close'}, each rebased onto the remote's head. ${groups.length + 2} forced turns of the stop hook are spent while a commit stands unpushed, the file steps plus two. <The main thread's tier for the writing and for the management.>`);
+  const nSteps = groups.length + 2;
+  L(`The ${nSteps} steps (${groups.length} file ${groups.length === 1 ? 'step' : 'steps'} run at the same time, with the take-up and the landing step) run on the sonnet tier with one agent for each, and a review is sent at the plan's first send and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move. Agent time is the sum of the steps' estimates, ${agentMin} min; wall time is the take-up, the longest file step and the landing step, ${wallMin} min. 2 pushes are made, one each by the take-up and the landing step, each rebased onto the remote's head. ${groups.length + 2} forced turns of the stop hook are spent while a commit stands unpushed, the file steps plus two. <The main thread's tier for the writing and for the management.>`);
   L();
   L('## Verification');
   L();
