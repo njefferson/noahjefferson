@@ -697,16 +697,46 @@ export const SUITE_MARK = 'WHOLE SUITE BEFORE A GUARD COMMIT (Q-HUB-311):';
  *   null when there is none.
  */
 export function redSuiteRun(events) {
+  return redSuiteRuns(events)[0] ?? null;
+}
+
+/**
+ * Every red run of the suite in the agent's transcript, one entry for each run (a run whose result and whose failed notice both read red
+ * counts once).
+ * @param {{use?: object, result?: object, text: string, note?: boolean}[]} events  from `callEvents`.
+ * @returns {string[]} the command of each red run, in the order they went red.
+ */
+export function redSuiteRuns(events) {
   const ran = new Map();
+  const seen = new Set();
+  const out = [];
+  const add = (id, cmd) => { if (!seen.has(id)) { seen.add(id); out.push(cmd); } };
   for (const x of events ?? []) {
     if (x.use?.name === 'Bash' && SUITE_RUN.test(String(x.use.input?.command ?? ''))) ran.set(x.use.id, String(x.use.input.command));
-    if (x.result && ran.has(x.result.tool_use_id) && (x.result.is_error === true || /^\s*Exit code [1-9]/.test(x.text)) && !notRedSuiteExit(ran.get(x.result.tool_use_id), x.text)) return ran.get(x.result.tool_use_id);
+    if (x.result && ran.has(x.result.tool_use_id) && (x.result.is_error === true || /^\s*Exit code [1-9]/.test(x.text)) && !notRedSuiteExit(ran.get(x.result.tool_use_id), x.text)) add(x.result.tool_use_id, ran.get(x.result.tool_use_id));
     if (x.note === true && SUITE_RUN.test(x.text) && /<status>(?:failed|killed)<\/status>|exit code [1-9]|\bfailed with\b/i.test(x.text)
       && !notRedSuiteExit([...ran.values()].at(-1) ?? '', x.text)) {
-      return [...ran.values()].at(-1) ?? 'the suite';
+      add([...ran.keys()].at(-1) ?? 'the suite', [...ran.values()].at(-1) ?? 'the suite');
     }
   }
-  return null;
+  return out;
+}
+
+/**
+ * Did the agent itself write this file earlier in the send, by a Write, Edit, MultiEdit or NotebookEdit whose result was not an error?
+ * @param {{use?: object, result?: object}[]} events  from `callEvents`, which leaves the call being judged out.
+ * @param {string} abs  the absolute path of the target.
+ * @param {string} cwd  the folder a relative path in the transcript is read against.
+ * @returns {boolean} true when such a write of exactly that path is in the transcript.
+ */
+export function wroteEarlier(events, abs, cwd) {
+  const failed = new Set((events ?? []).filter((x) => x.result && x.result.is_error === true).map((x) => x.result.tool_use_id));
+  const answered = new Set((events ?? []).filter((x) => x.result).map((x) => x.result.tool_use_id));
+  return (events ?? []).some((x) => {
+    if (!x.use || !WRITES.has(String(x.use.name ?? '')) || failed.has(x.use.id) || !answered.has(x.use.id)) return false;
+    const f = String(x.use.input?.file_path ?? x.use.input?.notebook_path ?? '');
+    return f !== '' && resolve(cwd, f) === abs;
+  });
 }
 
 /**
@@ -728,7 +758,9 @@ export function notRedSuiteExit(command, text) {
  * A RED RUN ENDS THE SEND AND NOTHING IS WRITTEN AFTER IT (Q-HUB-284).
  * A step wrote a restructure of a guard after its own red planted-fault run in the same send, against the plan's rule that a red run ends
  * the send with the hand-back; no gate stopped it. A write of a file outside the session scratchpad (the progress note and the report are
- * in it) is refused once the agent's own transcript holds a red run of the suite, whatever the Files list allows.
+ * in it) is refused once the agent's own transcript holds a red run of the suite, whatever the Files list allows; except that after the
+ * first red run alone, a write passes where its target is a file the agent's own transcript shows it wrote earlier in the send without a
+ * refusal (the one repair of its own file), and after a second red run every write is refused.
  * @param {object} p  a subagent's PreToolUse payload.
  * @param {{entries?: object[]}} [opts]  the agent's transcript entries, for the test.
  * @returns {string|null} null for a main-thread call, for a call that is not a Write, Edit, MultiEdit or NotebookEdit, for a target in the
@@ -741,8 +773,11 @@ export function writeAfterRedProblem(p, opts = {}) {
   const f = String(p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '');
   const abs = resolve(p.cwd || process.cwd(), f);
   if (f && (HARMLESS.has(abs) || inScratchpad(abs, p.session_id))) return null;
-  const red = redSuiteRun(callEvents(p, opts));
+  const events = callEvents(p, opts);
+  const reds = redSuiteRuns(events);
+  const red = reds[0];
   if (!red) return null;
+  if (reds.length < 2 && wroteEarlier(events, abs, p.cwd || process.cwd())) return null;
   return `${HEAD} ${RED_MARK} this agent's own run of the suite ("${red.slice(0, 120)}") was red, and a red run ends the send: ${tool} to ${f || '(no path)'} is refused. Write what was seen into the report and the progress note in the scratchpad, hand back FAILED, and write nothing else; the next send starts from the report. ${OWN_TURN}`;
 }
 

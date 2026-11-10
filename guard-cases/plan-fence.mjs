@@ -49,6 +49,37 @@ export const cases = [
     },
   },
   {
+    name: 'Step 189: after the first red run of the suite a write passes where its target is a file the agent itself wrote earlier in the send without a refusal, is refused for any other file, and is refused again after a second red run; with no red run a write passes as before',
+    guards: ['fence_red_own', 'fence_red_other', 'fence_red_second', 'fence_own_refused', 'fence_red_wired'],
+    run(m, dir, h) {
+      const r = h.repo({ 'keep.mjs': 'x\n', 'rw.mjs': 'x\n' });
+      const plan = h.fencePlan(basename(r.dir));
+      const s = h.sid('redown');
+      const call = (tool_name, tool_input, entries) => h.decideFence(m, { session_id: s, agent_id: 'a1', tool_name, tool_input, cwd: r.dir }, { plan, entries });
+      const edit = (name) => ({ file_path: join(r.dir, name), old_string: 'x', new_string: 'y' });
+      const wrote = (id, name, bad) => [h.tool(0, id, 'Write', { file_path: join(r.dir, name), content: 'x\n' }), h.result(0, id, bad ? 'refused by the fence' : 'File created', bad === true)];
+      const red = (id) => [h.tool(0, id, 'Bash', { command: SUITE }), h.result(0, id, 'Exit code 1\n2 cases failed')];
+      const said = (x) => typeof x === 'string' && /^PLAN FENCE/.test(x) && x.includes('RED RUN, NOTHING WRITTEN AFTER');
+      const got = {
+        own: call('Edit', edit('keep.mjs'), [...wrote('w1', 'keep.mjs'), ...red('r1')]),
+        ownBefore: call('Edit', edit('keep.mjs'), [...red('r1'), ...wrote('w1', 'keep.mjs')]),
+        other: call('Edit', edit('rw.mjs'), [...wrote('w1', 'keep.mjs'), ...red('r1')]),
+        twice: call('Edit', edit('keep.mjs'), [...wrote('w1', 'keep.mjs'), ...red('r1'), ...red('r2')]),
+        refusedWrite: call('Edit', edit('keep.mjs'), [...wrote('w1', 'keep.mjs', true), ...red('r1')]),
+        noRed: call('Edit', edit('keep.mjs'), wrote('w1', 'keep.mjs')),
+        noRedNone: call('Edit', edit('keep.mjs'), []),
+      };
+      return h.assertAll([
+        ['a red run and then an edit of a file the agent wrote earlier passes', got.own === null, got.own],
+        ['a file written after the red run counts too', got.ownBefore === null, got.ownBefore],
+        ['a red run and then an edit of a file the agent did not write is refused', said(got.other), got.other],
+        ['two red runs and then an edit of its own file is refused', said(got.twice), got.twice],
+        ['an earlier write that was refused does not count as written', said(got.refusedWrite), got.refusedWrite],
+        ['with no red run a write passes as before', got.noRed === null && got.noRedNone === null, [got.noRed, got.noRedNone]],
+      ]);
+    },
+  },
+  {
     name: 'Q-HUB-311: the plan fence refuses an agent\'s git commit after it edited a guard file beside the suite unless a run of the whole suite with no switch, not an error, came after the last edit, and holds no landing step, no case file and no file of a folder without the suite',
     guards: ['fence_suite_commit', 'fence_suite_wired', 'fence_suite_flag', 'fence_suite_after', 'fence_suite_cases', 'fence_suite_dir', 'fence_suite_error'],
     run(m, dir, h) {
@@ -274,7 +305,11 @@ export const cases = [
 
 export const plants = {
   fence_red_write: ['  if (afterRed) return afterRed;', '  if (afterRed) return null;', 'plan-fence.mjs'],
-  fence_red_wired: ["  const red = redSuiteRun(callEvents(p, opts));\n  if (!red) return null;", "  const red = null;\n  if (!red) return null;", 'plan-fence.mjs'],
+  fence_red_wired: ["  const red = reds[0];\n  if (!red) return null;", "  const red = null;\n  if (!red) return null;", 'plan-fence.mjs'],
+  fence_red_own: ['  if (reds.length < 2 && wroteEarlier(events, abs, p.cwd || process.cwd())) return null;\n', '', 'plan-fence.mjs'],
+  fence_red_other: ['reds.length < 2 && wroteEarlier(events, abs, p.cwd || process.cwd())', 'reds.length < 2 && true', 'plan-fence.mjs'],
+  fence_red_second: ['reds.length < 2 && wroteEarlier(', 'wroteEarlier(', 'plan-fence.mjs'],
+  fence_own_refused: [' || failed.has(x.use.id)', '', 'plan-fence.mjs'],
   fence_red_result: ['if (x.result && ran.has(x.result.tool_use_id) && (x.result.is_error === true || ', 'if (x.result && ran.has(x.result.tool_use_id) && (', 'plan-fence.mjs'],
   fence_red_notice: ['if (x.note === true && SUITE_RUN.test(x.text) && ', 'if (false && x.note === true && SUITE_RUN.test(x.text) && ', 'plan-fence.mjs'],
   fence_suite_commit: ['  if (editAt < 0) return null;', '  if (true) return null;', 'plan-fence.mjs'],
