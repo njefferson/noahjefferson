@@ -695,6 +695,11 @@ const underPlanEnv = () => {
 // A reply of the main thread, with the model that wrote it in the entry's own message.
 const modelReply = (secs, text, model) => ({ type: 'assistant', timestamp: later(secs), message: { role: 'assistant', model, content: [{ type: 'text', text }] } });
 
+// THE CASES THAT MAY STILL END BY RETURNING A BARE BOOLEAN (Q-HUB-346): the first words of each such case's name. A case that returns a
+// bare false names no assertion when it turns red, so every case ends through assertAll and this list is empty; the case that reads the
+// source fails on any case that ends otherwise and is not named here, and on a name here that no longer ends that way.
+const BARE_ENDINGS_DECLARED = [];
+
 const CASES = [
   // ---- pending-guard ----
   {
@@ -702,7 +707,10 @@ const CASES = [
     guards: ['enqueue_count', 'verbatim', 'dispatch_pending'],
     run(m) {
       const r = m.pending.decide({ session_id: 't' }, [turn(0, 'start'), enq(10, ASK)]);
-      return !!r && r.includes(ASK) && /end this turn/.test(r);
+      const held_rows = [['!!r', (!!r)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r.includes(ASK)', (r.includes(ASK))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/end this turn/.test(r)', (/end this turn/.test(r))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -710,21 +718,23 @@ const CASES = [
     run(m) {
       const a = m.pending.decide({ session_id: 't' }, [enq(10, ASK), deq(20), turn(20, ASK)]);
       const b = m.pending.decide({ session_id: 't' }, [enq(10, ASK), deq(20), mid(20, ASK)]);
-      return a === null && b === null;
+      const held_rows = [['a === null', (a === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['b === null', (b === null)]);
+      return assertAll(held_rows);
     },
   },
   {
     name: 'a message delivered in other words (a slash command) is released by the queue count',
     guards: ['dequeue_count'],
     run(m) {
-      return m.pending.decide({ session_id: 't' }, [enq(10, '/compact keep the plan'), deq(11), turn(11, '<command-name>/compact</command-name>')]) === null;
+      return assertAll([['m.pending.decide({ session_id: \'t\' }, [enq(10, \'/compact keep the plan\'), deq(11), turn(11, \'<command-name>/compact</command-name>\')]) === null', (m.pending.decide({ session_id: 't' }, [enq(10, '/compact keep the plan'), deq(11), turn(11, '<command-name>/compact</command-name>')]) === null)]]);
     },
   },
   {
     name: 'a task notification in the queue is not an owner message',
     guards: ['harness_tag'],
     run(m) {
-      return m.pending.decide({ session_id: 't' }, [enq(10, NOTE)]) === null;
+      return assertAll([['m.pending.decide({ session_id: \'t\' }, [enq(10, NOTE)]) === null', (m.pending.decide({ session_id: 't' }, [enq(10, NOTE)]) === null)]]);
     },
   },
   {
@@ -737,7 +747,13 @@ const CASES = [
       const bareOnly = m.pending.decide({ session_id: 't' }, [turn(0, 'start'), enq(10, bare)]);
       const both = m.pending.decide({ session_id: 't' }, [turn(0, 'start'), enq(10, back), enq(11, ASK)]);
       const stop = m.pending.decide({ session_id: 't', agent_id: 'a1' }, [enq(10, back)]);
-      return only === null && bareOnly === null && !!both && both.includes(ASK) && !both.includes('Step one is built') && stop === null;
+      const held_rows = [['only === null', (only === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['bareOnly === null', (bareOnly === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!both', (!!both)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['both.includes(ASK)', (both.includes(ASK))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!both.includes(\'Step one is built\')', (!both.includes('Step one is built'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stop === null', (stop === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -746,7 +762,10 @@ const CASES = [
     run(m) {
       const held = m.pending.decide({ session_id: 't' }, [enq(10, ASK), enq(11, NOTE), deq(12), mid(12, NOTE, 'task', 'task-notification')]);
       const freed = m.pending.decide({ session_id: 't' }, [enq(10, NOTE), enq(11, ASK), deq(12), mid(12, ASK)]);
-      return !!held && held.includes(ASK) && freed === null;
+      const held_rows = [['!!held', (!!held)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held.includes(ASK)', (held.includes(ASK))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['freed === null', (freed === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -754,7 +773,10 @@ const CASES = [
     guards: ['remove_text'],
     run(m) {
       const r = m.pending.decide({ session_id: 't' }, [enq(10, ASK), enq(11, 'second thought, ignore that'), rem(12, 'second thought, ignore that')]);
-      return !!r && r.includes(ASK) && !r.includes('second thought');
+      const held_rows = [['!!r', (!!r)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r.includes(ASK)', (r.includes(ASK))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!r.includes(\'second thought\')', (!r.includes('second thought'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -763,7 +785,11 @@ const CASES = [
     run(m) {
       const ord = m.pending.decide({ session_id: 't', agent_id: 'a1' }, [enq(10, ASK)]);
       const stop = m.pending.decide({ session_id: 't', agent_id: 'a1' }, [enq(10, STOPMSG)]);
-      return ord === null && !!stop && stop.includes(STOPMSG) && /subagent stops/.test(stop);
+      const held_rows = [['ord === null', (ord === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!stop', (!!stop)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stop.includes(STOPMSG)', (stop.includes(STOPMSG))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/subagent stops/.test(stop)', (/subagent stops/.test(stop))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -777,7 +803,11 @@ const CASES = [
       const r = m.pending.decide({ session_id: 'old' }, [enq(10, ASK), turn(150, 'new process')]);
       const fresh = m.pending.decide({ session_id: 'old' }, [enq(10, ASK), enq(160, 'and this one')]);
       delete process.env.PENDING_GUARD_DIR;
-      return r === null && !!fresh && fresh.includes('and this one') && !fresh.includes(ASK);
+      const held_rows = [['r === null', (r === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!fresh', (!!fresh)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fresh.includes(\'and this one\')', (fresh.includes('and this one'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!fresh.includes(ASK)', (!fresh.includes(ASK))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -787,7 +817,9 @@ const CASES = [
       const f = transcript([turn(0, 'start'), enq(10, ASK)]);
       const p = { session_id: 't', transcript_path: f, tool_name: 'Read', tool_input: { file_path: '/etc/hostname' }, hook_event_name: 'PreToolUse', cwd: tmp('sg-cwd-') };
       const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'PreToolUse'], { input: JSON.stringify(p), encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: p.cwd } });
-      return r.status === 2 && r.stderr.includes(ASK);
+      const held_rows = [['r.status === 2', (r.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r.stderr.includes(ASK)', (r.stderr.includes(ASK))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -800,7 +832,10 @@ const CASES = [
       r.write('lens.md', SOURCE_MD.replace('remove such a cast.', 'remove such a cast; Lightroom is named, not read, because Adobe\'s page was fetched in a browser\'s identity and that read is withdrawn.'));
       r.stage();
       const why = m.keep.decide({ tool_name: 'Bash', tool_input: { command: 'git commit -q -m "Notes: tidy"' }, cwd: r.dir }, []);
-      return !!why && /takes back information/.test(why) && /lens\.md/.test(why);
+      const held_rows = [['!!why', (!!why)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/takes back information/.test(why)', (/takes back information/.test(why))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/lens\\.md/.test(why)', (/lens\.md/.test(why))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -822,7 +857,7 @@ const CASES = [
         ['    GradientCorrection, were not read).\n',
           "    GradientCorrection, were not read). A checking agent read that\n    documentation index in a browser's identity; that reading is withdrawn,\n    and nothing here rests on it.\n"],
       ];
-      return pairs.every(([b, a]) => m.keep.findings('x.md', b, a).some((f) => f.kind === 'withdrawal'));
+      return assertAll([['pairs.every(([b, a]) => m.keep.findings(\'x.md\', b, a).some((f) => f.kind === \'withdrawal\'))', (pairs.every(([b, a]) => m.keep.findings('x.md', b, a).some((f) => f.kind === 'withdrawal')))]]);
     },
   },
   {
@@ -833,7 +868,7 @@ const CASES = [
       // Specific (a name, a page) and withdrawn, but nothing about fetching.
       r.write('lens.md', SOURCE_MD.replace('The figures below were measured on three frames.', "The figures below were measured on three frames. The numbers taken from Kennard's page are withdrawn, because they were read off the wrong frame."));
       r.stage();
-      return m.keep.decide({ tool_name: 'Bash', tool_input: { command: 'git commit -m x' }, cwd: r.dir }, []) === null;
+      return assertAll([['m.keep.decide({ tool_name: \'Bash\', tool_input: { command: \'git commit -m x\' }, cwd: r.dir }, []) === null', (m.keep.decide({ tool_name: 'Bash', tool_input: { command: 'git commit -m x' }, cwd: r.dir }, []) === null)]]);
     },
   },
   {
@@ -844,7 +879,9 @@ const CASES = [
       r.write('lens.md', SOURCE_MD.replace("Adobe's page on helpx.adobe.com says", "Adobe's page says"));
       r.stage();
       const why = m.keep.decide({ tool_name: 'Bash', tool_input: { command: `git -C ${r.dir} commit -m x` }, cwd: '/' }, []);
-      return !!why && /no longer names helpx\.adobe\.com/.test(why);
+      const held_rows = [['!!why', (!!why)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/no longer names helpx\\.adobe\\.com/.test(why)', (/no longer names helpx\.adobe\.com/.test(why))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -858,7 +895,10 @@ const CASES = [
       const yes = m.keep.decide(p, [{ text: 'Please remove the helpx.adobe.com link from the lens notes.' }]);
       const no = m.keep.decide(p, [{ text: 'Never remove what was read on helpx.adobe.com.' }]);
       const other = m.keep.decide(p, [{ text: 'Remove the duplicate heading in NOTES.' }]);
-      return yes === null && !!no && !!other;
+      const held_rows = [['yes === null', (yes === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!no', (!!no)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!other', (!!other)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -868,7 +908,7 @@ const CASES = [
       r.write('lens.md', SOURCE_MD.replace("Adobe's page on helpx.adobe.com says", "Adobe's page says"));
       r.stage();
       const f = transcript([turn(0, 'start'), mid(5, 'Take out helpx.adobe.com from lens.md, it is not a source I want.')]);
-      return m.keep.decide({ tool_name: 'Bash', tool_input: { command: 'git commit -m x' }, cwd: r.dir, transcript_path: f }) === null;
+      return assertAll([['m.keep.decide({ tool_name: \'Bash\', tool_input: { command: \'git commit -m x\' }, cwd: r.dir, transcript_path: f }) === null', (m.keep.decide({ tool_name: 'Bash', tool_input: { command: 'git commit -m x' }, cwd: r.dir, transcript_path: f }) === null)]]);
     },
   },
   {
@@ -878,7 +918,7 @@ const CASES = [
       const r = repo({ 'lens.md': SOURCE_MD });
       r.write('lens.md', SOURCE_MD.replace("Earlier note: the comments feed on blog.kasson.com was read in a browser's identity; that reading is withdrawn.", "Earlier note: the comments feed on blog.kasson.com was read in a\nbrowser's identity; that reading is withdrawn."));
       r.stage();
-      return m.keep.decide({ tool_name: 'Bash', tool_input: { command: 'git commit -m x' }, cwd: r.dir }, []) === null;
+      return assertAll([['m.keep.decide({ tool_name: \'Bash\', tool_input: { command: \'git commit -m x\' }, cwd: r.dir }, []) === null', (m.keep.decide({ tool_name: 'Bash', tool_input: { command: 'git commit -m x' }, cwd: r.dir }, []) === null)]]);
     },
   },
   {
@@ -888,7 +928,9 @@ const CASES = [
       const r = repo({ 'lens.md': SOURCE_MD });
       r.write('lens.md', SOURCE_MD.replace("Adobe's page on helpx.adobe.com says", "Adobe's page says"));
       const why = m.keep.decide({ tool_name: 'Bash', tool_input: { command: `cd ${r.dir} && git commit -am "x"` }, cwd: '/' }, []);
-      return !!why && /helpx\.adobe\.com/.test(why);
+      const held_rows = [['!!why', (!!why)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/helpx\\.adobe\\.com/.test(why)', (/helpx\.adobe\.com/.test(why))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -897,7 +939,7 @@ const CASES = [
       const r = repo({ 'lens.md': SOURCE_MD });
       r.write('lens.md', '');
       r.stage();
-      return m.keep.decide({ tool_name: 'Bash', tool_input: { command: 'git log -1 && echo "git commit"' }, cwd: r.dir }, []) === null;
+      return assertAll([['m.keep.decide({ tool_name: \'Bash\', tool_input: { command: \'git log -1 && echo "git commit"\' }, cwd: r.dir }, []) === null', (m.keep.decide({ tool_name: 'Bash', tool_input: { command: 'git log -1 && echo "git commit"' }, cwd: r.dir }, []) === null)]]);
     },
   },
 
@@ -913,7 +955,10 @@ const CASES = [
       const w = await m.recall.messagesSinceCompaction(written);
       const p = await m.recall.messagesSinceCompaction(pending);
       const n = await m.recall.messagesSinceCompaction(none);
-      return w.map((x) => x.text).join('|') === `${B}|${C}` && p.map((x) => x.text).join('|') === `${B}|${C}` && n.length === 2;
+      const held_rows = [['w.map((x) => x.text).join(\'|\') === `${B}|${C}`', (w.map((x) => x.text).join('|') === `${B}|${C}`)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['p.map((x) => x.text).join(\'|\') === `${B}|${C}`', (p.map((x) => x.text).join('|') === `${B}|${C}`)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['n.length === 2', (n.length === 2)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -925,7 +970,10 @@ const CASES = [
       const cwd = tmp('sg-cwd-');
       const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'SessionStart'], { input: JSON.stringify({ session_id: 't', source: 'compact', transcript_path: f, cwd }), encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: cwd } });
       const out = r.stdout ?? '';
-      return r.status === 0 && out.indexOf(B) >= 0 && out.indexOf(B) < out.indexOf('AFTER COMPACTION');
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.indexOf(B) >= 0', (out.indexOf(B) >= 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.indexOf(B) < out.indexOf(\'AFTER COMPACTION\')', (out.indexOf(B) < out.indexOf('AFTER COMPACTION'))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -953,17 +1001,36 @@ const CASES = [
       const file2 = m.recall.saveRecall(second, s2.msgs, { dir: where, n: s2.n, at: AT });
       const order = typed.slice(2).map((t) => block.indexOf(t));
       const filedAt = [answered, ...typed].map((t) => filed.indexOf(t));
-      return w.msgs.length === 13 && p.msgs.length === 13 && w.msgs[0].text === answered && !w.msgs[0].afterReply
-        && open(w.msgs) === typed.join('|') && open(p.msgs) === typed.join('|')
-        && w.n === 1 && p.n === 1 && s2.n === 2 && s2.msgs.length === 1
-        && !block.includes(answered) && !block.includes(typed[0]) && !block.includes(typed[1])
-        && order.every((i, k) => i >= 0 && (k === 0 || i > order[k - 1]))
-        && block.includes('--- 4 of 13') && block.includes('--- 13 of 13') && !block.includes('--- 3 of 13')
-        && /Not printed here: 3 older/.test(block) && !!file && block.includes(file)
-        && basename(file) === 'compaction-1-2026-11-03_12-00-00.txt' && again === file && !!file2 && basename(file2) === 'compaction-2-2026-11-03_12-00-00.txt'
-        && m.recall.californiaStamp(Date.UTC(2026, 6, 1, 7, 5, 9)) === '2026-07-01_00-05-09'
-        && filedAt.every((i, k) => i >= 0 && (k === 0 || i > filedAt[k - 1])) && filed.includes('--- 1 of 13') && filed.includes('--- 13 of 13')
-        && ((await m.recall.recallFor(written, where)).replace(/compaction-1-[\d_-]+\.txt/, 'F')) === block.replace(/compaction-1-[\d_-]+\.txt/, 'F');
+      const held_rows = [['w.msgs.length === 13', (w.msgs.length === 13)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['p.msgs.length === 13', (p.msgs.length === 13)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['w.msgs[0].text === answered', (w.msgs[0].text === answered)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!w.msgs[0].afterReply', (!w.msgs[0].afterReply)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['open(w.msgs) === typed.join(\'|\')', (open(w.msgs) === typed.join('|'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['open(p.msgs) === typed.join(\'|\')', (open(p.msgs) === typed.join('|'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['w.n === 1', (w.n === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['p.n === 1', (p.n === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['s2.n === 2', (s2.n === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['s2.msgs.length === 1', (s2.msgs.length === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!block.includes(answered)', (!block.includes(answered))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!block.includes(typed[0])', (!block.includes(typed[0]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!block.includes(typed[1])', (!block.includes(typed[1]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['order.every((i, k) => i >= 0 && (k === 0 || i > order[k - 1]))', (order.every((i, k) => i >= 0 && (k === 0 || i > order[k - 1])))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['block.includes(\'--- 4 of 13\')', (block.includes('--- 4 of 13'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['block.includes(\'--- 13 of 13\')', (block.includes('--- 13 of 13'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!block.includes(\'--- 3 of 13\')', (!block.includes('--- 3 of 13'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Not printed here: 3 older/.test(block)', (/Not printed here: 3 older/.test(block))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!file', (!!file)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['block.includes(file)', (block.includes(file))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['basename(file) === \'compaction-1-2026-11-03_12-00-00.txt\'', (basename(file) === 'compaction-1-2026-11-03_12-00-00.txt')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['again === file', (again === file)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!file2', (!!file2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['basename(file2) === \'compaction-2-2026-11-03_12-00-00.txt\'', (basename(file2) === 'compaction-2-2026-11-03_12-00-00.txt')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.recall.californiaStamp(Date.UTC(2026, 6, 1, 7, 5, 9)) === \'2026-07-01_00-05-09\'', (m.recall.californiaStamp(Date.UTC(2026, 6, 1, 7, 5, 9)) === '2026-07-01_00-05-09')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['filedAt.every((i, k) => i >= 0 && (k === 0 || i > filedAt[k - 1]))', (filedAt.every((i, k) => i >= 0 && (k === 0 || i > filedAt[k - 1])))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['filed.includes(\'--- 1 of 13\')', (filed.includes('--- 1 of 13'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['filed.includes(\'--- 13 of 13\')', (filed.includes('--- 13 of 13'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['((await m.recall.recallFor(written, where)).replace(/compaction-1-[\\d_-]+\\.txt/, \'F\')) === block.replace(/compaction-1-[\\d_-]+\\.txt/, \'F\')', (((await m.recall.recallFor(written, where)).replace(/compaction-1-[\d_-]+\.txt/, 'F')) === block.replace(/compaction-1-[\d_-]+\.txt/, 'F'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -979,7 +1046,10 @@ const CASES = [
       const open = (x) => x.filter((y) => y.afterReply).map((y) => y.text).join('|');
       const got = await m.recall.messagesSinceCompaction(none);
       const left = await m.recall.messagesSinceCompaction(one);
-      return open(got) === [A, B, C, D].join('|') && left.map((x) => x.text).join('|') === [A, B, E].join('|') && open(left) === E;
+      const held_rows = [['open(got) === [A, B, C, D].join(\'|\')', (open(got) === [A, B, C, D].join('|'))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['left.map((x) => x.text).join(\'|\') === [A, B, E].join(\'|\')', (left.map((x) => x.text).join('|') === [A, B, E].join('|'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['open(left) === E', (open(left) === E)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -993,8 +1063,16 @@ const CASES = [
       const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'SessionStart'], { input: JSON.stringify({ session_id: s, source: 'compact', transcript_path: f, cwd }), encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: cwd } });
       const out = r.stdout ?? '';
       const file = join(process.env.COMPACT_RECALL_DIR, `${basename(f, '.jsonl')}.txt`);
-      return r.status === 0 && out.includes('Not printed here: 3 older') && out.includes(file) && existsSync(file) && !existsSync(join(process.env.RECALL_DUE_DIR, `${s}.json`))
-        && out.indexOf(typed[11]) >= 0 && out.indexOf(typed[11]) < out.indexOf('AFTER COMPACTION') && !out.includes(typed[1]) && out.includes(typed[2]);
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.includes(\'Not printed here: 3 older\')', (out.includes('Not printed here: 3 older'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.includes(file)', (out.includes(file))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['existsSync(file)', (existsSync(file))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!existsSync(join(process.env.RECALL_DUE_DIR, `${s}.json`))', (!existsSync(join(process.env.RECALL_DUE_DIR, `${s}.json`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.indexOf(typed[11]) >= 0', (out.indexOf(typed[11]) >= 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.indexOf(typed[11]) < out.indexOf(\'AFTER COMPACTION\')', (out.indexOf(typed[11]) < out.indexOf('AFTER COMPACTION'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!out.includes(typed[1])', (!out.includes(typed[1]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.includes(typed[2])', (out.includes(typed[2]))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -1030,13 +1108,27 @@ const CASES = [
       const partial = send();
       appendFileSync(w.tr, jsonl(fileReads(file, total, [[11, total - 10]], (k) => later(4 + k))));
       const after = send();
-      return start.status === 0 && due && total === 28 && ['start', ...typed, GO].every((t) => filed.includes(t))
-        && start.stdout.includes('Not printed here: 4 older') && start.stdout.includes(file) && /OWNER'S MESSAGES DUE/.test(start.stdout)
-        && !!stamped && Math.abs(stamped.at - Date.now()) < 120000 && !stamped.told
-        && held.status === 2 && /RECALL GATE/.test(held.stderr) && held.stderr.includes(file) && notLatched
-        && reading.status === 0 && stamp.status === 0
-        && partial.status === 2 && /RECALL GATE/.test(partial.stderr)
-        && after.status === 0 && !existsSync(marker);
+      const held_rows = [['start.status === 0', (start.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due', (due)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['total === 28', (total === 28)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['[\'start\', ...typed, GO].every((t) => filed.includes(t))', (['start', ...typed, GO].every((t) => filed.includes(t)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['start.stdout.includes(\'Not printed here: 4 older\')', (start.stdout.includes('Not printed here: 4 older'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['start.stdout.includes(file)', (start.stdout.includes(file))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/OWNER\'S MESSAGES DUE/.test(start.stdout)', (/OWNER'S MESSAGES DUE/.test(start.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!stamped', (!!stamped)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['Math.abs(stamped.at - Date.now()) < 120000', (Math.abs(stamped.at - Date.now()) < 120000)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!stamped.told', (!stamped.told)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held.status === 2', (held.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/RECALL GATE/.test(held.stderr)', (/RECALL GATE/.test(held.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held.stderr.includes(file)', (held.stderr.includes(file))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notLatched', (notLatched)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['reading.status === 0', (reading.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stamp.status === 0', (stamp.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['partial.status === 2', (partial.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/RECALL GATE/.test(partial.stderr)', (/RECALL GATE/.test(partial.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after.status === 0', (after.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!existsSync(marker)', (!existsSync(marker))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1072,10 +1164,27 @@ const CASES = [
       const parts = call({}, [...rd('q6', 2, file, { numLines: 2, totalLines: 4 }), ...rd('q7', 4, file, { startLine: 3, numLines: 2, totalLines: 4 })]);
       const partsRemoved = !existsSync(marker);
       const held2 = (r) => typeof r === 'string' && /^RECALL GATE/.test(r) && r.includes(file) && /does not latch/.test(r);
-      return noMarker === null && /^OWNER'S MESSAGES DUE/.test(line) && line.includes(file) && line.includes('Read result') && !line.includes('\n')
-        && held2(held) && fileGone === null && noFile === null && readCall === null && agent === null && stop === null
-        && held2(partial) && held2(elsewhere) && held2(early) && held2(errored) && stillDue
-        && cleared === null && removed && parts === null && partsRemoved;
+      const held_rows = [['noMarker === null', (noMarker === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^OWNER\'S MESSAGES DUE/.test(line)', (/^OWNER'S MESSAGES DUE/.test(line))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['line.includes(file)', (line.includes(file))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['line.includes(\'Read result\')', (line.includes('Read result'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!line.includes(\'\\n\')', (!line.includes('\n'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held2(held)', (held2(held))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fileGone === null', (fileGone === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noFile === null', (noFile === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readCall === null', (readCall === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agent === null', (agent === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stop === null', (stop === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held2(partial)', (held2(partial))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held2(elsewhere)', (held2(elsewhere))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held2(early)', (held2(early))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held2(errored)', (held2(errored))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stillDue', (stillDue)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cleared === null', (cleared === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['removed', (removed)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['parts === null', (parts === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['partsRemoved', (partsRemoved)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1100,9 +1209,19 @@ const CASES = [
       const carried = page().includes(`</p>\n<p class="asof">${words}</p>\n<p class="next">`) && page().indexOf('updated ') < page().indexOf(words);
       m.report.markCompacted(s, Date.parse('2026-10-21T01:30:00Z'));
       const next = status();
-      return quiet && wrote && !!got && got.at === when && !got.printed && !got.told && m.report.compactedWords(got) === words
-        && said.includes(words) && !again.includes('Compacted at') && carried
-        && next.includes('Compacted at 18:30 California time on 2026-10-20.') && page().includes('Compacted at 18:30 California time on 2026-10-20.');
+      const held_rows = [['quiet', (quiet)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['wrote', (wrote)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!got', (!!got)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['got.at === when', (got.at === when)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!got.printed', (!got.printed)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!got.told', (!got.told)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.report.compactedWords(got) === words', (m.report.compactedWords(got) === words)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said.includes(words)', (said.includes(words))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!again.includes(\'Compacted at\')', (!again.includes('Compacted at'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['carried', (carried)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['next.includes(\'Compacted at 18:30 California time on 2026-10-20.\')', (next.includes('Compacted at 18:30 California time on 2026-10-20.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['page().includes(\'Compacted at 18:30 California time on 2026-10-20.\')', (page().includes('Compacted at 18:30 California time on 2026-10-20.'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1133,11 +1252,22 @@ const CASES = [
       const s4 = sid('cs');
       m.report.markCompacted(s4, when);
       const ignored = say(s4, PLAIN, { stop_hook_active: true });
-      return unmarked.status === 0 && refusedFor(bare) && refusedFor(lateLine) && refusedFor(noTime) && refusedFor(noWord) && stillOpen
-        && ok.status === 0 && toldNow && next.status === 0
-        && declared.status === 0 && m.report.readCompacted(s2)?.told === true
-        && followed.status === 0 && m.report.readCompacted(s3)?.told === true
-        && ignored.status === 0 && m.report.readCompacted(s4)?.told === false;
+      const held_rows = [['unmarked.status === 0', (unmarked.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedFor(bare)', (refusedFor(bare))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedFor(lateLine)', (refusedFor(lateLine))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedFor(noTime)', (refusedFor(noTime))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedFor(noWord)', (refusedFor(noWord))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stillOpen', (stillOpen)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ok.status === 0', (ok.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['toldNow', (toldNow)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['next.status === 0', (next.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['declared.status === 0', (declared.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.report.readCompacted(s2)?.told === true', (m.report.readCompacted(s2)?.told === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['followed.status === 0', (followed.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.report.readCompacted(s3)?.told === true', (m.report.readCompacted(s3)?.told === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ignored.status === 0', (ignored.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.report.readCompacted(s4)?.told === false', (m.report.readCompacted(s4)?.told === false)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -1160,7 +1290,11 @@ const CASES = [
       const legacy = m.reply.decide({ ...exit });
       delete process.env.REPLY_LEDGER_DIR;
       delete process.env.REPLY_GUARD_NOW;
-      return !recorded && again === null && !caught && legacy === null;
+      const held_rows = [['!recorded', (!recorded)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['again === null', (again === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!caught', (!caught)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['legacy === null', (legacy === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1172,7 +1306,10 @@ const CASES = [
       const ok = pg(`node ${self} --read call:abcd1234 --said "The plan was rejected" --route "answered the question first, then proposed again"`);
       const chained = pg(`node ${self} --read call:abcd1234 --said "The plan was rejected" --route "answered it" && touch /tmp/x`);
       const elsewhere = pg(`node /tmp/reply-guard.mjs --read call:abcd1234 --said "The plan was rejected" --route "answered it first"`);
-      return ok === 0 && chained === 2 && elsewhere === 2;
+      const held_rows = [['ok === 0', (ok === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['chained === 2', (chained === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['elsewhere === 2', (elsewhere === 2)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1196,8 +1333,12 @@ const CASES = [
       // proof plan-guard ran in the chain the TaskStop passed.
       const pad = join(tmpdir(), 'claude-0', '-home-user', s, 'scratchpad', 'note.txt');
       const write = w.call('PreToolUse', { session_id: s, agent_id: 'a1', permission_mode: 'plan', tool_name: 'Write', tool_input: { file_path: pad, content: 'x' } });
-      return pg({ agent_id: 'a1' }) === 0 && pg({}) === 2 && chain.status === 0
-        && write.status === 2 && /PLAN MODE/.test(write.stderr);
+      const held_rows = [['pg({ agent_id: \'a1\' }) === 0', (pg({ agent_id: 'a1' }) === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['pg({}) === 2', (pg({}) === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['chain.status === 0', (chain.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['write.status === 2', (write.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/PLAN MODE/.test(write.stderr)', (/PLAN MODE/.test(write.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1207,9 +1348,13 @@ const CASES = [
       const f = transcript([turn(0, OWNER)]);
       const exit = (asked) => spawnSync('node', [join(dir, 'plan-guard.mjs')], { input: JSON.stringify({ session_id: 't', permission_mode: 'plan', tool_name: 'ExitPlanMode', tool_input: { plan: PLAN(asked) }, transcript_path: f, cwd: '/' }), encoding: 'utf8' });
       const none = exit(null), quoted = exit(QUOTED), own = exit(OWN_WORDS);
-      return none.status === 2 && none.stdout.includes('no \\"## Asked\\" section')
-        && quoted.status === 2 && quoted.stdout.includes('copies the owner') && !quoted.stdout.includes('export button')
-        && own.status === 0;
+      const held_rows = [['none.status === 2', (none.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['none.stdout.includes(\'no \\\\"## Asked\\\\" section\')', (none.stdout.includes('no \\"## Asked\\" section'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['quoted.status === 2', (quoted.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['quoted.stdout.includes(\'copies the owner\')', (quoted.stdout.includes('copies the owner'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!quoted.stdout.includes(\'export button\')', (!quoted.stdout.includes('export button'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['own.status === 0', (own.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1232,9 +1377,15 @@ const CASES = [
       const inFinding = rec('IN-SCOPE: one control moved', QUOTED);
       const v2 = written();
       const ownWords = rec('IN-SCOPE: one control moved', 'The diff relocates the export control and changes nothing else.');
-      return inVerdict.status === 1 && !v1 && !inVerdict.stderr.includes('export button')
-        && inFinding.status === 1 && !v2
-        && ownWords.status === 0 && written() && !readFileSync(join(r.dir, '.plan-scope'), 'utf8').includes('export button');
+      const held_rows = [['inVerdict.status === 1', (inVerdict.status === 1)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!v1', (!v1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!inVerdict.stderr.includes(\'export button\')', (!inVerdict.stderr.includes('export button'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['inFinding.status === 1', (inFinding.status === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!v2', (!v2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ownWords.status === 0', (ownWords.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['written()', (written())]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!readFileSync(join(r.dir, \'.plan-scope\'), \'utf8\').includes(\'export button\')', (!readFileSync(join(r.dir, '.plan-scope'), 'utf8').includes('export button'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1248,7 +1399,11 @@ const CASES = [
       const drops = say('I stop the workflow and drop the adversarial-check stage for every group. That roughly halves the remaining time.');
       const top = say('The roadmap\'s top item is 085, and it is being built now.');
       const found = say('The check stage found two defects in the denoise group, and both are fixed.');
-      return asksNext === 2 && drops === 2 && top === 0 && found === 0;
+      const held_rows = [['asksNext === 2', (asksNext === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['drops === 2', (drops === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['top === 0', (top === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['found === 0', (found === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1271,7 +1426,12 @@ const CASES = [
       // A message from the owner still in the queue: the stop is what delivers
       // it, so it is allowed even with work running.
       const queued = say([...launch, enq(8, 'Where is the release?'), reply]);
-      return runningBoth === 2 && oneLeft === 2 && allEnded === 0 && onlyWords === 0 && queued === 0;
+      const held_rows = [['runningBoth === 2', (runningBoth === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['oneLeft === 2', (oneLeft === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['allEnded === 0', (allEnded === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['onlyWords === 0', (onlyWords === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['queued === 0', (queued === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1291,7 +1451,9 @@ const CASES = [
       const agentOnly = say();
       writeFileSync(main, jsonl([turn(0, 'start'), tool(1, 'b0', 'Bash', {}), result(2, 'b0', 'Command running in background with ID: bxyz789. Output is being written to: /tmp/x'), said]));
       const taskToo = say();
-      return agentOnly === 0 && taskToo === 2;
+      const held_rows = [['agentOnly === 0', (agentOnly === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['taskToo === 2', (taskToo === 2)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1305,7 +1467,11 @@ const CASES = [
       const none = say({ background_tasks: [], session_crons: [] }, [reply]);
       const agentOnly = say({ background_tasks: [{ id: 'a1', type: 'subagent', status: 'running', description: 'a step' }] }, [reply]);
       const fallback = say({}, [...bash, reply]);
-      return shell === 2 && none === 0 && agentOnly === 0 && fallback === 2;
+      const held_rows = [['shell === 2', (shell === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['none === 0', (none === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agentOnly === 0', (agentOnly === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fallback === 2', (fallback === 2)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1328,8 +1494,15 @@ const CASES = [
       const afterStartup = say([...bash, start(5, 'startup'), reply]);
       const afterCompact = say([...bash, start(5, 'compact'), reply]);
       const launchedAfter = say([start(1, 'resume'), ...bash, reply]);
-      return stillRunning === 2 && inAnswer === 0 && inCall === 0 && otherId === 2
-        && afterResume === 0 && afterStartup === 0 && afterCompact === 2 && launchedAfter === 2;
+      const held_rows = [['stillRunning === 2', (stillRunning === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['inAnswer === 0', (inAnswer === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['inCall === 0', (inCall === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['otherId === 2', (otherId === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['afterResume === 0', (afterResume === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['afterStartup === 0', (afterStartup === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['afterCompact === 2', (afterCompact === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['launchedAfter === 2', (launchedAfter === 2)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1344,7 +1517,12 @@ const CASES = [
       const typedStands = m.dispatch.correctionStanding({}, [turn(0, 'start'), turn(1, 'ok go'), cmd, typed]);
       const goTyped = m.dispatch.correctionStanding({}, [turn(0, 'start'), typed, turn(8, 'continue')]);
       const shared = m.pending.HARNESS_TAG.test('<command-name>/model</command-name>') && !m.pending.HARNESS_TAG.test('Please change the title of the page');
-      return goAfterCmd === null && correctionSurvives !== null && typedStands !== null && goTyped === null && shared;
+      const held_rows = [['goAfterCmd === null', (goAfterCmd === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['correctionSurvives !== null', (correctionSurvives !== null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typedStands !== null', (typedStands !== null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['goTyped === null', (goTyped === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['shared', (shared)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1369,8 +1547,14 @@ const CASES = [
         rmSync(marker, { force: true });
         const noPlan = read();
         const prompt = m.report.agentPrompt(join(subs, 'agent-file.jsonl'));
-        return withPlan.ids === 'file:2,new:1' && withPlan.next === 1 && noPlan.ids === 'file:2,new:1,old:1' && noPlan.next === null
-          && prompt?.plan === '/plans/new-plan.steps.md' && prompt?.step === 2;
+        return assertAll([
+          ['with the plan in force the ids are the new plan\'s two ends', withPlan.ids === 'file:2,new:1', withPlan.ids],
+          ['with the plan in force the pointer reads step 1', withPlan.next === 1, withPlan.next],
+          ['with no plan every end is listed', noPlan.ids === 'file:2,new:1,old:1', noPlan.ids],
+          ['with no plan the pointer reads none', noPlan.next === null, noPlan.next],
+          ['the prompt names the steps file', prompt?.plan === '/plans/new-plan.steps.md', prompt?.plan],
+          ['the prompt names step 2', prompt?.step === 2, prompt?.step],
+        ]);
       } finally { rmSync(marker, { force: true }); }
     },
   },
@@ -1412,8 +1596,13 @@ const CASES = [
         const since = Date.now() - 300 * 1000;
         const found = m.report.foundLines(pad, since).map((f) => f.key).join(',');
         const foundAll = m.report.foundLines(pad).map((f) => f.key).join(',');
-        return byApprovedAt === 'blind:2,late:1' && byOwnTime === 'blind:2,late:1' && noTime === 'blind:2,early:1,late:1'
-          && found === '2.1' && foundAll === '1.1,2.1';
+        return assertAll([
+          ['the approval time is read from approvedAt', byApprovedAt === 'blind:2,late:1', byApprovedAt],
+          ['else the marker\'s own time', byOwnTime === 'blind:2,late:1', byOwnTime],
+          ['a marker with no readable time drops nobody', noTime === 'blind:2,early:1,late:1', noTime],
+          ['the report file written before the approval is not read for Found lines', found === '2.1', found],
+          ['with no time every report file is read', foundAll === '1.1,2.1', foundAll],
+        ]);
       } finally { rmSync(marker, { force: true }); }
     },
   },
@@ -1474,11 +1663,22 @@ const CASES = [
       const heldUnder = g.stop(false);
       appendFileSync(g.tr, jsonl([FEEDBACK, reply(8, `${ONLY_WAITING}\nOne corrected sentence, now that the log has been read.`)]));
       const noPlanRepeat = g.stop(true, bare);
-      return refused.status === 2 && /the corrected sentences only/.test(refused.stderr) && /Do not send the reply again/.test(refused.stderr)
-        && repeat.status === 2 && /sends the refused reply again/.test(repeat.stderr) && /the corrected sentences only|corrected sentences only/.test(repeat.stderr)
-        && again.status === 0
-        && corrected.status === 0 && noText.status === 0 && shortOnes.status === 0 && stale.status === 0
-        && heldUnder.status === 2 && /says the work is not finished/.test(heldUnder.stderr) && unheld.status === 0 && noPlanRepeat.status === 0;
+      const held_rows = [['refused.status === 2', (refused.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/the corrected sentences only/.test(refused.stderr)', (/the corrected sentences only/.test(refused.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Do not send the reply again/.test(refused.stderr)', (/Do not send the reply again/.test(refused.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['repeat.status === 2', (repeat.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/sends the refused reply again/.test(repeat.stderr)', (/sends the refused reply again/.test(repeat.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/the corrected sentences only|corrected sentences only/.test(repeat.stderr)', (/the corrected sentences only|corrected sentences only/.test(repeat.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['again.status === 0', (again.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['corrected.status === 0', (corrected.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noText.status === 0', (noText.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['shortOnes.status === 0', (shortOnes.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stale.status === 0', (stale.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['heldUnder.status === 2', (heldUnder.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/says the work is not finished/.test(heldUnder.stderr)', (/says the work is not finished/.test(heldUnder.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['unheld.status === 0', (unheld.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noPlanRepeat.status === 0', (noPlanRepeat.status === 0)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -1494,22 +1694,33 @@ const CASES = [
       const page = `/tmp/claude-0/-home-user/${s}/scratchpad/status/fix-run.html`;
       const otherPage = `/tmp/claude-0/-home-user/${s}/scratchpad/status.html`;
       const fenced = (x) => /^MANAGER FENCE/.test(x ?? '');
-      return f('Read', { file_path: plan.path }) === null && f('Bash', { command: `cat ${plan.path}` }) === null
-        && f('TaskStop', { task_id: 'x' }) === null && f('ExitPlanMode') === null && f('EnterPlanMode') === null
-        && f('Agent', { prompt: '/plans/gate-test.md step 1' }) === null
-        && f('Artifact', { file_path: page }) === null && f('Artifact', { action: 'read', url: 'u' }) === null
-        && f('Artifact', { action: 'list' }) === null && f('Artifact', { action: 'open', url: 'u' }) === null
-        && fenced(f('Artifact', { action: 'quickstart', intent: 'other' }))
-        && fenced(f('Artifact', { file_path: otherPage })) && fenced(f('Artifact', { file_path: page, files: { 'a.js': 'x' } }))
-        && fenced(f('Artifact', { action: 'delete', url: 'u' })) && fenced(f('Artifact', { file_path: '/home/user/noahjefferson/public/index.html' }))
-        && fenced(f('Artifact', { file_path: `/tmp/claude-0/-home-user/other/scratchpad/status/fix-run.html` }))
-        && f('Write', { file_path: page }) === null && f('Edit', { file_path: page }) === null
-        && fenced(f('Write', { file_path: otherPage })) && fenced(f('Write', { file_path: `/tmp/claude-0/-home-user/other/scratchpad/status/fix-run.html` }))
-        && f('Write', { file_path: join(homedir(), '.claude', 'plans', 'next.md') }) === null
-        && fenced(f('Write', { file_path: '/home/user/noahjefferson/hook-dispatch.mjs' }))
-        && fenced(f('Edit', { file_path: join(homedir(), '.claude', 'plans', 'sub', 'x.md') }))
-        && fenced(f('Bash', { command: 'touch x' })) && fenced(f('mcp__github__push_files', { branch: 'main' }))
-        && f('Write', { file_path: '/anywhere' }, { agent_id: 'a1' }) === null;
+      const held_rows = [['f(\'Read\', { file_path: plan.path }) === null', (f('Read', { file_path: plan.path }) === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'Bash\', { command: `cat ${plan.path}` }) === null', (f('Bash', { command: `cat ${plan.path}` }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'TaskStop\', { task_id: \'x\' }) === null', (f('TaskStop', { task_id: 'x' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'ExitPlanMode\') === null', (f('ExitPlanMode') === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'EnterPlanMode\') === null', (f('EnterPlanMode') === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'Agent\', { prompt: \'/plans/gate-test.md step 1\' }) === null', (f('Agent', { prompt: '/plans/gate-test.md step 1' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'Artifact\', { file_path: page }) === null', (f('Artifact', { file_path: page }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'Artifact\', { action: \'read\', url: \'u\' }) === null', (f('Artifact', { action: 'read', url: 'u' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'Artifact\', { action: \'list\' }) === null', (f('Artifact', { action: 'list' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'Artifact\', { action: \'open\', url: \'u\' }) === null', (f('Artifact', { action: 'open', url: 'u' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Artifact\', { action: \'quickstart\', intent: \'other\' }))', (fenced(f('Artifact', { action: 'quickstart', intent: 'other' })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Artifact\', { file_path: otherPage }))', (fenced(f('Artifact', { file_path: otherPage })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Artifact\', { file_path: page, files: { \'a.js\': \'x\' } }))', (fenced(f('Artifact', { file_path: page, files: { 'a.js': 'x' } })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Artifact\', { action: \'delete\', url: \'u\' }))', (fenced(f('Artifact', { action: 'delete', url: 'u' })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Artifact\', { file_path: \'/home/user/noahjefferson/public/index.html\' }))', (fenced(f('Artifact', { file_path: '/home/user/noahjefferson/public/index.html' })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Artifact\', { file_path: `/tmp/claude-0/-home-user/other/scratchpad/status/fix-run.html` }))', (fenced(f('Artifact', { file_path: `/tmp/claude-0/-home-user/other/scratchpad/status/fix-run.html` })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'Write\', { file_path: page }) === null', (f('Write', { file_path: page }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'Edit\', { file_path: page }) === null', (f('Edit', { file_path: page }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Write\', { file_path: otherPage }))', (fenced(f('Write', { file_path: otherPage })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Write\', { file_path: `/tmp/claude-0/-home-user/other/scratchpad/status/fix-run.html` }))', (fenced(f('Write', { file_path: `/tmp/claude-0/-home-user/other/scratchpad/status/fix-run.html` })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'Write\', { file_path: join(homedir(), \'.claude\', \'plans\', \'next.md\') }) === null', (f('Write', { file_path: join(homedir(), '.claude', 'plans', 'next.md') }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Write\', { file_path: \'/home/user/noahjefferson/hook-dispatch.mjs\' }))', (fenced(f('Write', { file_path: '/home/user/noahjefferson/hook-dispatch.mjs' })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Edit\', { file_path: join(homedir(), \'.claude\', \'plans\', \'sub\', \'x.md\') }))', (fenced(f('Edit', { file_path: join(homedir(), '.claude', 'plans', 'sub', 'x.md') })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Bash\', { command: \'touch x\' }))', (fenced(f('Bash', { command: 'touch x' })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'mcp__github__push_files\', { branch: \'main\' }))', (fenced(f('mcp__github__push_files', { branch: 'main' })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'Write\', { file_path: \'/anywhere\' }, { agent_id: \'a1\' }) === null', (f('Write', { file_path: '/anywhere' }, { agent_id: 'a1' }) === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1519,18 +1730,20 @@ const CASES = [
       const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
       const f = (tool_name, tool_input, p = plan) => m.dispatch.managerFence({ session_id: 'dg', tool_name, tool_input }, { plan: p, classify: () => false });
       const gate = (x) => /^DISPATCH GATE/.test(x ?? '');
-      return f('Agent', { prompt: '/plans/gate-test.md step 2' }) === null && f('Task', { prompt: '  /plans/gate-test.md 1 ' }) === null
-        && f('Agent', { prompt: '/plans/gate-test.md step 2', subagent_type: 'general-purpose' }) === null
-        && f('Agent', { prompt: '/plans/gate-test.md step 2', subagent_type: 'Explore' }) === null
-        && /custom agent type/.test(f('Agent', { prompt: '/plans/gate-test.md step 2', subagent_type: 'house-builder' }) ?? '')
-        && /custom agent type/.test(f('Task', { prompt: '/plans/gate-test.md step 1', subagent_type: 'statusline-setup' }) ?? '')
-        && f('SendMessage', { to: 'a1', message: '/plans/gate-test.md step 1' }) === null
-        && gate(f('Agent', { prompt: '/plans/gate-test.md step 2. Also tidy the README.' }))
-        && gate(f('SendMessage', { to: 'a1', message: 'Go back and fix the test.' }))
-        && gate(f('Agent', { prompt: '/plans/other.md step 2' }))
-        && /no step 9/.test(f('Agent', { prompt: '/plans/gate-test.md step 9' }) ?? '')
-        && /workflow is refused/.test(f('Workflow', { script: 'x' }) ?? '')
-        && /No approved plan/.test(f('Agent', { prompt: '/plans/gate-test.md step 1' }, null) ?? '');
+      const held_rows = [['f(\'Agent\', { prompt: \'/plans/gate-test.md step 2\' }) === null', (f('Agent', { prompt: '/plans/gate-test.md step 2' }) === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'Task\', { prompt: \' /plans/gate-test.md 1 \' }) === null', (f('Task', { prompt: '  /plans/gate-test.md 1 ' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'Agent\', { prompt: \'/plans/gate-test.md step 2\', subagent_type: \'general-purpose\' }) === null', (f('Agent', { prompt: '/plans/gate-test.md step 2', subagent_type: 'general-purpose' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'Agent\', { prompt: \'/plans/gate-test.md step 2\', subagent_type: \'Explore\' }) === null', (f('Agent', { prompt: '/plans/gate-test.md step 2', subagent_type: 'Explore' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/custom agent type/.test(f(\'Agent\', { prompt: \'/plans/gate-test.md step 2\', subagent_type: \'house-builder\' }) ?? \'\')', (/custom agent type/.test(f('Agent', { prompt: '/plans/gate-test.md step 2', subagent_type: 'house-builder' }) ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/custom agent type/.test(f(\'Task\', { prompt: \'/plans/gate-test.md step 1\', subagent_type: \'statusline-setup\' }) ?? \'\')', (/custom agent type/.test(f('Task', { prompt: '/plans/gate-test.md step 1', subagent_type: 'statusline-setup' }) ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'SendMessage\', { to: \'a1\', message: \'/plans/gate-test.md step 1\' }) === null', (f('SendMessage', { to: 'a1', message: '/plans/gate-test.md step 1' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(f(\'Agent\', { prompt: \'/plans/gate-test.md step 2. Also tidy the README.\' }))', (gate(f('Agent', { prompt: '/plans/gate-test.md step 2. Also tidy the README.' })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(f(\'SendMessage\', { to: \'a1\', message: \'Go back and fix the test.\' }))', (gate(f('SendMessage', { to: 'a1', message: 'Go back and fix the test.' })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(f(\'Agent\', { prompt: \'/plans/other.md step 2\' }))', (gate(f('Agent', { prompt: '/plans/other.md step 2' })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/no step 9/.test(f(\'Agent\', { prompt: \'/plans/gate-test.md step 9\' }) ?? \'\')', (/no step 9/.test(f('Agent', { prompt: '/plans/gate-test.md step 9' }) ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/workflow is refused/.test(f(\'Workflow\', { script: \'x\' }) ?? \'\')', (/workflow is refused/.test(f('Workflow', { script: 'x' }) ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/No approved plan/.test(f(\'Agent\', { prompt: \'/plans/gate-test.md step 1\' }, null) ?? \'\')', (/No approved plan/.test(f('Agent', { prompt: '/plans/gate-test.md step 1' }, null) ?? ''))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1549,9 +1762,18 @@ const CASES = [
       const sSrc = sid('fw');
       const src = repo({ 'app.ts': 'export const x = 1;\n' }, 'appfix');
       const source = w.call('PreToolUse', { session_id: sSrc, tool_name: 'Read', tool_input: { file_path: join(src.dir, 'app.ts') } });
-      return write.status === 2 && /MANAGER FENCE/.test(write.stderr) && agent.status === 0
-        && extra.status === 2 && /DISPATCH GATE/.test(extra.stderr) && read.status === 0 && enter.status === 0
-        && source.status === 2 && /MANAGER FENCE/.test(source.stderr) && /Send an agent/.test(source.stderr) && !latched(sSrc);
+      const held_rows = [['write.status === 2', (write.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/MANAGER FENCE/.test(write.stderr)', (/MANAGER FENCE/.test(write.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agent.status === 0', (agent.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['extra.status === 2', (extra.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/DISPATCH GATE/.test(extra.stderr)', (/DISPATCH GATE/.test(extra.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['read.status === 0', (read.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['enter.status === 0', (enter.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['source.status === 2', (source.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/MANAGER FENCE/.test(source.stderr)', (/MANAGER FENCE/.test(source.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Send an agent/.test(source.stderr)', (/Send an agent/.test(source.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(sSrc)', (!latched(sSrc))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1607,10 +1829,14 @@ const CASES = [
       const theBashFlag = notBash(`grep --file=${sib.dir}/app.ts foo ${sib.dir}/NOTES.md`);
       const theConnector = refused('mcp__github__get_file_contents', { owner: 'o', repo: 'r', path: 'src/x.ts' }) && refused('mcp__github__search_code', { q: 'x' })
         && passes('ToolSearch', { query: 'x' }) && passes('WebSearch', { query: 'x' }) && passes('mcp__github__actions_list', { owner: 'o', repo: 'r' });
-      return thePlan && thePad && theDoctrine && theDoctrinePages && theTranscript && theTranscriptName && theRepoFiles && theHubFiles && theRead && theGrep && theGlob
-        && theBash && theBashDynamic && theBashPipe && theBashNoFile && theBashBare && theBashFlag && theConnector
+      return assertAll([
+        ['thePlan', thePlan], ['thePad', thePad], ['theDoctrine', theDoctrine], ['theDoctrinePages', theDoctrinePages], ['theTranscript', theTranscript],
+        ['theTranscriptName', theTranscriptName], ['theRepoFiles', theRepoFiles], ['theHubFiles', theHubFiles], ['theRead', theRead], ['theGrep', theGrep], ['theGlob', theGlob],
+        ['theBash', theBash], ['theBashDynamic', theBashDynamic], ['theBashPipe', theBashPipe], ['theBashNoFile', theBashNoFile], ['theBashBare', theBashBare],
+        ['theBashFlag', theBashFlag], ['theConnector', theConnector],
         // A subagent is not held by it: the plan fence holds an agent's reads.
-        && passes('Read', { file_path: join(sib.dir, 'app.ts') }, { agent_id: 'a1' });
+        ['a subagent\'s read of an app source passes the fence', passes('Read', { file_path: join(sib.dir, 'app.ts') }, { agent_id: 'a1' })],
+      ]);
     },
   },
   {
@@ -1635,8 +1861,14 @@ const CASES = [
       const through = w.call('PreToolUse', { session_id: s, tool_name: 'SendUserFile', tool_input: { file_paths: [sheet(1), sheet(2)] } });
       const sOut = sid('sf');
       const outside = w.call('PreToolUse', { session_id: sOut, tool_name: 'SendUserFile', tool_input: { file_paths: ['/etc/hostname'] } });
-      return sent && refused && through.status === 0 && outside.status === 2 && /MANAGER FENCE/.test(outside.stderr) && !latched(sOut)
-        && f({ file_paths: ['/etc/hostname'] }, { agent_id: 'a1' }) === null;
+      const held_rows = [['sent', (sent)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused', (refused)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['through.status === 0', (through.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['outside.status === 2', (outside.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/MANAGER FENCE/.test(outside.stderr)', (/MANAGER FENCE/.test(outside.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(sOut)', (!latched(sOut))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f({ file_paths: [\'/etc/hostname\'] }, { agent_id: \'a1\' }) === null', (f({ file_paths: ['/etc/hostname'] }, { agent_id: 'a1' }) === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1648,7 +1880,10 @@ const CASES = [
       const before = send();
       appendFileSync(w.plan, '3. **Also.** A step added after approval.\n');
       const after = send();
-      return before.status === 0 && after.status === 2 && /DISPATCH GATE[\s\S]*No approved plan/.test(after.stderr);
+      const held_rows = [['before.status === 0', (before.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after.status === 2', (after.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/DISPATCH GATE[\\s\\S]*No approved plan/.test(after.stderr)', (/DISPATCH GATE[\s\S]*No approved plan/.test(after.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1669,13 +1904,21 @@ const CASES = [
       writeFileSync(A.marker, '{ not json');
       const unreadable = status();
       const held = sha(STEPS_PLAN).slice(0, 12);
-      return /Marker: none/.test(none) && !/Match:/.test(none)
-        && ok.includes('Approval state, read from disk now:') && ok.includes(`Plan it names: ${A.plan}`) && ok.includes(`Hash it holds: ${held}`)
-        && /Marker: present, recorded \d{4}-\d\d-\d\d \d\d:\d\d \(California\), the test, session ap-1\./.test(ok)
-        && new RegExp(`Plan file now: hash ${held}, last written \\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d \\(California\\)\\.`).test(ok) && /Match: yes/.test(ok)
-        && /Match: NO/.test(changed) && !changed.includes(`Plan file now: hash ${held}`) && changed.includes(`Hash it holds: ${held}`)
-        && /Plan file now: cannot be read \(ENOENT\)/.test(gone) && /Match: no\./.test(gone)
-        && /cannot be read as an approval/.test(unreadable);
+      const held_rows = [['/Marker: none/.test(none)', (/Marker: none/.test(none))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/Match:/.test(none)', (!/Match:/.test(none))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ok.includes(\'Approval state, read from disk now:\')', (ok.includes('Approval state, read from disk now:'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ok.includes(`Plan it names: ${A.plan}`)', (ok.includes(`Plan it names: ${A.plan}`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ok.includes(`Hash it holds: ${held}`)', (ok.includes(`Hash it holds: ${held}`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Marker: present, recorded \\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d \\(California\\), the test, session ap-1\\./.test(ok)', (/Marker: present, recorded \d{4}-\d\d-\d\d \d\d:\d\d \(California\), the test, session ap-1\./.test(ok))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['new RegExp(`Plan file now: hash ${held}, last written \\\\d{4}-\\\\d\\\\d-\\\\d\\\\d \\\\d\\\\d:\\\\d\\\\d \\\\(California\\\\)\\\\.`).test(ok)', (new RegExp(`Plan file now: hash ${held}, last written \\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d \\(California\\)\\.`).test(ok))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Match: yes/.test(ok)', (/Match: yes/.test(ok))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Match: NO/.test(changed)', (/Match: NO/.test(changed))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!changed.includes(`Plan file now: hash ${held}`)', (!changed.includes(`Plan file now: hash ${held}`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['changed.includes(`Hash it holds: ${held}`)', (changed.includes(`Hash it holds: ${held}`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Plan file now: cannot be read \\(ENOENT\\)/.test(gone)', (/Plan file now: cannot be read \(ENOENT\)/.test(gone))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Match: no\\./.test(gone)', (/Match: no\./.test(gone))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/cannot be read as an approval/.test(unreadable)', (/cannot be read as an approval/.test(unreadable))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1689,9 +1932,13 @@ const CASES = [
       const edited = send(`${w.plan} step 1`);
       rmSync(join(w.home, '.claude', 'APPROVED-PLAN.json'));
       const none = send(`${w.plan} step 1`);
-      return wrong.status === 2 && /DISPATCH GATE[\s\S]*Send exactly[\s\S]*Match: yes/.test(wrong.stderr)
-        && edited.status === 2 && /No approved plan[\s\S]*Plan it names:[\s\S]*Match: NO/.test(edited.stderr)
-        && none.status === 2 && /No approved plan[\s\S]*Marker: none/.test(none.stderr);
+      const held_rows = [['wrong.status === 2', (wrong.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/DISPATCH GATE[\\s\\S]*Send exactly[\\s\\S]*Match: yes/.test(wrong.stderr)', (/DISPATCH GATE[\s\S]*Send exactly[\s\S]*Match: yes/.test(wrong.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['edited.status === 2', (edited.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/No approved plan[\\s\\S]*Plan it names:[\\s\\S]*Match: NO/.test(edited.stderr)', (/No approved plan[\s\S]*Plan it names:[\s\S]*Match: NO/.test(edited.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['none.status === 2', (none.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/No approved plan[\\s\\S]*Marker: none/.test(none.stderr)', (/No approved plan[\s\S]*Marker: none/.test(none.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1704,7 +1951,11 @@ const CASES = [
       const write = w.call('PreToolUse', { session_id: s, tool_name: 'Write', tool_input: { file_path: page, content: '<p>status</p>' } });
       const publish = w.call('PreToolUse', { session_id: s, tool_name: 'Artifact', tool_input: { file_path: page } });
       const other = w.call('PreToolUse', { session_id: sid('sp'), tool_name: 'Write', tool_input: { file_path: join(dirname(page), 'other.html'), content: 'x' } });
-      return write.status === 0 && publish.status === 0 && other.status === 2 && /MANAGER FENCE/.test(other.stderr);
+      const held_rows = [['write.status === 0', (write.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['publish.status === 0', (publish.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['other.status === 2', (other.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/MANAGER FENCE/.test(other.stderr)', (/MANAGER FENCE/.test(other.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1727,8 +1978,15 @@ const CASES = [
       const gate = spawnSync('node', [join(dir, 'report.mjs'), '--gate'], { input: JSON.stringify({ session_id: s, transcript_path: w.tr, tool_name: 'Read', tool_input: { file_path: w.plan } }), encoding: 'utf8', env: { ...process.env, HOME: w.home } });
       const stamp = spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — an agent ended'], { encoding: 'utf8', env: { ...process.env, HOME: w.home, CLAUDE_CODE_SESSION_ID: '' } });
       const again = call();
-      return due.status === 0 && notLatched && gate.status === 2 && /ended since the owner last got a status/.test(gate.stderr) && gate.stderr.includes('aend01')
-        && stamp.status === 0 && again.status === 0 && !latched(s);
+      const held_rows = [['due.status === 0', (due.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notLatched', (notLatched)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate.status === 2', (gate.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/ended since the owner last got a status/.test(gate.stderr)', (/ended since the owner last got a status/.test(gate.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate.stderr.includes(\'aend01\')', (gate.stderr.includes('aend01'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stamp.status === 0', (stamp.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['again.status === 0', (again.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(s)', (!latched(s))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1780,9 +2038,18 @@ const CASES = [
       handedBack('anew03', 60);
       const unreadable = g('');
       const missing = g(join(proj, 'missing.jsonl'));
-      return gapOnly.status === 0 && agentRuns.status === 0 && endedBefore.status === 0
-        && endedAfter.status === 2 && endedAfter.stderr.includes('anew02') && !endedAfter.stderr.includes('aold01') && /ended since the owner last got a status/.test(endedAfter.stderr)
-        && stamped.status === 0 && notRead.status === 0 && unreadable.status === 0 && missing.status === 0;
+      const held_rows = [['gapOnly.status === 0', (gapOnly.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agentRuns.status === 0', (agentRuns.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['endedBefore.status === 0', (endedBefore.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['endedAfter.status === 2', (endedAfter.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['endedAfter.stderr.includes(\'anew02\')', (endedAfter.stderr.includes('anew02'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!endedAfter.stderr.includes(\'aold01\')', (!endedAfter.stderr.includes('aold01'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/ended since the owner last got a status/.test(endedAfter.stderr)', (/ended since the owner last got a status/.test(endedAfter.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stamped.status === 0', (stamped.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notRead.status === 0', (notRead.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['unreadable.status === 0', (unreadable.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['missing.status === 0', (missing.status === 0)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -1801,10 +2068,17 @@ const CASES = [
       const ret = w.call('PreToolUse', { session_id: s, agent_id: 'a1', tool_name: 'StructuredOutput', tool_input: { result: 'x' } });
       const back = w.call('PreToolUse', { session_id: s, agent_id: 'a1', tool_name: 'SubagentHandback', tool_input: { message: 'x' } });
       const agentRead = w.call('PreToolUse', { session_id: s, agent_id: 'a1', tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
-      return first.status === 2 && latched(s)
-        && read.status === 2 && /REFUSAL LATCH/.test(read.stderr) && /DISPATCH GATE/.test(read.stderr)
-        && status.status === 0 && ret.status === 0 && back.status === 0
-        && agentRead.status === 2 && /REFUSAL LATCH/.test(agentRead.stderr);
+      const held_rows = [['first.status === 2', (first.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['latched(s)', (latched(s))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['read.status === 2', (read.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/REFUSAL LATCH/.test(read.stderr)', (/REFUSAL LATCH/.test(read.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/DISPATCH GATE/.test(read.stderr)', (/DISPATCH GATE/.test(read.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['status.status === 0', (status.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ret.status === 0', (ret.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['back.status === 0', (back.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agentRead.status === 2', (agentRead.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/REFUSAL LATCH/.test(agentRead.stderr)', (/REFUSAL LATCH/.test(agentRead.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1826,10 +2100,22 @@ const CASES = [
       // The main thread refused by a gate that latches (the dispatch gate): the session's own latch, as before.
       const mainRefused = call({ tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1, and tidy up after`, subagent_type: 'general-purpose' } });
       const mainNext = call({});
-      return refused.status === 2 && own
-        && next.status === 2 && /REFUSAL LATCH/.test(next.stderr) && /subagent \(a1\)/.test(next.stderr) && /every later call of it is refused except its own return/.test(next.stderr)
-        && back.status === 0 && second.status === 0 && main.status === 0 && agentSend.status === 0 && wait.status === 0
-        && mainRefused.status === 2 && latched(s) && mainNext.status === 2 && /REFUSAL LATCH/.test(mainNext.stderr);
+      const held_rows = [['refused.status === 2', (refused.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['own', (own)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['next.status === 2', (next.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/REFUSAL LATCH/.test(next.stderr)', (/REFUSAL LATCH/.test(next.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/subagent \\(a1\\)/.test(next.stderr)', (/subagent \(a1\)/.test(next.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/every later call of it is refused except its own return/.test(next.stderr)', (/every later call of it is refused except its own return/.test(next.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['back.status === 0', (back.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.status === 0', (second.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['main.status === 0', (main.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agentSend.status === 0', (agentSend.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['wait.status === 0', (wait.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mainRefused.status === 2', (mainRefused.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['latched(s)', (latched(s))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mainNext.status === 2', (mainNext.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/REFUSAL LATCH/.test(mainNext.stderr)', (/REFUSAL LATCH/.test(mainNext.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1844,12 +2130,19 @@ const CASES = [
       const read = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
       const wait = w.call('PreToolUse', { session_id: s, tool_name: 'Bash', tool_input: { command: `node ${join(dir, 'report.mjs')} --wait` } });
       const quoted = w.call('PreToolUse', { session_id: s, tool_name: 'Bash', tool_input: { command: `node ${join(dir, 'report.mjs')} "--wait"` } });
-      return first.status === 2 && latched(s)
-        && stop.status === 0
-        && agentStop.status === 2 && /REFUSAL LATCH/.test(agentStop.stderr)
-        && read.status === 2 && /REFUSAL LATCH/.test(read.stderr) && /main thread's TaskStop/.test(read.stderr)
-        && wait.status === 2 && /REFUSAL LATCH/.test(wait.stderr)
-        && quoted.status === 2 && /REFUSAL LATCH/.test(quoted.stderr);
+      const held_rows = [['first.status === 2', (first.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['latched(s)', (latched(s))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stop.status === 0', (stop.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agentStop.status === 2', (agentStop.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/REFUSAL LATCH/.test(agentStop.stderr)', (/REFUSAL LATCH/.test(agentStop.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['read.status === 2', (read.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/REFUSAL LATCH/.test(read.stderr)', (/REFUSAL LATCH/.test(read.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/main thread\'s TaskStop/.test(read.stderr)', (/main thread's TaskStop/.test(read.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['wait.status === 2', (wait.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/REFUSAL LATCH/.test(wait.stderr)', (/REFUSAL LATCH/.test(wait.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['quoted.status === 2', (quoted.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/REFUSAL LATCH/.test(quoted.stderr)', (/REFUSAL LATCH/.test(quoted.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1871,8 +2164,13 @@ const CASES = [
       const pre = w.call('PreToolUse', { session_id: s, tool_name: 'Read', tool_input: { file_path: w.plan }, pad });
       const s2 = sid('lr');
       const stop = w.call('Stop', { session_id: s2, pad });
-      return pre.status === 2 && /repo gate says no/.test(pre.stderr) && latched(s)
-        && stop.status === 2 && /repo stop says no/.test(stop.stderr) && !latched(s2);
+      const held_rows = [['pre.status === 2', (pre.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/repo gate says no/.test(pre.stderr)', (/repo gate says no/.test(pre.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['latched(s)', (latched(s))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stop.status === 2', (stop.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/repo stop says no/.test(stop.stderr)', (/repo stop says no/.test(stop.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(s2)', (!latched(s2))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1892,7 +2190,13 @@ const CASES = [
       const gone = !latched(s);
       m.dispatch.setLatch({ ...p, tool_name: 'Bash' }, 'refused again');
       const typed = m.dispatch.latchStanding(p, [owner(later(10), 'what was refused?')]);
-      return held && stillThere && typedMid === null && gone && typed === null && !latched(s);
+      const held_rows = [['held', (held)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stillThere', (stillThere)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typedMid === null', (typedMid === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gone', (gone)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typed === null', (typed === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(s)', (!latched(s))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1913,7 +2217,10 @@ const CASES = [
       const asPrompt = m.dispatch.latchStanding(p, [q(early, before), owner(later(6), before)]) !== null;
       // Typed after the refusal: clears it.
       const cleared = m.dispatch.latchStanding(p, [...lateDelivery, q(later(7), after), at(mid(0, after), later(8))]) === null && !latched(s);
-      return held && asPrompt && cleared;
+      const held_rows = [['held', (held)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['asPrompt', (asPrompt)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cleared', (cleared)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1931,7 +2238,11 @@ const CASES = [
       const back = w.call('PreToolUse', { session_id: s, agent_id: 'a1', permission_mode: 'plan', tool_name: 'SubagentHandback', tool_input: { message: 'Stopped: the push gate refused git push origin claude/x.' } });
       const out = w.call('PreToolUse', { session_id: s, agent_id: 'a1', permission_mode: 'plan', tool_name: 'StructuredOutput', tool_input: { result: 'x' } });
       const read = w.call('PreToolUse', { session_id: sid('rt'), agent_id: 'a1', tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
-      return back.status === 0 && out.status === 0 && read.status === 2 && /STOP/.test(read.stderr);
+      const held_rows = [['back.status === 0', (back.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.status === 0', (out.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['read.status === 2', (read.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/STOP/.test(read.stderr)', (/STOP/.test(read.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -1945,7 +2256,9 @@ const CASES = [
       const say = () => spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: s, transcript_path: tr }), encoding: 'utf8' }).status;
       const unlatched = say();
       m.dispatch.setLatch({ session_id: s, transcript_path: tr, tool_name: 'Bash' }, 'refused for the test');
-      return unlatched === 2 && say() === 0;
+      const held_rows = [['unlatched === 2', (unlatched === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['say() === 0', (say() === 0)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -1974,9 +2287,15 @@ const CASES = [
       mkdirSync(process.env.PLAN_GUARD_NAMES_DIR, { recursive: true });
       writeFileSync(join(process.env.PLAN_GUARD_NAMES_DIR, `${s3}.json`), JSON.stringify([{ name, at: Date.now() + 60000 }]));
       const early = exit(s3, dropped, [tool(0, 'g2', 'Grep', {}), at(result(0, 'g2', `found ${name}`), later(5))]);
-      return first.status === 2 && first.stdout.includes('exist in no repo')
-        && drop.status === 2 && drop.stdout.includes('stays refused') && drop.stdout.includes(name)
-        && seen.status === 0 && marked.status === 0 && early.status === 2;
+      const held_rows = [['first.status === 2', (first.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.stdout.includes(\'exist in no repo\')', (first.stdout.includes('exist in no repo'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['drop.status === 2', (drop.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['drop.stdout.includes(\'stays refused\')', (drop.stdout.includes('stays refused'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['drop.stdout.includes(name)', (drop.stdout.includes(name))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['seen.status === 0', (seen.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['marked.status === 0', (marked.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['early.status === 2', (early.status === 2)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2015,12 +2334,17 @@ const CASES = [
       const unanswered = exit([...entered, said(-500, TALK), at(tool(0, 'u1', 'Read', { file_path: '/etc/hostname' }), later(-450))], 1000);
       // No plan-mode call in the tail: nothing says what to count from.
       const noAnchor = exit([said(-500, TALK)], 300);
-      return good.status === 0
-        && edited.status === 2 && /last written at \d\d:\d\d \(California\), after the last chat turn that explained it/.test(edited.stdout)
-        && asked.status === 2 && /has not been talked through/.test(asked.stdout)
-        && askedAfter.status === 0 && newest.status === 0
-        && unanswered.status === 2 && /has not been talked through/.test(unanswered.stdout)
-        && noAnchor.status === 0;
+      const held_rows = [['good.status === 0', (good.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['edited.status === 2', (edited.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/last written at \\d\\d:\\d\\d \\(California\\), after the last chat turn that explained it/.test(edited.stdout)', (/last written at \d\d:\d\d \(California\), after the last chat turn that explained it/.test(edited.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['asked.status === 2', (asked.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/has not been talked through/.test(asked.stdout)', (/has not been talked through/.test(asked.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['askedAfter.status === 0', (askedAfter.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['newest.status === 0', (newest.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['unanswered.status === 2', (unanswered.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/has not been talked through/.test(unanswered.stdout)', (/has not been talked through/.test(unanswered.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noAnchor.status === 0', (noAnchor.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2054,7 +2378,11 @@ const CASES = [
       // Two talks and two answers: the newer talk (-300) is after the plan's last write (-500) and the older (-800) is not,
       // so judging the first owner message instead of the newest would refuse it.
       const newer = exit([...entered, said(-800, TALK), owner(later(-700), 'ok'), said(-300, TALK2), owner(later(-200), 'ok'), said(-100, LINE), call(-90)], 500);
-      return ownTurn.status === 0 && noTalk.status === 2 && /has not been talked through/.test(noTalk.stdout) && newer.status === 0;
+      const held_rows = [['ownTurn.status === 0', (ownTurn.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noTalk.status === 2', (noTalk.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/has not been talked through/.test(noTalk.stdout)', (/has not been talked through/.test(noTalk.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['newer.status === 0', (newer.status === 0)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -2074,8 +2402,11 @@ const CASES = [
         d('git push origin main:refs/tags/v1'), d('git push origin $BR'), d('bash -c "git push origin claude/work"'),
         d('git status && git push origin claude/work'), d(`cd ${r.dir} && git push`, '/'), d('echo $(git push origin claude/work)'),
         d('git push origin main claude/work')];
-      return onStaging.every((x) => x === null) && refused.every((x) => /^.+Only staging and main reach a remote/.test(x ?? ''))
-        && d('git status') === null && d('echo "git push origin claude/work"') === null;
+      const held_rows = [['onStaging.every((x) => x === null)', (onStaging.every((x) => x === null))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused.every((x) => /^.+Only staging and main reach a remote/.test(x ?? \'\'))', (refused.every((x) => /^.+Only staging and main reach a remote/.test(x ?? '')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['d(\'git status\') === null', (d('git status') === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['d(\'echo "git push origin claude/work"\') === null', (d('echo "git push origin claude/work"') === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2085,9 +2416,9 @@ const CASES = [
       const r = repo({ 'a.txt': 'x\n' });
       r.g('checkout', '-q', '-b', 'staging');
       const d = (command) => m.push.decide({ tool_name: 'Bash', tool_input: { command }, cwd: r.dir });
-      return ['git push --all origin', 'git push --mirror origin', 'git push --tags origin', 'git push origin --delete main',
+      return assertAll([['[\'git push --all origin\', \'git push --mirror origin\', \'git push --tags origin\', \'git push origin --delete main\', \'git push -d origin main\', \'git push --prune origin\', \'git push --branches origin\', \'git push --follow-tags origin staging\'] .every((c) => d(c) !== null)', (['git push --all origin', 'git push --mirror origin', 'git push --tags origin', 'git push origin --delete main',
         'git push -d origin main', 'git push --prune origin', 'git push --branches origin', 'git push --follow-tags origin staging']
-        .every((c) => d(c) !== null);
+        .every((c) => d(c) !== null))]]);
     },
   },
   {
@@ -2105,7 +2436,9 @@ const CASES = [
         'git commit -m "-n is not a flag here"', 'git commit -am "no verify skipped"', 'git commit -F msg.txt', 'git commit -m x -- notes'];
       const bad = [...refused.filter((c) => !/Only staging and main reach a remote/.test(d(c) ?? '')), ...passed.filter((c) => d(c) !== null)];
       if (bad.length) throw new Error(`wrong on: ${bad.join(' | ')}`);
-      return /force-pushes main/.test(d('git push -f origin main') ?? '') && /--no-verify/.test(d('git commit -n -m x') ?? '');
+      const held_rows = [['/force-pushes main/.test(d(\'git push -f origin main\') ?? \'\')', (/force-pushes main/.test(d('git push -f origin main') ?? ''))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/--no-verify/.test(d(\'git commit -n -m x\') ?? \'\')', (/--no-verify/.test(d('git commit -n -m x') ?? ''))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2121,7 +2454,7 @@ const CASES = [
         'git push origin >staging claude/work', 'git push origin > staging claude/work', 'git push origin staging "|" claude/work', 'git push origin :staging 2>&1 | tail'];
       const bad = [...passes.filter((c) => d(c) !== null), ...refused.filter((c) => !/Only staging and main reach a remote/.test(d(c) ?? ''))];
       if (bad.length) throw new Error(`wrong on: ${bad.join(' | ')}`);
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -2147,7 +2480,7 @@ const CASES = [
       const bad = [...refused.filter((c) => !/Only staging and main reach a remote/.test(d(c) ?? '')), ...passed.filter((c) => d(c, c.startsWith('cd ') ? '/' : r.dir) !== null),
         ...fromOther.filter((c) => !/Only staging and main reach a remote/.test(d(c, other.dir) ?? ''))];
       if (bad.length) throw new Error(`wrong on: ${bad.join(' | ')}`);
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -2155,11 +2488,14 @@ const CASES = [
     guards: ['push_connector_create', 'push_connector_write'],
     run(m) {
       const d = (tool_name, tool_input = {}) => m.push.decide({ tool_name, tool_input });
-      return d('mcp__github__create_branch', { branch: 'main' }) !== null
-        && d('mcp__github__create_or_update_file', { branch: 'claude/x', path: 'a' }) !== null
-        && d('mcp__github__push_files', { branch: 'feature' }) !== null && d('mcp__github__delete_file', {}) !== null
-        && d('mcp__github__create_or_update_file', { branch: 'main', path: 'a' }) === null && d('mcp__github__push_files', { branch: 'staging' }) === null
-        && d('mcp__github__get_file_contents', { branch: 'claude/x' }) === null;
+      const held_rows = [['d(\'mcp__github__create_branch\', { branch: \'main\' }) !== null', (d('mcp__github__create_branch', { branch: 'main' }) !== null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['d(\'mcp__github__create_or_update_file\', { branch: \'claude/x\', path: \'a\' }) !== null', (d('mcp__github__create_or_update_file', { branch: 'claude/x', path: 'a' }) !== null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['d(\'mcp__github__push_files\', { branch: \'feature\' }) !== null', (d('mcp__github__push_files', { branch: 'feature' }) !== null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['d(\'mcp__github__delete_file\', {}) !== null', (d('mcp__github__delete_file', {}) !== null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['d(\'mcp__github__create_or_update_file\', { branch: \'main\', path: \'a\' }) === null', (d('mcp__github__create_or_update_file', { branch: 'main', path: 'a' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['d(\'mcp__github__push_files\', { branch: \'staging\' }) === null', (d('mcp__github__push_files', { branch: 'staging' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['d(\'mcp__github__get_file_contents\', { branch: \'claude/x\' }) === null', (d('mcp__github__get_file_contents', { branch: 'claude/x' }) === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2168,13 +2504,15 @@ const CASES = [
     run(m) {
       const d = (tool_name, tool_input = {}) => m.push.decide({ tool_name, tool_input });
       const said = (x, what) => new RegExp(`${what}, and it is refused\\. Only staging and main reach a remote`).test(x ?? '');
-      return said(d('mcp__github__merge_pull_request', { owner: 'o', repo: 'r', pullNumber: 1 }), 'merges a pull request')
-        && said(d('mcp__github__merge_pull_request', { owner: 'o', repo: 'r', pullNumber: 1, merge_method: 'rebase' }), 'merges a pull request')
-        && said(d('mcp__GitHub__merge_pull_request', { pullNumber: 1 }), 'merges a pull request')
-        && said(d('mcp__github__enable_pr_auto_merge', { pullNumber: 1 }), 'merges a pull request')
-        && said(d('mcp__github__update_pull_request_branch', { pullNumber: 1 }), 'updates a pull request\'s branch')
-        && said(d('mcp__github__update_pull_request_branch', { pullNumber: 1, branch: 'main' }), 'updates a pull request\'s branch')
-        && d('mcp__github__pull_request_read', { pullNumber: 1 }) === null && d('mcp__github__disable_pr_auto_merge', { pullNumber: 1 }) === null;
+      const held_rows = [['said(d(\'mcp__github__merge_pull_request\', { owner: \'o\', repo: \'r\', pullNumber: 1 }), \'merges a pull request\')', (said(d('mcp__github__merge_pull_request', { owner: 'o', repo: 'r', pullNumber: 1 }), 'merges a pull request'))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said(d(\'mcp__github__merge_pull_request\', { owner: \'o\', repo: \'r\', pullNumber: 1, merge_method: \'rebase\' }), \'merges a pull request\')', (said(d('mcp__github__merge_pull_request', { owner: 'o', repo: 'r', pullNumber: 1, merge_method: 'rebase' }), 'merges a pull request'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said(d(\'mcp__GitHub__merge_pull_request\', { pullNumber: 1 }), \'merges a pull request\')', (said(d('mcp__GitHub__merge_pull_request', { pullNumber: 1 }), 'merges a pull request'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said(d(\'mcp__github__enable_pr_auto_merge\', { pullNumber: 1 }), \'merges a pull request\')', (said(d('mcp__github__enable_pr_auto_merge', { pullNumber: 1 }), 'merges a pull request'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said(d(\'mcp__github__update_pull_request_branch\', { pullNumber: 1 }), \'updates a pull request\\\'s branch\')', (said(d('mcp__github__update_pull_request_branch', { pullNumber: 1 }), 'updates a pull request\'s branch'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said(d(\'mcp__github__update_pull_request_branch\', { pullNumber: 1, branch: \'main\' }), \'updates a pull request\\\'s branch\')', (said(d('mcp__github__update_pull_request_branch', { pullNumber: 1, branch: 'main' }), 'updates a pull request\'s branch'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['d(\'mcp__github__pull_request_read\', { pullNumber: 1 }) === null', (d('mcp__github__pull_request_read', { pullNumber: 1 }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['d(\'mcp__github__disable_pr_auto_merge\', { pullNumber: 1 }) === null', (d('mcp__github__disable_pr_auto_merge', { pullNumber: 1 }) === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2183,7 +2521,9 @@ const CASES = [
     run(m, dir) {
       const w = world(dir);
       const o = w.call('PreToolUse', { session_id: sid('pw'), agent_id: 'a1', tool_name: 'Bash', tool_input: { command: 'git push origin claude/work' } });
-      return o.status === 2 && /PUSH GATE/.test(o.stderr);
+      const held_rows = [['o.status === 2', (o.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/PUSH GATE/.test(o.stderr)', (/PUSH GATE/.test(o.stderr))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -2197,12 +2537,18 @@ const CASES = [
       const s = sid('pf');
       const w = (file_path, extra = {}) => decideFence(m,{ session_id: s, agent_id: 'a1', tool_name: 'Write', tool_input: { file_path }, cwd: r.dir, ...extra }, { plan });
       const fenced = (x) => /^PLAN FENCE/.test(x ?? '');
-      return w(join(r.dir, 'keep.mjs')) === null && w(join(r.dir, 'src', 'deep', 'x.ts')) === null && w(join(r.dir, 'docs', 'notes.md')) === null
-        && w(`/tmp/claude-0/-home-user/${s}/scratchpad/a.txt`) === null
-        && fenced(w(join(r.dir, 'other.mjs'))) && fenced(w(join(r.dir, 'src', '..', 'other.mjs'))) && fenced(w(join(r.dir, 'src')))
-        && fenced(w(join(r.dir, 'docs', 'other.md'))) && fenced(w(`/tmp/claude-0/-home-user/someone-else/scratchpad/a.txt`))
-        && w(join(r.dir, 'other.mjs'), { agent_id: undefined }) === null
-        && fenced(decideFence(m,{ session_id: s, agent_id: 'a1', tool_name: 'Edit', tool_input: { file_path: join(r.dir, 'keep.mjs') }, cwd: r.dir }, { plan: null }));
+      const held_rows = [['w(join(r.dir, \'keep.mjs\')) === null', (w(join(r.dir, 'keep.mjs')) === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['w(join(r.dir, \'src\', \'deep\', \'x.ts\')) === null', (w(join(r.dir, 'src', 'deep', 'x.ts')) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['w(join(r.dir, \'docs\', \'notes.md\')) === null', (w(join(r.dir, 'docs', 'notes.md')) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['w(`/tmp/claude-0/-home-user/${s}/scratchpad/a.txt`) === null', (w(`/tmp/claude-0/-home-user/${s}/scratchpad/a.txt`) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(w(join(r.dir, \'other.mjs\')))', (fenced(w(join(r.dir, 'other.mjs'))))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(w(join(r.dir, \'src\', \'..\', \'other.mjs\')))', (fenced(w(join(r.dir, 'src', '..', 'other.mjs'))))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(w(join(r.dir, \'src\')))', (fenced(w(join(r.dir, 'src'))))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(w(join(r.dir, \'docs\', \'other.md\')))', (fenced(w(join(r.dir, 'docs', 'other.md'))))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(w(`/tmp/claude-0/-home-user/someone-else/scratchpad/a.txt`))', (fenced(w(`/tmp/claude-0/-home-user/someone-else/scratchpad/a.txt`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['w(join(r.dir, \'other.mjs\'), { agent_id: undefined }) === null', (w(join(r.dir, 'other.mjs'), { agent_id: undefined }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(decideFence(m,{ session_id: s, agent_id: \'a1\', tool_name: \'Edit\', tool_input: { file_path: join(r.dir, \'keep.mjs\') }, cwd: r.dir }, { plan: null }))', (fenced(decideFence(m,{ session_id: s, agent_id: 'a1', tool_name: 'Edit', tool_input: { file_path: join(r.dir, 'keep.mjs') }, cwd: r.dir }, { plan: null })))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2226,7 +2572,7 @@ const CASES = [
       const bad = [...pass.filter(([, x]) => x !== null), ...refuse.filter(([, x]) => !/^PLAN FENCE/.test(x ?? '')),
         ...cds.filter(([, x]) => !/^PLAN FENCE.* is a (cd|pushd|popd), and a \1 is refused: write every path in full/.test(x ?? ''))];
       if (bad.length) throw new Error(`wrong on: ${bad.map(([c]) => JSON.stringify(c)).join(', ')}`);
-      return decideFence(m,{ session_id: s, tool_name: 'Bash', tool_input: { command: 'rm -rf x' }, cwd: r.dir }, { plan }) === null;
+      return assertAll([['decideFence(m,{ session_id: s, tool_name: \'Bash\', tool_input: { command: \'rm -rf x\' }, cwd: r.dir }, { plan }) === null', (decideFence(m,{ session_id: s, tool_name: 'Bash', tool_input: { command: 'rm -rf x' }, cwd: r.dir }, { plan }) === null)]]);
     },
   },
   {
@@ -2238,13 +2584,20 @@ const CASES = [
       const call = (tool_name, tool_input = {}, reads) => decideFence(m,{ session_id: s, agent_id: 'a1', tool_name, tool_input, cwd: '/' }, { plan, ...(reads ? { reads } : {}) });
       const fenced = (x) => /^PLAN FENCE/.test(x ?? '');
       const no = () => false;
-      return call('Read', { file_path: '/etc/hostname' }) === null && call('mcp__github__get_file_contents', { owner: 'o', repo: 'r', path: 'a' }) === null
-        && call('SubagentHandback', { message: 'done' }, no) === null && call('StructuredOutput', { result: 'x' }, no) === null
-        && fenced(call('Agent', { prompt: 'x', subagent_type: 'Explore' })) && fenced(call('Task', { prompt: 'x', subagent_type: 'Plan' }))
-        && call('TaskStop', { task_id: 'x' }, no) === null && fenced(call('Artifact', { file_path: '/tmp/x.html' }))
-        && fenced(call('mcp__github__push_files', { branch: 'main' })) && fenced(call('mcp__github__actions_run_trigger', {}))
-        && fenced(call('ExitPlanMode', {})) && fenced(call('SomeToolNobodyHasHeardOf', {}))
-        && decideFence(m,{ session_id: s, tool_name: 'Agent', tool_input: {} }, { plan }) === null;
+      const held_rows = [['call(\'Read\', { file_path: \'/etc/hostname\' }) === null', (call('Read', { file_path: '/etc/hostname' }) === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['call(\'mcp__github__get_file_contents\', { owner: \'o\', repo: \'r\', path: \'a\' }) === null', (call('mcp__github__get_file_contents', { owner: 'o', repo: 'r', path: 'a' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['call(\'SubagentHandback\', { message: \'done\' }, no) === null', (call('SubagentHandback', { message: 'done' }, no) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['call(\'StructuredOutput\', { result: \'x\' }, no) === null', (call('StructuredOutput', { result: 'x' }, no) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(call(\'Agent\', { prompt: \'x\', subagent_type: \'Explore\' }))', (fenced(call('Agent', { prompt: 'x', subagent_type: 'Explore' })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(call(\'Task\', { prompt: \'x\', subagent_type: \'Plan\' }))', (fenced(call('Task', { prompt: 'x', subagent_type: 'Plan' })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['call(\'TaskStop\', { task_id: \'x\' }, no) === null', (call('TaskStop', { task_id: 'x' }, no) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(call(\'Artifact\', { file_path: \'/tmp/x.html\' }))', (fenced(call('Artifact', { file_path: '/tmp/x.html' })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(call(\'mcp__github__push_files\', { branch: \'main\' }))', (fenced(call('mcp__github__push_files', { branch: 'main' })))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(call(\'mcp__github__actions_run_trigger\', {}))', (fenced(call('mcp__github__actions_run_trigger', {})))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(call(\'ExitPlanMode\', {}))', (fenced(call('ExitPlanMode', {})))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(call(\'SomeToolNobodyHasHeardOf\', {}))', (fenced(call('SomeToolNobodyHasHeardOf', {})))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['decideFence(m,{ session_id: s, tool_name: \'Agent\', tool_input: {} }, { plan }) === null', (decideFence(m,{ session_id: s, tool_name: 'Agent', tool_input: {} }, { plan }) === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2274,7 +2627,12 @@ const CASES = [
       // The main thread's manager fence and plan mode's reader list are not changed: both still refuse the tool.
       const main = m.dispatch.managerFence({ session_id: s, tool_name: TOOL, tool_input: sweep }, { plan });
       const inPlanMode = m.dispatch.planGuardReads({ session_id: s, tool_name: TOOL, tool_input: sweep, cwd: r.dir });
-      return passes && refusals.every(swept) && others.every(fenced) && /^MANAGER FENCE/.test(main ?? '') && inPlanMode === false;
+      const held_rows = [['passes', (passes)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusals.every(swept)', (refusals.every(swept))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['others.every(fenced)', (others.every(fenced))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^MANAGER FENCE/.test(main ?? \'\')', (/^MANAGER FENCE/.test(main ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['inPlanMode === false', (inPlanMode === false)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2300,7 +2658,10 @@ const CASES = [
       const heredoc = b(`cat > ${scratch}/note.txt <<'EOF'\nhello\nEOF`);
       const heredocAfter = b(`cat <<'EOF' > ${scratch}/note.txt\nhello\nEOF`);
       const written = /^PLAN FENCE.* A redirect writes .*by a heredoc/;
-      return written.test(heredoc ?? '') && written.test(heredocAfter ?? '') && !/COMMIT MESSAGE RULE/.test(notCommit ?? '');
+      const held_rows = [['written.test(heredoc ?? \'\')', (written.test(heredoc ?? ''))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['written.test(heredocAfter ?? \'\')', (written.test(heredocAfter ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/COMMIT MESSAGE RULE/.test(notCommit ?? \'\')', (!/COMMIT MESSAGE RULE/.test(notCommit ?? ''))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2314,8 +2675,11 @@ const CASES = [
       const commit = bash('a1', 'git commit -m "Tuned by Sonnet 5"');
       const heredoc = bash('a2', `cat > ${w.cwd}/x.txt <<'EOF'\nhello\nEOF`);
       const MARK = m.dispatch.SHAPE_FAULT_MARK;
-      return [commit, heredoc].every((r) => r.status === 2 && /PLAN FENCE/.test(r.stderr) && r.stderr.includes(MARK)) && /COMMIT MESSAGE RULE/.test(commit.stderr)
-        && !agentLatch('a1') && !agentLatch('a2');
+      const held_rows = [['[commit, heredoc].every((r) => r.status === 2 && /PLAN FENCE/.test(r.stderr) && r.stderr.includes(MARK))', ([commit, heredoc].every((r) => r.status === 2 && /PLAN FENCE/.test(r.stderr) && r.stderr.includes(MARK)))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/COMMIT MESSAGE RULE/.test(commit.stderr)', (/COMMIT MESSAGE RULE/.test(commit.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!agentLatch(\'a1\')', (!agentLatch('a1'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!agentLatch(\'a2\')', (!agentLatch('a2'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2339,7 +2703,12 @@ const CASES = [
       const modelOk = refuse('Fix\n\nTuned by Sonnet 5\n', 'Tuned by Sonnet 5') && refuse('Fix\n\nclaude-opus-5 wrote it\n', 'claude-opus-5');
       const plain = commit('Fix the toolbar\n\nMove the folder opus/ and the file notes-sonnet.md\n');
       const check = spawnSync('node', [join(dir, 'branch-guard.mjs'), '--repo', t], { encoding: 'utf8', timeout: 60000 });
-      return trailerOk && linkOk && modelOk && plain.status === 0 && check.status === 0;
+      const held_rows = [['trailerOk', (trailerOk)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['linkOk', (linkOk)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['modelOk', (modelOk)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['plain.status === 0', (plain.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['check.status === 0', (check.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2358,12 +2727,18 @@ const CASES = [
       const w = (file_path) => decideFence(m,{ session_id: s, agent_id: 'a1', tool_name: 'Write', tool_input: { file_path }, cwd: '/' }, { plan });
       const b = (command) => decideFence(m,{ session_id: s, agent_id: 'a1', tool_name: 'Bash', tool_input: { command }, cwd: abg.dir }, { plan, classify: () => true });
       const fenced = (x) => /^PLAN FENCE/.test(x ?? '');
-      return w(join(abg.dir, 'keep.mjs')) === null && fenced(w(join(oth.dir, 'keep.mjs')))
-        && w(join(oth.dir, 'src', 'x.ts')) === null && fenced(w(join(abg.dir, 'src', 'x.ts')))
-        && w(join(hub.dir, 'a.mjs')) === null && fenced(w(join(abg.dir, 'a.mjs')))
-        && fenced(w(join(abg.dir, 'free.mjs')))
-        && /live gate copy/.test(w(join(live, 'hook-dispatch.mjs')) ?? '') && fenced(w(join(live, 'x', 'y.mjs')))
-        && fenced(b(`cat keep.mjs > ${live}/hook-dispatch.mjs`)) && b(`cat keep.mjs > ${abg.dir}/keep.mjs`) === null;
+      const held_rows = [['w(join(abg.dir, \'keep.mjs\')) === null', (w(join(abg.dir, 'keep.mjs')) === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(w(join(oth.dir, \'keep.mjs\')))', (fenced(w(join(oth.dir, 'keep.mjs'))))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['w(join(oth.dir, \'src\', \'x.ts\')) === null', (w(join(oth.dir, 'src', 'x.ts')) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(w(join(abg.dir, \'src\', \'x.ts\')))', (fenced(w(join(abg.dir, 'src', 'x.ts'))))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['w(join(hub.dir, \'a.mjs\')) === null', (w(join(hub.dir, 'a.mjs')) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(w(join(abg.dir, \'a.mjs\')))', (fenced(w(join(abg.dir, 'a.mjs'))))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(w(join(abg.dir, \'free.mjs\')))', (fenced(w(join(abg.dir, 'free.mjs'))))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/live gate copy/.test(w(join(live, \'hook-dispatch.mjs\')) ?? \'\')', (/live gate copy/.test(w(join(live, 'hook-dispatch.mjs')) ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(w(join(live, \'x\', \'y.mjs\')))', (fenced(w(join(live, 'x', 'y.mjs'))))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(b(`cat keep.mjs > ${live}/hook-dispatch.mjs`))', (fenced(b(`cat keep.mjs > ${live}/hook-dispatch.mjs`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['b(`cat keep.mjs > ${abg.dir}/keep.mjs`) === null', (b(`cat keep.mjs > ${abg.dir}/keep.mjs`) === null)]);
+      return assertAll(held_rows);
     },
   },
   // ---- the review step changes nothing outside the scratchpad (step 186, LESSONS §423) ----
@@ -2408,9 +2783,15 @@ const CASES = [
       const hooked = (tool_name, tool_input) => w.call('PreToolUse', { session_id: sid('rt'), agent_id: 'rv3', tool_name, tool_input });
       const hookWrite = hooked('Write', { file_path: join(target, 'x.txt'), content: 'x' });
       const hookRedirect = hooked('Bash', { command: `git status > ${target}/out.txt` });
-      return badNamed === 0 && badPass === 0
-        && hookWrite.status === 2 && /PLAN FENCE/.test(hookWrite.stderr) && /review step/.test(hookWrite.stderr) && /step 3/.test(hookWrite.stderr)
-        && hookRedirect.status === 2 && /review step/.test(hookRedirect.stderr);
+      const held_rows = [['badNamed === 0', (badNamed === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['badPass === 0', (badPass === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['hookWrite.status === 2', (hookWrite.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/PLAN FENCE/.test(hookWrite.stderr)', (/PLAN FENCE/.test(hookWrite.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/review step/.test(hookWrite.stderr)', (/review step/.test(hookWrite.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/step 3/.test(hookWrite.stderr)', (/step 3/.test(hookWrite.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['hookRedirect.status === 2', (hookRedirect.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/review step/.test(hookRedirect.stderr)', (/review step/.test(hookRedirect.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2445,10 +2826,18 @@ const CASES = [
       const emptyRecord = hookWrite('rv3');
       marker({});
       const oldMarker = hookWrite('rv3');
-      return asStepOne.every((x) => x === null) && noRecord.every((x) => x === null) && unknownStep.every((x) => x === null) && reads.every((x) => x === null)
+      return assertAll([
+        ['asStepOne.every((x) => x === null)', asStepOne.every((x) => x === null)],
+        ['noRecord.every((x) => x === null)', noRecord.every((x) => x === null)],
+        ['unknownStep.every((x) => x === null)', unknownStep.every((x) => x === null)],
+        ['reads.every((x) => x === null)', reads.every((x) => x === null)],
         // A write outside the Files list is still the Files list's refusal for an agent that is not the review.
-        && /outside the Files list/.test(write(join(r.dir, 'other.mjs'), 1) ?? '') && /outside the Files list/.test(write(join(r.dir, 'other.mjs'), 2, { ...plan, review: [] }) ?? '')
-        && builder.status === 0 && emptyRecord.status === 0 && oldMarker.status === 0;
+        ['a write outside the Files list by step 1 is refused with the Files wording', /outside the Files list/.test(write(join(r.dir, 'other.mjs'), 1) ?? '')],
+        ['a write outside the Files list by step 2 with an empty record is refused with the Files wording', /outside the Files list/.test(write(join(r.dir, 'other.mjs'), 2, { ...plan, review: [] }) ?? '')],
+        ['builder.status === 0', builder.status === 0, builder.stderr],
+        ['emptyRecord.status === 0', emptyRecord.status === 0, emptyRecord.stderr],
+        ['oldMarker.status === 0', oldMarker.status === 0, oldMarker.stderr],
+      ]);
     },
   },
   {
@@ -2457,7 +2846,9 @@ const CASES = [
     run(m, dir) {
       const w = world(dir);
       const o = w.call('PreToolUse', { session_id: sid('fw'), agent_id: 'a1', tool_name: 'Write', tool_input: { file_path: join(w.cwd, 'stray.txt'), content: 'x' } });
-      return o.status === 2 && /PLAN FENCE/.test(o.stderr);
+      const held_rows = [['o.status === 2', (o.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/PLAN FENCE/.test(o.stderr)', (/PLAN FENCE/.test(o.stderr))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -2498,8 +2889,18 @@ const CASES = [
       const full = decide(p('Bash'), [...read('r4', doc, 1, 3, later(5)), ...read('r5', doc, 4, 2, later(6), false)], no);
       // The line printed at SessionStart names the hub's own copy.
       const named = /^DOCTRINE DUE/.test(line) && !line.includes('\n') && line.includes(m.doctrine.NEVER_PAGE) && /doctrine\/never\.md$/.test(m.doctrine.NEVER_PAGE);
-      return refusesWrite && readPasses && agentPasses && agentToolRefused && !!partial && !!old && !!wrongFile && stillDue
-        && full === null && !existsSync(dueFile) && named;
+      const held_rows = [['refusesWrite', (refusesWrite)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readPasses', (readPasses)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agentPasses', (agentPasses)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agentToolRefused', (agentToolRefused)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!partial', (!!partial)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!old', (!!old)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!wrongFile', (!!wrongFile)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stillDue', (stillDue)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['full === null', (full === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!existsSync(dueFile)', (!existsSync(dueFile))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['named', (named)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2519,8 +2920,15 @@ const CASES = [
         const lines = String(out ?? '').split('\n').filter((l) => /DOCTRINE/.test(l));
         return lines.length === 1 && /^DOCTRINE DUE/.test(lines[0]) && lines[0].includes(join(dir, 'doctrine', 'never.md')) && lines[0].includes(how);
       };
-      return due && read.status === 0 && agent.status === 2 && /DOCTRINE GATE/.test(agent.stderr)
-        && compact.status === 0 && oneLine(compact.stdout, 'was compacted') && startup.status === 0 && oneLine(startup.stdout, 'started');
+      const held_rows = [['due', (due)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['read.status === 0', (read.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agent.status === 2', (agent.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/DOCTRINE GATE/.test(agent.stderr)', (/DOCTRINE GATE/.test(agent.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['compact.status === 0', (compact.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['oneLine(compact.stdout, \'was compacted\')', (oneLine(compact.stdout, 'was compacted'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['startup.status === 0', (startup.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['oneLine(startup.stdout, \'started\')', (oneLine(startup.stdout, 'started'))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -2560,11 +2968,21 @@ const CASES = [
       // A file whose lines cannot be counted: every line, with no number to give.
       const blind = m.doctrine.markDue({ session_id: s, source: 'compact' }, absent);
       const blindRefusal = gate('compact', [], absent);
-      return cleared
-        && named(bound) && named(shortFirst) && named(shortLast) && named(early)
-        && printed(compact, 'was compacted') && printed(started, 'started') && printed(resumed, 'was resumed') && recorded === 'resume'
-        && /^DOCTRINE DUE/.test(blind) && blind.includes('every line') && !blind.includes('lines 1 to')
-        && refused(blindRefusal, 'every line') && !blindRefusal.includes('lines 1 to');
+      const held_rows = [['cleared', (cleared)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['named(bound)', (named(bound))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['named(shortFirst)', (named(shortFirst))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['named(shortLast)', (named(shortLast))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['named(early)', (named(early))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['printed(compact, \'was compacted\')', (printed(compact, 'was compacted'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['printed(started, \'started\')', (printed(started, 'started'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['printed(resumed, \'was resumed\')', (printed(resumed, 'was resumed'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['recorded === \'resume\'', (recorded === 'resume')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^DOCTRINE DUE/.test(blind)', (/^DOCTRINE DUE/.test(blind))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['blind.includes(\'every line\')', (blind.includes('every line'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!blind.includes(\'lines 1 to\')', (!blind.includes('lines 1 to'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(blindRefusal, \'every line\')', (refused(blindRefusal, 'every line'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!blindRefusal.includes(\'lines 1 to\')', (!blindRefusal.includes('lines 1 to'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2587,9 +3005,19 @@ const CASES = [
       // The same transcript at a compaction: the reads came before the start fired, so every line is still due.
       const compact = m.doctrine.markDue({ session_id: s, source: 'compact', transcript_path: tr }, doc);
       const compacted = m.doctrine.decide({ session_id: s, tool_name: 'Bash', tool_input: {} }, entries, { classify: () => false, doctrine: doc });
-      return /^DOCTRINE HELD/.test(line) && !line.includes('\n') && line.includes('none is due') && line.includes('13 lines') && line.includes(doc)
-        && written && first === null && gone
-        && /^DOCTRINE DUE/.test(compact) && typeof compacted === 'string' && /^DOCTRINE GATE/.test(compacted) && existsSync(marker);
+      const held_rows = [['/^DOCTRINE HELD/.test(line)', (/^DOCTRINE HELD/.test(line))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!line.includes(\'\\n\')', (!line.includes('\n'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['line.includes(\'none is due\')', (line.includes('none is due'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['line.includes(\'13 lines\')', (line.includes('13 lines'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['line.includes(doc)', (line.includes(doc))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['written', (written)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first === null', (first === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gone', (gone)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^DOCTRINE DUE/.test(compact)', (/^DOCTRINE DUE/.test(compact))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof compacted === \'string\'', (typeof compacted === 'string')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^DOCTRINE GATE/.test(compacted)', (/^DOCTRINE GATE/.test(compacted))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['existsSync(marker)', (existsSync(marker))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2607,9 +3035,18 @@ const CASES = [
       const call = (entries) => m.doctrine.decide({ session_id: s, tool_name: 'Bash', tool_input: {} }, entries, { classify: () => false, doctrine: doc });
       const refused = call(part);
       const rest = [...part, ...fileReads(doc, 13, [[8, 6]], (k) => ts(10 + k))];
-      return /^DOCTRINE DUE/.test(line) && line.includes('was resumed') && line.includes('every line (lines 1 to 13)') && !line.includes('none is due')
-        && typeof refused === 'string' && /^DOCTRINE GATE/.test(refused) && refused.includes('every line (lines 1 to 13)') && refused.includes(doc) && existsSync(marker)
-        && call(rest) === null && !existsSync(marker);
+      const held_rows = [['/^DOCTRINE DUE/.test(line)', (/^DOCTRINE DUE/.test(line))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['line.includes(\'was resumed\')', (line.includes('was resumed'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['line.includes(\'every line (lines 1 to 13)\')', (line.includes('every line (lines 1 to 13)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!line.includes(\'none is due\')', (!line.includes('none is due'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof refused === \'string\'', (typeof refused === 'string')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^DOCTRINE GATE/.test(refused)', (/^DOCTRINE GATE/.test(refused))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused.includes(\'every line (lines 1 to 13)\')', (refused.includes('every line (lines 1 to 13)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused.includes(doc)', (refused.includes(doc))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['existsSync(marker)', (existsSync(marker))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['call(rest) === null', (call(rest) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!existsSync(marker)', (!existsSync(marker))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2627,9 +3064,14 @@ const CASES = [
       const call = (list) => m.doctrine.decide({ session_id: s, tool_name: 'Bash', tool_input: {} }, list, { classify: () => false, doctrine: doc });
       const refused = call(entries);
       const whole = [...entries, ...fileReads(doc, 13, [[6, 8]], (k) => ts(20 + k))];
-      return /^DOCTRINE DUE/.test(line) && line.includes('every line (lines 1 to 13)')
-        && typeof refused === 'string' && /^DOCTRINE GATE/.test(refused) && existsSync(marker)
-        && call(whole) === null && !existsSync(marker);
+      const held_rows = [['/^DOCTRINE DUE/.test(line)', (/^DOCTRINE DUE/.test(line))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['line.includes(\'every line (lines 1 to 13)\')', (line.includes('every line (lines 1 to 13)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof refused === \'string\'', (typeof refused === 'string')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^DOCTRINE GATE/.test(refused)', (/^DOCTRINE GATE/.test(refused))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['existsSync(marker)', (existsSync(marker))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['call(whole) === null', (call(whole) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!existsSync(marker)', (!existsSync(marker))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2651,9 +3093,14 @@ const CASES = [
       const textOnly = resumeLine([...fileReads(doc, 12, [[1, 5], [6, 7]])], doc);
       // Every line of a file that cannot be counted: the reads exist, and the guard cannot say they cover it.
       const blindLine = resumeLine(fileReads(absent, 13, [[1, 13]]), absent);
-      return /^DOCTRINE DUE/.test(staleLine) && staleLine.includes('every line (lines 1 to 13)')
-        && /^DOCTRINE HELD/.test(fresh) && /^DOCTRINE DUE/.test(textOnly)
-        && /^DOCTRINE DUE/.test(blindLine) && blindLine.includes('every line') && !blindLine.includes('lines 1 to');
+      const held_rows = [['/^DOCTRINE DUE/.test(staleLine)', (/^DOCTRINE DUE/.test(staleLine))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['staleLine.includes(\'every line (lines 1 to 13)\')', (staleLine.includes('every line (lines 1 to 13)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^DOCTRINE HELD/.test(fresh)', (/^DOCTRINE HELD/.test(fresh))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^DOCTRINE DUE/.test(textOnly)', (/^DOCTRINE DUE/.test(textOnly))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^DOCTRINE DUE/.test(blindLine)', (/^DOCTRINE DUE/.test(blindLine))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['blindLine.includes(\'every line\')', (blindLine.includes('every line'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!blindLine.includes(\'lines 1 to\')', (!blindLine.includes('lines 1 to'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2665,8 +3112,15 @@ const CASES = [
       const resumed = w.call('SessionStart', { session_id: s, source: 'resume' });
       const lines = String(resumed.stdout ?? '').split('\n').filter((l) => /DOCTRINE/.test(l));
       const agent = w.call('PreToolUse', { session_id: s, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } });
-      return resumed.status === 0 && lines.length === 1 && /^DOCTRINE DUE/.test(lines[0]) && lines[0].includes('was resumed') && lines[0].includes(join(dir, 'doctrine', 'never.md'))
-        && existsSync(join(process.env.DOCTRINE_DUE_DIR, `${s}.json`)) && agent.status === 2 && /DOCTRINE GATE/.test(agent.stderr);
+      const held_rows = [['resumed.status === 0', (resumed.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lines.length === 1', (lines.length === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^DOCTRINE DUE/.test(lines[0])', (/^DOCTRINE DUE/.test(lines[0]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lines[0].includes(\'was resumed\')', (lines[0].includes('was resumed'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lines[0].includes(join(dir, \'doctrine\', \'never.md\'))', (lines[0].includes(join(dir, 'doctrine', 'never.md')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['existsSync(join(process.env.DOCTRINE_DUE_DIR, `${s}.json`))', (existsSync(join(process.env.DOCTRINE_DUE_DIR, `${s}.json`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agent.status === 2', (agent.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/DOCTRINE GATE/.test(agent.stderr)', (/DOCTRINE GATE/.test(agent.stderr))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -2717,7 +3171,22 @@ const CASES = [
       const neverRead = fileReads(never, N, [[1, N]], (j) => later(5 + j));
       const then = call(IN, neverRead, s2);
       const startFirst = typeof first === 'string' && /^DOCTRINE GATE/.test(first) && refused(then);
-      return noEntry && viaTool && viaMode && readPasses && agentPasses && forcedPasses && partial && whole && owedAgain && readAfterExit && refusedExit && unseenExit && compacted && blind && startFirst;
+      const held_rows = [['noEntry', (noEntry)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['viaTool', (viaTool)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['viaMode', (viaMode)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readPasses', (readPasses)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agentPasses', (agentPasses)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['forcedPasses', (forcedPasses)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['partial', (partial)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['whole', (whole)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owedAgain', (owedAgain)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readAfterExit', (readAfterExit)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedExit', (refusedExit)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['unseenExit', (unseenExit)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['compacted', (compacted)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['blind', (blind)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['startFirst', (startFirst)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2733,7 +3202,12 @@ const CASES = [
       const reads = bare.call('PreToolUse', { session_id: s, permission_mode: 'plan', tool_name: 'Read', tool_input: { file_path: join(dir, 'doctrine', 'plans.md') } });
       const s2 = sid('pd');
       const clear = holding.call('PreToolUse', { session_id: s2, permission_mode: 'plan', tool_name: 'Write', tool_input: { file_path: holding.plan, content: STEPS_PLAN } });
-      return held.status === 2 && /PLAN RULES GATE/.test(held.stderr) && !latched(s) && reads.status === 0 && !/PLAN RULES GATE/.test(`${clear.stderr}${clear.stdout}`);
+      const held_rows = [['held.status === 2', (held.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/PLAN RULES GATE/.test(held.stderr)', (/PLAN RULES GATE/.test(held.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(s)', (!latched(s))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['reads.status === 0', (reads.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/PLAN RULES GATE/.test(`${clear.stderr}${clear.stdout}`)', (!/PLAN RULES GATE/.test(`${clear.stderr}${clear.stdout}`))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -2760,9 +3234,14 @@ const CASES = [
       const resume = brief({ session_id: marked('resume'), source: 'resume' });
       const noMarker = brief({ session_id: sid('br') });
       const noPayload = brief(null);
-      return titled(startup) && startup.stdout.includes('titles only') && titled(cleared)
-        && countOnly(compact, 'was compacted') && countOnly(resume, 'was resumed')
-        && countOnly(noMarker, 'is not there') && countOnly(noPayload, 'no SessionStart payload');
+      const held_rows = [['titled(startup)', (titled(startup))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['startup.stdout.includes(\'titles only\')', (startup.stdout.includes('titles only'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['titled(cleared)', (titled(cleared))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['countOnly(compact, \'was compacted\')', (countOnly(compact, 'was compacted'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['countOnly(resume, \'was resumed\')', (countOnly(resume, 'was resumed'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['countOnly(noMarker, \'is not there\')', (countOnly(noMarker, 'is not there'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['countOnly(noPayload, \'no SessionStart payload\')', (countOnly(noPayload, 'no SessionStart payload'))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -2798,7 +3277,11 @@ const CASES = [
       const ends = cut.status === 0 && JSON.stringify(shapesOf(cut.stdout)) === JSON.stringify(['One.', 'Two.']);
       const missing = brief(place([]));
       const said = missing.status === 0 && missing.stdout.includes('HOW TO WRITE BACK: Doctrine 2 is not reachable this session.') && missing.stdout.includes('THE DOCTRINE: its index is not reachable this session');
-      return exact && indexed && ends && said;
+      const held_rows = [['exact', (exact)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['indexed', (indexed)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ends', (ends)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said', (said)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -2824,9 +3307,19 @@ const CASES = [
       const question = say([ask, reply(5, 'Has the workflow finished? Its log is the place to look.')]);
       const conditional = say([ask, reply(5, 'Once the push lands, the deploy follows it.')]);
       const declared = say([ask, reply(5, `Stopping here: open for you is the release.\n${claim}`)]);
-      return remembered.status === 2 && remembered.stderr.includes(SHA) && /rule 15/.test(remembered.stderr)
-        && afterRead.status === 0 && lastTurn.status === 2 && hookOnly.status === 2 && errorOnly.status === 2
-        && think.status === 0 && thinkNoAsk.status === 2 && question.status === 0 && conditional.status === 0 && declared.status === 2;
+      const held_rows = [['remembered.status === 2', (remembered.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['remembered.stderr.includes(SHA)', (remembered.stderr.includes(SHA))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/rule 15/.test(remembered.stderr)', (/rule 15/.test(remembered.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['afterRead.status === 0', (afterRead.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lastTurn.status === 2', (lastTurn.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['hookOnly.status === 2', (hookOnly.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['errorOnly.status === 2', (errorOnly.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['think.status === 0', (think.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['thinkNoAsk.status === 2', (thinkNoAsk.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['question.status === 0', (question.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['conditional.status === 0', (conditional.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['declared.status === 2', (declared.status === 2)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -2864,13 +3357,20 @@ const CASES = [
       // The running agent hands back: the next status prints it, and only it.
       appendFileSync(join(subs, 'agent-running.jsonl'), lines([said(-5, 'n2', 'SubagentHandback', { message: 'The long run is done.' }), back(-4, 'n2', 'Report delivered to your caller.')]));
       const third = status();
-      return /by a report\./.test(item(first, 'reported')) && item(first, 'reported').includes('Step two is built')
-        && /by an interruption\./.test(item(first, 'cutoff')) && item(first, 'cutoff').includes('node build.mjs')
-        && /by a refusal\./.test(item(first, 'refused')) && item(first, 'refused').includes('Stopped at a refusal')
-        && item(first, 'running') === '' && item(first, 'older') === ''
-        && /Agents ended since the last status: none\./.test(second)
-        && /by a report\./.test(item(third, 'running')) && item(third, 'running').includes('The long run is done')
-        && item(third, 'reported') === '' && item(third, 'cutoff') === '';
+      const held_rows = [['/by a report\\./.test(item(first, \'reported\'))', (/by a report\./.test(item(first, 'reported')))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['item(first, \'reported\').includes(\'Step two is built\')', (item(first, 'reported').includes('Step two is built'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/by an interruption\\./.test(item(first, \'cutoff\'))', (/by an interruption\./.test(item(first, 'cutoff')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['item(first, \'cutoff\').includes(\'node build.mjs\')', (item(first, 'cutoff').includes('node build.mjs'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/by a refusal\\./.test(item(first, \'refused\'))', (/by a refusal\./.test(item(first, 'refused')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['item(first, \'refused\').includes(\'Stopped at a refusal\')', (item(first, 'refused').includes('Stopped at a refusal'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['item(first, \'running\') === \'\'', (item(first, 'running') === '')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['item(first, \'older\') === \'\'', (item(first, 'older') === '')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Agents ended since the last status: none\\./.test(second)', (/Agents ended since the last status: none\./.test(second))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/by a report\\./.test(item(third, \'running\'))', (/by a report\./.test(item(third, 'running')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['item(third, \'running\').includes(\'The long run is done\')', (item(third, 'running').includes('The long run is done'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['item(third, \'reported\') === \'\'', (item(third, 'reported') === '')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['item(third, \'cutoff\') === \'\'', (item(third, 'cutoff') === '')]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2909,11 +3409,17 @@ const CASES = [
       const block = out.slice(Math.max(0, out.indexOf('Running agents'))).split("Agents' hook refusals")[0];
       const item = (id) => block.split('\n- ').find((x) => x.startsWith(`agent ${id} `)) ?? '';
       const fresh = item('fresh'), stale = item('stale'), silent = item('silent');
-      return out.includes('Running agents, each with the latest line of its progress note:')
-        && fresh.includes('step 2: written') && fresh.includes('suite running, 30 of 58') && !fresh.includes('reading the gates') && !/FLAGGED/.test(fresh)
-        && /FLAGGED, the note is older than five minutes/.test(stale) && stale.includes('walks started')
-        && /FLAGGED, no progress note/.test(silent) && silent.includes('step-4.txt')
-        && item('done') === '';
+      const held_rows = [['out.includes(\'Running agents, each with the latest line of its progress note:\')', (out.includes('Running agents, each with the latest line of its progress note:'))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fresh.includes(\'step 2: written\')', (fresh.includes('step 2: written'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fresh.includes(\'suite running, 30 of 58\')', (fresh.includes('suite running, 30 of 58'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!fresh.includes(\'reading the gates\')', (!fresh.includes('reading the gates'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/FLAGGED/.test(fresh)', (!/FLAGGED/.test(fresh))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/FLAGGED, the note is older than five minutes/.test(stale)', (/FLAGGED, the note is older than five minutes/.test(stale))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stale.includes(\'walks started\')', (stale.includes('walks started'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/FLAGGED, no progress note/.test(silent)', (/FLAGGED, no progress note/.test(silent))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['silent.includes(\'step-4.txt\')', (silent.includes('step-4.txt'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['item(\'done\') === \'\'', (item('done') === '')]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -2950,12 +3456,23 @@ const CASES = [
       const block = out.slice(Math.max(0, out.indexOf("Agents' hook refusals"))).split('Approval state')[0];
       const item = (id) => block.split('\n- ').find((x) => x.startsWith(`agent ${id} `)) ?? '';
       const twice = item('refusedtwice'), prose = item('onlyprose'), going = item('stillgoing');
-      return block.includes("never from what it said")
-        && /\(ended by a refusal\): 2 hook refusals\./.test(twice) && twice.includes('PLAN FENCE refused the cd') && twice.includes('PLAN FENCE refused the stray write')
-        && /Refused at \d\d:\d\d \(California\), Bash: /.test(twice) && /Refused at \d\d:\d\d \(California\), Write: /.test(twice) && /Last tool result, SubagentHandback/.test(twice) && twice.includes('Report delivered to your caller.')
-        && /\(ended by a report\): no hook refusals\./.test(prose) && /Last tool result, SubagentHandback/.test(prose) && !prose.includes('Refused at')
-        && /\(running\): 1 hook refusal\./.test(going) && going.includes('refused the edit outside the Files list') && /Last tool result, Bash/.test(going) && going.includes('syntax ok')
-        && item('older') === '';
+      const held_rows = [['block.includes("never from what it said")', (block.includes("never from what it said"))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/\\(ended by a refusal\\): 2 hook refusals\\./.test(twice)', (/\(ended by a refusal\): 2 hook refusals\./.test(twice))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['twice.includes(\'PLAN FENCE refused the cd\')', (twice.includes('PLAN FENCE refused the cd'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['twice.includes(\'PLAN FENCE refused the stray write\')', (twice.includes('PLAN FENCE refused the stray write'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Refused at \\d\\d:\\d\\d \\(California\\), Bash: /.test(twice)', (/Refused at \d\d:\d\d \(California\), Bash: /.test(twice))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Refused at \\d\\d:\\d\\d \\(California\\), Write: /.test(twice)', (/Refused at \d\d:\d\d \(California\), Write: /.test(twice))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Last tool result, SubagentHandback/.test(twice)', (/Last tool result, SubagentHandback/.test(twice))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['twice.includes(\'Report delivered to your caller.\')', (twice.includes('Report delivered to your caller.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/\\(ended by a report\\): no hook refusals\\./.test(prose)', (/\(ended by a report\): no hook refusals\./.test(prose))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Last tool result, SubagentHandback/.test(prose)', (/Last tool result, SubagentHandback/.test(prose))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!prose.includes(\'Refused at\')', (!prose.includes('Refused at'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/\\(running\\): 1 hook refusal\\./.test(going)', (/\(running\): 1 hook refusal\./.test(going))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['going.includes(\'refused the edit outside the Files list\')', (going.includes('refused the edit outside the Files list'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Last tool result, Bash/.test(going)', (/Last tool result, Bash/.test(going))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['going.includes(\'syntax ok\')', (going.includes('syntax ok'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['item(\'older\') === \'\'', (item('older') === '')]);
+      return assertAll(held_rows);
     },
   },
 
@@ -3002,14 +3519,27 @@ const CASES = [
       // Nothing runs: the wait returns at once.
       handBack('slow', 'Step three is done.');
       const d = await waitRun(dir, env(8000), 6000);
-      return a.code === 0 && a.ms < 6000 && a.out.includes('Progress notes written since the wait began')
-        && a.out.includes('suite running, 12 of 61') && !a.out.includes('building') && a.out.includes('This wait records nothing')
-        && b.code === 0 && b.ms < 6000 && b.out.includes('Ended since the wait began') && /agent busy .*by a report\./.test(b.out)
-        && b.out.includes('Step two is built')
-        && /- busy .*by a report\./.test(status) && status.includes('Step two is built')
-        && c.code === 0 && c.ms >= 1400 && /passed; no running agent's progress note changed and no agent ended/.test(c.out)
-        && c.out.includes('walks started')
-        && d.code === 0 && d.ms < 3000 && /nothing to wait on/.test(d.out);
+      const held_rows = [['a.code === 0', (a.code === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['a.ms < 6000', (a.ms < 6000)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['a.out.includes(\'Progress notes written since the wait began\')', (a.out.includes('Progress notes written since the wait began'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['a.out.includes(\'suite running, 12 of 61\')', (a.out.includes('suite running, 12 of 61'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!a.out.includes(\'building\')', (!a.out.includes('building'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['a.out.includes(\'This wait records nothing\')', (a.out.includes('This wait records nothing'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['b.code === 0', (b.code === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['b.ms < 6000', (b.ms < 6000)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['b.out.includes(\'Ended since the wait began\')', (b.out.includes('Ended since the wait began'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/agent busy .*by a report\\./.test(b.out)', (/agent busy .*by a report\./.test(b.out))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['b.out.includes(\'Step two is built\')', (b.out.includes('Step two is built'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/- busy .*by a report\\./.test(status)', (/- busy .*by a report\./.test(status))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['status.includes(\'Step two is built\')', (status.includes('Step two is built'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['c.code === 0', (c.code === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['c.ms >= 1400', (c.ms >= 1400)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/passed; no running agent\'s progress note changed and no agent ended/.test(c.out)', (/passed; no running agent's progress note changed and no agent ended/.test(c.out))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['c.out.includes(\'walks started\')', (c.out.includes('walks started'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['d.code === 0', (d.code === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['d.ms < 3000', (d.ms < 3000)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/nothing to wait on/.test(d.out)', (/nothing to wait on/.test(d.out))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3038,8 +3568,13 @@ const CASES = [
       appendFileSync(join(subs, 'agent-busy.jsonl'), jsonl([said(-1, 'b2', 'Bash', { command: 'cd /x && make' }),
         back(0, 'b2', 'PreToolUse:Bash hook error: [node hook-dispatch.mjs]: PLAN FENCE refused a cd in the command', true)]));
       const r = await p;
-      return r.code === 0 && r.ms < 6000 && r.out.includes('Refused by a hook since the wait began')
-        && r.out.includes('PLAN FENCE refused a cd in the command') && r.out.includes('agent busy') && !r.out.includes('Progress notes written');
+      const held_rows = [['r.code === 0', (r.code === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r.ms < 6000', (r.ms < 6000)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r.out.includes(\'Refused by a hook since the wait began\')', (r.out.includes('Refused by a hook since the wait began'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r.out.includes(\'PLAN FENCE refused a cd in the command\')', (r.out.includes('PLAN FENCE refused a cd in the command'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r.out.includes(\'agent busy\')', (r.out.includes('agent busy'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!r.out.includes(\'Progress notes written\')', (!r.out.includes('Progress notes written'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3057,8 +3592,14 @@ const CASES = [
       const asStatus = bash(`node ${r} "--wait"`);
       const asStatus1 = bash(`node ${r} '--wait'`);
       const fenced = (x) => x.status === 2 && /MANAGER FENCE/.test(x.stderr);
-      return plain.status === 0 && quotedPath.status === 0
-        && fenced(chained) && fenced(piped) && fenced(other) && fenced(asStatus) && fenced(asStatus1);
+      const held_rows = [['plain.status === 0', (plain.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['quotedPath.status === 0', (quotedPath.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(chained)', (fenced(chained))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(piped)', (fenced(piped))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(other)', (fenced(other))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(asStatus)', (fenced(asStatus))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(asStatus1)', (fenced(asStatus1))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -3104,7 +3645,7 @@ const CASES = [
         readAfter: readAfter === null, again: said(again, announced), againFine: againFine === null };
       const wrong = Object.entries(checks).filter(([, ok]) => !ok).map(([k]) => k);
       if (wrong.length) throw new Error(`wrong on: ${wrong.join(', ')}; fine=${fine}; bareFine=${bareFine}; plain=${plain}; second=${second}; readAfter=${readAfter}; againFine=${againFine}`);
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -3144,10 +3685,18 @@ const CASES = [
       const block = out.slice(Math.max(0, out.indexOf('Running agents, each with the latest line'))).split('\n\n')[0];
       const item = (id) => block.split('\n- agent ').find((x) => x.startsWith(id) || x.startsWith(`${id} `)) ?? '';
       const scratchy = item('scratchy'), named = item('named'), fresh = item('fresh');
-      return scratchy.includes('FLAGGED') && scratchy.includes(`last line of ${join(pad, 'scratch', 'step-2', 'newer.txt')}: case 12 ok`) && !scratchy.includes('older run line')
-        && /Its last tool result, Bash: suite: 12 of 61 cases passed so far/.test(scratchy)
-        && named.includes('FLAGGED') && named.includes(`last line of ${outFile}: walk at screen 4 of 9`) && /Its last tool result, Bash: walking screen 4/.test(named)
-        && fresh !== '' && !fresh.includes('FLAGGED') && !fresh.includes('Read instead of waiting') && !fresh.includes('Its last tool result');
+      const held_rows = [['scratchy.includes(\'FLAGGED\')', (scratchy.includes('FLAGGED'))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['scratchy.includes(`last line of ${join(pad, \'scratch\', \'step-2\', \'newer.txt\')}: case 12 ok`)', (scratchy.includes(`last line of ${join(pad, 'scratch', 'step-2', 'newer.txt')}: case 12 ok`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!scratchy.includes(\'older run line\')', (!scratchy.includes('older run line'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Its last tool result, Bash: suite: 12 of 61 cases passed so far/.test(scratchy)', (/Its last tool result, Bash: suite: 12 of 61 cases passed so far/.test(scratchy))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['named.includes(\'FLAGGED\')', (named.includes('FLAGGED'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['named.includes(`last line of ${outFile}: walk at screen 4 of 9`)', (named.includes(`last line of ${outFile}: walk at screen 4 of 9`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Its last tool result, Bash: walking screen 4/.test(named)', (/Its last tool result, Bash: walking screen 4/.test(named))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fresh !== \'\'', (fresh !== '')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!fresh.includes(\'FLAGGED\')', (!fresh.includes('FLAGGED'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!fresh.includes(\'Read instead of waiting\')', (!fresh.includes('Read instead of waiting'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!fresh.includes(\'Its last tool result\')', (!fresh.includes('Its last tool result'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3178,8 +3727,14 @@ const CASES = [
         const nowFresh = (Date.now()) / 1000;
         utimesSync(noteFile, nowFresh, nowFresh);
         const passes = wait();
-        return /MANAGER FENCE/.test(refused) && /flagged/.test(refused) && /status command prints/.test(refused) && refused.includes('busy') && refused.includes(m.dispatch.FENCE_NO_LATCH)
-          && passes === null;
+        return assertAll([
+          ['the wait is refused by the manager fence', /MANAGER FENCE/.test(refused), refused],
+          ['the refusal says a running agent is flagged', /flagged/.test(refused), refused],
+          ['the refusal names the status command as the read', /status command prints/.test(refused), refused],
+          ['the refusal names the flagged agent', refused.includes('busy'), refused],
+          ['the refusal carries the mark that sets no latch', refused.includes(m.dispatch.FENCE_NO_LATCH), refused],
+          ['the wait passes when no running agent is flagged', passes === null, passes],
+        ]);
       } finally {
         if (saved.HOME === undefined) delete process.env.HOME; else process.env.HOME = saved.HOME;
         if (saved.TMPDIR === undefined) delete process.env.TMPDIR; else process.env.TMPDIR = saved.TMPDIR;
@@ -3211,9 +3766,15 @@ const CASES = [
       appendFileSync(main, JSON.stringify(owner(new Date().toISOString(), 'Please read the header panel before anything else.')) + '\n');
       const r = await p;
       const first = r.out.split('\n')[0];
-      return quiet.code === 0 && quiet.ms >= 1400 && /passed; no running agent's progress note changed/.test(quiet.out) && !quiet.out.includes('owner message')
-        && r.code === 0 && r.ms < 6000 && /^An owner message arrived at \d\d:\d\d \(California\)/.test(first)
-        && r.out.split('\n')[1].includes('Please read the header panel before anything else.');
+      const held_rows = [['quiet.code === 0', (quiet.code === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['quiet.ms >= 1400', (quiet.ms >= 1400)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/passed; no running agent\'s progress note changed/.test(quiet.out)', (/passed; no running agent's progress note changed/.test(quiet.out))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!quiet.out.includes(\'owner message\')', (!quiet.out.includes('owner message'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r.code === 0', (r.code === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r.ms < 6000', (r.ms < 6000)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^An owner message arrived at \\d\\d:\\d\\d \\(California\\)/.test(first)', (/^An owner message arrived at \d\d:\d\d \(California\)/.test(first))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r.out.split(\'\\n\')[1].includes(\'Please read the header panel before anything else.\')', (r.out.split('\n')[1].includes('Please read the header panel before anything else.'))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -3238,10 +3799,19 @@ const CASES = [
       const bareHome = tmp('sg-home-');
       mkdirSync(join(bareHome, '.claude'), { recursive: true });
       const conversation = say(`${report}\n\nOpen for you:\n${choice}`, { ...process.env, HOME: bareHome });
-      return opens.status === 0 && declared.status === 0 && plainList.status === 0
-        && under.status === 2 && /choice is not the first thing/.test(under.stderr) && under.stderr.includes('Land the gates')
-        && nested.status === 2 && /choice is not the first thing/.test(nested.stderr)
-        && twice.status === 2 && /choice is not the first thing/.test(twice.stderr) && !/state line/i.test(twice.stderr) && conversation.status === 0;
+      const held_rows = [['opens.status === 0', (opens.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['declared.status === 0', (declared.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['plainList.status === 0', (plainList.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['under.status === 2', (under.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/choice is not the first thing/.test(under.stderr)', (/choice is not the first thing/.test(under.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['under.stderr.includes(\'Land the gates\')', (under.stderr.includes('Land the gates'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['nested.status === 2', (nested.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/choice is not the first thing/.test(nested.stderr)', (/choice is not the first thing/.test(nested.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['twice.status === 2', (twice.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/choice is not the first thing/.test(twice.stderr)', (/choice is not the first thing/.test(twice.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/state line/i.test(twice.stderr)', (!/state line/i.test(twice.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['conversation.status === 0', (conversation.status === 0)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -3278,7 +3848,10 @@ const CASES = [
       const pass = m.dispatch.stopWritePass(w(planFile), false) && m.dispatch.stopWritePass(w(planFile), true)
         && m.dispatch.stopWritePass(w(notes), false) && !m.dispatch.stopWritePass(w(notes), true)
         && !m.dispatch.stopWritePass(w('/repo/x.txt'), false) && !m.dispatch.stopWritePass(w(planFile, { agent_id: 'a1' }), false);
-      return phases && fence && pass;
+      const held_rows = [['phases', (phases)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fence', (fence)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['pass', (pass)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3313,7 +3886,11 @@ const CASES = [
       appendFileSync(old.plan, '\nA line added after the approval.\n');
       const oldRead = probe(old);
       const markerHeld = oldRead.r.status === 2 && /CORRECTION/.test(oldRead.r.stderr);
-      return skipped && judged && held && markerHeld;
+      const held_rows = [['skipped', (skipped)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['judged', (judged)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held', (held)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['markerHeld', (markerHeld)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3344,7 +3921,13 @@ const CASES = [
       // No Order: the pointer cannot be read, so it counts as in force and the correction holds.
       const plain = world(dir, [turn(0, GO), turn(5, WRONG)]);
       const noOrder = plain.call('PreToolUse', { session_id: sid('fn'), tool_name: 'Read', tool_input: { file_path: join(src.dir, 'app.ts') } });
-      return passes && fenced && judged && held && noOrder.status === 2 && /CORRECTION/.test(noOrder.stderr);
+      const held_rows = [['passes', (passes)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced', (fenced)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['judged', (judged)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held', (held)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noOrder.status === 2', (noOrder.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/CORRECTION/.test(noOrder.stderr)', (/CORRECTION/.test(noOrder.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3379,7 +3962,13 @@ const CASES = [
       const sC = sid('pn');
       const cNotes = c.call('PreToolUse', { session_id: sC, tool_name: 'Write', tool_input: { file_path: `/tmp/claude-0/-home-user/${sC}/scratchpad/status/manager.txt`, content: 'Version: x\n' } });
       const cRepo = write(c, join(c.cwd, 'x.txt'));
-      return inPlanMode && underPlan && !/CORRECTION/.test(cOut.stderr) && !/CORRECTION/.test(cNotes.stderr) && cRepo.status === 2 && /CORRECTION/.test(cRepo.stderr);
+      const held_rows = [['inPlanMode', (inPlanMode)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['underPlan', (underPlan)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/CORRECTION/.test(cOut.stderr)', (!/CORRECTION/.test(cOut.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/CORRECTION/.test(cNotes.stderr)', (!/CORRECTION/.test(cNotes.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cRepo.status === 2', (cRepo.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/CORRECTION/.test(cRepo.stderr)', (/CORRECTION/.test(cRepo.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3427,7 +4016,12 @@ const CASES = [
       const tierPlan = spawnSync('node', [join(dir, 'stop-guard.mjs')], { input: JSON.stringify({ session_id: sid('pt'), transcript_path: transcript([modelReply(-10, PLAINLY, FABLE)]) }), encoding: 'utf8', env: states.plan });
       const tierFinished = sayFinished([modelReply(-10, PLAINLY, FABLE)]);
       const tier = refusedBy(tierPlan) && tierFinished.status === 0;
-      return inPlan.every(Boolean) && inConversation.every(Boolean) && afterPlan.every(Boolean) && everywhere && tier;
+      const held_rows = [['inPlan.every(Boolean)', (inPlan.every(Boolean))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['inConversation.every(Boolean)', (inConversation.every(Boolean))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['afterPlan.every(Boolean)', (afterPlan.every(Boolean))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['everywhere', (everywhere)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['tier', (tier)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -3445,7 +4039,12 @@ const CASES = [
       const fencedOne = say('The three hosts, one per line.\n\n```\nalpha.example.com\nbeta.example.org\ngamma.example.net\n```');
       const proseTwo = say('The pair are alpha.example.com and beta.example.org today.');
       const files = say('The edits touch stop-guard.mjs, reply-guard.mjs and report.mjs in the repository.');
-      return refused(prose) && refused(fencedTwo) && fencedOne.status === 0 && proseTwo.status === 0 && files.status === 0;
+      const held_rows = [['refused(prose)', (refused(prose))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(fencedTwo)', (refused(fencedTwo))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fencedOne.status === 0', (fencedOne.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['proseTwo.status === 0', (proseTwo.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['files.status === 0', (files.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3466,7 +4065,11 @@ const CASES = [
         const printed = /Hosts the proxy declined since the last status[^\n]*\n```\nplanted-one\.example\.com\nplanted-two\.example\.org\n```/.test(first);
         const second = status();
         const quiet = !second.includes('planted-one.example.com') && !second.includes('planted-two.example.org') && !second.includes('Hosts the proxy declined');
-        return recorded && printed && quiet;
+        return assertAll([
+          ['both hosts are recorded as declined by the proxy', recorded, declines.join(',')],
+          ['the next status prints both hosts one per line in one fenced block', printed, first],
+          ['the status after it prints neither', quiet, second],
+        ]);
       } finally { delete process.env.REPLY_LEDGER_DIR; }
     },
   },
@@ -3491,11 +4094,22 @@ const CASES = [
       // again if the file were not cleared after the first delivery.
       const next = w.call('UserPromptSubmit', { session_id: s, prompt: 'One more thing, unrelated to that, so ok.' });
       const out = delivered.stdout ?? '';
-      return refused.status === 2 && retried.status === 2 && note.status === 0 && !/HELD WORK/.test(note.stdout ?? '') && harness === ''
-        && correction.status === 0 && !/HELD WORK/.test(correction.stdout ?? '') && /OWNER MESSAGE/.test(correction.stdout ?? '')
-        && /^HELD WORK/.test(out) && out.includes('Make the thing well.') && /main thread/.test(out)
-        && (out.match(/--- held /g) ?? []).length === 1 && out.indexOf('HELD WORK') < out.indexOf('OWNER MESSAGE')
-        && next.status === 0 && !/HELD WORK/.test(next.stdout ?? '');
+      const held_rows = [['refused.status === 2', (refused.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['retried.status === 2', (retried.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['note.status === 0', (note.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/HELD WORK/.test(note.stdout ?? \'\')', (!/HELD WORK/.test(note.stdout ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['harness === \'\'', (harness === '')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['correction.status === 0', (correction.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/HELD WORK/.test(correction.stdout ?? \'\')', (!/HELD WORK/.test(correction.stdout ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/OWNER MESSAGE/.test(correction.stdout ?? \'\')', (/OWNER MESSAGE/.test(correction.stdout ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^HELD WORK/.test(out)', (/^HELD WORK/.test(out))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.includes(\'Make the thing well.\')', (out.includes('Make the thing well.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/main thread/.test(out)', (/main thread/.test(out))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['(out.match(/--- held /g) ?? []).length === 1', ((out.match(/--- held /g) ?? []).length === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.indexOf(\'HELD WORK\') < out.indexOf(\'OWNER MESSAGE\')', (out.indexOf('HELD WORK') < out.indexOf('OWNER MESSAGE'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['next.status === 0', (next.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/HELD WORK/.test(next.stdout ?? \'\')', (!/HELD WORK/.test(next.stdout ?? ''))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3512,8 +4126,13 @@ const CASES = [
       appendFileSync(w.tr, [deq(20), turn(20, GO)].map((e) => JSON.stringify(e)).join('\n') + '\n');
       const delivered = w.call('UserPromptSubmit', { session_id: s, prompt: GO });
       const again = w.call('PreToolUse', write);
-      return refused.status === 2 && /pending-guard/.test(refused.stderr) && notLatched
-        && /^HELD WORK/.test(delivered.stdout ?? '') && again.status === 0 && !latched(s);
+      const held_rows = [['refused.status === 2', (refused.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/pending-guard/.test(refused.stderr)', (/pending-guard/.test(refused.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notLatched', (notLatched)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^HELD WORK/.test(delivered.stdout ?? \'\')', (/^HELD WORK/.test(delivered.stdout ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['again.status === 0', (again.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(s)', (!latched(s))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -3565,13 +4184,24 @@ const CASES = [
       const buildE = E.guard(trE, build);
       // The record of judged exits is the owner's, like the marker.
       const writeJudged = B.guard(trB, { tool_name: 'Write', tool_input: { file_path: B.judged, content: '{"judged":{}}' } });
-      return minted && buildA.status === 2
-        && done.status === 0 && readA2.status === 0 && !existsSync(A.marker) && buildA2.status === 2
-        && mintedB
-        && !existsSync(C.marker) && C.outcome(uc) === "not the owner's exit"
-        && !existsSync(D.marker) && D.outcome(ud) === "not the owner's exit"
-        && !existsSync(E.marker) && E.outcome(ue) === 'changed after' && buildE.status === 2 && /was written after that/.test(buildE.stdout)
-        && writeJudged.status === 2 && /written only by the owner's approval/.test(writeJudged.stdout);
+      const held_rows = [['minted', (minted)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['buildA.status === 2', (buildA.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['done.status === 0', (done.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readA2.status === 0', (readA2.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!existsSync(A.marker)', (!existsSync(A.marker))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['buildA2.status === 2', (buildA2.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mintedB', (mintedB)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!existsSync(C.marker)', (!existsSync(C.marker))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['C.outcome(uc) === "not the owner\'s exit"', (C.outcome(uc) === "not the owner's exit")]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!existsSync(D.marker)', (!existsSync(D.marker))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['D.outcome(ud) === "not the owner\'s exit"', (D.outcome(ud) === "not the owner's exit")]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!existsSync(E.marker)', (!existsSync(E.marker))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['E.outcome(ue) === \'changed after\'', (E.outcome(ue) === 'changed after')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['buildE.status === 2', (buildE.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/was written after that/.test(buildE.stdout)', (/was written after that/.test(buildE.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['writeJudged.status === 2', (writeJudged.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/written only by the owner\'s approval/.test(writeJudged.stdout)', (/written only by the owner's approval/.test(writeJudged.stdout))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3593,7 +4223,10 @@ const CASES = [
       const old = (Date.now() - 3600000) / 1000;
       utimesSync(B.plan, old, old);
       B.guard(transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, B.plan, ub2)]), read);
-      return untouched && B.outcome(ub2) === 'no exit call' && B.mk() === null;
+      const held_rows = [['untouched', (untouched)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['B.outcome(ub2) === \'no exit call\'', (B.outcome(ub2) === 'no exit call')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['B.mk() === null', (B.mk() === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3623,8 +4256,15 @@ const CASES = [
       mkdirSync(pad2, { recursive: true });
       const r = w.call('SessionStart', { session_id: s2, source: 'resume', permission_mode: 'plan' });
       let viaDispatch = null; try { viaDispatch = JSON.parse(readFileSync(join(pad2, 'status', 'start-mode.json'), 'utf8')); } catch { /* none */ }
-      return none === A.plan && noMode === A.plan && owners === '' && restart === A.plan && filed.mode === 'plan'
-        && r.status === 0 && viaDispatch?.mode === 'plan' && viaDispatch.source === 'resume';
+      const held_rows = [['none === A.plan', (none === A.plan)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noMode === A.plan', (noMode === A.plan)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owners === \'\'', (owners === '')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['restart === A.plan', (restart === A.plan)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['filed.mode === \'plan\'', (filed.mode === 'plan')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r.status === 0', (r.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['viaDispatch?.mode === \'plan\'', (viaDispatch?.mode === 'plan')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['viaDispatch.source === \'resume\'', (viaDispatch.source === 'resume')]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3637,9 +4277,13 @@ const CASES = [
       const f = namedTranscript([turn(0, 'typed in the later stretch'), boundary(40), summary(40)]);
       const got = await m.recall.stretchSinceCompaction(f);
       const file = m.recall.saveRecall(f, got.msgs, { dir: where, n: 1, at: Date.UTC(2026, 10, 3, 20, 0, 0) });
-      return !!file && file !== old && basename(file) === 'compaction-1-2026-11-03_12-00-00.txt'
-        && readFileSync(old, 'utf8') === 'earlier stretch, kept\n' && readFileSync(file, 'utf8').includes('typed in the later stretch')
-        && readdirSync(where).length === 2;
+      const held_rows = [['!!file', (!!file)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['file !== old', (file !== old)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['basename(file) === \'compaction-1-2026-11-03_12-00-00.txt\'', (basename(file) === 'compaction-1-2026-11-03_12-00-00.txt')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readFileSync(old, \'utf8\') === \'earlier stretch, kept\\n\'', (readFileSync(old, 'utf8') === 'earlier stretch, kept\n')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readFileSync(file, \'utf8\').includes(\'typed in the later stretch\')', (readFileSync(file, 'utf8').includes('typed in the later stretch'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readdirSync(where).length === 2', (readdirSync(where).length === 2)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3678,9 +4322,15 @@ const CASES = [
       // An agent was sent under the plan.
       const w3 = setUp((w) => [at(tool(0, 'ag', 'Agent', { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' }), later(-5))]);
       const sent = enter(w3, sid('ax'));
-      return again.status === 0 && printed.status === 0 && /not the owner's approval/.test(printed.stderr) && !latched(s1)
-        && mk1 === null && outcome1 === 'no exit call'
-        && wrote.status === 0 && sent.status === 0;
+      const held_rows = [['again.status === 0', (again.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['printed.status === 0', (printed.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/not the owner\'s approval/.test(printed.stderr)', (/not the owner's approval/.test(printed.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(s1)', (!latched(s1))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mk1 === null', (mk1 === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['outcome1 === \'no exit call\'', (outcome1 === 'no exit call')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['wrote.status === 0', (wrote.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['sent.status === 0', (sent.status === 0)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -3754,7 +4404,18 @@ const CASES = [
       done(J);
       J.guard(transcript([...head, ...buttonExit(-20, J.plan, STEPS_PLAN, 'bm')]), read);
       const notBack = !existsSync(J.marker);
-      return mintedA && stayedDone && mintedB && refusedNone && !existsSync(E0.marker) && !existsSync(F0.marker) && keptG && movedNone && stepsKept && markedJ && notBack;
+      const held_rows = [['mintedA', (mintedA)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stayedDone', (stayedDone)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mintedB', (mintedB)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedNone', (refusedNone)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!existsSync(E0.marker)', (!existsSync(E0.marker))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!existsSync(F0.marker)', (!existsSync(F0.marker))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['keptG', (keptG)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['movedNone', (movedNone)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stepsKept', (stepsKept)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['markedJ', (markedJ)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notBack', (notBack)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -3782,8 +4443,13 @@ const CASES = [
       // Changed by the plan of 6 November: the dispatcher still judges the exit first, and the judgement is that the app's exit is no
       // approval, so no marker is written and the send is refused for it.
       const judged = (() => { try { return JSON.parse(readFileSync(join(w.home, '.claude', 'APPROVED-PLAN-app-exits.json'), 'utf8')).judged?.[u]; } catch { return null; } })();
-      return send.status === 2 && mk === null && judged === 'no exit call'
-        && stale.status === 2 && /DISPATCH GATE[\s\S]*No approved plan/.test(stale.stderr) && /Marker: none/.test(stale.stderr);
+      const held_rows = [['send.status === 2', (send.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mk === null', (mk === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['judged === \'no exit call\'', (judged === 'no exit call')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stale.status === 2', (stale.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/DISPATCH GATE[\\s\\S]*No approved plan/.test(stale.stderr)', (/DISPATCH GATE[\s\S]*No approved plan/.test(stale.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Marker: none/.test(stale.stderr)', (/Marker: none/.test(stale.stderr))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -3832,13 +4498,33 @@ const CASES = [
       const peer = mid(32, '[Subagent hand-back] Step one is built.', 'peer');
       const notOwner = lift('', note) === 0 && lift('', sched) === 0 && lift('', peer) === 0;
       const said = refused.stderr ?? '';
-      return refused.status === 2 && /CORRECTION \(Doctrine §0e rule 3\)/.test(said) && said.includes('go, ok, continue, approved, yes')
-        && /a read of the record \(/.test(said) && /the status command and TaskStop pass/.test(said)
-        && !said.includes('done wrong') && !said.includes('answer me before')
-        && write.status === 2 && /CORRECTION/.test(write.stderr) && enter.status === 0 && outside.status === 2 && /CORRECTION/.test(outside.stderr) && noLatch
-        && status.status === 0 && stop.status === 0 && agent.status === 0 && wait.status === 2 && /CORRECTION/.test(wait.stderr)
-        && afterGo === 0 && midWrong === 2 && midGo === 0 && goAhead === 2 && goInside === 2 && words.every((x) => x === 0)
-        && longer.every((x) => x === 0) && notOwner;
+      const held_rows = [['refused.status === 2', (refused.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/CORRECTION \\(Doctrine §0e rule 3\\)/.test(said)', (/CORRECTION \(Doctrine §0e rule 3\)/.test(said))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said.includes(\'go, ok, continue, approved, yes\')', (said.includes('go, ok, continue, approved, yes'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/a read of the record \\(/.test(said)', (/a read of the record \(/.test(said))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/the status command and TaskStop pass/.test(said)', (/the status command and TaskStop pass/.test(said))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!said.includes(\'done wrong\')', (!said.includes('done wrong'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!said.includes(\'answer me before\')', (!said.includes('answer me before'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['write.status === 2', (write.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/CORRECTION/.test(write.stderr)', (/CORRECTION/.test(write.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['enter.status === 0', (enter.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['outside.status === 2', (outside.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/CORRECTION/.test(outside.stderr)', (/CORRECTION/.test(outside.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noLatch', (noLatch)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['status.status === 0', (status.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stop.status === 0', (stop.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agent.status === 0', (agent.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['wait.status === 2', (wait.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/CORRECTION/.test(wait.stderr)', (/CORRECTION/.test(wait.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['afterGo === 0', (afterGo === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['midWrong === 2', (midWrong === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['midGo === 0', (midGo === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['goAhead === 2', (goAhead === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['goInside === 2', (goInside === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['words.every((x) => x === 0)', (words.every((x) => x === 0))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['longer.every((x) => x === 0)', (longer.every((x) => x === 0))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notOwner', (notOwner)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3866,7 +4552,10 @@ const CASES = [
       // The go-word lifts it: the dispatch that was held now passes.
       appendFileSync(w.tr, jsonl([turn(10, GO)]));
       const lifted = call(send).status === 0;
-      return passed && held5 && lifted;
+      const held_rows = [['passed', (passed)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held5', (held5)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lifted', (lifted)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3893,7 +4582,12 @@ const CASES = [
       w.call('UserPromptSubmit', { session_id: s5, prompt: 'That was wrong; explain it.' });
       const w5 = world(dir, [turn(0, GO)]);
       const readable = w5.call('PreToolUse', { session_id: s5, tool_name: 'Agent', tool_input: { prompt: `${w5.plan} step 1`, subagent_type: 'general-purpose' } }).status;
-      return wrong === 2 && go === 0 && none === 0 && notified === 0 && readable === 0;
+      const held_rows = [['wrong === 2', (wrong === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['go === 0', (go === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['none === 0', (none === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notified === 0', (notified === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readable === 0', (readable === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3903,7 +4597,9 @@ const CASES = [
       const big = 'x'.repeat(3 * 1024 * 1024);
       const w = world(dir, [turn(0, GO), turn(5, 'That was done wrong; answer me first.'), tool(6, 'b1', 'Bash', { command: 'cat big' }), result(7, 'b1', big)]);
       const r = w.call('PreToolUse', { session_id: sid('cw'), tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
-      return r.status === 2 && /CORRECTION/.test(r.stderr);
+      const held_rows = [['r.status === 2', (r.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/CORRECTION/.test(r.stderr)', (/CORRECTION/.test(r.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3912,7 +4608,12 @@ const CASES = [
     run(m, dir) {
       const w = world(dir);
       const out = w.call('UserPromptSubmit', { session_id: sid('rm'), prompt: 'go' }).stdout ?? '';
-      return /First line: what you are doing now;/.test(out) && !/what comes next/i.test(out) && !/five minutes/i.test(out) && /OWNER MESSAGE/.test(out) && /open for the owner/.test(out);
+      const held_rows = [['/First line: what you are doing now;/.test(out)', (/First line: what you are doing now;/.test(out))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/what comes next/i.test(out)', (!/what comes next/i.test(out))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/five minutes/i.test(out)', (!/five minutes/i.test(out))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/OWNER MESSAGE/.test(out)', (/OWNER MESSAGE/.test(out))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/open for the owner/.test(out)', (/open for the owner/.test(out))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -3937,11 +4638,18 @@ const CASES = [
       // A task notification arriving after it is not a message from the owner and releases nothing.
       const note = { type: 'user', timestamp: ts(30), origin: { kind: 'task-notification' }, message: { role: 'user', content: 'The long run finished; nothing else is open.' } };
       const harness = decide([turn(0, 'start'), enq(10, LOST), note]);
-      return asPrompt === null && between === null
-        && !!inOrder && inOrder.includes(LATER) && !inOrder.includes(LOST)
-        && !!lateArrival && lateArrival.includes(NEXT) && !lateArrival.includes(LOST)
-        && unenqueued === null
-        && !!harness && harness.includes(LOST);
+      const held_rows = [['asPrompt === null', (asPrompt === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['between === null', (between === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!inOrder', (!!inOrder)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['inOrder.includes(LATER)', (inOrder.includes(LATER))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!inOrder.includes(LOST)', (!inOrder.includes(LOST))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!lateArrival', (!!lateArrival)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lateArrival.includes(NEXT)', (lateArrival.includes(NEXT))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!lateArrival.includes(LOST)', (!lateArrival.includes(LOST))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['unenqueued === null', (unenqueued === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!!harness', (!!harness)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['harness.includes(LOST)', (harness.includes(LOST))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -3970,8 +4678,13 @@ const CASES = [
       // A task notification prompt after the passing-over still shows what was passed over.
       const w4 = world(dir, [turn(0, 'start'), enq(10, LOST), enq(20, LATER), deq(30), turn(30, LATER)]);
       const viaNote = w4.call('UserPromptSubmit', { session_id: sid('sk'), prompt: NOTE }).stdout ?? '';
-      return printed && once && !/NEVER GIVEN/.test(carried) && !/NEVER GIVEN/.test(inTranscript)
-        && /NEVER GIVEN/.test(viaNote) && viaNote.includes(LOST);
+      const held_rows = [['printed', (printed)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['once', (once)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/NEVER GIVEN/.test(carried)', (!/NEVER GIVEN/.test(carried))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/NEVER GIVEN/.test(inTranscript)', (!/NEVER GIVEN/.test(inTranscript))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/NEVER GIVEN/.test(viaNote)', (/NEVER GIVEN/.test(viaNote))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['viaNote.includes(LOST)', (viaNote.includes(LOST))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -4034,14 +4747,30 @@ const CASES = [
       const bare0 = tmp('sg-home-'); mkdirSync(join(bare0, '.claude'), { recursive: true });
       const noPlan = say(REPORT, undefined, bare0);
       const err = (r) => r.stderr ?? '';
-      return none.status === 2 && /STOP REFUSED/.test(err(none)) && err(none).includes('(1, 2)') && /rule 2/.test(err(none)) && /the corrected sentences only/.test(err(none))
-        && one.status === 2 && err(one).includes('(2)') && !err(one).includes('(1, 2)')
-        && two.status === 2 && err(two).includes('(1)') && !err(two).includes('(1, 2)')
-        && refused.status === 2 && err(refused).includes('(2)')
-        && all.status === 0 && running.status === 0
-        && choice.status === 0 && declared.status === 0
-        && bare.status === 2 && /steps? of the approved plan/.test(err(bare)) && short.status === 2
-        && queued.status === 0 && correction.status === 0 && noPlan.status === 0;
+      const held_rows = [['none.status === 2', (none.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/STOP REFUSED/.test(err(none))', (/STOP REFUSED/.test(err(none)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(none).includes(\'(1, 2)\')', (err(none).includes('(1, 2)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/rule 2/.test(err(none))', (/rule 2/.test(err(none)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/the corrected sentences only/.test(err(none))', (/the corrected sentences only/.test(err(none)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['one.status === 2', (one.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(one).includes(\'(2)\')', (err(one).includes('(2)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!err(one).includes(\'(1, 2)\')', (!err(one).includes('(1, 2)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['two.status === 2', (two.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(two).includes(\'(1)\')', (err(two).includes('(1)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!err(two).includes(\'(1, 2)\')', (!err(two).includes('(1, 2)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused.status === 2', (refused.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(refused).includes(\'(2)\')', (err(refused).includes('(2)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['all.status === 0', (all.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['running.status === 0', (running.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['choice.status === 0', (choice.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['declared.status === 0', (declared.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['bare.status === 2', (bare.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/steps? of the approved plan/.test(err(bare))', (/steps? of the approved plan/.test(err(bare)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['short.status === 2', (short.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['queued.status === 0', (queued.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['correction.status === 0', (correction.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noPlan.status === 0', (noPlan.status === 0)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -4053,13 +4782,23 @@ const CASES = [
       const back = (step, first, how = 'a report') => ({ step, how, at: 1, last: `${first}\nThe second line says what happened.` });
       const ptr = (ends) => m.report.pointerOf(ORDER_PLAN, ends);
       const both = ptr([back(1, 'DONE'), back(2, 'DONE')]);
-      return JSON.stringify(m.report.planOrder(ORDER_PLAN)) === JSON.stringify({ order: [1, 2], standing: [3] }) && m.report.planOrder(STEPS_PLAN) === null
-        && ptr([]).next === 1 && ptr([back(1, 'DONE')]).next === 2
-        && ptr([back(1, 'REFUSED')]).next === 1 && ptr([back(1, 'FAILED')]).next === 1 && ptr([back(1, 'Built it.')]).next === 1
-        && ptr([back(1, 'DONE', 'a refusal')]).next === 1 && ptr([back(1, 'DONE', 'an interruption')]).next === 1 && ptr([back(null, 'DONE')]).next === 1
-        && ptr([back(3, 'DONE')]).next === 1 && ptr([back(2, 'DONE')]).next === 1
-        && both.next === null && !both.done.has(3) && ptr([back(1, 'REFUSED'), back(1, 'DONE')]).next === 2
-        && m.report.pointerOf(STEPS_PLAN, [back(1, 'DONE')]) === null;
+      const held_rows = [['JSON.stringify(m.report.planOrder(ORDER_PLAN)) === JSON.stringify({ order: [1, 2], standing: [3] })', (JSON.stringify(m.report.planOrder(ORDER_PLAN)) === JSON.stringify({ order: [1, 2], standing: [3] }))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.report.planOrder(STEPS_PLAN) === null', (m.report.planOrder(STEPS_PLAN) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ptr([]).next === 1', (ptr([]).next === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ptr([back(1, \'DONE\')]).next === 2', (ptr([back(1, 'DONE')]).next === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ptr([back(1, \'REFUSED\')]).next === 1', (ptr([back(1, 'REFUSED')]).next === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ptr([back(1, \'FAILED\')]).next === 1', (ptr([back(1, 'FAILED')]).next === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ptr([back(1, \'Built it.\')]).next === 1', (ptr([back(1, 'Built it.')]).next === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ptr([back(1, \'DONE\', \'a refusal\')]).next === 1', (ptr([back(1, 'DONE', 'a refusal')]).next === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ptr([back(1, \'DONE\', \'an interruption\')]).next === 1', (ptr([back(1, 'DONE', 'an interruption')]).next === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ptr([back(null, \'DONE\')]).next === 1', (ptr([back(null, 'DONE')]).next === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ptr([back(3, \'DONE\')]).next === 1', (ptr([back(3, 'DONE')]).next === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ptr([back(2, \'DONE\')]).next === 1', (ptr([back(2, 'DONE')]).next === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['both.next === null', (both.next === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!both.done.has(3)', (!both.done.has(3))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ptr([back(1, \'REFUSED\'), back(1, \'DONE\')]).next === 2', (ptr([back(1, 'REFUSED'), back(1, 'DONE')]).next === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.report.pointerOf(STEPS_PLAN, [back(1, \'DONE\')]) === null', (m.report.pointerOf(STEPS_PLAN, [back(1, 'DONE')]) === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4074,11 +4813,24 @@ const CASES = [
       };
       const gate = (x) => /^DISPATCH GATE/.test(x ?? '');
       const refusedOne = [back(1, 'REFUSED')], oneDone = [back(1, 'DONE')], bothDone = [back(1, 'DONE'), back(2, 'DONE')];
-      return send(1, []) === null && gate(send(2, [])) && /next: step 1\b/.test(send(2, [])) && send(3, []) === null
-        && send(1, refusedOne) === null && /next: step 1\b/.test(send(2, refusedOne)) && send(3, refusedOne) === null
-        && send(2, oneDone) === null && gate(send(1, oneDone)) && /next: step 2\b/.test(send(1, oneDone)) && send(3, oneDone) === null
-        && gate(send(1, bothDone)) && /next: none/.test(send(1, bothDone)) && /next: none/.test(send(2, bothDone)) && send(3, bothDone) === null
-        && send(1, [], STEPS_PLAN) === null && send(2, [], STEPS_PLAN) === null;
+      const held_rows = [['send(1, []) === null', (send(1, []) === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(send(2, []))', (gate(send(2, [])))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/next: step 1\\b/.test(send(2, []))', (/next: step 1\b/.test(send(2, [])))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['send(3, []) === null', (send(3, []) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['send(1, refusedOne) === null', (send(1, refusedOne) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/next: step 1\\b/.test(send(2, refusedOne))', (/next: step 1\b/.test(send(2, refusedOne)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['send(3, refusedOne) === null', (send(3, refusedOne) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['send(2, oneDone) === null', (send(2, oneDone) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(send(1, oneDone))', (gate(send(1, oneDone)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/next: step 2\\b/.test(send(1, oneDone))', (/next: step 2\b/.test(send(1, oneDone)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['send(3, oneDone) === null', (send(3, oneDone) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(send(1, bothDone))', (gate(send(1, bothDone)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/next: none/.test(send(1, bothDone))', (/next: none/.test(send(1, bothDone)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/next: none/.test(send(2, bothDone))', (/next: none/.test(send(2, bothDone)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['send(3, bothDone) === null', (send(3, bothDone) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['send(1, [], STEPS_PLAN) === null', (send(1, [], STEPS_PLAN) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['send(2, [], STEPS_PLAN) === null', (send(2, [], STEPS_PLAN) === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4108,10 +4860,19 @@ const CASES = [
       const afterOne = three();
       agent('d2', 2, 'DONE');
       const afterBoth = three();
-      return ok(fresh[0]) && refusedWith(fresh[1], 'step 1') && ok(fresh[2])
-        && ok(afterRefused[0]) && refusedWith(afterRefused[1], 'step 1') && ok(afterRefused[2])
-        && refusedWith(afterOne[0], 'step 2') && ok(afterOne[1]) && ok(afterOne[2])
-        && refusedWith(afterBoth[0], 'none') && refusedWith(afterBoth[1], 'none') && ok(afterBoth[2]);
+      const held_rows = [['ok(fresh[0])', (ok(fresh[0]))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedWith(fresh[1], \'step 1\')', (refusedWith(fresh[1], 'step 1'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ok(fresh[2])', (ok(fresh[2]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ok(afterRefused[0])', (ok(afterRefused[0]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedWith(afterRefused[1], \'step 1\')', (refusedWith(afterRefused[1], 'step 1'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ok(afterRefused[2])', (ok(afterRefused[2]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedWith(afterOne[0], \'step 2\')', (refusedWith(afterOne[0], 'step 2'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ok(afterOne[1])', (ok(afterOne[1]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ok(afterOne[2])', (ok(afterOne[2]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedWith(afterBoth[0], \'none\')', (refusedWith(afterBoth[0], 'none'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedWith(afterBoth[1], \'none\')', (refusedWith(afterBoth[1], 'none'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ok(afterBoth[2])', (ok(afterBoth[2]))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4149,11 +4910,21 @@ const CASES = [
       const declared = say('Stopping here: open for you is the order of the two remaining changes.\n\n' + REPORT);
       handed('d2', 2, 'DONE');
       const both = say(REPORT);
-      return none.status === 2 && err(none).includes('next: step 1') && /rule 2/.test(err(none)) && /the corrected sentences only/.test(err(none))
-        && refused.status === 2 && err(refused).includes('next: step 1') && !err(refused).includes('next: step 2')
-        && one.status === 2 && err(one).includes('next: step 2') && !err(one).includes('next: step 1')
-        && running.status === 0 && choice.status === 0 && declared.status === 0
-        && both.status === 0;
+      const held_rows = [['none.status === 2', (none.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(none).includes(\'next: step 1\')', (err(none).includes('next: step 1'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/rule 2/.test(err(none))', (/rule 2/.test(err(none)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/the corrected sentences only/.test(err(none))', (/the corrected sentences only/.test(err(none)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused.status === 2', (refused.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(refused).includes(\'next: step 1\')', (err(refused).includes('next: step 1'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!err(refused).includes(\'next: step 2\')', (!err(refused).includes('next: step 2'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['one.status === 2', (one.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(one).includes(\'next: step 2\')', (err(one).includes('next: step 2'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!err(one).includes(\'next: step 1\')', (!err(one).includes('next: step 1'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['running.status === 0', (running.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['choice.status === 0', (choice.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['declared.status === 0', (declared.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['both.status === 0', (both.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4199,24 +4970,47 @@ const CASES = [
       const noOrder = status();
       rmSync(marker);
       const noPlan = status();
-      return /^next: step 1$/m.test(first) && first.includes("Order, each step's state: 1 not sent; 2 not sent.") && first.includes('Standing, sent at any time: 3 not sent.')
-        && first.includes('Hand-backs: no step has one yet.') && first.includes('Found, from the report files: none.')
-        && at1(first, 'Goals every session serves', 'next: step 1') && at1(first, 'next: step 1', '— the pointer test')
-        && firstPage.includes('<title>Plan run status</title>') && firstPage.includes('next: step 1')
-        && firstPage.includes('<h2>1. Build <span class="chip held">held, next to send</span></h2>') && firstPage.includes('<h2>2. Check <span class="chip held">held, after step 1</span></h2>')
-        && firstPage.includes('<h2>3. Timer <span class="chip held">held, sent at any time</span></h2>')
-        && /^next: step 2$/m.test(second) && second.includes("Order, each step's state: 1 DONE; 2 REFUSED.")
-        && second.includes('- step 1, ended') && second.includes('    DONE\n    The goals are written.') && second.includes('    REFUSED\n    The fence refused the write.')
-        && second.includes(`${join(pad, 'progress', 'step-1-report.txt')} (written)`) && second.includes(`${join(pad, 'progress', 'step-2-report.txt')} (not written)`)
-        && second.includes('- step 1 #1 [unsorted]: Found: the doc check was not run') && second.includes('- step 1 #2 [unsorted]: Found: a <b>tag</b> in the report') && !second.includes('not a found line')
-        && second.includes('Found, from the report files (2: 0 fixed, 0 stopping the plan, 0 queued, 2 unsorted):')
-        && secondPage.includes('next: step 2') && secondPage.includes('<li>2 Found lines are not sorted yet by the manager; the status print lists each.</li>') && !secondPage.includes('in the report')
-        && secondPage.includes('<h2>1. Build <span class="chip done">done</span></h2>') && secondPage.includes('<li>Where it stands: DONE</li>')
-        && secondPage.includes('<h2>2. Check <span class="chip open">open</span></h2>') && secondPage.includes('<li>Where it stands: REFUSED</li>')
-        && /^next: none$/m.test(third) && third.includes("Order, each step's state: 1 DONE; 2 DONE.") && third.includes('Standing, sent at any time: 3 not sent.')
-        && third.includes('The check is read.') && !third.includes('The fence refused the write.')
-        && thirdPage.includes('next: none') && thirdPage.includes('the plan has run to its end') && thirdPage.includes('The thing may need a second read.')
-        && /^next: not defined \(/m.test(noOrder) && /^next: not read \(no plan is in force/m.test(noPlan);
+      const held_rows = [['/^next: step 1$/m.test(first)', (/^next: step 1$/m.test(first))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.includes("Order, each step\'s state: 1 not sent; 2 not sent.")', (first.includes("Order, each step's state: 1 not sent; 2 not sent."))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.includes(\'Standing, sent at any time: 3 not sent.\')', (first.includes('Standing, sent at any time: 3 not sent.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.includes(\'Hand-backs: no step has one yet.\')', (first.includes('Hand-backs: no step has one yet.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.includes(\'Found, from the report files: none.\')', (first.includes('Found, from the report files: none.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['at1(first, \'Goals every session serves\', \'next: step 1\')', (at1(first, 'Goals every session serves', 'next: step 1'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['at1(first, \'next: step 1\', \'— the pointer test\')', (at1(first, 'next: step 1', '— the pointer test'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['firstPage.includes(\'<title>Plan run status</title>\')', (firstPage.includes('<title>Plan run status</title>'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['firstPage.includes(\'next: step 1\')', (firstPage.includes('next: step 1'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['firstPage.includes(\'<h2>1. Build <span class="chip held">held, next to send</span></h2>\')', (firstPage.includes('<h2>1. Build <span class="chip held">held, next to send</span></h2>'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['firstPage.includes(\'<h2>2. Check <span class="chip held">held, after step 1</span></h2>\')', (firstPage.includes('<h2>2. Check <span class="chip held">held, after step 1</span></h2>'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['firstPage.includes(\'<h2>3. Timer <span class="chip held">held, sent at any time</span></h2>\')', (firstPage.includes('<h2>3. Timer <span class="chip held">held, sent at any time</span></h2>'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^next: step 2$/m.test(second)', (/^next: step 2$/m.test(second))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes("Order, each step\'s state: 1 DONE; 2 REFUSED.")', (second.includes("Order, each step's state: 1 DONE; 2 REFUSED."))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes(\'- step 1, ended\')', (second.includes('- step 1, ended'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes(\' DONE\\n The goals are written.\')', (second.includes('    DONE\n    The goals are written.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes(\' REFUSED\\n The fence refused the write.\')', (second.includes('    REFUSED\n    The fence refused the write.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes(`${join(pad, \'progress\', \'step-1-report.txt\')} (written)`)', (second.includes(`${join(pad, 'progress', 'step-1-report.txt')} (written)`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes(`${join(pad, \'progress\', \'step-2-report.txt\')} (not written)`)', (second.includes(`${join(pad, 'progress', 'step-2-report.txt')} (not written)`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes(\'- step 1 #1 [unsorted]: Found: the doc check was not run\')', (second.includes('- step 1 #1 [unsorted]: Found: the doc check was not run'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes(\'- step 1 #2 [unsorted]: Found: a <b>tag</b> in the report\')', (second.includes('- step 1 #2 [unsorted]: Found: a <b>tag</b> in the report'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!second.includes(\'not a found line\')', (!second.includes('not a found line'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes(\'Found, from the report files (2: 0 fixed, 0 stopping the plan, 0 queued, 2 unsorted):\')', (second.includes('Found, from the report files (2: 0 fixed, 0 stopping the plan, 0 queued, 2 unsorted):'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['secondPage.includes(\'next: step 2\')', (secondPage.includes('next: step 2'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['secondPage.includes(\'<li>2 Found lines are not sorted yet by the manager; the status print lists each.</li>\')', (secondPage.includes('<li>2 Found lines are not sorted yet by the manager; the status print lists each.</li>'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!secondPage.includes(\'in the report\')', (!secondPage.includes('in the report'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['secondPage.includes(\'<h2>1. Build <span class="chip done">done</span></h2>\')', (secondPage.includes('<h2>1. Build <span class="chip done">done</span></h2>'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['secondPage.includes(\'<li>Where it stands: DONE</li>\')', (secondPage.includes('<li>Where it stands: DONE</li>'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['secondPage.includes(\'<h2>2. Check <span class="chip open">open</span></h2>\')', (secondPage.includes('<h2>2. Check <span class="chip open">open</span></h2>'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['secondPage.includes(\'<li>Where it stands: REFUSED</li>\')', (secondPage.includes('<li>Where it stands: REFUSED</li>'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^next: none$/m.test(third)', (/^next: none$/m.test(third))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['third.includes("Order, each step\'s state: 1 DONE; 2 DONE.")', (third.includes("Order, each step's state: 1 DONE; 2 DONE."))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['third.includes(\'Standing, sent at any time: 3 not sent.\')', (third.includes('Standing, sent at any time: 3 not sent.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['third.includes(\'The check is read.\')', (third.includes('The check is read.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!third.includes(\'The fence refused the write.\')', (!third.includes('The fence refused the write.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['thirdPage.includes(\'next: none\')', (thirdPage.includes('next: none'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['thirdPage.includes(\'the plan has run to its end\')', (thirdPage.includes('the plan has run to its end'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['thirdPage.includes(\'The thing may need a second read.\')', (thirdPage.includes('The thing may need a second read.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^next: not defined \\(/m.test(noOrder)', (/^next: not defined \(/m.test(noOrder))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^next: not read \\(no plan is in force/m.test(noPlan)', (/^next: not read \(no plan is in force/m.test(noPlan))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -4227,11 +5021,21 @@ const CASES = [
     run(m) {
       const v = (t) => m.report.parseVerdict(t);
       const ok = v('ON-AIM ROUTE-CLEAR step 12 next 13');
-      return ok?.aim === 'ON-AIM' && ok.route === 'ROUTE-CLEAR' && ok.step === 12 && ok.next === 13
-        && v('OFF-AIM ROUTE-REFUSED, step 4, next 5')?.aim === 'OFF-AIM' && v('ON-AIM ROUTE-REFUSED step 4 next 5')?.route === 'ROUTE-REFUSED'
-        && v('ON-AIM ROUTE-CLEAR step none next 41')?.step === 'none' && v('ON-AIM ROUTE-CLEAR step 3')?.next === null
-        && v('ON-AIM step 12') === null && v('ON-AIM') === null && v('Looks fine to me, go ahead.') === null && v('') === null
-        && v('on-aim route-clear step 1 next 2') === null && v('ROUTE-CLEAR ON-AIM step 1 next 2') === null;
+      const held_rows = [['ok?.aim === \'ON-AIM\'', (ok?.aim === 'ON-AIM')]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ok.route === \'ROUTE-CLEAR\'', (ok.route === 'ROUTE-CLEAR')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ok.step === 12', (ok.step === 12)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ok.next === 13', (ok.next === 13)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['v(\'OFF-AIM ROUTE-REFUSED, step 4, next 5\')?.aim === \'OFF-AIM\'', (v('OFF-AIM ROUTE-REFUSED, step 4, next 5')?.aim === 'OFF-AIM')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['v(\'ON-AIM ROUTE-REFUSED step 4 next 5\')?.route === \'ROUTE-REFUSED\'', (v('ON-AIM ROUTE-REFUSED step 4 next 5')?.route === 'ROUTE-REFUSED')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['v(\'ON-AIM ROUTE-CLEAR step none next 41\')?.step === \'none\'', (v('ON-AIM ROUTE-CLEAR step none next 41')?.step === 'none')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['v(\'ON-AIM ROUTE-CLEAR step 3\')?.next === null', (v('ON-AIM ROUTE-CLEAR step 3')?.next === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['v(\'ON-AIM step 12\') === null', (v('ON-AIM step 12') === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['v(\'ON-AIM\') === null', (v('ON-AIM') === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['v(\'Looks fine to me, go ahead.\') === null', (v('Looks fine to me, go ahead.') === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['v(\'\') === null', (v('') === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['v(\'on-aim route-clear step 1 next 2\') === null', (v('on-aim route-clear step 1 next 2') === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['v(\'ROUTE-CLEAR ON-AIM step 1 next 2\') === null', (v('ROUTE-CLEAR ON-AIM step 1 next 2') === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4244,25 +5048,31 @@ const CASES = [
       const kind = (ends, o) => st(ends, o).kind;
       const one = endFor(1, 100, 50, 'DONE');
       const cleared = st([one, endFor(3, 200, 150, CLEAR)]);
-      return cleared.kind === 'cleared' && cleared.cleared === 2 && cleared.step === 1 && cleared.refAt === 100
+      return assertAll([
+        ['the first review is cleared', cleared.kind === 'cleared' && cleared.cleared === 2 && cleared.step === 1 && cleared.refAt === 100, JSON.stringify(cleared)],
         // Began at or before the end it judges: stale. Equal is not after.
-        && kind([one, endFor(3, 200, 90, CLEAR)]) === 'stale' && kind([one, endFor(3, 200, 100, CLEAR)]) === 'stale'
-        && kind([one, endFor(3, 200, 101, CLEAR)]) === 'cleared'
+        ['a review begun before the end it judges is stale', kind([one, endFor(3, 200, 90, CLEAR)]) === 'stale'],
+        ['a review begun at the end it judges is stale', kind([one, endFor(3, 200, 100, CLEAR)]) === 'stale'],
+        ['a review begun just after the end is cleared', kind([one, endFor(3, 200, 101, CLEAR)]) === 'cleared'],
         // A later end in Order, a REFUSED hand-back and an interruption each move the reference.
-        && kind([one, endFor(3, 200, 150, CLEAR), endFor(2, 300, 250, 'DONE')]) === 'stale'
-        && kind([endFor(1, 100, 50, 'REFUSED'), endFor(3, 200, 90, CLEAR)]) === 'stale'
-        && kind([endFor(1, 100, 50, 'REFUSED'), endFor(3, 200, 150, 'ON-AIM ROUTE-CLEAR step 1 next 1')]) === 'cleared'
-        && kind([endFor(1, 100, 50, 'x', 'an interruption'), endFor(3, 200, 90, CLEAR)]) === 'stale'
+        ['a later end in Order moves the reference', kind([one, endFor(3, 200, 150, CLEAR), endFor(2, 300, 250, 'DONE')]) === 'stale'],
+        ['a REFUSED hand-back moves the reference', kind([endFor(1, 100, 50, 'REFUSED'), endFor(3, 200, 90, CLEAR)]) === 'stale'],
+        ['a review begun after a REFUSED hand-back is cleared', kind([endFor(1, 100, 50, 'REFUSED'), endFor(3, 200, 150, 'ON-AIM ROUTE-CLEAR step 1 next 1')]) === 'cleared'],
+        ['an interruption moves the reference', kind([endFor(1, 100, 50, 'x', 'an interruption'), endFor(3, 200, 90, CLEAR)]) === 'stale'],
         // A step outside Order does not move it; a hand-back that is not a report for the review step is no review.
-        && kind([one, endFor(9, 500, 400, 'DONE'), endFor(3, 200, 150, CLEAR)]) === 'cleared'
-        && kind([one, endFor(3, 200, 150, CLEAR, 'a refusal')]) === 'missing'
+        ['a step outside Order does not move it', kind([one, endFor(9, 500, 400, 'DONE'), endFor(3, 200, 150, CLEAR)]) === 'cleared'],
+        ['a hand-back that is not a report is no review', kind([one, endFor(3, 200, 150, CLEAR, 'a refusal')]) === 'missing'],
         // The plan's last write and the owner's newest message move it too.
-        && kind([one, endFor(3, 200, 150, CLEAR)], { planAt: 160 }) === 'stale' && kind([one, endFor(3, 200, 150, CLEAR)], { planAt: 149 }) === 'cleared'
-        && kind([one, endFor(3, 200, 150, CLEAR)], { after: 170 }) === 'stale' && kind([one, endFor(3, 200, 150, CLEAR)], { after: 140 }) === 'cleared'
+        ['a plan write after the review began makes it stale', kind([one, endFor(3, 200, 150, CLEAR)], { planAt: 160 }) === 'stale'],
+        ['a plan write before the review began leaves it cleared', kind([one, endFor(3, 200, 150, CLEAR)], { planAt: 149 }) === 'cleared'],
+        ['an owner message after the review began makes it stale', kind([one, endFor(3, 200, 150, CLEAR)], { after: 170 }) === 'stale'],
+        ['an owner message before the review began leaves it cleared', kind([one, endFor(3, 200, 150, CLEAR)], { after: 140 }) === 'cleared'],
         // The newest review is the one read.
-        && kind([one, endFor(3, 200, 150, CLEAR), endFor(3, 400, 350, 'OFF-AIM ROUTE-REFUSED step 1 next 2')]) === 'off-aim'
+        ['the newest review is the one read', kind([one, endFor(3, 200, 150, CLEAR), endFor(3, 400, 350, 'OFF-AIM ROUTE-REFUSED step 1 next 2')]) === 'off-aim'],
         // A start that cannot be read is not after anything.
-        && kind([one, endFor(3, 200, NaN, CLEAR)]) === 'stale' && kind([one, { ...endFor(3, 200, 0, CLEAR), startAt: undefined }]) === 'stale';
+        ['a start that is NaN is not after anything', kind([one, endFor(3, 200, NaN, CLEAR)]) === 'stale'],
+        ['a start that is undefined is not after anything', kind([one, { ...endFor(3, 200, 0, CLEAR), startAt: undefined }]) === 'stale'],
+      ]);
     },
   },
   {
@@ -4279,20 +5089,31 @@ const CASES = [
       const elsewhere = step3('Follow /somewhere/else/aim-review.md for the move named on the status page.');
       const noFollow = step3(`Read ${join(dir, 'aim-review.md')} for the move named on the status page.`);
       const first = endFor(3, 200, 150, 'ON-AIM ROUTE-CLEAR step none next 1');
-      return rv('OFF-AIM ROUTE-REFUSED step 1 next 2').kind === 'off-aim' && rv('OFF-AIM ROUTE-CLEAR step 1 next 2').kind === 'off-aim'
-        && rv('ON-AIM ROUTE-REFUSED step 1 next 2').kind === 'route-refused'
-        && rv('ON-AIM ROUTE-CLEAR step 2 next 2').kind === 'wrong-step' && rv('ON-AIM ROUTE-CLEAR step none next 2').kind === 'wrong-step' && rv('ON-AIM ROUTE-CLEAR next 2').kind === 'wrong-step'
-        && rv('ON-AIM ROUTE-CLEAR step 1').kind === 'no-next'
-        && rv('ON-AIM step 1').kind === 'unreadable' && rv('All is well.').kind === 'unreadable'
+      return assertAll([
+        ['OFF-AIM with a refused route is off-aim', rv('OFF-AIM ROUTE-REFUSED step 1 next 2').kind === 'off-aim'],
+        ['OFF-AIM with a clear route is off-aim', rv('OFF-AIM ROUTE-CLEAR step 1 next 2').kind === 'off-aim'],
+        ['ON-AIM with a refused route is route-refused', rv('ON-AIM ROUTE-REFUSED step 1 next 2').kind === 'route-refused'],
+        ['another step judged is wrong-step', rv('ON-AIM ROUTE-CLEAR step 2 next 2').kind === 'wrong-step'],
+        ['step none judged is wrong-step', rv('ON-AIM ROUTE-CLEAR step none next 2').kind === 'wrong-step'],
+        ['no step named is wrong-step', rv('ON-AIM ROUTE-CLEAR next 2').kind === 'wrong-step'],
+        ['a missing next is no-next', rv('ON-AIM ROUTE-CLEAR step 1').kind === 'no-next'],
+        ['a first line with no route is unreadable', rv('ON-AIM step 1').kind === 'unreadable'],
+        ['a first line that is no verdict is unreadable', rv('All is well.').kind === 'unreadable'],
         // With no step of Order ended yet there is nothing the verdict's step could be compared with.
-        && st([first]).kind === 'cleared' && st([first]).step === null && st([first]).cleared === 1
-        && st([one]).kind === 'missing' && st([one], { runningSteps: new Set([3]) }).kind === 'running'
-        && st([one, endFor(3, 200, 150, 'ON-AIM ROUTE-CLEAR step 1 next 2')], { runningSteps: new Set([3]) }).kind === 'cleared'
-        && st([one, endFor(3, 200, 50, 'ON-AIM ROUTE-CLEAR step 1 next 2')], { runningSteps: new Set([3]) }).kind === 'running'
-        && st(null).kind === 'not-read'
-        && st([one], {}, { path: '/plans/gate-test.md', text: ORDER_PLAN }).kind === 'not-enforced' && st([one], {}, null).kind === 'not-enforced'
-        && st([one], {}, bare).kind === 'not-enforced' && st([one], {}, elsewhere).kind === 'not-enforced' && st([one], {}, noFollow).kind === 'not-enforced'
-        && JSON.stringify(m.report.aimReviewSteps(text)) === '[3]' && JSON.stringify(m.report.aimReviewSteps(STEPS_PLAN)) === '[]';
+        ['with no step ended the verdict is cleared with no step', st([first]).kind === 'cleared' && st([first]).step === null && st([first]).cleared === 1, JSON.stringify(st([first]))],
+        ['no review is missing', st([one]).kind === 'missing'],
+        ['a review still running is running', st([one], { runningSteps: new Set([3]) }).kind === 'running'],
+        ['a review that began after the end is cleared though a step runs', st([one, endFor(3, 200, 150, 'ON-AIM ROUTE-CLEAR step 1 next 2')], { runningSteps: new Set([3]) }).kind === 'cleared'],
+        ['a review that began before the end is running', st([one, endFor(3, 200, 50, 'ON-AIM ROUTE-CLEAR step 1 next 2')], { runningSteps: new Set([3]) }).kind === 'running'],
+        ['agents that cannot be read are not-read', st(null).kind === 'not-read'],
+        ['a plan with no review step is not enforced', st([one], {}, { path: '/plans/gate-test.md', text: ORDER_PLAN }).kind === 'not-enforced'],
+        ['no plan is not enforced', st([one], {}, null).kind === 'not-enforced'],
+        ['a Standing step naming aim-review.md bare is not enforced', st([one], {}, bare).kind === 'not-enforced'],
+        ['a Standing step naming another folder is not enforced', st([one], {}, elsewhere).kind === 'not-enforced'],
+        ['a Standing step that does not follow the file is not enforced', st([one], {}, noFollow).kind === 'not-enforced'],
+        ['the review steps of the plan are 3', JSON.stringify(m.report.aimReviewSteps(text)) === '[3]'],
+        ['a plan with no review step has none', JSON.stringify(m.report.aimReviewSteps(STEPS_PLAN)) === '[]'],
+      ]);
     },
   },
   {
@@ -4304,18 +5125,21 @@ const CASES = [
       const moved = (edit) => m.report.scopeChanged(hashes, edit(base));
       const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
       const all = ['Goals', 'Asked', 'Files', 'Commands', 'Rules', 'Rules of this plan'];
-      return eq(Object.keys(hashes), all) && Object.values(hashes).every((h) => /^[0-9a-f]{64}$/.test(h))
-        && eq(moved((t) => t), [])
-        && eq(moved((t) => t.replace('1. **Build.** Make the thing.', '1. **Build.** Make the thing, and say what it did.')), [])
-        && eq(moved((t) => t.replace('Order: 1 2', 'Order: 2 1')), [])
-        && eq(moved((t) => t.replace('- The thing may need a second read.', '- The thing may need a third read.')), [])
-        && eq(moved((t) => t.replace('`keep.mjs`', '`keep.mjs`, `more.mjs`')), ['Files'])
-        && eq(moved((t) => t.replace('- git push', '- git push\n- git reset')), ['Commands'])
-        && eq(moved((t) => t.replace('1. The thing is built and read.', '1. The thing is built.')), ['Goals'])
-        && eq(moved((t) => t.replace(OWN_WORDS, 'Do something else.')), ['Asked'])
-        && eq(moved((t) => t.replace('- git push', '- git push\n- git reset').replace('`keep.mjs`', '`keep.mjs`, `more.mjs`')), ['Files', 'Commands'])
-        && eq(m.report.scopeChanged(hashes, base.replace(`## Asked\n${OWN_WORDS}\n\n`, '')), ['Asked'])
-        && eq(m.report.scopeChanged(null, base), all) && eq(m.report.scopeChanged('x', base), all);
+      const held_rows = [['eq(Object.keys(hashes), all)', (eq(Object.keys(hashes), all))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['Object.values(hashes).every((h) => /^[0-9a-f]{64}$/.test(h))', (Object.values(hashes).every((h) => /^[0-9a-f]{64}$/.test(h)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved((t) => t), [])', (eq(moved((t) => t), []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved((t) => t.replace(\'1. **Build.** Make the thing.\', \'1. **Build.** Make the thing, and say what it did.\')), [])', (eq(moved((t) => t.replace('1. **Build.** Make the thing.', '1. **Build.** Make the thing, and say what it did.')), []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved((t) => t.replace(\'Order: 1 2\', \'Order: 2 1\')), [])', (eq(moved((t) => t.replace('Order: 1 2', 'Order: 2 1')), []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved((t) => t.replace(\'- The thing may need a second read.\', \'- The thing may need a third read.\')), [])', (eq(moved((t) => t.replace('- The thing may need a second read.', '- The thing may need a third read.')), []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved((t) => t.replace(\'`keep.mjs`\', \'`keep.mjs`, `more.mjs`\')), [\'Files\'])', (eq(moved((t) => t.replace('`keep.mjs`', '`keep.mjs`, `more.mjs`')), ['Files']))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved((t) => t.replace(\'- git push\', \'- git push\\n- git reset\')), [\'Commands\'])', (eq(moved((t) => t.replace('- git push', '- git push\n- git reset')), ['Commands']))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved((t) => t.replace(\'1. The thing is built and read.\', \'1. The thing is built.\')), [\'Goals\'])', (eq(moved((t) => t.replace('1. The thing is built and read.', '1. The thing is built.')), ['Goals']))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved((t) => t.replace(OWN_WORDS, \'Do something else.\')), [\'Asked\'])', (eq(moved((t) => t.replace(OWN_WORDS, 'Do something else.')), ['Asked']))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved((t) => t.replace(\'- git push\', \'- git push\\n- git reset\').replace(\'`keep.mjs`\', \'`keep.mjs`, `more.mjs`\')), [\'Files\', \'Commands\'])', (eq(moved((t) => t.replace('- git push', '- git push\n- git reset').replace('`keep.mjs`', '`keep.mjs`, `more.mjs`')), ['Files', 'Commands']))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(m.report.scopeChanged(hashes, base.replace(`## Asked\\n${OWN_WORDS}\\n\\n`, \'\')), [\'Asked\'])', (eq(m.report.scopeChanged(hashes, base.replace(`## Asked\n${OWN_WORDS}\n\n`, '')), ['Asked']))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(m.report.scopeChanged(null, base), all)', (eq(m.report.scopeChanged(null, base), all))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(m.report.scopeChanged(\'x\', base), all)', (eq(m.report.scopeChanged('x', base), all))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4340,12 +5164,22 @@ const CASES = [
       const moved = (then, name) => m.report.scopeChanged(then, edits[name](base));
       // The instrument: every edit changes the text, or an edit that moves nothing could be one never made.
       const changes = Object.keys(edits).every((k) => edits[k](base) !== base);
-      return changes && firstBlockLine.length > 20
-        && eq(m.report.scopeHashes(edits.addStep(base)), hashes) && eq(m.report.scopeHashes(edits.dropLine(base)), hashes)
-        && eq(moved(hashes, 'addStep'), []) && eq(moved(hashes, 'dropLine'), []) && eq(moved(hashes, 'steps'), [])
-        && eq(moved(hashes, 'ownGoal'), ['Goals']) && eq(moved(hashes, 'blockGoal'), ['Goals']) && eq(moved(hashes, 'secondLine'), ['Goals'])
-        && eq(m.report.scopeChanged(old, base), []) && eq(moved(old, 'steps'), [])
-        && eq(moved(old, 'ownGoal'), ['Goals']) && eq(moved(old, 'blockGoal'), ['Goals']) && eq(moved(old, 'addStep'), ['Goals']);
+      const held_rows = [['changes', (changes)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['firstBlockLine.length > 20', (firstBlockLine.length > 20)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(m.report.scopeHashes(edits.addStep(base)), hashes)', (eq(m.report.scopeHashes(edits.addStep(base)), hashes))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(m.report.scopeHashes(edits.dropLine(base)), hashes)', (eq(m.report.scopeHashes(edits.dropLine(base)), hashes))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved(hashes, \'addStep\'), [])', (eq(moved(hashes, 'addStep'), []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved(hashes, \'dropLine\'), [])', (eq(moved(hashes, 'dropLine'), []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved(hashes, \'steps\'), [])', (eq(moved(hashes, 'steps'), []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved(hashes, \'ownGoal\'), [\'Goals\'])', (eq(moved(hashes, 'ownGoal'), ['Goals']))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved(hashes, \'blockGoal\'), [\'Goals\'])', (eq(moved(hashes, 'blockGoal'), ['Goals']))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved(hashes, \'secondLine\'), [\'Goals\'])', (eq(moved(hashes, 'secondLine'), ['Goals']))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(m.report.scopeChanged(old, base), [])', (eq(m.report.scopeChanged(old, base), []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved(old, \'steps\'), [])', (eq(moved(old, 'steps'), []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved(old, \'ownGoal\'), [\'Goals\'])', (eq(moved(old, 'ownGoal'), ['Goals']))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved(old, \'blockGoal\'), [\'Goals\'])', (eq(moved(old, 'blockGoal'), ['Goals']))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(moved(old, \'addStep\'), [\'Goals\'])', (eq(moved(old, 'addStep'), ['Goals']))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4389,11 +5223,22 @@ const CASES = [
       call(B, trB, STEP, '--amend');
       const mkB = B.mk();
       const addAfter = call(B, trB, ADD);
-      return same(Object.keys(scopeA ?? {}), ['Goals', 'Asked', 'Files', 'Commands', 'Rules', 'Rules of this plan'])
-        && addPre.status === 0 && addPost.status === 0 && mkA?.hash === sha(text.replace(ADD.old_string, ADD.new_string)) && same(mkA.scope, scopeA) && mkA.amendments === 1
-        && refused(goalA, /Goals/) && /Scope: Goals, Asked, Files, Commands, Rules, Rules of this plan are as approved\./.test(statusA) && /Match: yes/.test(statusA)
-        && refused(addOld, /Goals/) && refused(goalOld, /Goals/) && stepOld.status === 0
-        && mkB?.hash === sha(text.replace(STEP.old_string, STEP.new_string)) && same(mkB.scope, m.report.scopeHashes(text)) && addAfter.status === 0;
+      const held_rows = [['same(Object.keys(scopeA ?? {}), [\'Goals\', \'Asked\', \'Files\', \'Commands\', \'Rules\', \'Rules of this plan\'])', (same(Object.keys(scopeA ?? {}), ['Goals', 'Asked', 'Files', 'Commands', 'Rules', 'Rules of this plan']))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['addPre.status === 0', (addPre.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['addPost.status === 0', (addPost.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mkA?.hash === sha(text.replace(ADD.old_string, ADD.new_string))', (mkA?.hash === sha(text.replace(ADD.old_string, ADD.new_string)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['same(mkA.scope, scopeA)', (same(mkA.scope, scopeA))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mkA.amendments === 1', (mkA.amendments === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(goalA, /Goals/)', (refused(goalA, /Goals/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Scope: Goals, Asked, Files, Commands, Rules, Rules of this plan are as approved\\./.test(statusA)', (/Scope: Goals, Asked, Files, Commands, Rules, Rules of this plan are as approved\./.test(statusA))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Match: yes/.test(statusA)', (/Match: yes/.test(statusA))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(addOld, /Goals/)', (refused(addOld, /Goals/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(goalOld, /Goals/)', (refused(goalOld, /Goals/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stepOld.status === 0', (stepOld.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mkB?.hash === sha(text.replace(STEP.old_string, STEP.new_string))', (mkB?.hash === sha(text.replace(STEP.old_string, STEP.new_string)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['same(mkB.scope, m.report.scopeHashes(text))', (same(mkB.scope, m.report.scopeHashes(text)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['addAfter.status === 0', (addAfter.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4419,9 +5264,16 @@ const CASES = [
       const inPlan = w.call('PreToolUse', { session_id: sid('pu'), permission_mode: 'plan', ...POPUP });
       const agent = w.call('PreToolUse', { session_id: sid('pu'), agent_id: 'a1', ...POPUP });
       const readMain = w.call('PreToolUse', { session_id: sid('pu'), ...READ });
-      return refused(planMain, /not known to be read-only/) && refused(planAgent, /not known to be read-only/) && planRead.status === 0
-        && refused(none, /No approved plan is in force/) && noneRead.status === 0
-        && refused(main, /MANAGER FENCE/) && refused(inPlan, /MANAGER FENCE/) && refused(agent, /PLAN FENCE/) && readMain.status === 0;
+      const held_rows = [['refused(planMain, /not known to be read-only/)', (refused(planMain, /not known to be read-only/))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(planAgent, /not known to be read-only/)', (refused(planAgent, /not known to be read-only/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['planRead.status === 0', (planRead.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(none, /No approved plan is in force/)', (refused(none, /No approved plan is in force/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noneRead.status === 0', (noneRead.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(main, /MANAGER FENCE/)', (refused(main, /MANAGER FENCE/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(inPlan, /MANAGER FENCE/)', (refused(inPlan, /MANAGER FENCE/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(agent, /PLAN FENCE/)', (refused(agent, /PLAN FENCE/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readMain.status === 0', (readMain.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4434,17 +5286,21 @@ const CASES = [
       const gate = (n, state, extra, p = plan) => m.dispatch.reviewGate(send(n, extra), p, state);
       const clear = { ...base, kind: 'cleared', cleared: 2 };
       const says = (r, ...re) => typeof r === 'string' && /^REVIEW GATE/.test(r) && re.every((x) => x.test(r));
-      return gate(2, clear) === null
-        && says(gate(1, clear), /cleared step 2/, /step 3/)
-        && gate(3, { ...base, kind: 'missing' }) === null && gate(3, null) === null
-        && ['missing', 'running', 'stale', 'unreadable', 'wrong-step', 'no-next'].every((k) => says(gate(2, { ...base, kind: k }), new RegExp(`${plan.path} step 3`), /does not latch/))
-        && says(gate(2, { ...base, kind: 'off-aim', first: 'OFF-AIM ROUTE-REFUSED step 1 next 2' }), /Go back to plan mode/, /OFF-AIM/)
-        && says(gate(2, { ...base, kind: 'route-refused', first: 'ON-AIM ROUTE-REFUSED step 1 next 2' }), /Amend/, /Steps or Order/)
-        && says(gate(2, { ...base, kind: 'not-read' }), /cannot be read/) && says(gate(2, null), /could not be read/)
-        && gate(2, { ...base, kind: 'not-enforced' }) === null
-        && gate(2, { ...base, kind: 'missing' }, { agent_id: 'a1' }) === null && gate(2, { ...base, kind: 'missing' }, { tool_name: 'Read' }) === null
-        && gate(2, { ...base, kind: 'missing' }, {}, { path: plan.path, text: ORDER_PLAN }) === null
-        && gate(2, { ...base, kind: 'missing' }, { tool_input: { prompt: 'something else' } }) === null;
+      const held_rows = [['gate(2, clear) === null', (gate(2, clear) === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(gate(1, clear), /cleared step 2/, /step 3/)', (says(gate(1, clear), /cleared step 2/, /step 3/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(3, { ...base, kind: \'missing\' }) === null', (gate(3, { ...base, kind: 'missing' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(3, null) === null', (gate(3, null) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['[\'missing\', \'running\', \'stale\', \'unreadable\', \'wrong-step\', \'no-next\'].every((k) => says(gate(2, { ...base, kind: k }), new RegExp(`${plan.path} step 3`), /does not latch/))', (['missing', 'running', 'stale', 'unreadable', 'wrong-step', 'no-next'].every((k) => says(gate(2, { ...base, kind: k }), new RegExp(`${plan.path} step 3`), /does not latch/)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(gate(2, { ...base, kind: \'off-aim\', first: \'OFF-AIM ROUTE-REFUSED step 1 next 2\' }), /Go back to plan mode/, /OFF-AIM/)', (says(gate(2, { ...base, kind: 'off-aim', first: 'OFF-AIM ROUTE-REFUSED step 1 next 2' }), /Go back to plan mode/, /OFF-AIM/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(gate(2, { ...base, kind: \'route-refused\', first: \'ON-AIM ROUTE-REFUSED step 1 next 2\' }), /Amend/, /Steps or Order/)', (says(gate(2, { ...base, kind: 'route-refused', first: 'ON-AIM ROUTE-REFUSED step 1 next 2' }), /Amend/, /Steps or Order/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(gate(2, { ...base, kind: \'not-read\' }), /cannot be read/)', (says(gate(2, { ...base, kind: 'not-read' }), /cannot be read/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(gate(2, null), /could not be read/)', (says(gate(2, null), /could not be read/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(2, { ...base, kind: \'not-enforced\' }) === null', (gate(2, { ...base, kind: 'not-enforced' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(2, { ...base, kind: \'missing\' }, { agent_id: \'a1\' }) === null', (gate(2, { ...base, kind: 'missing' }, { agent_id: 'a1' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(2, { ...base, kind: \'missing\' }, { tool_name: \'Read\' }) === null', (gate(2, { ...base, kind: 'missing' }, { tool_name: 'Read' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(2, { ...base, kind: \'missing\' }, {}, { path: plan.path, text: ORDER_PLAN }) === null', (gate(2, { ...base, kind: 'missing' }, {}, { path: plan.path, text: ORDER_PLAN }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(2, { ...base, kind: \'missing\' }, { tool_input: { prompt: \'something else\' } }) === null', (gate(2, { ...base, kind: 'missing' }, { tool_input: { prompt: 'something else' } }) === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4455,12 +5311,18 @@ const CASES = [
       const send = (n, extra = {}) => ({ tool_name: 'Agent', tool_input: { prompt: `${plan.path} step ${n}` }, ...extra });
       const lifts = (n, state, extra, p = plan) => m.dispatch.correctionLifts(send(n, extra), { typed: 5 }, p, state);
       const clear = { kind: 'cleared', cleared: 2 };
-      return lifts(3, { kind: 'missing' }) === true && lifts(2, clear) === true && lifts(1, clear) === false
-        && lifts(2, { kind: 'stale' }) === false && lifts(2, { kind: 'cleared', cleared: null }) === false
-        && lifts(2, clear, { agent_id: 'a1' }) === false && lifts(2, clear, { tool_name: 'Write' }) === false
-        && lifts(2, clear, {}, { path: plan.path, text: ORDER_PLAN }) === false && lifts(3, clear, {}, { path: plan.path, text: ORDER_PLAN }) === false
-        && lifts(2, clear, { tool_input: { prompt: 'something else' } }) === false
-        && lifts(2, clear, {}, null) === false;
+      const held_rows = [['lifts(3, { kind: \'missing\' }) === true', (lifts(3, { kind: 'missing' }) === true)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lifts(2, clear) === true', (lifts(2, clear) === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lifts(1, clear) === false', (lifts(1, clear) === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lifts(2, { kind: \'stale\' }) === false', (lifts(2, { kind: 'stale' }) === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lifts(2, { kind: \'cleared\', cleared: null }) === false', (lifts(2, { kind: 'cleared', cleared: null }) === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lifts(2, clear, { agent_id: \'a1\' }) === false', (lifts(2, clear, { agent_id: 'a1' }) === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lifts(2, clear, { tool_name: \'Write\' }) === false', (lifts(2, clear, { tool_name: 'Write' }) === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lifts(2, clear, {}, { path: plan.path, text: ORDER_PLAN }) === false', (lifts(2, clear, {}, { path: plan.path, text: ORDER_PLAN }) === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lifts(3, clear, {}, { path: plan.path, text: ORDER_PLAN }) === false', (lifts(3, clear, {}, { path: plan.path, text: ORDER_PLAN }) === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lifts(2, clear, { tool_input: { prompt: \'something else\' } }) === false', (lifts(2, clear, { tool_input: { prompt: 'something else' } }) === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lifts(2, clear, {}, null) === false', (lifts(2, clear, {}, null) === false)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -4503,11 +5365,19 @@ const CASES = [
         edit(e, '--amend');
       }
       const after = A.mk();
-      return eq(seen.steps, [1, 2, 3]) && eq(seen.standing, [3])
-        && eq(mkA?.steps, seen.steps) && eq(mkA?.standing, seen.standing)
-        && mkB === null // changed by the plan of 6 November: the owner's exit in the app records no marker now
-        && eq(pre, [0, 0, 0, 0]) && cur !== text && after?.hash === sha256(cur) && after?.amendments === 4
-        && eq(after?.steps, seen.steps) && eq(after?.standing, seen.standing);
+      const held_rows = [['eq(seen.steps, [1, 2, 3])', (eq(seen.steps, [1, 2, 3]))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(seen.standing, [3])', (eq(seen.standing, [3]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(mkA?.steps, seen.steps)', (eq(mkA?.steps, seen.steps))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(mkA?.standing, seen.standing)', (eq(mkA?.standing, seen.standing))]);
+      // changed by the plan of 6 November: the owner's exit in the app records no marker now
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mkB === null', (mkB === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(pre, [0, 0, 0, 0])', (eq(pre, [0, 0, 0, 0]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cur !== text', (cur !== text)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after?.hash === sha256(cur)', (after?.hash === sha256(cur))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after?.amendments === 4', (after?.amendments === 4)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(after?.steps, seen.steps)', (eq(after?.steps, seen.steps))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(after?.standing, seen.standing)', (eq(after?.standing, seen.standing))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4527,9 +5397,13 @@ const CASES = [
       const held = readWith({ steps: [1, 2, 3], standing: [3] });
       const old = readWith({});
       const bad = readWith({ steps: 'all', standing: [3, 'x'] });
-      return eq(held?.steps, [1, 2, 3]) && eq(held?.standing, [3])
-        && old?.steps === null && old?.standing === null
-        && eq(bad?.steps, []) && eq(bad?.standing, []);
+      const held_rows = [['eq(held?.steps, [1, 2, 3])', (eq(held?.steps, [1, 2, 3]))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(held?.standing, [3])', (eq(held?.standing, [3]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['old?.steps === null', (old?.steps === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['old?.standing === null', (old?.standing === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(bad?.steps, [])', (eq(bad?.steps, []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(bad?.standing, [])', (eq(bad?.standing, []))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4549,13 +5423,23 @@ const CASES = [
       const changed = [added, textEdit, orderEdit].every((t) => t !== base);
       // A plan with a plain Standing step and no review: judged as before with no lists, refused with them.
       const timer = (extra) => gate(3, { path: '/plans/gate-test.md', text: ORDER_PLAN, ...extra });
-      return changed
-        && typeof bad === 'string' && /^DISPATCH GATE/.test(bad) && /STEP NOT IN THE PLAN AT APPROVAL/.test(bad) && /owner's button/.test(bad)
-        && /step 4 was not in the plan's Steps/.test(bad) && /were 1, 2, 3\)/.test(bad) && bad.includes(m.dispatch.FENCE_NO_LATCH)
-        && gate(1, plan(base)) === null && gate(1, plan(textEdit)) === null && gate(2, plan(orderEdit)) === null
-        && gate(4, plan(added, none)) === null
-        && typeof gate(1, plan(base, { steps: [] })) === 'string' && typeof gate(1, plan(base, { steps: [2, 3] })) === 'string'
-        && timer(none) === null && typeof timer({ steps: [1, 2, 3], standing: [3] }) === 'string';
+      const held_rows = [['changed', (changed)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof bad === \'string\'', (typeof bad === 'string')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^DISPATCH GATE/.test(bad)', (/^DISPATCH GATE/.test(bad))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/STEP NOT IN THE PLAN AT APPROVAL/.test(bad)', (/STEP NOT IN THE PLAN AT APPROVAL/.test(bad))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/owner\'s button/.test(bad)', (/owner's button/.test(bad))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/step 4 was not in the plan\'s Steps/.test(bad)', (/step 4 was not in the plan's Steps/.test(bad))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/were 1, 2, 3\\)/.test(bad)', (/were 1, 2, 3\)/.test(bad))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['bad.includes(m.dispatch.FENCE_NO_LATCH)', (bad.includes(m.dispatch.FENCE_NO_LATCH))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(1, plan(base)) === null', (gate(1, plan(base)) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(1, plan(textEdit)) === null', (gate(1, plan(textEdit)) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(2, plan(orderEdit)) === null', (gate(2, plan(orderEdit)) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate(4, plan(added, none)) === null', (gate(4, plan(added, none)) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof gate(1, plan(base, { steps: [] })) === \'string\'', (typeof gate(1, plan(base, { steps: [] })) === 'string')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof gate(1, plan(base, { steps: [2, 3] })) === \'string\'', (typeof gate(1, plan(base, { steps: [2, 3] })) === 'string')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['timer(none) === null', (timer(none) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof timer({ steps: [1, 2, 3], standing: [3] }) === \'string\'', (typeof timer({ steps: [1, 2, 3], standing: [3] }) === 'string')]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4580,21 +5464,25 @@ const CASES = [
       const MARK = new RegExp(m.dispatch.FENCE_NO_LATCH.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
       const old = lists([1, 2, 3], [3]);
       const wide = lists([1, 2, 3, 4], [3, 4]);
-      return changed
-        // Put on the line after approval: a step that was in the Steps, and a step that was added.
-        && says(review(2, plan(moved, old)), /^REVIEW GATE/, RULE, /step 2 is on the plan's Standing line now/, /does not latch/)
-        && says(dispatch(2, plan(moved, old)), /^DISPATCH GATE/, RULE, /step 2 is on the plan's Standing line now/, MARK)
-        && says(review(4, plan(added, old)), RULE, /step 4 is on the plan's Standing line now/)
-        && says(dispatch(4, plan(added, old)), RULE, /step 4 is on the plan's Standing line now/, MARK)
-        // Recorded on the line at approval, and neither the review nor a route check named in its first line.
-        && says(review(4, plan(added, wide)), RULE, /neither the review step/)
-        && says(dispatch(4, plan(added, wide)), RULE, /neither the review step/, MARK)
-        && says(review(4, plan(late, wide)), RULE, /neither the review step/) && says(dispatch(4, plan(late, wide)), RULE, /neither the review step/, MARK)
-        // The review step and a route check recorded at approval go.
-        && review(3, plan(base, old)) === null && dispatch(3, plan(base, old)) === null
-        && review(4, plan(route, wide)) === null && dispatch(4, plan(route, wide)) === null
-        // A marker that recorded no lists is judged as before: a Standing step goes.
-        && review(2, plan(moved, lists(null, null))) === null;
+      // Put on the line after approval: a step that was in the Steps, and a step that was added.
+      const held_rows = [['changed', (changed)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(review(2, plan(moved, old)), /^REVIEW GATE/, RULE, /step 2 is on the plan\'s Standing line now/, /does not latch/)', (says(review(2, plan(moved, old)), /^REVIEW GATE/, RULE, /step 2 is on the plan's Standing line now/, /does not latch/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(dispatch(2, plan(moved, old)), /^DISPATCH GATE/, RULE, /step 2 is on the plan\'s Standing line now/, MARK)', (says(dispatch(2, plan(moved, old)), /^DISPATCH GATE/, RULE, /step 2 is on the plan's Standing line now/, MARK))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(review(4, plan(added, old)), RULE, /step 4 is on the plan\'s Standing line now/)', (says(review(4, plan(added, old)), RULE, /step 4 is on the plan's Standing line now/))]);
+      // Recorded on the line at approval, and neither the review nor a route check named in its first line.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(dispatch(4, plan(added, old)), RULE, /step 4 is on the plan\'s Standing line now/, MARK)', (says(dispatch(4, plan(added, old)), RULE, /step 4 is on the plan's Standing line now/, MARK))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(review(4, plan(added, wide)), RULE, /neither the review step/)', (says(review(4, plan(added, wide)), RULE, /neither the review step/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(dispatch(4, plan(added, wide)), RULE, /neither the review step/, MARK)', (says(dispatch(4, plan(added, wide)), RULE, /neither the review step/, MARK))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(review(4, plan(late, wide)), RULE, /neither the review step/)', (says(review(4, plan(late, wide)), RULE, /neither the review step/))]);
+      // The review step and a route check recorded at approval go.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(dispatch(4, plan(late, wide)), RULE, /neither the review step/, MARK)', (says(dispatch(4, plan(late, wide)), RULE, /neither the review step/, MARK))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['review(3, plan(base, old)) === null', (review(3, plan(base, old)) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['dispatch(3, plan(base, old)) === null', (dispatch(3, plan(base, old)) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['review(4, plan(route, wide)) === null', (review(4, plan(route, wide)) === null)]);
+      // A marker that recorded no lists is judged as before: a Standing step goes.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['dispatch(4, plan(route, wide)) === null', (dispatch(4, plan(route, wide)) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['review(2, plan(moved, lists(null, null))) === null', (review(2, plan(moved, lists(null, null))) === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4615,11 +5503,20 @@ const CASES = [
       const onLine = send(mk(moved, lists), 2);
       const reviewStep = send(mk(base, lists), 3);
       const noLists = send(mk(added, {}), 4);
-      return added !== base && moved !== base
-        && newStep.r.status === 2 && /STEP NOT IN THE PLAN AT APPROVAL/.test(newStep.r.stderr) && /owner's button/.test(newStep.r.stderr) && !latched(newStep.id)
-        && onLine.r.status === 2 && /THE STANDING LINE HOLDS THE REVIEW AND A ROUTE CHECK/.test(onLine.r.stderr) && !latched(onLine.id)
-        && reviewStep.r.status === 0
-        && noLists.r.status === 2 && /REVIEW GATE/.test(noLists.r.stderr) && !/STEP NOT IN THE PLAN AT APPROVAL/.test(noLists.r.stderr);
+      const held_rows = [['added !== base', (added !== base)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['moved !== base', (moved !== base)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['newStep.r.status === 2', (newStep.r.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/STEP NOT IN THE PLAN AT APPROVAL/.test(newStep.r.stderr)', (/STEP NOT IN THE PLAN AT APPROVAL/.test(newStep.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/owner\'s button/.test(newStep.r.stderr)', (/owner's button/.test(newStep.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(newStep.id)', (!latched(newStep.id))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['onLine.r.status === 2', (onLine.r.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/THE STANDING LINE HOLDS THE REVIEW AND A ROUTE CHECK/.test(onLine.r.stderr)', (/THE STANDING LINE HOLDS THE REVIEW AND A ROUTE CHECK/.test(onLine.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(onLine.id)', (!latched(onLine.id))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['reviewStep.r.status === 0', (reviewStep.r.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noLists.r.status === 2', (noLists.r.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/REVIEW GATE/.test(noLists.r.stderr)', (/REVIEW GATE/.test(noLists.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/STEP NOT IN THE PLAN AT APPROVAL/.test(noLists.r.stderr)', (!/STEP NOT IN THE PLAN AT APPROVAL/.test(noLists.r.stderr))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -4660,9 +5557,21 @@ const CASES = [
       writeFileSync(A.plan, edited);
       A.guard(trA, { tool_name: 'Edit', tool_input: { file_path: A.plan, ...drop }, hook_event_name: 'PostToolUse' }, '--amend');
       const after = A.mk();
-      return eq(seen.review, [3]) && eq(timer.review, []) && edited !== text && eq(m.report.approvedStepSet(edited).review, [])
-        && eq(mkA?.review, [3]) && mkB === null /* changed by the plan of 6 November: the app's exit records no marker */ && eq(mkC?.review, [])
-        && pre === 0 && after?.hash === sha256(edited) && after?.amendments === 1 && eq(after?.review, [3]) && eq(after?.steps, seen.steps) && eq(after?.standing, seen.standing);
+      const held_rows = [['eq(seen.review, [3])', (eq(seen.review, [3]))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(timer.review, [])', (eq(timer.review, []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['edited !== text', (edited !== text)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(m.report.approvedStepSet(edited).review, [])', (eq(m.report.approvedStepSet(edited).review, []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(mkA?.review, [3])', (eq(mkA?.review, [3]))]);
+      /* changed by the plan of 6 November: the app's exit records no marker */
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mkB === null', (mkB === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(mkC?.review, [])', (eq(mkC?.review, []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['pre === 0', (pre === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after?.hash === sha256(edited)', (after?.hash === sha256(edited))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after?.amendments === 1', (after?.amendments === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(after?.review, [3])', (eq(after?.review, [3]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(after?.steps, seen.steps)', (eq(after?.steps, seen.steps))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(after?.standing, seen.standing)', (eq(after?.standing, seen.standing))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4684,7 +5593,12 @@ const CASES = [
       const empty = readWith({ review: [] });
       const bad = readWith({ review: 'all' });
       const mixed = readWith({ review: [3, 'x'] });
-      return eq(held?.review, [3]) && old?.review === null && eq(empty?.review, []) && eq(bad?.review, []) && eq(mixed?.review, []);
+      const held_rows = [['eq(held?.review, [3])', (eq(held?.review, [3]))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['old?.review === null', (old?.review === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(empty?.review, [])', (eq(empty?.review, []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(bad?.review, [])', (eq(bad?.review, []))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(mixed?.review, [])', (eq(mixed?.review, []))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4706,21 +5620,27 @@ const CASES = [
       const MARK = new RegExp(m.dispatch.FENCE_NO_LATCH.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
       const refusedBoth = (pl, n) => says(dispatch(n, pl), /^DISPATCH GATE/, RULE, /review step 3/, /plan mode/, /Standing step included/, MARK)
         && says(review(n, pl), /^REVIEW GATE/, RULE, /review step 3/, /plan mode/, /does not latch/);
-      return changed
-        // The plan as approved: the review step names the file, so both gates judge as they did.
-        && dispatch(1, plan(base, [3])) === null && review(1, plan(base, [3]), cleared(1)) === null
-        && review(3, plan(base, [3]), missing) === null && dispatch(3, plan(base, [3])) === null
-        // The review step's text edited until it names no file, and the step taken off the Standing line: every step is refused.
-        && [1, 2, 3].every((n) => refusedBoth(plan(edited, [3]), n))
-        && [1, 2, 3].every((n) => refusedBoth(plan(off, [3]), n))
-        // A marker that recorded no review step, an empty list, or no list at all carries no such check.
-        && [undefined, null, []].every((r) => dispatch(1, plan(edited, r)) === null && review(1, plan(edited, r)) === null && review(2, plan(off, r)) === null)
-        // The plan still has a review step: the recorded number is not compared, the condition is the gate's own.
-        && dispatch(1, plan(base, [5])) === null && review(3, plan(base, [5])) === null
-        // Not a main-thread send of a step: an agent's call and a prompt naming no step are not this gate's.
-        && review(1, plan(edited, [3]), missing) !== null && m.dispatch.reviewGate({ ...call(1), agent_id: 'a1' }, plan(edited, [3]), missing) === null
-        && m.dispatch.reviewGate({ tool_name: 'Agent', tool_input: { prompt: 'something else' } }, plan(edited, [3]), missing) === null
-        && m.dispatch.reviewRecordProblem(null) === null && m.dispatch.reviewRecordProblem({ text: edited, review: [3] }) !== null;
+      // The plan as approved: the review step names the file, so both gates judge as they did.
+      const held_rows = [['changed', (changed)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['dispatch(1, plan(base, [3])) === null', (dispatch(1, plan(base, [3])) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['review(1, plan(base, [3]), cleared(1)) === null', (review(1, plan(base, [3]), cleared(1)) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['review(3, plan(base, [3]), missing) === null', (review(3, plan(base, [3]), missing) === null)]);
+      // The review step's text edited until it names no file, and the step taken off the Standing line: every step is refused.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['dispatch(3, plan(base, [3])) === null', (dispatch(3, plan(base, [3])) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['[1, 2, 3].every((n) => refusedBoth(plan(edited, [3]), n))', ([1, 2, 3].every((n) => refusedBoth(plan(edited, [3]), n)))]);
+      // A marker that recorded no review step, an empty list, or no list at all carries no such check.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['[1, 2, 3].every((n) => refusedBoth(plan(off, [3]), n))', ([1, 2, 3].every((n) => refusedBoth(plan(off, [3]), n)))]);
+      // The plan still has a review step: the recorded number is not compared, the condition is the gate's own.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['[undefined, null, []].every((r) => dispatch(1, plan(edited, r)) === null && review(1, plan(edited, r)) === null && review(2, plan(off, r)) === null)', ([undefined, null, []].every((r) => dispatch(1, plan(edited, r)) === null && review(1, plan(edited, r)) === null && review(2, plan(off, r)) === null))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['dispatch(1, plan(base, [5])) === null', (dispatch(1, plan(base, [5])) === null)]);
+      // Not a main-thread send of a step: an agent's call and a prompt naming no step are not this gate's.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['review(3, plan(base, [5])) === null', (review(3, plan(base, [5])) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['review(1, plan(edited, [3]), missing) !== null', (review(1, plan(edited, [3]), missing) !== null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.reviewGate({ ...call(1), agent_id: \'a1\' }, plan(edited, [3]), missing) === null', (m.dispatch.reviewGate({ ...call(1), agent_id: 'a1' }, plan(edited, [3]), missing) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.reviewGate({ tool_name: \'Agent\', tool_input: { prompt: \'something else\' } }, plan(edited, [3]), missing) === null', (m.dispatch.reviewGate({ tool_name: 'Agent', tool_input: { prompt: 'something else' } }, plan(edited, [3]), missing) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.reviewRecordProblem(null) === null', (m.dispatch.reviewRecordProblem(null) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.reviewRecordProblem({ text: edited, review: [3] }) !== null', (m.dispatch.reviewRecordProblem({ text: edited, review: [3] }) !== null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4741,11 +5661,18 @@ const CASES = [
       const reviewer = send(mk(edited, { ...lists, review: [3] }), 3);
       const asApproved = send(mk(base, { ...lists, review: [3] }), 3);
       const noRecord = send(mk(edited, lists), 1);
-      return edited !== base
-        && worker.r.status === 2 && RULE.test(worker.r.stderr) && /DISPATCH GATE/.test(worker.r.stderr) && /plan mode/.test(worker.r.stderr) && !latched(worker.id)
-        && reviewer.r.status === 2 && RULE.test(reviewer.r.stderr) && !latched(reviewer.id)
-        && asApproved.r.status === 0
-        && noRecord.r.status === 0;
+      const held_rows = [['edited !== base', (edited !== base)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['worker.r.status === 2', (worker.r.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['RULE.test(worker.r.stderr)', (RULE.test(worker.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/DISPATCH GATE/.test(worker.r.stderr)', (/DISPATCH GATE/.test(worker.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/plan mode/.test(worker.r.stderr)', (/plan mode/.test(worker.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(worker.id)', (!latched(worker.id))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['reviewer.r.status === 2', (reviewer.r.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['RULE.test(reviewer.r.stderr)', (RULE.test(reviewer.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(reviewer.id)', (!latched(reviewer.id))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['asApproved.r.status === 0', (asApproved.r.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noRecord.r.status === 0', (noRecord.r.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4787,15 +5714,24 @@ const CASES = [
       const plainDone = ending(addedPlain, plainLists, [1, 2]);
       const plainDoneOld = ending(addedPlain, {}, [1, 2]);
       const plainOne = ending(addedPlain, plainLists, [1]);
-      return addedOrder !== ORDER_PLAN && addedPlain !== STEPS_PLAN
-        // With an Order: the added step 4 sits before step 2 and is skipped, so step 2 is the step left; once 1 and 2 are done nothing is left.
-        && oneDone.status === 2 && err(oneDone).includes('next: step 2') && !err(oneDone).includes('next: step 4')
-        && bothDone.status === 0
-        // A marker that recorded no list holds the added step: it is next, as it was.
-        && bothDoneOld.status === 2 && err(bothDoneOld).includes('next: step 4')
-        // With no Order: the added step 3 is not counted, and a recorded step still is.
-        && plainDone.status === 0 && plainOne.status === 2 && err(plainOne).includes('(2)') && !err(plainOne).includes('(3)')
-        && plainDoneOld.status === 2 && err(plainDoneOld).includes('(3)');
+      const held_rows = [['addedOrder !== ORDER_PLAN', (addedOrder !== ORDER_PLAN)]];
+      // With an Order: the added step 4 sits before step 2 and is skipped, so step 2 is the step left; once 1 and 2 are done nothing is left.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['addedPlain !== STEPS_PLAN', (addedPlain !== STEPS_PLAN)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['oneDone.status === 2', (oneDone.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(oneDone).includes(\'next: step 2\')', (err(oneDone).includes('next: step 2'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!err(oneDone).includes(\'next: step 4\')', (!err(oneDone).includes('next: step 4'))]);
+      // A marker that recorded no list holds the added step: it is next, as it was.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['bothDone.status === 0', (bothDone.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['bothDoneOld.status === 2', (bothDoneOld.status === 2)]);
+      // With no Order: the added step 3 is not counted, and a recorded step still is.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(bothDoneOld).includes(\'next: step 4\')', (err(bothDoneOld).includes('next: step 4'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['plainDone.status === 0', (plainDone.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['plainOne.status === 2', (plainOne.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(plainOne).includes(\'(2)\')', (err(plainOne).includes('(2)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!err(plainOne).includes(\'(3)\')', (!err(plainOne).includes('(3)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['plainDoneOld.status === 2', (plainDoneOld.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(plainDoneOld).includes(\'(3)\')', (err(plainDoneOld).includes('(3)'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4805,27 +5741,42 @@ const CASES = [
       const h = (entries) => m.dispatch.holdsIn(entries);
       const note = { type: 'user', timestamp: ts(40), origin: { kind: 'task-notification' }, message: { role: 'user', content: 'The long run finished; ok, nothing else is open.' } };
       const stands = (entries) => h(entries).stop !== null;
-      return stands([turn(0, 'Stop. Nothing more until I answer.')]) && stands([turn(0, '  STOP!')]) && stands([turn(0, '"Stop" means stop.')])
-        // The word second, after another word, and later in a message: a first-word rule held none of these.
-        && stands([turn(0, 'Please stop.')]) && stands([turn(0, 'Wait, stop everything right now')]) && stands([turn(0, 'This is wrong and you must stop')])
-        && stands([turn(0, 'Please do not stop now.')]) && stands([turn(0, 'It is a stop-gap, not a fix')])
-        // Not the whole word, no word at all, or a message that carries a go-word.
-        && !stands([turn(0, 'The stopped run is fine')]) && !stands([turn(0, 'It is unstoppable')]) && !stands([turn(0, 'Check the stopwatch')])
-        && !stands([turn(0, 'The stopped run is fine, go')]) && !stands([turn(0, GO)])
-        && !stands([turn(0, 'Stop, then go.')]) && !stands([turn(0, 'Please stop, ok')])
-        // Lifted by a later go-word message; a plain message, a harness message and another stop do not lift it.
-        && !stands([turn(0, 'stop'), turn(5, 'Go.')]) && !stands([turn(0, 'please stop'), mid(5, 'continue')])
-        && stands([turn(0, 'stop'), turn(5, 'That was done wrong; explain it.')]) && stands([turn(0, 'please stop'), note])
-        // A message with the word and a go-word is a go message: it lifts an earlier stop.
-        && !stands([turn(0, 'stop'), turn(5, 'Stop, ok')])
-        // A go-word BEFORE the stop lifts nothing.
-        && stands([turn(0, GO), turn(5, 'Now stop that')])
-        // The newest stop is the one that counts: lifted once, said again.
-        && stands([turn(0, 'stop'), turn(5, 'go'), turn(10, 'please stop again')]) && !stands([turn(0, 'stop'), turn(5, 'go'), turn(10, 'please stop again'), turn(15, 'ok')])
-        // A correction is the newest message when it does not end with a go-word, with its delivery time and its TYPED time.
-        && h([turn(0, GO), turn(5, 'That was wrong.')]).correction !== null && h([turn(0, GO)]).correction === null && h([turn(0, 'Stop, then go.')]).correction === null
-        && (() => { const x = h([turn(0, GO), enq(20, 'Not that one.'), mid(30, 'Not that one.')]).correction; return !!x && x.typed === Date.parse(ts(20)) && x.at === Date.parse(ts(30)); })()
-        && h([]).last === null;
+      const held_rows = [['stands([turn(0, \'Stop. Nothing more until I answer.\')])', (stands([turn(0, 'Stop. Nothing more until I answer.')]))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stands([turn(0, \' STOP!\')])', (stands([turn(0, '  STOP!')]))]);
+      // The word second, after another word, and later in a message: a first-word rule held none of these.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stands([turn(0, \'"Stop" means stop.\')])', (stands([turn(0, '"Stop" means stop.')]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stands([turn(0, \'Please stop.\')])', (stands([turn(0, 'Please stop.')]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stands([turn(0, \'Wait, stop everything right now\')])', (stands([turn(0, 'Wait, stop everything right now')]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stands([turn(0, \'This is wrong and you must stop\')])', (stands([turn(0, 'This is wrong and you must stop')]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stands([turn(0, \'Please do not stop now.\')])', (stands([turn(0, 'Please do not stop now.')]))]);
+      // Not the whole word, no word at all, or a message that carries a go-word.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stands([turn(0, \'It is a stop-gap, not a fix\')])', (stands([turn(0, 'It is a stop-gap, not a fix')]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!stands([turn(0, \'The stopped run is fine\')])', (!stands([turn(0, 'The stopped run is fine')]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!stands([turn(0, \'It is unstoppable\')])', (!stands([turn(0, 'It is unstoppable')]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!stands([turn(0, \'Check the stopwatch\')])', (!stands([turn(0, 'Check the stopwatch')]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!stands([turn(0, \'The stopped run is fine, go\')])', (!stands([turn(0, 'The stopped run is fine, go')]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!stands([turn(0, GO)])', (!stands([turn(0, GO)]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!stands([turn(0, \'Stop, then go.\')])', (!stands([turn(0, 'Stop, then go.')]))]);
+      // Lifted by a later go-word message; a plain message, a harness message and another stop do not lift it.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!stands([turn(0, \'Please stop, ok\')])', (!stands([turn(0, 'Please stop, ok')]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!stands([turn(0, \'stop\'), turn(5, \'Go.\')])', (!stands([turn(0, 'stop'), turn(5, 'Go.')]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!stands([turn(0, \'please stop\'), mid(5, \'continue\')])', (!stands([turn(0, 'please stop'), mid(5, 'continue')]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stands([turn(0, \'stop\'), turn(5, \'That was done wrong; explain it.\')])', (stands([turn(0, 'stop'), turn(5, 'That was done wrong; explain it.')]))]);
+      // A message with the word and a go-word is a go message: it lifts an earlier stop.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stands([turn(0, \'please stop\'), note])', (stands([turn(0, 'please stop'), note]))]);
+      // A go-word BEFORE the stop lifts nothing.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!stands([turn(0, \'stop\'), turn(5, \'Stop, ok\')])', (!stands([turn(0, 'stop'), turn(5, 'Stop, ok')]))]);
+      // The newest stop is the one that counts: lifted once, said again.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stands([turn(0, GO), turn(5, \'Now stop that\')])', (stands([turn(0, GO), turn(5, 'Now stop that')]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stands([turn(0, \'stop\'), turn(5, \'go\'), turn(10, \'please stop again\')])', (stands([turn(0, 'stop'), turn(5, 'go'), turn(10, 'please stop again')]))]);
+      // A correction is the newest message when it does not end with a go-word, with its delivery time and its TYPED time.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!stands([turn(0, \'stop\'), turn(5, \'go\'), turn(10, \'please stop again\'), turn(15, \'ok\')])', (!stands([turn(0, 'stop'), turn(5, 'go'), turn(10, 'please stop again'), turn(15, 'ok')]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['h([turn(0, GO), turn(5, \'That was wrong.\')]).correction !== null', (h([turn(0, GO), turn(5, 'That was wrong.')]).correction !== null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['h([turn(0, GO)]).correction === null', (h([turn(0, GO)]).correction === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['h([turn(0, \'Stop, then go.\')]).correction === null', (h([turn(0, 'Stop, then go.')]).correction === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['(() => { const x = h([turn(0, GO), enq(20, \'Not that one.\'), mid(30, \'Not that one.\')]).correction; return !!x && x.typed === Date.parse(ts(20)) && x.at === Date.parse(ts(30)); })()', ((() => { const x = h([turn(0, GO), enq(20, 'Not that one.'), mid(30, 'Not that one.')]).correction; return !!x && x.typed === Date.parse(ts(20)) && x.at === Date.parse(ts(30)); })())]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['h([]).last === null', (h([]).last === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4837,9 +5788,16 @@ const CASES = [
       const neither = ['stopped', 'unstoppable', 'go', 'Check the stopwatch'];
       const queued = (t) => m.pending.decide({ session_id: 'sw', agent_id: 'a1' }, [turn(0, 'start'), enq(10, t)]) !== null;
       const held = (t) => m.dispatch.isStopMessage(t);
-      return first.every((t) => queued(t) && held(t)) && second.every((t) => !queued(t) && held(t)) && neither.every((t) => !queued(t) && !held(t))
-        && m.dispatch.hasStopWord('stop') && m.dispatch.hasStopWord('Please stop') && !m.dispatch.hasStopWord('go')
-        && m.dispatch.isStopMessage('stop') && !m.dispatch.isStopMessage('stop, go') && !m.dispatch.isStopMessage('');
+      const held_rows = [['first.every((t) => queued(t) && held(t))', (first.every((t) => queued(t) && held(t)))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.every((t) => !queued(t) && held(t))', (second.every((t) => !queued(t) && held(t)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['neither.every((t) => !queued(t) && !held(t))', (neither.every((t) => !queued(t) && !held(t)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.hasStopWord(\'stop\')', (m.dispatch.hasStopWord('stop'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.hasStopWord(\'Please stop\')', (m.dispatch.hasStopWord('Please stop'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!m.dispatch.hasStopWord(\'go\')', (!m.dispatch.hasStopWord('go'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.isStopMessage(\'stop\')', (m.dispatch.isStopMessage('stop'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!m.dispatch.isStopMessage(\'stop, go\')', (!m.dispatch.isStopMessage('stop, go'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!m.dispatch.isStopMessage(\'\')', (!m.dispatch.isStopMessage(''))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4897,7 +5855,7 @@ const CASES = [
       ];
       const bad = checks.filter(([, ok]) => !ok).map(([label]) => label);
       if (bad.length) throw new Error(`failed: ${bad.join('; ')}`);
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -4907,30 +5865,39 @@ const CASES = [
       const plan = { path: '/plans/gate-test.md', text: reviewPlan(dir) };
       const due = (ends, extra = {}) => m.dispatch.reviewDue({ session_id: 'rd' }, plan, { ends, runningStarts: [], correctionAt: 0, ...extra });
       const end = (step, startAt, at, first, how = 'a report') => endFor(step, at, startAt, first, how);
-      return due([]).due === true && /first send of the plan/.test(due([]).why)
-        // A review step's own agent is no send of the plan's work.
-        && due([end(3, 1, 2, 'ON-AIM ROUTE-CLEAR step none next 1')]).due === true
-        && due([end(1, 1, 5, 'DONE')]).due === false
-        && due([end(1, 1, 5, 'FAILED')]).due === true && due([end(1, 1, 5, 'REFUSED')]).due === true && due([end(1, 1, 5, 'EJECT')]).due === true
-        && due([end(1, 1, 5, 'DONE'), end(2, 2, 6, 'FAILED')]).due === true && /step 2 handed back FAILED/.test(due([end(1, 1, 5, 'DONE'), end(2, 2, 6, 'FAILED')]).why)
-        // An agent that began after the failed end ends the trigger; one that began before it does not.
-        && due([end(1, 1, 5, 'FAILED'), end(1, 7, 9, 'DONE')]).due === false && due([end(1, 1, 5, 'FAILED'), end(2, 3, 9, 'DONE')]).due === true
-        && due([end(1, 1, 5, 'FAILED')], { runningStarts: [{ id: 'x', step: 1, startAt: 8 }] }).due === false
-        && due([end(1, 1, 5, 'FAILED')], { runningStarts: [{ id: 'x', step: 3, startAt: 8 }] }).due === true
-        && due([end(1, 1, 5, 'FAILED'), end(3, 7, 9, 'ON-AIM ROUTE-CLEAR step 1 next 1')]).due === true
-        && due([end(1, 1, 5, 'FAILED'), end(1, Number.NaN, 9, 'DONE')]).due === true
-        // An end with no hand-back, whatever its first line, is a trigger.
-        && due([end(1, 1, 5, 'DONE', 'an interruption')]).due === true && /ended with no hand-back/.test(due([end(1, 1, 5, 'DONE', 'an interruption')]).why)
-        // A correction typed after the sends is a trigger until a send begins after it.
-        && due([end(1, 1, 5, 'DONE')], { correctionAt: 8 }).due === true && /after a correction/.test(due([end(1, 1, 5, 'DONE')], { correctionAt: 8 }).why)
-        && due([end(1, 1, 5, 'DONE'), end(2, 9, 12, 'DONE')], { correctionAt: 8 }).due === false
-        && due([end(1, 1, 5, 'DONE')], { correctionAt: 0 }).due === false
-        // The newest of the two triggers is the one a start has to follow.
-        && due([end(1, 1, 5, 'FAILED'), end(2, 6, 9, 'DONE')], { correctionAt: 7 }).due === true
-        // A session whose agents cannot be read is due; the newest correction is read from the entries.
-        && m.dispatch.reviewDue({ session_id: 'rd-no-such-session', transcript_path: '' }, plan).due === true
-        && m.dispatch.newestCorrectionAt([owner(later(-900), GO), owner(later(-500), 'That was wrong, so explain it.'), owner(later(-300), GO)]) > 0
-        && m.dispatch.newestCorrectionAt([owner(later(-900), GO)]) === 0 && m.dispatch.newestCorrectionAt([]) === 0;
+      const held_rows = [['due([]).due === true', (due([]).due === true)]];
+      // A review step's own agent is no send of the plan's work.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/first send of the plan/.test(due([]).why)', (/first send of the plan/.test(due([]).why))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(3, 1, 2, \'ON-AIM ROUTE-CLEAR step none next 1\')]).due === true', (due([end(3, 1, 2, 'ON-AIM ROUTE-CLEAR step none next 1')]).due === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'DONE\')]).due === false', (due([end(1, 1, 5, 'DONE')]).due === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'FAILED\')]).due === true', (due([end(1, 1, 5, 'FAILED')]).due === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'REFUSED\')]).due === true', (due([end(1, 1, 5, 'REFUSED')]).due === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'EJECT\')]).due === true', (due([end(1, 1, 5, 'EJECT')]).due === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'DONE\'), end(2, 2, 6, \'FAILED\')]).due === true', (due([end(1, 1, 5, 'DONE'), end(2, 2, 6, 'FAILED')]).due === true)]);
+      // An agent that began after the failed end ends the trigger; one that began before it does not.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/step 2 handed back FAILED/.test(due([end(1, 1, 5, \'DONE\'), end(2, 2, 6, \'FAILED\')]).why)', (/step 2 handed back FAILED/.test(due([end(1, 1, 5, 'DONE'), end(2, 2, 6, 'FAILED')]).why))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'FAILED\'), end(1, 7, 9, \'DONE\')]).due === false', (due([end(1, 1, 5, 'FAILED'), end(1, 7, 9, 'DONE')]).due === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'FAILED\'), end(2, 3, 9, \'DONE\')]).due === true', (due([end(1, 1, 5, 'FAILED'), end(2, 3, 9, 'DONE')]).due === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'FAILED\')], { runningStarts: [{ id: \'x\', step: 1, startAt: 8 }] }).due === false', (due([end(1, 1, 5, 'FAILED')], { runningStarts: [{ id: 'x', step: 1, startAt: 8 }] }).due === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'FAILED\')], { runningStarts: [{ id: \'x\', step: 3, startAt: 8 }] }).due === true', (due([end(1, 1, 5, 'FAILED')], { runningStarts: [{ id: 'x', step: 3, startAt: 8 }] }).due === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'FAILED\'), end(3, 7, 9, \'ON-AIM ROUTE-CLEAR step 1 next 1\')]).due === true', (due([end(1, 1, 5, 'FAILED'), end(3, 7, 9, 'ON-AIM ROUTE-CLEAR step 1 next 1')]).due === true)]);
+      // An end with no hand-back, whatever its first line, is a trigger.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'FAILED\'), end(1, Number.NaN, 9, \'DONE\')]).due === true', (due([end(1, 1, 5, 'FAILED'), end(1, Number.NaN, 9, 'DONE')]).due === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'DONE\', \'an interruption\')]).due === true', (due([end(1, 1, 5, 'DONE', 'an interruption')]).due === true)]);
+      // A correction typed after the sends is a trigger until a send begins after it.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/ended with no hand-back/.test(due([end(1, 1, 5, \'DONE\', \'an interruption\')]).why)', (/ended with no hand-back/.test(due([end(1, 1, 5, 'DONE', 'an interruption')]).why))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'DONE\')], { correctionAt: 8 }).due === true', (due([end(1, 1, 5, 'DONE')], { correctionAt: 8 }).due === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/after a correction/.test(due([end(1, 1, 5, \'DONE\')], { correctionAt: 8 }).why)', (/after a correction/.test(due([end(1, 1, 5, 'DONE')], { correctionAt: 8 }).why))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'DONE\'), end(2, 9, 12, \'DONE\')], { correctionAt: 8 }).due === false', (due([end(1, 1, 5, 'DONE'), end(2, 9, 12, 'DONE')], { correctionAt: 8 }).due === false)]);
+      // The newest of the two triggers is the one a start has to follow.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'DONE\')], { correctionAt: 0 }).due === false', (due([end(1, 1, 5, 'DONE')], { correctionAt: 0 }).due === false)]);
+      // A session whose agents cannot be read is due; the newest correction is read from the entries.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due([end(1, 1, 5, \'FAILED\'), end(2, 6, 9, \'DONE\')], { correctionAt: 7 }).due === true', (due([end(1, 1, 5, 'FAILED'), end(2, 6, 9, 'DONE')], { correctionAt: 7 }).due === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.reviewDue({ session_id: \'rd-no-such-session\', transcript_path: \'\' }, plan).due === true', (m.dispatch.reviewDue({ session_id: 'rd-no-such-session', transcript_path: '' }, plan).due === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.newestCorrectionAt([owner(later(-900), GO), owner(later(-500), \'That was wrong, so explain it.\'), owner(later(-300), GO)]) > 0', (m.dispatch.newestCorrectionAt([owner(later(-900), GO), owner(later(-500), 'That was wrong, so explain it.'), owner(later(-300), GO)]) > 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.newestCorrectionAt([owner(later(-900), GO)]) === 0', (m.dispatch.newestCorrectionAt([owner(later(-900), GO)]) === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.newestCorrectionAt([]) === 0', (m.dispatch.newestCorrectionAt([]) === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4956,10 +5923,18 @@ const CASES = [
       const plain = world(dir, [owner(later(-900), GO), owner(later(-200), WRONG)], ORDER_PLAN);
       const idp = sid('cl');
       const plainSend = plain.call('PreToolUse', { session_id: idp, tool_name: 'Agent', tool_input: { prompt: `${plain.plan} step 1`, subagent_type: 'general-purpose' } });
-      return held(before[0]) && /Standing review step and the step that review clears/.test(before[0].r.stderr) && passes(before[1])
-        && passes(after[0]) && held(after[1]) && passes(after[2])
-        && held(off)
-        && plainSend.status === 2 && /CORRECTION/.test(plainSend.stderr) && !/Standing review step/.test(plainSend.stderr) && !latched(idp);
+      const held_rows = [['held(before[0])', (held(before[0]))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Standing review step and the step that review clears/.test(before[0].r.stderr)', (/Standing review step and the step that review clears/.test(before[0].r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['passes(before[1])', (passes(before[1]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['passes(after[0])', (passes(after[0]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held(after[1])', (held(after[1]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['passes(after[2])', (passes(after[2]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held(off)', (held(off))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['plainSend.status === 2', (plainSend.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/CORRECTION/.test(plainSend.stderr)', (/CORRECTION/.test(plainSend.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/Standing review step/.test(plainSend.stderr)', (!/Standing review step/.test(plainSend.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(idp)', (!latched(idp))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -4996,11 +5971,19 @@ const CASES = [
       both.agent('d1', 1, -800, -700, 'DONE'); both.agent('r1', 3, -100, -50, 'ON-AIM ROUTE-CLEAR step 1 next 2');
       const idb = sid('sh');
       const sentBoth = both.send(2, idb);
-      return stands.every(held) && kept.every(passes) && plainAfter.every(held) && lifted.every(passes)
-        && heldSecond[0].r.status === 2 && /STOP \(Doctrine §0e rule 3\)/.test(heldSecond[0].r.stderr) && !latched(ids)
-        && heldSecond[1].r.status === 2 && /STOP \(Doctrine §0e rule 3\)/.test(heldSecond[1].r.stderr)
-        && !heldSecond[0].r.stderr.includes('Nothing more until')
-        && sentBoth.status === 0 && !/STOP \(Doctrine/.test(sentBoth.stderr);
+      const held_rows = [['stands.every(held)', (stands.every(held))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['kept.every(passes)', (kept.every(passes))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['plainAfter.every(held)', (plainAfter.every(held))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lifted.every(passes)', (lifted.every(passes))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['heldSecond[0].r.status === 2', (heldSecond[0].r.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/STOP \\(Doctrine §0e rule 3\\)/.test(heldSecond[0].r.stderr)', (/STOP \(Doctrine §0e rule 3\)/.test(heldSecond[0].r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(ids)', (!latched(ids))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['heldSecond[1].r.status === 2', (heldSecond[1].r.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/STOP \\(Doctrine §0e rule 3\\)/.test(heldSecond[1].r.stderr)', (/STOP \(Doctrine §0e rule 3\)/.test(heldSecond[1].r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!heldSecond[0].r.stderr.includes(\'Nothing more until\')', (!heldSecond[0].r.stderr.includes('Nothing more until'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['sentBoth.status === 0', (sentBoth.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/STOP \\(Doctrine/.test(sentBoth.stderr)', (!/STOP \(Doctrine/.test(sentBoth.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -5016,7 +5999,10 @@ const CASES = [
       const plain = send(world(dir, [turn(0, GO), turn(5, STOP), ...output, turn(8, 'Another plain message, which is no go-word.')]));
       const lifted = send(world(dir, [turn(0, GO), turn(5, STOP), ...output, turn(8, 'go')]));
       const held = (r) => r.status === 2 && /STOP \(Doctrine §0e rule 3\)/.test(r.stderr);
-      return held(stopped) && held(plain) && lifted.status === 0;
+      const held_rows = [['held(stopped)', (held(stopped))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held(plain)', (held(plain))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lifted.status === 0', (lifted.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -5043,8 +6029,13 @@ const CASES = [
       w.call('UserPromptSubmit', { session_id: s3, prompt: 'Go.' });
       const liftedLate = lost(s3);
       const says = (r) => r.status === 2 && /STOP \(Doctrine §0e rule 3\)/.test(r.stderr);
-      return says(stopped) && lifted.status === 0 && harness.status === 2
-        && says(second) && says(plain) && liftedLate.status === 0;
+      const held_rows = [['says(stopped)', (says(stopped))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lifted.status === 0', (lifted.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['harness.status === 2', (harness.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(second)', (says(second))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(plain)', (says(plain))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['liftedLate.status === 0', (liftedLate.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -5086,8 +6077,10 @@ const CASES = [
       const elsewhere = exit(withStanding('Follow /somewhere/else/aim-review.md for the move named on the status page.'));
       const noFollow = exit(withStanding(`Read ${join(dir, 'aim-review.md')} for the move named on the status page.`));
       const noOrder = exit(PLAN(OWN_WORDS));
-      return good.status === 0 && noOrder.status === 0
-        && [timer, bare, elsewhere, noFollow].every((x) => x.status === 2 && /AIM REVIEW/.test(x.stdout) && x.stdout.includes('aim-review.md'));
+      const held_rows = [['good.status === 0', (good.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noOrder.status === 0', (noOrder.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['[timer, bare, elsewhere, noFollow].every((x) => x.status === 2 && /AIM REVIEW/.test(x.stdout) && x.stdout.includes(\'aim-review.md\'))', ([timer, bare, elsewhere, noFollow].every((x) => x.status === 2 && /AIM REVIEW/.test(x.stdout) && x.stdout.includes('aim-review.md')))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -5132,7 +6125,7 @@ const CASES = [
       if (!(gitDirs[0] === null && /git -C/.test(gitDirs[1] ?? '') && gitDirs[2] === null)) out.push(`the git flag check gave ${JSON.stringify(gitDirs.map((x) => x === null ? null : 'refusal'))}`);
       if (checked.status !== 1 || !/COMMANDS GIT FLAG/.test(checked.stdout)) out.push(`--check did not print the git flag fault and exit 1 (status ${checked.status})`);
       if (out.length) throw new Error(out.join('; '));
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -5209,18 +6202,43 @@ const CASES = [
       const trF = transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, F.plan, uf)]);
       F.guard(trF, { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
       const scopeF = F.mk()?.scope;
-      return same(Object.keys(mk0?.scope ?? {}), ['Goals', 'Asked', 'Files', 'Commands', 'Rules', 'Rules of this plan']) && same(mk0.scope, scope) && mk0.hash === sha(text)
-        && steps.status === 0 && amended.status === 0 && mk1?.hash === sha(text.replace(STEP.old_string, STEP.new_string)) && same(mk1.scope, scope) && mk1.amendments === 1
-        && order.status === 0 && whole.status === 0
-        && refused(files, /Files/, /voids the approval/) && !/Commands/.test(files.stdout) && refused(commands, /Commands/) && refused(goals, /Goals/) && refused(asked, /Asked/)
-        && refused(two, /Files/, /Commands/) && refused(writeGoals, /Goals/)
-        && refused(agent, /voids its approval, and every write after it would be refused/) && refused(other, /another session/)
-        && refused(absent, /could not be applied/) && refused(ambiguous, /could not be applied/)
-        && refused(moved, /has changed since it was approved/) && refused(noScope, /every write after it would be refused/)
-        && notCarried.status === 2 && /Files/.test(notCarried.stderr) && /NOT carried/.test(notCarried.stderr) && D.mk()?.hash === sha(text)
-        && /Scope: CHANGED in Files\./.test(stuck) && /Match: NO/.test(stuck)
-        && agentLeft && mainMoved && /Scope: Goals, Asked, Files, Commands, Rules, Rules of this plan are as approved\./.test(carried) && /Match: yes/.test(carried) && !/Scope: CHANGED/.test(carried)
-        && scopeF === undefined && F.mk() === null; // changed by the plan of 6 November: the owner's exit in the app records no marker
+      const held_rows = [['same(Object.keys(mk0?.scope ?? {}), [\'Goals\', \'Asked\', \'Files\', \'Commands\', \'Rules\', \'Rules of this plan\'])', (same(Object.keys(mk0?.scope ?? {}), ['Goals', 'Asked', 'Files', 'Commands', 'Rules', 'Rules of this plan']))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['same(mk0.scope, scope)', (same(mk0.scope, scope))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mk0.hash === sha(text)', (mk0.hash === sha(text))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['steps.status === 0', (steps.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['amended.status === 0', (amended.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mk1?.hash === sha(text.replace(STEP.old_string, STEP.new_string))', (mk1?.hash === sha(text.replace(STEP.old_string, STEP.new_string)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['same(mk1.scope, scope)', (same(mk1.scope, scope))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mk1.amendments === 1', (mk1.amendments === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['order.status === 0', (order.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['whole.status === 0', (whole.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(files, /Files/, /voids the approval/)', (refused(files, /Files/, /voids the approval/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/Commands/.test(files.stdout)', (!/Commands/.test(files.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(commands, /Commands/)', (refused(commands, /Commands/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(goals, /Goals/)', (refused(goals, /Goals/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(asked, /Asked/)', (refused(asked, /Asked/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(two, /Files/, /Commands/)', (refused(two, /Files/, /Commands/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(writeGoals, /Goals/)', (refused(writeGoals, /Goals/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(agent, /voids its approval, and every write after it would be refused/)', (refused(agent, /voids its approval, and every write after it would be refused/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(other, /another session/)', (refused(other, /another session/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(absent, /could not be applied/)', (refused(absent, /could not be applied/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(ambiguous, /could not be applied/)', (refused(ambiguous, /could not be applied/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(moved, /has changed since it was approved/)', (refused(moved, /has changed since it was approved/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(noScope, /every write after it would be refused/)', (refused(noScope, /every write after it would be refused/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notCarried.status === 2', (notCarried.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Files/.test(notCarried.stderr)', (/Files/.test(notCarried.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/NOT carried/.test(notCarried.stderr)', (/NOT carried/.test(notCarried.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['D.mk()?.hash === sha(text)', (D.mk()?.hash === sha(text))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Scope: CHANGED in Files\\./.test(stuck)', (/Scope: CHANGED in Files\./.test(stuck))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Match: NO/.test(stuck)', (/Match: NO/.test(stuck))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agentLeft', (agentLeft)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mainMoved', (mainMoved)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Scope: Goals, Asked, Files, Commands, Rules, Rules of this plan are as approved\\./.test(carried)', (/Scope: Goals, Asked, Files, Commands, Rules, Rules of this plan are as approved\./.test(carried))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Match: yes/.test(carried)', (/Match: yes/.test(carried))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/Scope: CHANGED/.test(carried)', (!/Scope: CHANGED/.test(carried))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['scopeF === undefined', (scopeF === undefined)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['F.mk() === null', (F.mk() === null)]);
+      return assertAll(held_rows); // changed by the plan of 6 November: the owner's exit in the app records no marker
     },
   },
   {
@@ -5256,12 +6274,23 @@ const CASES = [
       writeFileSync(w.plan, amended.replace(FILES.old_string, FILES.new_string));
       const lost = w.call('PostToolUse', { session_id: sid('aw'), tool_name: 'Edit', tool_input: FILES });
       const none = go(2);
-      return before.status === 0 && edit.status === 0 && post.status === 0 && moved
-        && stale.status === 2 && /REVIEW GATE/.test(stale.stderr) && !/No approved plan/.test(stale.stderr)
-        && cleared.status === 0
-        && files.status === 2 && /Files/.test(files.stdout + files.stderr)
-        && lost.status === 2 && /NOT carried/.test(lost.stderr) && mk().hash === sha(amended)
-        && none.status === 2 && /DISPATCH GATE[\s\S]*No approved plan/.test(none.stderr) && /Scope: CHANGED in Files/.test(none.stderr);
+      const held_rows = [['before.status === 0', (before.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['edit.status === 0', (edit.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['post.status === 0', (post.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['moved', (moved)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stale.status === 2', (stale.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/REVIEW GATE/.test(stale.stderr)', (/REVIEW GATE/.test(stale.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/No approved plan/.test(stale.stderr)', (!/No approved plan/.test(stale.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cleared.status === 0', (cleared.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['files.status === 2', (files.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Files/.test(files.stdout + files.stderr)', (/Files/.test(files.stdout + files.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lost.status === 2', (lost.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/NOT carried/.test(lost.stderr)', (/NOT carried/.test(lost.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mk().hash === sha(amended)', (mk().hash === sha(amended))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['none.status === 2', (none.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/DISPATCH GATE[\\s\\S]*No approved plan/.test(none.stderr)', (/DISPATCH GATE[\s\S]*No approved plan/.test(none.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Scope: CHANGED in Files/.test(none.stderr)', (/Scope: CHANGED in Files/.test(none.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -5295,12 +6324,23 @@ const CASES = [
       // Both steps DONE: nothing is left.
       w.agent('d2', 2, -500, -400, 'DONE');
       const all = say(REPORT);
-      return none.status === 2 && err(none).includes('next: step 1') && err(none).includes(`${w.plan} step 3`) && /No review is current \(missing\)/.test(err(none))
-        && cleared.status === 2 && /cleared step 2 and no other/.test(err(cleared)) && err(cleared).includes(`${w.plan} step 2`)
-        && correction.status === 2 && /cleared step 2 and no other/.test(err(correction))
-        && stopped.status === 0 && choice.status === 0 && declared.status === 0
-        && stale.status === 2 && /No review is current \(stale\)/.test(err(stale)) && err(stale).includes(`${w.plan} step 3`)
-        && all.status === 0;
+      const held_rows = [['none.status === 2', (none.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(none).includes(\'next: step 1\')', (err(none).includes('next: step 1'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(none).includes(`${w.plan} step 3`)', (err(none).includes(`${w.plan} step 3`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/No review is current \\(missing\\)/.test(err(none))', (/No review is current \(missing\)/.test(err(none)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cleared.status === 2', (cleared.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/cleared step 2 and no other/.test(err(cleared))', (/cleared step 2 and no other/.test(err(cleared)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(cleared).includes(`${w.plan} step 2`)', (err(cleared).includes(`${w.plan} step 2`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['correction.status === 2', (correction.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/cleared step 2 and no other/.test(err(correction))', (/cleared step 2 and no other/.test(err(correction)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stopped.status === 0', (stopped.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['choice.status === 0', (choice.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['declared.status === 0', (declared.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stale.status === 2', (stale.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/No review is current \\(stale\\)/.test(err(stale))', (/No review is current \(stale\)/.test(err(stale)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(stale).includes(`${w.plan} step 3`)', (err(stale).includes(`${w.plan} step 3`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['all.status === 0', (all.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -5328,11 +6368,21 @@ const CASES = [
       const plain = status();
       const at1 = (out, a, b) => out.indexOf(a) >= 0 && out.indexOf(a) < out.indexOf(b);
       const block = (kind, extra = {}) => m.report.reviewBlock({ kind, reviewers: [3], step: 1, first: 'ON-AIM ROUTE-CLEAR step 1 next 2', review: { at: 200, startAt: 150 }, cleared: 2, ...extra });
-      return /^Review: none has handed back; no step in Order has ended yet\. Send Standing step 3\.$/m.test(first) && at1(first, 'next: step 1', 'Review: none') && at1(first, 'Review: none', '— the review test')
-        && /^Review: the review that ended .* reads "ON-AIM ROUTE-CLEAR step 1 next 2"; it clears step 2 and no other\.$/m.test(second) && at1(second, 'next: step 2', 'Review: the review')
-        && /^Review: not enforced \(/m.test(plain)
-        && /not read/.test(block('not-read')) && /Send Standing step 3/.test(block('stale')) && /not a verdict/.test(block('unreadable')) && /off aim/.test(block('off-aim'))
-        && /route is refused/.test(block('route-refused')) && /judged another step/.test(block('wrong-step')) && /names no step to send/.test(block('no-next')) && /running/.test(block('running'));
+      const held_rows = [['/^Review: none has handed back; no step in Order has ended yet\\. Send Standing step 3\\.$/m.test(first)', (/^Review: none has handed back; no step in Order has ended yet\. Send Standing step 3\.$/m.test(first))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['at1(first, \'next: step 1\', \'Review: none\')', (at1(first, 'next: step 1', 'Review: none'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['at1(first, \'Review: none\', \'— the review test\')', (at1(first, 'Review: none', '— the review test'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^Review: the review that ended .* reads "ON-AIM ROUTE-CLEAR step 1 next 2"; it clears step 2 and no other\\.$/m.test(second)', (/^Review: the review that ended .* reads "ON-AIM ROUTE-CLEAR step 1 next 2"; it clears step 2 and no other\.$/m.test(second))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['at1(second, \'next: step 2\', \'Review: the review\')', (at1(second, 'next: step 2', 'Review: the review'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^Review: not enforced \\(/m.test(plain)', (/^Review: not enforced \(/m.test(plain))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/not read/.test(block(\'not-read\'))', (/not read/.test(block('not-read')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Send Standing step 3/.test(block(\'stale\'))', (/Send Standing step 3/.test(block('stale')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/not a verdict/.test(block(\'unreadable\'))', (/not a verdict/.test(block('unreadable')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/off aim/.test(block(\'off-aim\'))', (/off aim/.test(block('off-aim')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/route is refused/.test(block(\'route-refused\'))', (/route is refused/.test(block('route-refused')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/judged another step/.test(block(\'wrong-step\'))', (/judged another step/.test(block('wrong-step')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/names no step to send/.test(block(\'no-next\'))', (/names no step to send/.test(block('no-next')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/running/.test(block(\'running\'))', (/running/.test(block('running')))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -5350,19 +6400,23 @@ const CASES = [
       writeFileSync(broken, '# Rules\n\nThere is no version line here.\n- one rule\n');
       const absent = join(tmp('sg-rules-'), 'absent.md');
       const altered = [block[0].replace('Never', 'Always'), ...block.slice(1)];
-      return RULES_VERSION > 0 && block.length >= 5
-        && m.dispatch.rulesProblem('# T\n\n## Files\n- Hub: `a.mjs`\n', file) === null
-        && problem(rulesLine(dir)) === null && problem(`- ${rulesLine(dir)}`) === null
-        && problem(`Rules: \`${file}\`, version ${RULES_VERSION}.`) === null
-        && problem(block.join('\n')) === null && problem([...block, '- A rule of the plan\'s own.'].join('\n')) === null
-        && refuses(null, /no "## Rules" section/)
-        && refuses('Nothing of the kind.', /lacks \d+ of the file's \d+ rule lines/)
-        && refuses(`Rules: /somewhere/else/agent-rules.md, version ${RULES_VERSION}.`, /not this hub's rules file/)
-        && refuses(rulesLine(dir, RULES_VERSION + 1), new RegExp(`pins version ${RULES_VERSION + 1} and the file now says version ${RULES_VERSION}`))
-        && refuses(block.slice(1).join('\n'), /lacks 1 of the file's/)
-        && refuses(altered.join('\n'), /lacks 1 of the file's/)
-        && refuses(rulesLine(dir), /cannot be read as a rules file/, broken)
-        && refuses(rulesLine(dir), /cannot be read as a rules file/, absent);
+      const held_rows = [['RULES_VERSION > 0', (RULES_VERSION > 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['block.length >= 5', (block.length >= 5)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.rulesProblem(\'# T\\n\\n## Files\\n- Hub: `a.mjs`\\n\', file) === null', (m.dispatch.rulesProblem('# T\n\n## Files\n- Hub: `a.mjs`\n', file) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['problem(rulesLine(dir)) === null', (problem(rulesLine(dir)) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['problem(`- ${rulesLine(dir)}`) === null', (problem(`- ${rulesLine(dir)}`) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['problem(`Rules: \\`${file}\\`, version ${RULES_VERSION}.`) === null', (problem(`Rules: \`${file}\`, version ${RULES_VERSION}.`) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['problem(block.join(\'\\n\')) === null', (problem(block.join('\n')) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['problem([...block, \'- A rule of the plan\\\'s own.\'].join(\'\\n\')) === null', (problem([...block, '- A rule of the plan\'s own.'].join('\n')) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refuses(null, /no "## Rules" section/)', (refuses(null, /no "## Rules" section/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refuses(\'Nothing of the kind.\', /lacks \\d+ of the file\'s \\d+ rule lines/)', (refuses('Nothing of the kind.', /lacks \d+ of the file's \d+ rule lines/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refuses(`Rules: /somewhere/else/agent-rules.md, version ${RULES_VERSION}.`, /not this hub\'s rules file/)', (refuses(`Rules: /somewhere/else/agent-rules.md, version ${RULES_VERSION}.`, /not this hub's rules file/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refuses(rulesLine(dir, RULES_VERSION + 1), new RegExp(`pins version ${RULES_VERSION + 1} and the file now says version ${RULES_VERSION}`))', (refuses(rulesLine(dir, RULES_VERSION + 1), new RegExp(`pins version ${RULES_VERSION + 1} and the file now says version ${RULES_VERSION}`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refuses(block.slice(1).join(\'\\n\'), /lacks 1 of the file\'s/)', (refuses(block.slice(1).join('\n'), /lacks 1 of the file's/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refuses(altered.join(\'\\n\'), /lacks 1 of the file\'s/)', (refuses(altered.join('\n'), /lacks 1 of the file's/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refuses(rulesLine(dir), /cannot be read as a rules file/, broken)', (refuses(rulesLine(dir), /cannot be read as a rules file/, broken))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refuses(rulesLine(dir), /cannot be read as a rules file/, absent)', (refuses(rulesLine(dir), /cannot be read as a rules file/, absent))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -5388,13 +6442,27 @@ const CASES = [
       const sendIn = (w, s) => w.call('PreToolUse', { session_id: s, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1`, subagent_type: 'general-purpose' } });
       const held = sendIn(world(dir, [turn(0, GO)], withRules(old)), s1);
       const free = sendIn(world(dir, [turn(0, GO)], withRules(rulesLine(dir))), s2);
-      return typeof stale === 'string' && /^RULES GATE/.test(stale) && /pins version \d+ and .* now says version \d+/.test(stale) && /lands only when no plan is in force/.test(stale) && /does not latch/.test(stale)
-        && typeof review === 'string' && /^RULES GATE/.test(review)
-        && typeof other === 'string' && /not this hub's rules file/.test(other)
-        && copies === null && notStep === null && readTool === null && agent === null
-        && typeof unread === 'string' && /cannot be read as a rules file/.test(unread)
-        && held.status === 2 && /RULES GATE/.test(held.stderr) && !latched(s1)
-        && free.status === 0 && !latched(s2);
+      const held_rows = [['typeof stale === \'string\'', (typeof stale === 'string')]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^RULES GATE/.test(stale)', (/^RULES GATE/.test(stale))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/pins version \\d+ and .* now says version \\d+/.test(stale)', (/pins version \d+ and .* now says version \d+/.test(stale))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/lands only when no plan is in force/.test(stale)', (/lands only when no plan is in force/.test(stale))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/does not latch/.test(stale)', (/does not latch/.test(stale))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof review === \'string\'', (typeof review === 'string')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^RULES GATE/.test(review)', (/^RULES GATE/.test(review))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof other === \'string\'', (typeof other === 'string')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/not this hub\'s rules file/.test(other)', (/not this hub's rules file/.test(other))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['copies === null', (copies === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notStep === null', (notStep === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readTool === null', (readTool === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agent === null', (agent === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof unread === \'string\'', (typeof unread === 'string')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/cannot be read as a rules file/.test(unread)', (/cannot be read as a rules file/.test(unread))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held.status === 2', (held.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/RULES GATE/.test(held.stderr)', (/RULES GATE/.test(held.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(s1)', (!latched(s1))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['free.status === 0', (free.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(s2)', (!latched(s2))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -5413,10 +6481,18 @@ const CASES = [
       const noRules = exitFor(dir, sendingPlan(dir, { rules: null, files, answered: all, what }), A.dir);
       const stale = exitFor(dir, sendingPlan(dir, { rules: rulesLine(dir, RULES_VERSION + 1), files, answered: all, what }), A.dir);
       const quiet = exitFor(dir, sendingPlan(dir, { files: '- quiet-repo: `c.txt`', what: '- "a line of text that the plan can quote" (c.txt).' }), C.dir);
-      return good.status === 0 && quiet.status === 0
-        && unanswered.status === 2 && said(unanswered).includes('FOUND QUEUE') && said(unanswered).includes('Q-QR-2')
-        && noRules.status === 2 && said(noRules).includes('SHARED RULES') && said(noRules).includes('Rules')
-        && stale.status === 2 && said(stale).includes('SHARED RULES') && said(stale).includes(`version ${RULES_VERSION + 1}`);
+      const held_rows = [['good.status === 0', (good.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['quiet.status === 0', (quiet.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['unanswered.status === 2', (unanswered.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said(unanswered).includes(\'FOUND QUEUE\')', (said(unanswered).includes('FOUND QUEUE'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said(unanswered).includes(\'Q-QR-2\')', (said(unanswered).includes('Q-QR-2'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noRules.status === 2', (noRules.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said(noRules).includes(\'SHARED RULES\')', (said(noRules).includes('SHARED RULES'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said(noRules).includes(\'Rules\')', (said(noRules).includes('Rules'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stale.status === 2', (stale.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said(stale).includes(\'SHARED RULES\')', (said(stale).includes('SHARED RULES'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said(stale).includes(`version ${RULES_VERSION + 1}`)', (said(stale).includes(`version ${RULES_VERSION + 1}`))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -5446,18 +6522,28 @@ const CASES = [
       const noStep = judge(one, ['Q-QR-1: fixed', fine[1], fine[2]]);
       const foreign = judge(one, ['Q-OT-1: fixed in step 1.', fine[1], fine[2]]);
       const twoRepos = judge(both, fine);
-      return q.map((x) => x.key).join(',') === 'Q-QR-1,Q-QR-2,Q-QR-3' && q[1].text.startsWith('the second finding') && q[2].text.startsWith('the third finding')
-        && names(none, 'Q-QR-1', 'Q-QR-2', 'Q-QR-3', '3 queued findings') && lacks(none, 'Q-QR-9', 'Q-OT-1')
-        && judge(one, fine) === null
-        && names(withShort, 'Q-QR-3') && lacks(withShort, 'Q-QR-1', 'Q-QR-2')
-        && names(noReason, 'Q-QR-3') && lacks(noReason, 'Q-QR-1', 'Q-QR-2')
-        && names(noStep, 'Q-QR-1') && lacks(noStep, 'Q-QR-2', 'Q-QR-3')
-        && names(foreign, 'Q-QR-1') && names(twoRepos, 'Q-OT-1') && lacks(twoRepos, 'Q-QR-')
-        && judge(both, [...fine, 'Q-OT-1: dropped, the plan no longer touches it.']) === null
-        && judge(['- plain-repo: `q.txt`'], null, Q.dir) === null
-        && judge(['- no-such-repo: `a.txt`'], null) === null
-        && m.dispatch.foundAnsweredProblem('# T\n\n## Steps\n1. x\n', { dir: A.dir }) === null
-        && m.dispatch.queueRoots(plan(one, null), A.dir).join() === A.dir && m.dispatch.queueRoots(plan(both, null), A.dir).sort().join() === [A.dir, B].sort().join();
+      const held_rows = [['q.map((x) => x.key).join(\',\') === \'Q-QR-1,Q-QR-2,Q-QR-3\'', (q.map((x) => x.key).join(',') === 'Q-QR-1,Q-QR-2,Q-QR-3')]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['q[1].text.startsWith(\'the second finding\')', (q[1].text.startsWith('the second finding'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['q[2].text.startsWith(\'the third finding\')', (q[2].text.startsWith('the third finding'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['names(none, \'Q-QR-1\', \'Q-QR-2\', \'Q-QR-3\', \'3 queued findings\')', (names(none, 'Q-QR-1', 'Q-QR-2', 'Q-QR-3', '3 queued findings'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lacks(none, \'Q-QR-9\', \'Q-OT-1\')', (lacks(none, 'Q-QR-9', 'Q-OT-1'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['judge(one, fine) === null', (judge(one, fine) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['names(withShort, \'Q-QR-3\')', (names(withShort, 'Q-QR-3'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lacks(withShort, \'Q-QR-1\', \'Q-QR-2\')', (lacks(withShort, 'Q-QR-1', 'Q-QR-2'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['names(noReason, \'Q-QR-3\')', (names(noReason, 'Q-QR-3'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lacks(noReason, \'Q-QR-1\', \'Q-QR-2\')', (lacks(noReason, 'Q-QR-1', 'Q-QR-2'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['names(noStep, \'Q-QR-1\')', (names(noStep, 'Q-QR-1'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lacks(noStep, \'Q-QR-2\', \'Q-QR-3\')', (lacks(noStep, 'Q-QR-2', 'Q-QR-3'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['names(foreign, \'Q-QR-1\')', (names(foreign, 'Q-QR-1'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['names(twoRepos, \'Q-OT-1\')', (names(twoRepos, 'Q-OT-1'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lacks(twoRepos, \'Q-QR-\')', (lacks(twoRepos, 'Q-QR-'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['judge(both, [...fine, \'Q-OT-1: dropped, the plan no longer touches it.\']) === null', (judge(both, [...fine, 'Q-OT-1: dropped, the plan no longer touches it.']) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['judge([\'- plain-repo: `q.txt`\'], null, Q.dir) === null', (judge(['- plain-repo: `q.txt`'], null, Q.dir) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['judge([\'- no-such-repo: `a.txt`\'], null) === null', (judge(['- no-such-repo: `a.txt`'], null) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.foundAnsweredProblem(\'# T\\n\\n## Steps\\n1. x\\n\', { dir: A.dir }) === null', (m.dispatch.foundAnsweredProblem('# T\n\n## Steps\n1. x\n', { dir: A.dir }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.queueRoots(plan(one, null), A.dir).join() === A.dir', (m.dispatch.queueRoots(plan(one, null), A.dir).join() === A.dir)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.queueRoots(plan(both, null), A.dir).sort().join() === [A.dir, B].sort().join()', (m.dispatch.queueRoots(plan(both, null), A.dir).sort().join() === [A.dir, B].sort().join())]);
+      return assertAll(held_rows);
     },
   },
 
@@ -5485,12 +6571,20 @@ const CASES = [
       const S = repo({ 'a.txt': 'x\n', 'NOTES.md': QUEUE_NOTES }, 'section-repo');
       const E = repo({ 'a.txt': 'x\n', 'NOTES.md': QUEUE_NOTES }, 'empty-repo');
       mkdirSync(join(E.dir, 'found'));
-      return q.map((x) => x.key).join(',') === 'Q-FL-1,Q-FL-2,Q-FL-10' && q[0].text.startsWith('the first finding') && q[1].text.startsWith('the second finding') && q[2].text.startsWith('the tenth finding')
-        && names(none, 'Q-FL-1', 'Q-FL-2', 'Q-FL-10', '3 queued findings') && !none.includes('Q-FL-9') && !none.includes('Q-FL-7')
-        && names(partial, 'Q-FL-10 (', '1 queued finding') && !partial.includes('Q-FL-1 (') && !partial.includes('Q-FL-2 (')
-        && all === null
-        && m.dispatch.foundQueue(S.dir).map((x) => x.key).join(',') === 'Q-QR-1,Q-QR-2,Q-QR-3'
-        && m.dispatch.foundQueue(E.dir).length === 0;
+      const held_rows = [['q.map((x) => x.key).join(\',\') === \'Q-FL-1,Q-FL-2,Q-FL-10\'', (q.map((x) => x.key).join(',') === 'Q-FL-1,Q-FL-2,Q-FL-10')]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['q[0].text.startsWith(\'the first finding\')', (q[0].text.startsWith('the first finding'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['q[1].text.startsWith(\'the second finding\')', (q[1].text.startsWith('the second finding'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['q[2].text.startsWith(\'the tenth finding\')', (q[2].text.startsWith('the tenth finding'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['names(none, \'Q-FL-1\', \'Q-FL-2\', \'Q-FL-10\', \'3 queued findings\')', (names(none, 'Q-FL-1', 'Q-FL-2', 'Q-FL-10', '3 queued findings'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!none.includes(\'Q-FL-9\')', (!none.includes('Q-FL-9'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!none.includes(\'Q-FL-7\')', (!none.includes('Q-FL-7'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['names(partial, \'Q-FL-10 (\', \'1 queued finding\')', (names(partial, 'Q-FL-10 (', '1 queued finding'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!partial.includes(\'Q-FL-1 (\')', (!partial.includes('Q-FL-1 ('))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!partial.includes(\'Q-FL-2 (\')', (!partial.includes('Q-FL-2 ('))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['all === null', (all === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.foundQueue(S.dir).map((x) => x.key).join(\',\') === \'Q-QR-1,Q-QR-2,Q-QR-3\'', (m.dispatch.foundQueue(S.dir).map((x) => x.key).join(',') === 'Q-QR-1,Q-QR-2,Q-QR-3')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.foundQueue(E.dir).length === 0', (m.dispatch.foundQueue(E.dir).length === 0)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -5534,23 +6628,43 @@ const CASES = [
       mkdirSync(join(pad2, 'status'), { recursive: true });
       writeFileSync(join(pad2, 'status', 'manager.txt'), 'Found 7.* fixed: all of step 7\nFound 7.2 queued: but this one stays\n');
       const bulk = m.report.sortFound([{ step: 7, n: 1, key: '7.1' }, { step: 7, n: 2, key: '7.2' }, { step: 8, n: 1, key: '8.1' }], m.report.managerNotes(pad2));
-      return bulk.fixed.map((x) => x.key).join() === '7.1' && bulk.queued.map((x) => x.key).join() === '7.2' && bulk.unsorted.map((x) => x.key).join() === '8.1' && bulk.fixed[0].note === 'all of step 7'
-        && before.includes(`State page: no manager notes at ${join(pad, 'status', 'manager.txt')}`) && before.includes('Found, from the report files (4: 0 fixed, 0 stopping the plan, 0 queued, 4 unsorted):')
-        && beforePage.includes('<li>4 Found lines are not sorted yet by the manager; the status print lists each.</li>') && !beforePage.includes('first thing, not fixed here')
-        && !beforePage.includes('class="tag">queued<') && !beforePage.includes('class="tag">stopping the plan<')
-        && after.includes('State page: manager notes read from') && after.includes('explanations standing 1, ruled out 1; decisions 1; a next move written; 1 of 4 Found lines unsorted.')
-        && after.includes('- step 1 #1 [fixed]: Found: first thing, not fixed here (put right in step 3)') && after.includes('- step 1 #2 [queued]: Found: second thing, left for later (the later line wins)')
-        && after.includes('- step 2 #1 [stopping]: Found: the fourth thing blocks the plan') && after.includes('- step 1 #3 [unsorted]: Found: third thing, <i>marked</i>')
-        && after.includes('Found, from the report files (4: 1 fixed, 1 stopping the plan, 1 queued, 1 unsorted):')
-        && !afterPage.includes('A reader opens') && !afterPage.includes('the gate reads') && !afterPage.includes('the clock was wrong') && !afterPage.includes('build the page first')
-        && afterPage.includes('The next move: send step 2 once the review clears it')
-        && !afterPage.includes('marked') && afterPage.includes('<li>1 Found line is not sorted yet by the manager; the status print lists it.</li>')
-        && !afterPage.includes('first thing, not fixed here')
-        && at1(afterPage, 'class="tag">stopping the plan<', 'class="tag">queued<')
-        && afterPage.includes('<span class="tag">queued</span> Step 1 #2: second thing, left for later') && afterPage.includes('<span class="tag">stopping the plan</span> Step 2 #1: the fourth thing blocks the plan')
-        && readFileSync(join(pad, 'status', 'manager.txt'), 'utf8') === notes
-        && parsed.read && parsed.standing[0].evidence === 'the report names that file' && parsed.ruledOut.length === 1 && parsed.decisions[0].reason === 'the other pieces read it'
-        && parsed.sorts.get('1.2').how === 'queued' && !m.report.managerNotes(join(pad, 'nowhere')).read && !m.report.managerNotes(null).read;
+      const held_rows = [['bulk.fixed.map((x) => x.key).join() === \'7.1\'', (bulk.fixed.map((x) => x.key).join() === '7.1')]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['bulk.queued.map((x) => x.key).join() === \'7.2\'', (bulk.queued.map((x) => x.key).join() === '7.2')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['bulk.unsorted.map((x) => x.key).join() === \'8.1\'', (bulk.unsorted.map((x) => x.key).join() === '8.1')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['bulk.fixed[0].note === \'all of step 7\'', (bulk.fixed[0].note === 'all of step 7')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['before.includes(`State page: no manager notes at ${join(pad, \'status\', \'manager.txt\')}`)', (before.includes(`State page: no manager notes at ${join(pad, 'status', 'manager.txt')}`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['before.includes(\'Found, from the report files (4: 0 fixed, 0 stopping the plan, 0 queued, 4 unsorted):\')', (before.includes('Found, from the report files (4: 0 fixed, 0 stopping the plan, 0 queued, 4 unsorted):'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['beforePage.includes(\'<li>4 Found lines are not sorted yet by the manager; the status print lists each.</li>\')', (beforePage.includes('<li>4 Found lines are not sorted yet by the manager; the status print lists each.</li>'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!beforePage.includes(\'first thing, not fixed here\')', (!beforePage.includes('first thing, not fixed here'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!beforePage.includes(\'class="tag">queued<\')', (!beforePage.includes('class="tag">queued<'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!beforePage.includes(\'class="tag">stopping the plan<\')', (!beforePage.includes('class="tag">stopping the plan<'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after.includes(\'State page: manager notes read from\')', (after.includes('State page: manager notes read from'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after.includes(\'explanations standing 1, ruled out 1; decisions 1; a next move written; 1 of 4 Found lines unsorted.\')', (after.includes('explanations standing 1, ruled out 1; decisions 1; a next move written; 1 of 4 Found lines unsorted.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after.includes(\'- step 1 #1 [fixed]: Found: first thing, not fixed here (put right in step 3)\')', (after.includes('- step 1 #1 [fixed]: Found: first thing, not fixed here (put right in step 3)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after.includes(\'- step 1 #2 [queued]: Found: second thing, left for later (the later line wins)\')', (after.includes('- step 1 #2 [queued]: Found: second thing, left for later (the later line wins)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after.includes(\'- step 2 #1 [stopping]: Found: the fourth thing blocks the plan\')', (after.includes('- step 2 #1 [stopping]: Found: the fourth thing blocks the plan'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after.includes(\'- step 1 #3 [unsorted]: Found: third thing, <i>marked</i>\')', (after.includes('- step 1 #3 [unsorted]: Found: third thing, <i>marked</i>'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after.includes(\'Found, from the report files (4: 1 fixed, 1 stopping the plan, 1 queued, 1 unsorted):\')', (after.includes('Found, from the report files (4: 1 fixed, 1 stopping the plan, 1 queued, 1 unsorted):'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!afterPage.includes(\'A reader opens\')', (!afterPage.includes('A reader opens'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!afterPage.includes(\'the gate reads\')', (!afterPage.includes('the gate reads'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!afterPage.includes(\'the clock was wrong\')', (!afterPage.includes('the clock was wrong'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!afterPage.includes(\'build the page first\')', (!afterPage.includes('build the page first'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['afterPage.includes(\'The next move: send step 2 once the review clears it\')', (afterPage.includes('The next move: send step 2 once the review clears it'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!afterPage.includes(\'marked\')', (!afterPage.includes('marked'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['afterPage.includes(\'<li>1 Found line is not sorted yet by the manager; the status print lists it.</li>\')', (afterPage.includes('<li>1 Found line is not sorted yet by the manager; the status print lists it.</li>'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!afterPage.includes(\'first thing, not fixed here\')', (!afterPage.includes('first thing, not fixed here'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['at1(afterPage, \'class="tag">stopping the plan<\', \'class="tag">queued<\')', (at1(afterPage, 'class="tag">stopping the plan<', 'class="tag">queued<'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['afterPage.includes(\'<span class="tag">queued</span> Step 1 #2: second thing, left for later\')', (afterPage.includes('<span class="tag">queued</span> Step 1 #2: second thing, left for later'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['afterPage.includes(\'<span class="tag">stopping the plan</span> Step 2 #1: the fourth thing blocks the plan\')', (afterPage.includes('<span class="tag">stopping the plan</span> Step 2 #1: the fourth thing blocks the plan'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readFileSync(join(pad, \'status\', \'manager.txt\'), \'utf8\') === notes', (readFileSync(join(pad, 'status', 'manager.txt'), 'utf8') === notes)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['parsed.read', (parsed.read)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['parsed.standing[0].evidence === \'the report names that file\'', (parsed.standing[0].evidence === 'the report names that file')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['parsed.ruledOut.length === 1', (parsed.ruledOut.length === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['parsed.decisions[0].reason === \'the other pieces read it\'', (parsed.decisions[0].reason === 'the other pieces read it')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['parsed.sorts.get(\'1.2\').how === \'queued\'', (parsed.sorts.get('1.2').how === 'queued')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!m.report.managerNotes(join(pad, \'nowhere\')).read', (!m.report.managerNotes(join(pad, 'nowhere')).read)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!m.report.managerNotes(null).read', (!m.report.managerNotes(null).read)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -5636,7 +6750,7 @@ const CASES = [
       ];
       const failed = checks.filter(([, ok]) => !ok).map(([label]) => label);
       if (failed.length) throw new Error(`the page failed: ${failed.join('; ')}`);
-      return true;
+      return assertAll([]);
     },
   },
   // ---- the steps of a plan with no Order and the time chips of every step (NOTES Q-HUB-42, LESSONS §419) ----
@@ -5659,7 +6773,7 @@ const CASES = [
       ];
       const failed = checks.filter(([, ok]) => !ok).map(([label]) => label);
       if (failed.length) throw new Error(`the keys failed: ${failed.join('; ')}`);
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -5722,7 +6836,7 @@ const CASES = [
       ];
       const failed = checks.filter(([, ok]) => !ok).map(([label]) => label);
       if (failed.length) throw new Error(`the page of a plan with no Order failed: ${failed.join('; ')}`);
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -5766,7 +6880,7 @@ const CASES = [
       ];
       const failed = checks.filter(([, ok]) => !ok).map(([label]) => label);
       if (failed.length) throw new Error(`the time chips failed: ${failed.join('; ')}`);
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -5778,11 +6892,17 @@ const CASES = [
       const f = (tool_name, file) => m.dispatch.managerFence({ session_id: s, tool_name, tool_input: { file_path: file } }, { plan, classify: () => false });
       const mine = `/tmp/claude-0/-home-user/${s}/scratchpad/status/manager.txt`;
       const fenced = (x) => /^MANAGER FENCE/.test(x ?? '');
-      return f('Write', mine) === null && f('Edit', mine) === null && f('MultiEdit', mine) === null
-        && m.dispatch.isManagerNotes(mine, s) && !m.dispatch.isManagerNotes(mine, 'someone-else')
-        && fenced(f('Write', `/tmp/claude-0/-home-user/other/scratchpad/status/manager.txt`)) && fenced(f('Write', `${mine}.bak`))
-        && fenced(f('Write', `/tmp/claude-0/-home-user/${s}/scratchpad/status/other.txt`)) && fenced(f('Write', `/tmp/claude-0/-home-user/${s}/scratchpad/manager.txt`))
-        && fenced(f('Write', '/home/user/noahjefferson/status/manager.txt'));
+      const held_rows = [['f(\'Write\', mine) === null', (f('Write', mine) === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'Edit\', mine) === null', (f('Edit', mine) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(\'MultiEdit\', mine) === null', (f('MultiEdit', mine) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.isManagerNotes(mine, s)', (m.dispatch.isManagerNotes(mine, s))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!m.dispatch.isManagerNotes(mine, \'someone-else\')', (!m.dispatch.isManagerNotes(mine, 'someone-else'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Write\', `/tmp/claude-0/-home-user/other/scratchpad/status/manager.txt`))', (fenced(f('Write', `/tmp/claude-0/-home-user/other/scratchpad/status/manager.txt`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Write\', `${mine}.bak`))', (fenced(f('Write', `${mine}.bak`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Write\', `/tmp/claude-0/-home-user/${s}/scratchpad/status/other.txt`))', (fenced(f('Write', `/tmp/claude-0/-home-user/${s}/scratchpad/status/other.txt`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Write\', `/tmp/claude-0/-home-user/${s}/scratchpad/manager.txt`))', (fenced(f('Write', `/tmp/claude-0/-home-user/${s}/scratchpad/manager.txt`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced(f(\'Write\', \'/home/user/noahjefferson/status/manager.txt\'))', (fenced(f('Write', '/home/user/noahjefferson/status/manager.txt')))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -5796,8 +6916,13 @@ const CASES = [
       const live = join(homedir(), '.claude', 'hub', 'agent-rules.md');
       const agentRead = decideFence(m,{ session_id: 's', agent_id: 'a1', tool_name: 'Read', tool_input: { file_path: live } }, { plan, reads: (q) => q.tool_name === 'Read' });
       const agentWrite = decideFence(m,{ session_id: 's', agent_id: 'a1', tool_name: 'Write', tool_input: { file_path: live, content: 'x' } }, { plan });
-      return m.dispatch.recordPath(join(hub.dir, 'agent-rules.md'), p) && !m.dispatch.recordPath(join(hub.dir, 'src.mjs'), p) && !m.dispatch.recordPath(join(app.dir, 'agent-rules.md'), p)
-        && agentRead === null && typeof agentWrite === 'string' && /live gate copy/.test(agentWrite);
+      const held_rows = [['m.dispatch.recordPath(join(hub.dir, \'agent-rules.md\'), p)', (m.dispatch.recordPath(join(hub.dir, 'agent-rules.md'), p))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!m.dispatch.recordPath(join(hub.dir, \'src.mjs\'), p)', (!m.dispatch.recordPath(join(hub.dir, 'src.mjs'), p))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!m.dispatch.recordPath(join(app.dir, \'agent-rules.md\'), p)', (!m.dispatch.recordPath(join(app.dir, 'agent-rules.md'), p))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agentRead === null', (agentRead === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof agentWrite === \'string\'', (typeof agentWrite === 'string')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/live gate copy/.test(agentWrite)', (/live gate copy/.test(agentWrite))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -5836,11 +6961,28 @@ const CASES = [
       const parts = call({}, [...rd('p3', 2, page, { numLines: 2, totalLines: 3 }), ...rd('p4', 4, page, { startLine: 3, numLines: 1, totalLines: 3 })]);
       const partsRemoved = !existsSync(marker);
       const held2 = (r) => typeof r === 'string' && /^STATE PAGE GATE/.test(r) && r.includes(page) && /does not latch/.test(r);
-      return noMarker === null && /^STATE PAGE DUE/.test(line) && line.includes('was compacted') && line.includes('Read result') && !line.includes('\n')
-        && held2(held) && pageGone === null && noPage === null && readCall === null && agent === null && stop === null
-        && held2(partial) && held2(elsewhere) && held2(early) && held2(errored) && stillDue
-        && cleared === null && removed
-        && held2(same) && parts === null && partsRemoved;
+      const held_rows = [['noMarker === null', (noMarker === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^STATE PAGE DUE/.test(line)', (/^STATE PAGE DUE/.test(line))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['line.includes(\'was compacted\')', (line.includes('was compacted'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['line.includes(\'Read result\')', (line.includes('Read result'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!line.includes(\'\\n\')', (!line.includes('\n'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held2(held)', (held2(held))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['pageGone === null', (pageGone === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noPage === null', (noPage === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readCall === null', (readCall === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agent === null', (agent === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stop === null', (stop === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held2(partial)', (held2(partial))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held2(elsewhere)', (held2(elsewhere))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held2(early)', (held2(early))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held2(errored)', (held2(errored))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stillDue', (stillDue)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cleared === null', (cleared === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['removed', (removed)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held2(same)', (held2(same))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['parts === null', (parts === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['partsRemoved', (partsRemoved)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -5868,10 +7010,20 @@ const CASES = [
       appendFileSync(w.tr, jsonl([at(tool(0, 'rp', 'Read', { file_path: page }), later(2)),
         { ...at(result(0, 'rp', '1\t<p>state</p>'), later(3)), toolUseResult: { type: 'text', file: { filePath: page, content: 'x', startLine: 1, numLines: 1, totalLines: 1 } } }]));
       const after = send();
-      return start.status === 0 && /STATE PAGE DUE/.test(start.stdout) && start.stdout.includes('fix-run.html') && due
-        && early.status === 0 && held.status === 2 && /STATE PAGE GATE/.test(held.stderr) && held.stderr.includes(page) && notLatched
-        && reading.status === 0 && stamp.status === 0
-        && after.status === 0 && !existsSync(marker);
+      const held_rows = [['start.status === 0', (start.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/STATE PAGE DUE/.test(start.stdout)', (/STATE PAGE DUE/.test(start.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['start.stdout.includes(\'fix-run.html\')', (start.stdout.includes('fix-run.html'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['due', (due)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['early.status === 0', (early.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held.status === 2', (held.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/STATE PAGE GATE/.test(held.stderr)', (/STATE PAGE GATE/.test(held.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held.stderr.includes(page)', (held.stderr.includes(page))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notLatched', (notLatched)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['reading.status === 0', (reading.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stamp.status === 0', (stamp.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after.status === 0', (after.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!existsSync(marker)', (!existsSync(marker))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -5899,10 +7051,17 @@ const CASES = [
       const noSection = brief(null);
       rmSync(join(hub, 'CLAUDE.md'));
       const noFile = brief(null);
-      return starts.every(shown) && shown(noPayload)
-        && long.status === 0 && long.stdout.includes('Card line 38: an ask that is kept.') && !long.stdout.includes('Card line 39:') && /… 7 more lines in the "The owner's core asks, one page" section/.test(long.stdout)
-        && noSection.status === 0 && noSection.stdout.includes('THE OWNER\'S CORE ASKS: not printed (the hub CLAUDE.md has no non-empty "## The owner\'s core asks, one page" section)')
-        && noFile.status === 0 && noFile.stdout.includes('THE OWNER\'S CORE ASKS: not printed (no CLAUDE.md beside this brief');
+      const held_rows = [['starts.every(shown)', (starts.every(shown))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['shown(noPayload)', (shown(noPayload))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['long.status === 0', (long.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['long.stdout.includes(\'Card line 38: an ask that is kept.\')', (long.stdout.includes('Card line 38: an ask that is kept.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!long.stdout.includes(\'Card line 39:\')', (!long.stdout.includes('Card line 39:'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/… 7 more lines in the "The owner\'s core asks, one page" section/.test(long.stdout)', (/… 7 more lines in the "The owner's core asks, one page" section/.test(long.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noSection.status === 0', (noSection.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noSection.stdout.includes(\'THE OWNER\\\'S CORE ASKS: not printed (the hub CLAUDE.md has no non-empty "## The owner\\\'s core asks, one page" section)\')', (noSection.stdout.includes('THE OWNER\'S CORE ASKS: not printed (the hub CLAUDE.md has no non-empty "## The owner\'s core asks, one page" section)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noFile.status === 0', (noFile.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noFile.stdout.includes(\'THE OWNER\\\'S CORE ASKS: not printed (no CLAUDE.md beside this brief\')', (noFile.stdout.includes('THE OWNER\'S CORE ASKS: not printed (no CLAUDE.md beside this brief'))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -5917,7 +7076,12 @@ const CASES = [
       const missing = found.filter((f) => !hubHas(f));
       // The doctrine is the three files of doctrine/ and DOCTRINE.md is their index: the lines are read from the files that hold them.
       const real = ['never.md', 'plans.md', 'apps.md'].flatMap((n) => wholeGates(readFileSync(join(dir, 'doctrine', n), 'utf8')));
-      return found.length === 3 && missing.length === 1 && missing[0] === 'no-such-gate.mjs' && real.length > 0 && real.every(hubHas);
+      const held_rows = [['found.length === 3', (found.length === 3)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['missing.length === 1', (missing.length === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['missing[0] === \'no-such-gate.mjs\'', (missing[0] === 'no-such-gate.mjs')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['real.length > 0', (real.length > 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['real.every(hubHas)', (real.every(hubHas))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -5930,10 +7094,15 @@ const CASES = [
       const keyed = section.split('\n').filter((l) => /^\s*(?:[-*]\s+)?\**Q-/.test(l));
       const keys = q.map((x) => x.key);
       const named = files.map((n) => basename(n, '.md'));
-      return q.length > 0 && files.length === q.length && keys.every((k) => /^Q-HUB-\d+$/.test(k)) && new Set(keys).size === keys.length
-        && [...keys].sort().join() === [...named].sort().join() && q.every((x) => x.text.length >= 20)
-        && files.every((n) => readFileSync(join(dir, 'found', n), 'utf8').startsWith(`${basename(n, '.md')}:`))
-        && keyed.length === 0;
+      const held_rows = [['q.length > 0', (q.length > 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['files.length === q.length', (files.length === q.length)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['keys.every((k) => /^Q-HUB-\\d+$/.test(k))', (keys.every((k) => /^Q-HUB-\d+$/.test(k)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['new Set(keys).size === keys.length', (new Set(keys).size === keys.length)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['[...keys].sort().join() === [...named].sort().join()', ([...keys].sort().join() === [...named].sort().join())]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['q.every((x) => x.text.length >= 20)', (q.every((x) => x.text.length >= 20))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['files.every((n) => readFileSync(join(dir, \'found\', n), \'utf8\').startsWith(`${basename(n, \'.md\')}:`))', (files.every((n) => readFileSync(join(dir, 'found', n), 'utf8').startsWith(`${basename(n, '.md')}:`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['keyed.length === 0', (keyed.length === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -5971,9 +7140,16 @@ const CASES = [
       // Through the fence, with every call a read for the classifier: a decision record goes, the source is refused with the reason to send an agent.
       const plan = { path: '/plans/gate-test.md', text: STEPS_PLAN };
       const fence = (file_path) => m.dispatch.managerFence({ session_id: s, tool_name: 'Read', tool_input: { file_path } }, { plan, classify: () => true });
-      return results && notResults && science && records && notRecords
-        && fence(join(sib.dir, 'docs', 'decisions', '066-film-model.md')) === null && fence(join(proj, s, 'tool-results', 'b07s4b48n.txt')) === null
-        && /Send an agent/.test(fence(join(sib.dir, 'app.ts')) ?? '') && /IR-SCIENCE\.md and docs\/decisions/.test(fence(join(sib.dir, 'app.ts')) ?? '');
+      const held_rows = [['results', (results)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notResults', (notResults)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['science', (science)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['records', (records)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notRecords', (notRecords)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fence(join(sib.dir, \'docs\', \'decisions\', \'066-film-model.md\')) === null', (fence(join(sib.dir, 'docs', 'decisions', '066-film-model.md')) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fence(join(proj, s, \'tool-results\', \'b07s4b48n.txt\')) === null', (fence(join(proj, s, 'tool-results', 'b07s4b48n.txt')) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Send an agent/.test(fence(join(sib.dir, \'app.ts\')) ?? \'\')', (/Send an agent/.test(fence(join(sib.dir, 'app.ts')) ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/IR-SCIENCE\\.md and docs\\/decisions/.test(fence(join(sib.dir, \'app.ts\')) ?? \'\')', (/IR-SCIENCE\.md and docs\/decisions/.test(fence(join(sib.dir, 'app.ts')) ?? ''))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -6037,12 +7213,27 @@ const CASES = [
       const again = m.report.readsBlock(s2, 0);
       rmSync(file);
       const gone = m.report.readsBlock(s2, 0);
-      return heldRead.status === 2 && recorded.join() === w.plan
-        && held.status === 2 && /READS GATE/.test(held.stderr) && held.stderr.includes(w.plan) && notLatched
-        && afterError.status === 2 && /READS GATE/.test(afterError.stderr) && cleared.status === 0 && unit && failedRecorded
-        && before.includes('Refused reads of the record NOT read since') && before.includes(file) && before.includes('refused for the test')
-        && still.includes(file) && !/not read since: none\./.test(still) && /Refused reads of the record not read since: none\./.test(after) && after.includes('Main thread reads since the last status: 2 (Read 2)')
-        && again.includes(file) && /not read since: none\./.test(gone);
+      const held_rows = [['heldRead.status === 2', (heldRead.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['recorded.join() === w.plan', (recorded.join() === w.plan)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held.status === 2', (held.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/READS GATE/.test(held.stderr)', (/READS GATE/.test(held.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held.stderr.includes(w.plan)', (held.stderr.includes(w.plan))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notLatched', (notLatched)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['afterError.status === 2', (afterError.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/READS GATE/.test(afterError.stderr)', (/READS GATE/.test(afterError.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cleared.status === 0', (cleared.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['unit', (unit)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['failedRecorded', (failedRecorded)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['before.includes(\'Refused reads of the record NOT read since\')', (before.includes('Refused reads of the record NOT read since'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['before.includes(file)', (before.includes(file))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['before.includes(\'refused for the test\')', (before.includes('refused for the test'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['still.includes(file)', (still.includes(file))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/not read since: none\\./.test(still)', (!/not read since: none\./.test(still))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Refused reads of the record not read since: none\\./.test(after)', (/Refused reads of the record not read since: none\./.test(after))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['after.includes(\'Main thread reads since the last status: 2 (Read 2)\')', (after.includes('Main thread reads since the last status: 2 (Read 2)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['again.includes(file)', (again.includes(file))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/not read since: none\\./.test(gone)', (/not read since: none\./.test(gone))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -6095,21 +7286,50 @@ const CASES = [
       const seenFile = join(home, '.claude', 'report-seen', `${s}.json`);
       // No session id: no memory, so the goals and the approval state print again.
       const bare1 = run(''), bare2 = run('');
-      return first.includes('Goals every session serves') && first.includes('Hand-backs new since the last status') && first.includes('- step 1, ended') && first.includes('- step 2, ended')
-        && count(first, 'The goals are written.') === 1 && first.includes('Last entry: its hand-back, printed above under step 1.')
-        && first.includes('- step 1 #1 [unsorted]: Found: the doc check was not run') && first.includes('- step 1 #2 [unsorted]')
-        && first.includes('Main thread reads since the last status: 2 (Read 1, Grep 1): /x/newer.md, /x/dir.') && !first.includes('older.md') && !first.includes('side.md')
-        && first.includes('Plan it names:') && /\(running\): 1 hook refusal\./.test(first) && first.includes('refused the first cd')
-        && !second.includes('Goals every session serves') && second.includes('Hand-backs: none new since the last status') && !second.includes('The goals are written.') && !second.includes('- step 1, ended')
-        && second.includes('- step 1 #1 [unsorted]') && second.includes('- step 1 #2 [unsorted]') && second.includes('Approval state, read from disk now: unchanged since the last status')
-        && !second.includes('Plan it names:') && second.includes('Agents ended since the last status: none.') && second.includes('Main thread reads since the last status: none.')
-        && /no running agent has a hook refusal that an earlier status did not print/.test(second) && !second.includes('refused the first cd')
-        && !third.includes('Goals every session serves') && count(third, 'The check is read.') === 1 && third.includes('printed above under step 2')
-        && third.includes('- step 1 #1 [fixed]: Found: the doc check was not run (put right in step 3)') && third.includes('- step 1 #2 [unsorted]')
-        && /\(running\): 1 hook refusal new since the last status\./.test(third) && third.includes('refused the second cd') && !third.includes('refused the first cd')
-        && !fourth.includes('- step 1 #1 [fixed]') && fourth.includes('- step 1 #2 [unsorted]') && /\(1 Found line sorted and printed by an earlier status is not printed again/.test(fourth)
-        && existsSync(seenFile) && !existsSync(join(home, '.claude', 'report-seen', '.json'))
-        && bare1.includes('Goals every session serves') && bare2.includes('Goals every session serves') && bare1.includes('Plan it names:') && bare2.includes('Plan it names:');
+      const held_rows = [['first.includes(\'Goals every session serves\')', (first.includes('Goals every session serves'))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.includes(\'Hand-backs new since the last status\')', (first.includes('Hand-backs new since the last status'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.includes(\'- step 1, ended\')', (first.includes('- step 1, ended'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.includes(\'- step 2, ended\')', (first.includes('- step 2, ended'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['count(first, \'The goals are written.\') === 1', (count(first, 'The goals are written.') === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.includes(\'Last entry: its hand-back, printed above under step 1.\')', (first.includes('Last entry: its hand-back, printed above under step 1.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.includes(\'- step 1 #1 [unsorted]: Found: the doc check was not run\')', (first.includes('- step 1 #1 [unsorted]: Found: the doc check was not run'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.includes(\'- step 1 #2 [unsorted]\')', (first.includes('- step 1 #2 [unsorted]'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.includes(\'Main thread reads since the last status: 2 (Read 1, Grep 1): /x/newer.md, /x/dir.\')', (first.includes('Main thread reads since the last status: 2 (Read 1, Grep 1): /x/newer.md, /x/dir.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!first.includes(\'older.md\')', (!first.includes('older.md'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!first.includes(\'side.md\')', (!first.includes('side.md'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.includes(\'Plan it names:\')', (first.includes('Plan it names:'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/\\(running\\): 1 hook refusal\\./.test(first)', (/\(running\): 1 hook refusal\./.test(first))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.includes(\'refused the first cd\')', (first.includes('refused the first cd'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!second.includes(\'Goals every session serves\')', (!second.includes('Goals every session serves'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes(\'Hand-backs: none new since the last status\')', (second.includes('Hand-backs: none new since the last status'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!second.includes(\'The goals are written.\')', (!second.includes('The goals are written.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!second.includes(\'- step 1, ended\')', (!second.includes('- step 1, ended'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes(\'- step 1 #1 [unsorted]\')', (second.includes('- step 1 #1 [unsorted]'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes(\'- step 1 #2 [unsorted]\')', (second.includes('- step 1 #2 [unsorted]'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes(\'Approval state, read from disk now: unchanged since the last status\')', (second.includes('Approval state, read from disk now: unchanged since the last status'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!second.includes(\'Plan it names:\')', (!second.includes('Plan it names:'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes(\'Agents ended since the last status: none.\')', (second.includes('Agents ended since the last status: none.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.includes(\'Main thread reads since the last status: none.\')', (second.includes('Main thread reads since the last status: none.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/no running agent has a hook refusal that an earlier status did not print/.test(second)', (/no running agent has a hook refusal that an earlier status did not print/.test(second))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!second.includes(\'refused the first cd\')', (!second.includes('refused the first cd'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!third.includes(\'Goals every session serves\')', (!third.includes('Goals every session serves'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['count(third, \'The check is read.\') === 1', (count(third, 'The check is read.') === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['third.includes(\'printed above under step 2\')', (third.includes('printed above under step 2'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['third.includes(\'- step 1 #1 [fixed]: Found: the doc check was not run (put right in step 3)\')', (third.includes('- step 1 #1 [fixed]: Found: the doc check was not run (put right in step 3)'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['third.includes(\'- step 1 #2 [unsorted]\')', (third.includes('- step 1 #2 [unsorted]'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/\\(running\\): 1 hook refusal new since the last status\\./.test(third)', (/\(running\): 1 hook refusal new since the last status\./.test(third))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['third.includes(\'refused the second cd\')', (third.includes('refused the second cd'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!third.includes(\'refused the first cd\')', (!third.includes('refused the first cd'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!fourth.includes(\'- step 1 #1 [fixed]\')', (!fourth.includes('- step 1 #1 [fixed]'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fourth.includes(\'- step 1 #2 [unsorted]\')', (fourth.includes('- step 1 #2 [unsorted]'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/\\(1 Found line sorted and printed by an earlier status is not printed again/.test(fourth)', (/\(1 Found line sorted and printed by an earlier status is not printed again/.test(fourth))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['existsSync(seenFile)', (existsSync(seenFile))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!existsSync(join(home, \'.claude\', \'report-seen\', \'.json\'))', (!existsSync(join(home, '.claude', 'report-seen', '.json')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['bare1.includes(\'Goals every session serves\')', (bare1.includes('Goals every session serves'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['bare2.includes(\'Goals every session serves\')', (bare2.includes('Goals every session serves'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['bare1.includes(\'Plan it names:\')', (bare1.includes('Plan it names:'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['bare2.includes(\'Plan it names:\')', (bare2.includes('Plan it names:'))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -6155,11 +7375,25 @@ const CASES = [
       const viaPayload = written();
       rmSync(page, { force: true });
       const viaVariable = spawnSync('node', [join(dir, 'report.mjs'), '--page'], { input: '', encoding: 'utf8', env: { ...env, CLAUDE_CODE_SESSION_ID: s } });
-      return ownerMsg.status === 0 && quiet.status === 0 && none
-        && ended.status === 0 && html.includes('<title>Plan run status</title>') && html.includes('Status 09:00 — the page test') && !/Plan run status/.test(ended.stdout) && !ended.stdout.includes('next: step')
-        && unchanged && peer.status === 0 && peerWritten
-        && direct.status === 0 && /status page written/.test(direct.stdout) && viaPayload && !/Status 1/.test(direct.stdout)
-        && viaVariable.status === 0 && written() && readFileSync(clock, 'utf8') === clockText;
+      const held_rows = [['ownerMsg.status === 0', (ownerMsg.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['quiet.status === 0', (quiet.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['none', (none)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ended.status === 0', (ended.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['html.includes(\'<title>Plan run status</title>\')', (html.includes('<title>Plan run status</title>'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['html.includes(\'Status 09:00 — the page test\')', (html.includes('Status 09:00 — the page test'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/Plan run status/.test(ended.stdout)', (!/Plan run status/.test(ended.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!ended.stdout.includes(\'next: step\')', (!ended.stdout.includes('next: step'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['unchanged', (unchanged)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['peer.status === 0', (peer.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['peerWritten', (peerWritten)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['direct.status === 0', (direct.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/status page written/.test(direct.stdout)', (/status page written/.test(direct.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['viaPayload', (viaPayload)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/Status 1/.test(direct.stdout)', (!/Status 1/.test(direct.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['viaVariable.status === 0', (viaVariable.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['written()', (written())]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readFileSync(clock, \'utf8\') === clockText', (readFileSync(clock, 'utf8') === clockText)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -6214,7 +7448,14 @@ const CASES = [
       const raw = STEPS_PLAN.replace('## Commands', `## Script\n${SCRIPT}\n\n## Commands`);
       const shape = m.report.planScript(scriptPlan()) === SCRIPT && m.report.planScript(prose) === null && m.report.planScript(raw) === SCRIPT && m.report.planScript(STEPS_PLAN) === null
         && m.report.scriptHashOf(scriptPlan()) === sha256(SCRIPT) && m.report.scriptHashOf(STEPS_PLAN) === '';
-      return off && exact && gate && reads && fine && unserved && shape;
+      const held_rows = [['off', (off)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['exact', (exact)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gate', (gate)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['reads', (reads)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fine', (fine)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['unserved', (unserved)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['shape', (shape)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -6242,8 +7483,14 @@ const CASES = [
       const noHash = send(script);
       approve({ scriptHash: sha256('another script') });
       const other = send(script);
-      return ok.status === 0 && changed.status === 2 && /byte for byte/.test(changed.stderr) && noHash.status === 2 && /does not hold the hash/.test(noHash.stderr)
-        && other.status === 2 && /does not hold the hash/.test(other.stderr);
+      const held_rows = [['ok.status === 0', (ok.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['changed.status === 2', (changed.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/byte for byte/.test(changed.stderr)', (/byte for byte/.test(changed.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noHash.status === 2', (noHash.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/does not hold the hash/.test(noHash.stderr)', (/does not hold the hash/.test(noHash.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['other.status === 2', (other.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/does not hold the hash/.test(other.stderr)', (/does not hold the hash/.test(other.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -6272,9 +7519,14 @@ const CASES = [
       const uf = uid();
       const trF = transcript([turn(0, 'start'), ...enterPlan(-60), ...exitPlan(-20, false), exitEntry(-19, F.plan, uf)]);
       F.guard(trF, { tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } });
-      return mk0?.scriptHash === sha256(SCRIPT) && mk1?.hash === sha256(text.replace(STEP.old_string, STEP.new_string)) && mk1.scriptHash === sha256(SCRIPT)
-        && mk2?.hash === sha256(edited) && mk2.scriptHash === sha256(SCRIPT) && m.report.scriptHashOf(edited) !== mk2.scriptHash
-        && F.mk() === null; // changed by the plan of 6 November: the owner's exit in the app records no marker
+      const held_rows = [['mk0?.scriptHash === sha256(SCRIPT)', (mk0?.scriptHash === sha256(SCRIPT))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mk1?.hash === sha256(text.replace(STEP.old_string, STEP.new_string))', (mk1?.hash === sha256(text.replace(STEP.old_string, STEP.new_string)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mk1.scriptHash === sha256(SCRIPT)', (mk1.scriptHash === sha256(SCRIPT))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mk2?.hash === sha256(edited)', (mk2?.hash === sha256(edited))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mk2.scriptHash === sha256(SCRIPT)', (mk2.scriptHash === sha256(SCRIPT))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.report.scriptHashOf(edited) !== mk2.scriptHash', (m.report.scriptHashOf(edited) !== mk2.scriptHash)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['F.mk() === null', (F.mk() === null)]);
+      return assertAll(held_rows); // changed by the plan of 6 November: the owner's exit in the app records no marker
     },
   },
 
@@ -6303,7 +7555,13 @@ const CASES = [
         write(`${pad}/progress/step-3.txt`, 'NotebookEdit'), call('Read', { file_path: `${pad}/progress/step-3-report.txt` }), call('Bash', { command: 'git status' }),
       ].every((r) => r.status === 2 && /REFUSAL LATCH/.test(r.stderr));
       const back = call('SubagentHandback', { message: 'Refused by the plan fence; nothing was written.' });
-      return latch.status === 2 && held.status === 2 && /REFUSAL LATCH/.test(held.stderr) && passes && stays && back.status === 0;
+      const held_rows = [['latch.status === 2', (latch.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held.status === 2', (held.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/REFUSAL LATCH/.test(held.stderr)', (/REFUSAL LATCH/.test(held.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['passes', (passes)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stays', (stays)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['back.status === 0', (back.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -6360,7 +7618,19 @@ const CASES = [
       const flow = first.status === 2 && /RULES FIRST, NO LATCH/.test(first.stderr) && !latched(sw)
         && next.status === 2 && /RULES FIRST:/.test(next.stderr) && !/NO LATCH/.test(next.stderr) && note.status === 0
         && after.status === 2 && /REFUSAL LATCH/.test(after.stderr) && !latched(sw);
-      return noFile && itself && otherRead && returns && report && emptyAgent && wrongFile && refusedRead && ok && issued && afterBig && flow;
+      const held_rows = [['noFile', (noFile)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['itself', (itself)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['otherRead', (otherRead)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['returns', (returns)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['report', (report)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['emptyAgent', (emptyAgent)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['wrongFile', (wrongFile)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedRead', (refusedRead)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ok', (ok)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['issued', (issued)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['afterBig', (afterBig)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['flow', (flow)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -6381,9 +7651,13 @@ const CASES = [
       let real = null;
       try { real = JSON.parse(readFileSync(join(dir, '.claude', 'settings.json'), 'utf8')); } catch { return false; }
       const allow = real?.permissions?.allow;
-      return found.join('|') === 'Bash|Bash(*)|Bash(:*)|Bash(node:*)|Bash(git:*)|Bash(npm:*)|Bash(python3:*)'
-        && Array.isArray(allow) && allow.every((r) => typeof r === 'string') && broad(allow).length === 0 && new Set(allow).size === allow.length
-        && ['SessionStart', 'Stop', 'PreToolUse'].every((e) => Array.isArray(real.hooks?.[e]) && real.hooks[e].length > 0);
+      const held_rows = [['found.join(\'|\') === \'Bash|Bash(*)|Bash(:*)|Bash(node:*)|Bash(git:*)|Bash(npm:*)|Bash(python3:*)\'', (found.join('|') === 'Bash|Bash(*)|Bash(:*)|Bash(node:*)|Bash(git:*)|Bash(npm:*)|Bash(python3:*)')]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['Array.isArray(allow)', (Array.isArray(allow))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['allow.every((r) => typeof r === \'string\')', (allow.every((r) => typeof r === 'string'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['broad(allow).length === 0', (broad(allow).length === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['new Set(allow).size === allow.length', (new Set(allow).size === allow.length)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['[\'SessionStart\', \'Stop\', \'PreToolUse\'].every((e) => Array.isArray(real.hooks?.[e]) && real.hooks[e].length > 0)', (['SessionStart', 'Stop', 'PreToolUse'].every((e) => Array.isArray(real.hooks?.[e]) && real.hooks[e].length > 0))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -6434,12 +7708,25 @@ const CASES = [
       putAgent(subs2, w2.plan, 'p1', 1, -300, -100, 'DONE');
       const freeOwed = sendTo(w2, 2, (s) => judgedPad(s, {}));
       const freeJudged = sendTo(w2, 2, (s) => judgedPad(s, { 1: 1 }));
-      return goes(nothing) && owed(refusedOwed, /"Judged 1:/) && goes(refusedJudged)
-        && owed(otherStep, /no line keyed "Judged 1:"/) && owed(stale, /is not after that end/) && goes(standing)
-        && owed(partial, /lack fails, cheapest/) && owed(thin, /lack is /)
-        && owed(whyShort, /holds 1 whole line keyed "Why 1:" of the 2 it needs/) && owed(whyNone, /"Why 1:/) && owed(whyPartial, /lacks .*cheapest/) && goes(whyWhole)
-        && owed(short, /holds 1 such line for 2 ends of that step/) && goes(whole)
-        && goes(free) && owed(freeWhy, /"Why 1:/) && owed(freeOwed, /"Judged 1:/) && goes(freeJudged);
+      const held_rows = [['goes(nothing)', (goes(nothing))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owed(refusedOwed, /"Judged 1:/)', (owed(refusedOwed, /"Judged 1:/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['goes(refusedJudged)', (goes(refusedJudged))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owed(otherStep, /no line keyed "Judged 1:"/)', (owed(otherStep, /no line keyed "Judged 1:"/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owed(stale, /is not after that end/)', (owed(stale, /is not after that end/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['goes(standing)', (goes(standing))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owed(partial, /lack fails, cheapest/)', (owed(partial, /lack fails, cheapest/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owed(thin, /lack is /)', (owed(thin, /lack is /))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owed(whyShort, /holds 1 whole line keyed "Why 1:" of the 2 it needs/)', (owed(whyShort, /holds 1 whole line keyed "Why 1:" of the 2 it needs/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owed(whyNone, /"Why 1:/)', (owed(whyNone, /"Why 1:/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owed(whyPartial, /lacks .*cheapest/)', (owed(whyPartial, /lacks .*cheapest/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['goes(whyWhole)', (goes(whyWhole))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owed(short, /holds 1 such line for 2 ends of that step/)', (owed(short, /holds 1 such line for 2 ends of that step/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['goes(whole)', (goes(whole))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['goes(free)', (goes(free))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owed(freeWhy, /"Why 1:/)', (owed(freeWhy, /"Why 1:/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owed(freeOwed, /"Judged 1:/)', (owed(freeOwed, /"Judged 1:/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['goes(freeJudged)', (goes(freeJudged))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -6458,27 +7745,39 @@ const CASES = [
       const P = { session_id: 'js', tool_name: 'Agent', tool_input: { prompt: `${PL.path} step 2` } };
       const owedState = { kind: 'none', step: 1, endAt, ends: 1, have: 0, notesAt: 0, file: '/pad/status/manager.txt' };
       const refuses = (x, re) => typeof x === 'string' && /^JUDGEMENT GATE/.test(x) && re.test(x);
-      return st([{ step: 1, at: endAt }]).kind === 'judged'
-        && st([{ step: 1, at: Date.now() + 60000 }]).kind === 'stale'
-        && st([{ step: 2, at: endAt }]).kind === 'none'
-        && st([{ step: 1, at: endAt }, { step: 1, at: endAt - 1000 }]).kind === 'short'
-        && st([{ step: 4, at: endAt }]).kind === 'not-enforced' && st([{ step: null, at: endAt }]).kind === 'not-enforced'
-        && st([{ step: 1, at: endAt - 5000 }, { step: 2, at: endAt }]).kind === 'none'
-        && st([{ step: 1, at: endAt }], { pad: null }).kind === 'no-pad'
-        && st(null).kind === 'not-read'
-        && st([{ step: 1, at: endAt }], { plan: FREE }).kind === 'judged' && st([{ step: 2, at: endAt }], { plan: FREE }).kind === 'none'
-        && st([{ step: 1, at: endAt }], { plan: { path: PL.path, text: PLAN(OWN_WORDS) } }).kind === 'not-enforced'
-        && m.report.judgedState({ session_id: 'js' }, null).kind === 'not-enforced'
-        && st([{ step: 1, at: endAt }], { pad: partialPad }).kind === 'incomplete' && st([{ step: 1, at: endAt }], { pad: partialPad }).missing.join() === 'fails,cheapest'
-        && st([{ step: 1, at: endAt }], { pad: thinPad }).kind === 'incomplete' && st([{ step: 1, at: endAt }], { pad: thinPad }).missing.join() === 'is'
-        && st([{ step: 1, at: endAt }], { send: 2 }).kind === 'judged'
-        && st([{ step: 1, at: endAt }, { step: 2, at: endAt - 1000 }], { send: 2 }).kind === 'why-short'
-        && st([{ step: 1, at: endAt }], { send: 1 }).kind === 'why-none'
-        && st([{ step: 1, at: endAt }], { pad: whyPartialPad, send: 2 }).kind === 'why-incomplete' && st([{ step: 1, at: endAt }], { pad: whyPartialPad, send: 2 }).whyMissing.join() === 'wrong,fails,cheapest'
-        && st([{ step: 1, at: endAt }], { send: 3 }).kind === 'not-enforced'
-        && st([], { send: 2 }).kind === 'judged' && st([], { send: 1 }).kind === 'why-none' && st([]).kind === 'not-enforced'
-        // The dispatcher's gate that read this state is gone; the state and the status line that read it stay.
-        && m.dispatch.judgedGate === undefined && m.dispatch.tierGate === undefined && P.tool_name === 'Agent' && owedState.kind === 'none' && refuses('JUDGEMENT GATE x', /x/);
+      const held_rows = [['st([{ step: 1, at: endAt }]).kind === \'judged\'', (st([{ step: 1, at: endAt }]).kind === 'judged')]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: Date.now() + 60000 }]).kind === \'stale\'', (st([{ step: 1, at: Date.now() + 60000 }]).kind === 'stale')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 2, at: endAt }]).kind === \'none\'', (st([{ step: 2, at: endAt }]).kind === 'none')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt }, { step: 1, at: endAt - 1000 }]).kind === \'short\'', (st([{ step: 1, at: endAt }, { step: 1, at: endAt - 1000 }]).kind === 'short')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 4, at: endAt }]).kind === \'not-enforced\'', (st([{ step: 4, at: endAt }]).kind === 'not-enforced')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: null, at: endAt }]).kind === \'not-enforced\'', (st([{ step: null, at: endAt }]).kind === 'not-enforced')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt - 5000 }, { step: 2, at: endAt }]).kind === \'none\'', (st([{ step: 1, at: endAt - 5000 }, { step: 2, at: endAt }]).kind === 'none')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt }], { pad: null }).kind === \'no-pad\'', (st([{ step: 1, at: endAt }], { pad: null }).kind === 'no-pad')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st(null).kind === \'not-read\'', (st(null).kind === 'not-read')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt }], { plan: FREE }).kind === \'judged\'', (st([{ step: 1, at: endAt }], { plan: FREE }).kind === 'judged')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 2, at: endAt }], { plan: FREE }).kind === \'none\'', (st([{ step: 2, at: endAt }], { plan: FREE }).kind === 'none')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt }], { plan: { path: PL.path, text: PLAN(OWN_WORDS) } }).kind === \'not-enforced\'', (st([{ step: 1, at: endAt }], { plan: { path: PL.path, text: PLAN(OWN_WORDS) } }).kind === 'not-enforced')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.report.judgedState({ session_id: \'js\' }, null).kind === \'not-enforced\'', (m.report.judgedState({ session_id: 'js' }, null).kind === 'not-enforced')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt }], { pad: partialPad }).kind === \'incomplete\'', (st([{ step: 1, at: endAt }], { pad: partialPad }).kind === 'incomplete')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt }], { pad: partialPad }).missing.join() === \'fails,cheapest\'', (st([{ step: 1, at: endAt }], { pad: partialPad }).missing.join() === 'fails,cheapest')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt }], { pad: thinPad }).kind === \'incomplete\'', (st([{ step: 1, at: endAt }], { pad: thinPad }).kind === 'incomplete')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt }], { pad: thinPad }).missing.join() === \'is\'', (st([{ step: 1, at: endAt }], { pad: thinPad }).missing.join() === 'is')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt }], { send: 2 }).kind === \'judged\'', (st([{ step: 1, at: endAt }], { send: 2 }).kind === 'judged')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt }, { step: 2, at: endAt - 1000 }], { send: 2 }).kind === \'why-short\'', (st([{ step: 1, at: endAt }, { step: 2, at: endAt - 1000 }], { send: 2 }).kind === 'why-short')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt }], { send: 1 }).kind === \'why-none\'', (st([{ step: 1, at: endAt }], { send: 1 }).kind === 'why-none')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt }], { pad: whyPartialPad, send: 2 }).kind === \'why-incomplete\'', (st([{ step: 1, at: endAt }], { pad: whyPartialPad, send: 2 }).kind === 'why-incomplete')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt }], { pad: whyPartialPad, send: 2 }).whyMissing.join() === \'wrong,fails,cheapest\'', (st([{ step: 1, at: endAt }], { pad: whyPartialPad, send: 2 }).whyMissing.join() === 'wrong,fails,cheapest')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([{ step: 1, at: endAt }], { send: 3 }).kind === \'not-enforced\'', (st([{ step: 1, at: endAt }], { send: 3 }).kind === 'not-enforced')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([], { send: 2 }).kind === \'judged\'', (st([], { send: 2 }).kind === 'judged')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([], { send: 1 }).kind === \'why-none\'', (st([], { send: 1 }).kind === 'why-none')]);
+      // The dispatcher's gate that read this state is gone; the state and the status line that read it stay.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['st([]).kind === \'not-enforced\'', (st([]).kind === 'not-enforced')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.judgedGate === undefined', (m.dispatch.judgedGate === undefined)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.tierGate === undefined', (m.dispatch.tierGate === undefined)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['P.tool_name === \'Agent\'', (P.tool_name === 'Agent')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owedState.kind === \'none\'', (owedState.kind === 'none')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refuses(\'JUDGEMENT GATE x\', /x/)', (refuses('JUDGEMENT GATE x', /x/))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -6510,10 +7809,16 @@ const CASES = [
       writeFileSync(join(pad, 'status', 'manager.txt'), `${judgedLine(1)}\n`);
       const judgedOut = status();
       const before = (out, a, b) => out.indexOf(a) >= 0 && out.indexOf(a) < out.indexOf(b);
-      return /^Judgement: nothing to judge/m.test(first) && before(first, 'Review:', 'Judgement:')
-        && !/OWED/.test(owedOut) && !/^Judgement:/m.test(owedOut) && /^Review:/m.test(owedOut)
-        && !/OWED/.test(partialOut) && !/^Judgement:/m.test(partialOut)
-        && /^Judgement: step 1's newest hand-back \(ended .*\) is judged in .*"Why <step>: now: … \| wrong: … \| fails: … \| cheapest: …"/m.test(judgedOut) && judgedOut.includes(join(pad, 'status', 'manager.txt'));
+      const held_rows = [['/^Judgement: nothing to judge/m.test(first)', (/^Judgement: nothing to judge/m.test(first))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['before(first, \'Review:\', \'Judgement:\')', (before(first, 'Review:', 'Judgement:'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/OWED/.test(owedOut)', (!/OWED/.test(owedOut))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/^Judgement:/m.test(owedOut)', (!/^Judgement:/m.test(owedOut))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^Review:/m.test(owedOut)', (/^Review:/m.test(owedOut))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/OWED/.test(partialOut)', (!/OWED/.test(partialOut))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/^Judgement:/m.test(partialOut)', (!/^Judgement:/m.test(partialOut))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^Judgement: step 1\'s newest hand-back \\(ended .*\\) is judged in .*"Why <step>: now: … \\| wrong: … \\| fails: … \\| cheapest: …"/m.test(judgedOut)', (/^Judgement: step 1's newest hand-back \(ended .*\) is judged in .*"Why <step>: now: … \| wrong: … \| fails: … \| cheapest: …"/m.test(judgedOut))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['judgedOut.includes(join(pad, \'status\', \'manager.txt\'))', (judgedOut.includes(join(pad, 'status', 'manager.txt')))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -6542,10 +7847,16 @@ const CASES = [
       const bare = { ...process.env, HOME: bareHome };
       const conversation = [say('I understand your frustration with the status page. The list now reads from the notes file.', GO, bare),
         say('From now on I will read the record first.', GO, bare), say('Say go when you want the step sent.', correction, bare)];
-      return emotion.every((r) => refusedAs(r, /names the owner's emotion/)) && promise.every((r) => refusedAs(r, /promises future conduct/))
-        && refusedAs(goAsk, /opens by asking for a go-word while the owner's newest message is a correction/) && refusedAs(goAskTwo, /go-word/)
-        && goLater.status === 0 && goNoCorrection.status === 0 && fenced.status === 0 && honest.status === 0
-        && conversation.every((r) => r.status === 0);
+      const held_rows = [['emotion.every((r) => refusedAs(r, /names the owner\'s emotion/))', (emotion.every((r) => refusedAs(r, /names the owner's emotion/)))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['promise.every((r) => refusedAs(r, /promises future conduct/))', (promise.every((r) => refusedAs(r, /promises future conduct/)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedAs(goAsk, /opens by asking for a go-word while the owner\'s newest message is a correction/)', (refusedAs(goAsk, /opens by asking for a go-word while the owner's newest message is a correction/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedAs(goAskTwo, /go-word/)', (refusedAs(goAskTwo, /go-word/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['goLater.status === 0', (goLater.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['goNoCorrection.status === 0', (goNoCorrection.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced.status === 0', (fenced.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['honest.status === 0', (honest.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['conversation.every((r) => r.status === 0)', (conversation.every((r) => r.status === 0))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -6580,7 +7891,7 @@ const CASES = [
       ].map((t) => [t, say(t)]);
       const unrefused = refuses.filter(([, r]) => !(r.status === 2 && /LESSONS §406/.test(r.stderr) && /opens by asking for a go-word/.test(r.stderr))).map(([t]) => JSON.stringify(t));
       if (unrefused.length) throw new Error(`not refused as a go-word ask: ${unrefused.join('; ')}`);
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -6599,8 +7910,13 @@ const CASES = [
       const noCorrection = say('Say go to continue.', GO);
       const emotion = say('I understand your frustration with the status page. The list now reads from the notes file.');
       const promise = say('This will not happen again.');
-      return later.status === 0 && noCorrection.status === 0
-        && emotion.status === 2 && /names the owner's emotion/.test(emotion.stderr) && promise.status === 2 && /promises future conduct/.test(promise.stderr);
+      const held_rows = [['later.status === 0', (later.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noCorrection.status === 0', (noCorrection.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['emotion.status === 2', (emotion.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/names the owner\'s emotion/.test(emotion.stderr)', (/names the owner's emotion/.test(emotion.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['promise.status === 2', (promise.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/promises future conduct/.test(promise.stderr)', (/promises future conduct/.test(promise.stderr))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -6624,12 +7940,21 @@ const CASES = [
       writeFileSync(join(hub, 'STATE.md'), 'The hub state: one line.\n');
       const withState = brief(alpha);
       const out = withState.stdout;
-      return none.status === 0 && /STATE\.md: none of the 1 repository beside this brief keeps one\./.test(none.stdout)
-        && withState.status === 0 && out.includes('STATE.md of alpha') && out.includes('# Alpha state\n\nThe walk is running.\nThe last line of alpha.')
-        && out.includes('STATE.md of delta') && out.includes('The delta state, a repository beside the others.')
-        && out.includes('STATE.md of hub') && out.includes('The hub state: one line.') && !out.includes('STATE.md of beta')
-        && !out.includes('STATE.md of gamma') && !out.includes('The gamma state text') && !/STATE\.md: none of/.test(out)
-        && out.indexOf('STATE.md of alpha') < out.indexOf('STATE.md of hub');
+      const held_rows = [['none.status === 0', (none.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/STATE\\.md: none of the 1 repository beside this brief keeps one\\./.test(none.stdout)', (/STATE\.md: none of the 1 repository beside this brief keeps one\./.test(none.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['withState.status === 0', (withState.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.includes(\'STATE.md of alpha\')', (out.includes('STATE.md of alpha'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.includes(\'# Alpha state\\n\\nThe walk is running.\\nThe last line of alpha.\')', (out.includes('# Alpha state\n\nThe walk is running.\nThe last line of alpha.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.includes(\'STATE.md of delta\')', (out.includes('STATE.md of delta'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.includes(\'The delta state, a repository beside the others.\')', (out.includes('The delta state, a repository beside the others.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.includes(\'STATE.md of hub\')', (out.includes('STATE.md of hub'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.includes(\'The hub state: one line.\')', (out.includes('The hub state: one line.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!out.includes(\'STATE.md of beta\')', (!out.includes('STATE.md of beta'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!out.includes(\'STATE.md of gamma\')', (!out.includes('STATE.md of gamma'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!out.includes(\'The gamma state text\')', (!out.includes('The gamma state text'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/STATE\\.md: none of/.test(out)', (!/STATE\.md: none of/.test(out))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.indexOf(\'STATE.md of alpha\') < out.indexOf(\'STATE.md of hub\')', (out.indexOf('STATE.md of alpha') < out.indexOf('STATE.md of hub'))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -6665,13 +7990,26 @@ const CASES = [
       // Not judged: no Steps, or a Files that names no repository.
       const noSteps = m.dispatch.whatIsProblem(PLAN(OWN_WORDS), { roots: [R.dir] });
       const noRoots = m.dispatch.whatIsProblem(sendingPlan(dir, { files: null, what: null }), { dir: R.dir });
-      return wi(good) === null && wi(curly) === null && wi(elided) === null
-        && lists(noQuote, /quotes nothing/) && lists(noFile, /names no file outside the quote/) && lists(noRepoFile, /no repository the Files names holds MISSING\.md/)
-        && lists(notThere, /the file does not carry the quote \(NOTES\.md\)/) && lists(oneOfTwo, /does not carry the quote/) && lists(shortQuote, /quotes nothing/)
-        && lists(several, /2 of the "## What is" bullets do not quote/) && !/line 3/.test(several)
-        && lists(wi(null), /has no "## What is" section with a bullet in it/)
-        && bad.status === 2 && /WHAT IS/.test(said(bad)) && okExit.status === 0 && none.status === 2 && /WHAT IS/.test(said(none))
-        && noSteps === null && noRoots === null;
+      const held_rows = [['wi(good) === null', (wi(good) === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['wi(curly) === null', (wi(curly) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['wi(elided) === null', (wi(elided) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lists(noQuote, /quotes nothing/)', (lists(noQuote, /quotes nothing/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lists(noFile, /names no file outside the quote/)', (lists(noFile, /names no file outside the quote/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lists(noRepoFile, /no repository the Files names holds MISSING\\.md/)', (lists(noRepoFile, /no repository the Files names holds MISSING\.md/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lists(notThere, /the file does not carry the quote \\(NOTES\\.md\\)/)', (lists(notThere, /the file does not carry the quote \(NOTES\.md\)/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lists(oneOfTwo, /does not carry the quote/)', (lists(oneOfTwo, /does not carry the quote/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lists(shortQuote, /quotes nothing/)', (lists(shortQuote, /quotes nothing/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lists(several, /2 of the "## What is" bullets do not quote/)', (lists(several, /2 of the "## What is" bullets do not quote/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/line 3/.test(several)', (!/line 3/.test(several))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lists(wi(null), /has no "## What is" section with a bullet in it/)', (lists(wi(null), /has no "## What is" section with a bullet in it/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['bad.status === 2', (bad.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/WHAT IS/.test(said(bad))', (/WHAT IS/.test(said(bad)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['okExit.status === 0', (okExit.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['none.status === 2', (none.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/WHAT IS/.test(said(none))', (/WHAT IS/.test(said(none)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noSteps === null', (noSteps === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noRoots === null', (noRoots === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -6700,12 +8038,22 @@ const CASES = [
       const passed = exits(all.replace('- 012 in: the plan builds it this time', '- 012 out: the plan leaves it for a later plan'));
       const quietExit = exitFor(dir, sendingPlan(dir, { files: '- plain-repo: `a.txt`', what: '- "No roadmap here." (NOTES.md).', roadmap: null }), quiet.dir);
       const said = (r) => `${r.stdout}${r.stderr}`;
-      return itemsRead === '012|013|Gamma without a number'
-        && lists(none, /3 open roadmap items, and 3 have no line/, /- 012 \(road-repo\): Alpha feature/, /- 013 \(road-repo\)/, /- Gamma without a number \(road-repo\)/) && !/014|099|sub bullet/.test(none)
-        && rd(all) === null && lists(one, /2 have no line/, /- 013 \(/, /- Gamma/) && !/- 012 \(/.test(one)
-        && lists(weak, /3 have no line/) && dressed === null && lists(prefix, /1 has no line/, /- 012 \(/) && !/- 013 \(/.test(prefix)
-        && refused.status === 2 && /ROADMAP/.test(said(refused)) && passed.status === 0 && quietExit.status === 0
-        && m.dispatch.roadmapProblem(PLAN(OWN_WORDS), { roots: [R.dir] }) === null;
+      const held_rows = [['itemsRead === \'012|013|Gamma without a number\'', (itemsRead === '012|013|Gamma without a number')]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lists(none, /3 open roadmap items, and 3 have no line/, /- 012 \\(road-repo\\): Alpha feature/, /- 013 \\(road-repo\\)/, /- Gamma without a number \\(road-repo\\)/)', (lists(none, /3 open roadmap items, and 3 have no line/, /- 012 \(road-repo\): Alpha feature/, /- 013 \(road-repo\)/, /- Gamma without a number \(road-repo\)/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/014|099|sub bullet/.test(none)', (!/014|099|sub bullet/.test(none))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['rd(all) === null', (rd(all) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lists(one, /2 have no line/, /- 013 \\(/, /- Gamma/)', (lists(one, /2 have no line/, /- 013 \(/, /- Gamma/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/- 012 \\(/.test(one)', (!/- 012 \(/.test(one))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lists(weak, /3 have no line/)', (lists(weak, /3 have no line/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['dressed === null', (dressed === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lists(prefix, /1 has no line/, /- 012 \\(/)', (lists(prefix, /1 has no line/, /- 012 \(/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/- 013 \\(/.test(prefix)', (!/- 013 \(/.test(prefix))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused.status === 2', (refused.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/ROADMAP/.test(said(refused))', (/ROADMAP/.test(said(refused)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['passed.status === 0', (passed.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['quietExit.status === 0', (quietExit.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.roadmapProblem(PLAN(OWN_WORDS), { roots: [R.dir] }) === null', (m.dispatch.roadmapProblem(PLAN(OWN_WORDS), { roots: [R.dir] }) === null)]);
+      return assertAll(held_rows);
     },
   },
   // ---- a plan that marks a roadmap item in has read the app's commit log first (step 186, LESSONS §423) ----
@@ -6771,20 +8119,44 @@ const CASES = [
       const exitNoRead = exit(line, (f) => planWrite(f));
       const exitNoLine = exit(null, (f) => [...planWrite(f), ...planLog('xl', R.dir, '--format=%s origin/main origin/staging')]);
       const exitShipped = exit('012: shipped on main by "Fixed: a look can be taken off"', (f) => [...planWrite(f), ...planLog('xl', R.dir, '--format=%s origin/main origin/staging')]);
-      return good === null && says(noRead, /no result of a git log on ship-repo/, /naming main and staging/, /012/) && !/has no line/.test(noRead)
-        && says(readBefore, /no result of a git log on ship-repo/) && says(otherRepo, /no result of a git log on ship-repo/)
-        && says(onlyMain, /naming main and staging/) && says(onlyStaging, /naming main and staging/) && says(failed, /no result of a git log on ship-repo/)
-        && ranges.every((x) => x === null) && says(notALog, /no result of a git log/) && noPlanFile === null
-        && altOk === null && says(altWrongRead, /naming prod and beta/) && says(altWrongLine, /reads against main and staging/, /ships on prod and stages on beta/)
-        && dressed === null && says(noLine, /has no line for 012/, /not shipped, read against main and staging on/) && !/no result of a git log/.test(noLine)
-        && says(noDate, /has no line for 012/) && says(wrongNames, /reads against master and develop/, /ships on main and stages on staging/)
-        && says(shipped, /012/, /shipped on main by "Fixed: a look can be taken off"/, /work already done/) && says(shippedOnStaging, /work already done/)
-        && says(otherKey, /has no line for 012/) && says(longerKey, /has no line for 012/) && says(noColon, /has no line for 012/)
-        && titled === null && says(twoIn, /has no line for 013/) && !/has no line for 012/.test(twoIn)
-        && noSteps === null
-        && exitGood.status === 0 && exitNoRead.status === 2 && /SHIPPED CHECK/.test(said(exitNoRead)) && /no result of a git log/.test(said(exitNoRead))
-        && exitNoLine.status === 2 && /SHIPPED CHECK/.test(said(exitNoLine)) && /has no line for 012/.test(said(exitNoLine))
-        && exitShipped.status === 2 && /work already done/.test(said(exitShipped));
+      const held_rows = [['good === null', (good === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(noRead, /no result of a git log on ship-repo/, /naming main and staging/, /012/)', (says(noRead, /no result of a git log on ship-repo/, /naming main and staging/, /012/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/has no line/.test(noRead)', (!/has no line/.test(noRead))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(readBefore, /no result of a git log on ship-repo/)', (says(readBefore, /no result of a git log on ship-repo/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(otherRepo, /no result of a git log on ship-repo/)', (says(otherRepo, /no result of a git log on ship-repo/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(onlyMain, /naming main and staging/)', (says(onlyMain, /naming main and staging/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(onlyStaging, /naming main and staging/)', (says(onlyStaging, /naming main and staging/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(failed, /no result of a git log on ship-repo/)', (says(failed, /no result of a git log on ship-repo/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ranges.every((x) => x === null)', (ranges.every((x) => x === null))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(notALog, /no result of a git log/)', (says(notALog, /no result of a git log/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noPlanFile === null', (noPlanFile === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['altOk === null', (altOk === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(altWrongRead, /naming prod and beta/)', (says(altWrongRead, /naming prod and beta/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(altWrongLine, /reads against main and staging/, /ships on prod and stages on beta/)', (says(altWrongLine, /reads against main and staging/, /ships on prod and stages on beta/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['dressed === null', (dressed === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(noLine, /has no line for 012/, /not shipped, read against main and staging on/)', (says(noLine, /has no line for 012/, /not shipped, read against main and staging on/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/no result of a git log/.test(noLine)', (!/no result of a git log/.test(noLine))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(noDate, /has no line for 012/)', (says(noDate, /has no line for 012/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(wrongNames, /reads against master and develop/, /ships on main and stages on staging/)', (says(wrongNames, /reads against master and develop/, /ships on main and stages on staging/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(shipped, /012/, /shipped on main by "Fixed: a look can be taken off"/, /work already done/)', (says(shipped, /012/, /shipped on main by "Fixed: a look can be taken off"/, /work already done/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(shippedOnStaging, /work already done/)', (says(shippedOnStaging, /work already done/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(otherKey, /has no line for 012/)', (says(otherKey, /has no line for 012/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(longerKey, /has no line for 012/)', (says(longerKey, /has no line for 012/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(noColon, /has no line for 012/)', (says(noColon, /has no line for 012/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['titled === null', (titled === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(twoIn, /has no line for 013/)', (says(twoIn, /has no line for 013/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/has no line for 012/.test(twoIn)', (!/has no line for 012/.test(twoIn))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noSteps === null', (noSteps === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['exitGood.status === 0', (exitGood.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['exitNoRead.status === 2', (exitNoRead.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/SHIPPED CHECK/.test(said(exitNoRead))', (/SHIPPED CHECK/.test(said(exitNoRead)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/no result of a git log/.test(said(exitNoRead))', (/no result of a git log/.test(said(exitNoRead)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['exitNoLine.status === 2', (exitNoLine.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/SHIPPED CHECK/.test(said(exitNoLine))', (/SHIPPED CHECK/.test(said(exitNoLine)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/has no line for 012/.test(said(exitNoLine))', (/has no line for 012/.test(said(exitNoLine)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['exitShipped.status === 2', (exitShipped.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/work already done/.test(said(exitShipped))', (/work already done/.test(said(exitShipped)))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -6808,8 +8180,14 @@ const CASES = [
       // Both marked in, with the read and a line each, passes.
       const bothIn = exitFor(dir, sendingPlan(dir, { files: '- ship-two: `a.txt`', what, roadmap: '- 012 in: the plan builds it this time\n- 013 in: the plan builds this one too', shipped: `${line}\n013: not shipped, read against main and staging on 24 October 2026` }), R.dir, withRead);
       const quietExit = exitFor(dir, sendingPlan(dir, { files: '- plain-ship: `a.txt`', what: '- "No roadmap here." (NOTES.md).', roadmap: null }), quiet.dir, []);
-      return missing.status === 2 && /ROADMAP/.test(said(missing)) && /- 013 \(ship-two\)/.test(said(missing)) && !/SHIPPED CHECK/.test(said(missing))
-        && allOut.status === 0 && bothIn.status === 0 && quietExit.status === 0;
+      const held_rows = [['missing.status === 2', (missing.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/ROADMAP/.test(said(missing))', (/ROADMAP/.test(said(missing)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/- 013 \\(ship-two\\)/.test(said(missing))', (/- 013 \(ship-two\)/.test(said(missing)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/SHIPPED CHECK/.test(said(missing))', (!/SHIPPED CHECK/.test(said(missing)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['allOut.status === 0', (allOut.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['bothIn.status === 0', (bothIn.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['quietExit.status === 0', (quietExit.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -6832,8 +8210,17 @@ const CASES = [
       const mixedTags = ans(`Q-RG-1 to Q-ZZ-9 still queued: ${reason}`);
       const singles = ans([1, 2, 3, 4, 5].map((n) => `Q-RG-${n}: still queued, the plan leaves it alone.`).join('\n'));
       const exitPlan = exitFor(dir, sendingPlan(dir, { files, answered: `Q-RG-1 to Q-RG-5 still queued: ${reason}`, what: '- "finding number 1 with some words" (NOTES.md).' }), A.dir);
-      return whole === null && mixed === null && singles === null && keysOf(dash) === '5' && keysOf(fixed) === '12345' && keysOf(short) === '12345'
-        && keysOf(reversed) === '12345' && keysOf(otherTag) === '12345' && keysOf(mixedTags) === '12345' && exitPlan.status === 0;
+      const held_rows = [['whole === null', (whole === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mixed === null', (mixed === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['singles === null', (singles === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['keysOf(dash) === \'5\'', (keysOf(dash) === '5')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['keysOf(fixed) === \'12345\'', (keysOf(fixed) === '12345')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['keysOf(short) === \'12345\'', (keysOf(short) === '12345')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['keysOf(reversed) === \'12345\'', (keysOf(reversed) === '12345')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['keysOf(otherTag) === \'12345\'', (keysOf(otherTag) === '12345')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['keysOf(mixedTags) === \'12345\'', (keysOf(mixedTags) === '12345')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['exitPlan.status === 0', (exitPlan.status === 0)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -6898,13 +8285,26 @@ const CASES = [
           transcript_path: transcript([turn(0, OWNER), ...enterPlan(-3000), at(reply(0, PLAN_TALK), later(-1000)), owner(later(-900), 'ok')]), cwd: '/' }),
         encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: repo({ 'a.txt': 'x\n' }).dir },
       });
-      return pathOk && sections && marked === m.report.stepsFileText(text, A.plan) && amended === m.report.stepsFileText(amendedText, A.plan) && amended.includes('say what it did')
-        && appFile === null // changed by the plan of 6 November: the owner's exit in the app records no marker and writes no steps file
-        && missing.r.status === 2 && /DISPATCH GATE/.test(missing.r.stderr) && /cannot be read/.test(missing.r.stderr)
-        && named.r.status === 0 && planNamed.r.status === 0
-        && stale.r.status === 2 && /not the Rules, Steps and Commands of the plan in force/.test(stale.r.stderr)
-        && otherPath.r.status === 2 && /Send exactly/.test(otherPath.r.stderr) && badStep.r.status === 2 && /no step 9/.test(badStep.r.stderr)
-        && picked.status === 0;
+      const held_rows = [['pathOk', (pathOk)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['sections', (sections)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['marked === m.report.stepsFileText(text, A.plan)', (marked === m.report.stepsFileText(text, A.plan))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['amended === m.report.stepsFileText(amendedText, A.plan)', (amended === m.report.stepsFileText(amendedText, A.plan))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['amended.includes(\'say what it did\')', (amended.includes('say what it did'))]);
+      // changed by the plan of 6 November: the owner's exit in the app records no marker and writes no steps file
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['appFile === null', (appFile === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['missing.r.status === 2', (missing.r.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/DISPATCH GATE/.test(missing.r.stderr)', (/DISPATCH GATE/.test(missing.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/cannot be read/.test(missing.r.stderr)', (/cannot be read/.test(missing.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['named.r.status === 0', (named.r.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['planNamed.r.status === 0', (planNamed.r.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stale.r.status === 2', (stale.r.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/not the Rules, Steps and Commands of the plan in force/.test(stale.r.stderr)', (/not the Rules, Steps and Commands of the plan in force/.test(stale.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['otherPath.r.status === 2', (otherPath.r.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Send exactly/.test(otherPath.r.stderr)', (/Send exactly/.test(otherPath.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['badStep.r.status === 2', (badStep.r.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/no step 9/.test(badStep.r.stderr)', (/no step 9/.test(badStep.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['picked.status === 0', (picked.status === 0)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -6952,9 +8352,20 @@ const CASES = [
       const reportP = (agent_id, n) => ({ session_id: pad.split('/')[4], transcript_path: tr, agent_id, tool_name: 'Write', tool_input: { file_path: `${pad}/progress/step-${n}-report.txt`, content: 'x' } });
       const own = m.dispatch.agentReportWrite(reportP('wfa', 2)) === true;
       const other = m.dispatch.agentReportWrite(reportP('wfa', 3)) === false;
-      return ids === 'top,wfa,wfb,wfc' && topFile === join(subs, 'agent-top.jsonl') && meta('wfa').description === 'workflow ended' && meta('wfc').description === 'beside'
-        && lookups && runningIds === 'wfb:3' && /(?:^|,)wfa:2(?:,|$)/.test(endedIds) && /(?:^|,)wfc:4(?:,|$)/.test(endedIds) && /(?:^|,)top:1(?:,|$)/.test(endedIds)
-        && readOk && noRead && own && other;
+      const held_rows = [['ids === \'top,wfa,wfb,wfc\'', (ids === 'top,wfa,wfb,wfc')]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['topFile === join(subs, \'agent-top.jsonl\')', (topFile === join(subs, 'agent-top.jsonl'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['meta(\'wfa\').description === \'workflow ended\'', (meta('wfa').description === 'workflow ended')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['meta(\'wfc\').description === \'beside\'', (meta('wfc').description === 'beside')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lookups', (lookups)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['runningIds === \'wfb:3\'', (runningIds === 'wfb:3')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/(?:^|,)wfa:2(?:,|$)/.test(endedIds)', (/(?:^|,)wfa:2(?:,|$)/.test(endedIds))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/(?:^|,)wfc:4(?:,|$)/.test(endedIds)', (/(?:^|,)wfc:4(?:,|$)/.test(endedIds))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/(?:^|,)top:1(?:,|$)/.test(endedIds)', (/(?:^|,)top:1(?:,|$)/.test(endedIds))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readOk', (readOk)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noRead', (noRead)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['own', (own)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['other', (other)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -6991,9 +8402,21 @@ const CASES = [
       // The second refusal latches: the next command is refused, and so is the plan's Read.
       const third = call('Bash', { command: 'git log' });
       const fourth = call('Read', { file_path: w.plan });
-      return planRead && stepsRead && otherPlan && notReads && noPlan
-        && first.status === 0 && stillFree && second.status === 2 && secondNoLatch && third.status === 2 && /RULES FIRST:/.test(third.stderr) && !/NO LATCH/.test(third.stderr)
-        && fourth.status === 2 && /REFUSAL LATCH/.test(fourth.stderr);
+      const held_rows = [['planRead', (planRead)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stepsRead', (stepsRead)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['otherPlan', (otherPlan)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notReads', (notReads)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noPlan', (noPlan)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['first.status === 0', (first.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stillFree', (stillFree)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['second.status === 2', (second.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['secondNoLatch', (secondNoLatch)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['third.status === 2', (third.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/RULES FIRST:/.test(third.stderr)', (/RULES FIRST:/.test(third.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/NO LATCH/.test(third.stderr)', (!/NO LATCH/.test(third.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fourth.status === 2', (fourth.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/REFUSAL LATCH/.test(fourth.stderr)', (/REFUSAL LATCH/.test(fourth.stderr))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -7027,10 +8450,18 @@ const CASES = [
       const plain = tmp('sg-plain-');
       for (const f of FILES) copyGuard(join(dir, f), join(plain, f));
       const outside = run(plain, '--touched');
-      return Number(one[1]) === countOf('stop-guard.mjs') && Number(one[1]) > 0 && Number(one[2]) === total && one[3].split(', ').every((k) => plants[k]?.[2] === 'stop-guard.mjs')
-        && Number(two[1]) === countOf('stop-guard.mjs', 'plan-fence.mjs') && Number(nothing[1]) === 0 && Number(all[1]) === total
-        && Number(touched[1]) === countOf('plan-fence.mjs') && touched[3].split(', ').every((k) => plants[k]?.[2] === 'plan-fence.mjs')
-        && outside.status === 1 && /needs a git checkout of the guards/.test(outside.stdout);
+      const held_rows = [['Number(one[1]) === countOf(\'stop-guard.mjs\')', (Number(one[1]) === countOf('stop-guard.mjs'))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['Number(one[1]) > 0', (Number(one[1]) > 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['Number(one[2]) === total', (Number(one[2]) === total)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['one[3].split(\', \').every((k) => plants[k]?.[2] === \'stop-guard.mjs\')', (one[3].split(', ').every((k) => plants[k]?.[2] === 'stop-guard.mjs'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['Number(two[1]) === countOf(\'stop-guard.mjs\', \'plan-fence.mjs\')', (Number(two[1]) === countOf('stop-guard.mjs', 'plan-fence.mjs'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['Number(nothing[1]) === 0', (Number(nothing[1]) === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['Number(all[1]) === total', (Number(all[1]) === total)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['Number(touched[1]) === countOf(\'plan-fence.mjs\')', (Number(touched[1]) === countOf('plan-fence.mjs'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['touched[3].split(\', \').every((k) => plants[k]?.[2] === \'plan-fence.mjs\')', (touched[3].split(', ').every((k) => plants[k]?.[2] === 'plan-fence.mjs'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['outside.status === 1', (outside.status === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/needs a git checkout of the guards/.test(outside.stdout)', (/needs a git checkout of the guards/.test(outside.stdout))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -7052,7 +8483,15 @@ const CASES = [
       const w = spawnSync('node', [join(dir, 'report.mjs'), '--page'], { input: '', encoding: 'utf8', env: { ...process.env, HOME: home } });
       const real = /fix-run\.html was rewritten/.test(decoyChanged());
       plantDecoy();
-      return pristine && rewritten && gone && planted && quiet && w.status === 0 && real && decoyChanged() === '';
+      const held_rows = [['pristine', (pristine)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['rewritten', (rewritten)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gone', (gone)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['planted', (planted)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['quiet', (quiet)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['w.status === 0', (w.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['real', (real)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['decoyChanged() === \'\'', (decoyChanged() === '')]);
+      return assertAll(held_rows);
     },
   },
 
@@ -7093,7 +8532,14 @@ const CASES = [
       const sr = sid('nl');
       const repoRefused = call(sr, 'Read', { file_path: w.plan });
       const repoLatches = repoRefused.status === 2 && /repo gate says no/.test(repoRefused.stderr) && latched(sr);
-      return unlatched && marked && mayUse && checkCmd && next.status === 0 && dispatchLatches && repoLatches;
+      const held_rows = [['unlatched', (unlatched)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['marked', (marked)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['mayUse', (mayUse)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['checkCmd', (checkCmd)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['next.status === 0', (next.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['dispatchLatches', (dispatchLatches)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['repoLatches', (repoLatches)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -7245,7 +8691,14 @@ const CASES = [
       const okLine = w.call('PreToolUse', { session_id: sPass, cwd: parent, tool_name: 'Bash', tool_input: { command: `git -C ${one} log --format=%s -n 100 origin/main origin/staging` } });
       const sBad = sid('gh');
       const badLine = w.call('PreToolUse', { session_id: sBad, cwd: parent, tool_name: 'Bash', tool_input: { command: `git -C ${one} log --oneline ; touch x` } });
-      return canPasses && canRefuses && okLine.status === 0 && !latched(sPass) && badLine.status === 2 && /MANAGER FENCE/.test(badLine.stderr) && !latched(sBad);
+      const held_rows = [['canPasses', (canPasses)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['canRefuses', (canRefuses)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['okLine.status === 0', (okLine.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(sPass)', (!latched(sPass))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['badLine.status === 2', (badLine.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/MANAGER FENCE/.test(badLine.stderr)', (/MANAGER FENCE/.test(badLine.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(sBad)', (!latched(sBad))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -7264,12 +8717,19 @@ const CASES = [
       const f = (command, extra = {}) => m.dispatch.managerFence({ session_id: s, cwd: parent, tool_name: 'Bash', tool_input: { command }, ...extra }, { plan, classify: () => true });
       const sendAgent = (x) => /^MANAGER FENCE/.test(x ?? '') && /Send an agent/.test(x);
       const hookFile = join(dir, 'hook-dispatch.mjs');
-      return sendAgent(f(`git -C ${one} diff`)) && sendAgent(f(`git -C ${one} show origin/main`)) && sendAgent(f(`git -C ${one} status`)) && sendAgent(f(`cat ${one}/app.ts`))
-        && sendAgent(f(`git -C ${one} log --stat`)) && sendAgent(f(`git -C ${one} log -p origin/main`)) && sendAgent(f(`git -C ${one} log --oneline ; cat ${one}/app.ts`))
-        && sendAgent(f(`git -C ${elsewhere} log --oneline`)) && sendAgent(f(`git -C ${elsewhere} show-ref --heads`))
-        // A call by an agent is not the fence's: the manager fence returns null for a subagent, as before.
-        && f(`git -C ${one} diff`, { agent_id: 'a1' }) === null
-        && f(`node ${hookFile} --can Read /plans/gate-test.md`) === null;
+      const held_rows = [['sendAgent(f(`git -C ${one} diff`))', (sendAgent(f(`git -C ${one} diff`)))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['sendAgent(f(`git -C ${one} show origin/main`))', (sendAgent(f(`git -C ${one} show origin/main`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['sendAgent(f(`git -C ${one} status`))', (sendAgent(f(`git -C ${one} status`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['sendAgent(f(`cat ${one}/app.ts`))', (sendAgent(f(`cat ${one}/app.ts`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['sendAgent(f(`git -C ${one} log --stat`))', (sendAgent(f(`git -C ${one} log --stat`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['sendAgent(f(`git -C ${one} log -p origin/main`))', (sendAgent(f(`git -C ${one} log -p origin/main`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['sendAgent(f(`git -C ${one} log --oneline ; cat ${one}/app.ts`))', (sendAgent(f(`git -C ${one} log --oneline ; cat ${one}/app.ts`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['sendAgent(f(`git -C ${elsewhere} log --oneline`))', (sendAgent(f(`git -C ${elsewhere} log --oneline`)))]);
+      // A call by an agent is not the fence's: the manager fence returns null for a subagent, as before.
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['sendAgent(f(`git -C ${elsewhere} show-ref --heads`))', (sendAgent(f(`git -C ${elsewhere} show-ref --heads`)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(`git -C ${one} diff`, { agent_id: \'a1\' }) === null', (f(`git -C ${one} diff`, { agent_id: 'a1' }) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['f(`node ${hookFile} --can Read /plans/gate-test.md`) === null', (f(`node ${hookFile} --can Read /plans/gate-test.md`) === null)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -7305,7 +8765,13 @@ const CASES = [
       agent([opening, ...stepsRead]);
       const first = decide();
       const firstFree = refused(first) && /RULES FIRST, NO LATCH/.test(first);
-      return stepsOnly && afterRules && failedRead && otherFile && secondLatches && firstFree;
+      const held_rows = [['stepsOnly', (stepsOnly)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['afterRules', (afterRules)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['failedRead', (failedRead)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['otherFile', (otherFile)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['secondLatches', (secondLatches)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['firstFree', (firstFree)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -7346,7 +8812,7 @@ const CASES = [
         const nowSecs = Date.now() / 1000;
         utimesSync(page, nowSecs, nowSecs);
         const editedSince = m.reply.decide({ session_id: 'pg3', tool_name: 'Artifact', tool_input: input, transcript_path: transcript(calls) }) === null;
-        return recorded && identical && relabelled && edited && restored && keyed && unchangedSince && editedSince;
+        return assertAll([['recorded', recorded], ['identical', identical], ['relabelled', relabelled], ['edited', edited], ['restored', restored], ['keyed', keyed], ['unchangedSince', unchangedSince], ['editedSince', editedSince]]);
       } finally {
         delete process.env.REPLY_LEDGER_DIR;
         delete process.env.REPLY_GUARD_NOW;
@@ -7402,7 +8868,8 @@ const CASES = [
         const id = m.reply.callHash('Bash', { command: cmd }).slice(0, 8);
         const released = m.reply.decide({ ...payload, tool_input: { command: `node ${join(dir, 'reply-guard.mjs')} --read call:${id} --said "Cannot find module" --route "the file now exists"` } }) === null
           && m.reply.decide(payload) === null;
-        return noWrite && afterWrite && afterEdit && afterMulti && beforeFailure && afterRead && failedWrite && otherWrote && ownWrote && readRepeat && released;
+        return assertAll([['noWrite', noWrite], ['afterWrite', afterWrite], ['afterEdit', afterEdit], ['afterMulti', afterMulti], ['beforeFailure', beforeFailure], ['afterRead', afterRead],
+          ['failedWrite', failedWrite], ['otherWrote', otherWrote], ['ownWrote', ownWrote], ['readRepeat', readRepeat], ['released', released]]);
       } finally {
         delete process.env.REPLY_LEDGER_DIR;
         delete process.env.REPLY_GUARD_NOW;
@@ -7469,7 +8936,7 @@ const CASES = [
         const refused = judge(failed);
         const named = /call that failed, unchanged/.test(refused ?? '') && /Write or Edit of \/scratch\/check\.mjs/.test(refused ?? '');
         const edited = judge([...failed, ...wrote]) === null;
-        return pass && liftedA && scope && named && edited;
+        return assertAll([['pass', pass], ['liftedA', liftedA], ['scope', scope], ['named', named, refused], ['edited', edited]]);
       } finally {
         delete process.env.REPLY_LEDGER_DIR;
         delete process.env.REPLY_GUARD_NOW;
@@ -7517,7 +8984,7 @@ const CASES = [
         const first = [wide, onPad, released, onRepo].find((x) => x.status !== 0);
         throw new Error(`statuses ${got.join(', ')} (wide tail, scratchpad, held record, repository), held record keeps ${left.length}; first refusal: ${String(first?.stdout ?? '').slice(0, 220)}`);
       }
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -7543,7 +9010,11 @@ const CASES = [
       const elsewhere = exit(sid('nm'), naming('zzqx-elsewhere-note.txt'), []);
       const all = [made, pathy, held, elsewhere];
       if (!all.every((x) => x.status === 2)) throw new Error(`statuses ${all.map((x) => x.status).join(', ')} (made up, path-shaped, held, another session's scratchpad), every one is 2`);
-      return /exist in no repo/.test(made.stdout) && pathy.stdout.includes('src/zzqx/nothing-here.mjs') && /stays refused/.test(held.stdout) && elsewhere.stdout.includes('zzqx-elsewhere-note.txt');
+      const held_rows = [['/exist in no repo/.test(made.stdout)', (/exist in no repo/.test(made.stdout))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['pathy.stdout.includes(\'src/zzqx/nothing-here.mjs\')', (pathy.stdout.includes('src/zzqx/nothing-here.mjs'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/stays refused/.test(held.stdout)', (/stays refused/.test(held.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['elsewhere.stdout.includes(\'zzqx-elsewhere-note.txt\')', (elsewhere.stdout.includes('zzqx-elsewhere-note.txt'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -7567,8 +9038,10 @@ const CASES = [
         ['git status; cd /tmp', /opened this command at a semicolon/]]) if (!said(c, ...res, file)) bad.push(c);
       if (bad.length) throw new Error(`wrong on: ${bad.map((c) => JSON.stringify(c)).join(', ')}`);
       const hosts = (cmd) => [...m.reply.hostsIn(cmd)];
-      return hosts(`git commit -m 'see ${BT}curl pixinsight.com/x${BT} now'`).length === 0 && hosts("git commit -m 'see $(curl pixinsight.com/x) now'").length === 0
-        && m.reply.commandsIn(`git commit -m 'x ${BT}curl y${BT} z'`).every((x) => x.words[0] !== 'curl');
+      const held_rows = [['hosts(`git commit -m \'see ${BT}curl pixinsight.com/x${BT} now\'`).length === 0', (hosts(`git commit -m 'see ${BT}curl pixinsight.com/x${BT} now'`).length === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['hosts("git commit -m \'see $(curl pixinsight.com/x) now\'").length === 0', (hosts("git commit -m 'see $(curl pixinsight.com/x) now'").length === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.reply.commandsIn(`git commit -m \'x ${BT}curl y${BT} z\'`).every((x) => x.words[0] !== \'curl\')', (m.reply.commandsIn(`git commit -m 'x ${BT}curl y${BT} z'`).every((x) => x.words[0] !== 'curl'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -7585,7 +9058,11 @@ const CASES = [
       const bad = refuse.filter(([, x]) => !/^PLAN FENCE/.test(x ?? '')).map(([c]) => c);
       if (bad.length) throw new Error(`not refused: ${bad.map((c) => JSON.stringify(c)).join(', ')}`);
       const hosts = (cmd) => m.reply.hostsIn(cmd).has('pixinsight.com');
-      return hosts('curl pixinsight.com/x') && hosts(`echo "see ${BT}curl pixinsight.com/x${BT}"`) && hosts('echo "see $(curl pixinsight.com/x)"') && hosts(`echo ${BT}curl pixinsight.com/x${BT}`);
+      const held_rows = [['hosts(\'curl pixinsight.com/x\')', (hosts('curl pixinsight.com/x'))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['hosts(`echo "see ${BT}curl pixinsight.com/x${BT}"`)', (hosts(`echo "see ${BT}curl pixinsight.com/x${BT}"`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['hosts(\'echo "see $(curl pixinsight.com/x)"\')', (hosts('echo "see $(curl pixinsight.com/x)"'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['hosts(`echo ${BT}curl pixinsight.com/x${BT}`)', (hosts(`echo ${BT}curl pixinsight.com/x${BT}`))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -7601,7 +9078,7 @@ const CASES = [
       if (!(first.status === 2 && /DOCTRINE GATE/.test(first.stderr) && !standing && read.status === 0)) {
         throw new Error(`first ${first.status} (${String(first.stderr).slice(0, 80)}), latch standing ${standing}, read ${read.status} (${String(read.stderr).slice(0, 120)})`);
       }
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -7621,7 +9098,7 @@ const CASES = [
       if (!(first.status === 2 && /exist in no repo/.test(first.stderr) && !standing && read.status === 0 && again.status === 2 && /exist in no repo/.test(again.stderr) && !/REFUSAL LATCH/.test(again.stderr))) {
         throw new Error(`first ${first.status} (${String(first.stderr).slice(0, 100)}), latch standing ${standing}, read ${read.status} (${String(read.stderr).slice(0, 120)}), again ${again.status} (${String(again.stderr).slice(0, 100)})`);
       }
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -7637,7 +9114,7 @@ const CASES = [
       if (!(first.status === 2 && /planted refusal from ident-guard\.sh/.test(first.stderr) && !standing && read.status === 0)) {
         throw new Error(`first ${first.status} (${String(first.stderr).slice(0, 100)}), latch standing ${standing}, read ${read.status} (${String(read.stderr).slice(0, 120)})`);
       }
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -7676,7 +9153,7 @@ const CASES = [
         && identRead.status === 2 && held(afterIdent) && other.status === 2 && held(afterOther))) {
         throw new Error(`doctrine again ${again.status}, missing ${missing.status} then ${afterMissing.status}, ident ${identRead.status} then ${afterIdent.status}, other ${other.status} then ${afterOther.status}`);
       }
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -7701,12 +9178,20 @@ const CASES = [
       const standing = gate('After: 3 after 1');
       const malformed = gate('After: two after one');
       const none = gate('');
-      return m.report.planAfter(afterPlanText(dir)) === null && parsed?.bad.length === 0 && eq([...parsed.follows], [[4, [1, 2]], [2, [1]]])
-        && eq([...shown.follows], [[202, [200, 201]], [203, [199, 202]], [204, [203]]])
-        && current.kind === 'cleared' && current.cleared === 4 && current.step === 1 && unrelated.kind === 'cleared' && eq(current.ignored, [2])
-        && m.report.reviewBlock(current).includes('The plan\'s After line does not tie step 2 to it, so an end of that step after it began leaves it current.')
-        && good.status === 0 && none.status === 0
-        && [outside, standing, malformed].every((x) => x.status === 2 && /AFTER LINE/.test(x.stdout));
+      const held_rows = [['m.report.planAfter(afterPlanText(dir)) === null', (m.report.planAfter(afterPlanText(dir)) === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['parsed?.bad.length === 0', (parsed?.bad.length === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq([...parsed.follows], [[4, [1, 2]], [2, [1]]])', (eq([...parsed.follows], [[4, [1, 2]], [2, [1]]]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq([...shown.follows], [[202, [200, 201]], [203, [199, 202]], [204, [203]]])', (eq([...shown.follows], [[202, [200, 201]], [203, [199, 202]], [204, [203]]]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['current.kind === \'cleared\'', (current.kind === 'cleared')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['current.cleared === 4', (current.cleared === 4)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['current.step === 1', (current.step === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['unrelated.kind === \'cleared\'', (unrelated.kind === 'cleared')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['eq(current.ignored, [2])', (eq(current.ignored, [2]))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.report.reviewBlock(current).includes(\'The plan\\\'s After line does not tie step 2 to it, so an end of that step after it began leaves it current.\')', (m.report.reviewBlock(current).includes('The plan\'s After line does not tie step 2 to it, so an end of that step after it began leaves it current.'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['good.status === 0', (good.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['none.status === 0', (none.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['[outside, standing, malformed].every((x) => x.status === 2 && /AFTER LINE/.test(x.stdout))', ([outside, standing, malformed].every((x) => x.status === 2 && /AFTER LINE/.test(x.stdout)))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -7743,7 +9228,7 @@ const CASES = [
       // A followed step that ended before the review began leaves it current.
       if (kind('After: 4 after 2', [one, endFor(2, 120, 60, 'DONE'), endFor(3, 200, 150, 'ON-AIM ROUTE-CLEAR step 2 next 4')]) !== 'cleared') out.push('the After line: a followed step that ended before it began');
       if (out.length) throw new Error(`wrong on: ${out.join('; ')}`);
-      return true;
+      return assertAll([]);
     },
   },
 
@@ -7832,7 +9317,13 @@ const CASES = [
       const words = typeof route === 'string' && /Goals, Asked, Files, Commands, Rules, Rules of this plan do not/.test(route)
         && typeof pin === 'string' && /pins version \d+/.test(pin) && /lands only when no plan is in force, as the last step of the plan that makes it/.test(pin)
         && /no plan is moved to a new rules version without the button/.test(pin) && /no amendment carries it/.test(pin) && /plan-mode button/.test(pin) && /does not latch/.test(pin) && !/amend the Rules line/.test(pin);
-      return changes && hashed && oldRead && newShape && olderShape && words;
+      const held_rows = [['changes', (changes)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['hashed', (hashed)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['oldRead', (oldRead)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['newShape', (newShape)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['olderShape', (olderShape)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['words', (words)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -7852,8 +9343,12 @@ const CASES = [
       const plainWord = pg(transcript([...base, ...restart, at(turn(0, 'Why is that so.'), later(-100))]));
       const goBefore = pg(transcript([...base, at(turn(0, 'Go.'), later(-700)), ...restart]));
       const refusedAsApproved = (r) => r.status === 2 && /PLAN ALREADY APPROVED, NO LATCH:/.test(r.stdout);
-      return passed.status === 0 && /exit goes up on the owner's go/.test(passed.stdout) && !/PLAN ALREADY APPROVED/.test(passed.stdout)
-        && refusedAsApproved(plainWord) && refusedAsApproved(goBefore);
+      const held_rows = [['passed.status === 0', (passed.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/exit goes up on the owner\'s go/.test(passed.stdout)', (/exit goes up on the owner's go/.test(passed.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/PLAN ALREADY APPROVED/.test(passed.stdout)', (!/PLAN ALREADY APPROVED/.test(passed.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedAsApproved(plainWord)', (refusedAsApproved(plainWord))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refusedAsApproved(goBefore)', (refusedAsApproved(goBefore))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -7864,7 +9359,10 @@ const CASES = [
       approvalMarker(A.home, A.plan, STEPS_PLAN, { steps: [1, 2], amendments: 2, via: 'kept by the case' });
       const first = readFileSync(A.marker, 'utf8');
       const r = A.guard(transcript([turn(0, 'start')]), { hook_event_name: 'PostToolUse', tool_name: 'ExitPlanMode', tool_response: { plan: STEPS_PLAN, isAgent: false, filePath: A.plan } }, '--mark');
-      return r.status === 0 && readFileSync(A.marker, 'utf8') === first && /approval of .* stands/.test(r.stderr ?? '');
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readFileSync(A.marker, \'utf8\') === first', (readFileSync(A.marker, 'utf8') === first)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/approval of .* stands/.test(r.stderr ?? \'\')', (/approval of .* stands/.test(r.stderr ?? ''))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -7984,7 +9482,7 @@ const CASES = [
           lockedOther: lockedThrough.other.status === 2 && /PLAN MODE/.test(lockedThrough.other.stderr), lockedExit: !/PLAN ALREADY APPROVED/.test(lockedThrough.exit.stderr) };
         throw new Error(`wrong on: ${wrong.join(', ')}; dispatched parts false: ${Object.entries(dispatchParts).filter(([, v]) => !v).map(([k]) => k).join(', ')}; owner other: ${String(owner.other.stderr).slice(0, 200)}`);
       }
-      return true;
+      return assertAll([]);
     },
   },
 
@@ -8073,7 +9571,7 @@ const CASES = [
         go(sD, first);
         const refusedReading = send(sD, rel('call:xray0001'));
         const flowD = refusedReading.status === 2 && /no failed call/.test(refusedReading.stderr) && latched(sD);
-        return parse && passes && table && says && flowA && flowB && flowC && flowD;
+        return assertAll([['parse', parse], ['passes', passes], ['table', table], ['says', says], ['flowA', flowA, repeat.stderr], ['flowB', flowB, wrong.stderr], ['flowC', flowC, other.stderr], ['flowD', flowD, refusedReading.stderr]]);
       } finally {
         delete process.env.REPLY_LEDGER_DIR;
       }
@@ -8155,7 +9653,18 @@ const CASES = [
       stop(s6, [modelReply(-10, PLAINLY, FABLE)]);
       const f1 = stop(s6, [modelReply(-10, PLAINLY, FABLE), modelReply(-5, WORDS, FABLE)], { stop_hook_active: true });
       const followUp = f1.status === 0 && m.report.readTier(s6)?.told === true;
-      return topIds && serving && status && owed && once && lessOwes && changed && noMarker && afterButton && naming && followUp;
+      const held_rows = [['topIds', (topIds)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['serving', (serving)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['status', (status)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['owed', (owed)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['once', (once)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lessOwes', (lessOwes)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['changed', (changed)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noMarker', (noMarker)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['afterButton', (afterButton)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['naming', (naming)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['followUp', (followUp)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -8237,7 +9746,18 @@ const CASES = [
       const dispatched = underLatch.status === 0 && latched(sL) && otherUnderLatch.status === 2 && /REFUSAL LATCH/.test(otherUnderLatch.stderr) && chained.status === 2 && inPlanMode.status === 0;
       // The latch's own refusal names the plan check among the calls that pass it.
       const says = /the check of a call and the plan check pass as it does/.test(m.dispatch.latchMessage({ at: Date.now(), tool: 'Bash', agent: null, reason: 'MANAGER FENCE (Doctrine §0e): planted.' }));
-      return listed && green && readOnly && unjudged && noFile && stopsAtFirst && fenced && canned && reads && dispatched && says;
+      const held_rows = [['listed', (listed)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['green', (green)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readOnly', (readOnly)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['unjudged', (unjudged)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noFile', (noFile)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stopsAtFirst', (stopsAtFirst)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fenced', (fenced)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['canned', (canned)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['reads', (reads)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['dispatched', (dispatched)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says', (says)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -8286,7 +9806,9 @@ const CASES = [
       const readT = wT.call('PreToolUse', { session_id: sT, tool_name: 'Read', tool_input: { file_path: wT.plan } });
       const talkLatches = talk.status === 2 && /has not been talked through/.test(talk.stderr) && !/PLAN SHAPE, NO LATCH:/.test(talk.stderr) && latched(sT)
         && readT.status === 2 && /REFUSAL LATCH/.test(readT.stderr);
-      return texts && talkLatches;
+      const held_rows = [['texts', (texts)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['talkLatches', (talkLatches)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -8335,7 +9857,17 @@ const CASES = [
         && !/is amended to the new one/.test(rules) && Number(/Rules version: (\d+)/.exec(rules)?.[1]) >= 2;
       if (!(Number.isInteger(said) && items.length === said)) throw new Error(`rule 14 says ${said} and lists ${items.length}`);
       if (unnamed.length) throw new Error(`rule 14 items that name nothing the guards hold: ${unnamed.map((x) => flat(x).slice(0, 60)).join(' | ')}`);
-      return roadmap && shipped && doneCounts && checkFirst && rulesRule && noAmend && count && passes && index && header;
+      const held_rows = [['roadmap', (roadmap)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['shipped', (shipped)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['doneCounts', (doneCounts)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['checkFirst', (checkFirst)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['rulesRule', (rulesRule)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noAmend', (noAmend)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['count', (count)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['passes', (passes)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['index', (index)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['header', (header)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -8359,7 +9891,11 @@ const CASES = [
       const nested = pg({ tool_name: 'Write', tool_input: { file_path: join(pad, 'status', 'sub', 'manager.txt'), content: 'x' } });
       const source = pg({ tool_name: 'Write', tool_input: { file_path: join(home, 'src.txt'), content: 'x' } });
       const notebook = pg({ tool_name: 'NotebookEdit', tool_input: { file_path: notes, new_source: 'x' } });
-      return write.status === 0 && edit.status === 0 && plan.status === 0 && [page, progress, another, nested, source, notebook].every(asPlanMode);
+      const held_rows = [['write.status === 0', (write.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['edit.status === 0', (edit.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['plan.status === 0', (plan.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['[page, progress, another, nested, source, notebook].every(asPlanMode)', ([page, progress, another, nested, source, notebook].every(asPlanMode))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -8399,7 +9935,14 @@ const CASES = [
       // The same hand-backs under a plan with no Order: there is no pointer to finish, so the gate holds.
       writeFileSync(A.plan, STEPS_PLAN);
       const unordered = rm(approvalMarker(A.home, A.plan, STEPS_PLAN)) === A.plan;
-      return none && oneLeft && failed && refused && other && finished && unordered;
+      const held_rows = [['none', (none)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['oneLeft', (oneLeft)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['failed', (failed)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused', (refused)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['other', (other)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['finished', (finished)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['unordered', (unordered)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -8482,7 +10025,7 @@ const CASES = [
       if (!dispFirst) out.push(`the dispatcher did not carry the fence's line beside the first call: ${d1.status} ${d1.stdout.slice(0, 120)} ${d1.stderr.slice(0, 120)}`);
       if (!dispLater) out.push('the dispatcher carried a line beside a later call, or beside a call with no restore');
       if (out.length) throw new Error(out.join('; '));
-      return true;
+      return assertAll([]);
     },
   },
 
@@ -8538,7 +10081,14 @@ const CASES = [
       const printed = /by a report that opens DONE, with a call of the agent refused before it handed back\./.test(item('one')) && /by a report that opens DONE, with a call/.test(item('two'))
         && /by a refusal\./.test(item('three')) && /Refused at \d\d:\d\d \(California\), SendMessage: /.test(out) && out.includes('PLAN FENCE refused the message')
         && /\(ended by a report that opens DONE, with a call of the agent refused before it handed back\): 1 hook refusal\./.test(out) && /\(ended by a refusal\): 1 hook refusal\./.test(out);
-      return classes && words && carried && counted && finished && gathered && printed;
+      const held_rows = [['classes', (classes)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['words', (words)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['carried', (carried)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['counted', (counted)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['finished', (finished)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['gathered', (gathered)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['printed', (printed)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -8577,7 +10127,7 @@ const CASES = [
         && /step 1 lacks/.test(direct[5] ?? '') && direct[6] === null && direct[7] === null)) out.push(`the step shape check gave ${JSON.stringify(direct.map((x) => x === null ? null : 'refusal'))}`);
       if (checked.status !== 1 || !/STEP SHAPE/.test(checked.stdout)) out.push(`--check did not print the step shape fault and exit 1 (status ${checked.status})`);
       if (out.length) throw new Error(out.join('; '));
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -8660,7 +10210,7 @@ const CASES = [
       if (!readFromPad) out.push(`the pointer for a session did not read the note from its scratchpad: ${JSON.stringify([forSession?.next, forSession?.closed, forOther?.next])}`);
       if (!(holds && stands)) out.push(`the restart gate did not stand aside for an ejected plan (held ${holds}, stood ${stands})`);
       if (out.length) throw new Error(out.join('; '));
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -8715,7 +10265,7 @@ const CASES = [
       checks.push(['a note naming another plan closes nothing of this one', /^next: step 1$/m.test(printedStale) && !/the plan ejected to/.test(printedStale)]);
       const failed = checks.filter(([, ok]) => !ok).map(([label]) => label);
       if (failed.length) throw new Error(`the eject states failed: ${failed.join('; ')}`);
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -8757,11 +10307,25 @@ const CASES = [
       const closed = ending(REPORT, { 1: 'DONE' }, 'Eject: P-12 gate-test.md the review found the premise false');
       const stale = ending(REPORT, { 1: 'DONE' }, 'Eject: P-12 an-earlier-plan.md the review found the premise false');
       const noReason = ending(REPORT, { 1: 'DONE' }, 'Eject: P-12');
-      return plain.status === 2 && err(plain).includes('next: step 2') && err(plain).includes('Step 2 ejected to the plan') && err(plain).includes('it waits on <the specific thing>')
-        && declared.status === 0 && running.status === 0
-        && wrongStep.status === 2 && noWhat.status === 2 && tooShort.status === 2 && failedStep.status === 2 && !err(failedStep).includes('ejected to the plan')
-        && notEjected.status === 2 && err(notEjected).includes('next: step 2') && !err(notEjected).includes('ejected to the plan')
-        && closed.status === 0 && stale.status === 2 && err(stale).includes('next: step 2') && noReason.status === 2;
+      const held_rows = [['plain.status === 2', (plain.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(plain).includes(\'next: step 2\')', (err(plain).includes('next: step 2'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(plain).includes(\'Step 2 ejected to the plan\')', (err(plain).includes('Step 2 ejected to the plan'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(plain).includes(\'it waits on <the specific thing>\')', (err(plain).includes('it waits on <the specific thing>'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['declared.status === 0', (declared.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['running.status === 0', (running.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['wrongStep.status === 2', (wrongStep.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noWhat.status === 2', (noWhat.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['tooShort.status === 2', (tooShort.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['failedStep.status === 2', (failedStep.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!err(failedStep).includes(\'ejected to the plan\')', (!err(failedStep).includes('ejected to the plan'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notEjected.status === 2', (notEjected.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(notEjected).includes(\'next: step 2\')', (err(notEjected).includes('next: step 2'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!err(notEjected).includes(\'ejected to the plan\')', (!err(notEjected).includes('ejected to the plan'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['closed.status === 0', (closed.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stale.status === 2', (stale.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['err(stale).includes(\'next: step 2\')', (err(stale).includes('next: step 2'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noReason.status === 2', (noReason.status === 2)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -8807,7 +10371,7 @@ const CASES = [
           && m.dispatch.replyReadOfRecord({ ...at0, tool_name: 'Read', tool_input: { file_path: '/etc/hostname' } }, opts) === false
           && m.dispatch.replyReadOfRecord({ ...at0, tool_name: 'Read', agent_id: 'a1', tool_input: { file_path: record } }, opts) === false
           && m.dispatch.replyReadOfRecord({ ...at0, tool_name: 'Grep', tool_input: { pattern: 'x', path: record } }, opts) === false;
-        return readFlow && grepFlow && agentFlow && unit;
+        return assertAll([['readFlow', readFlow, repeat.stderr], ['grepFlow', grepFlow, grep.stderr], ['agentFlow', agentFlow, agentRead.stderr], ['unit', unit]]);
       } finally {
         delete process.env.REPLY_LEDGER_DIR;
       }
@@ -8865,10 +10429,20 @@ const CASES = [
       const moved = flow(CHOICE, `${OPTION}\n2. Hold the gates for a second look before landing them.\nThe choice now opens the reply.`);
       const ordinary = flow(CHOICE, 'The second line of the report says the cases were written today.\nThe choice now opens the reply.');
       const otherKind = flow(`${WAIT}\n${OPTION}`, OPTION);
-      return idle.status === 2 && /says the work is not finished/.test(idle.stderr) && running.status === 0
-        && link.one.status === 2 && link.two.status === 0 && sentence.two.status === 2 && /sends the refused reply again/.test(sentence.two.stderr)
-        && moved.one.status === 2 && /choice is not the first thing/.test(moved.one.stderr) && moved.two.status === 0 && ordinary.two.status === 2
-        && otherKind.one.status === 2 && otherKind.two.status === 2;
+      const held_rows = [['idle.status === 2', (idle.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/says the work is not finished/.test(idle.stderr)', (/says the work is not finished/.test(idle.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['running.status === 0', (running.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['link.one.status === 2', (link.one.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['link.two.status === 0', (link.two.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['sentence.two.status === 2', (sentence.two.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/sends the refused reply again/.test(sentence.two.stderr)', (/sends the refused reply again/.test(sentence.two.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['moved.one.status === 2', (moved.one.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/choice is not the first thing/.test(moved.one.stderr)', (/choice is not the first thing/.test(moved.one.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['moved.two.status === 0', (moved.two.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ordinary.two.status === 2', (ordinary.two.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['otherKind.one.status === 2', (otherKind.one.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['otherKind.two.status === 2', (otherKind.two.status === 2)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -8913,8 +10487,17 @@ const CASES = [
       const outside = say();
       notes('Found 1.1 queued: left for a later plan with no key');
       const declared = say('Stopping here: open for you is the finding that has no key yet.\nThe rest follows.');
-      return unkeyed.status === 2 && /next: none/.test(unkeyed.stderr) && /Found 1\.1/.test(unkeyed.stderr) && /Found queue/.test(unkeyed.stderr) && missing.status === 2
-        && keyed.status === 0 && fixed.status === 0 && unsorted.status === 0 && outside.status === 0 && declared.status === 0;
+      const held_rows = [['unkeyed.status === 2', (unkeyed.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/next: none/.test(unkeyed.stderr)', (/next: none/.test(unkeyed.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Found 1\\.1/.test(unkeyed.stderr)', (/Found 1\.1/.test(unkeyed.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Found queue/.test(unkeyed.stderr)', (/Found queue/.test(unkeyed.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['missing.status === 2', (missing.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['keyed.status === 0', (keyed.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['fixed.status === 0', (fixed.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['unsorted.status === 0', (unsorted.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['outside.status === 0', (outside.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['declared.status === 0', (declared.status === 0)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -8949,7 +10532,11 @@ const CASES = [
       const missing = say();
       notes('Found 1.1 queued: Q-CF-1 holds it');
       const keyed = say();
-      return missing.status === 2 && /next: none/.test(missing.stderr) && /Found 1\.1/.test(missing.stderr) && keyed.status === 0;
+      const held_rows = [['missing.status === 2', (missing.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/next: none/.test(missing.stderr)', (/next: none/.test(missing.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/Found 1\\.1/.test(missing.stderr)', (/Found 1\.1/.test(missing.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['keyed.status === 0', (keyed.status === 0)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -8988,11 +10575,17 @@ const CASES = [
       const listed = (m.report.runningAgents(sidP, { main: mainP, agents: subs }) ?? []).map((a) => a.id).sort().join(',');
       const steps = m.report.stepEnds(p);
       const work = (m.report.runningWork(p) ?? []).sort().join(',');
-      return paused === null && resumed === null && plain === null
-        && handed?.how === 'a report' && stopped?.how === 'an interruption' && /^an interruption/.test(restarted?.how ?? '')
-        && listed === 'pauseagent1,workagent1'
-        && steps?.running.slice().sort().join(',') === 'agent pauseagent1,agent workagent1' && steps?.ends.map((e) => e.how).join(',') === 'a report'
-        && work === 'agent pauseagent1,agent workagent1';
+      const held_rows = [['paused === null', (paused === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['resumed === null', (resumed === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['plain === null', (plain === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['handed?.how === \'a report\'', (handed?.how === 'a report')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['stopped?.how === \'an interruption\'', (stopped?.how === 'an interruption')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^an interruption/.test(restarted?.how ?? \'\')', (/^an interruption/.test(restarted?.how ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['listed === \'pauseagent1,workagent1\'', (listed === 'pauseagent1,workagent1')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['steps?.running.slice().sort().join(\',\') === \'agent pauseagent1,agent workagent1\'', (steps?.running.slice().sort().join(',') === 'agent pauseagent1,agent workagent1')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['steps?.ends.map((e) => e.how).join(\',\') === \'a report\'', (steps?.ends.map((e) => e.how).join(',') === 'a report')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['work === \'agent pauseagent1,agent workagent1\'', (work === 'agent pauseagent1,agent workagent1')]);
+      return assertAll(held_rows);
     },
   },
 
@@ -9014,7 +10607,12 @@ const CASES = [
       const lesser = send([modelReply(-10, 'Sending the first step now.', OPUS)]);
       const free = (x) => x.r.status === 0 && !/TIER GATE/.test(x.r.stderr) && !latched(x.s);
       const held = (x) => x.r.status !== 0 && /top tier/.test(x.r.stderr) && /switch of model/.test(x.r.stderr) && !/TIER GATE/.test(x.r.stderr) && !latched(x.s);
-      return held(silent) && held(said) && free(lesser) && m.dispatch.tierGate === undefined && typeof m.report.tierWords === 'function';
+      const held_rows = [['held(silent)', (held(silent))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['held(said)', (held(said))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['free(lesser)', (free(lesser))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.tierGate === undefined', (m.dispatch.tierGate === undefined)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof m.report.tierWords === \'function\'', (typeof m.report.tierWords === 'function')]);
+      return assertAll(held_rows);
     },
   },
 
@@ -9051,9 +10649,20 @@ const CASES = [
       const heldRestart = through('restart');
       const toldRestart = through('restart', [modelReply(-100, SAID, OPUS)]);
       const owners = through('owner');
-      return refused(silent) && told === null && refused(toldBefore) && refused(noLeave) && notRestart === null && read === null && other === null && agent === null
-        && heldRestart.r.status === 2 && /RESTORED PLAN MODE/.test(heldRestart.r.stderr) && !heldRestart.latched
-        && !/RESTORED PLAN MODE/.test(toldRestart.r.stderr) && !/RESTORED PLAN MODE/.test(owners.r.stderr);
+      const held_rows = [['refused(silent)', (refused(silent))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['told === null', (told === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(toldBefore)', (refused(toldBefore))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused(noLeave)', (refused(noLeave))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['notRestart === null', (notRestart === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['read === null', (read === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['other === null', (other === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['agent === null', (agent === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['heldRestart.r.status === 2', (heldRestart.r.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/RESTORED PLAN MODE/.test(heldRestart.r.stderr)', (/RESTORED PLAN MODE/.test(heldRestart.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!heldRestart.latched', (!heldRestart.latched)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/RESTORED PLAN MODE/.test(toldRestart.r.stderr)', (!/RESTORED PLAN MODE/.test(toldRestart.r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/RESTORED PLAN MODE/.test(owners.r.stderr)', (!/RESTORED PLAN MODE/.test(owners.r.stderr))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -9070,7 +10679,7 @@ const CASES = [
         'git config --edit', 'TZ=America/Los_Angeles ls', 'TZ=America/Los_Angeles rm x', 'TZ=UTC date', 'git remote add x y'];
       const bad = passes.filter((c) => pg(c).status !== 0).concat(refuses.filter((c) => pg(c).status !== 2));
       if (bad.length) throw new Error(`wrong verdict for: ${bad.join(' | ')}`);
-      return true;
+      return assertAll([]);
     },
   },
 
@@ -9108,16 +10717,33 @@ const CASES = [
       const cost = (c) => m.dispatch.costProblem(sendingPlan(dir, { files, what, roadmap, cost: c }));
       const costed = (x, ...re) => typeof x === 'string' && /^COST/.test(x) && re.every((r) => r.test(x));
       const exitNoCost = exitFor(dir, sendingPlan(dir, { files, what, roadmap, cost: null }), R.dir);
-      return noCompaction === null && says(readBefore) && readAfter === null && grepFolder === null && grepFile === null && says(failedRead) && says(otherFile) && says(newest) && noSteps === null
-        && exitRefused.status === 2 && /READ AFTER COMPACTION/.test(said(exitRefused)) && /sets no latch/.test(said(exitRefused)) && exitRead.status === 0
-        && cost('One step on the sonnet tier and one review per move, with one push at the end of the plan.') === null
-        && cost('Two pushes, three agent sends and the opus tier for the audit.') === null
-        && cost('No push at all; one agent on the haiku tier.') === null
-        && costed(cost(null), /no "## Cost" section/) && costed(cost('The run is cheap.'), /the number of pushes/, /the agent sends or reviews/, /the tier of each step/)
-        && costed(cost('One push and two agent sends.'), /the tier of each step/) && !/the number of pushes/.test(cost('One push and two agent sends.'))
-        && costed(cost('Two pushes on the opus tier.'), /the agent sends or reviews/) && costed(cost('Three agent sends on the opus tier, pushing once.'), /the number of pushes/)
-        && m.dispatch.costProblem(PLAN(OWN_WORDS)) === null
-        && exitNoCost.status === 2 && /COST/.test(said(exitNoCost)) && /sets no latch/.test(said(exitNoCost));
+      const held_rows = [['noCompaction === null', (noCompaction === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(readBefore)', (says(readBefore))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['readAfter === null', (readAfter === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['grepFolder === null', (grepFolder === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['grepFile === null', (grepFile === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(failedRead)', (says(failedRead))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(otherFile)', (says(otherFile))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(newest)', (says(newest))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noSteps === null', (noSteps === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['exitRefused.status === 2', (exitRefused.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/READ AFTER COMPACTION/.test(said(exitRefused))', (/READ AFTER COMPACTION/.test(said(exitRefused)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/sets no latch/.test(said(exitRefused))', (/sets no latch/.test(said(exitRefused)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['exitRead.status === 0', (exitRead.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cost(\'One step on the sonnet tier and one review per move, with one push at the end of the plan.\') === null', (cost('One step on the sonnet tier and one review per move, with one push at the end of the plan.') === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cost(\'Two pushes, three agent sends and the opus tier for the audit.\') === null', (cost('Two pushes, three agent sends and the opus tier for the audit.') === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cost(\'No push at all; one agent on the haiku tier.\') === null', (cost('No push at all; one agent on the haiku tier.') === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['costed(cost(null), /no "## Cost" section/)', (costed(cost(null), /no "## Cost" section/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['costed(cost(\'The run is cheap.\'), /the number of pushes/, /the agent sends or reviews/, /the tier of each step/)', (costed(cost('The run is cheap.'), /the number of pushes/, /the agent sends or reviews/, /the tier of each step/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['costed(cost(\'One push and two agent sends.\'), /the tier of each step/)', (costed(cost('One push and two agent sends.'), /the tier of each step/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/the number of pushes/.test(cost(\'One push and two agent sends.\'))', (!/the number of pushes/.test(cost('One push and two agent sends.')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['costed(cost(\'Two pushes on the opus tier.\'), /the agent sends or reviews/)', (costed(cost('Two pushes on the opus tier.'), /the agent sends or reviews/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['costed(cost(\'Three agent sends on the opus tier, pushing once.\'), /the number of pushes/)', (costed(cost('Three agent sends on the opus tier, pushing once.'), /the number of pushes/))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.costProblem(PLAN(OWN_WORDS)) === null', (m.dispatch.costProblem(PLAN(OWN_WORDS)) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['exitNoCost.status === 2', (exitNoCost.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/COST/.test(said(exitNoCost))', (/COST/.test(said(exitNoCost)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/sets no latch/.test(said(exitNoCost))', (/sets no latch/.test(said(exitNoCost)))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -9168,7 +10794,7 @@ const CASES = [
       ];
       const failed = checks.filter(([, ok]) => !ok);
       if (failed.length) throw new Error(failed.map(([label, , got]) => `${label}: got ${JSON.stringify(String(got).slice(0, 600))}`).join(' | '));
-      return true;
+      return assertAll([]);
     },
   },
 
@@ -9179,8 +10805,9 @@ const CASES = [
     run(m, dir) {
       const cases = spawnSync('node', [join(dir, 'session-guards.test.mjs'), '--case=no-such-case-name-at-all'], { encoding: 'utf8', timeout: 120000 });
       const plants = spawnSync('node', [join(dir, 'session-guards.test.mjs'), '--plants', '--files=no-such-file.mjs'], { encoding: 'utf8', timeout: 120000 });
-      return /PLANTS NOT RUN: this run ran the cases only; the \d+ plants run with --plants/.test(cases.stdout)
-        && /PLANTS RUN: 0 of \d+ \(the plants of no-such-file\.mjs; add the counts of the by-file runs against the total of \d+\)/.test(plants.stdout);
+      const held_rows = [['/PLANTS NOT RUN: this run ran the cases only; the \\d+ plants run with --plants/.test(cases.stdout)', (/PLANTS NOT RUN: this run ran the cases only; the \d+ plants run with --plants/.test(cases.stdout))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/PLANTS RUN: 0 of \\d+ \\(the plants of no-such-file\\.mjs; add the counts of the by-file runs against the total of \\d+\\)/.test(plants.stdout)', (/PLANTS RUN: 0 of \d+ \(the plants of no-such-file\.mjs; add the counts of the by-file runs against the total of \d+\)/.test(plants.stdout))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -9201,11 +10828,22 @@ const CASES = [
       const both = parse(head('Q-HUB-245/269:,finding 16:'));
       const none = parse(head('no-such-case-a,no-such-case-b'));
       if (!a || !b || !both || !none) return false;
-      return a.n === 1 && a.each[0][1] === 1 && a.total === 1
-        && b.n === 1 && b.each[0][1] >= 1 && b.total === b.each[0][1]
-        && both.n === 2 && both.each.length === 2 && both.each[0][1] === a.each[0][1] && both.each[1][1] === b.each[0][1]
-        && both.total === a.total + b.total && both.total < both.all
-        && none.n === 2 && none.each.every((x) => x[1] === 0) && none.total === 0;
+      const held_rows = [['a.n === 1', (a.n === 1)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['a.each[0][1] === 1', (a.each[0][1] === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['a.total === 1', (a.total === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['b.n === 1', (b.n === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['b.each[0][1] >= 1', (b.each[0][1] >= 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['b.total === b.each[0][1]', (b.total === b.each[0][1])]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['both.n === 2', (both.n === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['both.each.length === 2', (both.each.length === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['both.each[0][1] === a.each[0][1]', (both.each[0][1] === a.each[0][1])]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['both.each[1][1] === b.each[0][1]', (both.each[1][1] === b.each[0][1])]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['both.total === a.total + b.total', (both.total === a.total + b.total)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['both.total < both.all', (both.total < both.all)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['none.n === 2', (none.n === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['none.each.every((x) => x[1] === 0)', (none.each.every((x) => x[1] === 0))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['none.total === 0', (none.total === 0)]);
+      return assertAll(held_rows);
     },
   },
 
@@ -9223,9 +10861,17 @@ const CASES = [
       const w2 = world(dir);
       const s2 = sid('np');
       const wrong = w2.call('PreToolUse', { session_id: s2, tool_name: 'Agent', tool_input: { prompt: `${w2.plan} step 1, and tidy up after`, subagent_type: 'general-purpose' } });
-      return r.status === 2 && /No approved plan is in force/.test(r.stderr) && /EnterPlanMode/.test(r.stderr) && !latched(s) && next.status === 0
-        && typeof unit === 'string' && unit.includes(m.dispatch.FENCE_NO_LATCH) && /EnterPlanMode/.test(unit)
-        && wrong.status === 2 && latched(s2);
+      const held_rows = [['r.status === 2', (r.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/No approved plan is in force/.test(r.stderr)', (/No approved plan is in force/.test(r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/EnterPlanMode/.test(r.stderr)', (/EnterPlanMode/.test(r.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(s)', (!latched(s))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['next.status === 0', (next.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof unit === \'string\'', (typeof unit === 'string')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['unit.includes(m.dispatch.FENCE_NO_LATCH)', (unit.includes(m.dispatch.FENCE_NO_LATCH))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/EnterPlanMode/.test(unit)', (/EnterPlanMode/.test(unit))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['wrong.status === 2', (wrong.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['latched(s2)', (latched(s2))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9242,8 +10888,14 @@ const CASES = [
       left.agent('d1', 1, -900, -800, 'DONE');
       const s2 = sid('fp');
       const r2 = left.call('PreToolUse', { session_id: s2, ...edit(left) });
-      return r1.status === 2 && /FINISHED PLAN, NO LATCH/.test(r1.stderr) && /EnterPlanMode/.test(r1.stderr) && !latched(s1)
-        && r2.status === 2 && !/FINISHED PLAN/.test(r2.stderr) && latched(s2);
+      const held_rows = [['r1.status === 2', (r1.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/FINISHED PLAN, NO LATCH/.test(r1.stderr)', (/FINISHED PLAN, NO LATCH/.test(r1.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/EnterPlanMode/.test(r1.stderr)', (/EnterPlanMode/.test(r1.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!latched(s1)', (!latched(s1))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r2.status === 2', (r2.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/FINISHED PLAN/.test(r2.stderr)', (!/FINISHED PLAN/.test(r2.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['latched(s2)', (latched(s2))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9268,7 +10920,11 @@ const CASES = [
       writeFileSync(tp, readFileSync(tp, 'utf8') + jsonl([tool(0, 'sf1', 'Bash', { command: 'cd /tmp' }), result(0, 'sf1', cd.stderr, true)]));
       const second = bash('a1', 'pushd /tmp');
       const secondLatches = second.status === 2 && !second.stderr.includes(MARK) && agentLatch('a1') && !latched(s);
-      return first && noLatchFirst && otherLatches && secondLatches;
+      const held_rows = [['first', (first)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noLatchFirst', (noLatchFirst)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['otherLatches', (otherLatches)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['secondLatches', (secondLatches)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9290,7 +10946,12 @@ const CASES = [
         && m.dispatch.noLatchRepoRefusal('other-guard.sh', { tool_name: 'Bash' }, bash.stdout) === false
         && m.dispatch.noLatchRepoRefusal('plan-guard.sh', { tool_name: 'Bash' }, write.stdout) === false
         && m.dispatch.noLatchRepoRefusal('plan-guard.sh', { tool_name: 'ExitPlanMode' }, 'PLAN MODE. nothing of the kind') === false;
-      return rewrite && oldWords && clock.status === 0 && decided && MARK === 'READ SHAPE, NO LATCH:';
+      const held_rows = [['rewrite', (rewrite)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['oldWords', (oldWords)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['clock.status === 0', (clock.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['decided', (decided)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['MARK === \'READ SHAPE, NO LATCH:\'', (MARK === 'READ SHAPE, NO LATCH:')]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9313,10 +10974,23 @@ const CASES = [
       const underRead = under(read);
       const said = m.dispatch.canText({ ...read, tool_name: 'Read' }, convRead, 'app.ts');
       const saidFin = m.dispatch.canText({ ...write }, finWrite, 'new.ts');
-      return convRead.skipped === true && convRead.fence === null && convRead.passes === true && /no plan is in force \(conversation\)/.test(said) && /skips it for this call, which would pass/.test(said)
-        && typeof convSend.fence === 'string' && /^DISPATCH GATE/.test(convSend.fence) && convSend.passes === false
-        && finWrite.skipped === true && typeof finWrite.fence === 'string' && finRead.fence === null && /the plan has finished/.test(saidFin) && /would be refused/.test(saidFin)
-        && underRead.skipped === false && typeof underRead.fence === 'string' && /not of the record/.test(underRead.fence);
+      const held_rows = [['convRead.skipped === true', (convRead.skipped === true)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['convRead.fence === null', (convRead.fence === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['convRead.passes === true', (convRead.passes === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/no plan is in force \\(conversation\\)/.test(said)', (/no plan is in force \(conversation\)/.test(said))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/skips it for this call, which would pass/.test(said)', (/skips it for this call, which would pass/.test(said))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof convSend.fence === \'string\'', (typeof convSend.fence === 'string')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^DISPATCH GATE/.test(convSend.fence)', (/^DISPATCH GATE/.test(convSend.fence))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['convSend.passes === false', (convSend.passes === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['finWrite.skipped === true', (finWrite.skipped === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof finWrite.fence === \'string\'', (typeof finWrite.fence === 'string')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['finRead.fence === null', (finRead.fence === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/the plan has finished/.test(saidFin)', (/the plan has finished/.test(saidFin))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/would be refused/.test(saidFin)', (/would be refused/.test(saidFin))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['underRead.skipped === false', (underRead.skipped === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['typeof underRead.fence === \'string\'', (typeof underRead.fence === 'string')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/not of the record/.test(underRead.fence)', (/not of the record/.test(underRead.fence))]);
+      return assertAll(held_rows);
     },
   },
   // ---- step 67: the session-start hook clones the hub and installs the dispatcher when the clone is absent ----
@@ -9329,9 +11003,11 @@ const CASES = [
       const r = spawnSync('bash', [join(dir, '.claude', 'hooks', 'session-start.sh')], { encoding: 'utf8', timeout: 120000,
         env: { ...process.env, CLAUDE_PROJECT_DIR: project, HUB_CLONE_PATH: clone, HUB_CLONE_SOURCE: HERE, HUB_CLONE_DRY: '1' } });
       const out = r.stdout ?? '';
-      return r.status === 0 && out.includes(`cloned it from ${HERE} into ${clone}`)
-        && out.includes(`install line (dry run, not run): node ${clone}/hook-dispatch.mjs --install`)
-        && existsSync(join(clone, 'hook-dispatch.mjs'));
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.includes(`cloned it from ${HERE} into ${clone}`)', (out.includes(`cloned it from ${HERE} into ${clone}`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['out.includes(`install line (dry run, not run): node ${clone}/hook-dispatch.mjs --install`)', (out.includes(`install line (dry run, not run): node ${clone}/hook-dispatch.mjs --install`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['existsSync(join(clone, \'hook-dispatch.mjs\'))', (existsSync(join(clone, 'hook-dispatch.mjs')))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9343,7 +11019,10 @@ const CASES = [
       const r = spawnSync('bash', [join(dir, '.claude', 'hooks', 'session-start.sh')], { encoding: 'utf8', timeout: 120000,
         env: { ...process.env, CLAUDE_PROJECT_DIR: project, HUB_CLONE_PATH: clone, HUB_CLONE_SOURCE: HERE, HUB_CLONE_DRY: '1' } });
       const out = r.stdout ?? '';
-      return r.status === 0 && !/clone/.test(out) && !/install line/.test(out);
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/clone/.test(out)', (!/clone/.test(out))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/install line/.test(out)', (!/install line/.test(out))]);
+      return assertAll(held_rows);
     },
   },
   // ---- the two model-switch events (P-18) ----
@@ -9361,9 +11040,17 @@ const CASES = [
       const msg = String(j.systemMessage ?? '');
       let line = '';
       try { line = readFileSync(join(pad, 'status', 'switches.txt'), 'utf8'); } catch { return false; }
-      return r.status === 0 && j.hookSpecificOutput?.hookEventName === 'PreModelSwitch' && j.hookSpecificOutput?.permissionDecision === 'allow'
-        && msg.includes('cache warm') && msg.includes('123456 tokens') && msg.includes('$0.42') && msg.includes('claude-sonnet-5-5')
-        && line.includes('before the switch') && line.includes('cache warm') && line.includes('California');
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['j.hookSpecificOutput?.hookEventName === \'PreModelSwitch\'', (j.hookSpecificOutput?.hookEventName === 'PreModelSwitch')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['j.hookSpecificOutput?.permissionDecision === \'allow\'', (j.hookSpecificOutput?.permissionDecision === 'allow')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['msg.includes(\'cache warm\')', (msg.includes('cache warm'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['msg.includes(\'123456 tokens\')', (msg.includes('123456 tokens'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['msg.includes(\'$0.42\')', (msg.includes('$0.42'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['msg.includes(\'claude-sonnet-5-5\')', (msg.includes('claude-sonnet-5-5'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['line.includes(\'before the switch\')', (line.includes('before the switch'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['line.includes(\'cache warm\')', (line.includes('cache warm'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['line.includes(\'California\')', (line.includes('California'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9375,7 +11062,12 @@ const CASES = [
       let j = {};
       try { j = JSON.parse(r.stdout); } catch { return false; }
       const msg = String(j.systemMessage ?? '');
-      return r.status === 0 && j.hookSpecificOutput?.permissionDecision === 'allow' && msg.includes('cache cold') && msg.includes('$1.50') && msg.includes('0 tokens');
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['j.hookSpecificOutput?.permissionDecision === \'allow\'', (j.hookSpecificOutput?.permissionDecision === 'allow')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['msg.includes(\'cache cold\')', (msg.includes('cache cold'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['msg.includes(\'$1.50\')', (msg.includes('$1.50'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['msg.includes(\'0 tokens\')', (msg.includes('0 tokens'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9387,7 +11079,12 @@ const CASES = [
       let j = {};
       try { j = JSON.parse(r.stdout); } catch { return false; }
       const ctx = String(j.hookSpecificOutput?.additionalContext ?? '');
-      return r.status === 0 && j.hookSpecificOutput?.hookEventName === 'PostModelSwitch' && ctx.includes('claude-fable-5-1') && ctx.includes('the top tier') && ctx.includes('does not need the top tier');
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['j.hookSpecificOutput?.hookEventName === \'PostModelSwitch\'', (j.hookSpecificOutput?.hookEventName === 'PostModelSwitch')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ctx.includes(\'claude-fable-5-1\')', (ctx.includes('claude-fable-5-1'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ctx.includes(\'the top tier\')', (ctx.includes('the top tier'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ctx.includes(\'does not need the top tier\')', (ctx.includes('does not need the top tier'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9399,14 +11096,20 @@ const CASES = [
       let j = {};
       try { j = JSON.parse(r.stdout); } catch { return false; }
       const ctx = String(j.hookSpecificOutput?.additionalContext ?? '');
-      return r.status === 0 && ctx.includes('claude-sonnet-5-5') && ctx.includes('not on the top tier') && !ctx.includes('does not need');
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ctx.includes(\'claude-sonnet-5-5\')', (ctx.includes('claude-sonnet-5-5'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ctx.includes(\'not on the top tier\')', (ctx.includes('not on the top tier'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!ctx.includes(\'does not need\')', (!ctx.includes('does not need'))]);
+      return assertAll(held_rows);
     },
   },
   {
     name: 'a payload with no model leaves the switch to go ahead with nothing written',
     run(m, dir) {
       const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'PreModelSwitch'], { encoding: 'utf8', env: { ...process.env }, input: JSON.stringify({ session_id: sid('sw') }) });
-      return r.status === 0 && (r.stdout ?? '').trim() === '';
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['(r.stdout ?? \'\').trim() === \'\'', ((r.stdout ?? '').trim() === '')]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9419,7 +11122,12 @@ const CASES = [
       let s = {};
       try { s = JSON.parse(readFileSync(f, 'utf8')); } catch { return false; }
       const has = (ev, text) => JSON.stringify(s.hooks?.[ev] ?? []).includes(text);
-      return r.status === 0 && has('PreModelSwitch', 'planted-earlier') && has('PreModelSwitch', 'hook-dispatch.mjs') && has('PostModelSwitch', 'hook-dispatch.mjs') && has('Stop', 'hook-dispatch.mjs');
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['has(\'PreModelSwitch\', \'planted-earlier\')', (has('PreModelSwitch', 'planted-earlier'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['has(\'PreModelSwitch\', \'hook-dispatch.mjs\')', (has('PreModelSwitch', 'hook-dispatch.mjs'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['has(\'PostModelSwitch\', \'hook-dispatch.mjs\')', (has('PostModelSwitch', 'hook-dispatch.mjs'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['has(\'Stop\', \'hook-dispatch.mjs\')', (has('Stop', 'hook-dispatch.mjs'))]);
+      return assertAll(held_rows);
     },
   },
   // ---- the ConfigChange event (P-21) ----
@@ -9437,9 +11145,16 @@ const CASES = [
       try { lines = readFileSync(join(pad, 'status', 'config-changes.jsonl'), 'utf8').trim().split('\n'); } catch { return false; }
       let rec = {};
       try { rec = JSON.parse(lines[0]); } catch { return false; }
-      return r.status === 0 && lines.length === 1 && Number.isFinite(rec.at) && /^\d{4}-\d\d-\d\d \d\d:\d\d$/.test(String(rec.california))
-        && rec.source === 'user_settings' && rec.file === '/planted/home/.claude/settings.json' && rec.baseline === true
-        && (r.stdout ?? '').trim() === '' && !/decision|systemMessage|continue/.test(r.stdout ?? '');
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lines.length === 1', (lines.length === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['Number.isFinite(rec.at)', (Number.isFinite(rec.at))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^\\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d$/.test(String(rec.california))', (/^\d{4}-\d\d-\d\d \d\d:\d\d$/.test(String(rec.california)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['rec.source === \'user_settings\'', (rec.source === 'user_settings')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['rec.file === \'/planted/home/.claude/settings.json\'', (rec.file === '/planted/home/.claude/settings.json')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['rec.baseline === true', (rec.baseline === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['(r.stdout ?? \'\').trim() === \'\'', ((r.stdout ?? '').trim() === '')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/decision|systemMessage|continue/.test(r.stdout ?? \'\')', (!/decision|systemMessage|continue/.test(r.stdout ?? ''))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9453,7 +11168,12 @@ const CASES = [
         input: JSON.stringify({ session_id: s, source: 'policy_settings' }) });
       let rec = {};
       try { rec = JSON.parse(readFileSync(join(pad, 'status', 'config-changes.jsonl'), 'utf8').trim().split('\n')[0]); } catch { return false; }
-      return r.status === 0 && rec.source === 'policy_settings' && rec.file === null && rec.baseline === false && !/decision|block|continue/.test(r.stdout ?? '');
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['rec.source === \'policy_settings\'', (rec.source === 'policy_settings')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['rec.file === null', (rec.file === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['rec.baseline === false', (rec.baseline === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!/decision|block|continue/.test(r.stdout ?? \'\')', (!/decision|block|continue/.test(r.stdout ?? ''))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9462,7 +11182,10 @@ const CASES = [
     run(m, dir) {
       const r = spawnSync('node', [join(dir, 'hook-dispatch.mjs'), 'ConfigChange'], { encoding: 'utf8', env: { ...process.env },
         input: JSON.stringify({ source: 'skills', file_path: '/planted/skill/SKILL.md' }) });
-      return r.status === 0 && (r.stdout ?? '').trim() === '' && !existsSync(join(DECOY_PAD, 'status', 'config-changes.jsonl'));
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['(r.stdout ?? \'\').trim() === \'\'', ((r.stdout ?? '').trim() === '')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!existsSync(join(DECOY_PAD, \'status\', \'config-changes.jsonl\'))', (!existsSync(join(DECOY_PAD, 'status', 'config-changes.jsonl')))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9479,8 +11202,13 @@ const CASES = [
       // The whole written command is compared, the clone path in front of the file name included (Q-HUB-267): a suffix check passed
       // an install that wrote the wrong folder.
       const want = (ev) => `node "${join(dir, 'hook-dispatch.mjs')}" ${ev}`;
-      return r.status === 0 && cc.length === 1 && cc[0].matcher === '' && cmd(cc[0]) === want('ConfigChange') && cmd(stop[0]) === want('Stop')
-        && cmd(cc[0]).replace(/ ConfigChange$/, '') === cmd(stop[0]).replace(/ Stop$/, '');
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cc.length === 1', (cc.length === 1)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cc[0].matcher === \'\'', (cc[0].matcher === '')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cmd(cc[0]) === want(\'ConfigChange\')', (cmd(cc[0]) === want('ConfigChange'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cmd(stop[0]) === want(\'Stop\')', (cmd(stop[0]) === want('Stop'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['cmd(cc[0]).replace(/ ConfigChange$/, \'\') === cmd(stop[0]).replace(/ Stop$/, \'\')', (cmd(cc[0]).replace(/ ConfigChange$/, '') === cmd(stop[0]).replace(/ Stop$/, ''))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9497,7 +11225,9 @@ const CASES = [
       const rec = (ago, file) => JSON.stringify({ at: Date.now() - ago, time: 'x', california: '2026-11-05 10:00', source: 'skills', file, baseline: false });
       writeFileSync(join(pad, 'status', 'config-changes.jsonl'), `${rec(60000, '/planted/newer-skill.md')}\n${rec(600000, '/planted/older-skill.md')}\n`);
       const out = spawnSync('node', [join(dir, 'report.mjs'), 'Status 10:00 — the configuration test'], { encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_CODE_SESSION_ID: s, TMPDIR: temp } }).stdout ?? '';
-      return out.includes('Configuration change: 2026-11-05 10:00 California, source skills, /planted/newer-skill.md') && !out.includes('older-skill');
+      const held_rows = [['out.includes(\'Configuration change: 2026-11-05 10:00 California, source skills, /planted/newer-skill.md\')', (out.includes('Configuration change: 2026-11-05 10:00 California, source skills, /planted/newer-skill.md'))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!out.includes(\'older-skill\')', (!out.includes('older-skill'))]);
+      return assertAll(held_rows);
     },
   },
   // ---- the P-21 replan's three gates: no send on the top tier, a stop through the queue, no exit under auto mode ----
@@ -9518,11 +11248,15 @@ const CASES = [
       const heldNoPlan = m.dispatch.dispatchGate(send, null, null, top);
       const viaFence = m.dispatch.managerFence({ session_id: 'tier', ...send }, { plan, pointer: null, entries: top });
       const says = (r) => typeof r === 'string' && /top tier/.test(r) && /switch of model/.test(r) && /claude-fable-5-1/.test(r) && r.includes(m.dispatch.FENCE_NO_LATCH);
-      return says(held) && says(heldMessage) && says(heldNoPlan) && says(viaFence)
-        && m.dispatch.dispatchGate(send, plan, null, lesser) === null
-        && m.dispatch.dispatchGate(send, plan, null, []) === null
-        && m.dispatch.dispatchGate(send, plan, null, inInput) === null
-        && /No approved plan is in force/.test(m.dispatch.dispatchGate(send, null, null, lesser) ?? '');
+      const held_rows = [['says(held)', (says(held))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(heldMessage)', (says(heldMessage))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(heldNoPlan)', (says(heldNoPlan))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['says(viaFence)', (says(viaFence))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.dispatchGate(send, plan, null, lesser) === null', (m.dispatch.dispatchGate(send, plan, null, lesser) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.dispatchGate(send, plan, null, []) === null', (m.dispatch.dispatchGate(send, plan, null, []) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.dispatchGate(send, plan, null, inInput) === null', (m.dispatch.dispatchGate(send, plan, null, inInput) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/No approved plan is in force/.test(m.dispatch.dispatchGate(send, null, null, lesser) ?? \'\')', (/No approved plan is in force/.test(m.dispatch.dispatchGate(send, null, null, lesser) ?? ''))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9531,11 +11265,12 @@ const CASES = [
     run(m) {
       const queued = [turn(0, 'start'), enq(10, ASK)];
       const stopped = [turn(0, 'start'), enq(10, STOPMSG)];
-      return m.pending.decide({ session_id: 't', tool_name: 'TaskStop', tool_input: { task_id: 'x' } }, queued) === null
-        && m.pending.decide({ session_id: 't', tool_name: 'TaskStop', tool_input: { task_id: 'x' } }, stopped) === null
-        && /pending-guard/.test(m.pending.decide({ session_id: 't', tool_name: 'Bash', tool_input: { command: 'ls' } }, queued) ?? '')
-        && /pending-guard/.test(m.pending.decide({ session_id: 't', tool_name: 'Read', tool_input: { file_path: '/x' } }, stopped) ?? '')
-        && /pending-guard/.test(m.pending.decide({ session_id: 't', agent_id: 'a1', tool_name: 'TaskStop', tool_input: { task_id: 'x' } }, stopped) ?? '');
+      const held_rows = [['m.pending.decide({ session_id: \'t\', tool_name: \'TaskStop\', tool_input: { task_id: \'x\' } }, queued) === null', (m.pending.decide({ session_id: 't', tool_name: 'TaskStop', tool_input: { task_id: 'x' } }, queued) === null)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.pending.decide({ session_id: \'t\', tool_name: \'TaskStop\', tool_input: { task_id: \'x\' } }, stopped) === null', (m.pending.decide({ session_id: 't', tool_name: 'TaskStop', tool_input: { task_id: 'x' } }, stopped) === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/pending-guard/.test(m.pending.decide({ session_id: \'t\', tool_name: \'Bash\', tool_input: { command: \'ls\' } }, queued) ?? \'\')', (/pending-guard/.test(m.pending.decide({ session_id: 't', tool_name: 'Bash', tool_input: { command: 'ls' } }, queued) ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/pending-guard/.test(m.pending.decide({ session_id: \'t\', tool_name: \'Read\', tool_input: { file_path: \'/x\' } }, stopped) ?? \'\')', (/pending-guard/.test(m.pending.decide({ session_id: 't', tool_name: 'Read', tool_input: { file_path: '/x' } }, stopped) ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/pending-guard/.test(m.pending.decide({ session_id: \'t\', agent_id: \'a1\', tool_name: \'TaskStop\', tool_input: { task_id: \'x\' } }, stopped) ?? \'\')', (/pending-guard/.test(m.pending.decide({ session_id: 't', agent_id: 'a1', tool_name: 'TaskStop', tool_input: { task_id: 'x' } }, stopped) ?? ''))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9555,10 +11290,17 @@ const CASES = [
       const afterNotice = run([{ ...turn(0, 'Go.'), permissionMode: 'auto' }, notice]);
       const reason = (() => { try { return JSON.parse(auto.stdout).hookSpecificOutput.permissionDecisionReason; } catch { return ''; } })();
       const marked = (r) => (r.stdout ?? '').includes(mark);
-      return auto.status === 2 && reason.includes(mark) && /out of auto mode/.test(reason) && /sets no latch/.test(reason)
-        && marked(afterNotice) && !marked(under('plan')) && !marked(under('default')) && !marked(under(null))
-        && m.dispatch.noLatchRepoRefusal('plan-guard.sh', { tool_name: 'ExitPlanMode' }, reason) === true
-        && m.dispatch.noLatchRepoRefusal('plan-guard.sh', { tool_name: 'ExitPlanMode' }, 'PLAN MODE. some other refusal of the call.') === false;
+      const held_rows = [['auto.status === 2', (auto.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['reason.includes(mark)', (reason.includes(mark))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/out of auto mode/.test(reason)', (/out of auto mode/.test(reason))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/sets no latch/.test(reason)', (/sets no latch/.test(reason))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['marked(afterNotice)', (marked(afterNotice))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!marked(under(\'plan\'))', (!marked(under('plan')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!marked(under(\'default\'))', (!marked(under('default')))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!marked(under(null))', (!marked(under(null)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.noLatchRepoRefusal(\'plan-guard.sh\', { tool_name: \'ExitPlanMode\' }, reason) === true', (m.dispatch.noLatchRepoRefusal('plan-guard.sh', { tool_name: 'ExitPlanMode' }, reason) === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['m.dispatch.noLatchRepoRefusal(\'plan-guard.sh\', { tool_name: \'ExitPlanMode\' }, \'PLAN MODE. some other refusal of the call.\') === false', (m.dispatch.noLatchRepoRefusal('plan-guard.sh', { tool_name: 'ExitPlanMode' }, 'PLAN MODE. some other refusal of the call.') === false)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9583,12 +11325,20 @@ const CASES = [
       const n = exitUnder(null);
       n.A.guard(n.tr, read);
       const said = /not the owner's approval/;
-      return readA.status === 0 && a.A.mk() === null && a.A.outcome(a.u) === 'under auto mode'
-        && buildA.status === 2 && said.test(`${buildA.stdout}${buildA.stderr}`) && /under auto mode/.test(`${buildA.stdout}${buildA.stderr}`)
-        && enter.status === 0 && said.test(enter.stderr ?? '')
-        // changed by the plan of 6 November: the same end under plan mode, or recording no mode, writes no marker either
-        && p.A.mk() === null && p.A.outcome(p.u) === 'no exit call'
-        && n.A.mk() === null && n.A.outcome(n.u) === 'no exit call';
+      const held_rows = [['readA.status === 0', (readA.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['a.A.mk() === null', (a.A.mk() === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['a.A.outcome(a.u) === \'under auto mode\'', (a.A.outcome(a.u) === 'under auto mode')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['buildA.status === 2', (buildA.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said.test(`${buildA.stdout}${buildA.stderr}`)', (said.test(`${buildA.stdout}${buildA.stderr}`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/under auto mode/.test(`${buildA.stdout}${buildA.stderr}`)', (/under auto mode/.test(`${buildA.stdout}${buildA.stderr}`))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['enter.status === 0', (enter.status === 0)]);
+      // changed by the plan of 6 November: the same end under plan mode, or recording no mode, writes no marker either
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['said.test(enter.stderr ?? \'\')', (said.test(enter.stderr ?? ''))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['p.A.mk() === null', (p.A.mk() === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['p.A.outcome(p.u) === \'no exit call\'', (p.A.outcome(p.u) === 'no exit call')]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['n.A.mk() === null', (n.A.mk() === null)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['n.A.outcome(n.u) === \'no exit call\'', (n.A.outcome(n.u) === 'no exit call')]);
+      return assertAll(held_rows);
     },
   },
   // ---- the cost instrument names each plan's title and program item (P-20, step 32) ----
@@ -9597,7 +11347,10 @@ const CASES = [
     guards: ['cost_item_read', 'cost_write_read'],
     run(m, dir) {
       const r = spawnSync('node', [join(dir, 'session-cost.mjs')], { encoding: 'utf8', timeout: 120000 });
-      return r.status === 0 && /planted counts match the known figures/.test(r.stdout) && r.stdout.includes('"titles":"P-99: A planted title; P-98: A second planted title; P-97: A third planted title"');
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/planted counts match the known figures/.test(r.stdout)', (/planted counts match the known figures/.test(r.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r.stdout.includes(\'"titles":"P-99: A planted title; P-98: A second planted title; P-97: A third planted title"\')', (r.stdout.includes('"titles":"P-99: A planted title; P-98: A second planted title; P-97: A third planted title"'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9605,7 +11358,10 @@ const CASES = [
     guards: ['cost_saved_read'],
     run(m, dir) {
       const r = spawnSync('node', [join(dir, 'session-cost.mjs')], { encoding: 'utf8', timeout: 120000 });
-      return r.status === 0 && /"plans":3/.test(r.stdout) && r.stdout.includes('P-97: A third planted title');
+      const held_rows = [['r.status === 0', (r.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/"plans":3/.test(r.stdout)', (/"plans":3/.test(r.stdout))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r.stdout.includes(\'P-97: A third planted title\')', (r.stdout.includes('P-97: A third planted title'))]);
+      return assertAll(held_rows);
     },
   },
 
@@ -9630,9 +11386,16 @@ const CASES = [
       const six = run(n(6));
       const seven = run(n(7));
       const split = run([...n(3), tool(14, 'ch2', 'Bash', { command: 'git status' }), result(15, 'ch2', 'clean'), ...n(4, 16)]);
-      return six.one.status === 2 && six.two.status === 2 && /sends the refused reply again/.test(six.two.stderr)
-        && seven.one.status === 2 && seven.two.status === 0 && /^STOP PASSED/.test(seven.two.stderr) && /7 stop refusals/.test(seven.two.stderr)
-        && split.two.status === 2 && /sends the refused reply again/.test(split.two.stderr);
+      const held_rows = [['six.one.status === 2', (six.one.status === 2)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['six.two.status === 2', (six.two.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/sends the refused reply again/.test(six.two.stderr)', (/sends the refused reply again/.test(six.two.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['seven.one.status === 2', (seven.one.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['seven.two.status === 0', (seven.two.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/^STOP PASSED/.test(seven.two.stderr)', (/^STOP PASSED/.test(seven.two.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/7 stop refusals/.test(seven.two.stderr)', (/7 stop refusals/.test(seven.two.stderr))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['split.two.status === 2', (split.two.status === 2)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['/sends the refused reply again/.test(split.two.stderr)', (/sends the refused reply again/.test(split.two.stderr))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9671,10 +11434,19 @@ const CASES = [
       const spent = stop(false);
       arm({});
       const empty = stop(false);
-      return noAgent.status === 0 && noAgentLog === 0 && wrong.status === 0 && wrongLog === 0
-        && lines.every(Boolean) && tenth.status === 0
-        && log.length === 9 && log.every((e, i) => e.call === i + 1) && log[0].stop_hook_active === false && log[8].stop_hook_active === true
-        && spent.status === 0 && empty.status === 0;
+      const held_rows = [['noAgent.status === 0', (noAgent.status === 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['noAgentLog === 0', (noAgentLog === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['wrong.status === 0', (wrong.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['wrongLog === 0', (wrongLog === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['lines.every(Boolean)', (lines.every(Boolean))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['tenth.status === 0', (tenth.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['log.length === 9', (log.length === 9)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['log.every((e, i) => e.call === i + 1)', (log.every((e, i) => e.call === i + 1))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['log[0].stop_hook_active === false', (log[0].stop_hook_active === false)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['log[8].stop_hook_active === true', (log[8].stop_hook_active === true)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['spent.status === 0', (spent.status === 0)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['empty.status === 0', (empty.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   // ---- the plan seed: a plan is typed from a print of the record at the entry to plan mode ----
@@ -9700,7 +11472,16 @@ const CASES = [
       const after = r3.stdout.split('==== THE PLAN ENDS ABOVE THIS LINE ====')[1] ?? '';
       const movable = after.split('\n').filter((l) => l.startsWith('- ['));
       const marked = movable.length === 8 && movable.every((l) => l.startsWith('- [movable: another session can move this before a step runs] ')) && !(r3.stdout.split('==== THE PLAN ENDS')[0].includes('[movable'));
-      return own && next && missing && goals && rules && ranges && closeStep && keys && marked;
+      const held_rows = [['own', (own)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['next', (next)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['missing', (missing)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['goals', (goals)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['rules', (rules)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['ranges', (ranges)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['closeStep', (closeStep)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['keys', (keys)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['marked', (marked)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9717,7 +11498,10 @@ const CASES = [
         d.commandsGitDirProblem(text), d.filesSpanProblem(text), d.stepShapeProblem(text), await d.reviewCommandProblem(text)];
       const steps = JSON.stringify(d.planSteps(text)) === '[1,2,3,4,5]';
       if (problems.some((x) => x !== null)) throw new Error(`the built plan was refused: ${problems.filter((x) => x !== null).map((x) => String(x).slice(0, 160)).join(' | ')}`);
-      return found && steps && r.status === 0;
+      const held_rows = [['found', (found)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['steps', (steps)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['r.status === 0', (r.status === 0)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9745,7 +11529,12 @@ const CASES = [
       const underLatch = w.call('PreToolUse', { session_id: s, tool_name: 'Bash', tool_input: { command: good[0] } });
       const other = w.call('PreToolUse', { session_id: s, tool_name: 'Bash', tool_input: { command: 'git status' } });
       const dispatched = underLatch.status === 0 && other.status === 2;
-      return fenced && canned && guarded && same && dispatched;
+      const held_rows = [['fenced', (fenced)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['canned', (canned)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['guarded', (guarded)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['same', (same)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['dispatched', (dispatched)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9781,7 +11570,7 @@ const CASES = [
       const a2 = added(c2);
       const calls = c1.status === 0 && added(c1) === null && c2.status === 0 && a2?.hookEventName === 'PreToolUse' && String(a2?.additionalContext).includes('PLAN SEED for P-3 ') && String(a2?.additionalContext).includes('PLAN SEED WRITTEN WHOLE to ') && c3.status === 0 && added(c3) === null;
       if (!(once && agent && unrecorded && prompts && calls)) throw new Error(`once ${once}, agent ${agent}, unrecorded ${unrecorded}, prompts ${prompts}, calls ${calls}`);
-      return true;
+      return assertAll([]);
     },
   },
   // ---- the single print put right (the plan of 5 November, step 89): each case on a planted hub in a temporary folder, never on the working copy ----
@@ -9798,7 +11587,9 @@ const CASES = [
         && r.stdout.includes('\n9. **Taken up: P-3') && r.stdout.includes('\n10. **<the item\'s step 10, one result>.**') && r.stdout.includes('\n11. **Closed in the program')
         && r.stdout.includes('\n12. **Review.**') && r.stdout.includes('Report `progress/step-9-report.txt`') && r.stdout.includes('Report `progress/step-11-report.txt`');
       const from1 = none.status === 0 && none.stdout.includes('\nOrder: 1 2 3\n') && none.stdout.includes('\n1. **Taken up: P-3') && none.stdout.includes('\n4. **Review.**');
-      return from9 && from1;
+      const held_rows = [['from9', (from9)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['from1', (from1)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9819,7 +11610,11 @@ const CASES = [
       const two = edited(app).length === 2 && edited(app)[1].startsWith(`- ${basename(other)}, edited:`);
       const commands = work.stdout.includes(`- \`node ${wc}/session-guards.test.mjs\``) && work.stdout.includes(`- \`node ${wc}/pin-check.mjs\``) && !work.stdout.includes(`node ${hub}/`)
         && same.stdout.includes(`- \`node ${hub}/session-guards.test.mjs\``);
-      return oneHub && oneWork && two && commands;
+      const held_rows = [['oneHub', (oneHub)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['oneWork', (oneWork)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['two', (two)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['commands', (commands)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9832,7 +11627,10 @@ const CASES = [
       const acts = ['`git fetch origin main`', '`git rebase origin/main`', '`git rebase --abort`', '`git log origin/main..main`, read as the commits this plan made', '`git push origin main`, and where the remote refuses it as not a fast-forward',
         'no force and no second try', '`git ls-remote --heads origin`', 'the doctrine gates run for the pushed commit read through the connector', '`git -C /root/.claude/hub pull origin main`', '`git -C /root/.claude/hub rev-parse HEAD`',
         '`git log origin/main..main`, read empty'];
-      return close.length > 0 && acts.every((a) => close.includes(a)) && close.includes('from the step reports, done where every step in Order handed back DONE and ejected with the finding attached otherwise');
+      const held_rows = [['close.length > 0', (close.length > 0)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['acts.every((a) => close.includes(a))', (acts.every((a) => close.includes(a)))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['close.includes(\'from the step reports, done where every step in Order handed back DONE and ejected with the finding attached otherwise\')', (close.includes('from the step reports, done where every step in Order handed back DONE and ejected with the finding attached otherwise'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9842,8 +11640,13 @@ const CASES = [
       const hub = seedHub(dir);
       const r = seedRun(dir, hub, ['--item', 'P-3']);
       const up = (r.stdout.split('\n1. **Taken up: P-3')[1] ?? '').split('\n2. **<')[0];
-      return up.includes('read `PROGRAM.md` whole') && up.includes('set State to planned and Plan to this plan\'s title') && up.includes('`git push origin main`, and where the remote refuses it as not a fast-forward')
-        && !up.includes('`git -C /root/.claude/hub pull origin main`') && up.includes('`git rebase --abort`') && up.includes('Report `progress/step-1-report.txt` (new)');
+      const held_rows = [['up.includes(\'read `PROGRAM.md` whole\')', (up.includes('read `PROGRAM.md` whole'))]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['up.includes(\'set State to planned and Plan to this plan\\\'s title\')', (up.includes('set State to planned and Plan to this plan\'s title'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['up.includes(\'`git push origin main`, and where the remote refuses it as not a fast-forward\')', (up.includes('`git push origin main`, and where the remote refuses it as not a fast-forward'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['!up.includes(\'`git -C /root/.claude/hub pull origin main`\')', (!up.includes('`git -C /root/.claude/hub pull origin main`'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['up.includes(\'`git rebase --abort`\')', (up.includes('`git rebase --abort`'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['up.includes(\'Report `progress/step-1-report.txt` (new)\')', (up.includes('Report `progress/step-1-report.txt` (new)'))]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9856,7 +11659,9 @@ const CASES = [
       const resend = review.includes('This step is never a resend: a send of it reads no step\'s report as its own and does none of any step\'s Do, and it follows the review file from its first line');
       const cost = (r.stdout.split('\n## Cost\n\n')[1] ?? '').split('\n')[0];
       const occasions = cost.includes('a review is sent at the plan\'s first send and after an eject, a failure, a refusal or a correction') && cost.includes('and at no other move') && !cost.includes('for each move');
-      return resend && occasions;
+      const held_rows = [['resend', (resend)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['occasions', (occasions)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9873,7 +11678,9 @@ const CASES = [
       writeFileSync(join(hub, 'PROGRAM.md'), `${head}\n${entry(1, 'Quietkeep', 'open')}\n${entry(2, 'fauxplane', 'open')}\n${entry(3, 'hub', 'done')}\n`);
       const none = seedRun(dir, hub, ['--item', 'next']);
       const refused = none.status === 1 && /no entry is open/.test(none.stdout) && !/next ranked open item is P-1/.test(none.stdout) && !/^PLAN SEED for/.test(none.stdout);
-      return ok && refused;
+      const held_rows = [['ok', (ok)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['refused', (refused)]);
+      return assertAll(held_rows);
     },
   },
   {
@@ -9897,7 +11704,10 @@ const CASES = [
       const seedPad = tmp('sg-seedpad-');
       const printed = m.dispatch.planEntrySeed({ session_id: 'sd', cwd: hub, permission_mode: 'plan' }, { pad: seedPad, script: stub, marker: noMarker, plansDir });
       const wired = printed === `--item next --plan ${fresh} --out ${join(seedPad, 'status', 'seed-print.txt')}`;
-      return byMarker && newest && wired;
+      const held_rows = [['byMarker', (byMarker)]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['newest', (newest)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['wired', (wired)]);
+      return assertAll(held_rows);
     },
   },
   // ---- the batch print (the plan of 5 November, step 90): each case on a planted hub in a temporary folder, never on the working copy ----
@@ -9911,24 +11721,24 @@ const CASES = [
       const t = r.stdout;
       const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
       // The file steps 2 to 4 run together after the take-up, one commit step (5) follows them and the close (6) follows it.
-      const takeup = step(1), alpha = step(2), beta = step(3), none = step(4), landing = step(5);
-      const items = ['P-1', 'P-2', 'P-3', 'P-4', 'P-5'];
+      const takeup = step(1), alpha = step(2), beta = step(3), landing = step(4);
+      const items = ['P-1', 'P-3', 'P-4', 'P-5'];
       const okTakeup = takeup.startsWith('Taken up: ') && items.every((i) => takeup.split(' set to planned')[0].includes(i));
-      const okGroups = alpha.startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13, Q-HUB-15.') && beta.startsWith('Put right in `beta.mjs`: Q-HUB-14.') && none.startsWith('Put right in the files each names: Q-HUB-12.')
-        && !/Q-QK-3/.test(alpha + beta + none) && t.includes('\nOrder: 1 2 3 4 5\n') && t.includes('\nStanding: 6\n') && t.includes('\n6. **Review.**')
-        && t.includes('\nAfter: 2 after 1; 3 after 1; 4 after 1; 5 after 2 3 4\n');
+      const okGroups = alpha.startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13, Q-HUB-15.') && beta.startsWith('Put right in `beta.mjs`: Q-HUB-14.')
+        && !/Q-QK-3/.test(alpha + beta) && t.includes('\nOrder: 1 2 3 4\n') && t.includes('\nStanding: 5\n') && t.includes('\n5. **Review.**')
+        && t.includes('\nAfter: 2 after 1; 3 after 1; 4 after 2 3\n');
       // Goal 1 names every item of the batch, read from the printed goal line (the landing step takes its items from the planned ones, so it cannot show a dropped key).
-      const goal1 = t.split('\n').find((l) => l.startsWith('1. Each of the 5 findings of the batch')) ?? '';
+      const goal1 = t.split('\n').find((l) => l.startsWith('1. Each of the 4 findings of the batch')) ?? '';
       const okClose = items.every((i) => landing.includes(i)) && landing.startsWith('Landed once') && items.every((i) => goal1.includes(i));
       const files = t.split('\n').find((l) => l.startsWith('- Hub, edited:')) ?? '';
       const okFiles = files.startsWith('- Hub, edited: `PROGRAM.md`, `NOTES.md`, `found/`, `lessons/`, `LESSONS.md`') && files.includes('`alpha.mjs`') && files.includes('`beta.mjs`') && files.includes('`session-guards.test.mjs`');
       const fa = (t.split('\n## Found answered\n')[1] ?? '').split('\n## ')[0];
-      const okFound = ['Q-HUB-11 fixed in step 2:', 'Q-HUB-13 fixed in step 2:', 'Q-HUB-15 fixed in step 2:', 'Q-HUB-14 fixed in step 3:', 'Q-HUB-12 fixed in step 4:'].every((x) => fa.includes(`- ${x}`))
-        && fa.includes('- Q-QK-3 still queued: ') && fa.includes('- Q-HUB-16 to Q-HUB-17 still queued: ') && !/Q-QK-3 fixed/.test(fa);
+      const okFound = ['Q-HUB-11 fixed in step 2:', 'Q-HUB-13 fixed in step 2:', 'Q-HUB-15 fixed in step 2:', 'Q-HUB-14 fixed in step 3:'].every((x) => fa.includes(`- ${x}`))
+        && fa.includes('- Q-QK-3 still queued: ') && fa.includes('- Q-HUB-16 to Q-HUB-17 still queued: ') && !/Q-QK-3 fixed/.test(fa) && !fa.includes('Q-HUB-12 fixed');
       const head = t.split('\n')[0];
-      const okHead = head.startsWith('PLAN SEED for the batch of 5 open findings of hub, in 3 group steps');
+      const okHead = head.startsWith('PLAN SEED for the batch of 4 open findings of hub, in 2 group steps');
       if (!(okTakeup && okGroups && okClose && okFiles && okFound && okHead)) throw new Error(`takeup ${okTakeup}, groups ${okGroups} (${t.slice(t.indexOf('## Order'), t.indexOf('## Order') + 260)}), close ${okClose}, files ${okFiles} (${files.slice(0, 200)}), found ${okFound} (${fa.slice(0, 700)}), head ${okHead}`);
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -9940,18 +11750,18 @@ const CASES = [
       writeFileSync(planFile, '# A planted plan\n\n## Steps\n\n7. **One.** planted text of the case.\n');
       const r = batchRun(dir, hub, ['--size', '2', '--plan', planFile]);
       const t = r.stdout;
-      // The cut of alpha makes two groups of one file; two groups of one file never share a wave, so wave 1 holds the first run of alpha, beta and the
-      // finding that names no file, the commit step and the close follow them, and the second run of alpha (Q-HUB-15) is left for wave 2.
-      const cut = r.status === 0 && t.includes('\nOrder: 8 9 10 11 12\n') && t.includes('\n9. **Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13.')
-        && t.includes('\n10. **Put right in `beta.mjs`: Q-HUB-14.') && t.includes('\n11. **Put right in the files each names: Q-HUB-12.')
-        && t.includes('\n12. **Landed once') && t.includes('\n13. **Review.**')
-        && !t.includes('Q-HUB-15 fixed') && t.split('\n')[1].includes('leaves 1 of the 4 groups');
+      // The cut of alpha makes two groups of one file; two groups of one file never share a wave, so wave 1 holds the first run of alpha and beta (the
+      // finding that names no file gets no step), the commit step and the close follow them, and the second run of alpha (Q-HUB-15) is left for wave 2.
+      const cut = r.status === 0 && t.includes('\nOrder: 8 9 10 11\n') && t.includes('\n9. **Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13.')
+        && t.includes('\n10. **Put right in `beta.mjs`: Q-HUB-14.')
+        && t.includes('\n11. **Landed once') && t.includes('\n12. **Review.**')
+        && !t.includes('Q-HUB-15 fixed') && t.split('\n')[1].includes('leaves 1 of the 3 groups');
       const cost = (t.split('\n## Cost\n\n')[1] ?? '').split('\n')[0];
-      const pushes = cost.includes('2 pushes are made, one each by the take-up and the landing step') && cost.includes('and at no other move') && cost.includes('The 5 steps (3 file steps run at the same time');
+      const pushes = cost.includes('2 pushes are made, one each by the take-up and the landing step') && cost.includes('and at no other move') && cost.includes('The 4 steps (2 file steps run at the same time');
       const lim = batchRun(dir, hub, ['--steps', '1']);
       const limited = lim.status === 0 && lim.stdout.includes('\nOrder: 1 2 3\n') && lim.stdout.includes('batch of 3 open findings') && !lim.stdout.includes('Q-HUB-14 fixed');
       if (!(cut && pushes && limited)) throw new Error(`cut ${cut}, pushes ${pushes} (${cost.slice(0, 300)}), limited ${limited} (${lim.stdout.slice(lim.stdout.indexOf('## Order'), lim.stdout.indexOf('## Order') + 200)})`);
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -9983,7 +11793,7 @@ const CASES = [
       const none = batchRun(dir, quiet, []);
       const refused = none.status === 1 && /no open entry of hub in PROGRAM.md is a filed finding/.test(none.stdout) && !/PLAN STARTS BELOW/.test(none.stdout);
       if (!(checked.status === 0 && refused)) throw new Error(`check status ${checked.status}: ${String(checked.stdout).split('\n').filter((l) => /^\d+\. [A-Z]/.test(l)).map((l) => l.slice(0, 260)).join(' // ')} | refused ${refused}`);
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -10004,9 +11814,9 @@ const CASES = [
         asSingle = m.dispatch.planEntrySeed({ session_id: 'sd', cwd: single, permission_mode: 'plan' }, opts(single));
       } finally { if (before === undefined) delete process.env.CLAUDE_PROJECT_DIR; else process.env.CLAUDE_PROJECT_DIR = before; }
       const modes = m.dispatch.seedMode(hub, hub) === 'batch' && m.dispatch.seedMode(single, single) === 'single' && m.dispatch.seedMode(tmp('sg-batchnoprog-'), tmp('sg-batchnoprog-')) === 'single';
-      const ok = asBatch.includes('\nPLAN SEED for the batch of 5 open findings of hub') && asSingle.includes('\nPLAN SEED for P-1 (A planted item with no key: ');
+      const ok = asBatch.includes('\nPLAN SEED for the batch of 4 open findings of hub') && asSingle.includes('\nPLAN SEED for P-1 (A planted item with no key: ');
       if (!(ok && modes)) throw new Error(`batch ${asBatch.slice(0, 80)} | single ${asSingle.slice(0, 80)} | modes ${modes}`);
-      return true;
+      return assertAll([]);
     },
   },
   // ---- the print to a file and the finding already put right (the plan of 6 November, step 96): each case on a planted hub in a temporary folder ----
@@ -10028,7 +11838,7 @@ const CASES = [
       const sWhole = seedRun(dir, single, ['--item', 'P-3']).stdout;
       const singleOk = s.status === 0 && existsSync(file2) && readFileSync(file2, 'utf8') === sWhole && s.stdout.includes(file2) && s.stdout.trim().split('\n').length === 1;
       if (!(batchOk && singleOk && whole.includes('==== THE PLAN ENDS ABOVE THIS LINE ====') && written.includes('MOVABLE READS'))) throw new Error(`batch ${batchOk} (${line.slice(0, 200)}), single ${singleOk}`);
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -10045,15 +11855,15 @@ const CASES = [
       const takeup = step(1);
       const planned = takeup.split(' set to planned')[0];
       const doneLine = takeup.includes('set State to done') && takeup.includes('P-3 (Q-HUB-13): Put right in step 4 of the planted plan: the fault is gone (a planted note).');
-      const plannedOk = ['P-1', 'P-2', 'P-4', 'P-5'].every((i) => planned.includes(i)) && !planned.includes('P-3');
-      const groups = [step(2), step(3), step(4)];
-      const grouped = groups[0].startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-15.') && groups[1].startsWith('Put right in `beta.mjs`: Q-HUB-14.') && groups[2].startsWith('Put right in the files each names: Q-HUB-12.')
+      const plannedOk = ['P-1', 'P-4', 'P-5'].every((i) => planned.includes(i)) && !planned.includes('P-2') && !planned.includes('P-3');
+      const groups = [step(2), step(3)];
+      const grouped = groups[0].startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-15.') && groups[1].startsWith('Put right in `beta.mjs`: Q-HUB-14.')
         && !groups.some((g) => g.includes('Q-HUB-13'));
       const fa = (t.split('\n## Found answered\n')[1] ?? '').split('\n## ')[0];
       const answered = fa.includes('- Q-HUB-13 fixed in step 1: its own text says it was put right') && fa.includes('- Q-HUB-14 fixed in step 3:');
-      const head = t.split('\n')[0].startsWith('PLAN SEED for the batch of 5 open findings of hub, in 3 group steps');
+      const head = t.split('\n')[0].startsWith('PLAN SEED for the batch of 4 open findings of hub, in 2 group steps');
       if (!(doneLine && plannedOk && grouped && answered && head)) throw new Error(`done ${doneLine}, planned ${plannedOk} (${planned.slice(0, 120)}), grouped ${grouped}, answered ${answered}, head ${head}`);
-      return true;
+      return assertAll([]);
     },
   },
   {
@@ -10076,7 +11886,7 @@ const CASES = [
       const forty = out.length === 41 && out.slice(1).every((l, i) => l === whole[i]) && whole.length > 41;
       const tail = whole.some((l) => l.startsWith('MOVABLE READS')) && !out.some((l) => l.startsWith('MOVABLE READS'));
       if (!(named && forty && tail)) throw new Error(`named ${named} (${out[0].slice(0, 160)}), forty ${forty} (${out.length} lines, file ${whole.length}), tail ${tail}`);
-      return true;
+      return assertAll([]);
     },
   },
 
@@ -10162,6 +11972,51 @@ const CASES = [
         ['a plain run names no case', !/^BARE BOOLEAN CASE: /m.test(plain.stdout), plain.stdout],
         ['--bare-list names the bare case', /^BARE BOOLEAN CASE: planted-bare-true$/m.test(listed.stdout), listed.stdout],
         ['--bare-list does not name the case that ends in assertAll', !/^BARE BOOLEAN CASE: planted-labelled-rows$/m.test(listed.stdout), listed.stdout],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-346: no case of the suite or of the files under guard-cases/ ends by returning a bare boolean: the last return of each case body goes through assertAll, a case named on the declared list is let through, and a declared name that no longer ends that way is named',
+    guards: ['bare_source_read'],
+    run(m, dir, h) {
+      // The reading of one file's text: how many cases it holds and where each one that does not end through assertAll ends.
+      const readEndings = (text) => {
+        const lines = text.split('\n');
+        const out = { cases: 0, bare: [] };
+        for (let i = 0; i < lines.length; i++) {
+          if (!/^ {4}(async )?run\([^)]*\) \{$/.test(lines[i])) continue;
+          out.cases++;
+          let end = i + 1;
+          while (end < lines.length && !/^ {4}\},?$/.test(lines[end])) end++;
+          let name = lines[i].trim();
+          for (let k = i - 1; k >= Math.max(0, i - 6); k--) if (/^ {4}name: /.test(lines[k])) { name = lines[k].trim().slice(6).replace(/\\'/g, "'").replace(/^['"`]/, '').replace(/['"`],?$/, ''); break; }
+          let last = -1;
+          for (let k = i + 1; k < end; k++) if (/^ {6,8}return\b/.test(lines[k])) last = k;
+          if (last < 0 || /^ {6,8}return (await )?([A-Za-z_$][\w$]*\.)?assertAll\(/.test(lines[last])) continue;
+          out.bare.push({ line: last + 1, name });
+        }
+        return out;
+      };
+      // The reading is tried on a planted text first: one case that ends in a bare return and one that ends through the helper.
+      const planted = readEndings(['  {', "    name: 'planted bare',", '    run(m) {', '      const a = 1;', '      return a === 1;', '    },', '  },', '  {', "    name: 'planted labelled',", '    run(m, dir, h) {',
+        "      return h.assertAll([['a is one', true]]);", '    },', '  },', ''].join('\n'));
+      const files = ['session-guards.test.mjs', ...readdirSync(join(dir, 'guard-cases')).filter((f) => f.endsWith('.mjs')).sort().map((f) => `guard-cases/${f}`)];
+      let cases = 0;
+      const bare = [], stillBare = new Set();
+      for (const f of files) {
+        const r = readEndings(readFileSync(join(dir, f), 'utf8'));
+        cases += r.cases;
+        for (const b of r.bare) {
+          const declared = BARE_ENDINGS_DECLARED.find((d) => b.name.startsWith(d));
+          if (declared !== undefined) stillBare.add(declared);
+          else bare.push(`${f}:${b.line} (${b.name.slice(0, 70)})`);
+        }
+      }
+      return h.assertAll([
+        ['the reading finds the planted case that ends in a bare return and not the one that ends through the helper', planted.cases === 2 && planted.bare.length === 1 && planted.bare[0].name === 'planted bare', JSON.stringify(planted)],
+        ['the reading found the cases of the suite and of the case files', cases > 400, `${cases} cases read`],
+        ['no case ends by returning a bare boolean unless it is declared', bare.length === 0, bare.slice(0, 12).join(' | ')],
+        ['every declared name is a case that still ends that way', BARE_ENDINGS_DECLARED.every((d) => stillBare.has(d)), BARE_ENDINGS_DECLARED.filter((d) => !stillBare.has(d)).join(' | ')],
       ]);
     },
   },
@@ -10311,7 +12166,7 @@ function seedHub(dir) {
 const seedRun = (dir, hub, args) => spawnSync('node', [join(dir, 'plan-seed.mjs'), '--hub', hub, '--repo', hub, ...args],
   { encoding: 'utf8', timeout: 60000, env: { ...process.env, CLAUDE_CODE_SESSION_ID: '' } });
 
-// A hub for the batch cases: five open findings of the hub (three name `alpha.mjs`, one `beta.mjs`, one names no file that exists, ranked second), one open finding of
+// A hub for the batch cases: five open findings of the hub (three name `alpha.mjs`, one `beta.mjs`, one names no file that exists and gets no step), one open finding of
 // another repository, one done finding of the hub and one filed finding with no item, over the seed hub's template, rules and goals.
 function batchHub(dir) {
   const hub = seedHub(dir);
@@ -11262,7 +13117,7 @@ const PLANTS = {
   can_cli: ["  if (event === '--can') { console.log(canMain(process.argv.slice(3))); process.exit(0); }", "  if (false) { console.log(canMain(process.argv.slice(3))); process.exit(0); }", 'hook-dispatch.mjs'],
   can_latch: [" || (!p.agent_id && CAN.test(String(p.tool_input?.command ?? '')))", '', 'hook-dispatch.mjs'],
   can_agent: ["(!p.agent_id && CAN.test(String(p.tool_input?.command ?? '')))", "CAN.test(String(p.tool_input?.command ?? ''))", 'hook-dispatch.mjs'],
-  can_chained: [' + CAN_ARG + ', " + CAN_ARG + '.*' + ", 'hook-dispatch.mjs'],
+  can_chained: ["--can\\\\s+[A-Za-z][A-Za-z0-9_]*\\\\s+${CAN_ARG}\\\\s*$", "--can\\\\s+[A-Za-z][A-Za-z0-9_]*\\\\s+${CAN_ARG}.*\\\\s*$", 'hook-dispatch.mjs'],
   can_fence: ["(!skipped || send) ? managerFence(p, opts) : phase.kind === 'finished'", "(!skipped || send) ? null : phase.kind === 'finished'", 'hook-dispatch.mjs'],
   can_latch_read: ['  if (latchKnown) { try { latch = latchStanding(p, opts.entries, true); } catch { latch = null; } }', '  if (latchKnown) { latch = null; }', 'hook-dispatch.mjs'],
   can_readonly: ['    if (!readOnly) rmSync(latchFile(p), { force: true });', '    rmSync(latchFile(p), { force: true });', 'hook-dispatch.mjs'],
@@ -11606,6 +13461,7 @@ const PLANTS = {
   run_plants_not_run: ['  // suite for nine hours, and the plants are the other half of it.\n  console.log(`PLANTS NOT RUN:', '  // suite for nine hours, and the plants are the other half of it.\n  console.log(`PLANTS:', 'session-guards.test.mjs'],
   case_split: ["  const words = v === undefined ? [] : v.split(',').map((s) => s.trim()).filter(Boolean);\n", "  const words = v === undefined ? [] : [v];\n", 'session-guards.test.mjs'],
   case_count: ["const counts = words.map((w) => CASES.filter((c) => c.name.includes(w)).length);\n", "const counts = words.map(() => 0);\n", 'session-guards.test.mjs'],
+  bare_source_read: ["      return h.assertAll([\n        ['an edit of the working copy during a case passes", "      return ([\n        ['an edit of the working copy during a case passes", 'session-guards.test.mjs'],
   run_plants_counted: ['  }\n  console.log(`PLANTS RUN: ${todo.length} of', '  }\n  console.log(`PLANTS: ${todo.length} of', 'session-guards.test.mjs'],
   // Step 56, conversation is the default (Design part 5): the state a call is made in (`planPhase`), what each state skips in the
   // dispatcher's main sequence, what the stop hold and the correction hold pass, and the refusals of a reply's prose that run under a plan only.
@@ -11681,8 +13537,8 @@ const PLANTS = {
   seed_planfile_wired: ['const planFile = seedPlanFile(opts);', "const planFile = '';", 'hook-dispatch.mjs'],
   // The batch print: which findings it takes, how it groups and cuts them, what it marks fixed, and where the dispatcher prints it.
   batch_select: ["if (e.state !== 'open' || e.repository.toLowerCase() !== o.repoName.toLowerCase()) return;", "if (e.state !== 'open') return;", 'plan-seed.mjs'],
-  batch_group: ["(a === '') - (b === '') || byHome.get(a)[0].rank - byHome.get(b)[0].rank", 'byHome.get(a)[0].rank - byHome.get(b)[0].rank', 'plan-seed.mjs'],
-  batch_home: ["rank, text, files, home: files[0] ?? '', putRight:", "rank, text, files, home: '', putRight:", 'plan-seed.mjs'],
+  batch_group: ['(a, b) => byHome.get(a)[0].rank - byHome.get(b)[0].rank', '(a, b) => byHome.get(b)[0].rank - byHome.get(a)[0].rank', 'plan-seed.mjs'],
+  batch_home: ["rank, text, files, home: files[0] ?? '', putRight, counts:", "rank, text, files, home: '', putRight, counts:", 'plan-seed.mjs'],
   batch_found: ['`- ${f.key} fixed in step ${stepOf.get(f.key)}', '`- ${f.key} dropped in step ${stepOf.get(f.key)}', 'plan-seed.mjs'],
   batch_close: ["const itemKeys = batch.map((f) => f.item).join(', ');", "const itemKeys = batch.map((f) => f.item).slice(0, 1).join(', ');", 'plan-seed.mjs'],
   batch_size: ['for (let i = 0; i < fs.length; i += size) groups.push({ home: h, list: fs.slice(i, i + size) });', 'groups.push({ home: h, list: fs });', 'plan-seed.mjs'],
@@ -11695,7 +13551,7 @@ const PLANTS = {
   seed_out_write: ['writeFileSync(path, r.text);', 'void path;', 'plan-seed.mjs'],
   seed_out_line: ['`plan-seed: wrote ${path} (', '`plan-seed: wrote ${"it"} (', 'plan-seed.mjs'],
   putright_read: ['const rest = m[1];', "const rest = '';", 'plan-seed.mjs'],
-  putright_skip: ['for (const f of findings) { if (f.putRight) continue;', 'for (const f of findings) {', 'plan-seed.mjs'],
+  putright_skip: ['for (const f of findings) { if (f.putRight || f.left || f.unplaced) continue;', 'for (const f of findings) { if (f.left || f.unplaced) continue;', 'plan-seed.mjs'],
   putright_takeup: ["const takeupVars = { ...vars, ITEM: planned.map((f) => f.item).join(', ') };", 'const takeupVars = { ...vars };', 'plan-seed.mjs'],
   putright_mid: ['(?:^|[.;:)\\]]\\s+)(put right', '(put right', 'plan-seed.mjs'],
   putright_found: ['fixed in step ${takeup}: its own text says it was put right', 'fixed in step ${stepOf.get(f.key)}: its own text says it was put right', 'plan-seed.mjs'],
