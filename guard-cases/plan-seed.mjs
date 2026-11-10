@@ -3,7 +3,7 @@
 // Q-HUB-379, Q-HUB-380, Q-HUB-386, Q-HUB-396, Q-HUB-397 and Q-HUB-399). Shape: guard-cases/shape.mjs.
 // Every hub, program, marker and repository a case needs is written under a temporary folder from `h`, never into the working copy.
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const git = (cwd, ...args) => spawnSync('git', ['-c', 'user.name=case', '-c', 'user.email=case@example.invalid', ...args], { cwd, encoding: 'utf8', timeout: 30000 });
@@ -39,6 +39,10 @@ export const cases = [
           closeStep.includes("the step's report naming each key it filed beside the line it came from, key by key and never as a range"), closeStep.slice(0, 300)]);
         has('the close files the findings passed in', 'for each finding listed in the plan\'s section Findings passed in');
       }
+      // The word new prints its own take-up step from its own block of the template, which carries the same sentence: a check on the single and batch prints alone passed with that block's copy gone.
+      const fresh = out(h.seedRun(dir, hub, ['--item', 'new']));
+      const freshStep = (fresh.split(/\n1\. \*\*/)[1] ?? '').split(/\n\d+\. \*\*/)[0];
+      rows.push(['new: the take-up step reads the remote\'s head before filing', freshStep.includes('reads the remote\'s head with `git show origin/main:PROGRAM.md`'), freshStep.slice(0, 300)]);
       return h.assertAll(rows);
     },
   },
@@ -483,6 +487,109 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'step 166 of the plan of 10 November (Q-HUB-407): the sentences of the item print and of the batch print that name the step that closes name it by its number and its own title, the close step in the print for one item and the landing step in the batch print, and the Cost of the print for one item names its two pushing steps by number',
+    guards: ['seed_closer_passed', 'batch_closer_passed', 'seed_closer_keys', 'batch_closer_keys', 'seed_cost_closer'],
+    run(m, dir, h) {
+      const single = h.seedRun(dir, h.seedHub(dir), ['--item', 'P-3', '--steps', '1']);
+      const batch = h.batchRun(dir, h.batchHub(dir), []);
+      const body = (r) => `${r.stdout}${r.stderr}`.split('==== THE PLAN STARTS BELOW THIS LINE ====')[1] ?? '';
+      const section = (b, name) => new RegExp(`\\n## ${name}\\n\\n([\\s\\S]*?)(?=\\n## |\\n==== THE PLAN ENDS)`).exec(b)?.[1] ?? '';
+      const [s, b] = [body(single), body(batch)];
+      return h.assertAll([
+        ['single: the Findings passed in line names step 3 as the close step', section(s, 'Findings passed in').includes('which step 3, the close step, files in the found folder'), section(s, 'Findings passed in')],
+        ['batch: the Findings passed in line names step 5 as the landing step and no close step', section(b, 'Findings passed in').includes('which step 5, the landing step, files in the found folder') && !section(b, 'Findings passed in').includes('close step'), section(b, 'Findings passed in')],
+        ['single: the Verification line names step 3 as the close step', section(s, 'Verification').includes('The report of step 3, the close step, names each key it filed beside the line it came from'), section(s, 'Verification')],
+        ['batch: the Verification line names step 5 as the landing step and no close step', section(b, 'Verification').includes('The report of step 5, the landing step, names each key it filed beside the line it came from') && !section(b, 'Verification').includes('close step'), section(b, 'Verification')],
+        ['single: the Cost names the take-up step and the close step by number', section(s, 'Cost').includes("one by step 1, the take-up step, and one by step 3, the close step, each rebased onto the remote's head"), section(s, 'Cost')],
+        ['batch: no step of the print is titled as the close', !/\n\d+\. \*\*Closed in the program/.test(b), b.slice(0, 200)],
+      ]);
+    },
+  },
+  {
+    name: 'step 166 of the plan of 10 November (Q-HUB-404): the item switch with the word new prints the entry form under the next free program key and a take-up step that adds the entry, and a key that is not in the program is still refused',
+    guards: ['seed_new_word', 'seed_new_takeup', 'seed_new_form', 'tpl_takeup_new'],
+    run(m, dir, h) {
+      const hub = h.seedHub(dir);
+      const r = h.seedRun(dir, hub, ['--item', 'new']);
+      const t = `${r.stdout}${r.stderr}`;
+      const b = t.split('==== THE PLAN STARTS BELOW THIS LINE ====')[1] ?? '';
+      const section = (name) => new RegExp(`\\n## ${name}\\n\\n([\\s\\S]*?)(?=\\n## |\\n==== THE PLAN ENDS)`).exec(b)?.[1] ?? '';
+      const entry = section('Item entry');
+      const step1 = (b.split(/\n1\. \*\*/)[1] ?? '').split(/\n\d+\. \*\*/)[0];
+      const known = (h.seedRun(dir, hub, ['--item', 'P-3']).stdout.split(/\n1\. \*\*/)[1] ?? '').split(/\n\d+\. \*\*/)[0];
+      const bad = h.seedRun(dir, hub, ['--item', 'P-99']);
+      return h.assertAll([
+        ['the print is made, with the next free key and the title of work with no entry', r.status === 0 && t.startsWith('PLAN SEED for P-4 (new work with no entry), repository'), t.slice(0, 200)],
+        ['the Item entry section says no entry holds the work and gives the form under the next free key', entry.includes('No entry in PROGRAM.md holds this work') && entry.includes("    ### P-4. <the work's title>")
+          && entry.includes("State: planned. Plan: <this plan's title>.") && entry.includes('Depends: <the program keys it depends on, or none>.'), entry],
+        ['the first step adds the entry under the printed key and raises the items count line', step1.startsWith('Taken up: P-4 entered in the program as planned') && step1.includes('the next free program key when this plan was typed is P-4, so the entry is added under it')
+          && step1.includes('the items count line is raised by one'), step1.slice(0, 600)],
+        ['the print for an item the program holds still takes that entry up and sets it to planned', known.startsWith('Taken up: P-3 set to planned'), known.slice(0, 200)],
+        ['a key that is not in the program is still refused', bad.status === 1 && bad.stdout.includes('the key P-99 is not in PROGRAM.md'), bad.stdout],
+      ]);
+    },
+  },
+  {
+    name: 'step 166 of the plan of 10 November (Q-HUB-404, the rounds): the batch print with --rounds prints that many waves as rounds of one plan, with one take-up that claims every round\'s items, its own file steps and landing step for each round, numbers that run on through the rounds, each later round after the landing step before it, only the last landing step pulling the live clone, the Cost counting each round, and the one-round print as it was; a value outside one to five or more rounds than waves remain prints no plan; the print of two rounds passes the plan check',
+    guards: ['rounds_refuse', 'rounds_waves', 'rounds_loop', 'rounds_after', 'rounds_last_pull', 'rounds_cost', 'rounds_takeup_all', 'rounds_served', 'rounds_order', 'rounds_parallel', 'rounds_lines', 'rounds_stepof', 'rounds_review', 'tpl_landing_round_live', 'tpl_landing_round_title'],
+    run(m, dir, h) {
+      const hub = h.batchHub(dir);
+      const r2 = h.batchRun(dir, hub, ['--size', '2', '--rounds', '2']);
+      const t = `${r2.stdout}${r2.stderr}`;
+      const step = (n) => (t.split(new RegExp(`\\n${n}\\. \\*\\*`))[1] ?? '').split(/\n\d+\. \*\*/)[0];
+      const [takeup, alpha1, beta, none, land1, alpha2, land2] = [1, 2, 3, 4, 5, 6, 7].map(step);
+      const plan = (args) => { const x = h.batchRun(dir, hub, args).stdout; return (x.split('==== THE PLAN STARTS BELOW THIS LINE ====')[1] ?? x).split('==== THE PLAN ENDS ABOVE THIS LINE ====')[0]; };
+      const base = plan(['--size', '2']);
+      const one = plan(['--size', '2', '--rounds', '1']);
+      const refused = (args) => h.batchRun(dir, hub, args);
+      const bad = ['0', '6', 'x', '2.5'].map((v) => [v, refused(['--size', '2', '--rounds', v])]);
+      const few = refused(['--size', '2', '--rounds', '3']);
+      const late = refused(['--size', '2', '--wave', '2', '--rounds', '2']);
+      const cost = (t.split('\n## Cost\n\n')[1] ?? '').split('\n')[0];
+      const served = t.split('\n').find((l) => l.startsWith('Served by:')) ?? '';
+      const fa = (t.split('\n## Found answered\n')[1] ?? '').split('\n## ')[0];
+      // The print of two rounds, its placeholders filled as the batch print's own case fills them, is put to the plan check from a planted hub.
+      const body = t.split('==== THE PLAN STARTS BELOW THIS LINE ====\n')[1]?.split('==== THE PLAN ENDS ABOVE THIS LINE ====')[0] ?? '';
+      const filled = body.split('\n').map((l) => {
+        if (!/<[^>]+>/.test(l)) return l;
+        if (l.startsWith('# ')) return '# The batch of five planted findings in two rounds';
+        if (l.startsWith('- <Each bullet quotes')) return '- The line "// a planted file of the case" is in `alpha.mjs`, which is what the plan rests on.';
+        if (l.startsWith('- ')) return l.replace(/<[^>]+>/, 'A planted line of the case that is longer than twenty characters.');
+        return l.replace(/<[^>]+>/g, 'A planted sentence of the case that is longer than twenty characters, in its own words.');
+      }).join('\n');
+      const planFile = join(h.tmp('sg-rounds-check-'), 'rounds-check.md');
+      writeFileSync(planFile, filled);
+      for (const f of h.FILES) if (!existsSync(join(hub, f))) h.copyGuard(join(dir, f), join(hub, f));
+      for (const d of ['progress', 'scratch', 'recall']) mkdirSync(join(hub, d), { recursive: true });
+      for (const f of ['NOTES.md', 'LESSONS.md']) writeFileSync(join(hub, f), '# planted\n');
+      const names = h.repo({ 'names.txt': 'node --format --pretty Next:\n' });
+      const checked = spawnSync('node', [join(hub, 'plan-guard.mjs'), '--check', planFile], { encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: names.dir } });
+      return h.assertAll([
+        ['one take-up claims the items of both rounds', t.split('Taken up: ').length === 2 && ['P-1', 'P-2', 'P-3', 'P-4', 'P-5'].every((i) => takeup.split(' set to planned')[0].includes(i)) && takeup.includes('Q-HUB-15'), takeup.slice(0, 500)],
+        ['the Order runs the second round after the landing step of the first, and the Standing step follows both', t.includes('\nOrder: 1 2 3 4 5 6 7\n') && t.includes('\nStanding: 8\n')
+          && t.includes('\nAfter: 2 after 1; 3 after 1; 4 after 1; 5 after 2 3 4; 6 after 5; 7 after 6\n'), t.slice(t.indexOf('## Order'), t.indexOf('## Order') + 300)],
+        ['the Served by line names the file steps and the landing step of each round', served.includes('steps 2 to 4 serve goal 1; step 5 serves goals 1, 5 and 6; step 6 serves goal 1; step 7 serves goals 1, 5 and 6; step 8 serves goals 3, 5 and 6.'), served],
+        ['each round holds its own file steps and landing step, the numbers running on', alpha1.startsWith('Put right in `alpha.mjs`: Q-HUB-11, Q-HUB-13.') && beta.startsWith('Put right in `beta.mjs`: Q-HUB-14.') && none.startsWith('Put right in the files each names: Q-HUB-12.')
+          && alpha2.startsWith('Put right in `alpha.mjs`: Q-HUB-15.') && land1.startsWith('Landed once for its round') && land2.startsWith('Landed once: every edit'), `${alpha1.slice(0, 60)} | ${alpha2.slice(0, 60)} | ${land1.slice(0, 60)} | ${land2.slice(0, 60)}`],
+        ['each step names the steps of its own round', alpha1.includes('run at the same time as steps 3, 4') && alpha1.includes("The landing step, step 5, lands this step's edits") && alpha2.includes("The landing step, step 7, lands this step's edits")
+          && !alpha2.includes('run at the same time as') && land1.includes('steps 2 to 4 left their edits uncommitted') && land2.includes('steps 6 to 6 left their edits uncommitted'), alpha2.slice(0, 300)],
+        ['only the last landing step pulls the live clone, and the earlier one says it is left as it is', [takeup, alpha1, beta, none, land1, alpha2].every((s) => !s.includes('pull origin main')) && land2.includes('git -C /root/.claude/hub pull origin main')
+          && land1.includes("the live clone is left as it is, because the plan's last landing step brings it forward when no other step is running"), land1.slice(-500)],
+        ['the Found answered section names the step of each round', ['Q-HUB-11 fixed in step 2:', 'Q-HUB-14 fixed in step 3:', 'Q-HUB-12 fixed in step 4:', 'Q-HUB-15 fixed in step 6:'].every((x) => fa.includes(`- ${x}`)), fa],
+        ['the Cost counts each round and one push for the take-up and one for each round', cost.includes('The 7 steps (4 file steps, run at the same time within their 2 rounds, with the take-up and the 2 landing steps)')
+          && cost.includes('round 1 sends its 3 file steps at once and then its landing step, step 5; round 2 sends its 1 file step at once and then its landing step, step 7')
+          && cost.includes('3 pushes are made, one by the take-up and one by the landing step of each round') && cost.includes('7 forced turns of the stop hook'), cost],
+        ['the standing rules name the file steps of each round', t.includes('The file steps, 2 to 4, run at the same time in the one working copy') && t.includes('The file steps, 6 to 6, run at the same time in the one working copy'), t.slice(0, 300)],
+        ['the header names the rounds and the groups of both', t.split('\n')[0].includes('in 4 group steps') && t.split('\n')[1].includes('This is 2 rounds of one plan, waves 1 to 2 of 2') && t.split('\n')[1].includes('leaves 0 of the 4 groups'), t.split('\n').slice(0, 2).join(' | ')],
+        ['with the rounds switch absent or one the print is the print of one wave', one === base && base.includes('\nOrder: 1 2 3 4 5\n') && !base.includes('Landed once for its round'), base.slice(0, 200)],
+        ...bad.map(([v, x]) => [`a rounds value of ${v} prints no plan`, x.status === 1 && x.stdout.includes('--rounds takes a whole number from one to five') && !x.stdout.includes('PLAN STARTS'), x.stdout]),
+        ['more rounds than waves print no plan', few.status === 1 && few.stdout.includes('3 rounds are asked for and 2 waves remain from wave 1') && !few.stdout.includes('PLAN STARTS'), few.stdout],
+        ['rounds from a later wave print no plan when too few waves remain', late.status === 1 && late.stdout.includes('2 rounds are asked for and 1 wave remains from wave 2'), late.stdout],
+        ['the print of two rounds with its placeholders filled passes the plan check', checked.status === 0, `check status ${checked.status}: ${String(checked.stdout).split('\n').filter((l) => /^\d+\. [A-Z]/.test(l)).map((l) => l.slice(0, 260)).join(' // ')}`],
+      ]);
+    },
+  },
 ];
 
 /** The names a file step's text says it owns: the code spans between "the step owns" and "and writes nothing else", the case file's "(new)" mark left out. */
@@ -510,14 +617,14 @@ function plantedHub(h, dir, spec) {
 }
 
 export const plants = {
-  seed_passed_in: ["L(FINDINGS_PASSED_IN);\n  L();\n  L('## Item entry');", "L('- <none>');\n  L();\n  L('## Item entry');", 'plan-seed.mjs'],
-  batch_passed_in: ["L(FINDINGS_PASSED_IN);\n  L();\n  L('## Thesis');", "L('- <none>');\n  L();\n  L('## Thesis');", 'plan-seed.mjs'],
+  seed_passed_in: ["L(findingsPassedIn(`step ${close}, the close step,`));\n  L();\n  L('## Item entry');", "L('- <none>');\n  L();\n  L('## Item entry');", 'plan-seed.mjs'],
+  batch_passed_in: ["L(findingsPassedIn(`step ${lastLanding}, the landing step,`));\n  L();\n  L('## Thesis');", "L('- <none>');\n  L();\n  L('## Thesis');", 'plan-seed.mjs'],
   seed_step_report_file: ['(new); ${SEND_REPORT}. Estimate <minutes> min.', '(new). Estimate <minutes> min.', 'plan-seed.mjs'],
   batch_step_report_file: ['(new); ${SEND_REPORT}. Estimate ${groupEst[i]} min.', '(new). Estimate ${groupEst[i]} min.', 'plan-seed.mjs'],
-  seed_cost_forced: ["one by the close step, each rebased onto the remote's head. ${FORCED_TURNS} ", "one by the close step, each rebased onto the remote's head. ", 'plan-seed.mjs'],
+  seed_cost_forced: ["the close step, each rebased onto the remote's head. ${FORCED_TURNS} ", "the close step, each rebased onto the remote's head. ", 'plan-seed.mjs'],
   batch_cost_forced: ['${groups.length + 2} forced turns of the stop hook are spent while a commit stands unpushed, the file steps plus two. ', '', 'plan-seed.mjs'],
-  seed_close_keys: ["L(CLOSE_KEYS_LINE);\n  L();\n\n  // ---- the movable", "L();\n\n  // ---- the movable", 'plan-seed.mjs'],
-  batch_close_keys: ["L(CLOSE_KEYS_LINE);\n  L();\n  L('==== THE PLAN ENDS", "L();\n  L('==== THE PLAN ENDS", 'plan-seed.mjs'],
+  seed_close_keys: ["L(closeKeysLine(`step ${close}, the close step,`));\n  L();\n\n  // ---- the movable", "L();\n\n  // ---- the movable", 'plan-seed.mjs'],
+  batch_close_keys: ["L(closeKeysLine(`step ${lastLanding}, the landing step,`));\n  L();\n  L('==== THE PLAN ENDS", "L();\n  L('==== THE PLAN ENDS", 'plan-seed.mjs'],
   batch_docs_bare: ["c === 'docs-check' ? `${base} ${repo}`", "c === 'docs-check' ? base", 'plan-seed.mjs'],
   batch_repo_flag: [': `${base} --repo ${repo}`}\\`', ': base}\\`', 'plan-seed.mjs'],
   seed_remote_read: ["const f = git(['ls-tree', '--name-only', 'origin/main', 'found/'], hub);", "const f = git(['ls-tree', '--name-only', 'origin/none', 'found/'], hub);", 'plan-seed.mjs'],
@@ -547,8 +654,8 @@ export const plants = {
   batch_seam_in: ['seamsIn[j].add(', 'seamsIn[j].has(', 'plan-seed.mjs'],
   batch_case_file: ["? `guard-cases/${x}` : '');", "? '' : '');", 'plan-seed.mjs'],
   batch_landing_after: ["`${landing} after ${gnums.length ? gnums.join(' ') : takeup}`", '`${landing} after ${takeup}`', 'plan-seed.mjs'],
-  batch_order_landing: ['const order = [takeup, ...gnums, landing];', 'const order = [takeup, ...gnums, landing, landing + 1];', 'plan-seed.mjs'],
-  batch_landing_step: ["L(fill(tpl['landing-step']", "void (fill(tpl['landing-step']", 'plan-seed.mjs'],
+  batch_order_landing: ['const order = [takeup, ...gnums, landing, ...later', 'const order = [takeup, ...gnums, landing, landing + 1, ...later', 'plan-seed.mjs'],
+  batch_landing_step: ['L(fill(tpl[landingBlock]', 'void (fill(tpl[landingBlock]', 'plan-seed.mjs'],
   batch_parallel_rules: ["if (groups.length) L(fill(tpl['parallel-rules']", "if (false) L(fill(tpl['parallel-rules']", 'plan-seed.mjs'],
   batch_cost_agent: ["Agent time is the sum of the steps' estimates, ${agentMin} min", "Agent time is the sum of the steps' estimates, 0 min", 'plan-seed.mjs'],
   batch_cost_wall: ['and the landing step, ${wallMin} min.', 'and the landing step, 0 min.', 'plan-seed.mjs'],
@@ -608,4 +715,29 @@ export const plants = {
   tpl_rule_conflict: ['Where the last rebase of the landing step stops on a conflict in `PROGRAM.md` alone', 'Where the last rebase of the landing step stops on a conflict', 'plans/seed-template.md'],
   tpl_rule_long_files: ["of a long file only the new plants run, by key, and its other plants are proved by the runner's doctrine gates run after the push", 'of a long file all plants run', 'plans/seed-template.md'],
   tpl_cmd_continue: ['- `git rebase --continue`\n', '', 'plans/seed-template.md'],
+  // step 166 of the plan of 10 November: Q-HUB-407, Q-HUB-404 and the rounds
+  seed_closer_passed: ['L(findingsPassedIn(`step ${close}, the close step,`));', "L(findingsPassedIn('the close step'));", 'plan-seed.mjs'],
+  batch_closer_passed: ['L(findingsPassedIn(`step ${lastLanding}, the landing step,`));', "L(findingsPassedIn('the close step'));", 'plan-seed.mjs'],
+  seed_closer_keys: ['L(closeKeysLine(`step ${close}, the close step,`));', "L(closeKeysLine('the close step'));", 'plan-seed.mjs'],
+  batch_closer_keys: ['L(closeKeysLine(`step ${lastLanding}, the landing step,`));', "L(closeKeysLine('the close step'));", 'plan-seed.mjs'],
+  seed_cost_closer: ['and one by step ${close}, the close step, each rebased', 'and one by the close step, each rebased', 'plan-seed.mjs'],
+  seed_new_word: ["const isNew = want === 'new';", 'const isNew = false;', 'plan-seed.mjs'],
+  seed_new_takeup: ["tpl[isNew ? 'take-up-new' : 'take-up']", "tpl['take-up']", 'plan-seed.mjs'],
+  seed_new_form: ["State: planned. Plan: <this plan's title>.", 'State: open. Plan: none.', 'plan-seed.mjs'],
+  tpl_takeup_new: ['and the next free program key when this plan was typed is {ITEM}, so the entry is added under it', 'and the entry is added', 'plans/seed-template.md'],
+  rounds_refuse: ['if (!Number.isInteger(asked) || asked < 1 || asked > 5) return', 'if (false) return', 'plan-seed.mjs'],
+  rounds_waves: ['if (R > 1 && waves.length - (waveNo - 1) < R) {', 'if (false) {', 'plan-seed.mjs'],
+  rounds_loop: ['wave: waveNo + k, part: true', 'wave: waveNo, part: true', 'plan-seed.mjs'],
+  rounds_after: ['const before = k === 0 ? landing : later[k - 1].landing;', 'const before = takeup;', 'plan-seed.mjs'],
+  rounds_last_pull: ['const lastRound = o.part ? o.lastRound === true : later.length === 0;', 'const lastRound = true;', 'plan-seed.mjs'],
+  rounds_cost: ['${R + 1} pushes are made, one by the take-up and one by the landing step of each round', '2 pushes are made, one by the take-up and one by the landing step of each round', 'plan-seed.mjs'],
+  rounds_takeup_all: ['const planned = [...plannedHere, ...later.flatMap((p) => p.planned)];', 'const planned = [...plannedHere];', 'plan-seed.mjs'],
+  rounds_served: ['...later.flatMap((p) => servedRound(p.gnums, p.landing)),', '', 'plan-seed.mjs'],
+  rounds_order: ['const order = [takeup, ...gnums, landing, ...later.flatMap((p) => [...p.gnums, p.landing])];', 'const order = [takeup, ...gnums, landing];', 'plan-seed.mjs'],
+  rounds_parallel: ['for (const p of later) L(p.rule);', '', 'plan-seed.mjs'],
+  rounds_lines: ['for (const p of later) for (const l of p.lines) L(l);', '', 'plan-seed.mjs'],
+  rounds_stepof: ['for (const p of later) for (const [k, n] of p.stepOf) stepOf.set(k, n);', '', 'plan-seed.mjs'],
+  rounds_review: ['const review = lastLanding + 1;', 'const review = landing + 1;', 'plan-seed.mjs'],
+  tpl_landing_round_live: ["the live clone is left as it is, because the plan's last landing step brings it forward when no other step is running, and the measure is recorded there and not here", 'the live clone is pulled', 'plans/seed-template.md'],
+  tpl_landing_round_title: ['**Landed once for its round: every edit left', '**Landed once: every edit left', 'plans/seed-template.md'],
 };

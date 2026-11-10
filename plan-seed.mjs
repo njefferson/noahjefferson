@@ -5,8 +5,12 @@
 // plan after it was typed and nothing put the record into the plan at the moment of writing; the session brief fixed that moment at the
 // start with a print, and this is the same print at the plan's moment.
 //
-//   node plan-seed.mjs --item <P-key | next> [--repo <full path>] [--plan <path>] [--steps <count>] [--hub <full path>]
-//   node plan-seed.mjs --batch [--size <n>] [--steps <n>] [--wave <n>] [--repo <full path>] [--plan <path>] [--hub <full path>]
+//   node plan-seed.mjs --item <P-key | next | new> [--repo <full path>] [--plan <path>] [--steps <count>] [--hub <full path>]
+//   node plan-seed.mjs --batch [--size <n>] [--steps <n>] [--wave <n>] [--rounds <1 to 5>] [--repo <full path>] [--plan <path>] [--hub <full path>]
+//
+// `--item new` is work with no entry in the program: the print gives the entry's form under the next free key and a take-up step that adds it. `--rounds <n>` prints
+// that many waves as rounds of ONE plan, from `--wave` on: one take-up claims every round's items, each round has its own file steps run at once and its own landing
+// step, the first round follows the take-up and each later round the landing step before it, and only the last landing step pulls the live clone.
 //
 // `--batch` prints the open findings of the repository as ONE plan, grouped by the file each names: a take-up step, one WAVE of up to seven file steps
 // run at the same time (each a group of up to `--size` findings, eight by default, owning its files and its guard's case file, committing nothing;
@@ -36,9 +40,11 @@ const MOVABLE = '[movable: another session can move this before a step runs]';
 const WAVE = 7;
 // Placeholders and sentences the seed prints in both modes.
 const SEND_REPORT = 'a send after the first writes its own file, named for the step number, a hyphen, the send\'s number and -report.txt';
-const FINDINGS_PASSED_IN = '- <Each finding the owner passed in from another session, in the session\'s own words, one line each, which the close step files in the found folder with its program item; write that none was passed in where none was.>';
+// The two sentences that name the step that closes name it by its number and its title in the print they sit in (Q-HUB-407): the single print's step is the close
+// and a batch print's is the landing step, which has no step of the close's title.
+const findingsPassedIn = (closer) => `- <Each finding the owner passed in from another session, in the session's own words, one line each, which ${closer} files in the found folder with its program item; write that none was passed in where none was.>`;
 const FORCED_TURNS = '<Where the plan\'s Rules hold its commits for a later landing: the number of turns the environment\'s stop hook forces while a commit stands unpushed, written as a number beside the words forced turns.>';
-const CLOSE_KEYS_LINE = '- The close step\'s report names each key it filed beside the line it came from, key by key and never as a range.';
+const closeKeysLine = (closer) => `- The report of ${closer} names each key it filed beside the line it came from, key by key and never as a range.`;
 
 /** The text of a file, or '' when it cannot be read. */
 const slurp = (f) => { try { return readFileSync(f, 'utf8'); } catch { return ''; } };
@@ -166,7 +172,9 @@ export function seed(o) {
   const want = String(o.item ?? '').trim();
   // `next` takes the item the session's approval marker names where one does, and the program's first open item of the repository otherwise.
   const markedKey = want === 'next' ? markerItem(o.marker ?? join(homedir(), '.claude', 'APPROVED-PLAN.json'), entries, String(process.env.CLAUDE_CODE_SESSION_ID ?? '').trim()) : '';
-  const entry = want === 'next' ? (entries.find((e) => e.key === markedKey) ?? firstOpen) : entries.find((e) => e.key === want);
+  // The word `new` is work that has no entry yet (Q-HUB-404): the print gives the entry's form under the next free key, filled in below once that key is known.
+  const isNew = want === 'new';
+  const entry = isNew ? {} : want === 'next' ? (entries.find((e) => e.key === markedKey) ?? firstOpen) : entries.find((e) => e.key === want);
   if (!entry) {
     return { ok: false, text: `plan-seed: the key ${want || '(none given)'} is not in PROGRAM.md. The next free program key is P-${nextP}`
       + `${firstOpen ? ` and the next ranked open item is ${firstOpen.key}, ${firstOpen.title}` : ' and no entry is open'}.\n` };
@@ -184,6 +192,12 @@ export function seed(o) {
   let lessonMax = remote.lesson;
   try { for (const n of readdirSync(join(hub, 'lessons'))) { const m = /^(\d+)-/.exec(n); if (m) lessonMax = Math.max(lessonMax, Number(m[1])); } } catch { /* no folder */ }
   const nextPk = Math.max(nextP, remote.program + 1);
+  if (isNew) {
+    Object.assign(entry, { key: `P-${nextPk}`, n: nextPk, title: 'new work with no entry', state: 'planned', repository: repoName, depends: '',
+      acceptance: "<the work's acceptance, as one sentence a reader can check>",
+      block: [`### P-${nextPk}. <the work's title>`, '', `Repository: ${repoName}. Goal: <the number of the program goal it serves>. State: planned. Plan: <this plan's title>.`, '',
+        "Acceptance: <the work's acceptance, as one sentence a reader can check>", '', 'Depends: <the program keys it depends on, or none>.'].join('\n') });
+  }
   const remoteNote = remote.read ? ` (counted past the remote's main as last fetched, which holds up to P-${remote.program}, Q-HUB-${remote.found} and lesson ${remote.lesson})` : '';
   const planText = o.plan ? slurp(resolve(o.plan)) : '';
   const stepNums = [...planSection(planText, 'Steps').matchAll(/^(\d+)\.\s/gm)].map((m) => Number(m[1]));
@@ -239,11 +253,12 @@ export function seed(o) {
   L();
   L('## Findings passed in');
   L();
-  L(FINDINGS_PASSED_IN);
+  L(findingsPassedIn(`step ${close}, the close step,`));
   L();
   L('## Item entry');
   L();
-  L(`The entry as PROGRAM.md holds it now, from its heading to the next; its dependency line is ${entry.depends ? `"${entry.depends}"` : 'not in the block'} and no other line stands for it.`);
+  L(isNew ? `No entry in PROGRAM.md holds this work. The take-up step adds the entry below, in its form, under the next free program key, ${entry.key}; every angle-bracket placeholder in it is filled before the plan is put forward.`
+    : `The entry as PROGRAM.md holds it now, from its heading to the next; its dependency line is ${entry.depends ? `"${entry.depends}"` : 'not in the block'} and no other line stands for it.`);
   L();
   for (const l of entry.block.split('\n')) L(l ? `    ${l}` : '');
   L();
@@ -269,7 +284,7 @@ export function seed(o) {
   L();
   L('## Steps');
   L();
-  L(fill(tpl['take-up'] ?? '<plans/seed-template.md has no take-up block>', vars));
+  L(fill(tpl[isNew ? 'take-up-new' : 'take-up'] ?? `<plans/seed-template.md has no ${isNew ? 'take-up-new' : 'take-up'} block>`, vars));
   L();
   for (const n of nums) {
     L(`${n}. **<the item's step ${n}, one result>.** <Repository>, one agent. Facts: <the asks and the facts the step depends on, restated>. Do: <the exact actions and nothing outside them>. Observe: <the observation that means it is done>. Kill: <what ends the step with nothing further written>. Report \`progress/step-${n}-report.txt\` (new); ${SEND_REPORT}. Estimate <minutes> min.`);
@@ -345,12 +360,12 @@ export function seed(o) {
   L();
   L('## Cost');
   L();
-  L(`Each of the ${count + 2} steps runs on the sonnet tier with one agent for each, and a review is sent at the plan's first send and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move. <The runs and checks the plan makes.> Two pushes are made, one by the take-up step and one by the close step, each rebased onto the remote's head. ${FORCED_TURNS} <The main thread's tier for the writing and for the management.>`);
+  L(`Each of the ${count + 2} steps runs on the sonnet tier with one agent for each, and a review is sent at the plan's first send and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move. <The runs and checks the plan makes.> Two pushes are made, one by step ${takeup}, the take-up step, and one by step ${close}, the close step, each rebased onto the remote's head. ${FORCED_TURNS} <The main thread's tier for the writing and for the management.>`);
   L();
   L('## Verification');
   L();
   L('- <What is observed at the end that shows the item\'s acceptance, each as one line.>');
-  L(CLOSE_KEYS_LINE);
+  L(closeKeysLine(`step ${close}, the close step,`));
   L();
 
   // ---- the movable reads, outside the plan ----
@@ -482,10 +497,24 @@ export function countsList(text) {
 
 /**
  * Print the batch: the open findings of the repository grouped by the file each names, as a plan in the plan's own shape.
- * @param {{repo?: string, plan?: string, steps?: number, size?: number, hub?: string, now?: Date}} o
- * @returns {{ok: boolean, text: string}} the print, or the error when the repository holds no open finding.
+ * @param {{repo?: string, plan?: string, steps?: number, size?: number, wave?: number, rounds?: number|string, hub?: string, now?: Date}} o  `rounds` is how many waves
+ *   the one plan holds, each as a round with its own file steps and landing step; absent or one is the print of a single wave.
+ * @returns {{ok: boolean, text: string}} the print, or the error when the repository holds no open finding, when `rounds` is not a whole number from one to five, or
+ *   when fewer waves remain than rounds are asked for.
  */
 export function batchSeed(o) {
+  const asked = o.rounds === undefined || o.rounds === null ? 1 : Number(o.rounds);
+  if (!Number.isInteger(asked) || asked < 1 || asked > 5) return { ok: false, text: `plan-seed: --rounds takes a whole number from one to five, and ${String(o.rounds)} is not one, so no plan is printed.\n` };
+  return batchWave({ ...o, rounds: asked });
+}
+
+/**
+ * One wave of the batch as a plan, or (with `part`) one round of a plan of several: the part a later round contributes to the first round's print.
+ * @param {object} o  the options of `batchSeed` with `rounds` a number; `part` makes it return the round's steps and numbers and no print, `firstStep` is the number of its
+ *   first file step and `lastRound` whether its landing step is the plan's last, which pulls the live clone.
+ * @returns {{ok: boolean, text?: string, part?: object}}
+ */
+function batchWave(o) {
   const hub = resolve(o.hub ?? HERE);
   const repo = resolve(o.repo ?? (existsSync(join(process.env.CLAUDE_PROJECT_DIR || process.cwd(), '.git')) ? (process.env.CLAUDE_PROJECT_DIR || process.cwd()) : hub));
   const now = o.now ?? new Date();
@@ -540,11 +569,16 @@ export function batchSeed(o) {
     pending = rest;
   }
   const waveNo = Math.min(Math.max(1, Math.floor(Number(o.wave) || 1)), Math.max(1, waves.length));
+  const R = o.rounds ?? 1;
+  // Each round is one wave, so a plan of several rounds needs that many waves from the one asked for.
+  if (R > 1 && waves.length - (waveNo - 1) < R) {
+    const left = Math.max(0, waves.length - (waveNo - 1));
+    return { ok: false, text: `plan-seed: ${R} rounds are asked for and ${left} ${left === 1 ? 'wave remains' : 'waves remain'} from wave ${waveNo}, so no plan is printed.\n` };
+  }
   const totalGroups = groups.length;
-  const leaves = waves.slice(waveNo).reduce((s, w) => s + w.length, 0);
+  const leaves = waves.slice(waveNo + R - 1).reduce((s, w) => s + w.length, 0);
   groups = waves[waveNo - 1] ?? [];
-  const planned = groups.flatMap((g) => g.list);
-  const batch = [...putRight, ...planned];
+  const plannedHere = groups.flatMap((g) => g.list);
 
   const hubFound = foundQueue(hub);
   const repoFound = isHub ? [] : foundQueue(repo);
@@ -561,11 +595,25 @@ export function batchSeed(o) {
   const planText = o.plan ? slurp(resolve(o.plan)) : '';
   const stepNums = [...planSection(planText, 'Steps').matchAll(/^(\d+)\.\s/gm)].map((m) => Number(m[1]));
   const takeup = (stepNums.length ? Math.max(...stepNums) : 0) + 1;
-  const g1 = takeup + 1;
+  const g1 = o.firstStep ?? takeup + 1;
   // The landing step comes after the last file step of the wave and holds the proof, every commit, the close and the push; it is also the close, so there is no commit step apart from it.
   const landing = g1 + groups.length;
   const close = landing;
-  const review = landing + 1;
+  // The rounds after the first are built by this function itself in its part mode, each numbered on from the landing step before it; only the last round's landing step
+  // pulls the live clone (Q-HUB-404).
+  const later = [];
+  for (let k = 1, first = landing + 1; k < R; k++) {
+    const p = batchWave({ ...o, rounds: 1, wave: waveNo + k, part: true, firstStep: first, lastRound: k === R - 1 });
+    if (!p.ok) return p;
+    later.push(p.part);
+    first = p.part.landing + 1;
+  }
+  const lastRound = o.part ? o.lastRound === true : later.length === 0;
+  const lastLanding = later.length ? later[later.length - 1].landing : landing;
+  const review = lastLanding + 1;
+  const planned = [...plannedHere, ...later.flatMap((p) => p.planned)];
+  const batch = [...putRight, ...planned];
+  const nGroups = groups.length + later.reduce((s, p) => s + p.gnums.length, 0);
   const rules = agentRules(join(hub, 'agent-rules.md'));
   const rulesPath = join(homedir(), '.claude', 'hub', 'agent-rules.md');
   const sid = String(process.env.CLAUDE_CODE_SESSION_ID ?? '').trim();
@@ -673,8 +721,9 @@ export function batchSeed(o) {
 
   const out = [];
   const L = (s = '') => out.push(s);
-  L(`PLAN SEED for the batch of ${batch.length} open findings of ${repoName}, in ${groups.length} group ${groups.length === 1 ? 'step' : 'steps'}, repository ${basename(repo)}, printed ${stamp}.`);
-  L(`This is wave ${waveNo} of ${waves.length || 1}: its ${groups.length} file ${groups.length === 1 ? 'step runs' : 'steps run'} at the same time, the most a wave holds being ${WAVE}, and it leaves ${leaves} of the ${totalGroups} groups${leaves ? `, which \`node plan-seed.mjs --batch --wave ${waveNo + 1}\` prints once this wave has landed` : ' for no later wave'}.`);
+  L(`PLAN SEED for the batch of ${batch.length} open findings of ${repoName}, in ${nGroups} group ${nGroups === 1 ? 'step' : 'steps'}, repository ${basename(repo)}, printed ${stamp}.`);
+  if (R > 1) L(`This is ${R} rounds of one plan, waves ${waveNo} to ${waveNo + R - 1} of ${waves.length}: each round's file steps run at the same time, the most a wave holds being ${WAVE}, and the print leaves ${leaves} of the ${totalGroups} groups${leaves ? `, which \`node plan-seed.mjs --batch --wave ${waveNo + R}\` prints once these rounds have landed` : ' for no later wave'}.`);
+  else L(`This is wave ${waveNo} of ${waves.length || 1}: its ${groups.length} file ${groups.length === 1 ? 'step runs' : 'steps run'} at the same time, the most a wave holds being ${WAVE}, and it leaves ${leaves} of the ${totalGroups} groups${leaves ? `, which \`node plan-seed.mjs --batch --wave ${waveNo + 1}\` prints once this wave has landed` : ' for no later wave'}.`);
   L(`Every line of the plan below was read from a file at this time. The lines under the movable reads at the end can be moved by another session before a step runs, so a step that depends on one reads it at the time of use.`);
   L('The plan starts at the line of equals signs. Fill each angle-bracket placeholder, delete this header, and keep the rest as printed.');
   L('==== THE PLAN STARTS BELOW THIS LINE ====');
@@ -687,7 +736,10 @@ export function batchSeed(o) {
   L(goalsBlock(join(hub, 'CLAUDE.md')) || '<the hub CLAUDE.md goals block could not be read>');
   L();
   const gnums = groups.map((_, i) => g1 + i);
-  L(`Served by: step ${takeup} serves goals 5 and 6; step${gnums.length === 1 ? '' : 's'} ${gnums.length === 1 ? g1 : `${g1} to ${g1 + gnums.length - 1}`} ${gnums.length === 1 ? 'serves' : 'serve'} goal 1; step ${landing} serves goals 1, 5 and 6; step ${review} serves goals 3, 5 and 6.`);
+  // One clause pair for each round: its file steps serve goal 1 and its landing step serves goals 1, 5 and 6.
+  const servedRound = (gn, lg) => [...(gn.length ? [`step${gn.length === 1 ? '' : 's'} ${gn.length === 1 ? gn[0] : `${gn[0]} to ${gn[gn.length - 1]}`} ${gn.length === 1 ? 'serves' : 'serve'} goal 1`] : []), `step ${lg} serves goals 1, 5 and 6`];
+  const servedBy = [`step ${takeup} serves goals 5 and 6`, ...servedRound(gnums, landing), ...later.flatMap((p) => servedRound(p.gnums, p.landing)), `step ${review} serves goals 3, 5 and 6`];
+  L(`Served by: ${servedBy.join('; ')}.`);
   L();
   L('## Asked');
   L();
@@ -699,7 +751,7 @@ export function batchSeed(o) {
   L();
   L('## Findings passed in');
   L();
-  L(FINDINGS_PASSED_IN);
+  L(findingsPassedIn(`step ${lastLanding}, the landing step,`));
   L();
   L('## Thesis');
   L();
@@ -714,20 +766,28 @@ export function batchSeed(o) {
   L(fill(tpl['rules-of-this-plan'] ?? '<plans/seed-template.md has no rules-of-this-plan block>', vars));
   // The file steps of the wave run together and commit nothing, so the standing text of a parallel batch follows.
   if (groups.length) L(fill(tpl['parallel-rules'] ?? '<plans/seed-template.md has no parallel-rules block>', cvars));
+  // A later round has its own file steps run at the same time: the block's first line, which names them, is printed again for each, and the rest of the block holds for all.
+  for (const p of later) L(p.rule);
   L();
   // The take-up is first and alone, every file step comes after it and the one landing step after every file step; no commit step and no close step stand apart from the landing step.
-  const order = [takeup, ...gnums, landing];
+  const order = [takeup, ...gnums, landing, ...later.flatMap((p) => [...p.gnums, p.landing])];
   L('## Order');
   L();
   L(`Order: ${order.join(' ')}`);
   L(`Standing: ${review}`);
+  // The first round's file steps follow the take-up; each later round's follow the landing step of the round before.
   const after = [...gnums.map((n) => `${n} after ${takeup}`), `${landing} after ${gnums.length ? gnums.join(' ') : takeup}`];
+  later.forEach((p, k) => {
+    const before = k === 0 ? landing : later[k - 1].landing;
+    after.push(...p.gnums.map((n) => `${n} after ${before}`), `${p.landing} after ${p.gnums.length ? p.gnums.join(' ') : before}`);
+  });
   L(`After: ${after.join('; ')}`);
   L();
   L('## Steps');
   L();
   L(fill(tpl['take-up-batch'] ?? '<plans/seed-template.md has no take-up-batch block>', takeupVars));
   L();
+  const stepsFrom = out.length;
   const stepOf = new Map();
   groups.forEach((g, i) => {
     const n = g1 + i;
@@ -749,8 +809,16 @@ export function batchSeed(o) {
     L(`${n}. **${g.home ? `Put right in ${where}` : 'Put right in the files each names'}: ${ks.join(', ')}.** ${isHub ? 'Hub' : basename(repo)}, one agent${together}. Facts: the step owns ${ownedText} and writes nothing else, commits nothing and stages nothing; ${noFile}${seams.length ? `${seams.join('; ')}; ` : ''}the step takes up ${ks.length} filed ${ks.length === 1 ? 'finding' : 'findings'}, each read whole from its file at the time of use; ${g.list.map((f) => `${f.key} (item ${f.item}): ${f.text}`).join(' ')} The landing step, step ${landing}, lands this step's edits. Do: \`git status\`, read as the rules of this plan allow; read with Read and Grep ${owned.length ? quote([...owned, ...cases.filter((c) => existsSync(join(repo, c)))]) : 'the files its findings name'}; ${doEach}; ${caseDo}then the six parts of the order the rules of this plan give a file step; a line a fix needs in a file another step of this plan owns is named in the report with the file, the place and the exact words, for the landing step, and is not written by this step; \`git status\`, read as the rules of this plan allow; write the report with the files changed, each case added, each new plant with its key and its CAUGHT line, each check's exit code and any find reworded, each stale plant re-pointed or named with its file, each line named for the landing step, and each finding's change in one line. Observe: the step's cases pass, each in a run of its own, every new plant reads CAUGHT, the three checks name no find in a line the step wrote, the files this step owns are changed and nothing else by this step, nothing is staged or committed. Kill: a red run of a case of its own ends it FAILED with its lines and nothing written after but the report; a part of its own that cannot be made or proved without a line in a file it does not own ends it EJECT naming the lines; a refusal of a command by a guard or by the harness's permission check ends it REFUSED with the refusal's words, nothing further done and no other route tried. Report \`progress/step-${n}-report.txt\` (new); ${SEND_REPORT}. Estimate ${groupEst[i]} min.`);
     L();
   });
-  L(fill(tpl['landing-step'] ?? '<plans/seed-template.md has no landing-step block>', { ...cvars, ITEM: planned.map((f) => f.item).join(', ') }));
+  // The plan's last landing step pulls the live clone; a landing step of an earlier round leaves it as it is and does not record the measure.
+  const landingBlock = lastRound ? 'landing-step' : 'landing-round';
+  L(fill(tpl[landingBlock] ?? `<plans/seed-template.md has no ${landingBlock} block>`, { ...cvars, ITEM: plannedHere.map((f) => f.item).join(', ') }));
   L();
+  if (o.part) {
+    return { ok: true, part: { planned: plannedHere, gnums: groups.map((_, i) => g1 + i), landing, lines: out.slice(stepsFrom), caseFiles, groupEst, landEst, stepOf: [...stepOf],
+      rule: fill(tpl['parallel-rules'] ?? '<plans/seed-template.md has no parallel-rules block>', cvars).split('\n')[0] } };
+  }
+  for (const p of later) for (const l of p.lines) L(l);
+  for (const p of later) for (const [k, n] of p.stepOf) stepOf.set(k, n);
   L(fill(tpl['review-step'] ?? '<plans/seed-template.md has no review-step block>', vars));
   L();
   L('## Commands');
@@ -762,7 +830,7 @@ export function batchSeed(o) {
   const readOnly = ['DOCTRINE.md', 'agent-rules.md', 'aim-review.md'].filter((f) => existsSync(join(hub, f)));
   const named = [...new Set(batch.flatMap((f) => f.files))];
   const edited = ['PROGRAM.md', 'NOTES.md', 'found/', ...(existsSync(join(hub, 'lessons')) ? ['lessons/', 'LESSONS.md'] : [])];
-  const mine = [...(named.some((x) => x.endsWith('.mjs')) ? ['session-guards.test.mjs'] : []), ...named, ...caseFiles].filter((x, i, a) => a.indexOf(x) === i);
+  const mine = [...(named.some((x) => x.endsWith('.mjs')) ? ['session-guards.test.mjs'] : []), ...named, ...caseFiles, ...later.flatMap((p) => p.caseFiles)].filter((x, i, a) => a.indexOf(x) === i);
   const mark = (x) => `\`${x}\`${existsSync(join(isHub ? repo : hub, x)) ? '' : ' (new)'}`;
   if (isHub) {
     L(`- Hub, edited: ${[...edited.map((x) => `\`${x}\``), ...mine.filter((x) => !edited.includes(x)).map(mark)].join(', ')}`);
@@ -831,12 +899,22 @@ export function batchSeed(o) {
   L('## Cost');
   L();
   const nSteps = groups.length + 2;
+  if (R > 1) {
+    // A plan of rounds: the sends and the minutes of each round, one push for the take-up and one for each round.
+    const rounds = [{ n: groups.length, landing, groupEst, landEst }, ...later.map((p) => ({ n: p.gnums.length, landing: p.landing, groupEst: p.groupEst, landEst: p.landEst }))];
+    const sum = (xs) => xs.reduce((s, x) => s + x, 0);
+    const allSteps = sum(rounds.map((r) => r.n)) + R + 1;
+    const agentAll = takeupEst + sum(rounds.map((r) => sum(r.groupEst) + r.landEst));
+    const wallAll = takeupEst + sum(rounds.map((r) => Math.max(0, ...r.groupEst) + r.landEst));
+    const each = rounds.map((r, i) => `round ${i + 1} sends its ${r.n} file ${r.n === 1 ? 'step' : 'steps'} at once and then its landing step, step ${r.landing}`).join('; ');
+    L(`The ${allSteps} steps (${sum(rounds.map((r) => r.n))} file steps, run at the same time within their ${R} rounds, with the take-up and the ${R} landing steps) run on the sonnet tier with one agent for each, and a review is sent at the plan's first send and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move. In turn: ${each}. Agent time is the sum of the steps' estimates, ${agentAll} min; wall time is the take-up and then, for each round, its longest file step and its landing step, ${wallAll} min. ${R + 1} pushes are made, one by the take-up and one by the landing step of each round, each rebased onto the remote's head. ${allSteps} forced turns of the stop hook are spent while a commit stands unpushed, the file steps plus the take-up and the ${R} landing steps. <The main thread's tier for the writing and for the management.>`);
+  } else
   L(`The ${nSteps} steps (${groups.length} file ${groups.length === 1 ? 'step' : 'steps'} run at the same time, with the take-up and the landing step) run on the sonnet tier with one agent for each, and a review is sent at the plan's first send and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move. Agent time is the sum of the steps' estimates, ${agentMin} min; wall time is the take-up, the longest file step and the landing step, ${wallMin} min. 2 pushes are made, one each by the take-up and the landing step, each rebased onto the remote's head. ${groups.length + 2} forced turns of the stop hook are spent while a commit stands unpushed, the file steps plus two. <The main thread's tier for the writing and for the management.>`);
   L();
   L('## Verification');
   L();
   L('- <What is observed at the end that shows the batch\'s acceptance, each as one line.>');
-  L(CLOSE_KEYS_LINE);
+  L(closeKeysLine(`step ${lastLanding}, the landing step,`));
   L();
   L('==== THE PLAN ENDS ABOVE THIS LINE ====');
   L();
@@ -877,12 +955,12 @@ if (isMain) {
   const a = process.argv.slice(2);
   const val = (f) => { const i = a.indexOf(f); return i >= 0 ? a[i + 1] : undefined; };
   if (a.includes('--batch')) {
-    const b = batchSeed({ repo: val('--repo'), plan: val('--plan'), steps: val('--steps'), size: val('--size'), wave: val('--wave'), hub: val('--hub') });
+    const b = batchSeed({ repo: val('--repo'), plan: val('--plan'), steps: val('--steps'), size: val('--size'), wave: val('--wave'), rounds: val('--rounds'), hub: val('--hub') });
     emit(b, b.ok ? val('--out') : undefined);
     process.exit(b.ok ? 0 : 1);
   }
   if (!val('--item')) {
-    process.stdout.write('usage: node plan-seed.mjs --item <P-key | next> | --batch [--size <n>] [--steps <n>] [--wave <n>] [--repo <full path>] [--plan <path>] [--hub <full path>] [--out <path>]\n');
+    process.stdout.write('usage: node plan-seed.mjs --item <P-key | next | new> | --batch [--size <n>] [--steps <n>] [--wave <n>] [--rounds <1 to 5>] [--repo <full path>] [--plan <path>] [--hub <full path>] [--out <path>]\n');
     process.exit(1);
   }
   const r = seed({ item: val('--item'), repo: val('--repo'), plan: val('--plan'), steps: val('--steps'), hub: val('--hub') });
