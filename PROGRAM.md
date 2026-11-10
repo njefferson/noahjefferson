@@ -3685,9 +3685,9 @@ Depends: none.
 
 ### P-379. Q-HUB-335: a stop hook asked for a commit and a push at nearly every turn while a plan held its commits
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: parked. Plan: none.
 
-Back to open by step 128 of the plan of the standing problems of the gates: step 125 read the repository's `.claude/settings.json` and found the hook that asks is the environment's, not the repository's; the repository's Stop hook runs the stop guard and holds no such request, so nothing in the repository can be changed for it. It stays with whoever configures the environment and is the owner's to decide.
+Back to open by step 128 of the plan of the standing problems of the gates: step 125 read the repository's `.claude/settings.json` and found the hook that asks is the environment's, not the repository's; the repository's Stop hook runs the stop guard and holds no such request, so nothing in the repository can be changed for it. It stays with whoever configures the environment and is the owner's to decide. Parked: no file of this repository changes the hook.
 
 Acceptance: the hook that asks is identified as the harness's or the repository's, and where it is the repository's it reads the plan's landing rule and prints nothing while a plan in force holds its commits, with a case.
 
@@ -4189,7 +4189,7 @@ Depends: none.
 
 ### P-430. Q-HUB-385: the status print names a plan mode a typed message carried after an approval had ended it
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
 
 Acceptance: the print reads the mode from the newest approval or entry call and takes a typed message's mode only where no later approval stands, with a case on an approval followed by a typed message.
 
@@ -4207,7 +4207,7 @@ Depends: none.
 
 ### P-432. Q-HUB-387: the plan check passes a Files line the fence reads as wholly unwritable
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
 
 Acceptance: the plan check refuses a Files line that carries the words read only beside a name a step writes, with a case on the line that passed.
 
@@ -4215,7 +4215,7 @@ Depends: none.
 
 ### P-433. Q-HUB-388: the approval guard and the status read one plan mode two ways
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
 
 Acceptance: both read the mode through one function, with a case on a plan mode entered after an approval.
 
@@ -4283,7 +4283,7 @@ Depends: none.
 
 ### P-440. Q-HUB-395: a plan approved again through plan mode read every step of its Order as not sent
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
 
 Acceptance: a re-approval of the same plan keeps its sends whichever marker it replaces, with a case on a marker written before the title and first approval time were recorded.
 
@@ -4369,7 +4369,7 @@ Depends: P-416.
 
 ### P-449. Q-HUB-403: the correction hold held the call that enters plan mode, which writes nothing but the plan file
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
 
 Acceptance: the correction hold passes the entry to plan mode as it passes the status command, with a case on a correction that asks for a plan and a plant on the hold.
 
@@ -4377,7 +4377,7 @@ Depends: none.
 
 ### P-450. Q-HUB-404: the plan seed printed for the next open item while the work was a defect with no entry
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
 
 Acceptance: the seed takes an item the session names and prints the item entry's form with the next free key where the work has no entry, with a case on a session that names no item.
 
@@ -4385,7 +4385,7 @@ Depends: none.
 
 ### P-451. Q-HUB-405: the incident behind the check of a call refused under a latch was not reproduced, and the check's pattern matches one spelling of the command
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
 
 Acceptance: the refused command is read from the session's transcript and the check either passes every spelling the owner's tools produce or names the accepted spelling in its refusal, with a case on each spelling.
 
@@ -4393,7 +4393,7 @@ Depends: none.
 
 ### P-452. Q-HUB-406: the plan check's pull fault reads a step's text for words
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
 
 Acceptance: the fault reads each step's Files and Do parts for writers by their structure, with a case on a writer described in other words.
 
@@ -4401,7 +4401,7 @@ Depends: none.
 
 ### P-453. Q-HUB-407: the single print's Cost line and two shared constants of the seed still say the close step
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
 
 Acceptance: each print names the step that closes in it, with a case that reads both prints.
 
@@ -4425,7 +4425,7 @@ Depends: none.
 
 ### P-456. Q-HUB-410: an agent's check of a call stays refused only by the order of the family guards
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
 
 Acceptance: a case drives an agent's check through the whole dispatcher with the guards in their other orders, or one refusal holds it independent of order.
 
@@ -4441,7 +4441,7 @@ Depends: none.
 
 ### P-458. Q-HUB-412: the tier fault takes an amendment of a running plan for a new plan
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
 
 Acceptance: an amendment of an approved section by a reply served below the top tier is not a fault, read from the plan's hand-backs and its previous approval, with a case on it.
 
@@ -4449,7 +4449,7 @@ Depends: none.
 
 ### P-459. Q-HUB-413: the plan-mode hook judges a plan with the working copy's plan check
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: planned. Plan: The batch's fourth wave: the status reader with the approval guard, the plan check with the plans page, the dispatcher, and the seed taught to print several waves as rounds of one plan, four file steps at once and one landing.
 
 Acceptance: the plan check runs from the live clone only, or its refusal names the copy that ran, with a case that plants a differing working copy.
 
