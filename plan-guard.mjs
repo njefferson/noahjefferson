@@ -324,6 +324,14 @@ if (tool === 'Bash') {
   const seedFlag = `(?:\\s+--(?:item|repo|plan|steps|size|hub)\\s+${seedArg}|\\s+--batch(?=\\s|$))`;
   const seedLine = new RegExp(`^\\s*node\\s+"?${join(dirname(fileURLToPath(import.meta.url)), 'plan-seed.mjs').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"?(?=${seedFlag}*\\s+--(?:item\\s|batch(?:\\s|$)))${seedFlag}+\\s*$`);
   if (seedLine.test(cmd)) process.exit(0);
+  // THE CHECK OF A CALL passes in plan mode (Q-HUB-389 and the refusal of 9 November): `hook-dispatch.mjs --can <tool> <one argument>`, alone, is the
+  // command the manager fence's own refusal names as the way to learn beforehand what a call would meet, and it changes nothing. The test is
+  // `isCanCommand`, the one the fence and the latch read, loaded only for a line that carries the flag; a line with anything chained to it is not it
+  // and falls to the readers below, where `node` without `--check` is refused.
+  if (/--can\b/.test(cmd)) {
+    const { isCanCommand } = await import('./hook-dispatch.mjs');
+    if (isCanCommand(cmd)) process.exit(0);
+  }
   const parts = commands(cmd);
 
   // A REDIRECT WRITES A FILE. `2>&1`, `>&2` and anything aimed at /dev/null do
@@ -799,6 +807,115 @@ function heldNames(plan, ctx) {
     + 'Rewording the plan or dropping the name does not clear it (Doctrine §0d).';
 }
 
+/**
+ * A PLAN'S TITLE IS COPIED WHOLE INTO THE PROGRAM, SO IT CARRIES NO PHRASE THE THIRD-PERSON CHECK REFUSES (Q-HUB-379).
+ * @param {string} plan  the whole plan file; its title is the first line opening `# `.
+ * @param {{PRONOUN_G: RegExp, POSSESSIVE_G: RegExp, ATTRIBUTION_G: RegExp}} patterns  the check's own patterns (`third-person-check.mjs`).
+ * @returns {string|null} the fault naming each phrase the check would find in the title, or null. A take-up step writes the title into the
+ *   program entry, where the check then fails on it; the plan check refuses it here, before the plan is approved.
+ */
+function titleProblem(plan, patterns) {
+  const title = (/^#\s+(.+)$/m.exec(String(plan ?? '')) ?? [])[1] ?? '';
+  const hits = [patterns.PRONOUN_G, patterns.POSSESSIVE_G, patterns.ATTRIBUTION_G]
+    .flatMap((re) => [...title.matchAll(re)].map((m) => m[0].replace(/\s+/g, ' ')));
+  if (!hits.length) return null;
+  return `PLAN TITLE (Q-HUB-379): the plan's title holds ${[...new Set(hits)].map((x) => `"${x}"`).join(', ')}, which the third-person check refuses, and a take-up step copies the title whole into the program entry `
+    + 'where that check then fails. Write the title without the phrase (say the role, or leave the possessive out).';
+}
+
+/**
+ * A STEP THAT PULLS THE LIVE CLONE FOLLOWS EVERY STEP THAT WRITES FILES (Q-HUB-386).
+ * @param {string} top  the plan's top block.
+ * @param {{planOrder: Function, planAfter: Function, stepBody: Function}} h  the plan readers of report.mjs.
+ * @returns {string|null} the fault, or null. A step whose text holds a `git pull` command (optionally with `-C <directory>`) changes the gates
+ *   under every agent that is running, so it must run after each other step of the Order that writes files (a text with an edit, the Edit or
+ *   Write tool, `git add` or `git commit`). Read from the Order and its After line: with an After line a step follows another only through the
+ *   groups `N after M M` (followed transitively), and without one only by standing later in the Order. A Standing step is not judged.
+ */
+function pullOrderProblem(top, h) {
+  const o = h.planOrder(top);
+  if (!o) return null;
+  const standing = new Set(o.standing);
+  const PULL = /\bgit\s+(?:-C\s+\S+\s+)?pull\b/;
+  const WRITES = /\b(?:Edit tool|Write tool|edits?|edited|git add|git commit)\b/i;
+  const body = (n) => h.stepBody(top, n);
+  const pullers = o.order.filter((n) => !standing.has(n) && PULL.test(body(n)));
+  if (!pullers.length) return null;
+  const writers = o.order.filter((n) => !standing.has(n) && !pullers.includes(n) && WRITES.test(body(n)));
+  const a = h.planAfter(top);
+  const follows = (p, w) => {
+    if (!a || !a.follows.size) return o.order.indexOf(w) < o.order.indexOf(p);
+    const seen = new Set();
+    const queue = [p];
+    while (queue.length) {
+      const x = queue.pop();
+      for (const y of a.follows.get(x) ?? []) { if (y === w) return true; if (!seen.has(y)) { seen.add(y); queue.push(y); } }
+    }
+    return false;
+  };
+  const bad = [];
+  for (const p of pullers) {
+    const beside = writers.filter((w) => !follows(p, w));
+    if (beside.length) bad.push(`step ${p} pulls the live clone and does not follow ${beside.length === 1 ? 'step' : 'steps'} ${beside.join(', ')}, which write files`);
+  }
+  if (!bad.length) return null;
+  return `PULL ORDER (Q-HUB-386): ${bad.join('; ')}. A pull changes the gates under every agent that is running, and on 9 November it changed the plan fence under two running steps and refused their edits. `
+    + 'Make the pulling step the last act of a step that follows every step that writes (the After line, "N after M M"), or take the pull out of the steps that run beside the writers.';
+}
+
+/**
+ * The model of the reply that last wrote the plan file.
+ * @param {string} planFile  the plan file's path; '' when the plan is only text the harness passed.
+ * @param {object[]} entries  the transcript's tail.
+ * @returns {string|null} the `message.model` of the newest main-thread assistant entry holding a Write, Edit or MultiEdit of that file, or null
+ *   when there is none, when it names no model or when it names a placeholder such as `<synthetic>`: a model that cannot be read is not a lesser tier.
+ */
+function planWriterModel(planFile, entries) {
+  if (!planFile) return null;
+  const want = resolve(planFile);
+  let model = null;
+  for (const e of entries ?? []) {
+    if (e?.type !== 'assistant' || e.isSidechain || e.agentId) continue;
+    const c = e.message?.content;
+    if (!Array.isArray(c)) continue;
+    if (c.some((b) => b?.type === 'tool_use' && /^(?:Write|Edit|MultiEdit)$/.test(b.name ?? '') && typeof b.input?.file_path === 'string' && resolve(b.input.file_path) === want)) model = e.message?.model ?? null;
+  }
+  return typeof model === 'string' && model.trim() && !/^<.*>$/.test(model.trim()) ? model.trim() : null;
+}
+
+/**
+ * Does the approval marker name a plan with a step of its Order still open?
+ * @param {object} payload  the call (`session_id` and `transcript_path` are read).
+ * @param {(p: object, text: string) => ({next: number|null}|null)} pointerFor  report.mjs's pointer for a session.
+ * @returns {boolean} true when `~/.claude/APPROVED-PLAN.json` names a plan file that can be read and its pointer does not read `none`; a pointer that
+ *   cannot be read (a plan with no Order, agents that cannot be found) counts as open, as `planPhase` counts it. The marker's hash is not compared: an
+ *   amendment of a running plan is edited in plan mode and moves the file's hash until the plan is approved again.
+ */
+function markerPlanOpen(payload, pointerFor) {
+  try {
+    const mk = JSON.parse(readFileSync(join(homedir(), '.claude', 'APPROVED-PLAN.json'), 'utf8'));
+    if (!mk?.plan) return false;
+    const text = readFileSync(String(mk.plan), 'utf8');
+    const pointer = pointerFor(payload, text);
+    return !pointer || pointer.next !== null;
+  } catch { return false; }
+}
+
+/**
+ * A NEW PLAN IS DRAWN ON THE TOP TIER (Doctrine §11b, §0e rule 4).
+ * @param {string|null} model  `planWriterModel`'s answer.
+ * @param {(id: string) => boolean} isTopTier  report.mjs's test of a model id.
+ * @param {boolean} open  `markerPlanOpen`'s answer.
+ * @returns {string|null} the fault when a model below the top tier last wrote the plan file and no approved plan has a step open; null when the
+ *   model is not known, is the top tier, or when the plan is an amendment of a running plan, which stays on the tier that runs it.
+ */
+function tierProblem(model, isTopTier, open) {
+  if (!model || isTopTier(model) || open) return null;
+  return `PLAN TIER (Doctrine §11b, §0e rule 4): the plan file was last written by a reply served by ${model}, which is not the top tier, and no approved plan has a step open. A new plan is drawn on the top tier. `
+    + 'The reply says in its first line that the plan needs the top tier and ends as a declared stop; the switch of model is the owner\'s, and the plan is then written again by the top tier. '
+    + 'An amendment of a running plan stays on the tier that runs it, and a model that cannot be read raises no fault.';
+}
+
 if (tool === 'ExitPlanMode') {
   // NO EXIT FROM PLAN MODE WHILE THE OWNER'S NEWEST MESSAGE IS RECORDED UNDER AUTO MODE (the P-21 replan, goal 6). The transcript records
   // the mode on each message the owner typed: plan inside plan mode, the session's base mode outside it. The exits of 5 November were
@@ -860,7 +977,11 @@ if (tool === 'ExitPlanMode') {
   // before the sections are looked at, so that the refusal for a missing one carries the mark that sets no latch as well.
   const { goalsProblem, aimStandingProblem, reviewCommandProblem, commandsGitDirProblem, filesSpanProblem, stepShapeProblem, afterProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem, shippedCheckProblem,
     readAfterCompactionProblem, costProblem, lessonCitedProblem, ruleNumberProblem, decisionsCheckProblem, verificationReadProblem, queueRoots, inScratchpad, NAMES_NO_LATCH, SHAPE_NO_LATCH } = await import('./hook-dispatch.mjs');
-  const { scratchpadOf } = await import('./report.mjs');
+  const { scratchpadOf, planOrder, planAfter, stepBody, pointerFor, isTopTier } = await import('./report.mjs');
+  // The check's own patterns, loaded beside this file. A copy of the guards that does not hold third-person-check.mjs (a test folder built from a
+  // list of files) raises no title fault and says so in the check mode, and never crashes the approval call for the other checks.
+  let thirdPerson = null;
+  try { thirdPerson = await import('./third-person-check.mjs'); } catch { thirdPerson = null; }
   // EVERY FAULT IS COLLECTED, AND THE APPROVAL CALL STOPS AT THE FIRST (LESSONS §435). `fault` is where a check's finding lands. At the
   // approval call it refuses at once, as each check did, so nothing a check does is run for a plan an earlier check has refused. In the
   // check mode (`--check`) it only records the finding, so the run goes through every check and prints them all: a plan with several faults
@@ -912,6 +1033,18 @@ if (tool === 'ExitPlanMode') {
   // does not hold, or not of the form `N after M M`, would be read as no group at all.
   const after = afterProblem(top);
   if (after) fault(after);
+  // THREE MORE FAULTS OF THE PLAN'S SHAPE, each answered by a write of the plan file and none setting a latch: a title the third-person check
+  // would refuse (Q-HUB-379), a step that pulls the live clone beside or before a step that writes files (Q-HUB-386), and a plan drawn below
+  // the top tier (Doctrine §11b). The tier is read from the transcript at the reply that last wrote the plan file, and an amendment of a
+  // running plan (the approval marker names a plan with a step of its Order open) stays on the tier that runs it.
+  const titled = thirdPerson ? titleProblem(plan, thirdPerson) : null;
+  if (titled) fault(titled);
+  if (!thirdPerson) notJudged.push('the plan\'s title against the third-person check (third-person-check.mjs could not be loaded beside this file)');
+  const pulled = pullOrderProblem(top, { planOrder, planAfter, stepBody });
+  if (pulled) fault(pulled);
+  const writerModel = planWriterModel(planFile, tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024));
+  const tiered = tierProblem(writerModel, isTopTier, !!writerModel && !isTopTier(writerModel) && markerPlanOpen(p, pointerFor));
+  if (tiered) fault(tiered);
   // A PLAN THAT SENDS AGENTS CARRIES THE RULES, OR POINTS AT THEM (Doctrine §0e
   // rule 13): a "## Rules" section that is the line naming the hub's
   // agent-rules.md and its version, or every rule line of that file. A plan

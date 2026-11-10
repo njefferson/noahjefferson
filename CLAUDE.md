@@ -747,9 +747,21 @@ Every item below has actually happened.
  the gate (LESSONS §413).
 - **A PLAN COMES TO THE BUTTON IN ITS OPTIMIZED SHAPE, AND IS NEVER RESHAPED BY
  THE OWNER'S ASK.** The seed prints the shape and the plans page states the
- procedure: steps partitioned by file, group steps run together, one commit step
- that lands once, the cost said, and no walk against a staging build. (Doctrine
- §0e rule 4.)
+ procedure: a take-up that only claims and runs alone and first, file steps
+ partitioned by file that run at once, check their new assertions against the code
+ they call and run their own cases and new plants, one landing step that proves in
+ the foreground, commits once for each file step, closes in the program and pushes
+ once with the live clone pulled last, no run in the background, the cost said, and
+ no walk against a staging build. (Doctrine §0e rule 4.)
+- **THE PLAN CHECK REFUSES A TITLE, A PULL AND A TIER, AND THE CHECK OF A CALL
+ PASSES IN PLAN MODE.** `plan-guard.mjs` faults, as faults of shape that set no
+ latch, a plan whose title holds a phrase `third-person-check.mjs` refuses (the
+ take-up copies the title into the program), a plan with a step that pulls the live
+ clone beside or before a step that writes files (read from the Order and its After
+ line), and a new plan whose file was last written by a reply served below the top
+ tier (an amendment of a running plan stays on its tier). In plan mode it also passes
+ `hook-dispatch.mjs --can <tool> <one argument>`, alone. (Doctrine §0e rule 4;
+ LESSONS §435.)
 - **EVERY REPLY ENDS WITH THE STATE LINE, AND A PAUSE ON THE OWNER IS NEVER
  WRITTEN AS NOTHING OPEN.** Paused, pending what; running, what; or finished,
  nothing pending. "Open for you" lists decisions only. (Doctrine §0e rule 6.)

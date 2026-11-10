@@ -367,7 +367,10 @@ every rule below while none of the hooks that enforce them was running
    plan's last edit and the plan is about to change. The approval call itself
    still stops at the first fault, and a fault of the plan's shape sets no latch
    (rule 14), so a plan with several faults cost one approval message per fault
-   until this check existed (LESSONS §435).
+   until this check existed (LESSONS §435). A title the third-person check refuses
+   is a fault, because the take-up copies it into the program (Q-HUB-379), and so is
+   a step that pulls the live clone beside or before a step that writes files, read
+   from the Order and its After line (Q-HUB-386).
    *Enforced by:* `plan-guard.mjs` (`--check`) and `hook-dispatch.mjs`
    (`planCheckTarget`, `isPlanCheck`).
    **A plan written after a compaction rests on files read since it, and a plan
@@ -395,20 +398,31 @@ every rule below while none of the hooks that enforce them was running
    they share no file and no dependency, one landing where one is enough, and the
    cost said. (g) Permanent: everything agreed is in the plan file before the
    button, so nothing rests on a chat turn.
-   **The shape a plan arrives in.** Its steps are partitioned by the files they
-   write, so no two share a file. The group steps run together, up to seven, and
-   the Order's After line says so. Each guard a step edits has its own case file
-   under the guard cases folder. One commit step proves and lands once: it runs
-   every case, the plants of each edited guard file, the checks, one commit for
-   each group step, and the push. The close files and indexes. A plan whose steps
-   run one after another says in its Branches why they cannot run together. A
-   step that needs a number from the device names the app's test page as its
-   instrument and never a container render, and no accessibility walk, cold read,
-   browser walk or screenshot tour runs against a staging build or a test page as
-   a step of a plan; the gate runs once, at the promotion to main. No gate
-   refuses a plan for its shape, by the owner's word of 9 November: the seed
-   prints the shape, this page states it, and the review's sequence rule reads
-   the Order.
+   **The shape a plan arrives in.** A take-up step only claims: it sets the items
+   to planned, runs no check, pulls nothing, and runs alone and first. The file
+   steps are partitioned by the files they write, so no two share a file; they run
+   at once (up to seven, and the After line says so), each makes its edits, checks
+   each new assertion against the code it calls, runs the third-person, privacy and
+   quote checks, its own cases, its new plants by key and the dry listing of its
+   files, and commits nothing. Each guard a step edits has its own case file under
+   the guard cases folder. One landing step proves in the foreground, with no run
+   in the background: every case, the plants of each edited file (a long file's new
+   plants by key, its other plants proved by the runner), the checks, one commit
+   for each file step, the close in the program, one push, and the pull of the live
+   clone last. A plan whose steps run one after another says in its Branches why
+   they cannot run together. A step that needs a number from the device names the
+   app's test page as its instrument and never a container render, and no
+   accessibility walk, cold read, browser walk or screenshot tour runs against a
+   staging build or a test page as a step of a plan; the gate runs once, at the
+   promotion to main. No gate refuses a plan for this shape itself, by the owner's
+   word of 9 November: the seed prints it, this page states it, and the review's
+   sequence rule reads the Order.
+   **A new plan is drawn on the top tier.** The plan check faults a plan last
+   written by a reply served below the top tier (the model read from the transcript,
+   judged as the status print judges a top-tier id) unless the approval marker names
+   a plan with a step of its Order open, so an amendment stays on its running tier.
+   At the entry to plan mode on a lower tier with no plan in force, the reply says in
+   its first line that the plan needs the top tier and ends as a declared stop.
 5. **A line before each tool call and a line after each result.**
 6. **Never "waiting on you", never "you owe", never a line saying nothing is
    open while the session is paused on the owner.** Every reply ends with the
@@ -509,7 +523,8 @@ every rule below while none of the hooks that enforce them was running
     main thread now, and why, and changes nothing; the fence passes it as it
     passes the status command, refuses it with anything chained to it, and names
     it in every refusal of a call that is not of the record, beside what the
-    main thread may use.
+    main thread may use; the plan guard passes it in plan mode as it passes the
+    plan check, alone and with nothing chained to it.
     *Enforced whole by:* `approved-plan-guard.mjs` and `report.mjs`.
     *Enforced whole by:* `hook-dispatch.mjs` and `plan-guard.mjs`.
     *Enforced whole by:* `plan-fence.mjs`.

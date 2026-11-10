@@ -69,20 +69,14 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { BINARY, LOCKFILE } from './binary-files.mjs';
 
-const argv = process.argv.slice(2);
-const known = new Set(['--repo', '--list']);
-for (const a of argv) {
-  if (a.startsWith('--') && !known.has(a.split('=')[0])) {
-    console.error(`unknown argument: ${a}`);
-    process.exit(2);
-  }
-}
-const repoAt = argv.indexOf('--repo');
-const repo = repoAt >= 0 && argv[repoAt + 1] ? argv[repoAt + 1] : '.';
-const listing = argv.includes('--list');
+// THE PATTERNS ARE EXPORTED, AND THE SCAN RUNS ONLY WHEN THIS FILE IS RUN (Q-HUB-379). The plan guard reads a plan's title with these same
+// patterns, so a title the check would refuse is refused at the plan check. Importing the file scans nothing and exits nothing; what the
+// check finds is unchanged.
+const isMain = !!process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 /** The marked region, and it is THE FAMILY'S EXISTING SPELLING rather than a
  *  new one. `privacy-patterns.mjs` already exports these two markers and every
@@ -96,7 +90,7 @@ const SENTINEL_OPEN = new RegExp('privacy-gate:' + 'patterns-begin');
 const SENTINEL_CLOSE = new RegExp('privacy-gate:' + 'patterns-end');
 
 // privacy-gate:patterns-begin
-const PRONOUN_G = /\b(?:he|his|him|himself)\b/gi;
+export const PRONOUN_G = /\b(?:he|his|him|himself)\b/gi;
 // Not prose: an unbroken run no hand ever typed. See the scan loop for the cost
 // of the line-length heuristic this replaced.
 const MACHINE_RUN = /\S{80,}/;
@@ -107,19 +101,32 @@ const POSSESSIONS = [
   'life', 'day', 'days', 'week', 'habits', 'routine', 'health', 'family',
   'job', 'office', 'diary', 'calendar', 'inbox', 'photos',
 ];
-const POSSESSIVE_G = new RegExp(
+export const POSSESSIVE_G = new RegExp(
   String.raw`\bthe owner['’]s\s+(?:` + POSSESSIONS.join('|') + String.raw`)\b`, 'gi');
 // RULE 3 — WHO FOUND IT. A finding verb bound to a person, and the two bare
 // spellings that name a reporter without naming anyone. Deliberately excludes
 // the governance verbs (confirmed, approved, applied, set, requested) and
 // "on the owner's word/say-so/instruction", which record a step only a human
 // can take and are the honest provenance for it.
-const ATTRIBUTION_G = new RegExp(
+export const ATTRIBUTION_G = new RegExp(
   String.raw`\b(?:caught|found|reported|noticed|spotted|discovered)\s+by\s+`
   + String.raw`(?:the\s+owner|him|her)\b`
   + String.raw`|\bReported\s+(?:from\s+live\s+use|here\s+as|back\s+as)\b`
   + String.raw`|\bthe\s+report\s+back\s+was\b`, 'gi');
 // privacy-gate:patterns-end
+
+function main() {
+const argv = process.argv.slice(2);
+const known = new Set(['--repo', '--list']);
+for (const a of argv) {
+  if (a.startsWith('--') && !known.has(a.split('=')[0])) {
+    console.error(`unknown argument: ${a}`);
+    process.exit(2);
+  }
+}
+const repoAt = argv.indexOf('--repo');
+const repo = repoAt >= 0 && argv[repoAt + 1] ? argv[repoAt + 1] : '.';
+const listing = argv.includes('--list');
 
 const name = repo.split('/').filter(Boolean).pop() || 'repo';
 console.log(`\n=== third-person gate - ${name} ===`);
@@ -295,3 +302,6 @@ if (undeclared.length) {
 if (!failed) console.log('no third-person references to the owner in tracked files.');
 console.log('');
 process.exit(failed);
+}
+
+if (isMain) main();
