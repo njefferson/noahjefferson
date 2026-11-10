@@ -5,14 +5,46 @@
 // that read an earlier call (Q-HUB-327), the check of a call asking both guards (Q-HUB-328), the seed at a resumed plan mode (Q-HUB-336), the
 // decisions check (Q-HUB-340) and a Verification read outside the record (Q-HUB-341), and by step 141 of the plan of 9 November: the page
 // refresh after the notes (Q-HUB-347), the hook loop's identifier skip (Q-HUB-349), a rule under a sub-heading (Q-HUB-351) and the read in plan
-// mode with no plan (Q-HUB-362). The shape of this file is guard-cases/shape.mjs.
-import { mkdirSync, writeFileSync, utimesSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
+// mode with no plan (Q-HUB-362); and by step 190 of the plan of 10 November: the price of a plan's sends, the print of the sends so far at each
+// owner message, the reminder in the form that fits the message, and the hub's copies brought forward at a start. The shape of this file is
+// guard-cases/shape.mjs.
+import { mkdirSync, writeFileSync, utimesSync, readFileSync, mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 
 const FABLE = 'claude-fable-1';
 const SONNET = 'claude-sonnet-5';
+
+// A git identity for the planted repositories of this file, so a commit made in one needs no configuration of the container.
+const GIT_ENV = { ...process.env, GIT_AUTHOR_NAME: 'planted', GIT_AUTHOR_EMAIL: 'planted@example.invalid', GIT_COMMITTER_NAME: 'planted', GIT_COMMITTER_EMAIL: 'planted@example.invalid' };
+const gitAt = (d, ...a) => spawnSync('git', ['-C', d, ...a], { encoding: 'utf8', env: GIT_ENV });
+
+/**
+ * A planted checkout of the hub with a bare origin, both under a temporary folder.
+ * @param {object} h  the suite's helpers.
+ * @param {{behind?: number, ahead?: number, branch?: string|null, dirty?: boolean, broken?: boolean}} [o]  `behind` commits are on the origin's main and
+ *   not in the checkout; `ahead` commits are in the checkout and not on the origin; `branch` checks out a new branch; `dirty` leaves an untracked
+ *   file; `broken` points the origin at a folder that is not a repository.
+ * @returns {{dir: string, g: Function, write: Function, origin: string}} the repository `h.repo` gives, with the origin's path.
+ */
+function hubCheckout(h, o = {}) {
+  const origin = h.tmp('sg-origin-');
+  gitAt(origin, 'init', '-q', '--bare');
+  gitAt(origin, 'symbolic-ref', 'HEAD', 'refs/heads/main');
+  const r = h.repo({ 'hook-dispatch.mjs': '// a planted dispatcher\n', 'DOCTRINE.md': '# a planted doctrine\n' }, 'hub');
+  r.g('branch', '-M', 'main');
+  r.g('remote', 'add', 'origin', origin);
+  r.g('push', '-q', 'origin', 'main');
+  const behind = o.behind ?? 0;
+  for (let i = 1; i <= behind; i++) { r.write(`c${i}.txt`, `change ${i}\n`); r.g('add', '-A'); r.g('commit', '-q', '-m', `change ${i}`); r.g('push', '-q', 'origin', 'main'); }
+  if (behind) r.g('reset', '-q', '--hard', `HEAD~${behind}`);
+  for (let i = 1; i <= (o.ahead ?? 0); i++) { r.write(`local${i}.txt`, 'a local commit\n'); r.g('add', '-A'); r.g('commit', '-q', '-m', `local ${i}`); }
+  if (o.branch) r.g('checkout', '-q', '-b', o.branch);
+  if (o.dirty) r.write('dirty.txt', 'not committed\n');
+  if (o.broken) r.g('remote', 'set-url', 'origin', join(origin, 'no-such-remote'));
+  return { ...r, origin };
+}
 
 export const cases = [
   {
@@ -776,6 +808,195 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'Sends priced: the price is read from a rule line of the plan\'s own rules that opens with the words, a colon and a whole number; the count is every agent that ended under the approval and every agent running, the review\'s among them, and the ends other than DONE are counted without the review\'s',
+    guards: ['price_parse', 'count_review', 'count_running'],
+    run(m, dir, h) {
+      const plan = (rule) => ['# A priced plan', '', '## Rules', 'Rules: /root/.claude/hub/agent-rules.md, version 5.', '', '## Rules of this plan', rule, '- Another rule of the plan.', '', '## Steps', '1. **One.** Do it.', ''].join('\n');
+      const wrongSection = ['# A plan', '', '## Rules', '- Sends priced: 9.', '', '## Steps', '1. **One.** Sends priced: 8.', ''].join('\n');
+      const reviewing = { text: h.reviewPlan(dir) };
+      const read = { ends: [h.endFor(1, 10, 1, 'DONE'), h.endFor(1, 20, 11, 'FAILED'), h.endFor(2, 30, 21, 'EJECT'), h.endFor(2, 35, 31, 'x', 'an interruption'), h.endFor(3, 40, 36, 'ON-AIM ROUTE-CLEAR step 2')], running: ['agent r1'] };
+      const counted = m.dispatch.sendCounts(read, reviewing);
+      return h.assertAll([
+        ['a hyphen line with the number and text after it gives the number', m.dispatch.pricedSends(plan('- Sends priced: 12. The plan is seven steps.')) === 12, m.dispatch.pricedSends(plan('- Sends priced: 12. The plan is seven steps.'))],
+        ['an asterisk line, a numbered line and a line with no space before the number give the number', m.dispatch.pricedSends(plan('* Sends priced: 7.')) === 7 && m.dispatch.pricedSends(plan('1. Sends priced: 5')) === 5 && m.dispatch.pricedSends(plan('- Sends priced:3 steps')) === 3, 'asterisk, numbered, tight'],
+        ['a line with no colon, with a word for the number or with other words first gives nothing', m.dispatch.pricedSends(plan('- Sends priced 12.')) === null && m.dispatch.pricedSends(plan('- Sends priced: many.')) === null && m.dispatch.pricedSends(plan('- The sends priced: 4.')) === null, 'no colon, a word, other words'],
+        ['a line outside the plan\'s own rules gives nothing', m.dispatch.pricedSends(wrongSection) === null, m.dispatch.pricedSends(wrongSection)],
+        ['the count is the ends and the running agents, the review\'s ends among them', counted?.sent === 6, JSON.stringify(counted)],
+        ['the ends other than DONE are the failed, the ejected and the interrupted step, and the review\'s end is left out', counted?.notDone === 3, JSON.stringify(counted)],
+        ['a session whose agents cannot be read has no count', m.dispatch.sendCounts(null, reviewing) === null, 'null'],
+      ]);
+    },
+  },
+  {
+    name: 'Sends priced: the dispatch gate refuses a send once the count has reached the number, saying the count, the number and that the plan goes back through plan mode, with the mark that sets no latch; a count below the number, a plan with no priced line and a count that cannot be read are not refused for it',
+    guards: ['price_refuses', 'price_nolatch'],
+    run(m, dir, h) {
+      const priced = (n) => h.STEPS_PLAN.replace('## Steps', `## Rules of this plan\n- Sends priced: ${n}. The plan stops there.\n\n## Steps`);
+      const p = { session_id: h.sid('pg'), tool_name: 'Agent', tool_input: { prompt: '/plans/gate-test.md step 1', subagent_type: 'general-purpose' } };
+      const at = (text, sends) => m.dispatch.dispatchGate(p, { path: '/plans/gate-test.md', text }, null, [], sends);
+      const reached = String(at(priced(3), { sent: 3, notDone: 1 }));
+      const past = String(at(priced(3), { sent: 5, notDone: 2 }));
+      const below = String(at(priced(3), { sent: 2, notDone: 0 }));
+      const none = String(at(h.STEPS_PLAN, { sent: 99, notDone: 9 }));
+      const unread = String(at(priced(3), null));
+      const flat = String(at(priced(1), undefined));
+      return h.assertAll([
+        ['the count at the number is refused and the refusal says the count and the number', /SENDS PRICED/.test(reached) && /at 3, and 3 agents have been sent/.test(reached) && /1 ended other than DONE/.test(reached), reached.slice(0, 500)],
+        ['the refusal says the plan goes back through plan mode with the line raised, and that no amendment carries it', /goes back through plan mode/.test(reached) && /raised with the causes of the overrun named/.test(reached) && /no amendment carries it/.test(reached), reached.slice(0, 700)],
+        ['the refusal carries the mark that sets no latch', reached.includes(m.dispatch.FENCE_NO_LATCH), reached.slice(0, 700)],
+        ['a count past the number is refused too', /SENDS PRICED/.test(past) && /5 agents have been sent/.test(past), past.slice(0, 400)],
+        ['a count below the number is not refused for the price', !/SENDS PRICED/.test(below), below.slice(0, 300)],
+        ['a plan with no priced line is not refused for it whatever the count', !/SENDS PRICED/.test(none), none.slice(0, 300)],
+        ['a count that cannot be read holds nothing', !/SENDS PRICED/.test(unread), unread.slice(0, 300)],
+        ['a session with no agents on disk, read for itself, holds nothing', !/SENDS PRICED/.test(flat), flat.slice(0, 300)],
+      ]);
+    },
+  },
+  {
+    name: 'Sends priced: through the dispatcher, a main-thread send under a plan priced at three is refused once three agents have ended or run under the approval, and the print at each owner message gives the sends so far, the number priced and how many ended other than DONE; a plan with no priced line prints no such line',
+    guards: ['price_refuses', 'price_nolatch', 'price_print'],
+    run(m, dir, h) {
+      const copy = h.tmp('sg-price-');
+      for (const f of h.FILES) h.copyGuard(join(dir, f), join(copy, f));
+      const planWith = (n) => (n === null ? h.reviewPlan(copy) : h.reviewPlan(copy).replace('## Steps', `## Rules of this plan\n- Sends priced: ${n}. The plan stops there.\n\n## Steps`));
+      const world = (n, agents) => {
+        const w = h.world(copy, [h.turn(0, h.GO)], planWith(n));
+        const subs = join(w.tr.slice(0, -'.jsonl'.length), 'subagents');
+        mkdirSync(subs, { recursive: true });
+        const old = (Date.now() - 60 * 60 * 1000) / 1000;
+        utimesSync(w.plan, old, old);
+        for (const [id, step, sent, ended, first] of agents) h.putAgent(subs, w.plan, id, step, sent, ended, first, ended === null);
+        return w;
+      };
+      const send = (w, s) => w.call('PreToolUse', { session_id: s, tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 2`, subagent_type: 'general-purpose' } });
+      const three = [['a1', 1, -1500, -1400, 'DONE'], ['a2', 2, -1300, -1200, 'FAILED'], ['a3', 3, -1100, -1000, 'ON-AIM ROUTE-CLEAR step 2']];
+      const atPrice = send(world(3, three), h.sid('pw'));
+      const withRunning = send(world(3, [three[0], three[1], ['a4', 2, -600, null, '']]), h.sid('pw'));
+      const under = send(world(4, three), h.sid('pw'));
+      const unpriced = send(world(null, three), h.sid('pw'));
+      const prompt = (w) => w.call('UserPromptSubmit', { session_id: h.sid('pp'), prompt: h.GO }).stdout ?? '';
+      const printed = prompt(world(12, three));
+      const reachedLine = prompt(world(3, three));
+      const absent = prompt(world(null, three));
+      return h.assertAll([
+        ['at the price a send is refused for it', atPrice.status === 2 && /SENDS PRICED/.test(atPrice.stderr), atPrice.stderr.slice(0, 500)],
+        ['two ended and one running reach the price', withRunning.status === 2 && /SENDS PRICED/.test(withRunning.stderr), withRunning.stderr.slice(0, 500)],
+        ['one under the price is not refused for it', !/SENDS PRICED/.test(under.stderr), under.stderr.slice(0, 300)],
+        ['a plan with no priced line is not refused for it', !/SENDS PRICED/.test(unpriced.stderr), unpriced.stderr.slice(0, 300)],
+        ['the print at an owner message gives the sent, the price and the ends other than DONE', /SENDS \(Doctrine §0e rule 4\): 3 of 12 priced sent under this approval, 1 ended other than DONE\./.test(printed), printed.slice(-600)],
+        ['a price that is reached says no further agent is sent', /3 of 3 priced sent/.test(reachedLine) && /The price is reached/.test(reachedLine), reachedLine.slice(-600)],
+        ['a plan with no priced line prints no such line', !/priced sent under this approval/.test(absent), absent.slice(-300)],
+      ]);
+    },
+  },
+  {
+    name: 'The reminder printed at each owner message says what passes in the form that fits the message: a go-word brings held work, a correction lists what the correction hold passes with the plan written in the same turn, the word stop lists what the stop refusal passes; the two refusals carry the same lists',
+    guards: ['reminder_go', 'reminder_stop', 'reminder_correction_list', 'reminder_wired', 'correction_plan_passes', 'stop_message_list'],
+    run(m, dir, h) {
+      const copy = h.tmp('sg-remforms-');
+      for (const f of h.FILES) h.copyGuard(join(dir, f), join(copy, f));
+      const w = h.world(copy, [h.turn(0, h.GO)], h.STEPS_PLAN);
+      const out = (prompt) => w.call('UserPromptSubmit', { session_id: h.sid('rf'), prompt }).stdout ?? '';
+      const go = out('Go.');
+      const stop = out('Please stop everything now.');
+      const fix = out('That button is in the wrong place, make me a plan for the fix.');
+      const STOP_LIST = 'the status command, TaskStop, an agent\'s own return and, on the main thread, a read of the record';
+      const PLAN_LIST = 'the entry to plan mode and, in plan mode, a write of the plan file and the plan check';
+      const old = /If it says something was done wrong: answer it, and run nothing else this turn\./;
+      const inProcess = [m.dispatch.reminderFor('Go.'), m.dispatch.reminderFor('stop'), m.dispatch.reminderFor('that is wrong')];
+      return h.assertAll([
+        ['after a go-word the line says held work may go and the plan goes on', /It ends with a go-word: work held since the last message may be sent again/.test(go) && !/It does not end with a go-word/.test(go), go.slice(0, 700)],
+        ['under a correction the line lists the status, the stop of a task, the read, the entry to plan mode and the plan file and the plan check', /it is a correction/.test(fix) && fix.includes(PLAN_LIST) && /a read of the record/.test(fix), fix.slice(0, 700)],
+        ['under a correction a message that asks for a plan gets the plan written in the same turn', /a message that asks for a plan gets the plan written in this turn/.test(fix), fix.slice(0, 700)],
+        ['under the word stop with no go-word the line lists what the stop refusal lists and not the plan file', /carries the word stop and does not end with a go-word/.test(stop) && stop.includes(STOP_LIST) && !stop.includes('plan file'), stop.slice(0, 700)],
+        ['no form keeps the old line that said to run nothing else for every message', !old.test(go) && !old.test(fix) && !old.test(stop), 'old line'],
+        ['the first-line and end lines stay in every form', [go, fix, stop].every((t) => /First line: what you are doing now/.test(t) && /End: done, not done/.test(t)), 'tail'],
+        ['the function gives the same three forms in process', /go-word: work held/.test(inProcess[0]) && /carries the word stop/.test(inProcess[1]) && /it is a correction/.test(inProcess[2]), inProcess.map((t) => t.split('\n')[1]).join(' | ')],
+        ['the stop refusal carries the list the stop form carries', m.dispatch.stopMessage({ at: 0 }).includes(`Only ${STOP_LIST} pass.`), m.dispatch.stopMessage({ at: 0 }).slice(0, 400)],
+        ['the correction refusal lists the entry to plan mode and the plan file and the plan check, and keeps its old words', m.dispatch.correctionMessage({ at: 0 }).includes(PLAN_LIST) && /the status command and TaskStop pass; every other call is held/.test(m.dispatch.correctionMessage({ at: 0 })), m.dispatch.correctionMessage({ at: 0 }).slice(0, 700)],
+      ]);
+    },
+  },
+  {
+    name: 'The hub\'s copies are brought forward at a start: a clean checkout on main behind the remote is fast-forwarded and said with the count and five subjects at most; one that is current is said so; one with a plan in force, on another branch, with uncommitted changes, with a failing fetch or with history that has diverged is left as it stands and why is said; a compaction, an agent\'s start and a repository that is not the hub are not touched',
+    guards: ['bf_ff', 'bf_plan', 'bf_compact', 'bf_branch', 'bf_dirty', 'bf_fetch', 'bf_dedupe', 'bf_subjects'],
+    run(m, dir, h) {
+      const start = { source: 'startup', session_id: 'bf' };
+      const go = (r, extra = {}, p = start) => m.dispatch.bringForward(p, { copy: r.dir, repos: [], inForce: false, ...extra });
+      const head = (r) => gitAt(r.dir, 'rev-parse', 'HEAD').stdout.trim();
+      const remote = (r) => gitAt(r.dir, 'rev-parse', 'origin/main').stdout.trim();
+      const behind = hubCheckout(h, { behind: 7 });
+      const forwarded = go(behind).join('\n');
+      const current = hubCheckout(h, {});
+      const same = go(current).join('\n');
+      const planned = hubCheckout(h, { behind: 2 });
+      const heldByPlan = go(planned, { inForce: true }).join('\n');
+      const other = hubCheckout(h, { behind: 2, branch: 'side' });
+      const onOther = go(other).join('\n');
+      const dirty = hubCheckout(h, { behind: 2, dirty: true });
+      const unclean = go(dirty).join('\n');
+      const broken = hubCheckout(h, { behind: 2, broken: true });
+      const failed = go(broken).join('\n');
+      const diverged = hubCheckout(h, { behind: 2, ahead: 1 });
+      const split = go(diverged).join('\n');
+      const compacted = hubCheckout(h, { behind: 2 });
+      const noneAtCompaction = go(compacted, {}, { source: 'compact', session_id: 'bf' });
+      const noneForAgent = go(compacted, {}, { source: 'startup', session_id: 'bf', agent_id: 'a1' });
+      const resumed = hubCheckout(h, { behind: 1 });
+      const afterResume = go(resumed, {}, { source: 'resume', session_id: 'bf' }).join('\n');
+      const twin = hubCheckout(h, { behind: 1 });
+      const app = h.repo({ 'a.txt': 'an app\n' });
+      const many = m.dispatch.bringForward(start, { copy: twin.dir, repos: [twin.dir, app.dir, twin.dir], inForce: false });
+      const notHub = h.tmp('sg-nothub-');
+      return h.assertAll([
+        ['a clean checkout on main behind the remote is brought forward by the count', /brought forward by 7 commits/.test(forwarded) && head(behind) === remote(behind) && existsSync(join(behind.dir, 'c7.txt')), forwarded],
+        ['five subjects at most are given, the newest first', /change 7; change 6; change 5; change 4; change 3\./.test(forwarded) && !/change 2/.test(forwarded), forwarded],
+        ['a current checkout is said to be current and is not moved', /already current/.test(same) && head(current) === remote(current), same],
+        ['a plan in force leaves the copy as it stands and says how far behind it is', /left as it stands, a plan is in force; 2 commits behind origin main/.test(heldByPlan) && head(planned) !== remote(planned) && !existsSync(join(planned.dir, 'c1.txt')), heldByPlan],
+        ['another branch leaves it as it stands and names the branch', /left as it stands, it is on the branch side; 2 commits behind/.test(onOther) && !existsSync(join(other.dir, 'c1.txt')), onOther],
+        ['uncommitted changes leave it as it stands', /left as it stands, it has uncommitted changes; 2 commits behind/.test(unclean) && !existsSync(join(dirty.dir, 'c1.txt')), unclean],
+        ['a failing fetch leaves it as it stands and says the fetch failed', /left as it stands, the fetch failed/.test(failed) && !existsSync(join(broken.dir, 'c1.txt')), failed],
+        ['history that has diverged is left as it stands and never merged', /left as it stands, it cannot be fast-forwarded; 2 commits behind/.test(split) && !existsSync(join(diverged.dir, 'c1.txt')) && existsSync(join(diverged.dir, 'local1.txt')), split],
+        ['a compaction touches nothing and prints nothing', noneAtCompaction.length === 0 && !existsSync(join(compacted.dir, 'c1.txt')), JSON.stringify(noneAtCompaction)],
+        ['an agent\'s start prints nothing', noneForAgent.length === 0, JSON.stringify(noneForAgent)],
+        ['a resume is brought forward', /brought forward by 1 commit\b/.test(afterResume) && existsSync(join(resumed.dir, 'c1.txt')), afterResume],
+        ['a copy named twice is one line, and a repository that is not the hub is not looked at', many.length === 1 && /brought forward by 1 commit\b/.test(many[0]) && !many[0].includes(app.dir), JSON.stringify(many)],
+        ['a folder that is no checkout gets no line', m.dispatch.bringForward(start, { copy: notHub, repos: [], inForce: false }).length === 0 && m.dispatch.isHubCheckout(notHub) === false, 'no line'],
+      ]);
+    },
+  },
+  {
+    name: 'The hub\'s copies are brought forward through the dispatcher at a startup and a resume and never at a compaction: the gates\' own copy, a checkout behind the remote, says it was brought forward in the start\'s print',
+    guards: ['bf_wire'],
+    run(m, dir, h) {
+      const c = h.suiteCopy(dir, { 'DOCTRINE.md': '# a planted doctrine\n' });
+      c.g('branch', '-M', 'main');
+      const origin = h.tmp('sg-origin-');
+      gitAt(origin, 'init', '-q', '--bare');
+      gitAt(origin, 'symbolic-ref', 'HEAD', 'refs/heads/main');
+      c.g('remote', 'add', 'origin', origin);
+      c.g('push', '-q', 'origin', 'main');
+      c.write('c1.txt', 'change 1\n');
+      c.g('add', '-A'); c.g('commit', '-q', '-m', 'change 1'); c.g('push', '-q', 'origin', 'main');
+      c.g('reset', '-q', '--hard', 'HEAD~1');
+      const home = h.tmp('sg-home-');
+      mkdirSync(join(home, '.claude'), { recursive: true });
+      const startWith = (payload) => spawnSync('node', [join(c.dir, 'hook-dispatch.mjs'), 'SessionStart'], {
+        input: JSON.stringify({ cwd: home, session_id: h.sid('bw'), hook_event_name: 'SessionStart', ...payload }), encoding: 'utf8',
+        env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: home },
+      });
+      const agent = startWith({ source: 'startup', agent_id: 'a1' });
+      const forwardedBefore = existsSync(join(c.dir, 'c1.txt'));
+      const startup = startWith({ source: 'startup' });
+      const movedAfter = existsSync(join(c.dir, 'c1.txt'));
+      return h.assertAll([
+        ['an agent\'s start leaves the copy where it was', forwardedBefore === false && !/HUB COPY/.test(agent.stdout ?? ''), (agent.stdout ?? '').slice(0, 300)],
+        ['a startup prints the gates\' copy as brought forward by one commit', /HUB COPY \(the gates' copy\): brought forward by 1 commit: change 1\./.test(startup.stdout ?? ''), (startup.stdout ?? '').slice(-500)],
+        ['the commit is in the copy after the start', movedAfter === true, 'c1.txt'],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
@@ -833,4 +1054,25 @@ export const plants = {
   seed_wish_valid_item: ['if (/^(?:P-\\d+|new)$/.test(item)) out.item = item;', 'if (/^.+$/.test(item)) out.item = item;', 'hook-dispatch.mjs'],
   seed_wish_valid_rounds: ['if (/^[1-5]$/.test(rounds)) out.rounds = Number(rounds);', 'if (/^\\d+$/.test(rounds)) out.rounds = Number(rounds);', 'hook-dispatch.mjs'],
   seed_wish_newest: ['if (m) v = m[1]; }', 'if (m && v === null) v = m[1]; }', 'hook-dispatch.mjs'],
+  price_parse: [String.raw`Sends priced[ \t]*:[ \t]*(\d+)\b/mi.exec`, String.raw`Sends priced[ \t]*(\d+)\b/mi.exec`, 'hook-dispatch.mjs'],
+  count_review: ['    if (reviewers.includes(e.step)) continue;', '    void 0;', 'hook-dispatch.mjs'],
+  count_running: ['  return { sent: read.ends.length + (read.running?.length ?? 0), notDone };', '  return { sent: read.ends.length, notDone };', 'hook-dispatch.mjs'],
+  price_refuses: ['    if (counts && counts.sent >= price) {', '    if (false) {', 'hook-dispatch.mjs'],
+  price_nolatch: ['        + `${FENCE_NO_LATCH} this refusal sets no latch, so the next call is judged on its own.`);', '        + `this refusal sets no latch, so the next call is judged on its own.`);', 'hook-dispatch.mjs'],
+  price_print: ['    try { const sends = sendsLine(p); if (sends) printed.push(sends); } catch', '    try { void 0; } catch', 'hook-dispatch.mjs'],
+  reminder_go: ['  if (endsWithGoWord(prompt)) form = ', '  if (false) form = ', 'hook-dispatch.mjs'],
+  reminder_stop: ['  else if (isStopMessage(prompt)) form = ', '  else if (false) form = ', 'hook-dispatch.mjs'],
+  reminder_correction_list: ['answer every point in it in this turn; ${CORRECTION_PASSES} pass,', 'answer every point in it in this turn; nothing else passes,', 'hook-dispatch.mjs'],
+  reminder_wired: ['    const REMINDER = reminderFor(p.prompt);', "    const REMINDER = reminderFor('');", 'hook-dispatch.mjs'],
+  correction_plan_passes: ['    + `Also passing: ${PLAN_PASSES}, so a message that asks for a plan gets the plan written in the same turn. `', '    + ``', 'hook-dispatch.mjs'],
+  stop_message_list: ['    + `Only ${STOP_PASSES} pass. `', '    + `Only the status command and TaskStop pass. `', 'hook-dispatch.mjs'],
+  bf_ff: ["const merged = git(dir, ['merge', '--ff-only', 'origin/main']);", "const merged = git(dir, ['reset', '--hard', 'origin/main']);", 'hook-dispatch.mjs'],
+  bf_plan: ["    if (inForce) reasons.push('a plan is in force');", '    void 0;', 'hook-dispatch.mjs'],
+  bf_compact: ["  if (p?.agent_id || !(p?.source === 'startup' || p?.source === 'resume')) return [];", '  if (p?.agent_id) return [];', 'hook-dispatch.mjs'],
+  bf_branch: ["else if (branch.out !== 'main') reasons.push(", 'else if (false) reasons.push(', 'hook-dispatch.mjs'],
+  bf_dirty: ["else if (dirty.out) reasons.push('it has uncommitted changes');", "else if (false) reasons.push('it has uncommitted changes');", 'hook-dispatch.mjs'],
+  bf_fetch: ['    if (!fetched.ok) {', '    if (false) {', 'hook-dispatch.mjs'],
+  bf_dedupe: ['    if (seen.has(key) || !isHubCheckout(dir)) return;', '    if (!isHubCheckout(dir)) return;', 'hook-dispatch.mjs'],
+  bf_subjects: ["['log', '--format=%s', '-5', 'HEAD..origin/main']", "['log', '--format=%s', 'HEAD..origin/main']", 'hook-dispatch.mjs'],
+  bf_wire: ['    try { printed.push(...bringForward(p, { root })); } catch', '    try { void 0; } catch', 'hook-dispatch.mjs'],
 };

@@ -1378,6 +1378,7 @@ export function correctionMessage(c, reviewed = false) {
     + `the status command and TaskStop pass; every other call is held, an agent dispatch, a write and a read of an app's source among them${reviewed
       ? ', except the Standing review step and the step that review clears: the review begins after this message and reads it, so a move the correction does not touch goes on after it and a move it touches does not'
       : ''}. `
+    + `Also passing: ${PLAN_PASSES}, so a message that asks for a plan gets the plan written in the same turn. `
     + `A message whose last word is one of these lifts it: ${GO_WORDS.join(', ')}. `
     + 'Held work is sent again only in a turn that follows one.';
 }
@@ -1391,7 +1392,7 @@ export function correctionMessage(c, reviewed = false) {
  */
 export function stopMessage(s) {
   return `STOP (Doctrine §0e rule 3): a message from the owner${s.at ? `, written ${californiaTime(new Date(s.at))} (California),` : ''} carries the word stop and does not end with a go-word, so everything is held, the main thread and every agent, a step the review cleared included, until the owner writes a message that ends with a go-word. `
-    + 'Only the status command, TaskStop, an agent\'s own return and, on the main thread, a read of the record pass. '
+    + `Only ${STOP_PASSES} pass. `
     + 'Say in plain text what was running and that it is stopped, answer the message, and end the turn; an agent returns what it has, saying it was stopped. '
     + `A message whose last word is one of these lifts it: ${GO_WORDS.join(', ')}. A plain message typed after the stop does not.`;
 }
@@ -1440,8 +1441,15 @@ export function stopMessage(s) {
  *   makes, and carries `FENCE_NO_LATCH`: the remedy is the owner's switch, and a latch would only stop the main thread's other calls.
  *   A model that cannot be read is not a top tier, so nothing is held on a doubt.
  * @param {object[]|undefined} [entries]  the main transcript's entries, for the test; read from the payload's transcript when undefined.
+ *   THE PRICE: a rule line of the plan's own rules that opens, after its list mark, with the words Sends priced, a colon and a whole number
+ *   (`pricedSends`) is a ceiling on the agents sent under the approval in force, the review step's among them. Once `sendCounts` reaches the
+ *   number the send is refused, with the count, the number and the way on (the plan goes back through plan mode, where the line is raised
+ *   with the causes named); the refusal carries `FENCE_NO_LATCH`, so the count of refusals that set no latch is as it was. A plan with no
+ *   such line is sent as before, and a count that cannot be read holds nothing (the review gate already fails closed on the same read).
+ * @param {{sent: number, notDone: number}|null|undefined} [sends]  `sendCounts`' answer, for the test; read from the session's agents when
+ *   undefined, and null means no count.
  */
-export function dispatchGate(p, plan = approvedPlan(), pointer = undefined, entries = undefined) {
+export function dispatchGate(p, plan = approvedPlan(), pointer = undefined, entries = undefined, sends = undefined) {
   const input = p.tool_input ?? {};
   const head = 'DISPATCH GATE (Doctrine §0e): an agent\'s prompt is only the approved plan\'s path and a step number, so everything an agent is told is in the plan the owner read.';
   const refusal = (t) => `${t}\n${approvalBlock()}`;
@@ -1492,6 +1500,17 @@ export function dispatchGate(p, plan = approvedPlan(), pointer = undefined, entr
   if (!servedBy(plan.text).get(n)?.length) {
     return refusal(`${head} The plan's "Served by:" line names no goal for step ${n}, so the step serves none and is not sent. The line is in the plan's "## Goals" section; it may be amended with the Steps, and the approval holds.`);
   }
+  // THE PRICE (Doctrine §0e rule 4): a plan that prices its sends is held to the number, the review step's sends among them.
+  const price = pricedSends(plan.text);
+  if (price !== null) {
+    let counts = sends;
+    if (counts === undefined) { try { counts = sendCounts(stepEnds(p), plan); } catch { counts = null; } }
+    if (counts && counts.sent >= price) {
+      return refusal(`${head} SENDS PRICED: the plan's own rules price its sends at ${price}, and ${counts.sent} agent${counts.sent === 1 ? ' has' : 's have'} been sent under this approval (the review step's among them; ${counts.notDone} ended other than DONE), so no further agent is sent. `
+        + 'The plan goes back through plan mode, where its "Sends priced" line is raised with the causes of the overrun named, and the owner approves it at the button (the line stands in the plan\'s rules, a section of the approved scope, so no amendment carries it). '
+        + `${FENCE_NO_LATCH} this refusal sets no latch, so the next call is judged on its own.`);
+    }
+  }
   // THE POINTER (Doctrine §0e rule 13): only step N and a Standing step are
   // sent. N is read from the agents' own hand-backs, never from the session.
   // A plan with a review step has no pointer to enforce here: the move is
@@ -1507,6 +1526,57 @@ export function dispatchGate(p, plan = approvedPlan(), pointer = undefined, entr
       + 'A step becomes next only when an agent hands back for the step before it with DONE as the first line; a REFUSED or FAILED hand-back leaves it where it is.');
   }
   return null;
+}
+
+/**
+ * The number of sends a plan prices.
+ * @param {string} text  the plan.
+ * @returns {number|null} the whole number of the first line of the plan's `## Rules of this plan` section that opens, after its list mark
+ *   (a hyphen, an asterisk, a plus or a number and a full stop), with the words Sends priced, a colon and the number; null when the section
+ *   holds no such line. The line stands in a section of the approved scope (`SCOPE_SECTIONS`), so raising it needs the button.
+ */
+export function pricedSends(text) {
+  const m = /^[ \t]*(?:[-*+]|\d+\.)[ \t]+Sends priced[ \t]*:[ \t]*(\d+)\b/mi.exec(planSection(text, 'Rules of this plan'));
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * The agents sent under the approval in force, and how many ended other than DONE.
+ * @param {{ends: object[], running: string[]}|null} read  `stepEnds`' answer (null when the session's files cannot be found).
+ * @param {{text: string}} plan  the plan in force; its review steps (`aimReviewSteps`) are counted among the sends and are not steps of the work.
+ * @returns {{sent: number, notDone: number}|null} `sent` is every agent that ended under the plan in force plus every agent still running,
+ *   the review's included; `notDone` counts the ends of a step of the work whose hand-back does not open DONE or that ended with none.
+ *   null when `read` is null. The one read the dispatch gate's price and the print at each prompt share.
+ */
+export function sendCounts(read, plan) {
+  if (!read || !Array.isArray(read.ends)) return null;
+  const reviewers = aimReviewSteps(plan?.text ?? '');
+  let notDone = 0;
+  for (const e of read.ends) {
+    if (reviewers.includes(e.step)) continue;
+    const first = String(e.last ?? '').split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+    if (e.how !== 'a report' || !/^DONE\b/.test(first)) notDone += 1;
+  }
+  return { sent: read.ends.length + (read.running?.length ?? 0), notDone };
+}
+
+/**
+ * The line printed at each prompt of the owner while a plan that prices its sends is in force.
+ * @param {object} p  the UserPromptSubmit payload.
+ * @param {{text: string}|null} [plan]  the plan in force; read from the approval marker when undefined.
+ * @param {{sent: number, notDone: number}|null|undefined} [counts]  `sendCounts`' answer, for the test; read from the session's agents when undefined.
+ * @returns {string} one line giving the sends so far, the number priced and how many ended other than DONE; '' for no plan, a plan with no
+ *   priced line, or a count that cannot be read.
+ */
+export function sendsLine(p, plan = undefined, counts = undefined) {
+  const inForce = plan === undefined ? approvedPlan() : plan;
+  if (!inForce) return '';
+  const price = pricedSends(inForce.text);
+  if (price === null) return '';
+  let c = counts;
+  if (c === undefined) { try { c = sendCounts(stepEnds(p), inForce); } catch { c = null; } }
+  if (!c) return '';
+  return `SENDS (Doctrine §0e rule 4): ${c.sent} of ${price} priced sent under this approval, ${c.notDone} ended other than DONE.${c.sent >= price ? ' The price is reached: no further agent is sent until the plan goes back through plan mode with the line raised.' : ''}`;
 }
 
 /**
@@ -3971,12 +4041,32 @@ async function toolCensus(path) {
 // The owner says what is next, so the reminder asks for what is being done now
 // and nothing about what comes next; a status is due when an agent has ended
 // (report.mjs), not on a clock, so it carries no five-minute line.
-const REMINDER = [
-  'OWNER MESSAGE (LESSONS §370). Before any tool call, reply to EVERY point in it.',
-  'If it says something was done wrong: answer it, and run nothing else this turn.',
+// THE LINE ABOUT WHAT PASSES IS THE FORM THAT FITS THE MESSAGE (Doctrine §0e rule 3): it used to say to answer and run nothing else, where rule 3
+// lets more pass. The two lists below are read by the refusals too (`correctionMessage`, `stopMessage`), so the print and the refusal cannot differ.
+const PLAN_PASSES = 'the entry to plan mode and, in plan mode, a write of the plan file and the plan check';
+const CORRECTION_PASSES = `the status command, TaskStop, a read of the record, ${PLAN_PASSES}`;
+const STOP_PASSES = 'the status command, TaskStop, an agent\'s own return and, on the main thread, a read of the record';
+const REMINDER_TAIL = [
   'First line: what you are doing now; a stop\'s first line is "Stopping here", then paused, pending what lifts it, or finished, nothing pending.',
   'End: done, not done, found and not fixed, open for the owner as decisions only, and the state line in its fixed forms: paused, pending what of the owner\'s; running, what; or finished. Never "waiting on you", and never "nothing open" for a pause. No app notifications.',
-].join('\n');
+];
+
+/**
+ * The reminder printed at each owner message, in the form that fits the message.
+ * @param {string} prompt  the message as it arrived.
+ * @returns {string} three lines of the head and two of the tail. The second line is one of three: for a message ending with a go-word (`endsWithGoWord`),
+ *   that held work may go; for a message carrying the word stop with no go-word at its end (`isStopMessage`), that only what the stop refusal
+ *   lists passes (`STOP_PASSES`); for any other message, a correction, what the correction hold passes (`CORRECTION_PASSES`), with the plan
+ *   written in the same turn where the message asks for one.
+ */
+export function reminderFor(prompt) {
+  const head = 'OWNER MESSAGE (LESSONS §370). Before any tool call, reply to EVERY point in it.';
+  let form;
+  if (endsWithGoWord(prompt)) form = 'It ends with a go-word: work held since the last message may be sent again, and the approved plan goes on.';
+  else if (isStopMessage(prompt)) form = `It carries the word stop and does not end with a go-word: everything is held, and only ${STOP_PASSES} pass. Answer it, say what was running and that it is stopped, and run nothing else this turn.`;
+  else form = `It does not end with a go-word, so it is a correction: answer every point in it in this turn; ${CORRECTION_PASSES} pass, so a message that asks for a plan gets the plan written in this turn. Every other call is held.`;
+  return [head, form, ...REMINDER_TAIL].join('\n');
+}
 
 /**
  * The model a switch made after the newest main-thread reply names.
@@ -4080,6 +4170,78 @@ export function configChange(p) {
  */
 function pageFollowsNext(raw, root) {
   try { run(`node "${join(HUB, 'report.mjs')}" --page-next`, raw, root, 30); } catch { /* the page follows at the next status */ }
+}
+
+/**
+ * Is a folder a checkout of the hub?
+ * @param {string} dir  a folder.
+ * @returns {boolean} true when it has a `.git` of its own and holds this dispatcher's file and the doctrine's index at its top: the hub's
+ *   mark, so the session's other repositories are not touched.
+ */
+export function isHubCheckout(dir) {
+  try { return existsSync(join(dir, '.git')) && existsSync(join(dir, 'hook-dispatch.mjs')) && existsSync(join(dir, 'DOCTRINE.md')); } catch { return false; }
+}
+
+/**
+ * Bring the gates' own copy of the hub, and each checkout of the hub among the session's repositories, forward from the remote's main.
+ * THE COPIES ARE BROUGHT FORWARD AT A START (Doctrine §0e rule 4): a startup or a resume, never a compaction, and only where no plan of the
+ * session is in force with a step open, because a copy changed under a running plan changes the gates and the rules beneath its agents.
+ * @param {object} p  the SessionStart payload: `source`, `session_id`, `cwd`.
+ * @param {{copy?: string, root?: string, repos?: string[], inForce?: boolean, git?: Function, seconds?: number}} [opts]  the gates' copy, the
+ *   launch folder the session's repositories are found under, those repositories, whether a plan is in force, the git runner
+ *   `(dir, args) => {ok, out}` and the seconds each git call is given; each is read from the session when absent, and the test gives them.
+ * @returns {string[]} one line for each copy, in this order of the three forms: brought forward, by how many commits and with five of their subjects
+ *   at most; already current; or left as it stands and why (a plan in force, another branch than main, uncommitted changes, a fetch that failed),
+ *   with how far behind it is where the fetch succeeded. [] for a compaction, an agent's start, or no copy to look at. Each git call is given
+ *   twenty seconds by default and any failure is a line, never a thrown error, so the start is never held. The only change made is a
+ *   fast-forward merge of `origin/main` into a copy on main with nothing uncommitted.
+ */
+export function bringForward(p, opts = {}) {
+  if (p?.agent_id || !(p?.source === 'startup' || p?.source === 'resume')) return [];
+  const seconds = opts.seconds ?? 20;
+  const git = opts.git ?? ((dir, args) => {
+    const r = spawnSync('git', ['-C', dir, ...args], { encoding: 'utf8', timeout: seconds * 1000, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } });
+    return { ok: r.status === 0 && !r.error, out: String(r.stdout ?? '').trim(), err: String(r.stderr ?? r.error?.message ?? '').trim() };
+  });
+  let inForce = opts.inForce;
+  if (inForce === undefined) { try { inForce = planPhase(p).kind === 'in force'; } catch { inForce = true; } }
+  const copies = [];
+  const seen = new Set();
+  const add = (dir, label) => {
+    let key = resolve(dir);
+    try { key = realpathSync(dir); } catch { /* the path as written */ }
+    if (seen.has(key) || !isHubCheckout(dir)) return;
+    seen.add(key);
+    copies.push({ dir, label });
+  };
+  add(opts.copy ?? HUB, 'the gates\' copy');
+  let repos = opts.repos;
+  if (!repos) { try { repos = reposUnder(resolve(String(opts.root || p?.cwd || process.env.CLAUDE_PROJECT_DIR || process.cwd()))); } catch { repos = []; } }
+  for (const r of repos) add(r, `the hub checkout ${r}`);
+  const lines = [];
+  for (const { dir, label } of copies) {
+    const reasons = [];
+    if (inForce) reasons.push('a plan is in force');
+    const branch = git(dir, ['rev-parse', '--abbrev-ref', 'HEAD']);
+    if (!branch.ok) reasons.push('its branch cannot be read');
+    else if (branch.out !== 'main') reasons.push(`it is on the branch ${branch.out}`);
+    const dirty = git(dir, ['status', '--porcelain']);
+    if (!dirty.ok) reasons.push('its changes cannot be read');
+    else if (dirty.out) reasons.push('it has uncommitted changes');
+    const fetched = git(dir, ['fetch', 'origin', 'main']);
+    if (!fetched.ok) { lines.push(`HUB COPY (${label}): left as it stands, the fetch failed${reasons.length ? ` and ${reasons.join(' and ')}` : ''}.`); continue; }
+    const behind = git(dir, ['rev-list', '--count', 'HEAD..origin/main']);
+    const n = behind.ok ? Number(behind.out) : NaN;
+    if (!Number.isInteger(n)) { lines.push(`HUB COPY (${label}): left as it stands, how far it is behind cannot be read${reasons.length ? ` and ${reasons.join(' and ')}` : ''}.`); continue; }
+    if (reasons.length) { lines.push(`HUB COPY (${label}): left as it stands, ${reasons.join(' and ')}; ${n} commit${n === 1 ? '' : 's'} behind origin main.`); continue; }
+    if (n === 0) { lines.push(`HUB COPY (${label}): already current.`); continue; }
+    const subjects = git(dir, ['log', '--format=%s', '-5', 'HEAD..origin/main']);
+    const merged = git(dir, ['merge', '--ff-only', 'origin/main']);
+    if (!merged.ok) { lines.push(`HUB COPY (${label}): left as it stands, it cannot be fast-forwarded; ${n} commit${n === 1 ? '' : 's'} behind origin main.`); continue; }
+    const list = subjects.ok && subjects.out ? `: ${subjects.out.split('\n').filter(Boolean).join('; ')}` : '';
+    lines.push(`HUB COPY (${label}): brought forward by ${n} commit${n === 1 ? '' : 's'}${list}.`);
+  }
+  return lines;
 }
 
 async function main(event, raw, p) {
@@ -4475,7 +4637,10 @@ async function main(event, raw, p) {
     let goals = '';
     try { goals = goalsSection(); } catch { goals = ''; }
     printed.push(goals || 'The goals every session serves: not read (no such section in the CLAUDE.md beside hook-dispatch.mjs).');
+    const REMINDER = reminderFor(p.prompt);
     printed.push(REMINDER);
+    // THE SENDS SO FAR, where the plan in force prices them (`sendsLine`): one line, so the count is in front of the session at every message.
+    try { const sends = sendsLine(p); if (sends) printed.push(sends); } catch { /* the line is a convenience; the gate counts on its own */ }
     // THE PLAN SEED, ONCE AT THE ENTRY TO PLAN MODE (`planEntrySeed`): the record is printed in the plan's own shape the first time a prompt
     // carries the mode plan, so the plan is typed from the record and not from memory. A prompt with no mode prints nothing.
     try { const seedText = planEntrySeed(p); if (seedText) printed.push(seedText); } catch { /* the plan is typed from the manager's own run of the command */ }
@@ -4525,6 +4690,11 @@ async function main(event, raw, p) {
       + await toolCensus(p.transcript_path));
   }
   if (dueLine) printed.push(dueLine);
+  // THE COPIES OF THE HUB ARE BROUGHT FORWARD AT A STARTUP OR A RESUME, NEVER A COMPACTION (`bringForward`): one line for each copy. A failure costs
+  // the lines, never the start.
+  if (event === 'SessionStart' && !p.agent_id) {
+    try { printed.push(...bringForward(p, { root })); } catch { /* the start prints without the lines */ }
+  }
   // THE HARNESS'S RESTORE OF PLAN MODE AFTER AN APPROVAL IS SAID TO THE MAIN THREAD AT A RESUME OR A COMPACTION (Q-HUB-303): one line of
   // what is established, and nothing at a start where `restartedPlanMode` does not hold.
   if (event === 'SessionStart' && !p.agent_id && (p.source === 'resume' || p.source === 'compact')) {
