@@ -7,7 +7,7 @@
 // refresh after the notes (Q-HUB-347), the hook loop's identifier skip (Q-HUB-349), a rule under a sub-heading (Q-HUB-351) and the read in plan
 // mode with no plan (Q-HUB-362). The shape of this file is guard-cases/shape.mjs.
 import { mkdirSync, writeFileSync, utimesSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 
@@ -528,6 +528,114 @@ export const cases = [
       }
     },
   },
+  {
+    name: 'Q-HUB-382: the check of a call carries the permission mode the owner\'s newest message recorded, so in plan mode with no plan in force it asks the fence about a read outside the record and about a history read carrying the stat flag as the dispatcher will, and in another mode it is the conversation skip',
+    guards: ['can_mode_read'],
+    run(m, dir, h) {
+      const s = h.sid('cm');
+      const proj = join(process.env.HOME, '.claude', 'projects', '-home-user');
+      mkdirSync(proj, { recursive: true });
+      const main = join(proj, `${s}.jsonl`);
+      const write = (mode) => writeFileSync(main, h.jsonl([{ ...h.turn(-5, 'Go.'), permissionMode: mode }]));
+      const r = h.repo({ 'a.txt': 'one\n' });
+      const outside = join(h.tmp('sg-cm-'), 'outside.txt');
+      writeFileSync(outside, 'x\n');
+      const cwd = h.tmp('sg-cmcwd-');
+      const check = (cmd) => m.dispatch.canMain(['Bash', cmd], { CLAUDE_CODE_SESSION_ID: s }, cwd);
+      const direct = (cmd) => m.dispatch.managerFence({ session_id: s, transcript_path: main, cwd, permission_mode: 'plan', tool_name: 'Bash', tool_input: { command: cmd } });
+      const stat = `git -C ${r.dir} log --stat -1`;
+      const cat = `cat ${outside}`;
+      write('plan');
+      const planCat = check(cat);
+      const planStat = check(stat);
+      write('auto');
+      const autoCat = check(cat);
+      return h.assertAll([
+        ['in plan mode a read outside the record is asked of the fence and would be refused', direct(cat) !== null && /MANAGER FENCE: would refuse\./.test(planCat), planCat],
+        ['in plan mode the history read with the stat flag is asked of the fence and gets the fence\'s own answer', !/no plan is in force \(conversation\)/.test(planStat) && (direct(stat) === null) === /MANAGER FENCE: would pass\./.test(planStat), planStat],
+        ['in another mode the same read is the conversation skip', /MANAGER FENCE: no plan is in force \(conversation\)/.test(autoCat), autoCat],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-383: the manager fence reads a grep pattern as a pattern, so a pattern holding a slash names no file, a pattern given by -e likewise, a pattern alone still names no file of the record, and a flag that takes a value leaves the line read as before',
+    guards: ['search_pattern_skip', 'search_pattern_flags', 'search_pattern_e'],
+    run(m, dir, h) {
+      const planFile = join(h.tmp('sg-sp-'), 'plan.md');
+      writeFileSync(planFile, '# P\n');
+      const plan = { path: planFile, text: h.STEPS_PLAN };
+      const fence = (command) => m.dispatch.managerFence({ session_id: h.sid('sp'), cwd: dirname(planFile), tool_name: 'Bash', tool_input: { command } }, { plan, classify: () => true });
+      const slash = fence(`grep -n "src/lib/x.mjs" ${planFile}`);
+      const viaE = fence(`grep -e "a/b" -e "c/d" ${planFile}`);
+      const piped = fence(`cat ${planFile} | grep "a/b"`);
+      const other = fence('grep -n "src/lib/x.mjs" /etc/hostname');
+      const alone = fence('grep -n "src/lib/x.mjs"');
+      const valued = fence(`grep -f /etc/passwd pat ${planFile}`);
+      return h.assertAll([
+        ['a pattern holding a slash names no file and the file after it is of the record', slash === null, slash],
+        ['patterns given by -e name no file', viaE === null, viaE],
+        ['a pattern after a pipe names no file', piped === null, piped],
+        ['a file outside the record after the pattern is still refused, and named', typeof other === 'string' && other.includes('/etc/hostname'), other],
+        ['a pattern alone still reads the working directory and is refused', typeof alone === 'string' && /names no file of the record/.test(alone), alone],
+        ['a flag that takes a value leaves the line read as before: the file it names is refused', typeof valued === 'string' && valued.includes('/etc/passwd'), valued],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-389: the check of a call passes a standing latch exactly as the dispatcher does: the check and the main thread\'s TaskStop pass it, a read does not, and an agent\'s TaskStop and check do not while a latched agent\'s own report does',
+    guards: ['can_passes_latch_list', 'latch_passes_report'],
+    run(m, dir, h) {
+      const w = h.world(dir);
+      const s = h.sid('lp');
+      const pad = join(tmpdir(), 'claude-0', '-home-user', s, 'scratchpad');
+      const hookFile = join(dir, 'hook-dispatch.mjs');
+      const hook = (extra) => w.call('PreToolUse', { session_id: s, ...extra });
+      const checkCall = { tool_name: 'Bash', tool_input: { command: `node "${hookFile}" --can Read "${w.plan}"` } };
+      const readCall = { tool_name: 'Read', tool_input: { file_path: w.plan } };
+      const mainStop = { tool_name: 'TaskStop', tool_input: { task_id: 'x' } };
+      const agentStop = { agent_id: 'a1', ...mainStop };
+      const agentCheck = { agent_id: 'a1', ...checkCall };
+      const agentNote = { agent_id: 'a1', tool_name: 'Write', tool_input: { file_path: join(pad, 'progress', 'step-1-report.txt'), content: 'x' } };
+      const set = hook({ tool_name: 'Agent', tool_input: { prompt: `${w.plan} step 1, and tidy up after`, subagent_type: 'general-purpose' } });
+      const standing = set.status === 2 && h.latched(s);
+      const hooked = { check: hook(checkCall).status, read: hook(readCall).status, agentStop: hook(agentStop).status, agentCheck: hook(agentCheck).status };
+      const can = (extra) => m.dispatch.canCall({ session_id: s, transcript_path: w.tr, cwd: w.cwd, ...extra }, { guards: false });
+      const note = can(agentNote);
+      return h.assertAll([
+        ['a refused send set the latch', standing, set.stderr],
+        ['the dispatcher passes the check under the latch and the check says it passes', hooked.check === 0 && can(checkCall).passesLatch === true, JSON.stringify(hooked)],
+        ['the dispatcher refuses a read under the latch and the check says the latch refuses it', hooked.read === 2 && can(readCall).passesLatch === false, JSON.stringify(hooked)],
+        ['the main thread\'s TaskStop passes the latch', can(mainStop).passesLatch === true, can(mainStop).passesLatch],
+        ['an agent\'s TaskStop is refused by the dispatcher and the check says the latch refuses it', hooked.agentStop === 2 && can(agentStop).passesLatch === false, JSON.stringify(hooked)],
+        ['an agent\'s check is refused by the dispatcher and the check says the latch refuses it', hooked.agentCheck === 2 && can(agentCheck).passesLatch === false, JSON.stringify(hooked)],
+        ['a latched agent\'s own report passes the latch in the check', note.passesLatch === true && m.dispatch.latchPasses({ session_id: s, transcript_path: w.tr, cwd: w.cwd, ...agentNote }, note.latch).reportWrite === true, JSON.stringify(note.latch)],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-400: the plan check does not ask the Found answered section for a finding whose program item reads done, and still asks for one whose item reads open and for one with no item',
+    guards: ['found_done_skip', 'found_done_state'],
+    run(m, dir, h) {
+      const root = h.tmp('sg-fd-');
+      mkdirSync(join(root, 'found'), { recursive: true });
+      for (const k of ['Q-ZZ-1', 'Q-ZZ-2', 'Q-ZZ-3']) writeFileSync(join(root, 'found', `${k}.md`), `${k}: a finding of the planted queue with words enough to read.\n`);
+      writeFileSync(join(root, 'PROGRAM.md'), ['# Program', '',
+        '### P-1. Q-ZZ-1: the planted finding that was put right', '', 'Repository: hub. Goal: 1. State: done. Plan: a plan.', '', 'Acceptance: a thing.', '',
+        '### P-2. Q-ZZ-2: the planted finding still open', '', 'Repository: hub. Goal: 1. State: open. Plan: none.', '', 'Acceptance: a thing.', ''].join('\n'));
+      const plan = '# T\n\n## Steps\n1. x\n';
+      const asked = m.dispatch.foundAnsweredProblem(plan, { roots: [root] });
+      const done = [...m.dispatch.doneFindingKeys(root)].join(',');
+      writeFileSync(join(root, 'PROGRAM.md'), ['# Program', '', '### P-1. Q-ZZ-1: the planted finding that was put right', '', 'Repository: hub. Goal: 1. State: done. Plan: a plan.', ''].join('\n'));
+      for (const k of ['Q-ZZ-2', 'Q-ZZ-3']) writeFileSync(join(root, 'found', `${k}.md`), 'prose that opens with no key\n');
+      const allDone = m.dispatch.foundAnsweredProblem(plan, { roots: [root] });
+      return h.assertAll([
+        ['the finding whose item is done is not asked for', typeof asked === 'string' && !asked.includes('Q-ZZ-1'), asked],
+        ['the open one and the one with no item are asked for', typeof asked === 'string' && asked.includes('Q-ZZ-2') && asked.includes('Q-ZZ-3'), asked],
+        ['the done keys are the item headings that read done', done === 'Q-ZZ-1', done],
+        ['a queue of done findings only asks for nothing', allDone === null, allDone],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
@@ -565,4 +673,12 @@ export const plants = {
   cfg_harness_sync: ['    if (harnessSync) baseline = true;', '    void 0;', 'hook-dispatch.mjs'],
   cfg_harness_field: ["source: String(p?.source ?? ''), file, baseline, harnessSync };", "source: String(p?.source ?? ''), file, baseline };", 'hook-dispatch.mjs'],
   cfg_print_harness: ["${r.harnessSync ? 'the harness", "${false ? 'the harness", 'report.mjs'],
+  can_mode_read: ['  if (files) { try { mode = ownerMode(tailEntries(files.main, 16 * 1024 * 1024)); } catch { mode = null; } }', '  if (files) { mode = null; }', 'hook-dispatch.mjs'],
+  search_pattern_skip: ['      if (asPattern && !patternSeen) { patternSeen = true; continue; }', '      if (false) { patternSeen = true; continue; }', 'hook-dispatch.mjs'],
+  search_pattern_flags: ['.every((x) => SEARCH_FLAG.test(x));', '.every(() => true);', 'hook-dispatch.mjs'],
+  search_pattern_e: ['      if (asPattern && SEARCH_E_FLAG.test(raw)) { patternSeen = true; patternNext = true; continue; }', '      void 0;', 'hook-dispatch.mjs'],
+  can_passes_latch_list: ['  const passesLatch = latchPasses(p, latch).passes;', "  const passesLatch = free || tool === 'TaskStop';", 'hook-dispatch.mjs'],
+  latch_passes_report: ['    try { reportWrite = !!latch && agentReportWrite(p); } catch { reportWrite = false; }', '    reportWrite = false;', 'hook-dispatch.mjs'],
+  found_done_skip: ['!queued.has(q.key) && !done.has(q.key)', '!queued.has(q.key)', 'hook-dispatch.mjs'],
+  found_done_state: [String.raw`State:\s*done\b/m.test(entry)`, String.raw`State:\s*\w+\b/m.test(entry)`, 'hook-dispatch.mjs'],
 };

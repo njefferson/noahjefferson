@@ -152,9 +152,9 @@ import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
 import { createHash } from 'node:crypto';
 import { recallParts } from './compact-recall.mjs';
-import { tailEntries, isOwnerMessage, textOf } from './transcript-tail.mjs';
+import { tailEntries, isOwnerMessage, textOf, ownerMode } from './transcript-tail.mjs';
 import { californiaTime, approvalBlock, goalsSection, goalsBlock, pointerFor, planOrder, reviewState, aimReviewSteps, AIM_FILE, planSection, RULES_FILE, agentRules, MANAGER_FILE, scratchpadOf,
-  planScript, noteRefusedRead, refusedReads, unreadRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, stepEnds, stepBody, markCompacted, sessionFiles,
+  planScript, noteRefusedRead, refusedReads, unreadRefusals, standingRefusals, agentStep, agentTranscriptPath, stepsFilePath, stepsFileText, stepEnds, stepBody, markCompacted, sessionFiles,
   planAfter, SCOPE_SECTIONS, restartedPlanMode, writeStartMode, isTopTier, tierWords, servingModel, flaggedAgents } from './report.mjs';
 // One definition of a plan's section, in report.mjs, for the approval's scope hashes to share.
 export { planSection };
@@ -1058,6 +1058,27 @@ export function agentReportWrite(p) {
   let own = null;
   try { const file = agentTranscriptPath(p); if (file) own = agentStep(file); } catch { own = null; }
   return own === null || own === Number(m[1]);
+}
+
+/**
+ * Which kinds of call a standing refusal latch lets through (Q-HUB-389): the one list `main` and the check of a call (`canCall`) both read.
+ * @param {object} p  a PreToolUse payload.
+ * @param {{reason: string, own?: boolean} | null} [latch]  the latch standing for this call (`latchStanding`), for the release of a latch an agent's own refusal set.
+ * @returns {{status: boolean, mainStop: boolean, release: object|null, reportWrite: boolean, passes: boolean}} `status`: the status command, and on the
+ *   main thread only the check of a call (`--can`), the plan check and the plan seed; `mainStop`: the main thread's TaskStop; `release`: the reply guard's
+ *   release command, on the main thread, or an agent's own when the latch is its own and the reply guard set it; `reportWrite`: a latched agent's own
+ *   progress note and report (`agentReportWrite`); `passes`: any of them. The plans page lists these kinds in rule 14; an agent's own return passes before
+ *   the latch is asked and is no call of this list.
+ */
+export function latchPasses(p, latch = null) {
+    // (Four spaces in, as the lines stood in `main`, so the suite's plants on these lines still find them.)
+    const status = p.tool_name === 'Bash' && (REPORT.test(String(p.tool_input?.command ?? '')) || (!p.agent_id && CAN.test(String(p.tool_input?.command ?? ''))) || (!p.agent_id && isPlanCheck(p)) || (!p.agent_id && isSeedCommand(p.tool_input?.command)));
+    const mainStop = p.tool_name === 'TaskStop' && !p.agent_id;
+    const releaseCall = p.tool_name === 'Bash' ? releaseCommand(p.tool_input?.command) : null;
+    const release = releaseCall && (!p.agent_id || (latch?.own && releaseLifts(latch, releaseCall))) ? releaseCall : null;
+    let reportWrite = false;
+    try { reportWrite = !!latch && agentReportWrite(p); } catch { reportWrite = false; }
+    return { status, mainStop, release, reportWrite, passes: !!(status || mainStop || release || reportWrite) };
 }
 
 /**
@@ -1977,7 +1998,8 @@ export function readsGate(p, plan = approvedPlan(), open = undefined) {
   let list = open;
   if (list === undefined) {
     const refused = refusedReads(p.session_id);
-    list = refused.length ? unreadRefusals(refused, tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024)) : [];
+    // Q-HUB-384: the status print reads the same list through the same function (`standingRefusals`), the refusals before the newest compaction dropped.
+    list = refused.length ? standingRefusals(refused, tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024), plan?.approvedAt) : [];
   }
   // Q-HUB-290: only a refusal made since the plan in force was approved holds a step; refusals of earlier, closed plans stay in the record and
   // hold nothing (thirty of them held one send).
@@ -2038,6 +2060,27 @@ export function foundQueue(root) {
 }
 
 /**
+ * The findings whose program item is done.
+ * @param {string} root  a repository's root directory.
+ * @returns {Set<string>} the key of each item of the root's `PROGRAM.md` whose heading is `### P-N. Q-TAG-M: …` (an item taken for a filed finding)
+ *   and whose entry reads `State: done`; empty where the root has no program or the file cannot be read. An item that reads open, planned or
+ *   anything else holds nothing back.
+ */
+export function doneFindingKeys(root) {
+  const done = new Set();
+  let text = '';
+  try { text = readFileSync(join(root, 'PROGRAM.md'), 'utf8'); } catch { return done; }
+  const heads = [...text.matchAll(/^### P-\d+\.\s+(Q-[A-Za-z0-9]+-\d+)\b/gm)];
+  for (const m of heads) {
+    const rest = text.slice(m.index + m[0].length);
+    const end = rest.search(/^#{2,3} /m);
+    const entry = end < 0 ? rest : rest.slice(0, end);
+    if (/^Repository:[^\n]*\bState:\s*done\b/m.test(entry)) done.add(m[1]);
+  }
+  return done;
+}
+
+/**
  * The repositories a plan touches that can hold a queue.
  * @param {string} text  the plan.
  * @param {string} [dir]  the launch directory; CLAUDE_PROJECT_DIR or the working
@@ -2088,7 +2131,8 @@ export function queueRoots(text, dir = process.env.CLAUDE_PROJECT_DIR || process
 export function foundAnsweredProblem(text, opts = {}) {
   const roots = opts.roots ?? queueRoots(text, opts.dir);
   const queued = new Map();
-  for (const r of roots) for (const q of foundQueue(r)) if (!queued.has(q.key)) queued.set(q.key, { ...q, repo: basename(r) });
+  // Q-HUB-400: the found folder keeps a finding's file after its program item closes, so a finding whose item reads done is not queued.
+  for (const r of roots) { const done = doneFindingKeys(r); for (const q of foundQueue(r)) if (!queued.has(q.key) && !done.has(q.key)) queued.set(q.key, { ...q, repo: basename(r) }); }
   if (!queued.size) return null;
   const answered = new Set();
   for (const l of planSection(text, 'Found answered').split('\n')) {
@@ -2882,6 +2926,11 @@ export function recordPath(abs, p, planPath) {
   return rel === 'DOCTRINE.md' || rel === 'LESSONS.md' || rel === AIM_FILE || rel === RULES_FILE || ['doctrine', 'lessons', 'plans'].some((d) => rel === d || rel.startsWith(`${d}/`));
 }
 
+// The search programs whose first plain word is a pattern (Q-HUB-383), the flags of one that take no value, and the flag that gives the pattern.
+const SEARCH_READERS = new Set(['grep', 'egrep', 'fgrep']);
+const SEARCH_FLAG = /^(?:-[rRnilLvwxcEFHhIoqsabz]*e?|--(?:recursive|ignore-case|line-number|files-with-matches|files-without-match|invert-match|word-regexp|line-regexp|count|extended-regexp|fixed-strings|no-filename|with-filename|only-matching|quiet|no-messages|text|null-data|binary)?)$/;
+const SEARCH_E_FLAG = /^-[rRnilLvwxcEFHhIoqsabz]*e$/;
+
 /**
  * The file a Bash read names that is not of the record.
  * @param {string} command  a Bash line the read classifier already called a read.
@@ -2894,7 +2943,9 @@ export function recordPath(abs, p, planPath) {
  *   it. A word with
  *   a `$` or a backtick cannot be resolved to a file and is refused. A word is a
  *   file when it looks like a path (`/`, `~`, `./`, a slash inside it), the
- *   value of a `--flag=value`, or a bare word that exists under `cwd`.
+ *   value of a `--flag=value`, or a bare word that exists under `cwd`. THE ONE EXCEPTION is a search's pattern (Q-HUB-383): for grep,
+ *   egrep and fgrep given only flags that take no value, the first word that is no flag, or the word after `-e`, is a pattern and is
+ *   never read as a file; a pattern alone names no file, so the line is still refused for reading the working directory.
  */
 function bashOutsideRecord(command, cwd, of) {
   const text = command.replace(/2>&1|>&2|&>\s*\/dev\/null|2?>\s*\/dev\/null/g, ' ');
@@ -2918,9 +2969,17 @@ function bashOutsideRecord(command, cwd, of) {
   flush(';');
   for (const { words: ws, piped } of segs) {
     let named = 0;
+    // Q-HUB-383: a search's pattern is a pattern, not a path: with only flags that take no value, the first word that is no flag (or the word
+    // after `-e`) is the pattern and names no file, however many slashes it holds. Any other flag may take a value, which would make the
+    // first word the flag's and not the pattern, so the segment is read as before and a pattern holding a slash is refused as a path.
+    const asPattern = SEARCH_READERS.has(basename(ws[0])) && ws.slice(1).filter((x) => x.startsWith('-')).every((x) => SEARCH_FLAG.test(x));
+    let patternSeen = false, patternNext = false;
     for (const raw of ws.slice(1)) {
+      if (asPattern && patternNext) { patternNext = false; continue; }
+      if (asPattern && SEARCH_E_FLAG.test(raw)) { patternSeen = true; patternNext = true; continue; }
       let w = raw;
       if (w.startsWith('-')) { const eq = w.indexOf('='); if (eq < 0) continue; w = w.slice(eq + 1); if (!w) continue; }
+      if (asPattern && !patternSeen) { patternSeen = true; continue; }
       if (w === '/dev/null') continue;
       if (pathLike(w)) { if (!of(w)) return `${w} is not of the record`; named++; continue; }
       let there = false;
@@ -3466,7 +3525,7 @@ export function pausedOnRun(a, pad, now = Date.now()) {
  *   looked at and before the fence is asked, so `fence` is null for them; otherwise `fence` is the manager
  *   fence's refusal or null, and `noLatch` is true when that refusal carries `FENCE_NO_LATCH`; `latch` is the
  *   session's latch as `latchStanding` reads it without removing the file (null when none stands), `latchKnown`
- *   is false when the payload names no session; `passesLatch` is true for `free` calls and TaskStop;
+ *   is false when the payload names no session; `passesLatch` is true for the kinds of call `latchPasses` lists, the list `main` reads;
  *   `passes` is true only when the fence would pass the call and no latch would stop it. It writes and removes
  *   nothing, and its answer for the fence and the latch is the one `main` reaches, because it calls the same
  *   two functions; the gates it does not ask are named by `canText`.
@@ -3474,8 +3533,8 @@ export function pausedOnRun(a, pad, now = Date.now()) {
 export function canCall(p, opts = {}) {
   const tool = String(p.tool_name ?? '');
   const cmd = String(p.tool_input?.command ?? '');
-  const free = tool === 'Bash' && (REPORT.test(cmd) || CAN.test(cmd) || isPlanCheck(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path) || (!p.agent_id && isSeedCommand(cmd)));
-  const passesLatch = free || tool === 'TaskStop' || (tool === 'Bash' && !!releaseCommand(cmd));
+  const free = tool === 'Bash' && (REPORT.test(cmd) || (!p.agent_id && CAN.test(cmd)) || isPlanCheck(p, () => ('plan' in opts ? opts.plan : approvedPlan())?.path) || (!p.agent_id && isSeedCommand(cmd)));
+  // THE KINDS THAT PASS A LATCH ARE THE ONE LIST `main` READS (`latchPasses`, Q-HUB-389), asked after the latch is read.
   // THE SKIP OUTSIDE A PLAN IS APPLIED AS THE DISPATCHER APPLIES IT (`main`): in conversation only a send is asked of the fence, and after a
   // plan has finished the main thread's repository writes are refused (`finishedFence`) and the rest passes. A call made by an agent is
   // always judged as under a plan.
@@ -3490,6 +3549,7 @@ export function canCall(p, opts = {}) {
   const latchKnown = !!p.session_id;
   let latch = null;
   if (latchKnown) { try { latch = latchStanding(p, opts.entries, true); } catch { latch = null; } }
+  const passesLatch = latchPasses(p, latch).passes;
   // Q-HUB-328: the plan guard and the approval guard are asked as the call would meet them, so a check that passes the fence and the latch cannot
   // hide the refusal of plan mode or of the approved plan's scope. `opts.guards` gives the test's judgement of each guard file, or false to ask none.
   const guards = free || opts.guards === false || p.agent_id ? { plan: null, approval: null } : {
@@ -3666,7 +3726,12 @@ export function canMain(args, env = process.env, cwd = process.cwd()) {
   if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(tool) || !arg) return `usage: node ${join(HUB, 'hook-dispatch.mjs')} --can <tool name> "<path or command line>"`;
   const sid = String(env.CLAUDE_CODE_SESSION_ID ?? '').trim();
   const files = sid ? sessionFiles(sid) : null;
-  const p = { ...(sid ? { session_id: sid } : {}), ...(files ? { transcript_path: files.main } : {}), cwd, tool_name: tool, tool_input: inputFor(tool, arg) };
+  // Q-HUB-382: the harness's permission mode rides on every real call and the fence and the phase read it (plan mode skips nothing and
+  // reads a repository's files with no plan in force), so the check carries the mode the owner's newest message recorded, the same
+  // reading the status print gives (`modeLine`), and judges the call as the dispatcher will.
+  let mode = null;
+  if (files) { try { mode = ownerMode(tailEntries(files.main, 16 * 1024 * 1024)); } catch { mode = null; } }
+  const p = { ...(sid ? { session_id: sid } : {}), ...(files ? { transcript_path: files.main } : {}), ...(mode ? { permission_mode: mode } : {}), cwd, tool_name: tool, tool_input: inputFor(tool, arg) };
   return canText(p, canCall(p), arg);
 }
 
@@ -4006,20 +4071,16 @@ async function main(event, raw, p) {
     // is not exempt; the plan fence judges it.
     // THE PLAN CHECK (`isPlanCheck`, LESSONS §435) PASSES THE SAME WAY, on the main thread and for a file of the record: it changes nothing,
     // and a plan is checked in plan mode and under a latch, before its talk turn.
-    const status = p.tool_name === 'Bash' && (REPORT.test(String(p.tool_input?.command ?? '')) || (!p.agent_id && CAN.test(String(p.tool_input?.command ?? ''))) || (!p.agent_id && isPlanCheck(p)) || (!p.agent_id && isSeedCommand(p.tool_input?.command)));
-    const mainStop = p.tool_name === 'TaskStop' && !p.agent_id;
+    // Q-HUB-389: the kinds that pass a latch are one list (`latchPasses`), read here and by the check of a call.
+    const latch = latchStanding(p);
+    const { status, mainStop, release, reportWrite } = latchPasses(p, latch);
     // THE REPLY GUARD'S RELEASE COMMAND PASSES THE LATCH ON THE MAIN THREAD (`releaseCommand`, LESSONS §432): a refusal of the reply
     // guard names it as the way on, and the latch that refusal set refused the way on with it. Only the latch is passed here: the
     // stop hold, the correction check and every later gate judge it as any command, and it lifts the latch after the guards pass it.
     // AN AGENT'S RELEASE PASSES ITS OWN LATCH when a refusal of the reply guard set it and the release is of the call that refusal named (Q-HUB-272).
-    const releaseCall = p.tool_name === 'Bash' ? releaseCommand(p.tool_input?.command) : null;
-    const latch = latchStanding(p);
-    const release = releaseCall && (!p.agent_id || (latch?.own && releaseLifts(latch, releaseCall))) ? releaseCall : null;
     // A LATCHED AGENT WRITES ITS OWN REPORT: its progress note and report file in the
     // scratchpad pass the latch, so a refusal does not cost its step the record of what
     // it did. Every other call of it is still refused but its own return.
-    let reportWrite = false;
-    try { reportWrite = !!latch && agentReportWrite(p); } catch { reportWrite = false; }
     if (latch && !status && !mainStop && !release && !reportWrite) return refuse(latchMessage(latch), false);
     if (status) {
       // A subagent cannot tell the owner anything, so its stamp would unlock
@@ -4223,6 +4284,11 @@ async function main(event, raw, p) {
       if (o.status !== 0 && !READS.has(p.tool_name ?? '')) {
         return refuse(`${g.split('"')[1] ?? g} did not run cleanly (${o.error ?? `exit ${o.status}`}${o.err ? `: ${o.err.trim().split('\n')[0]}` : ''}); only reads run until it is fixed.`);
       }
+    }
+    // Q-HUB-389: THE CHECK OF A CALL IS THE MAIN THREAD'S. The plan guard passes it in plan mode, so the plan fence's reader test passes an agent's
+    // call of it as well; an agent's own check stays refused, as the latch list and `canCall`'s free flag say, and the refusal latches that agent only.
+    if (p.agent_id && String(p.tool_name ?? '') === 'Bash' && CAN.test(String(p.tool_input?.command ?? ''))) {
+      return refuse('PLAN FENCE (Doctrine §0e): the check of a call (hook-dispatch.mjs --can) is the main thread\'s, and an agent\'s call of it is refused.');
     }
     // A RELEASE OF THE CALL THE LATCH WAS SET BY LIFTS THE LATCH (`releaseLifts`, LESSONS §432): the reply guard has just checked the
     // reading and recorded it, so the repeat of the call it refused is no longer a repeat. Only a latch the reply guard set is lifted,

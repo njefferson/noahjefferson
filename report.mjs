@@ -1228,6 +1228,41 @@ export function unreadRefusals(list, entries) {
 }
 
 /**
+ * When the session was last compacted, read from its transcript.
+ * @param {object[]} entries  the main transcript's entries (`tailEntries`).
+ * @returns {number} the time in ms of the newest compaction boundary among the main thread's entries: the system entry `compact_boundary` or the
+ *   SessionStart hook entry of a compaction (`SessionStart:compact`); NaN where there is none. A resume is not one, since it keeps the context.
+ */
+export function lastCompactionAt(entries) {
+  let at = NaN;
+  for (const e of entries ?? []) {
+    if (e?.isSidechain || e?.agentId) continue;
+    const a = e?.type === 'attachment' ? e.attachment : null;
+    const boundary = (e?.type === 'system' && e.subtype === 'compact_boundary')
+      || (a?.type === 'hook_success' && a.hookEvent === 'SessionStart' && a.hookName === 'SessionStart:compact');
+    const t = Date.parse(e?.timestamp ?? '');
+    if (boundary && Number.isFinite(t) && !(t < at)) at = t;
+  }
+  return at;
+}
+
+/**
+ * The refused reads that stand: the one list the status print and the dispatch gate both read (Q-HUB-384).
+ * @param {{path: string, at: number}[]} list  `refusedReads`' answer.
+ * @param {object[]} entries  the main transcript's entries.
+ * @param {number} [approvedAt]  when the plan in force was approved, in ms; NaN or absent for none.
+ * @returns {{path: string, at: number, why: string}[]} what `unreadRefusals` leaves, less a refusal made before the plan in force was approved
+ *   (Q-HUB-290) and less a refusal made before the session's newest compaction (`lastCompactionAt`): the compaction replaced the context the
+ *   refused read was for, and the recall gate and the page gate hold the reads the new context needs. ONE RULE for both readers, so the status
+ *   cannot say none while the gate holds a send, and so a refusal of a file the compaction made again (the recall file) from before it holds nothing.
+ */
+export function standingRefusals(list, entries, approvedAt = NaN) {
+  const compacted = lastCompactionAt(entries);
+  const since = Math.max(Number.isFinite(approvedAt) ? approvedAt : 0, Number.isFinite(compacted) ? compacted : 0);
+  return unreadRefusals(list, entries).filter((x) => !(Number(x.at) < since));
+}
+
+/**
  * The main thread's reads since a time.
  * @param {object[]} entries  the main transcript's entries.
  * @param {number} since  the last status's time in ms (0 for all).
@@ -1274,7 +1309,7 @@ export function readsBlock(sid, since) {
   const lines = [r.count
     ? `Main thread reads since the last status: ${r.count} (${kinds}): ${shown.join(', ')}${r.paths.length > shown.length ? `, and ${r.paths.length - shown.length} more` : ''}.`
     : 'Main thread reads since the last status: none.'];
-  const open = unreadRefusals(refusedReads(sid), entries);
+  const open = standingRefusals(refusedReads(sid), entries, markerApprovalTime());
   if (!open.length) lines.push('Refused reads of the record not read since: none.');
   else {
     lines.push('Refused reads of the record NOT read since (the dispatch gate sends no step while one is named; reading the file clears it):');

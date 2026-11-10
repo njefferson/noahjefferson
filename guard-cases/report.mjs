@@ -217,6 +217,41 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'Q-HUB-384: the status print and the reads gate read one list of refused reads: a recall file refused before the session\'s newest compaction is on neither, a refusal after it is on both, a refusal before the plan\'s approval is dropped, and with no compaction the refusal stands',
+    guards: ['refusals_compaction', 'refusals_approval', 'refusals_hook_form', 'refusals_shared_status', 'refusals_shared_gate'],
+    run(m, dir, h) {
+      const files = h.tmp('sg-refused-');
+      const recall = join(files, 'recall.md');
+      const after = join(files, 'after.md');
+      writeFileSync(recall, 'x\n');
+      writeFileSync(after, 'x\n');
+      const plan = { path: '/plans/gate-test.md', text: h.STEPS_PLAN };
+      const bySystem = h.at(h.boundary(0), h.later(-300));
+      const byHook = { type: 'attachment', timestamp: h.later(-300), attachment: { type: 'hook_success', hookEvent: 'SessionStart', hookName: 'SessionStart:compact' } };
+      const world = (extra, only) => {
+        const x = session(h, 'rf', [h.turn(0, 'start'), ...extra]);
+        if (only !== 'after') m.report.noteRefusedRead(x.s, recall, 'refused before the compaction', Date.now() - 3600 * 1000);
+        if (only !== 'recall') m.report.noteRefusedRead(x.s, after, 'refused after the compaction', Date.now() - 100 * 1000);
+        const entries = [h.turn(0, 'start'), ...extra];
+        const gate = m.dispatch.readsGate({ session_id: x.s, transcript_path: x.main, tool_name: 'Agent', tool_input: { prompt: `${plan.path} step 1` } }, plan);
+        return { x, entries, gate: String(gate ?? ''), status: m.report.readsBlock(x.s, 0), stand: m.report.standingRefusals(m.report.refusedReads(x.s), entries).map((r) => r.path) };
+      };
+      const sys = world([bySystem]);
+      const hook = world([byHook]);
+      const none = world([]);
+      const recallOnly = world([bySystem], 'recall');
+      const before = m.report.standingRefusals([{ path: after, at: Date.now() - 100 * 1000, why: 'x' }], [], Date.now() - 50 * 1000).length;
+      return h.assertAll([
+        ['with a compaction the recall file refused before it stands in neither list', !sys.status.includes(recall) && !sys.gate.includes(recall) && !sys.stand.includes(recall), `${sys.status} | ${sys.gate}`],
+        ['the refusal made after the compaction stands in both lists', sys.status.includes(after) && sys.gate.includes(after) && sys.stand.includes(after), `${sys.status} | ${sys.gate}`],
+        ['a compaction recorded as the session start hook\'s entry counts the same', !hook.status.includes(recall) && hook.status.includes(after) && !hook.gate.includes(recall), hook.status],
+        ['with no compaction in the transcript the refusal stands in both', none.status.includes(recall) && none.gate.includes(recall), none.status],
+        ['a session whose only refusal came before the compaction is told none and its send is not held', /not read since: none\./.test(recallOnly.status) && recallOnly.gate === '', `${recallOnly.status} | ${recallOnly.gate}`],
+        ['a refusal made before the plan was approved is dropped by the shared list', before === 0, before],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
@@ -239,4 +274,9 @@ export const plants = {
   page_next_unchanged: ["  if (shown === escapeHtml(next)) return null;\n", "  if (false) return null;\n", 'report.mjs'],
   page_next_cli: ["  if (process.argv[2] === '--page-next') {", "  if (process.argv[2] === '--page-next-off') {", 'report.mjs'],
   wait_flagged_read: ["      if (stale.length) out.push('Running agents whose note is flagged", "      if (false) out.push('Running agents whose note is flagged", 'report.mjs'],
+  refusals_compaction: ['Number.isFinite(compacted) ? compacted : 0);', '0);', 'report.mjs'],
+  refusals_approval: ['Math.max(Number.isFinite(approvedAt) ? approvedAt : 0, ', 'Math.max(0, ', 'report.mjs'],
+  refusals_hook_form: ["a.hookName === 'SessionStart:compact');", 'false);', 'report.mjs'],
+  refusals_shared_status: ['  const open = standingRefusals(refusedReads(sid), entries, markerApprovalTime());', '  const open = unreadRefusals(refusedReads(sid), entries);', 'report.mjs'],
+  refusals_shared_gate: ["standingRefusals(refused, tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024), plan?.approvedAt)", "unreadRefusals(refused, tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024))", 'hook-dispatch.mjs'],
 };
