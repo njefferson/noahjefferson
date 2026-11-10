@@ -1,0 +1,3 @@
+Q-HUB-458: the rule that a file step searches the suite and the case files for the cases a changed print makes stale finds them by words of the case's name, and the dispatcher case that held the seed's old count of five findings carried no such word in its name, so step 170 did not name it and step 185 found it by a red run (found in step 185 of the batch's fifth wave of 10 November, filed in step 187); the fix is for the rule to search also for the strings and counts the old print produced, not only for words in case names.
+
+Fix in: `plans/seed-template.md`, `guard-cases/plan-seed.mjs`. The rule on a changed print or guard says to search also for the text and the counts the old print produced, with a case that reads the rule in a print.

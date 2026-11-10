@@ -1,0 +1,3 @@
+Q-HUB-457: the print of a whole run of the suite is cut by the tool in its middle, and at its end in one run of step 185, so the count line (417 of 417 passed) and the red cases could not always be read in one run and were found by narrowed runs of up to eight cases each (found in steps 185 and 187 of the batch's fifth wave of 10 November, filed in step 187); the fix is for the suite to print each red case and the count line last, after the passing cases, with a case on the order of a planted red run.
+
+Fix in: `session-guards.test.mjs`. The run prints the red cases and the count line after every passing case, so the end of a cut print still carries them.

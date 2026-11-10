@@ -1,0 +1,3 @@
+Q-HUB-456: Q-HUB-411 may describe no defect, because the dry listing and the narrowed run both count the same filtered list in `session-guards.test.mjs`, so the figure of 1091 of 1501 plants may be the true count for twelve files, and its fix asks only for a comparing case (found in step 184 of the batch's fifth wave of 10 November, filed in step 187); the fix is a case that compares the dry listing's count with the narrowed run's count for the same files, or the finding dropped with that comparison as its reason.
+
+Fix in: `session-guards.test.mjs`. A case compares the dry listing's plant count with the narrowed run's count for the same files, and Q-HUB-411 is dropped if the two agree.

@@ -1,0 +1,3 @@
+Q-HUB-460: a plant whose file is `session-guards.test.mjs` and whose find sits in the body of a case can never be caught, because the plant runner runs the live case list against a copy and the changed case code is never executed, so the plant bare_source_read read MISSED until it was re-pointed at what the case reads (found in steps 185 of the batch's fifth wave of 10 November, filed in step 187); the fix is for the runner to refuse such a plant as stale by design, naming it, or for the plants page to say so.
+
+Fix in: `session-guards.test.mjs`. The dry listing names a plant of the suite file whose find sits inside a case body as stale by design, with a case on a planted one.

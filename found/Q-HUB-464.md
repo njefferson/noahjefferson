@@ -1,0 +1,3 @@
+Q-HUB-464: in plan mode the check of a call (`hook-dispatch.mjs --can <tool> <one argument>`) refuses a shell line given as its one argument, as a line that is not a reader, so a shell line cannot be checked beforehand there and the plan's Commands cannot be tried against the fence before a step is sent (met by the main thread in the planning of the batch's fifth wave of 10 November, filed in step 187); the fix is for the plan guard to pass the check of a call whose one argument is a shell line, as it passes the check of a path.
+
+Fix in: `plan-guard.mjs`, `guard-cases/plan-guard.mjs`. In plan mode the check of a call passes when its one argument is a shell line, with a case on a quoted line.

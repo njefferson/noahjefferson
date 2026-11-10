@@ -1,0 +1,3 @@
+Q-HUB-453: the connector's job log for a red run of the doctrine gates comes back as lines of several hundred thousand characters each, which neither the Read tool nor a Grep window can show, so the failing lines of a red run cannot be read from it without a script and the plan's Commands list no reader for one (found in step 169 of the batch's fifth wave of 10 November, filed in step 187); the fix is a reader of the saved log that prints only the lines opening with MISSED, FAIL or a case name, or a Commands entry that lets an agent run it.
+
+Not the repository's: the log's shape is the connector's and the harness's, and the plan fence's refusal of a script reading it is the owner's rule; only a reader added to a plan's Commands can make the read.

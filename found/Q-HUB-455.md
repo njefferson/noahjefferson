@@ -1,0 +1,3 @@
+Q-HUB-455: sixteen entries of `PROGRAM.md` (P-22, P-24 to P-30 and P-36 to P-43) read State open and carry no finding key, so the batch print does not select them and no triage step reads them, and nothing tells a plan's writer that open entries stand outside every batch (found in step 172 of the batch's fifth wave of 10 November, filed in step 187); the fix is for the batch print to list open entries that carry no finding key after the plan's end, beside the not-placed findings, with a case on a planted program.
+
+Fix in: `plan-seed.mjs`, `guard-cases/plan-seed.mjs`. The batch print lists the key of each open entry that carries no finding key after the plan's end, beside the not-placed findings.

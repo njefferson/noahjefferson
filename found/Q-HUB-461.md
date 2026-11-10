@@ -1,0 +1,3 @@
+Q-HUB-461: the triage steps wrote a phrase naming a message given to the session into two finding lines, and the rule on the four lines does not say to avoid it while the privacy check refuses it, so the lines had to be reworded by the second send of step 186 (found in step 186 of the batch's fifth wave of 10 November, filed in step 187); the fix is a sentence in the rule on the four lines that a line names no person and no message sent to the session.
+
+Fix in: `doctrine/plans.md`, `plans/seed-template.md`. The paragraph on the four lines and the template's copy of the rule say that a line names no person and no message sent to the session.
