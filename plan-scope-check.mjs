@@ -134,25 +134,29 @@ export function diffForScope(repo) {
   const bg = existsSync(join(repo, '.branch-guard'))
     ? readFileSync(join(repo, '.branch-guard'), 'utf8')
     : '';
-  // `work=` is read too, per this gate's own contract with the rest of the
-  // family — declared here even though only `promote=` feeds the hash, so a
-  // `.branch-guard` missing `promote=` entirely still reads as one repo's
-  // config rather than as two separate lookups.
   const workMatch = /^\s*work\s*=\s*(.+?)\s*$/m.exec(bg);
   const promoteMatch = /^\s*promote\s*=\s*(.+?)\s*$/m.exec(bg);
-  void workMatch;
+  const work = workMatch ? workMatch[1] : '';
   const promote = promoteMatch ? promoteMatch[1] : 'main';
 
-  let promoteFound = false;
-  try {
-    execSync(`git rev-parse --verify --quiet ${JSON.stringify(`refs/heads/${promote}`)}`, {
-      cwd: repo,
-      stdio: ['ignore', 'ignore', 'ignore'],
-    });
-    promoteFound = true;
-  } catch {
-    promoteFound = false;
-  }
+  const refExists = (ref) => {
+    try {
+      execSync(`git rev-parse --verify --quiet ${JSON.stringify(ref)}`, {
+        cwd: repo,
+        stdio: ['ignore', 'ignore', 'ignore'],
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const promoteFound = refExists(`refs/heads/${promote}`);
+  // Q-HUB-437: where the work branch differs from the promote branch, the commits a judge has not seen are the ones the remote's work
+  // branch lacks, because every commit that branch holds passed this check at its own commit. Counting against the promote branch put
+  // the whole unpromoted run into the count, 3,232,879 lines once, and no landing could record a verdict. With no remote-tracking ref
+  // for the work branch, and wherever the two branches are the same, the base is the promote branch as before.
+  const remoteBase = work && work !== promote && refExists(`refs/remotes/origin/${work}`);
+  const base = remoteBase ? `refs/remotes/origin/${work}` : (promoteFound ? promote : null);
 
   const run = (cmd) => {
     try {
@@ -207,12 +211,12 @@ export function diffForScope(repo) {
   }
   // The commits this branch carries that the promote branch does not. Already
   // index-independent; excluded path kept for the same reason as above.
-  const branchOnly = promoteFound
-    ? run(`git diff ${JSON.stringify(`${promote}...HEAD`)} -- . ':(exclude).plan-scope'`)
+  const branchOnly = base
+    ? run(`git diff ${JSON.stringify(`${base}...HEAD`)} -- . ':(exclude).plan-scope'`)
     : '';
   h.update('branch\n').update(branchOnly);
 
-  return { hash: h.digest('hex').slice(0, 16), promote, promoteFound, lines: diffLineCount(run, repo, promoteFound ? promote : null) };
+  return { hash: h.digest('hex').slice(0, 16), promote, promoteFound, remoteBase, work, lines: diffLineCount(run, repo, base) };
 }
 
 /**
@@ -223,7 +227,8 @@ export function diffForScope(repo) {
  *
  * @param {(cmd: string) => string} run - runs a shell command in the repository and returns what it printed.
  * @param {string} repo - the repository's working tree.
- * @param {string|null} promote - the promote branch, or null when it is not in this clone.
+ * @param {string|null} promote - the ref the commits are counted against: the promote branch, or (Q-HUB-437) the remote's work branch
+ *   where the work branch differs from the promote branch, or null when neither is in this clone.
  * @returns {number} the diff's line count.
  */
 function diffLineCount(run, repo, promote) {
@@ -239,8 +244,7 @@ function diffLineCount(run, repo, promote) {
     if (!text || text.includes('\0')) continue;
     lines += text.split('\n').length - (text.endsWith('\n') ? 1 : 0);
   }
-  if (promote) lines += numstat(run(`git diff ${JSON.stringify(`${promote}...HEAD`)} --numstat -- . ':(exclude).plan-scope'`));
-  return lines;
+  if (promote) lines += numstat(run(`git diff ${JSON.stringify(`${promote}...HEAD`)} --numstat -- . ':(exclude).plan-scope'`));  return lines;
 }
 
 /**
@@ -357,8 +361,10 @@ if (!tx) {
   console.log('--- end of the owner\'s messages ---\n');
 }
 
-const { hash: diffhash, promote, promoteFound, lines: diffLines } = diffForScope(REPO);
-if (!promoteFound) {
+const { hash: diffhash, promote, promoteFound, remoteBase, work, lines: diffLines } = diffForScope(REPO);
+if (remoteBase) {
+  console.log(`  · counting this branch's commits against the remote's "${work}", not the promote branch "${promote}"\n`);
+} else if (!promoteFound) {
   console.log(`  · promote branch "${promote}" not found locally — hashing the working tree`);
   console.log('    and the index only, not this branch\'s unmerged commits\n');
 }
