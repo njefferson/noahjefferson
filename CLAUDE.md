@@ -408,7 +408,8 @@ Every item below has actually happened.
  does not end with a go-word (go, ok, continue, approved, yes; the owner's list
  to extend, never a session's) is a correction. While it is the owner's newest
  message, `hook-dispatch.mjs` holds every main-thread action, without
- latching, and passes the status command, `TaskStop` and a read of the
+ latching, and passes the status command, `TaskStop`, the entry to plan mode, in
+ plan mode a write of the plan file and the plan check, and a read of the
  record as the manager fence classifies one, so a question one file answers is
  answered from that file in the turn it is asked: answer every point in it and
  end the turn. Where the plan has a review step the review step passes, and so
@@ -753,13 +754,17 @@ Every item below has actually happened.
  the foreground, commits once for each file step, closes in the program and pushes
  once with the live clone pulled last, no run in the background, the cost said, and
  no walk against a staging build. (Doctrine §0e rule 4.)
-- **THE PLAN CHECK REFUSES A TITLE, A PULL AND A TIER, AND THE CHECK OF A CALL
- PASSES IN PLAN MODE.** `plan-guard.mjs` faults, as faults of shape that set no
+- **THE PLAN CHECK REFUSES A TITLE, A PULL, A TIER AND A FILES LINE, AND THE CHECK OF
+ A CALL PASSES IN PLAN MODE.** `plan-guard.mjs` faults, as faults of shape that set no
  latch, a plan whose title holds a phrase `third-person-check.mjs` refuses (the
  take-up copies the title into the program), a plan with a step that pulls the live
  clone beside or before a step that writes files (read from the Order and its After
- line), and a new plan whose file was last written by a reply served below the top
- tier (an amendment of a running plan stays on its tier). In plan mode it also passes
+ line, and each step's Files and Do parts for the writers), a Files line that says
+ read only beside a word naming a write (the plan fence takes the whole line as
+ unwritable), and a new plan whose file was last written by a reply served below the
+ top tier (an amendment of a running plan stays on its tier, though plan mode has
+ removed the marker). Its refusal and its check mode name which copy of the plan
+ check ran, the live clone's or a working copy's. In plan mode it also passes
  `hook-dispatch.mjs --can <tool> <one argument>`, alone. (Doctrine §0e rule 4;
  LESSONS §435.)
 - **EVERY REPLY ENDS WITH THE STATE LINE, AND A PAUSE ON THE OWNER IS NEVER
@@ -1267,7 +1272,7 @@ existing.
 - [`CONFIG.md`](CONFIG.md) — the baseline of every configuration item with its state and the item of the program that may change it; a drift found is a finding.
 - [`found/`](found/) — one file per finding, keyed `Q-HUB-N`, so two sessions never edit one file; the closing check reads its keys.
 - [`doctrine/`](doctrine/) — the doctrine in three files: `never.md` read at every start, `plans.md` read at the entry to plan mode, `apps.md` read where an item points at it; `DOCTRINE.md` is their index.
-- [`plan-seed.mjs`](plan-seed.mjs) — prints the record into a plan at the write, in the plan's own shape (item entry and its own dependency line, goals, rules version, standing text from `plans/seed-template.md`, found keys, movable reads marked); `node plan-seed.mjs --item <P-key or next>`, run once by the dispatcher at the entry to plan mode; `--batch` (new) prints the repository's open findings as one plan grouped by the file each names, and the dispatcher prints it when the next open item is a finding.
+- [`plan-seed.mjs`](plan-seed.mjs) — prints the record into a plan at the write, in the plan's own shape (item entry and its own dependency line, goals, rules version, standing text from `plans/seed-template.md`, found keys, movable reads marked); `node plan-seed.mjs --item <P-key or next>`, run once by the dispatcher at the entry to plan mode (the word new in place of the key prints the entry's form under the next free key, for work with no entry yet); `--batch` (new) prints the repository's open findings as one plan grouped by the file each names, and the dispatcher prints it when the next open item is a finding; `--batch --rounds <1 to 5>` prints that many waves as rounds of one plan, and the manager notes name the item and the rounds (Doctrine §0e rule 4).
 
 **AND THE WIRING IS SHARED NOW TOO, WHICH IT WAS NOT.**
 [`.github/workflows/hub-gates.yml`](.github/workflows/hub-gates.yml) is a

@@ -43,7 +43,12 @@ function runExit(hub, h, planText, projectDir, { entries = () => [], marker = nu
   writeFileSync(file, planText);
   const t = (Date.now() - 1000 * 1000) / 1000;
   utimesSync(file, t, t);
-  if (marker) {
+  if (marker === 'lineage' || marker === 'lineage-other') {
+    // Plan mode removes the marker when it is entered to amend; the lineage file beside it keeps the last approval's plan and title.
+    const named = join(home, '.claude', 'plans', 'running.md');
+    writeFileSync(named, h.sendingPlan(hub));
+    writeFileSync(join(home, '.claude', 'APPROVED-PLAN-lineage.json'), JSON.stringify({ plan: named, title: marker === 'lineage' ? '# Sending plan' : '# Another plan entirely', firstApprovedAt: new Date().toISOString() }));
+  } else if (marker) {
     const named = marker === 'open' ? join(home, '.claude', 'plans', 'running.md') : join(home, '.claude', 'plans', 'gone.md');
     if (marker === 'open') writeFileSync(named, h.sendingPlan(hub));
     writeFileSync(join(home, '.claude', 'APPROVED-PLAN.json'), JSON.stringify({ plan: named, hash: 'a hash that no file has', at: new Date().toISOString() }));
@@ -198,6 +203,105 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'Q-HUB-387: a Files line worded read only that also names a write (changed, edited, written, owned, new) is refused at the approval call with the mark that sets no latch and printed by the check mode, and a line of unchanged files worded read only, or changed files on a line of their own, passes',
+    guards: ['pg_files_ro_wired', 'pg_files_ro_words', 'pg_files_ro_unchanged'],
+    run(m, dir, h) {
+      const hub = hubCopy(dir, h);
+      const r = h.repo({ 'a.txt': 'x\n', 'b.txt': 'y\n' });
+      const withFiles = (files) => h.sendingPlan(hub, { files });
+      const mixed = '- Repo, changed: `a.txt`, then unchanged and read only: `b.txt`';
+      const passedBefore = runExit(hub, h, withFiles(mixed), r.dir);
+      const split = runExit(hub, h, withFiles('- Repo, changed: `a.txt`\n- Repo, unchanged, read only: `b.txt`'), r.dir);
+      const writtenWord = runExit(hub, h, withFiles('- Repo: `a.txt`\n- Repo, new files, read only: `b.txt`'), r.dir);
+      const checked = runCheck(hub, h, withFiles(mixed), r.dir);
+      return h.assertAll([
+        ['a line of changed files followed by unchanged ones worded read only is refused with the mark that sets no latch', refusedWith(passedBefore, /FILES READ ONLY/), `exit ${passedBefore.status}: ${passedBefore.stdout}`],
+        ['a line that says new beside read only is refused', refusedWith(writtenWord, /FILES READ ONLY/), `exit ${writtenWord.status}: ${writtenWord.stdout}`],
+        ['changed files on one line and unchanged read only files on another pass', split.status === 0, `exit ${split.status}: ${String(split.stdout).slice(0, 300)}`],
+        ['the check mode prints the fault and exits 1', checked.status === 1 && /FILES READ ONLY/.test(checked.stdout), `exit ${checked.status}: ${checked.stdout}`],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-406: the pull fault reads a step\'s Do and Files parts, so a writer described in other words (a Do part that rewrites a named file, a Files part naming one) puts a pull before it in the Order out of order, a Do part that writes nothing does not, and a pull spelled with a git directory flag is seen',
+    guards: ['pg_pull_do_structure', 'pg_pull_files_part', 'pg_pull_files_readonly', 'pg_pull_nothing', 'pg_pull_flag'],
+    run(m, dir, h) {
+      const hub = hubCopy(dir, h);
+      const r = h.repo({ 'a.txt': 'x\n' });
+      const PULLER = 'Pull the clone with git -C /root/.claude/hub pull origin main as the last act.';
+      const landing = (order, writer, puller = PULLER) => h.sendingPlan(hub)
+        .replace('Order: 1\nStanding: 2\n', `Order: ${order}\nStanding: 3\n`)
+        .replace('Served by: steps 1 and 2 serve goal 1.', 'Served by: steps 1, 2 and 3 serve goal 1.')
+        .replace('1. **Build.** Make the toolbar change.', `1. **Build.** ${writer}`)
+        .replace(/2\. \*\*Review\.\*\*/, `2. **Land.** ${puller}\n${h.LABELS}\n3. **Review.**`);
+      const OTHER = 'Put the toolbar right.\nFacts: the button sits on the wrong side. Do: rewrite `a.txt` so the button sits left. Observe: it sits left. Kill: a red check ends the step.';
+      const FILES_PART = 'Tidy the toolbar.\nFacts: the button sits on the wrong side. Do: act. Observe: it sits left. Kill: a red check ends the step. Files: `a.txt`.';
+      const FILES_RO = 'Look at the toolbar.\nFacts: the button sits on the wrong side. Do: act. Observe: it sits left. Kill: a red check ends the step. Files: read only `a.txt`.';
+      const NOTHING = 'Look at the toolbar.\nFacts: the button sits on the wrong side. Do: read `a.txt` and report what it holds; this step writes nothing. Observe: the report. Kill: a red check ends the step.';
+      const WRITER = 'Edit the toolbar file with the Edit tool.';
+      const FLAGGED = 'Update the clone with git --git-dir=/root/.claude/hub/repository-dir pull origin main as the last act.';
+      const otherBefore = runExit(hub, h, landing('2 1', OTHER), r.dir);
+      const otherAfter = runExit(hub, h, landing('1 2', OTHER), r.dir);
+      const filesBefore = runExit(hub, h, landing('2 1', FILES_PART), r.dir);
+      const filesRo = runExit(hub, h, landing('2 1', FILES_RO), r.dir);
+      const nothing = runExit(hub, h, landing('2 1', NOTHING), r.dir);
+      const flagged = runExit(hub, h, landing('2 1', WRITER, FLAGGED), r.dir);
+      const checked = runCheck(hub, h, landing('2 1', OTHER), r.dir);
+      return h.assertAll([
+        ['a pull before a step whose Do part rewrites a named file is refused though no word of the old list is in the step', refusedWith(otherBefore, /PULL ORDER/), `exit ${otherBefore.status}: ${otherBefore.stdout}`],
+        ['a pull after that step passes', otherAfter.status === 0, `exit ${otherAfter.status}: ${String(otherAfter.stdout).slice(0, 300)}`],
+        ['a pull before a step whose Files part names a file is refused', refusedWith(filesBefore, /PULL ORDER/), `exit ${filesBefore.status}: ${filesBefore.stdout}`],
+        ['a Files part worded read only is no writer, so a pull before the step passes', filesRo.status === 0, `exit ${filesRo.status}: ${String(filesRo.stdout).slice(0, 300)}`],
+        ['a Do part that names a file and says it writes nothing is no writer', nothing.status === 0, `exit ${nothing.status}: ${String(nothing.stdout).slice(0, 300)}`],
+        ['a pull spelled with a git directory flag is seen, so it is refused before a writer', refusedWith(flagged, /PULL ORDER/), `exit ${flagged.status}: ${flagged.stdout}`],
+        ['the check mode prints the fault and exits 1', checked.status === 1 && /PULL ORDER/.test(checked.stdout), `exit ${checked.status}: ${checked.stdout}`],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-412: an amendment of a running plan stays on its tier when plan mode removed the marker, read from the previous approval kept beside it (same title, a step of the Order open), and a plan with another title written over the same file is a new plan and is refused',
+    guards: ['pg_tier_lineage', 'pg_tier_lineage_read'],
+    run(m, dir, h) {
+      const hub = hubCopy(dir, h);
+      const r = h.repo({ 'a.txt': 'x\n' });
+      const plan = h.sendingPlan(hub);
+      const LOW = 'claude-sonnet-5-5';
+      const low = (f) => [writeBy(h, f, LOW, -800, 'w1')];
+      const amended = runExit(hub, h, plan, r.dir, { entries: low, marker: 'lineage' });
+      const newPlan = runExit(hub, h, plan, r.dir, { entries: low, marker: 'lineage-other' });
+      const none = runExit(hub, h, plan, r.dir, { entries: low });
+      return h.assertAll([
+        ['a plan with no marker whose previous approval has its title and a step open stays on its tier', amended.status === 0, `exit ${amended.status}: ${String(amended.stdout).slice(0, 300)}`],
+        ['a previous approval of a plan with another title does not make this plan an amendment', refusedWith(newPlan, /PLAN TIER/), `exit ${newPlan.status}: ${newPlan.stdout}`],
+        ['no marker and no previous approval is a new plan', refusedWith(none, /PLAN TIER/), `exit ${none.status}: ${none.stdout}`],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-413: the plan check says which copy ran, in the refusal and in the check mode: a working copy is named as not the live clone, and a copy at the live clone\'s path is named as the live clone',
+    guards: ['pg_copy_note_shape', 'pg_copy_note_live', 'pg_copy_note_check'],
+    run(m, dir, h) {
+      const hub = hubCopy(dir, h);
+      const r = h.repo({ 'a.txt': 'x\n' });
+      const faulty = h.sendingPlan(hub).replace('# Sending plan', `# Move the export control, as ${PRON} asked`);
+      const refused = runExit(hub, h, faulty, r.dir);
+      const checked = runCheck(hub, h, faulty, r.dir);
+      const home = h.tmp('pg-live-');
+      const live = join(home, '.claude', 'hub');
+      for (const f of [...h.FILES, 'third-person-check.mjs', 'binary-files.mjs']) {
+        try { mkdirSync(dirname(join(live, f)), { recursive: true }); copyFileSync(join(hub, f), join(live, f)); } catch { /* not a file of this tree */ }
+      }
+      const file = join(home, 'check-test.md');
+      writeFileSync(file, faulty);
+      const ran = spawnSync('node', [join(live, 'plan-guard.mjs'), '--check', file], { encoding: 'utf8', env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: r.dir, CLAUDE_CODE_SESSION_ID: '' } });
+      return h.assertAll([
+        ['the refusal of a working copy names the file that ran and says it is not the live clone', refusedWith(refused, /PLAN TITLE/) && refused.stdout.includes(join(hub, 'plan-guard.mjs')) && /a working copy and not the live clone/.test(refused.stdout), `exit ${refused.status}: ${refused.stdout}`],
+        ['the check mode of a working copy prints the same sentence', checked.status === 1 && /a working copy and not the live clone/.test(checked.stdout), `exit ${checked.status}: ${checked.stdout}`],
+        ['the check mode of the copy at the live clone\'s path says it is the live clone', ran.status === 1 && /the live clone\./.test(ran.stdout) && !/a working copy/.test(ran.stdout), `exit ${ran.status}: ${ran.stdout}${ran.stderr}`],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
@@ -210,8 +314,21 @@ export const plants = {
   pg_pull_wired: ['  if (pulled) fault(pulled);\n', '\n', 'plan-guard.mjs'],
   pg_pull_follows: ['if (y === w) return true;', 'if (false) return true;', 'plan-guard.mjs'],
   pg_pull_order_sequence: ['return o.order.indexOf(w) < o.order.indexOf(p);', 'return true;', 'plan-guard.mjs'],
-  pg_pull_writers: ['const WRITES = /\\b(?:Edit tool|Write tool|edits?|edited|git add|git commit)\\b/i;', 'const WRITES = /\\b(?:never matched here)\\b/i;', 'plan-guard.mjs'],
-  pg_pull_readonly: ['!pullers.includes(n) && WRITES.test(body(n)))', '!pullers.includes(n))', 'plan-guard.mjs'],
+  pg_pull_writers: ['const WORDS = /\\b(?:Edit tool|Write tool|edits?|edited|git add|git commit)\\b/i;', 'const WORDS = /\\b(?:never matched here)\\b/i;', 'plan-guard.mjs'],
+  pg_pull_readonly: ['!pullers.includes(n) && stepWrites(body(n)))', '!pullers.includes(n))', 'plan-guard.mjs'],
+  pg_pull_do_structure: ["return part('Do').some((d) => SPAN.test(d) && VERBS.test(d));", 'return false;', 'plan-guard.mjs'],
+  pg_pull_files_part: ["if (part('Files').some((f) => SPAN.test(f) && !/\\bread[- ]only\\b/i.test(f))) return true;", '', 'plan-guard.mjs'],
+  pg_pull_files_readonly: ['SPAN.test(f) && !/\\bread[- ]only\\b/i.test(f)', 'SPAN.test(f)', 'plan-guard.mjs'],
+  pg_pull_nothing: ["const clean = text.replace(NONE, ' ');", 'const clean = text;', 'plan-guard.mjs'],
+  pg_pull_flag: ['(?:(?:-C|-c|--git-dir|--work-tree)(?:\\s+|=)\\S+\\s+)*pull', '(?:-C\\s+\\S+\\s+)?pull', 'plan-guard.mjs'],
+  pg_files_ro_wired: ['  if (filesRo) fault(filesRo);\n', '\n', 'plan-guard.mjs'],
+  pg_files_ro_words: ['const WRITE = /\\b(?:changed|changes|edited|edits|written|writes|owned|owns|new|created|creates|rewritten|modified)\\b/i;', 'const WRITE = /\\b(?:never matched here)\\b/i;', 'plan-guard.mjs'],
+  pg_files_ro_unchanged: ['const WRITE = /\\b(?:changed|changes|edited', 'const WRITE = /(?:changed|changes|edited', 'plan-guard.mjs'],
+  pg_tier_lineage: ['if (!was?.plan || !was.title || title(current) !== was.title) return false;', 'if (!was?.plan) return false;', 'plan-guard.mjs'],
+  pg_tier_lineage_read: ["join(homedir(), '.claude', 'APPROVED-PLAN-lineage.json')", "join(homedir(), '.claude', 'no-such-lineage.json')", 'plan-guard.mjs'],
+  pg_copy_note_shape: ['put the plan up again. ${copyNote()} Prose', 'put the plan up again. Prose', 'plan-guard.mjs'],
+  pg_copy_note_live: ['dirname(self) === live ? ', 'false ? ', 'plan-guard.mjs'],
+  pg_copy_note_check: ['    console.log(copyNote());\n', '', 'plan-guard.mjs'],
   pg_tier_wired: ['  if (tiered) fault(tiered);\n', '\n', 'plan-guard.mjs'],
   pg_tier_top: ['if (!model || isTopTier(model) || open) return null;', 'if (!model || open) return null;', 'plan-guard.mjs'],
   pg_tier_open: ['if (!model || isTopTier(model) || open) return null;', 'if (!model || isTopTier(model)) return null;', 'plan-guard.mjs'],

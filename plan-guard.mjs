@@ -164,6 +164,18 @@ const deny = (why) => {
 };
 
 /**
+ * Which copy of the plan check answered (Q-HUB-413).
+ * @returns {string} a sentence naming this file's own path and saying whether it is the live clone's (`~/.claude/hub`) or a working copy. The
+ *   repository's own plan-mode hook runs the working copy's plan check, so an uncommitted edit of this file changes the gate at once; the
+ *   refusal and the check mode say which copy ran, so a fault that only the uncommitted file holds is read as that and not as the clone's.
+ */
+const copyNote = () => {
+  const self = fileURLToPath(import.meta.url);
+  const live = join(homedir(), '.claude', 'hub');
+  return `This plan check ran from ${self}, ${dirname(self) === live ? 'the live clone' : `a working copy and not the live clone at ${join(live, 'plan-guard.mjs')}, so an uncommitted edit of this file is what judged the plan`}.`;
+};
+
+/**
  * Refuse the approval call for a fault of the plan's shape, and set no latch.
  * @param {string} why  the fault, in the words of the check that found it.
  * @param {string} mark  `SHAPE_NO_LATCH` from hook-dispatch.mjs, which the dispatcher reads as "this refusal sets no latch"
@@ -179,7 +191,7 @@ const denyShape = (why, mark) => {
       hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
       permissionDecisionReason: `PLAN MODE. ${mark} ${why} A write of the plan file answers this refusal, so it sets no latch: put the plan right, run `
-        + `node ${self} --check <the plan's path> until it prints no fault, and put the plan up again. Prose approval does not lift this — the mode does.`,
+        + `node ${self} --check <the plan's path> until it prints no fault, and put the plan up again. ${copyNote()} Prose approval does not lift this — the mode does.`,
     },
   }));
   process.exit(2);
@@ -824,6 +836,49 @@ function titleProblem(plan, patterns) {
 }
 
 /**
+ * A FILES LINE THAT SAYS READ ONLY HOLDS NO NAME A STEP WRITES (Q-HUB-387).
+ * @param {string} top  the plan's top block.
+ * @param {(text: string, name: string) => string} planSection  report.mjs's section reader.
+ * @returns {string|null} the fault, or null. The plan fence takes a whole line of the Files section as unwritable when the words read only (or
+ *   read-only) stand anywhere on it (`writableFiles` in plan-fence.mjs), so a line that names files a step changes and then says read only for
+ *   the rest leaves every file on it unwritable, and the plan check once passed such a line. A line with those words is refused when it also
+ *   carries a word that names a write (changed, edited, written, writes, owned, owns, new, created, rewritten, modified); `unchanged` is not one.
+ */
+function filesReadOnlyProblem(top, planSection) {
+  const WRITE = /\b(?:changed|changes|edited|edits|written|writes|owned|owns|new|created|creates|rewritten|modified)\b/i;
+  const bad = String(planSection(top, 'Files') ?? '').split('\n')
+    .filter((l) => /\bread[- ]only\b/i.test(l) && /`[^`\s]+`/.test(l) && WRITE.test(l.replace(/`[^`]*`/g, ' ')))
+    .map((l) => l.trim());
+  if (!bad.length) return null;
+  return `FILES READ ONLY (Q-HUB-387): ${bad.length === 1 ? 'a line' : `${bad.length} lines`} of the plan's "## Files" ${bad.length === 1 ? 'says' : 'say'} read only and also name${bad.length === 1 ? 's' : ''} a write (${bad.map((l) => `"${l.slice(0, 80)}"`).join('; ')}). `
+    + 'The plan fence takes a whole line with those words as unwritable, so every file on it is one no agent can write. Put the files a step changes on a line of their own, '
+    + 'and the files only read on another line worded read only.';
+}
+
+/**
+ * Does a step write files? Read from the step's structure, not only from a few words (Q-HUB-406).
+ * @param {string} body  one step's text (`stepBody`): its sentence and its Facts, Do, Observe, Kill and Files parts.
+ * @returns {boolean} true when the step's text holds one of the words that name a write (the Edit or Write tool, an edit, git add, git
+ *   commit); or when its `Files:` part holds a code span that names a file or a directory; or when a `Do:` part holds a code span that names
+ *   a file or a directory together with a verb of writing (write, rewrite, create, replace, put right, set, change, add, remove, fix, update,
+ *   stage, commit, land and their forms), which describes a writer in other words. A phrase that says nothing is written ("writes nothing",
+ *   "nothing is staged or committed") is set aside first, and so is a `Files:` part worded read only. A `Do:` part is the text from its label to
+ *   the next label of the four or of Files.
+ */
+function stepWrites(body) {
+  const text = String(body ?? '');
+  const WORDS = /\b(?:Edit tool|Write tool|edits?|edited|git add|git commit)\b/i;
+  const NONE = /\b(?:writes?|changes?|edits?|stages?|commits?|adds?|touch(?:es)?|creates?|sets?)\s+(?:nothing|no\b[^.;]*)|\bnothing\s+(?:is|are)\s+(?:staged|committed|changed|written|pushed|edited)(?:\s+or\s+\w+)?/gi;
+  const clean = text.replace(NONE, ' ');
+  if (WORDS.test(clean)) return true;
+  const SPAN = /`(?:[^`\s]*\/|[^`\s/]*\.[A-Za-z0-9]{1,6})`/;
+  const VERBS = /\b(?:writ\w+|wrote|rewr\w+|creat\w+|replac\w+|put\s+right|sets?|chang\w+|add(?:s|ed)?|remov\w+|delet\w+|fix(?:es|ed)?|updat\w+|stag(?:e|es|ed)|commit(?:s|ted)?|land(?:s|ed)?|sav(?:e|es|ed)|appends?|renam\w+|mak(?:e|es)\s+the\s+edit)\b/i;
+  const part = (label) => [...clean.matchAll(new RegExp(`\\b${label}\\b\\**\\s*:\\s*([\\s\\S]*?)(?=\\b(?:Facts|Do|Observe|Kill|Files)\\b\\**\\s*:|$)`, 'g'))].map((m) => m[1]);
+  if (part('Files').some((f) => SPAN.test(f) && !/\bread[- ]only\b/i.test(f))) return true;
+  return part('Do').some((d) => SPAN.test(d) && VERBS.test(d));
+}
+
+/**
  * A STEP THAT PULLS THE LIVE CLONE FOLLOWS EVERY STEP THAT WRITES FILES (Q-HUB-386).
  * @param {string} top  the plan's top block.
  * @param {{planOrder: Function, planAfter: Function, stepBody: Function}} h  the plan readers of report.mjs.
@@ -836,12 +891,11 @@ function pullOrderProblem(top, h) {
   const o = h.planOrder(top);
   if (!o) return null;
   const standing = new Set(o.standing);
-  const PULL = /\bgit\s+(?:-C\s+\S+\s+)?pull\b/;
-  const WRITES = /\b(?:Edit tool|Write tool|edits?|edited|git add|git commit)\b/i;
+  const PULL = /\bgit\s+(?:(?:-C|-c|--git-dir|--work-tree)(?:\s+|=)\S+\s+)*pull\b/;
   const body = (n) => h.stepBody(top, n);
   const pullers = o.order.filter((n) => !standing.has(n) && PULL.test(body(n)));
   if (!pullers.length) return null;
-  const writers = o.order.filter((n) => !standing.has(n) && !pullers.includes(n) && WRITES.test(body(n)));
+  const writers = o.order.filter((n) => !standing.has(n) && !pullers.includes(n) && stepWrites(body(n)));
   const a = h.planAfter(top);
   const follows = (p, w) => {
     if (!a || !a.follows.size) return o.order.indexOf(w) < o.order.indexOf(p);
@@ -887,17 +941,30 @@ function planWriterModel(planFile, entries) {
  * Does the approval marker name a plan with a step of its Order still open?
  * @param {object} payload  the call (`session_id` and `transcript_path` are read).
  * @param {(p: object, text: string) => ({next: number|null}|null)} pointerFor  report.mjs's pointer for a session.
+ * @param {string} [current]  the plan being checked; with no marker standing, the previous approval's plan counts only when this carries its title.
  * @returns {boolean} true when `~/.claude/APPROVED-PLAN.json` names a plan file that can be read and its pointer does not read `none`; a pointer that
  *   cannot be read (a plan with no Order, agents that cannot be found) counts as open, as `planPhase` counts it. The marker's hash is not compared: an
  *   amendment of a running plan is edited in plan mode and moves the file's hash until the plan is approved again.
  */
-function markerPlanOpen(payload, pointerFor) {
-  try {
-    const mk = JSON.parse(readFileSync(join(homedir(), '.claude', 'APPROVED-PLAN.json'), 'utf8'));
-    if (!mk?.plan) return false;
-    const text = readFileSync(String(mk.plan), 'utf8');
+function markerPlanOpen(payload, pointerFor, current = '') {
+  const open = (planPath) => {
+    const text = readFileSync(String(planPath), 'utf8');
     const pointer = pointerFor(payload, text);
     return !pointer || pointer.next !== null;
+  };
+  try {
+    const mk = JSON.parse(readFileSync(join(homedir(), '.claude', 'APPROVED-PLAN.json'), 'utf8'));
+    if (mk?.plan) return open(mk.plan);
+  } catch { /* no marker: plan mode removes it when it is entered to amend, so the previous approval is read below */ }
+  // THE PREVIOUS APPROVAL OUTLIVES THE MARKER (Q-HUB-412). Entering plan mode removes the marker, so an amendment of a running plan reached this
+  // check with none, and the exception the tier fault gives it did not hold. The lineage file beside the marker keeps the plan file and the title of
+  // the last approval; it names the same plan only when the plan being checked carries that title (the harness gives every plan of a session one
+  // file, and a new plan written over it has another title). The plan's steps are then read from its hand-backs as for a marker.
+  try {
+    const was = JSON.parse(readFileSync(join(homedir(), '.claude', 'APPROVED-PLAN-lineage.json'), 'utf8'));
+    const title = (t) => String(t ?? '').split('\n').map((l) => l.trim()).find((l) => /^# \S/.test(l)) ?? '';
+    if (!was?.plan || !was.title || title(current) !== was.title) return false;
+    return open(was.plan);
   } catch { return false; }
 }
 
@@ -977,7 +1044,7 @@ if (tool === 'ExitPlanMode') {
   // before the sections are looked at, so that the refusal for a missing one carries the mark that sets no latch as well.
   const { goalsProblem, aimStandingProblem, reviewCommandProblem, commandsGitDirProblem, filesSpanProblem, stepShapeProblem, afterProblem, rulesProblem, foundAnsweredProblem, whatIsProblem, roadmapProblem, shippedCheckProblem,
     readAfterCompactionProblem, costProblem, lessonCitedProblem, ruleNumberProblem, decisionsCheckProblem, verificationReadProblem, queueRoots, inScratchpad, NAMES_NO_LATCH, SHAPE_NO_LATCH } = await import('./hook-dispatch.mjs');
-  const { scratchpadOf, planOrder, planAfter, stepBody, pointerFor, isTopTier } = await import('./report.mjs');
+  const { scratchpadOf, planOrder, planAfter, stepBody, pointerFor, isTopTier, planSection } = await import('./report.mjs');
   // The check's own patterns, loaded beside this file. A copy of the guards that does not hold third-person-check.mjs (a test folder built from a
   // list of files) raises no title fault and says so in the check mode, and never crashes the approval call for the other checks.
   let thirdPerson = null;
@@ -994,7 +1061,7 @@ if (tool === 'ExitPlanMode') {
     faults.push(why);
     if (CHECK) return;
     if (shape) denyShape(why, SHAPE_NO_LATCH);
-    deny(why);
+    deny(`${why} ${copyNote()}`);
   };
   if (missing.length) {
     fault(`the plan is missing ${missing.map((m) => `"## ${m}"`).join(', ')} with a real body under each. `
@@ -1023,6 +1090,8 @@ if (tool === 'ExitPlanMode') {
   if (gitDir) fault(gitDir);
   const filesSpan = filesSpanProblem(top);
   if (filesSpan) fault(filesSpan);
+  const filesRo = filesReadOnlyProblem(top, planSection);
+  if (filesRo) fault(filesRo);
   // EVERY STEP IS A LIST THAT CANNOT BE DONE WRONG (Design part 4): each step that is not on the Standing line carries Facts, Do, Observe
   // and Kill, so the agent that reads it is told what it depends on, what to do, what means done and what ends it with nothing written.
   // A fault of the plan's shape, and it sets no latch.
@@ -1043,7 +1112,7 @@ if (tool === 'ExitPlanMode') {
   const pulled = pullOrderProblem(top, { planOrder, planAfter, stepBody });
   if (pulled) fault(pulled);
   const writerModel = planWriterModel(planFile, tailEntries(p.transcript_path ?? '', 16 * 1024 * 1024));
-  const tiered = tierProblem(writerModel, isTopTier, !!writerModel && !isTopTier(writerModel) && markerPlanOpen(p, pointerFor));
+  const tiered = tierProblem(writerModel, isTopTier, !!writerModel && !isTopTier(writerModel) && markerPlanOpen(p, pointerFor, plan));
   if (tiered) fault(tiered);
   // A PLAN THAT SENDS AGENTS CARRIES THE RULES, OR POINTS AT THEM (Doctrine §0e
   // rule 13): a "## Rules" section that is the line naming the hub's
@@ -1120,6 +1189,7 @@ if (tool === 'ExitPlanMode') {
   if (CHECK) {
     console.log(`PLAN CHECK (Doctrine §0e rule 4, LESSONS §435) of ${planFile || input.planFilePath}: ${faults.length ? `${faults.length} fault${faults.length === 1 ? '' : 's'}, each in the words of the refusal the approval call would give` : 'no fault'}.`);
     faults.forEach((f, i) => console.log(`${i + 1}. ${f}`));
+    console.log(copyNote());
     for (const n of notJudged) console.log(`NOT JUDGED HERE: ${n}.`);
     process.exit(faults.length ? 1 : 0);
   }

@@ -289,6 +289,9 @@ every rule below while none of the hooks that enforce them was running
    prints the list, never quotes the message, and does not latch (rule 14): the
    owner's next message lifts it, and a latch would only add a second wait.
    Agents are not held by a correction, and the plan fence holds them (rule 13).
+   The entry to plan mode passes the hold, and so, while plan mode is on, do a
+   write of the plan file and the plan check, as the status command does; a
+   correction that asks for a plan would otherwise hold the call that makes it.
    *Enforced whole by:* `hook-dispatch.mjs` and `pending-guard.mjs`.
    Held work (LESSONS §376) is sent again only in a turn that follows a go-word. A
    task notification, a scheduled message and an agent's hand-back are not
@@ -370,7 +373,13 @@ every rule below while none of the hooks that enforce them was running
    until this check existed (LESSONS §435). A title the third-person check refuses
    is a fault, because the take-up copies it into the program (Q-HUB-379), and so is
    a step that pulls the live clone beside or before a step that writes files, read
-   from the Order and its After line (Q-HUB-386).
+   from the Order and its After line (Q-HUB-386). A writer is read from each step's
+   Files and Do parts by their structure, so one described in other words is seen
+   (Q-HUB-406). A Files line that says read only beside a word naming a write is a
+   fault, because the plan fence takes the whole line as unwritable (Q-HUB-387).
+   The refusal and the check mode name which copy of the plan check ran, the live
+   clone's or a working copy's, since an uncommitted edit of the file judges at
+   once (Q-HUB-413).
    *Enforced by:* `plan-guard.mjs` (`--check`) and `hook-dispatch.mjs`
    (`planCheckTarget`, `isPlanCheck`).
    **A plan written after a compaction rests on files read since it, and a plan
@@ -388,7 +397,9 @@ every rule below while none of the hooks that enforce them was running
    which the dispatcher prints once at the entry to plan mode: the item's own entry,
    goals, rules version, standing text, found keys and the reads another session can
    move, each marked, so a step reads those at the time of use; the hub's open
-   findings are printed as a batch grouped by file (`--batch`).
+   findings are printed as a batch grouped by file (`--batch`). The manager notes
+   may name the item to seed, a program key or the word `new` for work with no
+   entry yet, and a number of rounds from one to five (Q-HUB-404).
    **The planning procedure a session follows before any plan goes up.** (a) What
    is: read from the record, the files and the remote's head, never remembered.
    (b) What should be: the owner's goal in the program's rank. (c) Why: the cause
@@ -414,13 +425,18 @@ every rule below while none of the hooks that enforce them was running
    app's test page as its instrument and never a container render, and no
    accessibility walk, cold read, browser walk or screenshot tour runs against a
    staging build or a test page as a step of a plan; the gate runs once, at the
-   promotion to main. No gate refuses a plan for this shape itself, by the owner's
+   promotion to main. Several waves may be rounds of one plan: one take-up, then
+   for each round its file steps and its landing step, the live clone pulled once,
+   by the last landing. No gate refuses a plan for this shape itself, by the owner's
    word of 9 November: the seed prints it, this page states it, and the review's
    sequence rule reads the Order.
    **A new plan is drawn on the top tier.** The plan check faults a plan last
    written by a reply served below the top tier (the model read from the transcript,
    judged as the status print judges a top-tier id) unless the approval marker names
    a plan with a step of its Order open, so an amendment stays on its running tier.
+   It stays on it though plan mode has removed the marker: the previous approval kept
+   beside it, with the plan's title, says the plan is the same and its Order has a step open
+   (Q-HUB-412).
    At the entry to plan mode on a lower tier with no plan in force, the reply says in
    its first line that the plan needs the top tier and ends as a declared stop.
 5. **A line before each tool call and a line after each result.**
@@ -520,7 +536,9 @@ every rule below while none of the hooks that enforce them was running
     Order of the recorded steps keeps the approval.
     `node ~/.claude/hub/hook-dispatch.mjs --can <tool> <path or command line>`
     prints whether the manager fence and the latch would pass that call on the
-    main thread now, and why, and changes nothing; the fence passes it as it
+    main thread now, and why, and changes nothing; it is accepted spelled with the
+    live clone's full path and with the tilde path above, and any other spelling is
+    refused with those two named (Q-HUB-405); the fence passes it as it
     passes the status command, refuses it with anything chained to it, and names
     it in every refusal of a call that is not of the record, beside what the
     main thread may use; the plan guard passes it in plan mode as it passes the
