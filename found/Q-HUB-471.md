@@ -1,0 +1,3 @@
+Q-HUB-471: four things the plan check taught are in neither the seed's template nor the plans page: a Files line worded read only is faulted for a word naming a write; an evidence bullet naming a file with no extension is read as naming none; a step whose Do has numbered stages is judged stage by stage by the decision-records rule; and the check of a call does not judge the correction hold (filed in step 195 as one finding).
+
+Fix in: `plans/seed-template.md`, `doctrine/plans.md`, `plan-guard.mjs`. The template and the page state the four, and the check of a call prints that it does not judge the correction hold, each with a case.

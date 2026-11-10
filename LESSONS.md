@@ -575,3 +575,4 @@ and the filename carries it.
 - **§480** — [A plan is drafted in its optimized shape from the sources it is typed from, and is never reshaped afterwards](lessons/480-a-plan-is-drafted-in-its-optimized-shape-from-the-seed-and-the-plans-page-and-never-reshaped-afterwards.md)
 - **§481** — [A pause awaiting a go-word or the button is a state the reply says in a fixed line, and is never a decision listed as nothing](lessons/481-a-pause-on-the-owners-message-is-a-state-the-reply-says-in-a-fixed-line-and-never-a-decision-listed-as-nothing.md)
 - **§482** — [A pull of the gates' clone inside a running plan changes the gates under its running steps](lessons/482-a-pull-of-the-gates-clone-inside-a-running-plan-changes-the-gates-under-its-running-steps.md)
+- **§483** — [A plan's end is not the goal, and a run past its price is a defect and not an outcome](lessons/483-a-plans-end-is-not-the-goal-and-a-run-past-its-price-is-a-defect-and-not-an-outcome.md)
