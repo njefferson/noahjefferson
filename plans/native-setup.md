@@ -25,3 +25,13 @@ First, this plan: the stand-down. Second, under the stand-down, the parts of Par
 ## F. Not verified, and settled by the trial
 
 That a cloud session honours each part of Part B as documented, that the stronger model is available as an adviser on the owner's plan, and how the shared parts reach all ten repositories.
+
+## G. Where the work stands
+
+The first act, the stand-down, landed on 11 November 2026 and is in force through 18 November. It took eleven agent sends and about four hours, and it met two refusals.
+
+The second act's texts stand as documents under plans/native/: the short page, the worker and checker roles, and the piece-of-work and landing procedures. They are not installed anywhere.
+
+The trial has shown two things so far. In auto mode the harness's own check refuses an agent's write under the configuration folder, and it refuses to start an agent whose task is to change the session's own roles or gates, so those changes are placed by a person's approval and agents only draft them. A new agent type in a folder that did not exist at a session's start loads at the next session start.
+
+What remains for a person to switch on is installing the two roles and the two procedures, the check before a push, running the main thread as a manager role, and naming a stronger tier as its adviser.
