@@ -83,6 +83,27 @@ const tool = p.tool_name ?? '';
 const input = p.tool_input ?? {};
 const cwd = p.cwd ?? process.cwd();
 
+// THE STAND-DOWN IS ASKED FIRST (stand-down.mjs). While one is in force for the launch folder every call passes and nothing is printed,
+// but for the choice popup, which is refused as it always was. The check mode is not a hook and never stands down. A copy of this file
+// without the module keeps every gate.
+if (!CHECK) {
+  const standing = await import('./stand-down.mjs').then((m) => m.standDownHere()).catch(() => ({ inForce: false }));
+  if (standing.inForce) {
+    if (tool === 'AskUserQuestion') {
+      process.stdout.write(JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
+          permissionDecision: 'deny',
+          permissionDecisionReason: 'CHOICE POPUP REFUSED (Doctrine §0): AskUserQuestion is banned in every repository, and the stand-down does not lift it. '
+            + 'Ask in plain text, and only a choice that is the owner\'s.',
+        },
+      }));
+      process.exit(2);
+    }
+    process.exit(0);
+  }
+}
+
 const locked = existsSync(join(cwd, '.claude', 'PLAN-LOCK'));
 const planning = p.permission_mode === 'plan' || locked;
 if (!planning) process.exit(0);

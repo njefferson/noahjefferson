@@ -4244,7 +4244,53 @@ export function bringForward(p, opts = {}) {
   return lines;
 }
 
+/**
+ * Is a stand-down in force for the session this process belongs to? (stand-down.mjs)
+ * @returns {Promise<{inForce: boolean, until: string|null, reason: string}>} the module's answer; no when the module is absent or throws,
+ *   so a copy of the dispatcher without the module keeps every gate.
+ */
+const standNow = () => import('./stand-down.mjs').then((m) => m.standDownHere()).catch(() => ({ inForce: false, until: null, reason: '' }));
+
+/**
+ * The whole of an event while a stand-down is in force. Five things stay as they are: a push is judged by the push guard, the choice popup
+ * is refused, a prompt the session is given prints one line that the stand-down is in force, and the start-of-session print and the hooks
+ * git runs at a commit are not the dispatcher's. Every other event, tool call and gate passes and prints nothing. A refusal here sets no latch,
+ * because the latch's own gates stand down with the rest.
+ * @param {string} event  the hook event.
+ * @param {string} raw  the payload as received.
+ * @param {object} p  the payload parsed.
+ * @param {{until: string, reason: string}} sd  the answer of `standNow`.
+ * @returns {Promise<number>} the exit code: 2 for a refusal, 0 otherwise.
+ */
+async function standDownMain(event, raw, p, sd) {
+  if (event === 'PreToolUse') {
+    const tool = String(p.tool_name ?? '');
+    if (tool === 'AskUserQuestion') {
+      process.stderr.write('CHOICE POPUP REFUSED (Doctrine §0): AskUserQuestion is banned in every repository, and the stand-down does not lift it. Ask in plain text, and only a choice that is the owner\'s.\n');
+      return 2;
+    }
+    const o = run(`node "${join(HUB, 'push-guard.mjs')}"`, raw, resolve(process.env.CLAUDE_PROJECT_DIR || process.cwd()));
+    if (o.deny) { process.stderr.write(o.reason + '\n'); return 2; }
+    if (o.status !== 0 && !READS.has(tool)) {
+      process.stderr.write(`push-guard.mjs did not run cleanly (${o.error ?? `exit ${o.status}`}); only reads run until it is fixed.\n`);
+      return 2;
+    }
+    return 0;
+  }
+  if (event === 'UserPromptSubmit') {
+    const { standDownLine } = await import('./stand-down.mjs');
+    process.stdout.write(`${standDownLine(sd)}\n`);
+  }
+  return 0;
+}
+
 async function main(event, raw, p) {
+  // THE STAND-DOWN IS ASKED FIRST (stand-down.mjs). The question reads the launch folder alone. While a stand-down is in force the
+  // event is `standDownMain`'s and nothing below runs. Otherwise every child this dispatcher starts is told the launch folder, so a
+  // child started for a repository beside or beneath it asks about the launch folder and never about its own.
+  const standing = await standNow();
+  if (standing.inForce) return standDownMain(event, raw, p, standing);
+  process.env.HUB_LAUNCH_DIR = process.env.CLAUDE_PROJECT_DIR ?? '';
   if (event === 'ConfigChange') {
     configChange(p);
     return 0;

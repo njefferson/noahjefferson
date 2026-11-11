@@ -280,6 +280,10 @@ function namesTier(open, model) {
   return names && NEEDS_WORD.test(open);
 }
 
+// THE STAND-DOWN IS ASKED FIRST (stand-down.mjs). While one is in force for the launch folder the stop passes at once and nothing is
+// printed. A copy of this file without the module keeps every gate.
+if ((await import('./stand-down.mjs').then((m) => m.standDownHere()).catch(() => ({ inForce: false }))).inForce) process.exit(0);
+
 let payload = '';
 try { payload = readFileSync(0, 'utf8'); } catch { /* no stdin */ }
 

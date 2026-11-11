@@ -132,7 +132,7 @@ const FILES = ['pending-guard.mjs', 'keep-info-guard.mjs', 'compact-recall.mjs',
   'plan-guard.mjs', 'hook-dispatch.mjs', 'report.mjs', 'drive-guard.mjs', 'approved-plan-guard.mjs', 'plan-scope-check.mjs', 'stop-guard.mjs',
   'push-guard.mjs', 'plan-fence.mjs', 'doctrine-read-guard.mjs', 'session-brief.mjs', 'CLAUDE.md', 'agent-rules.md', 'DOCTRINE.md',
   'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-cost.mjs', 'plan-seed.mjs', 'plans/seed-template.md', 'session-guards.test.mjs', 'CONFIG.md', 'privacy-patterns.mjs', 'branch-guard.mjs', 'lessons-check.mjs',
-  'hub-pin-check.mjs', 'gate-args.mjs', 'third-person-check.mjs', 'binary-files.mjs'];
+  'hub-pin-check.mjs', 'gate-args.mjs', 'third-person-check.mjs', 'binary-files.mjs', 'stand-down.mjs'];
 // Every copy of the guards makes a file's folder before it copies it: the doctrine's three pages sit in doctrine/.
 const copyGuard = (from, to) => { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to); };
 // The shared rules file the guards read beside themselves: its version, and the pointer line a plan writes for the hub
@@ -167,6 +167,10 @@ process.env.STOP_REFUSED_DIR = join(STATE, 'stop-refused');
 process.env.SKIPPED_PRINTED_DIR = join(STATE, 'skipped-printed');
 process.env.REFUSED_READS_DIR = join(STATE, 'refused-reads');
 process.env.MODEL_TIER_DIR = join(STATE, 'model-tier');
+// THE SUITE JUDGES THE GATES AS THEY STAND WITH NO STAND-DOWN (stand-down.mjs): the hub's own file may stand in the checkout this runs in,
+// and a session may give this process a project folder that holds one. While this variable is present the module answers no; it can
+// only bring the gates back. The cases of guard-cases/stand-down.mjs clear it for the one hook they run.
+process.env.HUB_STAND_DOWN_OFF = 'suite';
 // The stop guard reads the approval marker under the home directory, and a real
 // session's marker (a plan in force, steps left, no agent of the test's running)
 // would refuse every case that ends a turn with no declaration. The whole suite

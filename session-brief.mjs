@@ -156,6 +156,18 @@ const dirty = sh('git status --porcelain');
 if (dirty) say(`  ${dirty.split('\n').length} file(s) uncommitted.`);
 say();
 
+// --- 1a · THE STAND-DOWN (stand-down.mjs) ---------------------------------
+//
+// While a stand-down is in force for the launch folder the brief is the lines above (a stale working copy, the branch) and one line
+// saying the stand-down is in force, through which date, and where the record is. Nothing else is printed. A copy of this file without
+// the module prints the whole brief.
+const standing = await import('./stand-down.mjs').then((m) => ({ sd: m.standDownHere(), line: m.standDownLine })).catch(() => null);
+if (standing?.sd.inForce) {
+  say(standing.line(standing.sd));
+  console.log(out.join('\n'));
+  process.exit(0);
+}
+
 // --- 2 · has the doctrine moved -------------------------------------------
 const syncFile = join(repo, '.doctrine-sync');
 if (repo !== hub) {
