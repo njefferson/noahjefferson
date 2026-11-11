@@ -219,7 +219,9 @@ export function seed(o) {
   // HUB in the standing text is where an agent edits and tests: the working copy when the print is for the hub, never the live clone the
   // script may run out of.
   const vars = { HUB: isHub ? repo : hub, ITEM: entry.key, TAKEUP: takeup, CLOSE: close, REVIEW: review, NEXTP: `P-${nextPk}`, NEXTQ: `Q-HUB-${hubMax + 1}`, NEXTL: lessonMax + 1,
-    TRANSCRIPT: transcript, REVIEWFILE: join(homedir(), '.claude', 'hub', 'aim-review.md'), PUTRIGHT: '' };
+    TRANSCRIPT: transcript, REVIEWFILE: join(homedir(), '.claude', 'hub', 'aim-review.md'), PUTRIGHT: '',
+    // The price of the plan (Q-HUB-479): the steps of the Order, one review and two for each round; the item print is one round.
+    ORDERN: count + 2, OVER: 2, PRICED: count + 2 + 1 + 2, FILESTEPS: `${takeup + 1} to ${takeup + count}`, ROUNDNOTE: '' };
   vars.LANDING = fill(tpl.landing ?? '<plans/seed-template.md has no landing block>', vars);
   // The take-up lands too, but leaves the live clone alone: the close pulls it last (Q-HUB-386).
   vars.TAKEUPLANDING = fill(tpl['landing-takeup'] ?? '<plans/seed-template.md has no landing-takeup block>', vars);
@@ -657,10 +659,13 @@ function batchWave(o) {
   const itemKeys = batch.map((f) => f.item).join(', ');
   const vars = { HUB: isHub ? repo : hub, ITEM: itemKeys, TAKEUP: takeup, CLOSE: close, REVIEW: review, NEXTP: `P-${nextP}`, NEXTQ: `Q-HUB-${hubMax + 1}`, NEXTL: lessonMax + 1,
     TRANSCRIPT: transcript, REVIEWFILE: join(homedir(), '.claude', 'hub', 'aim-review.md') };
+  // The price of the plan (Q-HUB-479): the steps of the Order, one review and two for each round.
+  const orderN = 2 + groups.length + later.reduce((s, p) => s + p.gnums.length + 1, 0);
+  Object.assign(vars, { ORDERN: orderN, OVER: 2 * R, PRICED: orderN + 1 + 2 * R });
   vars.LANDING = fill(tpl.landing ?? '<plans/seed-template.md has no landing block>', vars);
   // The take-up sets the planned items to planned and the put-right items to done, so it is filled with the planned keys and the put-right paragraph.
   vars.PUTRIGHT = putRight.length
-    ? `; in the entry of each of these items, whose finding's own text says it was put right, set State to done with the sentence after its key as what changed: ${putRight.map((f) => `${f.item} (${f.key}): ${f.putRight}`).join(' ')}`
+    ? `; in the entry of each of these items, whose finding's own text says it was put right, set State to done with the sentence after its key as what changed:${putRight.map((f) => `${f.item} (${f.key}): ${f.putRight}`).join(' ')}`
     : '';
   vars.TAKEUPLANDING = fill(tpl['landing-takeup'] ?? '<plans/seed-template.md has no landing-takeup block>', vars);
   const takeupVars = { ...vars, ITEM: planned.map((f) => f.item).join(', ') };
@@ -749,7 +754,11 @@ function batchWave(o) {
   const landEst = 20 + 5 * groups.length;
   const agentMin = takeupEst + groupEst.reduce((s, x) => s + x, 0) + landEst;
   const wallMin = takeupEst + Math.max(0, ...groupEst) + landEst;
-  const cvars = { ...vars, LANDSTEP: landing, FIRSTGROUP: groups.length ? g1 : takeup, LASTGROUP: groups.length ? g1 + groups.length - 1 : takeup, LANDEST: landEst, CHECKS: checks,
+  // The rule on the file steps is printed once and names the file steps of every round (Q-HUB-473's template change): each round's as first to last, the rounds joined by "and".
+  const roundRuns = [{ gnums: groups.map((_, i) => g1 + i) }, ...later].map((p) => (p.gnums.length ? `${p.gnums[0]} to ${p.gnums[p.gnums.length - 1]}` : `${takeup} to ${takeup}`));
+  const filesteps = roundRuns.length > 1 ? `${roundRuns.slice(0, -1).join(', ')} and ${roundRuns[roundRuns.length - 1]}` : roundRuns[0];
+  const roundNote = later.length ? ', the steps of each round together and each round after the landing step of the round before' : '';
+  const cvars = { ...vars, FILESTEPS: filesteps, ROUNDNOTE: roundNote, LANDSTEP: landing, FIRSTGROUP: groups.length ? g1 : takeup, LASTGROUP: groups.length ? g1 + groups.length - 1 : takeup, LANDEST: landEst, CHECKS: checks,
     GUARDFILES: guardFiles.length ? guardFiles.map((x) => `\`${x}\``).join(', ') : 'none, since no file of this wave is a guard file' };
 
   const out = [];
@@ -800,8 +809,7 @@ function batchWave(o) {
   L(fill(tpl['rules-of-this-plan'] ?? '<plans/seed-template.md has no rules-of-this-plan block>', vars));
   // The file steps of the wave run together and commit nothing, so the standing text of a parallel batch follows.
   if (groups.length) L(fill(tpl['parallel-rules'] ?? '<plans/seed-template.md has no parallel-rules block>', cvars));
-  // A later round has its own file steps run at the same time: the block's first line, which names them, is printed again for each, and the rest of the block holds for all.
-  for (const p of later) L(p.rule);
+  // The block's first line names the file steps of every round and is printed once; a later round does not print it again.
   L();
   // The take-up is first and alone, every file step comes after it and the one landing step after every file step; no commit step and no close step stand apart from the landing step.
   const order = [takeup, ...gnums, landing, ...later.flatMap((p) => [...p.gnums, p.landing])];
@@ -839,7 +847,7 @@ function batchWave(o) {
     const seams = [...seamsOut[i], ...seamsIn[i]];
     const caseDo = cases.length ? `write into ${quote(cases)} a case that fails on the old text and a plant for each fix, in the shape of the case files beside it; ` : '';
     // The six parts of the order are the plan's rule for a file step, and the step's text points at it (Q-HUB-399).
-    L(`${n}. **Put right in ${where}: ${ks.join(', ')}.** ${isHub ? 'Hub' : basename(repo)}, one agent${together}. Facts: the step owns ${ownedText} and writes nothing else, commits nothing and stages nothing; ${seams.length ? `${seams.join('; ')}; ` : ''}the step takes up ${ks.length} filed ${ks.length === 1 ? 'finding' : 'findings'}, each read whole from its file at the time of use; ${g.list.map((f) => `${f.key} (item ${f.item}): ${f.text}`).join(' ')} The landing step, step ${landing}, lands this step's edits. Do: \`git status\`, read as the rules of this plan allow; read with Read and Grep ${owned.length ? quote([...owned, ...cases.filter((c) => existsSync(join(repo, c)))]) : 'the files its findings name'}; ${doEach}; ${caseDo}then the six parts of the order the rules of this plan give a file step; a line a fix needs in a file another step of this plan owns is named in the report with the file, the place and the exact words, for the landing step, and is not written by this step; \`git status\`, read as the rules of this plan allow; write the report with the files changed, each case added, each new plant with its key and its CAUGHT line, each check's exit code and any find reworded, each stale plant re-pointed or named with its file, each line named for the landing step, and each finding's change in one line. Observe: the step's cases pass, each in a run of its own, every new plant reads CAUGHT, the three checks name no find in a line the step wrote, the files this step owns are changed and nothing else by this step, nothing is staged or committed. Kill: a red run of a case of its own ends it FAILED with its lines and nothing written after but the report; a part of its own that cannot be made or proved without a line in a file it does not own ends it EJECT naming the lines; a refusal of a command by a guard or by the harness's permission check ends it REFUSED with the refusal's words, nothing further done and no other route tried. Report \`progress/step-${n}-report.txt\` (new); ${SEND_REPORT}. Estimate ${groupEst[i]} min.`);
+    L(`${n}. **Put right in ${where}: ${ks.join(', ')}.** ${isHub ? 'Hub' : basename(repo)}, one agent${together}. Facts: the step owns ${ownedText} and writes nothing else, commits nothing and stages nothing; ${seams.length ? `${seams.join('; ')}; ` : ''}the step takes up ${ks.length} filed ${ks.length === 1 ? 'finding' : 'findings'}, each read whole from its file at the time of use; ${g.list.map((f) => `${f.key} (item ${f.item}): ${f.text}`).join(' ')} The landing step, step ${landing}, lands this step's edits. Do: \`git status\`, read as the rules of this plan allow; read with Read and Grep ${owned.length ? quote([...owned, ...cases.filter((c) => existsSync(join(repo, c)))]) : 'the files its findings name'}; ${doEach}; ${caseDo}then the six parts of the order the rules of this plan give a file step; a line a fix needs in a file another step of this plan owns is named in the report with the file, the place and the exact words, for the landing step, and is not written by this step; \`git status\`, read as the rules of this plan allow; write the report with the files changed, each case added, each new plant with its key and its CAUGHT line, each check's exit code and any find reworded, each stale plant re-pointed or named with its file, each line named for the landing step, and each finding's change in one line. Observe: the step's cases pass, each in a run of its own, every new plant reads CAUGHT, the three checks name no find in a line the step wrote, the files this step owns are changed and nothing else by this step, nothing is staged or committed. Kill: a second red run of a case of its own, or a cause the rules of this plan do not let the step repair, ends it FAILED with its lines and nothing written after but the report and its progress note; a part of its own that cannot be made or proved without a line in a file it does not own ends it EJECT naming the lines; a refusal of a command by a guard or by the harness's permission check ends it REFUSED with the refusal's words, nothing further done and no other route tried. Report \`progress/step-${n}-report.txt\` (new); ${SEND_REPORT}. Estimate ${groupEst[i]} min.`);
     L();
   });
   // The plan's last landing step pulls the live clone; a landing step of an earlier round leaves it as it is and does not record the measure.
@@ -847,8 +855,7 @@ function batchWave(o) {
   L(fill(tpl[landingBlock] ?? `<plans/seed-template.md has no ${landingBlock} block>`, { ...cvars, ITEM: plannedHere.map((f) => f.item).join(', ') }));
   L();
   if (o.part) {
-    return { ok: true, part: { planned: plannedHere, gnums: groups.map((_, i) => g1 + i), landing, lines: out.slice(stepsFrom), caseFiles, groupEst, landEst, stepOf: [...stepOf],
-      rule: fill(tpl['parallel-rules'] ?? '<plans/seed-template.md has no parallel-rules block>', cvars).split('\n')[0] } };
+    return { ok: true, part: { planned: plannedHere, gnums: groups.map((_, i) => g1 + i), landing, lines: out.slice(stepsFrom), caseFiles, groupEst, landEst, stepOf: [...stepOf] } };
   }
   for (const p of later) for (const l of p.lines) L(l);
   for (const p of later) for (const [k, n] of p.stepOf) stepOf.set(k, n);

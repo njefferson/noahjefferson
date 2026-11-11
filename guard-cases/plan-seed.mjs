@@ -27,11 +27,11 @@ export const cases = [
         has('each hub check is spelled as its usage gives', 'the docs check takes the repository\'s full path bare, and the quote, privacy, third-person, example and pin checks take');
         has('a step editing a guard file runs every case', 'runs every case of the suite, with no case filter, once after its last edit');
         has('a step adding a refusal lists the dispatcher', 'lists `hook-dispatch.mjs` among its files');
-        has('a red gates run is read into the report', 'where it has concluded red its failing lines, read from the run\'s log through the connector and written into the report');
+        const gates = 'the doctrine gates run for the pushed commit read through the connector for its state alone, its conclusion or that it was still running, and no log of it read';
+        has('the gates run is read through the connector for its state alone', gates);
         // The sentence stands in the landing acts of the step that lands the work, read from that step's own line: the take-up of the single print carries the same words, so a check on the whole print passed with the landing's copy gone.
         const landStep = /\n\d+\. \*\*(?:Closed in the program|Landed once)[^\n]*/.exec(t)?.[0] ?? '';
-        rows.push([`${mode}: the landing step reads a red gates run into the report`,
-          landStep.includes('where it has concluded red its failing lines, read from the run\'s log through the connector and written into the report'), landStep.slice(0, 300)]);
+        rows.push([`${mode}: the landing step reads the gates run for its state alone`, landStep.includes(gates), landStep.slice(0, 300)]);
         has('the close reads the remote\'s head before filing','reads the remote\'s head with `git show origin/main:PROGRAM.md`');
         // The whole sentence of the close step, read from that step's line: the Verification line carries the same words, so a check on the whole print passed with the template's sentence gone.
         const closeStep = /\n\d+\. \*\*(?:Closed in the program|Landed once)[^\n]*/.exec(t)?.[0] ?? '';
@@ -195,8 +195,9 @@ export const cases = [
         ['a guard file has its own case file named for it, new where the folder has none', alpha.includes('its own case file `guard-cases/alpha.mjs`') && !alpha.includes('`guard-cases/alpha.mjs` (new)') && beta.includes('`guard-cases/beta.mjs` (new)'), `${alpha.slice(0, 300)} | ${beta.slice(0, 300)}`],
         ['no file step commits, stages or pushes', [alpha, beta].every((s) => s.includes('commits nothing and stages nothing') && !s.includes('git push origin main')), alpha.slice(0, 400)],
         ['one landing step follows the file steps and names their number, their guard files and one commit for each, and no step is titled as a commit step', t.split('Landed once').length === 2 && landing.startsWith('Landed once')
-          && landing.includes('steps 2 to 3 left their edits uncommitted') && landing.includes('the files being `alpha.mjs`, `beta.mjs`') && landing.includes('one commit for each of steps 2 to 3 in that order, nothing staged beforehand'), landing.slice(0, 700)],
-        ['the landing step writes an index row for each lesson in the shape the index\'s rows hold', landing.includes('add one index row for it in `LESSONS.md` in the shape the index\'s rows hold'), landing.slice(0, 200)],
+          && landing.includes('steps 2 to 3 left their edits uncommitted') && landing.includes('the files being `alpha.mjs`, `beta.mjs`') && landing.includes('one entry for each of steps 2 to 3 in that order')
+          && landing.includes('makes one commit for each of steps 2 to 3 in that order and refuses, with nothing committed,'), landing.slice(0, 700)],
+        ['the landing step writes an index row for each lesson in the shape the index\'s rows hold', landing.includes('one index row for it in `LESSONS.md` in the shape the index\'s rows hold'), landing.slice(0, 200)],
         ['the Cost counts the steps and the pushes, and the forced turns are the file steps plus two', cost.includes('The 4 steps (2 file steps run at the same time') && cost.includes('2 pushes are made, one each by the take-up and the landing step') && cost.includes('4 forced turns of the stop hook'), cost],
         ['the Cost sums the estimates for the agent time', cost.includes('Agent time is the sum of the steps\' estimates, 85 min'), cost],
         ['the Cost takes the wall time as the take-up, the longest file step and the landing step', cost.includes('the longest file step and the landing step, 65 min.'), cost],
@@ -205,14 +206,17 @@ export const cases = [
         ['the file steps run at the same time in the one working copy', 'The file steps, 2 to 3, run at the same time in the one working copy'],
         ['a review for a resend goes only when no agent edits the working copy', 'A review for a resend of a file step is sent only when no agent is editing the working copy'],
         ['the landing step puts an existing case turned red right in the owning step\'s file', 'the landing step puts the code right in the owning step\'s file and keeps the finding\'s fix'],
-        ['commits name their own files after the message with nothing staged beforehand', 'stages nothing beforehand and names each commit\'s own files after the message'],
         ['no run of the plan goes in the background', 'No run of this plan goes in the background'],
         ['a number from the device comes from the test page and never a container render', 'names the app\'s test page as its instrument and never a container render'],
         ['nothing is pushed except by the take-up step and the landing step', 'Nothing is pushed except by the take-up step and by the landing step, which is the close step in a plan for one item'],
       ];
       for (const [label, s] of lines) rows.push([`batch: ${label}`, t.includes(s), s]);
-      for (const [label, s] of lines.slice(4)) rows.push([`single: ${label}`, single.includes(s), s]);
-      rows.push(['single: the close step writes the index row too', single.includes('add one index row for it in `LESSONS.md` in the shape the index\'s rows hold'), 'index row']);
+      for (const [label, s] of lines.slice(3)) rows.push([`single: ${label}`, single.includes(s), s]);
+      // The landing is made by the landing command's verbs, so the rule on staging a landing's several commits is gone from both prints.
+      for (const [mode, text] of [['batch', t], ['single', single]]) {
+        rows.push([`${mode}: no rule on staging a landing's several commits`, !text.includes('stages nothing beforehand and names each commit\'s own files after the message') && !text.includes('nothing staged beforehand'), 'staging rule']);
+      }
+      rows.push(['single: the close step writes the index row too', single.includes('one index row for it in `LESSONS.md` in the shape the index\'s rows hold'), 'index row']);
 
       // A wave holds up to seven file steps; the groups it leaves are named in the header and printed by the next wave; two groups of one file never share a wave.
       const wv = h.seedHub(dir);
@@ -336,7 +340,7 @@ export const cases = [
   },
   {
     name: 'step 159 of the plan of 9 November: a file step points at the six parts of the order the rules give it and names a line it needs in another step\'s file in its report without writing it, and the parallel rules give the order, each case in a run of its own with one case switch to a run, and the same line for another step\'s file',
-    guards: ['batch_six_parts', 'batch_other_line', 'tpl_six_order', 'tpl_own_runs', 'tpl_other_line'],
+    guards: ['batch_six_parts', 'batch_other_line', 'tpl_six_order', 'tpl_own_runs', 'tpl_other_line', 'batch_group_kill', 'tpl_case_quote', 'tpl_parallel_repair'],
     run(m, dir, h) {
       const t = `${h.batchRun(dir, h.batchHub(dir), []).stdout}`;
       const group = (/\n2\. \*\*Put right in[^\n]*/.exec(t)?.[0]) ?? '';
@@ -345,9 +349,11 @@ export const cases = [
       return h.assertAll([
         ['the group step points at the six parts of the order the rules of the plan give a file step', group.includes('then the six parts of the order the rules of this plan give a file step'), group.slice(0, 200)],
         ['the group step names a line it needs in another step\'s file in the report and does not write it', group.includes(other), group.slice(-900)],
-        ['the group step\'s Kill ends a red run of a case of its own FAILED with nothing written after but the report', group.includes('Kill: a red run of a case of its own ends it FAILED with its lines and nothing written after but the report'), group.slice(-900)],
+        ['the group step\'s Kill ends a second red run of a case of its own FAILED, and leaves the first to the repair the rules give', group.includes('Kill: a second red run of a case of its own, or a cause the rules of this plan do not let the step repair, ends it FAILED with its lines and nothing written after but the report and its progress note'), group.slice(-900)],
         ['the parallel rules give the six parts in their order, from the edits to the dry listing', rules.includes('It works in this order and no other. First, every edit its findings ask for') && rules.includes('Sixth, the suite\'s dry listing'), rules.slice(0, 600)],
         ['the parallel rules run each case in a run of its own with one case switch to a run', rules.includes('Fourth, its own cases, each in a run of its own with one case switch to a run'), rules.slice(0, 900)],
+        ['the parallel rules spell the case switch whole inside double quotes', rules.includes('with one case switch to a run, the switch written whole inside double quotes, as "--case=<the case\'s name>". Fifth,'), rules.slice(0, 1200)],
+        ['the parallel rules meet a red run of a case of its own with the repair once and not with the fence', rules.includes('A red run of a case of its own is met as the rule on a red check gives: the step repairs it once, in a file it wrote in this send, and a second red run ends the send FAILED with the report naming the fix.') && !rules.includes('the fence refuses every write after it'), rules.slice(-500)],
         ['the rules of the plan name a line in another step\'s file in the report for the landing step', t.includes('A line a fix needs in a file another step owns is named in the report with the file, the place and the exact words, for the landing step, and is not written by the step'), 'rule'],
       ]);
     },
@@ -384,8 +390,8 @@ export const cases = [
       const landing = /\n\d+\. \*\*Landed once[^\n]*/.exec(batch)?.[0] ?? '';
       const close = /\n\d+\. \*\*Closed in the program[^\n]*/.exec(single)?.[0] ?? '';
       const marker = "an app's doctrine marker and the calling workflow's hub pin move together or not at all";
-      const pulled = (s) => s.indexOf('`git push origin main`') > 0 && s.indexOf('`git -C /root/.claude/hub pull origin main`') > s.indexOf('`git push origin main`')
-        && s.includes("the pull being the last act that changes anything because it changes the gates under every agent");
+      const pulled = (s) => s.indexOf("the landing command's verb push") > 0 && s.includes('after its clone switch, which fetches main from the remote') && s.includes('reads the remote\'s heads and pulls the live clone')
+        && s.indexOf("the pull being the last act that changes anything because it changes the gates under every agent") > s.indexOf("the landing command's verb push");
       return h.assertAll([
         ['batch: the landing step says the marker and the pin move together or not at all', landing.includes(marker), landing.slice(-500)],
         ['single: the close step says the marker and the pin move together or not at all', close.includes(marker), close.slice(-500)],
@@ -396,18 +402,21 @@ export const cases = [
         ['batch: the landing step reads each item\'s key from the program and not from the plan\'s text', landing.includes("each item's key is read from the program and not from this plan's text"), landing.slice(0, 1500)],
         ['single: the close step reads the item\'s key from the program at the time of use', close.includes("the item's key is read from the program at the time of use and not from this plan's text"), close.slice(0, 1500)],
         ['batch: the landing step runs the plants of every file the steps edited, the suite file and each doctrine page among them', landing.includes('the plants of every file the steps edited are run here, the suite file and each doctrine page among them'), landing.slice(0, 1500)],
-        ['batch: the landing step runs the new plants of a long file by key', landing.includes('then the new plants of the long files that the reports name, by key in one run'), landing.slice(0, 2500)],
-        ['batch: the landing step runs the checks before the first commit and again over the close', landing.includes('then the checks again, once each, each exit code read') && landing.includes('then one commit for each of steps 2 to 3 in that order'), landing.slice(0, 2500)],
-        ['batch: the landing step makes one close commit naming the close\'s files', landing.includes('one commit made with `git commit -m` naming the close\'s files after a reader-facing message saying the wave is closed'), landing.slice(-900)],
+        ['batch: the landing step writes the keys of the new plants into the manifest, those of a long file among them, for the verb prove to run by key', landing.includes('the keys of its new plants, those of a long file among them'), landing.slice(0, 2500)],
+        ['batch: the landing step runs the verb prove on the manifest, then the checks alone over the close', landing.includes('run the landing command\'s verb prove on the manifest once, which makes the dry listing and the plants run for each file the reports name as changed, the whole suite and the seven checks')
+          && landing.includes('run the landing command\'s verb prove for the checks alone, once, its last line read'), landing.slice(0, 2500)],
+        ['batch: the landing step commits the close entry by its label', landing.includes('a reader-facing one-line message saying the wave is closed and the close\'s files, and run the landing command\'s verb commit with the close entry\'s label'), landing.slice(-900)],
       ]);
     },
   },
   {
     name: 'step 159 of the plan of 9 November: the rules of the plan carry no background run, the rule for a string a case writes, the rule for a conflict in the program alone, the rule for the long files and the continue command, in the item print and in the batch print',
-    guards: ['tpl_rule_case_string', 'tpl_rule_conflict', 'tpl_rule_long_files', 'tpl_cmd_continue', 'tpl_rule_foreground'],
+    guards: ['tpl_rule_case_string', 'tpl_rule_conflict', 'tpl_rule_long_files', 'tpl_cmd_continue', 'tpl_rule_foreground', 'tpl_repair_four_parts', 'tpl_repair_landing', 'tpl_rule_case_quote', 'tpl_cmd_land', 'tpl_cmd_program', 'tpl_rule_commands'],
     run(m, dir, h) {
       const rows = [];
-      for (const [mode, r] of [['single', h.seedRun(dir, h.seedHub(dir), ['--item', 'P-3'])], ['batch', h.batchRun(dir, h.batchHub(dir), [])]]) {
+      const singleHub = h.seedHub(dir);
+      const batchHub = h.batchHub(dir);
+      for (const [mode, r, hub] of [['single', h.seedRun(dir, singleHub, ['--item', 'P-3']), singleHub], ['batch', h.batchRun(dir, batchHub, []), batchHub]]) {
         const t = `${r.stdout}`;
         const has = (label, s) => rows.push([`${mode}: ${label}`, t.includes(s), s]);
         has('every run of the suite and of a check is made in the foreground', "Every run of the suite and of a check is made in the foreground with the Bash tool's timeout set to ten minutes, and a run that ends on that timeout ends the step EJECT naming it");
@@ -415,8 +424,15 @@ export const cases = [
         has('a string a case writes holds no word the third-person check reads as a pronoun', 'A string a case writes holds no word the third-person check reads as a pronoun, whole or as the first part of a word split across a template.');
         has('a conflict in the program alone is resolved so both sessions\' items stand', "Where the last rebase of the landing step stops on a conflict in `PROGRAM.md` alone, the step resolves it with the Edit tool so both sessions' items stand");
         has('a conflict in any other file ends the rebase', 'a conflict in any other file, or in any other rebase of this plan, ends the rebase with `git rebase --abort` and the step ejects with nothing pushed');
-        has('only the new plants of a long file run, by key', "of a long file only the new plants run, by key, and its other plants are proved by the runner's doctrine gates run after the push");
+        rows.push([`${mode}: the sentence on which plants a landing runs narrowed is gone, since the verb prove runs them`, !t.includes("of a long file only the new plants run, by key, and its other plants are proved by the runner's doctrine gates run after the push"), 'long files']);
         has('the continue command is among the Commands', '- `git rebase --continue`\n- `git push origin main`');
+        // The repair (Q-HUB-473): a red check is met once by the agent that wrote the file, and no sentence says any longer that nothing is written after a red check or that the fence refuses every write after it.
+        has('the rule on the four parts of a step gives the repair of a red check', "A red check is met as the agent rules give: where its cause is read from the run's own output and lies in a file the agent has itself written in this send, the agent writes into its report what was red and its cause, makes the edit in that file, and makes the red run once more; a second red check, a cause that cannot be read from the output, or a cause in a file the agent has not written in this send ends the step FAILED, with nothing written after but its report and its progress note. No repair removes or loosens an assertion.");
+        has('the rule on the landing step meets a red run with the repair', "is met as the rule on a red check gives, a cause in a file another step wrote ending the send FAILED with its report, which names each case, plant or check line to put right and the file each sits in, so the next send puts them right first.");
+        rows.push([`${mode}: no sentence withholds the repair or leans on the fence after a red run`, !t.includes('hands back FAILED naming it, and writes nothing after') && !t.includes('the fence refuses an agent\'s write after its own red run') && !t.includes('because the fence refuses every write after it'), 'old words']);
+        has('a case switch whose name holds a space is written whole inside double quotes', "- A case switch whose name holds a space is written whole inside double quotes, as \"--case=<the case's name>\", because the suite refuses a name cut at a space.");
+        has('the landing, the claim, the filing and the close are each made by a verb of the two commands', "- The landing, the claim, the filing and the close are each made by a command of the Commands: the landing command's verbs prove, commit and push, and the program command's verbs claim, file, done, measure and lesson");
+        has('the landing command is among the Commands', `- \`node ${hub}/plan-land.mjs\`\n- \`node ${hub}/program.mjs\`\n`);
       }
       return h.assertAll(rows);
     },
@@ -532,7 +548,7 @@ export const cases = [
   },
   {
     name: 'step 166 of the plan of 10 November (Q-HUB-404, the rounds): the batch print with --rounds prints that many waves as rounds of one plan, with one take-up that claims every round\'s items, its own file steps and landing step for each round, numbers that run on through the rounds, each later round after the landing step before it, only the last landing step pulling the live clone, the Cost counting each round, and the one-round print as it was; a value outside one to five or more rounds than waves remain prints no plan; the print of two rounds passes the plan check',
-    guards: ['rounds_refuse', 'rounds_waves', 'rounds_loop', 'rounds_after', 'rounds_last_pull', 'rounds_cost', 'rounds_takeup_all', 'rounds_served', 'rounds_order', 'rounds_parallel', 'rounds_lines', 'rounds_stepof', 'rounds_review', 'tpl_landing_round_live', 'tpl_landing_round_title'],
+    guards: ['rounds_refuse', 'rounds_waves', 'rounds_loop', 'rounds_after', 'rounds_last_pull', 'rounds_cost', 'rounds_takeup_all', 'rounds_served', 'rounds_order', 'rounds_parallel', 'rounds_note', 'rounds_lines', 'rounds_stepof', 'rounds_review', 'tpl_landing_round_live', 'tpl_landing_round_title'],
     run(m, dir, h) {
       const hub = h.batchHub(dir);
       const r2 = h.batchRun(dir, hub, ['--size', '2', '--rounds', '2']);
@@ -574,13 +590,15 @@ export const cases = [
           && alpha2.startsWith('Put right in `alpha.mjs`: Q-HUB-15.') && land1.startsWith('Landed once for its round') && land2.startsWith('Landed once: every edit'), `${alpha1.slice(0, 60)} | ${alpha2.slice(0, 60)} | ${land1.slice(0, 60)} | ${land2.slice(0, 60)}`],
         ['each step names the steps of its own round', alpha1.includes('run at the same time as step 3') && alpha1.includes("The landing step, step 4, lands this step's edits") && alpha2.includes("The landing step, step 6, lands this step's edits")
           && !alpha2.includes('run at the same time as') && land1.includes('steps 2 to 3 left their edits uncommitted') && land2.includes('steps 5 to 5 left their edits uncommitted'), alpha2.slice(0, 300)],
-        ['only the last landing step pulls the live clone, and the earlier one says it is left as it is', [takeup, alpha1, beta, land1, alpha2].every((s) => !s.includes('pull origin main')) && land2.includes('git -C /root/.claude/hub pull origin main')
+        ['only the last landing step pulls the live clone, and the earlier one says it is left as it is', [takeup, alpha1, beta, land1, alpha2].every((s) => !s.includes('pull origin main') && !s.includes('after its clone switch')) && land2.includes('the live clone\'s path, `/root/.claude/hub`, after its clone switch')
           && land1.includes("the live clone is left as it is, because the plan's last landing step brings it forward when no other step is running"), land1.slice(-500)],
         ['the Found answered section names the step of each round and marks the finding that names no file as no fix of this plan', ['Q-HUB-11 fixed in step 2:', 'Q-HUB-14 fixed in step 3:', 'Q-HUB-15 fixed in step 5:'].every((x) => fa.includes(`- ${x}`)) && !fa.includes('Q-HUB-12 fixed'), fa],
         ['the Cost counts each round and one push for the take-up and one for each round', cost.includes('The 6 steps (3 file steps, run at the same time within their 2 rounds, with the take-up and the 2 landing steps)')
           && cost.includes('round 1 sends its 2 file steps at once and then its landing step, step 4; round 2 sends its 1 file step at once and then its landing step, step 6')
           && cost.includes('3 pushes are made, one by the take-up and one by the landing step of each round') && cost.includes('6 forced turns of the stop hook'), cost],
-        ['the standing rules name the file steps of each round', t.includes('The file steps, 2 to 3, run at the same time in the one working copy') && t.includes('The file steps, 5 to 5, run at the same time in the one working copy'), t.slice(0, 300)],
+        ['the rule on the file steps is printed once and names the file steps of each round', t.split('- The file steps, ').length === 2
+          && t.includes('- The file steps, 2 to 3 and 5 to 5, run at the same time in the one working copy, the steps of each round together and each round after the landing step of the round before. Each writes'), t.slice(0, 300)],
+        ['the Sends priced line counts the six steps, the review and two for each of the two rounds', /\n- Sends priced: 11\. The plan is 6 steps and one review at its first send, and 4 more sends, two for each round, allow a failed step a review and a second send; past 11 sends it stops/.test(t), t.slice(0, 300)],
         ['the header names the rounds and the groups of both', t.split('\n')[0].includes('in 3 group steps') && t.split('\n')[1].includes('This is 2 rounds of one plan, waves 1 to 2 of 2') && t.split('\n')[1].includes('leaves 0 of the 3 groups'), t.split('\n').slice(0, 2).join(' | ')],
         ['with the rounds switch absent or one the print is the print of one wave', one === base && base.includes('\nOrder: 1 2 3 4\n') && !base.includes('Landed once for its round'), base.slice(0, 200)],
         ...bad.map(([v, x]) => [`a rounds value of ${v} prints no plan`, x.status === 1 && x.stdout.includes('--rounds takes a whole number from one to five') && !x.stdout.includes('PLAN STARTS'), x.stdout]),
@@ -672,6 +690,57 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'step 200 of the plan of 10 November (Q-HUB-479): the Sends priced rule line carries the number the seed fills, the steps of the Order, one review and two for each round, in the item print, the batch print and the print of two rounds, and no placeholder stands in the line',
+    guards: ['seed_priced', 'batch_priced', 'tpl_priced_line'],
+    run(m, dir, h) {
+      const line = (t) => /\n- Sends priced:[^\n]*/.exec(t)?.[0] ?? '';
+      const one = `${h.seedRun(dir, h.seedHub(dir), ['--item', 'P-3', '--steps', '1']).stdout}`;
+      const three = `${h.seedRun(dir, h.seedHub(dir), ['--item', 'P-3', '--steps', '3']).stdout}`;
+      const batch = `${h.batchRun(dir, h.batchHub(dir), []).stdout}`;
+      const two = `${h.batchRun(dir, h.batchHub(dir), ['--size', '2', '--rounds', '2']).stdout}`;
+      const said = (t, price, steps, over) => line(t).startsWith(`\n- Sends priced: ${price}. The plan is ${steps} steps and one review at its first send, and ${over} more sends, two for each round, allow a failed step a review and a second send; past ${price} sends it stops`);
+      return h.assertAll([
+        ['item print of one step: three steps in the Order, so six sends', said(one, 6, 3, 2), line(one)],
+        ['item print of three steps: five steps in the Order, so eight sends', said(three, 8, 5, 2), line(three)],
+        ['batch print: four steps in the Order, so seven sends', said(batch, 7, 4, 2), line(batch)],
+        ['print of two rounds: six steps in the Order, so eleven sends', said(two, 11, 6, 4), line(two)],
+        ['no placeholder stands in the line', [one, three, batch, two].every((t) => !/\{[A-Z]+\}/.test(line(t)) && !/Sends priced: N\b/.test(line(t))), line(one)],
+      ]);
+    },
+  },
+  {
+    name: 'step 200 of the plan of 10 November (Q-HUB-473): the take-up step claims by the program command\'s verb claim and lands by the landing command\'s verbs commit and push, and the landing step and the close step make the landing, the filing and the close by the verbs prove, commit, push, done, file, lesson and measure, in the item print, the print for new work, the batch print and the print of two rounds',
+    guards: ['tpl_takeup_claim_verb', 'tpl_takeup_batch_claim', 'tpl_takeup_commit_verb', 'tpl_takeup_push_verb', 'tpl_land_push_verb', 'tpl_land_prove', 'tpl_land_commit', 'tpl_land_done', 'tpl_land_file', 'tpl_land_lesson', 'tpl_close_measure', 'tpl_close_file', 'tpl_close_done', 'tpl_close_commit_verb'],
+    run(m, dir, h) {
+      const single = `${h.seedRun(dir, h.seedHub(dir), ['--item', 'P-3']).stdout}`;
+      const fresh = `${h.seedRun(dir, h.seedHub(dir), ['--item', 'new']).stdout}`;
+      const batch = `${h.batchRun(dir, h.batchHub(dir), []).stdout}`;
+      const rounds = `${h.batchRun(dir, h.batchHub(dir), ['--size', '2', '--rounds', '2']).stdout}`;
+      const stepOf = (t, re) => re.exec(t)?.[0] ?? '';
+      const upSingle = stepOf(single, /\n1\. \*\*Taken up[^\n]*/);
+      const upFresh = stepOf(fresh, /\n1\. \*\*Taken up[^\n]*/);
+      const upBatch = stepOf(batch, /\n1\. \*\*Taken up[^\n]*/);
+      const close = stepOf(single, /\n\d+\. \*\*Closed in the program[^\n]*/);
+      const land = stepOf(batch, /\n\d+\. \*\*Landed once: every[^\n]*/);
+      const round = stepOf(rounds, /\n\d+\. \*\*Landed once for its round[^\n]*/);
+      const push = "the landing command's verb push, run with that number after its expect switch";
+      const noGit = (s) => !s.includes('`git add`') && !s.includes('`git commit -m`') && !s.includes('`git push origin main`') && !s.includes('`git ls-remote --heads origin`');
+      return h.assertAll([
+        ['single take-up: the claim is the program command\'s verb claim with the item and the plan file\'s path', upSingle.includes("run the program command's verb claim with the key of each item the plan names, P-3, and the plan file's path, which will set State to planned and Plan to this plan's title"), upSingle.slice(0, 900)],
+        ['single take-up: the commit is the landing command\'s verb commit and the push its verb push with no clone switch', upSingle.includes("run the landing command's verb commit on the manifest; then the landing acts:") && upSingle.includes(`${push} and with no clone switch`) && noGit(upSingle), upSingle.slice(-1200)],
+        ['new work: the entry is written by hand and the commit and push are the landing command\'s verbs', upFresh.includes("run the landing command's verb commit on the manifest; then the landing acts:") && upFresh.includes(`${push} and with no clone switch`) && !upFresh.includes('verb claim') && noGit(upFresh), upFresh.slice(-1200)],
+        ['batch take-up: the claim is the verb claim with the keys of the items and the commit and push are the landing command\'s verbs', upBatch.includes("run the program command's verb claim with the keys of the items P-") && upBatch.includes("run the landing command's verb commit on the manifest; then the landing acts:") && upBatch.includes(`${push} and with no clone switch`) && noGit(upBatch), upBatch.slice(0, 1500)],
+        ['single close step: done, file, lesson, measure, the checks alone, the commit and the push with the live clone are the verbs', ["by the program command's verb done for an item that is done", "run the program command's verb file on that file, which will write one file in the found folder named by its key", "run the program command's verb lesson with its title",
+          "run the program command's verb measure on the transcript, which runs the cost instrument", "run the landing command's verb prove for the checks alone, once, its last line read", "run the landing command's verb commit on it", `${push} and the live clone's path, \`/root/.claude/hub\`, after its clone switch`].every((s) => close.includes(s)) && noGit(close), close.slice(0, 1500)],
+        ['batch landing step: the manifest, prove, commit, done, file, lesson, measure, the checks alone, the close entry\'s commit and the push are the verbs', ["write the manifest in the session scratchpad with the Write tool from the reports", "run the landing command's verb prove on the manifest once", "run the landing command's verb commit on the manifest, which makes one commit for each of steps",
+          "run the program command's verb done for the items", "run the program command's verb file on it, which will write one file in the found folder and one open program item for each", "run the program command's verb lesson with its title", "run the program command's verb measure on the transcript",
+          "run the landing command's verb prove for the checks alone, once", `${push} and the live clone's path`].every((s) => land.includes(s)) && noGit(land), land.slice(0, 2500)],
+        ['round landing step: the same verbs but the measure and the clone switch, which the last round alone uses', ["run the landing command's verb prove on the manifest once", "run the landing command's verb commit on the manifest, which makes one commit for each of steps", "run the program command's verb done for the items", "run the program command's verb file on it", `${push} and with no clone switch`].every((s) => round.includes(s))
+          && !round.includes('verb measure') && noGit(round), round.slice(0, 2500)],
+      ]);
+    },
+  },
 ];
 
 /** The names a file step's text says it owns: the code spans between "the step owns" and "and writes nothing else", the case file's "(new)" mark left out. */
@@ -725,7 +794,7 @@ export const plants = {
   tpl_check_spelling: ["the docs check takes the repository's full path bare, and the quote, privacy", "the docs check and the quote check take the repository's full path bare, and the privacy", 'plans/seed-template.md'],
   tpl_every_case: ['runs every case of the suite, with no case filter, once after its last edit', 'runs its own cases of the suite, with a case filter, once after its last edit', 'plans/seed-template.md'],
   tpl_dispatcher_file: ['lists `hook-dispatch.mjs` among its files', 'lists `plan-seed.mjs` among its files', 'plans/seed-template.md'],
-  tpl_landing_red: ["where it has concluded red its failing lines, read from the run's log through the connector and written into the report", 'where it has concluded red its failing lines are left', 'plans/seed-template.md'],
+  tpl_landing_red: ['read through the connector for its state alone, its conclusion or that it was still running, and no log of it read', 'read through the connector, its conclusion or that it was still running, and where it has concluded red its failing lines are left', 'plans/seed-template.md'],
   tpl_close_remote: ["reads the remote's head with `git show origin/main:PROGRAM.md`", "reads the remote's head with `git show main:PROGRAM.md`", 'plans/seed-template.md'],
   tpl_close_keys: ['key by key and never as a range', 'as a range', 'plans/seed-template.md'],
   tpl_passed_in: ["for each finding listed in the plan's section Findings passed in", "for each finding listed in the plan's section Notes", 'plans/seed-template.md'],
@@ -745,10 +814,10 @@ export const plants = {
   batch_wave_header: ['and it leaves ${leaves} of the ${totalGroups} groups', 'and it leaves 0 of the ${totalGroups} groups', 'plan-seed.mjs'],
   batch_wave_home: ['![...g.claims].some((x) => used.has(x))', 'true', 'plan-seed.mjs'],
   batch_wave_switch: ['Math.floor(Number(o.wave) || 1)', '1', 'plan-seed.mjs'],
-  tpl_close_index: ['add one index row for it in `LESSONS.md` in the shape the index\'s rows hold', 'add one row for it', 'plans/seed-template.md'],
+  tpl_close_index: ['one index row for it in `LESSONS.md` in the shape the index\'s rows hold', 'one row for it', 'plans/seed-template.md'],
   tpl_review_resend: ['A review for a resend of a file step is sent only when no agent is editing the working copy', 'A review for a resend of a file step may be sent while an agent is editing the working copy', 'plans/seed-template.md'],
   tpl_commit_red_case: ["the landing step puts the code right in the owning step's file and keeps the finding's fix", 'the landing step leaves the case red', 'plans/seed-template.md'],
-  tpl_commit_by_path: ["stages nothing beforehand and names each commit's own files after the message", 'stages everything beforehand', 'plans/seed-template.md'],
+  tpl_commit_by_path: ['- A suite case never writes into the working copy: a case that needs a program', "- A landing step with several commits stages nothing beforehand and names each commit's own files after the message, because the Commands hold no unstage.\n- A suite case never writes into the working copy: a case that needs a program", 'plans/seed-template.md'],
   tpl_rule_no_bg: ['No run of this plan goes in the background.', 'A run of this plan may go in the background.', 'plans/seed-template.md'],
   tpl_device_line: ["names the app's test page as its instrument and never a container render", "names a container render as its instrument", 'plans/seed-template.md'],
   tpl_push_landing: ['Nothing is pushed except by the take-up step and by the landing step, which is the close step in a plan for one item', 'Nothing is pushed except by the take-up step', 'plans/seed-template.md'],
@@ -770,7 +839,7 @@ export const plants = {
   tpl_commit_find_file: ['is put right in that file at the start of the next send', 'is left to the close', 'plans/seed-template.md'],
   tpl_commit_suite_first: ['a landing step that edits a gate file runs the whole suite after its last edit and before its first commit', 'a landing step that edits a gate file runs its own cases', 'plans/seed-template.md'],
   tpl_commit_stale_report: ["the stale-plant list comes from the suite's own report before a run", 'the stale-plant list comes from reading the plants', 'plans/seed-template.md'],
-  tpl_commit_step_text: ['one commit for each of steps {FIRSTGROUP} to {LASTGROUP} in that order, nothing staged beforehand', 'one commit for all of steps {FIRSTGROUP} to {LASTGROUP}', 'plans/seed-template.md'],
+  tpl_commit_step_text: ['one entry for each of steps {FIRSTGROUP} to {LASTGROUP} in that order', 'one entry for all of steps {FIRSTGROUP} to {LASTGROUP}', 'plans/seed-template.md'],
   // step 159 of the plan of 9 November: the shape the last wave ran, Q-HUB-377, Q-HUB-379, Q-HUB-380, Q-HUB-386, Q-HUB-396, Q-HUB-397 and Q-HUB-399
   batch_findkeys: ["takeupVars.FINDKEYS = planned.map((f) => f.key).join(', ');", "takeupVars.FINDKEYS = '';", 'plan-seed.mjs'],
   batch_suite_targets: ['...plantTargets(suiteText).filter((t) => namedFiles.has(t))', '...[]', 'plan-seed.mjs'],
@@ -789,13 +858,13 @@ export const plants = {
   tpl_key_from_program: ["the item's key is read from the program at the time of use and not from this plan's text", "the item's key is read from this plan's text", 'plans/seed-template.md'],
   tpl_land_key_program: ["and each item's key is read from the program and not from this plan's text", "and each item's key is read from this plan's text", 'plans/seed-template.md'],
   tpl_land_plants_all: ['the plants of every file the steps edited are run here, the suite file and each doctrine page among them', 'the plants of the guard files are run here', 'plans/seed-template.md'],
-  tpl_land_long_files: ['then the new plants of the long files that the reports name, by key in one run', 'then the plants of the long files', 'plans/seed-template.md'],
-  tpl_land_checks_twice: ['then the checks again, once each, each exit code read', 'then nothing again', 'plans/seed-template.md'],
-  tpl_land_close_commit: ["one commit made with `git commit -m` naming the close's files after a reader-facing message saying the wave is closed", 'one commit made with `git commit -m`', 'plans/seed-template.md'],
+  tpl_land_long_files: ['the keys of its new plants, those of a long file among them', 'the keys of its new plants', 'plans/seed-template.md'],
+  tpl_land_checks_twice: ["run the landing command's verb prove for the checks alone, once, its last line read; add the close entry", 'then nothing again; add the close entry', 'plans/seed-template.md'],
+  tpl_land_close_commit: ["a reader-facing one-line message saying the wave is closed and the close's files, and run the landing command's verb commit with the close entry's label", "a one-line message and the close's files", 'plans/seed-template.md'],
   tpl_rule_foreground: ["Every run of the suite and of a check is made in the foreground with the Bash tool's timeout set to ten minutes", 'Every run of the suite and of a check may be made in the background', 'plans/seed-template.md'],
   tpl_rule_case_string: ['A string a case writes holds no word the third-person check reads as a pronoun', 'A string a case writes holds any word', 'plans/seed-template.md'],
   tpl_rule_conflict: ['Where the last rebase of the landing step stops on a conflict in `PROGRAM.md` alone', 'Where the last rebase of the landing step stops on a conflict', 'plans/seed-template.md'],
-  tpl_rule_long_files: ["of a long file only the new plants run, by key, and its other plants are proved by the runner's doctrine gates run after the push", 'of a long file all plants run', 'plans/seed-template.md'],
+  tpl_rule_long_files: ['- In the landing step every edit of a gate file is made before the run of the whole suite', "- The plants of every edited file run in the landing step narrowed to that file, but of a long file only the new plants run, by key, and its other plants are proved by the runner's doctrine gates run after the push.\n- In the landing step every edit of a gate file is made before the run of the whole suite", 'plans/seed-template.md'],
   tpl_cmd_continue: ['- `git rebase --continue`\n', '', 'plans/seed-template.md'],
   // step 166 of the plan of 10 November: Q-HUB-407, Q-HUB-404 and the rounds
   seed_closer_passed: ['L(findingsPassedIn(`step ${close}, the close step,`));', "L(findingsPassedIn('the close step'));", 'plan-seed.mjs'],
@@ -816,7 +885,8 @@ export const plants = {
   rounds_takeup_all: ['const planned = [...plannedHere, ...later.flatMap((p) => p.planned)];', 'const planned = [...plannedHere];', 'plan-seed.mjs'],
   rounds_served: ['...later.flatMap((p) => servedRound(p.gnums, p.landing)),', '', 'plan-seed.mjs'],
   rounds_order: ['const order = [takeup, ...gnums, landing, ...later.flatMap((p) => [...p.gnums, p.landing])];', 'const order = [takeup, ...gnums, landing];', 'plan-seed.mjs'],
-  rounds_parallel: ['for (const p of later) L(p.rule);', '', 'plan-seed.mjs'],
+  rounds_parallel: ["const filesteps = roundRuns.length > 1 ? `${roundRuns.slice(0, -1).join(', ')} and ${roundRuns[roundRuns.length - 1]}` : roundRuns[0];", 'const filesteps = roundRuns[0];', 'plan-seed.mjs'],
+  rounds_note: ["const roundNote = later.length ? ', the steps of each round together and each round after the landing step of the round before' : '';", "const roundNote = '';", 'plan-seed.mjs'],
   rounds_lines: ['for (const p of later) for (const l of p.lines) L(l);', '', 'plan-seed.mjs'],
   rounds_stepof: ['for (const p of later) for (const [k, n] of p.stepOf) stepOf.set(k, n);', '', 'plan-seed.mjs'],
   rounds_review: ['const review = lastLanding + 1;', 'const review = landing + 1;', 'plan-seed.mjs'],
@@ -835,4 +905,31 @@ export const plants = {
   tpl_rule_changed_guard: ['searches `session-guards.test.mjs` and the files under `guard-cases/` with Grep for the words and the status codes the old behaviour produced', 'searches `session-guards.test.mjs` for the words the old behaviour produced', 'plans/seed-template.md'],
   tpl_land_cases_first: ['each case a report names as holding the old behaviour of a guard or a print a step changed brought to the fix there before the whole suite runs', 'nothing else before the whole suite runs', 'plans/seed-template.md'],
   tpl_found_line: ["each file written in the found folder ends, after one empty line, with one line of the finding's own kind", 'each file written in the found folder holds the finding', 'plans/seed-template.md'],
+  // step 200 of the plan of 10 November: Q-HUB-473, Q-HUB-479 and Q-HUB-468, and the file steps' rule printed once
+  seed_priced: ['PRICED: count + 2 + 1 + 2', 'PRICED: count', 'plan-seed.mjs'],
+  batch_priced: ['OVER: 2 * R, PRICED: orderN + 1 + 2 * R', 'OVER: 2 * R, PRICED: orderN', 'plan-seed.mjs'],
+  tpl_priced_line: ['Sends priced: {PRICED}. The plan is {ORDERN} steps and one review at its first send, and {OVER} more sends', 'Sends priced: N. The plan is {ORDERN} steps and one review at its first send, and {OVER} more sends', 'plans/seed-template.md'],
+  batch_group_kill: ['Kill: a second red run of a case of its own, or a cause the rules of this plan do not let the step repair, ends it FAILED', 'Kill: a red run of a case of its own ends it FAILED', 'plan-seed.mjs'],
+  tpl_case_quote: ["with one case switch to a run, the switch written whole inside double quotes, as \"--case=<the case's name>\". Fifth,", 'with one case switch to a run. Fifth,', 'plans/seed-template.md'],
+  tpl_parallel_repair: ['A red run of a case of its own is met as the rule on a red check gives: the step repairs it once, in a file it wrote in this send, and a second red run ends', 'A red run of a case of its own ends', 'plans/seed-template.md'],
+  tpl_repair_four_parts: ["A red check is met as the agent rules give: where its cause is read from the run's own output", "A red check ends the step: where its cause is read from the run's own output", 'plans/seed-template.md'],
+  tpl_repair_landing: ['is met as the rule on a red check gives, a cause in a file another step wrote ending the send FAILED with its report,', 'ends the send FAILED with nothing written after but its report,', 'plans/seed-template.md'],
+  tpl_rule_case_quote: ['- A case switch whose name holds a space is written whole inside double quotes', '- A case switch is written', 'plans/seed-template.md'],
+  tpl_cmd_land: ['- `node {HUB}/plan-land.mjs`\n', '', 'plans/seed-template.md'],
+  tpl_cmd_program: ['- `node {HUB}/program.mjs`\n', '', 'plans/seed-template.md'],
+  tpl_rule_commands: ['- The landing, the claim, the filing and the close are each made by a command of the Commands', '- The landing is made by hand, and the claim, the filing and the close are each made by a command of the Commands', 'plans/seed-template.md'],
+  tpl_takeup_claim_verb: ["run the program command's verb claim with the key of each item the plan names", 'set State to planned for each item the plan names', 'plans/seed-template.md'],
+  tpl_takeup_batch_claim: ["run the program command's verb claim with the keys of the items {ITEM}", 'set State to planned in the items {ITEM}', 'plans/seed-template.md'],
+  tpl_takeup_commit_verb: ["run the landing command's verb commit on the manifest; then the landing acts: {TAKEUPLANDING}. Observe: the entry reads State planned", 'make one commit; then the landing acts: {TAKEUPLANDING}. Observe: the entry reads State planned', 'plans/seed-template.md'],
+  tpl_takeup_push_verb: ["the landing command's verb push, run with that number after its expect switch and with no clone switch", '`git push origin main`', 'plans/seed-template.md'],
+  tpl_land_push_verb: ["the landing command's verb push, run with that number after its expect switch and the live clone's path", "`git push origin main`, and the live clone's path", 'plans/seed-template.md'],
+  tpl_land_prove: ["run the landing command's verb prove on the manifest once, which makes", 'run the suite once, which makes', 'plans/seed-template.md'],
+  tpl_land_commit: ["run the landing command's verb commit on the manifest, which makes one commit for each of steps", 'make one commit for each of steps', 'plans/seed-template.md'],
+  tpl_land_done: ["run the program command's verb done for the items {ITEM} that the take-up set to planned", 'write State done in the entries of the items {ITEM} that the take-up set to planned', 'plans/seed-template.md'],
+  tpl_land_file: ["run the program command's verb file on it, which will write one file in the found folder and one open program item for each", 'write one file in the found folder and one open program item for each', 'plans/seed-template.md'],
+  tpl_land_lesson: ["run the program command's verb lesson with its title", 'write the lesson with its title', 'plans/seed-template.md'],
+  tpl_close_measure: ["run the program command's verb measure on the transcript, which runs the cost instrument", 'run the cost instrument on the transcript', 'plans/seed-template.md'],
+  tpl_close_file: ["run the program command's verb file on that file, which will write one file in the found folder named by its key", 'write one file in the found folder named by its key', 'plans/seed-template.md'],
+  tpl_close_done: ["by the program command's verb done for an item that is done", 'by hand', 'plans/seed-template.md'],
+  tpl_close_commit_verb: ["run the landing command's verb commit on it; then the landing acts: {LANDING}", 'make one commit; then the landing acts: {LANDING}', 'plans/seed-template.md'],
 };
