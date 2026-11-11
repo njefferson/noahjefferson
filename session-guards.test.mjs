@@ -11624,8 +11624,8 @@ const CASES = [
       const hub = seedHub(dir);
       const r = seedRun(dir, hub, ['--item', 'P-3']);
       const close = (r.stdout.split('\n3. **Closed in the program')[1] ?? '').split('\n4. **Review.**')[0];
-      const acts = ['`git fetch origin main`', '`git rebase origin/main`', '`git rebase --abort`', '`git log origin/main..main`, read as the commits this plan made', '`git push origin main`, and where the remote refuses it as not a fast-forward',
-        'no force and no second try', '`git ls-remote --heads origin`', 'the doctrine gates run for the pushed commit read through the connector', '`git -C /root/.claude/hub pull origin main`', '`git -C /root/.claude/hub rev-parse HEAD`',
+      const acts = ['`git fetch origin main`', '`git rebase origin/main`', '`git rebase --abort`', '`git log origin/main..main`, read as the commits this plan made', "the landing command's verb push, run with that number after its expect switch and the live clone's path",
+        'no force and no second try', 'the doctrine gates run for the pushed commit read through the connector',
         '`git log origin/main..main`, read empty'];
       const held_rows = [['close.length > 0', (close.length > 0)]];
       if (held_rows.every(([, ok]) => ok)) held_rows.push(['acts.every((a) => close.includes(a))', (acts.every((a) => close.includes(a)))]);
@@ -11642,7 +11642,7 @@ const CASES = [
       const up = (r.stdout.split('\n1. **Taken up: P-3')[1] ?? '').split('\n2. **<')[0];
       const held_rows = [['up.includes(\'read `PROGRAM.md` whole\')', (up.includes('read `PROGRAM.md` whole'))]];
       if (held_rows.every(([, ok]) => ok)) held_rows.push(['up.includes(\'set State to planned and Plan to this plan\\\'s title\')', (up.includes('set State to planned and Plan to this plan\'s title'))]);
-      if (held_rows.every(([, ok]) => ok)) held_rows.push(['up.includes(\'`git push origin main`, and where the remote refuses it as not a fast-forward\')', (up.includes('`git push origin main`, and where the remote refuses it as not a fast-forward'))]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['up.includes("the landing command\'s verb push, run with that number after its expect switch and with no clone switch")', (up.includes("the landing command's verb push, run with that number after its expect switch and with no clone switch"))]);
       if (held_rows.every(([, ok]) => ok)) held_rows.push(['!up.includes(\'`git -C /root/.claude/hub pull origin main`\')', (!up.includes('`git -C /root/.claude/hub pull origin main`'))]);
       if (held_rows.every(([, ok]) => ok)) held_rows.push(['up.includes(\'`git rebase --abort`\')', (up.includes('`git rebase --abort`'))]);
       if (held_rows.every(([, ok]) => ok)) held_rows.push(['up.includes(\'Report `progress/step-1-report.txt` (new)\')', (up.includes('Report `progress/step-1-report.txt` (new)'))]);
@@ -12079,6 +12079,43 @@ const CASES = [
         ['the filter line counts two substrings', /^CASE FILTER: 2 substrings: "planted-caught-case" matched 1, "planted-failing-case" matched 1; 2 of \d+ cases selected\./m.test(two.stdout), two.stdout],
         ['the run with two switches reads as the run with one comma-joined switch', /^1\/2 passed$/m.test(commas.stdout) && /^CASE FILTER: 2 substrings:/m.test(commas.stdout), commas.stdout],
         ['a single switch still selects one case', one.status === 0 && /^1\/1 passed$/m.test(one.stdout) && !/planted-failing-case/.test(one.stdout.replace(/^CASE FILTER:.*$/m, '')), one.stdout + one.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-476: a case file that cannot be loaded is named on a NOT LOADED line and the other files still run: a run narrowed to a loaded case passes, a narrowed run that selects nothing and a whole plants run exit non-zero, and a plants run prints the line once',
+    guards: ['nl_loader', 'nl_print', 'nl_cases_exit', 'nl_plants_whole', 'nl_plants_narrow', 'nl_chunk_filter', 'nl_chunk_keys'],
+    run(m, dir, h) {
+      const good = [
+        "import { readFileSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        'export const cases = [',
+        "  { name: 'planted-loaded-case', guards: ['planted_ok'], run(m, d, h) { return h.assertAll([['the target holds its first line', readFileSync(join(d, 'planted-target.mjs'), 'utf8').includes('alpha-line'), '']]); } },",
+        '];',
+        'export const plants = {',
+        "  planted_ok: ['alpha-line', 'beta-line', 'planted-target.mjs'],",
+        '};',
+        '',
+      ].join('\n');
+      const c = h.suiteCopy(dir, { 'planted-target.mjs': PLANTED_TARGET, 'guard-cases/planted-good.mjs': good, 'guard-cases/planted-broken.mjs': 'export const cases = [ {\n' });
+      const named = /^NOT LOADED guard-cases\/planted-broken\.mjs: \S/m;
+      const narrowed = c.run(['--case=planted-loaded-case']);
+      const unheld = c.run(['--case=no-such-case-name-at-all']);
+      const dryWhole = c.run(['--plants', '--dry']);
+      const dryNarrow = c.run(['--plants', '--dry', '--files=planted-target.mjs']);
+      const drySelectsNone = c.run(['--plants', '--dry', '--files=no-such-file.mjs']);
+      const planted = c.run(['--plants', '--files=planted-target.mjs']);
+      const keyed = c.run(['--plants', '--plant-keys=no_such_plant_key']);
+      const count = (s) => (s.match(/^NOT LOADED /gm) ?? []).length;
+      return h.assertAll([
+        ['a run narrowed to a case of a loaded file passes, with the broken file named', narrowed.status === 0 && /^PASS  planted-loaded-case$/m.test(narrowed.stdout) && /^1\/1 passed$/m.test(narrowed.stdout) && named.test(narrowed.stdout), narrowed.stdout + narrowed.stderr],
+        ['the file is named once, with the load error on its line', count(narrowed.stdout) === 1, narrowed.stdout],
+        ['a case run narrowed to a name no loaded file holds exits non-zero and names the file', unheld.status !== 0 && /^NOTHING SELECTED among the files that loaded; not loaded: guard-cases\/planted-broken\.mjs$/m.test(unheld.stdout) && named.test(unheld.stdout), unheld.stdout + unheld.stderr],
+        ['a whole plants run says the file fails it', dryWhole.status !== 0 && /^NOT LOADED FAILS THIS RUN \(no narrowing\): guard-cases\/planted-broken\.mjs$/m.test(dryWhole.stdout), dryWhole.stdout],
+        ['a plants run narrowed to a loaded file exits by that file alone', dryNarrow.status === 0 && named.test(dryNarrow.stdout) && !/NOT LOADED FAILS/.test(dryNarrow.stdout) && /^PLANTS TO RUN: 1 of /m.test(dryNarrow.stdout), dryNarrow.stdout],
+        ['a plants run narrowed to a file that selects nothing exits non-zero naming the file', drySelectsNone.status !== 0 && /^NOT LOADED FAILS THIS RUN \(nothing was selected/m.test(drySelectsNone.stdout), drySelectsNone.stdout],
+        ['a plants run prints the NOT LOADED line once, not once for each chunk process, and catches the loaded file\'s plant', count(planted.stdout) === 1 && /^CAUGHT  plant "planted_ok" in planted-target\.mjs/m.test(planted.stdout), planted.stdout],
+        ['a plant-keys run of a key no loaded file holds exits non-zero and names the file', keyed.status !== 0 && named.test(keyed.stdout) && /no plant of that name stands/.test(keyed.stdout), keyed.stdout + keyed.stderr],
       ]);
     },
   },
@@ -13043,6 +13080,15 @@ const PLANTS = {
   plants_touched_flag: ["else if (process.argv.includes('--touched')) {\n    narrowTo = touchedFiles();", "else if (process.argv.includes('--touched')) {\n    narrowTo = [];", 'session-guards.test.mjs'],
   plants_dry: ["if (process.argv.includes('--dry')) {\n    console.log(`PLANTS TO RUN", "if (false) {\n    console.log(`PLANTS TO RUN", 'session-guards.test.mjs'],
 
+  // Q-HUB-476: a case file that cannot be loaded (each plant's change lies in the loader's or the runner's code, across a line break).
+  nl_loader: ["continue; }\n  const cs = mod.cases ?? [];", "throw new Error('planted'); }\n  const cs = mod.cases ?? [];", 'session-guards.test.mjs'],
+  nl_print: ["for (const n of NOT_LOADED) console.log(`NOT LOADED ${n.file}: ${n.err}`);\n// Whether a run", "// Whether a run", 'session-guards.test.mjs'],
+  nl_cases_exit: ["  rmSync(STATE, { recursive: true, force: true });\n  process.exit(failedN || (NOT_LOADED.length && (!caseList || nothingSelected)) ? 1 : 0);", "  rmSync(STATE, { recursive: true, force: true });\n  process.exit(failedN || (NOT_LOADED.length && !caseList) ? 1 : 0);", 'session-guards.test.mjs'],
+  nl_plants_whole: ["((!narrowTo && !caseList) || todo.length === 0);\n  if (notLoadedFails)", "(todo.length === 0);\n  if (notLoadedFails)", 'session-guards.test.mjs'],
+  nl_plants_narrow: ["((!narrowTo && !caseList) || todo.length === 0);\n  if (notLoadedFails)", "(true);\n  if (notLoadedFails)", 'session-guards.test.mjs'],
+  nl_chunk_filter: ["if (!line || line.startsWith('NOT LOADED ')) continue;\n      const e = /^CHUNK-END", "if (!line) continue;\n      const e = /^CHUNK-END", 'session-guards.test.mjs'],
+  nl_chunk_keys: ["  rmSync(STATE, { recursive: true, force: true });\n  process.exit(NOT_LOADED.length && !ran ? 1 : 0);", "  rmSync(STATE, { recursive: true, force: true });\n  process.exit(0);", 'session-guards.test.mjs'],
+
   // The status page's shape: the six keys of the notes it is drawn from, the chip of each step, and what each section carries.
   page_notes_version: ['out.versions.push(m[1].trim());', 'void 0;', 'report.mjs'],
   page_notes_open: ['out.open.push(m[1].trim());', 'void 0;', 'report.mjs'],
@@ -13529,7 +13575,7 @@ const PLANTS = {
   seed_takeup: ["L(fill(tpl[isNew ? 'take-up-new' : 'take-up']", "void (fill(tpl[isNew ? 'take-up-new' : 'take-up']", 'plan-seed.mjs'],
   seed_cost: ["and after an eject, a failure, a refusal or a correction, where the review gate asks for one, and at no other move.", 'for each move.', 'plan-seed.mjs'],
   seed_state: ['done where every step in Order handed back DONE', 'done', 'plans/seed-template.md'],
-  seed_landing: ['`git push origin main`, and where the remote refuses it as not a fast-forward', '`git push origin main`, and where it fails', 'plans/seed-template.md'],
+  seed_landing: ["the landing command's verb push, run with that number after its expect switch", "the landing command's verb pull, run with that number after its expect switch", 'plans/seed-template.md'],
   seed_takeup_state: ['set State to planned and Plan to', 'set State to open and Plan to', 'plans/seed-template.md'],
   seed_resend: ['This step is never a resend', 'This step may be a resend', 'plans/seed-template.md'],
   seed_planfile_marker: ['    if (mk?.plan && existsSync(String(mk.plan))) return String(mk.plan);\n', '\n', 'hook-dispatch.mjs'],
@@ -13661,12 +13707,15 @@ const H = { HERE, FILES, copyGuard, RULES_VERSION, rulesLine, GOALS_BLOCK, tmp, 
   scopedPlan, endFor, putAgent, world, reviewWorld, judgedLine, whyLine, MANY_WHYS, judgedPad, notesPad, latched, rulesReadEntries, decideFence, owner, jsonl, waitRun, settle, uid, enterPlan, planOn,
   exitPlan, exitEntry, buttonExit, appHome, SOURCE_MD, PLAN_TALK, QUEUE_NOTES, exitFor, sendingPlan, wholeGates, SCRIPT, scriptPlan, sha256, BT, afterPlanText, afterGatePlan, hookRepo, RULE_OWN,
   rulesScopedPlan, hookAt, approvedEntries, workEntries, restartOf, approvalMarker, underPlanEnv, modelReply, SEED_PROGRAM, seedHub, seedRun, batchHub, batchRun, assertAll, suiteCopy };
+const NOT_LOADED = [];
 const CASE_DIR = join(HERE, 'guard-cases');
 const CASE_FILE_NAMES = existsSync(CASE_DIR) ? readdirSync(CASE_DIR).filter((f) => f.endsWith('.mjs')).sort() : [];
 for (const f of CASE_FILE_NAMES) {
   FILES.push(`guard-cases/${f}`);
   let mod;
-  try { mod = await import(pathToFileURL(join(CASE_DIR, f)).href); } catch (e) { throw new Error(`guard-cases/${f} could not be loaded: ${e?.message}`); }
+  // A CASE FILE THAT CANNOT BE LOADED IS NAMED, NOT FATAL (Q-HUB-476): six steps writing at once left one file unparsed for a moment and
+  // every other step's run went red before any case ran. The file is listed, its cases are not run, and the exits below say so.
+  try { mod = await import(pathToFileURL(join(CASE_DIR, f)).href); } catch (e) { NOT_LOADED.push({ file: `guard-cases/${f}`, err: String(e?.message ?? e).split('\n')[0] }); continue; }
   const cs = mod.cases ?? [];
   const ps = mod.plants ?? {};
   if (!Array.isArray(cs) || typeof ps !== 'object' || ps === null || Array.isArray(ps)) throw new Error(`guard-cases/${f} must export cases (an array) and plants (an object)`);
@@ -13792,6 +13841,10 @@ const caseList = caseWords(argValues('case').join(','));
 // `name`, and a one-word substring such as `a` selected 281 of 293 cases in a run meant for one. The refusal names both faces: words that
 // stand after the switch, and a filter that selects more than half of the suite (`--allow-wide` runs that on purpose).
 const strayWords = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+for (const n of NOT_LOADED) console.log(`NOT LOADED ${n.file}: ${n.err}`);
+// Whether a run is narrowed decides what a file that did not load costs: a whole run exits non-zero for it; a narrowed run exits by
+// what it selected from the files that loaded, and non-zero only where it selected nothing.
+const notLoadedNames = () => NOT_LOADED.map((n) => n.file).join(', ');
 if (strayWords.length) {
   console.log(`CASE FILTER REFUSED: ${strayWords.length === 1 ? 'a word stands' : `${strayWords.length} words stand`} among the arguments that is no switch (${strayWords.map((w) => `"${w}"`).join(', ')}). A value with a space was cut at the space: quote the whole switch, as "--case=a name", or separate several names with commas and no space.`);
   process.exit(2);
@@ -13849,11 +13902,16 @@ async function runPlant(key) {
 
 if (process.argv.includes('--plants') && argValue('plant-keys') !== undefined) {
   // One chunk of a parent's run: run the plants named, print their lines, and end with the one line the parent reads.
-  let badInChunk = 0;
-  for (const key of argValue('plant-keys').split(',').filter(Boolean)) if ((await runPlant(key)) !== 'caught') badInChunk++;
+  let badInChunk = 0, ran = 0;
+  for (const key of argValue('plant-keys').split(',').filter(Boolean)) {
+    // A key held by a case file that did not load is named and counted, and the keys that are held run.
+    if (!PLANTS[key] && NOT_LOADED.length) { console.log(`PLANT ${key}: no plant of that name stands among the files that loaded; not loaded: ${notLoadedNames()}`); badInChunk++; continue; }
+    ran++;
+    if ((await runPlant(key)) !== 'caught') badInChunk++;
+  }
   console.log(`CHUNK-END bad=${badInChunk} leaks=${LEAKS}`);
   rmSync(STATE, { recursive: true, force: true });
-  process.exit(0);
+  process.exit(NOT_LOADED.length && !ran ? 1 : 0);
 } else if (process.argv.includes('--plants')) {
   let bad = 0;
   const noPlant = [], missed = [], caughtKeys = new Set();
@@ -13876,11 +13934,14 @@ if (process.argv.includes('--plants') && argValue('plant-keys') !== undefined) {
   const sourceOf = (file) => { if (!sources.has(file)) sources.set(file, existsSync(join(HERE, file)) ? readFileSync(join(HERE, file), 'utf8') : null); return sources.get(file); };
   const stale = todo.filter(([, [from, , file]]) => !(sourceOf(file) ?? '').includes(from)).map(([k]) => k);
   if (stale.length) console.log(`STALE PLANTS BEFORE THE RUN (${stale.length}): ${stale.map((k) => `${k} in ${PLANTS[k][2]}`).join(', ')}. Each is skipped and counted as a failure; re-point its line to where the edit moved it.`);
+  // A FILE THAT DID NOT LOAD FAILS A WHOLE PLANTS RUN, AND A NARROWED ONE ONLY WHERE IT SELECTED NOTHING (Q-HUB-476).
+  const notLoadedFails = NOT_LOADED.length > 0 && ((!narrowTo && !caseList) || todo.length === 0);
+  if (notLoadedFails) console.log(`NOT LOADED FAILS THIS RUN (${todo.length === 0 ? 'nothing was selected among the files that loaded' : 'no narrowing'}): ${notLoadedNames()}`);
   if (process.argv.includes('--dry')) {
     console.log(`PLANTS TO RUN: ${todo.length} of ${Object.keys(PLANTS).length}: ${todo.map(([k]) => k).join(', ')}`);
     console.log(plantsByFile());
     rmSync(STATE, { recursive: true, force: true });
-    process.exit(stale.length || noPlant.length ? 1 : 0);
+    process.exit(stale.length || noPlant.length || notLoadedFails ? 1 : 0);
   }
   if (narrowTo) console.log(`NARROWED to ${narrowTo.length ? narrowTo.join(', ') : 'no guard file'}: ${todo.length} of ${Object.keys(PLANTS).length} plants. The plants of the other files were not run; the full run is the gate.`);
   bad += stale.length;
@@ -13896,7 +13957,7 @@ if (process.argv.includes('--plants') && argValue('plant-keys') !== undefined) {
     let end = null;
     const reported = new Set();
     for (const line of (r.stdout ?? '').split('\n')) {
-      if (!line) continue;
+      if (!line || line.startsWith('NOT LOADED ')) continue;
       const e = /^CHUNK-END bad=(\d+) leaks=(\d+)$/.exec(line);
       if (e) { end = e; continue; }
       console.log(line);
@@ -13918,7 +13979,7 @@ if (process.argv.includes('--plants') && argValue('plant-keys') !== undefined) {
   if (noPlant.length) console.log(`CITED WITH NO PLANT (${noPlant.length}): ${noPlant.join(', ')}`);
   console.log(leaks ? `LEAK: the planted live session was changed in ${leaks} case run${leaks === 1 ? '' : 's'} of the plants` : 'planted live session unchanged by the plants');
   rmSync(STATE, { recursive: true, force: true });
-  process.exit(bad ? 1 : 0);
+  process.exit(bad || notLoadedFails ? 1 : 0);
 } else {
   const copy = checkoutCopy(HERE);
   const watch = trackedWatch(copy ? copy.dir : HERE, copy ? copy.files : null);
@@ -13935,6 +13996,10 @@ if (process.argv.includes('--plants') && argValue('plant-keys') !== undefined) {
   // suite for nine hours, and the plants are the other half of it.
   console.log(`PLANTS NOT RUN: this run ran the cases only; the ${Object.keys(PLANTS).length} plants run with --plants, by guard file (--files=a.mjs), and the full suite is the cases and every plant.`);
   console.log(LEAKS ? `LEAK: the planted live session was changed in ${LEAKS} case${LEAKS === 1 ? '' : 's'} of the run` : 'planted live session unchanged by the run');
+  // A FILE THAT DID NOT LOAD FAILS A WHOLE RUN, AND A RUN NARROWED BY --case= ONLY WHERE IT SELECTED NOTHING (Q-HUB-476).
+  const nothingSelected = r.length === 0;
+  if (NOT_LOADED.length && nothingSelected) console.log(`NOTHING SELECTED among the files that loaded; not loaded: ${notLoadedNames()}`);
+  else if (NOT_LOADED.length && !caseList) console.log(`CASES NOT RUN: every case of ${notLoadedNames()} (not loaded); the run exits non-zero for it.`);
   rmSync(STATE, { recursive: true, force: true });
-  process.exit(failedN ? 1 : 0);
+  process.exit(failedN || (NOT_LOADED.length && (!caseList || nothingSelected)) ? 1 : 0);
 }
