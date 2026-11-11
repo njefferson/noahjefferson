@@ -1,0 +1,3 @@
+Q-HUB-531: The program command's verb measure refuses any transcript whose cost print holds the word REFUSED, and the print of every transcript with a stop-hook refusal holds the words STOP REFUSED in its refusal counts, so the verb wrote nothing for the stand-down plan on 11 November and that plan's cost entry under the measure item is owed once the verb is mended.
+
+Fix in: `program.mjs`. The test at line 258 matches only the cost instrument's own refusal lines and not the words inside a count of stop-hook refusals, so the verb measure writes the close entry for a transcript that holds such a refusal.
