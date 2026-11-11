@@ -21,7 +21,20 @@
       "Bash(node /tmp/claude-0/:*)",
       "Bash(node --check:*)",
       "Bash(python3 -m http.server:*)",
-      "Bash(python3 -I -m zipfile:*)"
+      "Bash(python3 -I -m zipfile:*)",
+      "Bash(node /home/user/noahjefferson/session-guards.test.mjs:*)",
+      "Bash(node /home/user/noahjefferson/docs-check.mjs:*)",
+      "Bash(node /home/user/noahjefferson/lessons-check.mjs:*)",
+      "Bash(node /home/user/noahjefferson/quote-check.mjs:*)",
+      "Bash(node /home/user/noahjefferson/privacy-check.mjs:*)",
+      "Bash(node /home/user/noahjefferson/third-person-check.mjs:*)",
+      "Bash(node /home/user/noahjefferson/example-check.mjs:*)",
+      "Bash(node /home/user/noahjefferson/pin-check.mjs:*)",
+      "Bash(git rebase:*)",
+      "Bash(git rm:*)",
+      "Bash(git show:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git -C /root/.claude/hub pull /home/user/noahjefferson main)"
     ]
   },
   "hooks": {

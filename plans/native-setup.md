@@ -30,10 +30,14 @@ That a cloud session honours each part of Part B as documented, that the stronge
 
 The first act, the stand-down, landed on 11 November 2026 and is in force through 18 November. It took eleven agent sends and about four hours, and it met two refusals.
 
-The second act's texts stand as documents under plans/native/: the short page, the worker and checker roles, and the piece-of-work and landing procedures. They are not installed anywhere.
+The second act is built. The two roles, the worker and the checker, are installed under the configuration folder's agents folder and load at the next session start. The two procedures, piece-of-work and landing, are installed under its skills folder and were picked up within the same session. The short page stands at plans/native/page.md, and the roles name it by that path.
+
+The check before a push is in the push guard and acts only under a stand-down. While one is in force, a push of main is refused until an agent that changed nothing has handed back CHECK PASS and the full id of the exact commit being pushed, read from the session's agent transcripts and never from a file. With no stand-down the push guard decides as it did.
+
+The install was made in accept-edits mode, where the harness asked the owner before each of the five writes to its configuration folder. The fifth was a list of the hub's own test and check commands, so the build ran without asking.
 
 The trial has shown two things so far. In auto mode the harness's own check refuses an agent's write under the configuration folder, and it refuses to start an agent whose task is to change the session's own roles or gates, so those changes are placed by a person's approval and agents only draft them. A new agent type in a folder that did not exist at a session's start loads at the next session start.
 
-What remains for a person to switch on is installing the two roles and the two procedures, the check before a push, running the main thread as a manager role, and naming a stronger tier as its adviser.
+What remains for a person to switch on is running the main thread as a manager role, and naming a stronger tier as its adviser.
 
 Notes from the Quietkeep session of 11 November 2026 are filed in the hub's record: its finished work as P-585, and three findings as Q-HUB-532 to Q-HUB-534 with P-586 to P-588. The finding on the seed's rule about renders (Q-HUB-533) joins the third act, and the session's cost figures stand in the close entry under the measure item P-10 for the fourth act.
