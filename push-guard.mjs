@@ -31,13 +31,29 @@
  *          FILE_WRITES are refused unless their `branch` is staging or main;
  *          those in PR_MERGE and BRANCH_UPDATE are refused whatever they name.
  *
+ *   THE CHECK BEFORE A PUSH OF MAIN, UNDER A STAND-DOWN ONLY (plans/native-setup.md): while stand-down.mjs says a stand-down is in
+ *          force for the session, a push that lands on main is refused unless a checker has passed the exact commit it pushes. A
+ *          pass is an agent of this session whose hand-back opens `CHECK PASS` and then the full id of that commit, and whose own
+ *          transcript holds no Edit, Write, MultiEdit or NotebookEdit call and no Bash call running git commit, git add or git
+ *          push. It is read from the agents' transcripts (report.mjs `agentFiles` and `agentEnd`), never from a file an agent could
+ *          write; a transcript that cannot be read is no pass. With no stand-down in force none of this runs and every decision
+ *          above is as it was.
+ *
  *   node push-guard.mjs     (payload on stdin; exit 2 refuses, reason on stderr)
  */
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve, basename } from 'node:path';
+import { readFileSync, existsSync, statSync } from 'node:fs';
+import { resolve, basename, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { commandsIn, commandWordIndex, heredocs } from './reply-guard.mjs';
+
+// The stand-down question and the code that reads agents' transcripts are loaded here and not imported statically, so a copy of the
+// guard without them keeps every other decision (the dispatcher loads the stand-down the same way).
+let standMod = null;
+let reportMod = null;
+let tailMod = null;
+try { standMod = await import('./stand-down.mjs'); } catch { standMod = null; }
+try { reportMod = await import('./report.mjs'); tailMod = await import('./transcript-tail.mjs'); } catch { reportMod = null; tailMod = null; }
 
 const SELF = fileURLToPath(import.meta.url);
 const ALLOWED = new Set(['staging', 'main']);
@@ -164,6 +180,112 @@ export function commitSkipsHooks(args) {
   return false;
 }
 
+const CHECK_PREFIX = 'PUSH CHECK: ';
+const CHECK_READ_BYTES = 64 * 1024 * 1024;
+const MUTATING_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
+const MUTATING_GIT = /\bgit\b(?:\s+(?:-C\s+\S+|-c\s+\S+|--[\w-]+(?:=\S*)?))*\s+(?:commit|add|push)\b/;
+
+/**
+ * Is a stand-down in force for this process's session?
+ * @returns {boolean} true only when stand-down.mjs loaded and says so; any failure is no.
+ */
+function standingNow() {
+  try { return !!standMod?.standDownHere().inForce; } catch { return false; }
+}
+
+/**
+ * Does a Bash line run git commit, git add or git push?
+ * @param {string} command  the line.
+ * @returns {boolean} true when any simple command in it (nested ones included) is one, or the text reads like one.
+ */
+export function runsGitWrite(command) {
+  const cmd = heredocs(String(command ?? '')).shell;
+  if (MUTATING_GIT.test(cmd)) return true;
+  const simple = commandsIn(cmd);
+  for (const s of simple) {
+    const w = s.words.map(String);
+    const at = commandWordIndex(w);
+    if (at < 0 || basename(w[at]) !== 'git') continue;
+    let k = at + 1;
+    while (k < w.length && w[k].startsWith('-')) k += /^(-C|-c|--git-dir|--work-tree|--namespace)$/.test(w[k]) ? 2 : 1;
+    if (['commit', 'add', 'push'].includes(w[k] ?? '')) return true;
+  }
+  return false;
+}
+
+/**
+ * What an agent's own transcript shows it changed.
+ * @param {object[]} entries  the agent's whole transcript.
+ * @returns {string} '' when it holds no call of Edit, Write, MultiEdit or NotebookEdit and no Bash call running git commit, git add
+ *   or git push; otherwise the first such call, named.
+ */
+export function changedSomething(entries) {
+  for (const e of entries) {
+    const c = e?.message?.content;
+    if (e?.type !== 'assistant' || !Array.isArray(c)) continue;
+    for (const b of c) {
+      if (b?.type !== 'tool_use') continue;
+      if (MUTATING_TOOLS.has(String(b.name))) return `a call of ${b.name}`;
+      if (b.name === 'Bash' && runsGitWrite(b.input?.command)) return 'a Bash call running git commit, git add or git push';
+    }
+  }
+  return '';
+}
+
+/**
+ * Has a checker passed this commit?
+ * @param {object} p  the PreToolUse payload (`transcript_path`, `session_id`).
+ * @param {string} commit  the full id of the commit being pushed.
+ * @returns {{ok: boolean, unread?: string}} ok when an agent of the session handed back with a first line of CHECK PASS and exactly that
+ *   id and its transcript shows nothing changed; `unread` says why the agents could not be read, which is no pass.
+ */
+export function checkerPassed(p, commit) {
+  if (!reportMod || !tailMod) return { ok: false, unread: 'the code that reads the agents could not be loaded' };
+  const tr = String(p?.transcript_path ?? '');
+  let dir = '';
+  if (tr.endsWith('.jsonl')) dir = join(tr.slice(0, -'.jsonl'.length), 'subagents');
+  else { try { dir = reportMod.sessionFiles(String(p?.session_id ?? ''))?.agents ?? ''; } catch { dir = ''; } }
+  if (!dir) return { ok: false, unread: 'the session\'s transcript could not be found' };
+  let files = [];
+  try { files = reportMod.agentFiles(dir); } catch { return { ok: false, unread: 'the session\'s agents could not be listed' }; }
+  for (const a of files) {
+    try {
+      if (statSync(a.file).size > CHECK_READ_BYTES) continue;
+      const entries = tailMod.tailEntries(a.file, CHECK_READ_BYTES);
+      if (!entries.length) continue;
+      const end = reportMod.agentEnd(entries, reportMod.agentMeta(a), 0, '');
+      if (!end || end.how !== 'a report') continue;
+      const first = String(end.last ?? '').split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+      const m = /^CHECK PASS\s+([0-9a-f]{40,64})\b/i.exec(first);
+      if (!m || m[1].toLowerCase() !== commit.toLowerCase()) continue;
+      if (changedSomething(entries)) continue;
+      return { ok: true };
+    } catch { /* an agent that cannot be read is no pass */ }
+  }
+  return { ok: false };
+}
+
+/** The commit a refspec pushes, in full, or '' when it cannot be read. */
+function commitOf(spec, dir) {
+  const s = String(spec).replace(/^\+/, '');
+  const at = s.indexOf(':');
+  const src = at < 0 ? s : s.slice(0, at);
+  const r = git(dir, 'rev-parse', '--verify', '-q', `${!src || src === '@' ? 'HEAD' : src}^{commit}`);
+  return r.status === 0 ? r.stdout.trim() : '';
+}
+
+/**
+ * The refusal of a push of main that no checker has passed.
+ * @param {string} commit  the full id being pushed, or '' when it cannot be read.
+ * @param {string} [unread]  why the agents could not be read, when they could not.
+ * @returns {string} four plain sentences.
+ */
+function checkRefusal(commit, unread = '') {
+  return `${CHECK_PREFIX}The stand-down's check before a push holds. The push is of commit ${commit || '(not readable from this repository)'}. `
+    + `No checker has passed that commit${unread ? `, and ${unread}` : ''}. `
+    + 'A checker which changes nothing must pass that exact commit first, by handing back CHECK PASS and the full commit id on its first line.';
+}
+
 /**
  * Judge one `git …` simple command.
  * @param {string[]} words  the command's words from `git` on, quoting removed.
@@ -174,7 +296,7 @@ export function commitSkipsHooks(args) {
  *   commit skipping its hooks nor an alias, or when it is a push this can
  *   resolve and every branch it updates is staging or main without forcing main.
  */
-export function judgeGit(words, cwd, unsure = '') {
+export function judgeGit(words, cwd, unsure = '', onMain = null) {
   let dir = cwd;
   let k = 1;
   let dirOpt = '';
@@ -245,6 +367,14 @@ export function judgeGit(words, cwd, unsure = '') {
     if (d.bad) return `git push refused: ${d.bad}.`;
     if (!ALLOWED.has(d.dst)) return `git push to "${d.dst}" is refused: only staging and main reach a remote.`;
     if (d.dst === 'main' && (force || String(spec).startsWith('+'))) return `git push "${spec}" force-pushes main, and a force-push to main is refused.`;
+  }
+  // Under a stand-down only (`onMain` is null otherwise): a push that lands on main waits for a checker's pass of that exact commit.
+  if (onMain) {
+    for (const spec of specs) {
+      if (destination(spec, dir).dst !== 'main') continue;
+      const why = onMain(commitOf(spec, dir));
+      if (why) return why;
+    }
   }
   return null;
 }
@@ -329,9 +459,16 @@ export function decide(p) {
       }
     }
   }
+  const onMain = standingNow()
+    ? (commit) => {
+      if (!commit) return checkRefusal('');
+      const r = checkerPassed(p, commit);
+      return r.ok ? null : checkRefusal(commit, r.unread);
+    }
+    : null;
   for (const g of gits) {
-    const why = judgeGit(g.w, g.cwd, g.via || unsure);
-    if (why) return `${why} ${RULE}`;
+    const why = judgeGit(g.w, g.cwd, g.via || unsure, onMain);
+    if (why) return why.startsWith(CHECK_PREFIX) ? why : `${why} ${RULE}`;
   }
   return null;
 }
