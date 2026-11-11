@@ -44,6 +44,13 @@ never edits this page: its lines are the owner's to change.
 - AskUserQuestion is banned. [Doctrine §0]
 
 ## Start here: the brief is printed for you
+Start here: the hub is being rebuilt on the harness's own parts. The design and
+the order of the work are in [`plans/native-setup.md`](plans/native-setup.md), and
+hub work starts from that record. A `STAND-DOWN` file in the repository's
+`.claude` folder frees a session launched in the hub repository from the hub's
+gates through 18 November for the trial; it frees no session launched anywhere
+else.
+
 `.claude/hooks/session-start.sh` runs at session start and prints
 [`session-brief.mjs`](session-brief.mjs) — which branch this is versus where work
 belongs, whether the doctrine has moved since this repo last reconciled, the repo
