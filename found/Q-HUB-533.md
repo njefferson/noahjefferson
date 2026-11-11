@@ -1,0 +1,3 @@
+Q-HUB-533: A release that edits only the patch notes owes the accessibility walk and the color inventory, because the patch notes render into the hashed markup. The plan seed's rule on renders sends those only to a change of the shell or the markup, and an agent read a patch-note release as neither; the rule should name the patch notes.
+
+Fix in: `plans/seed-template.md`, `doctrine/plans.md`. The rule's words on the accessibility walk stand in the seed template's standing text and in the plans page of the doctrine; both name the patch notes as a change that owes the accessibility walk and the color inventory.

@@ -1,0 +1,3 @@
+Q-HUB-534: report.mjs sorts a step's Found lines by their position in the step's newest report, so a resend's new report attaches the earlier "Found N.k" sorts to different findings. Observed on 11 November: step 87's third report reordered its Found lines, and the status and the page printed the second send's sorts and reasons beside the third send's findings until the manager notes were rewritten.
+
+Not placed: `report.mjs`. The design of the native setup retires this file, so no fix is placed in it; the finding stands for the file's remaining life, and the sort is keyed by a finding's words and not its position if the file is kept.

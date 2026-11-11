@@ -35,3 +35,5 @@ The second act's texts stand as documents under plans/native/: the short page, t
 The trial has shown two things so far. In auto mode the harness's own check refuses an agent's write under the configuration folder, and it refuses to start an agent whose task is to change the session's own roles or gates, so those changes are placed by a person's approval and agents only draft them. A new agent type in a folder that did not exist at a session's start loads at the next session start.
 
 What remains for a person to switch on is installing the two roles and the two procedures, the check before a push, running the main thread as a manager role, and naming a stronger tier as its adviser.
+
+Notes from the Quietkeep session of 11 November 2026 are filed in the hub's record: its finished work as P-585, and three findings as Q-HUB-532 to Q-HUB-534 with P-586 to P-588. The finding on the seed's rule about renders (Q-HUB-533) joins the third act, and the session's cost figures stand in the close entry under the measure item P-10 for the fourth act.
