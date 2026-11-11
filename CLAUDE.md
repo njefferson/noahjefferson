@@ -53,7 +53,7 @@ written down and none of it was being read.** A session loads exactly one file
 automatically, and every other rule here had to be opened by somebody who
 remembered it existed.
 
-[`REPOS.md`](REPOS.md) is the map: eight repos, their branch models, deploy targets
+[`REPOS.md`](REPOS.md) is the map: ten repos, their branch models, deploy targets
 and what each still owes. It did not exist until 2026-08-10, which is why
 sessions kept asking questions that had already been answered — the repo list had
 never been written anywhere, so there was nothing to remember it from.
@@ -1276,6 +1276,8 @@ existing.
 - [`found/`](found/) — one file per finding, keyed `Q-HUB-N`, so two sessions never edit one file; the closing check reads its keys. A file may end with one line of four kinds, told by its opening words and a colon: Put right already, Fix in, Not the repository's, Not placed.
 - [`doctrine/`](doctrine/) — the doctrine in three files: `never.md` read at every start, `plans.md` read at the entry to plan mode, `apps.md` read where an item points at it; `DOCTRINE.md` is their index.
 - [`plan-seed.mjs`](plan-seed.mjs) — prints the record into a plan at the write, in the plan's own shape (item entry and its own dependency line, goals, rules version, standing text from `plans/seed-template.md`, found keys, movable reads marked); `node plan-seed.mjs --item <P-key or next>`, run once by the dispatcher at the entry to plan mode (the word new in place of the key prints the entry's form under the next free key, for work with no entry yet); `--batch` (new) prints the repository's open findings as one plan grouped by the file each names, and the dispatcher prints it when the next open item is a finding; `--batch --rounds <1 to 5>` prints that many waves as rounds of one plan, and the manager notes name the item and the rounds (Doctrine §0e rule 4). The seed reads a finding's last line of the four kinds: Fix in groups it by the files named, Put right already and Not the repository's leave it out of the batch, and Not placed gets no step and is listed as not placed.
+- [`plan-land.mjs`](plan-land.mjs) — lands a plan's file steps as one command run as node, the file, a verb and a manifest switch: prove runs the dry listings, the suite, the plants and the seven checks and exits 0 only where every stage passed, commit makes one commit for each manifest entry with only its files, and push rebases onto the remote's main, pushes it as a fast-forward and reads the remote's head back.
+- [`program.mjs`](program.mjs) — writes a plan's record into the program and the found folder as one command run as node, the file, a verb and its switches: claim sets items planned, file writes findings with their keys and program items after refusing any text that attributes or discloses, done sets items done, measure writes the plan's cost entry from the cost instrument, and lesson writes a lesson's file and row.
 
 **AND THE WIRING IS SHARED NOW TOO, WHICH IT WAS NOT.**
 [`.github/workflows/hub-gates.yml`](.github/workflows/hub-gates.yml) is a

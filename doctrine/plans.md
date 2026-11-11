@@ -175,7 +175,8 @@ every rule below while none of the hooks that enforce them was running
    by line.** A finding that is not put right and does not stop the plan goes in
    the `## Found queue` section of the `NOTES.md` of the repository it is about,
    one line each, opening with a key of the form `Q-TAG-3` (the tag is the
-   repository's, so a key in one repository cannot answer another's).
+   repository's, so a key in one repository cannot answer another's); the hub's
+   findings are files in `found/` and another repository's are lines of the found queue in its notes.
    *Enforced by:* `foundAnsweredProblem` in `hook-dispatch.mjs`, which
    `plan-guard.mjs` calls at `ExitPlanMode`: a plan whose Files names a
    repository (by a label `labelNames` accepts) with queued findings is refused
@@ -422,7 +423,7 @@ the button. A plan does not edit `permissions.allow` of the session's own
    they share no file and no dependency, one landing where one is enough, and the
    cost said; it binds the session's own turns as well as a plan's steps. (g) Permanent: everything agreed is in the plan file before the
    button, so nothing rests on a chat turn.
-   **The shape a plan arrives in.** A take-up step only claims: it sets the items
+   **The shape a plan arrives in.** A take-up step only claims, by the program command's verb claim: it sets the items
    to planned, runs no check, pulls nothing, and runs alone and first. The file
    steps are partitioned by the files they write, so no two share a file; they run
    at once (up to seven, and the After line says so), each makes its edits, checks
@@ -435,7 +436,7 @@ the button. A plan does not edit `permissions.allow` of the session's own
    in the background: every case, the plants of each edited file (a long file's new
    plants by key, its other plants proved by the runner), the checks, one commit
    for each file step, the close in the program, one push, and the pull of the live
-   clone last. A plan whose steps run one after another says in its Branches why
+   clone last; the landing step proves, commits and pushes by the landing command's verbs and closes by the program command's. A plan whose steps run one after another says in its Branches why
    they cannot run together. A step that needs a number from the device names the
    app's test page as its instrument and never a container render, and no
    accessibility walk, cold read, browser walk or screenshot tour runs against a
@@ -561,7 +562,6 @@ the button. A plan does not edit `permissions.allow` of the session's own
     *Enforced whole by:* `approved-plan-guard.mjs` and `report.mjs`.
     *Enforced whole by:* `hook-dispatch.mjs` and `plan-guard.mjs`.
     *Enforced whole by:* `plan-fence.mjs`.
-    *Enforced whole by:* `hook-dispatch.mjs` and `plan-guard.mjs`.
     *Enforced by:* `approved-plan-guard.mjs` and `report.mjs` (`SCOPE_SECTIONS`,
     `scopeChanged`): the plan's `## Rules` line and its `## Rules of this plan`
     section are part of the approved scope with Goals, Asked, Files and Commands,
@@ -1122,12 +1122,12 @@ compaction cover every line of the doctrine as it stands; every line is due
 otherwise, a part read, a whole read made only before the last compaction and a
 read of a file that has since changed length among them, because a resume keeps
 the conversation it had and no more. A doctrine whose lines cannot be counted
-is read in full. The marker clears when the Read results on `DOCTRINE.md`
+is read in full. The marker clears when the Read results on `doctrine/never.md`
 cover the lines due, counted across as many reads as it takes from the lines
 each result actually returned, never an errored one: for a startup, a clear and
 a compaction those returned after the marker, for a resume those since the last
-compaction. Only the hub's own `DOCTRINE.md` counts, the one beside the gate in
-the clone every gate runs from; a copy anywhere else is not the doctrine.
+compaction. Only the hub's own `doctrine/never.md` counts, the one beside the gate in
+the clone every gate runs from; a copy anywhere else is not the doctrine. The plans page is due at the entry to plan mode, and the gate holds the main thread to reading until it has been read.
 Agents are not held by it: `plan-fence.mjs` holds them to the approved plan
 instead (§11b).
 

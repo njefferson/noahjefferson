@@ -288,9 +288,9 @@ the push, not a courtesy a session may remember to extend.
  (LESSONS §52, third trap).
 - **Wiring status lives in the hub CLAUDE.md's gate index.** A repo is not
  "gated" until the CI step exists and its command has been seen red on a
- local plant. As of 2026-08-04: the hub and Quietkeep are wired; every
- other sibling OWES the step, and a sibling session that reads this owes it
- in its next commit.
+ local plant. The hub CLAUDE.md's gate index names the repositories that are
+ wired; a sibling not named there OWES the step, and a sibling session that
+ reads this owes it in its next commit.
 
 ## 11. Standing facts about the environment
 

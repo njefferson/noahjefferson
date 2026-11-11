@@ -269,8 +269,7 @@ so. The reference implementation is now hub `a11y-gate.mjs`:
 - EXEMPTIONS ARE PRINTED, NEVER SILENT. WCAG 2.2 SC 2.5.8 exempts a target inline
  in a sentence, because forcing 44px mid-paragraph breaks the text flow and
  makes the page worse. The gate applies that exception and NAMES every element
- it applied it to. **Open for the owner:** the rule above says ">= 44px" flatly —
- decide whether it should carry the inline exception in writing.
+ it applied it to.
 - MAKE IT FAIL ONCE BEFORE TRUSTING IT (§6). Verified by breaking a real contrast
  pair: `.foot` at 1.56:1 in dark theme, exit 1. Then reverted.
 
