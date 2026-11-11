@@ -1,0 +1,3 @@
+Q-HUB-512: the prompt hook read an agent's hand-back, which reaches the session as a prompt, as a message the session was typed, and printed a correction at every hand-back of 10 November from 21:07 California time, and at 21:27 a hold for the word stop because a report's sentence held it, while the gates that judge each call read the typed messages only and passed the calls that followed (met by the main thread in the plan of 10 November, filed in step 421); the hold for the word stop is also Q-HUB-491.
+
+Fix in: `hook-dispatch.mjs`. The line printed at each prompt names a correction or a stop only for a message the session was typed, with a case on a hand-back that closes a step and one whose report holds the word stop.
