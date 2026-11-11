@@ -1,0 +1,3 @@
+Q-HUB-498: an agent that runs its own cases one to a run meets a red run for each red case, so the one repair the agent rules allow is spent at the second, as step 200's was, and the plan fence refuses every write after a red run of the suite though the agent rules at version 6 allow one repair in a file the agent wrote in the send (found in steps 200 and 201 of the plan of 10 November, filed in step 202).
+
+Fix in: `plans/seed-template.md`, `plan-fence.mjs`, `hook-dispatch.mjs`. The order of a file step names one run for the step's own cases, and the fence allows the one repair after the first red run where a read of its code shows it refused after the first red run alone.

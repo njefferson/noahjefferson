@@ -54,7 +54,7 @@ The list is the rank. The items the redesign plan builds come first, then the pa
 
 ## Items
 
-539 items (P-535 to P-539 the keys Q-HUB-485 to Q-HUB-489, filed by step 407 of the plan of 10 November for the tap labelling, all found in that plan's reports; P-514 to P-533 the keys Q-HUB-465 to Q-HUB-484, filed by step 195 of the plan of 10 November that held a session to the cost of its work, eleven from that plan's words and nine found in its reports; P-534 that plan's own item, entered by step 195 and not from the Found queue; P-502 to P-513 the keys Q-HUB-453 to Q-HUB-464, filed by step 187 of the plan of the batch's fifth wave of 10 November, nine found in that plan's reports and three the main thread's own; P-484 the infrared app's separation measure read on the device and P-485 the infrared app's tap labelling, both entered by step 389 of the plan that read the separation measure on the device, on 9 November, and not from the Found queue; P-486 to P-501 the keys Q-HUB-437 to Q-HUB-452, filed by that step, three found in that plan's reports and thirteen the main thread's own; P-479 to P-483 the keys Q-HUB-432 to Q-HUB-436, filed by step 167 of the plan of the batch's fourth wave of 10 November, four found in that plan's reports and one the defect its Design names and step 166 put right; P-461 to P-478 the keys Q-HUB-414 to Q-HUB-431, filed by step 382 of the plan that closed the separation instrument of 9 November, five found in that plan's reports and thirteen the main thread's own; P-460 the infrared app's separation instrument, entered by step 382 of that plan and not from the Found queue; P-451 to P-459 the keys Q-HUB-405 to Q-HUB-413, filed by step 160 of the plan of the batch's third wave of 9 November, seven found in that wave's run and two met by the main thread; P-448 the infrared app's colour panel's rim, entered by step 370 of the plan of the panel's rim of 9 November and not from the Found queue; P-449 and P-450 the keys Q-HUB-403 and Q-HUB-404, filed by step 370 of that plan from the main thread's own findings; P-435 to P-447 the keys Q-HUB-390 to Q-HUB-402, filed by step 153 of the plan of the batch's second wave of 9 November, eleven found in the first wave's run and two in this plan's own; P-422 to P-434 the keys Q-HUB-377 to Q-HUB-389, filed by step 365 of the plan of the infrared app's colour panel of 9 November, four of them carried from the plans of 8 and 9 November and nine found in that plan's own run; P-417 to P-421 the keys Q-HUB-372 to Q-HUB-376, filed by step 147 of the plan of the batch's first wave of 9 November; P-416 the infrared app's colour panel for making a look, entered by the second send of step 357 of the plan of 9 November and not from the Found queue; P-415 the key Q-HUB-371, filed by step 138 of the plan of the batch's first wave of 9 November; P-407 to P-414 the keys Q-HUB-363 to Q-HUB-370, filed by step 136 of the plan of the planning method of 9 November; P-401 to P-406 the keys Q-HUB-357 to Q-HUB-362, filed by step 130 of the plan of the planning method of 9 November; P-389 to P-400 the keys Q-HUB-345 to Q-HUB-356, filed by step 128 of the plan of the standing problems of the gates; P-366 to P-388 the keys Q-HUB-322 to Q-HUB-344, filed by step 118 of the plan of the standing problems of the gates; P-365 the infrared app's populations measured by place, entered by step 339 of that plan and not from the Found queue; P-358 to P-364 the keys Q-HUB-315 to Q-HUB-321, filed by the second send of step 108 of the same plan; P-352 to P-357 the keys Q-HUB-309 to Q-HUB-314, filed by step 108 of the plan of the four gates of 7 November; P-351 the key Q-HUB-308, filed by step 337 of the plan of the infrared app's separation measure; P-350 the infrared app's separation measure of 9 November, entered by step 331 of that plan and not from the Found queue; P-349 the key Q-HUB-307, filed by step 330 of the plan that fixes the sweep and regathers the separation research; P-348 the infrared app's test page work of 8 November, entered by step 329 of that plan and not from the Found queue; P-344 to P-347 the keys Q-HUB-303 to Q-HUB-306, filed by step 103 of the plan of the four gates of 7 November; P-343 the key Q-HUB-302, filed by step 102 of the first batch plan; P-317 to P-319 the keys Q-HUB-276 to Q-HUB-278, filed by step 85 of the plan that closed P-21 after the lock of 6 November; P-320 to P-342 the keys Q-HUB-279 to Q-HUB-301, filed by step 99 of the first batch plan, whose first three keys moved past the keys of the remote's, so P-340 to P-342 are the keys Q-HUB-299 to Q-HUB-301; P-309 the batch seed, named by the owner on 5 November, and P-310 to P-316 the keys Q-HUB-269 to Q-HUB-275, filed by step 92 of the plan that wrote it; P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 389 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
+556 items (P-540 to P-556 the keys Q-HUB-490 to Q-HUB-506, filed by step 202 of the plan of 10 November that made the claim, the landing, the filing and the close commands, ten from that plan's words, five from the manager notes and two found in its reports; P-535 to P-539 the keys Q-HUB-485 to Q-HUB-489, filed by step 407 of the plan of 10 November for the tap labelling, all found in that plan's reports; P-514 to P-533 the keys Q-HUB-465 to Q-HUB-484, filed by step 195 of the plan of 10 November that held a session to the cost of its work, eleven from that plan's words and nine found in its reports; P-534 that plan's own item, entered by step 195 and not from the Found queue; P-502 to P-513 the keys Q-HUB-453 to Q-HUB-464, filed by step 187 of the plan of the batch's fifth wave of 10 November, nine found in that plan's reports and three the main thread's own; P-484 the infrared app's separation measure read on the device and P-485 the infrared app's tap labelling, both entered by step 389 of the plan that read the separation measure on the device, on 9 November, and not from the Found queue; P-486 to P-501 the keys Q-HUB-437 to Q-HUB-452, filed by that step, three found in that plan's reports and thirteen the main thread's own; P-479 to P-483 the keys Q-HUB-432 to Q-HUB-436, filed by step 167 of the plan of the batch's fourth wave of 10 November, four found in that plan's reports and one the defect its Design names and step 166 put right; P-461 to P-478 the keys Q-HUB-414 to Q-HUB-431, filed by step 382 of the plan that closed the separation instrument of 9 November, five found in that plan's reports and thirteen the main thread's own; P-460 the infrared app's separation instrument, entered by step 382 of that plan and not from the Found queue; P-451 to P-459 the keys Q-HUB-405 to Q-HUB-413, filed by step 160 of the plan of the batch's third wave of 9 November, seven found in that wave's run and two met by the main thread; P-448 the infrared app's colour panel's rim, entered by step 370 of the plan of the panel's rim of 9 November and not from the Found queue; P-449 and P-450 the keys Q-HUB-403 and Q-HUB-404, filed by step 370 of that plan from the main thread's own findings; P-435 to P-447 the keys Q-HUB-390 to Q-HUB-402, filed by step 153 of the plan of the batch's second wave of 9 November, eleven found in the first wave's run and two in this plan's own; P-422 to P-434 the keys Q-HUB-377 to Q-HUB-389, filed by step 365 of the plan of the infrared app's colour panel of 9 November, four of them carried from the plans of 8 and 9 November and nine found in that plan's own run; P-417 to P-421 the keys Q-HUB-372 to Q-HUB-376, filed by step 147 of the plan of the batch's first wave of 9 November; P-416 the infrared app's colour panel for making a look, entered by the second send of step 357 of the plan of 9 November and not from the Found queue; P-415 the key Q-HUB-371, filed by step 138 of the plan of the batch's first wave of 9 November; P-407 to P-414 the keys Q-HUB-363 to Q-HUB-370, filed by step 136 of the plan of the planning method of 9 November; P-401 to P-406 the keys Q-HUB-357 to Q-HUB-362, filed by step 130 of the plan of the planning method of 9 November; P-389 to P-400 the keys Q-HUB-345 to Q-HUB-356, filed by step 128 of the plan of the standing problems of the gates; P-366 to P-388 the keys Q-HUB-322 to Q-HUB-344, filed by step 118 of the plan of the standing problems of the gates; P-365 the infrared app's populations measured by place, entered by step 339 of that plan and not from the Found queue; P-358 to P-364 the keys Q-HUB-315 to Q-HUB-321, filed by the second send of step 108 of the same plan; P-352 to P-357 the keys Q-HUB-309 to Q-HUB-314, filed by step 108 of the plan of the four gates of 7 November; P-351 the key Q-HUB-308, filed by step 337 of the plan of the infrared app's separation measure; P-350 the infrared app's separation measure of 9 November, entered by step 331 of that plan and not from the Found queue; P-349 the key Q-HUB-307, filed by step 330 of the plan that fixes the sweep and regathers the separation research; P-348 the infrared app's test page work of 8 November, entered by step 329 of that plan and not from the Found queue; P-344 to P-347 the keys Q-HUB-303 to Q-HUB-306, filed by step 103 of the plan of the four gates of 7 November; P-343 the key Q-HUB-302, filed by step 102 of the first batch plan; P-317 to P-319 the keys Q-HUB-276 to Q-HUB-278, filed by step 85 of the plan that closed P-21 after the lock of 6 November; P-320 to P-342 the keys Q-HUB-279 to Q-HUB-301, filed by step 99 of the first batch plan, whose first three keys moved past the keys of the remote's, so P-340 to P-342 are the keys Q-HUB-299 to Q-HUB-301; P-309 the batch seed, named by the owner on 5 November, and P-310 to P-316 the keys Q-HUB-269 to Q-HUB-275, filed by step 92 of the plan that wrote it; P-300 to P-308 the keys Q-HUB-260 to Q-HUB-268, filed by step 87 of the plan that closes P-21; P-288 the plan seed, named by the owner on 5 November, and P-289 to P-299 the keys Q-HUB-249 to Q-HUB-259, filed by step 83 of the plan that wrote it; P-287 the owner's named work of 5 November, which entered by being named and not from the Found queue; P-286 the key Q-HUB-245, filed by step 72 of the plan of 4 November; P-269 to P-277 are the keys Q-HUB-228 to Q-HUB-236, P-278 to P-284 the keys Q-HUB-237 to Q-HUB-243, filed by step 63 of the plan of 3 November, and P-285 the key Q-HUB-244, filed by step 69 of the plan that took up its remainder): 10 built by the redesign plan, 7 parked items (the 5 of the redesign's settings part, the publish prompt, and the list of paragraphs of the instruction file, which is P-268 and stands at the end of the parked settings), 1 blind-areas item, 1 workflow-security item (P-287), 4 documented mechanisms, 9 knowledge layers, 4 dependency updates, 9 siblings owing a hub pin or a sweep caller, and 389 findings, one for each key of the Found queue from Q-HUB-1 to Q-HUB-227 that has a file or a line (P-171 to P-267 are the keys Q-HUB-131 to Q-HUB-227, filed by step 54 and step 60 of the redesign plan, in key order except that Q-HUB-198 stands at P-228 beside Q-HUB-187, whose defect it repeats; the keys Q-HUB-188 to Q-HUB-197 therefore stand one place later than their number plus 40).
 
 ## Items the redesign plan builds
 
@@ -459,6 +459,15 @@ Close entry of the plan of the tap labelling on the test page (P-485 and P-484, 
 - Compactions: 0 in the plan. Resumes: 0. Pushes: the instrument does not count them; steps 392, 400, 406 and this step pushed once each.
 - The session before the plan held 3 owner messages, 37 turns on the fable tier, 158 agents and 1 compaction at 12:20 California time on 10 November; the whole transcript read 9 owner messages (all ending in a go-word), 174 agents and 1 compaction.
 - The harness's own running cost entry, the last of 1, reads 5519.514381344973 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252): the agents of this step's own sends are not in it.
+
+Close entry of the plan that made the claim, the landing, the filing and the close commands (P-522, P-525, P-528 and P-517, steps 197 to 202, step 202 the writer), from the cost instrument run on this session's transcript, so far and before this step's push. The instrument numbers it plan 10 and reads no item for it; it was approved 12:18 California time on 10 November and approved again after amendments at 15:47 and 20:02:
+- Messages the session was given: 12 in the plan, 7 ending in a go-word and 5 not; none carries the word stop.
+- Stop-hook messages: 18 in 18 stops, all of the hook that reports uncommitted changes.
+- Main-thread refusals: 28 (pending guard 18, reply guard 7, manager fence 1, correction hold 1, approved-plan guard 1).
+- Agents: 13, all on the sonnet tier with 332,314 output tokens, 47,176,164 cache-read tokens and 1,955,946 cache-written tokens; 7 hook refusals (plan fence 5, unnamed in their text 2).
+- Main-thread turns: 73 on the opus tier with 47,013 output tokens, and 24 on the fable tier with 66,293 output tokens.
+- Compactions: 0. Resumes: 2. Pushes: the instrument does not count them; this step pushes once.
+- The harness's own running cost entry, the last of 26, reads 1326.2924200999994 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252): the agents of this step's own sends are not in it.
 
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
@@ -5197,7 +5206,9 @@ Depends: none.
 
 ### P-517. Q-HUB-468: the seed's template does not spell the case switch inside double quotes
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: The procedures every plan repeats made commands: the claim, the landing, the filing and the close, with the seed's template brought to them and to the repair, a narrowed run that goes on past a case file that cannot be loaded, and six stale facts of the doctrine corrected.
+
+Done: step 200 of that plan made the seed's template spell the case switch whole inside double quotes wherever it names a case, with a case that reads the quotes in the seed's print and the plant tpl_case_quote; landed by step 202.
 
 Acceptance: the template spells the case switch whole inside double quotes wherever it names a case, with a case that reads the quotes in a print of the template.
 
@@ -5237,7 +5248,9 @@ Depends: none.
 
 ### P-522. Q-HUB-473: the landing, the claim, the filing and the close are prose an agent performs by hand
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: done. Plan: The procedures every plan repeats made commands: the claim, the landing, the filing and the close, with the seed's template brought to them and to the repair, a narrowed run that goes on past a case file that cannot be loaded, and six stale facts of the doctrine corrected.
+
+Done: steps 198, 199 and 200 of that plan built `plan-land.mjs` (the verbs prove, commit and push) and `program.mjs` (the verbs claim, file, done, measure and lesson), each with a case file run as a child process against planted repositories and 84 plants, and brought the seed's template to name them in the take-up step, the landing step and the Commands; landed by step 202, whose own landing was the last made by hand.
 
 Acceptance: each of the four is a command of the seed that does the act and prints what it did, the template names the command in place of the prose, and a case covers each.
 
@@ -5261,7 +5274,9 @@ Depends: none.
 
 ### P-525. Q-HUB-476: a case file that does not parse fails the whole run with a load error
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: The procedures every plan repeats made commands: the claim, the landing, the filing and the close, with the seed's template brought to them and to the repair, a narrowed run that goes on past a case file that cannot be loaded, and six stale facts of the doctrine corrected.
+
+Done: step 197 of that plan made the suite's loader report a case file that cannot be loaded on a line opening NOT LOADED with the load error, count its cases as not run in a whole run, and let a run narrowed to cases or plants go on by the files that loaded, with the case Q-HUB-476 on a planted broken file and seven plants; landed by step 202.
 
 Acceptance: a case file that cannot be loaded is reported by name and its cases counted as not run while the others run, with a case on a planted case file that does not parse.
 
@@ -5285,7 +5300,9 @@ Depends: none.
 
 ### P-528. Q-HUB-479: the seed does not fill the number of the Sends priced line
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: done. Plan: The procedures every plan repeats made commands: the claim, the landing, the filing and the close, with the seed's template brought to them and to the repair, a narrowed run that goes on past a case file that cannot be loaded, and six stale facts of the doctrine corrected.
+
+Done: step 200 of that plan made the seed fill the number of the Sends priced line from the steps of the Order, one review and two more for each round, with cases that read the filled line and the plants seed_priced, batch_priced and tpl_priced_line; landed by step 202.
 
 Acceptance: the seed fills the number from the plan's step count and its review, with a case that reads the filled line in a print.
 
@@ -5378,5 +5395,141 @@ Depends: none.
 Repository: hub. Goal: 6. State: open. Plan: none.
 
 Acceptance: a step's text names where a hub tool's usage is read with Grep when the step runs that tool, with a case on a plan whose step runs a hub tool and names no usage.
+
+Depends: none.
+
+### P-540. Q-HUB-490: the plan fence passes a redirect into the scratchpad though the rules forbid one
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: the fence refuses a redirect in an agent's shell line wherever the target lies, with a case on a line that redirects into the scratchpad.
+
+Depends: none.
+
+### P-541. Q-HUB-491: the prompt line reads an agent's hand-back that names the stop guard's file as a message carrying the word stop
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: the printed line reads the word stop only in a message the session was typed, with a case on a hand-back that names the stop guard's file.
+
+Depends: none.
+
+### P-542. Q-HUB-492: the doctrine's index gives one section id to two sections
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: each section id names one section and every citation of the changed id is swept in the same change.
+
+Depends: none.
+
+### P-543. Q-HUB-493: the instruction file names a gates file the hub does not hold
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: the line names a file the hub holds, or is removed.
+
+Depends: none.
+
+### P-544. Q-HUB-494: two pages disagree on whether a repository can be added to a session after its start
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: after one plan has tried the adding once, both pages say what the try showed.
+
+Depends: none.
+
+### P-545. Q-HUB-495: the pointer counts a hand-back opening DONE where the step's own report file does not stand
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: a DONE counts only where the step's own report file stands and opens DONE, with a case on a hand-back that opens DONE beside no report file.
+
+Depends: none.
+
+### P-546. Q-HUB-496: the print at each prompt and hand-back holds the gates and not the next move
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the print opens with one line of the plan's goal 1 and one line of the next move, above every reminder, with a case that reads both lines in a print.
+
+Depends: none.
+
+### P-547. Q-HUB-497: the print at each prompt does not carry the plan-mode line the status prints
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the print carries the plan-mode line, the kind of plan mode and the way forward whenever plan mode is on, with a case on a plan mode brought back after an approval.
+
+Depends: none.
+
+### P-548. Q-HUB-498: an agent that runs its cases one to a run spends its one repair, and the fence refuses writes after a red run
+
+Repository: hub. Goal: 2. State: open. Plan: none.
+
+Acceptance: the template's order of a file step names one run for the step's own cases, and the fence allows the one repair after the first red run, with a case on each.
+
+Depends: none.
+
+### P-549. Q-HUB-499: the landing command's verb prove runs the whole suite and every plant in one call
+
+Repository: hub. Goal: 2. State: open. Plan: none.
+
+Acceptance: a switch names one stage, so each stage is a call within the foreground limit, with a case on the switch.
+
+Depends: none.
+
+### P-550. Q-HUB-500: the main thread on the lower tier rewrites the plan file while a plan is in force
+
+Repository: hub. Goal: 5. State: open. Plan: none.
+
+Acceptance: the manager fence refuses every write of the plan file outside plan mode while a plan is in force, with a case on a write.
+
+Depends: none.
+
+### P-551. Q-HUB-501: a plan file last written below the top tier passes the plan check when the plan is running
+
+Repository: hub. Goal: 2. State: open. Plan: none.
+
+Acceptance: such a plan file is faulted whether the plan is new or running, and the entry to plan mode below the top tier is answered by a first line naming the tier wanted, with a case on each.
+
+Depends: none.
+
+### P-552. Q-HUB-502: the dispatcher's refusal at the price does not say the top tier is wanted
+
+Repository: hub. Goal: 2. State: open. Plan: none.
+
+Acceptance: the refusal says the top tier is wanted for the amendment, with a case that reads the words.
+
+Depends: none.
+
+### P-553. Q-HUB-503: the count of a plan's sends and the plan's price are read from two approvals
+
+Repository: hub. Goal: 2. State: open. Plan: none.
+
+Acceptance: the count and the plans page say the same thing, with a case on a plan approved twice.
+
+Depends: none.
+
+### P-554. Q-HUB-504: a landing has no rule to file the lines of the manager notes that open File at the close
+
+Repository: hub. Goal: 2. State: open. Plan: none.
+
+Acceptance: the landing step and the program command's verb file read those lines with the reports' Found lines, with a case on a notes file that holds one.
+
+Depends: none.
+
+### P-555. Q-HUB-505: the suite's list of guard files does not name the two command files
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: both files join the list, with a case that holds every root command file of the hub to it.
+
+Depends: none.
+
+### P-556. Q-HUB-506: the checks read tracked files, so a new file is not scanned before its commit
+
+Repository: hub. Goal: 6. State: open. Plan: none.
+
+Acceptance: the landing stages each new file before the first run of the checks, with a case on an untracked file that holds a find.
 
 Depends: none.

@@ -1,0 +1,3 @@
+Q-HUB-496: the print the dispatcher adds at each prompt and at each agent's hand-back holds the standing goals and the rules on messages and nothing of the work in hand, so the nearest text at each choice is the gates and not the next move, and a surprise is met by searching for a read the gates pass in place of the move the plan names, as at 12:25 California time on 10 November when two calls went on reads before a step whose work was not made was sent again (found in the plan of 10 November, filed in step 202).
+
+Fix in: `hook-dispatch.mjs`. The print opens with one line of the plan's goal 1 and one line of the next move read from the pointer and the manager notes' unnumbered Next line, above every reminder. Ranked first for the next plan.
