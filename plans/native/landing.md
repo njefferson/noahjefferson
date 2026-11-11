@@ -5,15 +5,17 @@ description: How a worker in the hub checks, commits and pushes finished work to
 
 This is for a worker in the hub repository at /home/user/noahjefferson. Write every path in full and never change directory.
 
-1. Fetch and rebase onto the remote's main: run git fetch origin, then git rebase origin/main, with the repository named by the git option for its directory.
-2. Run the hub's seven checks, each as its own command in the foreground:
+1. Fetch and rebase onto the remote's main, with these two commands:
+   - git -C /home/user/noahjefferson fetch origin main
+   - git -C /home/user/noahjefferson rebase origin/main
+2. Run the hub's seven checks, as the hub's own landing command spells them, each as its own command in the foreground:
    - node /home/user/noahjefferson/docs-check.mjs /home/user/noahjefferson
-   - node /home/user/noahjefferson/privacy-check.mjs --repo /home/user/noahjefferson
+   - node /home/user/noahjefferson/lessons-check.mjs
    - node /home/user/noahjefferson/quote-check.mjs --repo /home/user/noahjefferson
+   - node /home/user/noahjefferson/privacy-check.mjs --repo /home/user/noahjefferson
    - node /home/user/noahjefferson/third-person-check.mjs --repo /home/user/noahjefferson
-   - node /home/user/noahjefferson/lessons-check.mjs --repo /home/user/noahjefferson
    - node /home/user/noahjefferson/example-check.mjs --repo /home/user/noahjefferson
-   - node /home/user/noahjefferson/hub-pin-check.mjs --repo /home/user/noahjefferson
+   - node /home/user/noahjefferson/pin-check.mjs --repo /home/user/noahjefferson
 3. Where code changed, run the suite as well.
 4. Commit with plain one-line messages that a reader of the history understands, with no trailer, no chat link and no model name.
 5. Ask for the checker. The push waits until the checker has passed the exact commit.

@@ -33,3 +33,5 @@ Workers on the cheapest tier do the steps. A checker that did none of the work t
 - A refusal from the harness or a hook is an instruction. Say plainly what was refused, and never work around it.
 - A statement of state is read in the same turn, never remembered.
 - Start no process you will not manage, and confirm it ended by the resource, not the process list.
+- When an input does not clearly belong to the work in front of the session, such as an unfamiliar app, screenshot, link, file or repository, ask in plain text before doing anything at all.
+- Only the owner decides what appears on the hub's public pages, so a session adds, removes, proposes or mentions no app there unless the owner has named it.
