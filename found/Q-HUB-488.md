@@ -1,0 +1,3 @@
+Q-HUB-488: the plan fence passes a write only to a path the plan's Files holds, so a step that writes one new file whose exact name cannot be known when the plan is written, a decision record under the next free number, was refused at its Write in the first two sends of step 399 on 10 November, and the plan went back through plan mode twice to name the file (found in step 399, filed in step 407; the main thread's notes record the Files line shape the fence did not read).
+
+Fix in: `plan-fence.mjs`, `plan-guard.mjs`. A Files entry may name a folder and a rule for a new file's name, or the plan check refuses a step that writes a file the Files cannot name before the button, so the refusal comes at the plan and not at the Write.

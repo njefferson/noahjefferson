@@ -1,0 +1,3 @@
+Q-HUB-486: the latch that follows a refusal passes an agent's report named for its step alone and does not pass the report of a second send named with a hyphen and the send's number, which the plan's own rule for a send after the first names, so a resent step that is refused cannot write its own report; the second send of step 399 on 10 November wrote its notes to the progress note instead (found in step 399, filed in step 407; Q-HUB-439 is the same refusal for the first send's report).
+
+Fix in: `plan-fence.mjs`, `hook-dispatch.mjs`. A latched agent's own report of a second or later send, named for its step, a hyphen, the send's number and then the word report, passes the latch as the first send's report does.
