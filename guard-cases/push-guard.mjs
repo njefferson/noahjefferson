@@ -1,32 +1,13 @@
-// Cases and plants for the push guard and for the check before a push, that push-guard.mjs makes while a stand-down is in force
-// (see plans/native-setup.md). Shape: guard-cases/shape.mjs. Every repository, folder, transcript and agent is written under a temporary
-// folder from `h`, and the suite removes those folders; nothing is written into the checkout.
-//
-// The suite sets HUB_STAND_DOWN_OFF before its first case, so each call below builds its own environment: `inForce` names a launch folder
-// that holds a stand-down file with the suite's off variable taken out, and `notInForce` is the same call with no file under the launch
-// folder. The guard is run as the hook runs it, as a program that reads the payload on its input.
+// Cases and plants for the check before a push, that push-guard.mjs always makes (see plans/native-setup.md). Shape: guard-cases/shape.mjs.
+// Every repository, folder, transcript and agent is written under a temporary folder from `h`, and the suite removes those folders; nothing
+// is written into the checkout. The guard is run as the hook runs it, as a program that reads the payload on its input.
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const DAY = 24 * 60 * 60 * 1000;
-const dateIn = (days) => new Date(Date.now() + days * DAY).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-const placeStandDown = (folder) => {
-  mkdirSync(join(folder, '.claude'), { recursive: true });
-  writeFileSync(join(folder, '.claude', 'STAND-DOWN'), `until: ${dateIn(30)}\ntrial of the harness's own parts, plans/native-setup.md\n`);
-  return folder;
-};
-/** The environment of one call: the suite's off variable and any launch folder taken out, `extra` put in. */
-const envFor = (extra = {}) => {
-  const e = { ...process.env };
-  delete e.HUB_STAND_DOWN_OFF;
-  delete e.HUB_LAUNCH_DIR;
-  delete e.CLAUDE_PROJECT_DIR;
-  for (const [k, v] of Object.entries(extra)) { if (v === undefined) delete e[k]; else e[k] = v; }
-  return e;
-};
 const said = (r) => `exit ${r.status}: ${r.stdout}${r.stderr}`.slice(0, 600);
 const refused = (r) => r.status === 2 && /PUSH GATE: PUSH CHECK: /.test(r.stderr);
+const env = { ...process.env };
 
 /** A repository on main with two commits; `first` is the id of the older, `head` of the newer. */
 function twoCommits(h) {
@@ -75,67 +56,42 @@ function endedSession(h, id, calls, final) {
 }
 
 /** Run the guard on one Bash line in `repoDir`, as the hook does. */
-const push = (dir, repoDir, command, tr, env, sessionId = 'pc-session') => spawnSync('node', [join(dir, 'push-guard.mjs')], {
+const push = (dir, repoDir, command, tr, sessionId = 'pc-session') => spawnSync('node', [join(dir, 'push-guard.mjs')], {
   input: JSON.stringify({ tool_name: 'Bash', tool_input: { command }, cwd: repoDir, session_id: sessionId, ...(tr ? { transcript_path: tr } : {}) }),
   encoding: 'utf8', env });
 
 export const cases = [
   {
-    name: 'push check: with the suite\'s off variable present a push of main passes as it did, with or without a checker, and a push to another branch is refused as it was; with no stand-down file the check holds the push all the same',
-    guards: ['pc_standing_asked'],
+    name: 'push check: a push of main with no checker having passed it is refused, in one sentence each: the check holds, which commit, that none has passed it, and that a checker which changes nothing must pass that exact commit first',
+    guards: ['pc_commit_named'],
     run(m, dir, h) {
       const r = twoCommits(h);
-      const bare = session(h, []);
-      const launchFile = placeStandDown(h.tmp('pc-launch-'));
-      const launchNone = h.tmp('pc-none-');
-      const offNone = { CLAUDE_PROJECT_DIR: launchNone, HUB_STAND_DOWN_OFF: 'suite' };
-      const noFile = push(dir, r.dir, 'git push origin main', bare, envFor(offNone));
-      const retiredHeld = push(dir, r.dir, 'git push origin main', bare, envFor({ CLAUDE_PROJECT_DIR: launchNone }));
-      const offVar = push(dir, r.dir, 'git push origin main', bare, envFor({ CLAUDE_PROJECT_DIR: launchFile, HUB_STAND_DOWN_OFF: 'suite' }));
-      const noPayloadSession = push(dir, r.dir, 'git push origin HEAD', undefined, envFor(offNone));
-      const other = push(dir, r.dir, 'git push origin claude/work', bare, envFor({ CLAUDE_PROJECT_DIR: launchNone }));
-      return h.assertAll([
-        ['with the off variable present file the push of main with no checker is refused by the check before a push', refused(retiredHeld), said(retiredHeld)],
-        ['with the off variable present the push of main passes and prints nothing', noFile.status === 0 && noFile.stderr === '' && noFile.stdout === '', said(noFile)],
-        ['with a file in force but the suite\'s off variable present the push of main passes', offVar.status === 0 && offVar.stderr === '', said(offVar)],
-        ['with the off variable present and no transcript at all a push of HEAD on main passes',noPayloadSession.status === 0 && noPayloadSession.stderr === '', said(noPayloadSession)],
-        ['a push to another branch is refused by the old rule and its old words', other.status === 2 && /Only staging and main reach a remote/.test(other.stderr) && !/PUSH CHECK/.test(other.stderr), said(other)],
-      ]);
-    },
-  },
-  {
-    name: 'push check: under a stand-down a push of main with no checker having passed it is refused, in one sentence each: the check holds, which commit, that none has passed it, and that a checker which changes nothing must pass that exact commit first',
-    guards: ['pc_standing_asked', 'pc_commit_named'],
-    run(m, dir, h) {
-      const r = twoCommits(h);
-      const launch = placeStandDown(h.tmp('pc-launch-'));
-      const env = envFor({ CLAUDE_PROJECT_DIR: launch });
-      const noAgents = push(dir, r.dir, 'git push origin main', session(h, []), env);
-      const unrelated = push(dir, r.dir, 'git push origin main', session(h, [{ id: 'w1', first: `DONE the work is written, commit ${r.head}` }]), env);
-      const headForm = push(dir, r.dir, 'git push origin HEAD:main', session(h, []), env);
+      const noAgents = push(dir, r.dir, 'git push origin main', session(h, []));
+      const unrelated = push(dir, r.dir, 'git push origin main', session(h, [{ id: 'w1', first: `DONE the work is written, commit ${r.head}` }]));
+      const headForm = push(dir, r.dir, 'git push origin HEAD:main', session(h, []));
+      const other = push(dir, r.dir, 'git push origin claude/work', session(h, []));
       const text = noAgents.stderr;
       return h.assertAll([
         ['a session with no agent is refused', refused(noAgents), said(noAgents)],
-        ['the refusal says the stand-down\'s check before a push holds', /The stand-down's check before a push holds\./.test(text), text],
+        ['the refusal says the check before a push holds', /The check before a push holds\./.test(text) && !/stand-down/i.test(text), text],
         ['the refusal names the commit being pushed in full', text.includes(`The push is of commit ${r.head}.`), text],
         ['the refusal says no checker has passed that commit', /No checker has passed that commit\./.test(text), text],
         ['the refusal says a checker which changes nothing must pass that exact commit first', /A checker which changes nothing must pass that exact commit first/.test(text), text],
         ['an agent whose hand-back opens DONE and names the commit is no pass', refused(unrelated), said(unrelated)],
         ['the same push spelled HEAD:main is refused the same way', refused(headForm) && headForm.stderr.includes(r.head), said(headForm)],
+        ['a push to another branch is refused by the branch rule and its words', other.status === 2 && /Only staging and main reach a remote/.test(other.stderr) && !/PUSH CHECK/.test(other.stderr), said(other)],
       ]);
     },
   },
   {
-    name: 'push check: under a stand-down a push of main passes when an agent that changed nothing handed back CHECK PASS and the full id of the commit being pushed',
-    guards: ['pc_standing_asked', 'pc_pass_read'],
+    name: 'push check: a push of main passes when an agent that changed nothing handed back CHECK PASS and the full id of the commit being pushed',
+    guards: ['pc_pass_read'],
     run(m, dir, h) {
       const r = twoCommits(h);
-      const launch = placeStandDown(h.tmp('pc-launch-'));
-      const env = envFor({ CLAUDE_PROJECT_DIR: launch });
       const tr = session(h, [{ id: 'c1', first: `CHECK PASS ${r.head}` }]);
-      const viaMain = push(dir, r.dir, 'git push origin main', tr, env);
-      const viaHead = push(dir, r.dir, 'git push origin HEAD:main', tr, env);
-      const viaPath = push(dir, '/', `git -C ${r.dir} push origin main`, tr, env);
+      const viaMain = push(dir, r.dir, 'git push origin main', tr);
+      const viaHead = push(dir, r.dir, 'git push origin HEAD:main', tr);
+      const viaPath = push(dir, '/', `git -C ${r.dir} push origin main`, tr);
       return h.assertAll([
         ['git push origin main passes and prints nothing', viaMain.status === 0 && viaMain.stderr === '', said(viaMain)],
         ['git push origin HEAD:main passes', viaHead.status === 0 && viaHead.stderr === '', said(viaHead)],
@@ -144,16 +100,14 @@ export const cases = [
     },
   },
   {
-    name: 'push check: under a stand-down a pass for a different commit, a pass naming a prefix of the id and a first line that only mentions the commit are no pass',
+    name: 'push check: a pass for a different commit, a pass naming a prefix of the id and a first line that only mentions the commit are no pass',
     guards: ['pc_exact_commit', 'pc_pass_read'],
     run(m, dir, h) {
       const r = twoCommits(h);
-      const launch = placeStandDown(h.tmp('pc-launch-'));
-      const env = envFor({ CLAUDE_PROJECT_DIR: launch });
-      const older = push(dir, r.dir, 'git push origin main', session(h, [{ id: 'c1', first: `CHECK PASS ${r.first}` }]), env);
-      const prefix = push(dir, r.dir, 'git push origin main', session(h, [{ id: 'c1', first: `CHECK PASS ${r.head.slice(0, 12)}` }]), env);
-      const mention = push(dir, r.dir, 'git push origin main', session(h, [{ id: 'c1', first: `The check was a pass for ${r.head}` }]), env);
-      const failed = push(dir, r.dir, 'git push origin main', session(h, [{ id: 'c1', first: `CHECK FAIL ${r.head}` }]), env);
+      const older = push(dir, r.dir, 'git push origin main', session(h, [{ id: 'c1', first: `CHECK PASS ${r.first}` }]));
+      const prefix = push(dir, r.dir, 'git push origin main', session(h, [{ id: 'c1', first: `CHECK PASS ${r.head.slice(0, 12)}` }]));
+      const mention = push(dir, r.dir, 'git push origin main', session(h, [{ id: 'c1', first: `The check was a pass for ${r.head}` }]));
+      const failed = push(dir, r.dir, 'git push origin main', session(h, [{ id: 'c1', first: `CHECK FAIL ${r.head}` }]));
       return h.assertAll([
         ['a pass for the older commit does not let the newer one go', refused(older) && older.stderr.includes(r.head), said(older)],
         ['a pass naming only the first twelve characters is refused', refused(prefix), said(prefix)],
@@ -163,15 +117,13 @@ export const cases = [
     },
   },
   {
-    name: 'push check: under a stand-down a "pass" from an agent that made an Edit, Write or NotebookEdit call, or ran git commit, git add or git push, is no pass',
+    name: 'push check: a "pass" from an agent that made an Edit, Write or NotebookEdit call, or ran git commit, git add or git push, is no pass',
     guards: ['pc_no_edit', 'pc_git_write'],
     run(m, dir, h) {
       const r = twoCommits(h);
-      const launch = placeStandDown(h.tmp('pc-launch-'));
-      const env = envFor({ CLAUDE_PROJECT_DIR: launch });
       const first = `CHECK PASS ${r.head}`;
       const call = (name, input) => [h.tool(10, `x-${name}`, name, input), h.result(11, `x-${name}`, 'ok')];
-      const tried = (extra) => push(dir, r.dir, 'git push origin main', session(h, [{ id: 'c1', first, extra }]), env);
+      const tried = (extra) => push(dir, r.dir, 'git push origin main', session(h, [{ id: 'c1', first, extra }]));
       const control = tried([]);
       const edit = tried(call('Edit', { file_path: join(r.dir, 'a.txt'), old_string: 'two', new_string: 'three' }));
       const write = tried(call('Write', { file_path: join(r.dir, 'b.txt'), content: 'x' }));
@@ -193,16 +145,14 @@ export const cases = [
     },
   },
   {
-    name: 'push check: under a stand-down a transcript that cannot be read and a commit that cannot be read are refused, and a push to another branch is as it was',
+    name: 'push check: a transcript that cannot be read and a commit that cannot be read are refused, and a push to another branch is as it was',
     guards: ['pc_unreadable_commit', 'pc_pass_read'],
     run(m, dir, h) {
       const r = twoCommits(h);
-      const launch = placeStandDown(h.tmp('pc-launch-'));
-      const env = envFor({ CLAUDE_PROJECT_DIR: launch });
-      const noTranscript = push(dir, r.dir, 'git push origin main', undefined, env, 'pc-no-such-session');
-      const noRef = push(dir, r.dir, 'git push origin nosuchbranch:main', session(h, [{ id: 'c1', first: `CHECK PASS ${r.head}` }]), env);
-      const feature = push(dir, r.dir, 'git push origin claude/work', session(h, []), env);
-      const forced = push(dir, r.dir, 'git push --force origin main', session(h, [{ id: 'c1', first: `CHECK PASS ${r.head}` }]), env);
+      const noTranscript = push(dir, r.dir, 'git push origin main', undefined, 'pc-no-such-session');
+      const noRef = push(dir, r.dir, 'git push origin nosuchbranch:main', session(h, [{ id: 'c1', first: `CHECK PASS ${r.head}` }]));
+      const feature = push(dir, r.dir, 'git push origin claude/work', session(h, []));
+      const forced = push(dir, r.dir, 'git push --force origin main', session(h, [{ id: 'c1', first: `CHECK PASS ${r.head}` }]));
       return h.assertAll([
         ['a session whose transcript cannot be found is refused and says so', refused(noTranscript) && /could not be found/.test(noTranscript.stderr), said(noTranscript)],
         ['a source that names no commit is refused by the check', refused(noRef), said(noRef)],
@@ -212,15 +162,13 @@ export const cases = [
     },
   },
   {
-    name: 'push check: under a stand-down a pass an ended agent wrote as its final message counts for the exact commit, and not from an agent that edited, for another commit, as CHECK FAIL, or from an agent whose last entry is a tool call',
+    name: 'push check: a pass an ended agent wrote as its final message counts for the exact commit, and not from an agent that edited, for another commit, as CHECK FAIL, or from an agent whose last entry is a tool call',
     guards: ['pc_final_text', 'pc_exact_commit', 'pc_no_edit'],
     run(m, dir, h) {
       const r = twoCommits(h);
-      const launch = placeStandDown(h.tmp('pc-launch-'));
-      const env = envFor({ CLAUDE_PROJECT_DIR: launch });
       const read = [h.tool(2, 'e-b', 'Bash', { command: 'git status' }), h.result(3, 'e-b', 'clean')];
       const edit = [h.tool(4, 'e-e', 'Edit', { file_path: join(r.dir, 'a.txt'), old_string: 'two', new_string: 'three' }), h.result(5, 'e-e', 'ok')];
-      const go = (calls, final) => push(dir, r.dir, 'git push origin main', endedSession(h, 'e1', calls, final), env);
+      const go = (calls, final) => push(dir, r.dir, 'git push origin main', endedSession(h, 'e1', calls, final));
       const text = `CHECK PASS ${r.head}\nThe second line says what was read.`;
       const passed = go(read, text);
       const blankFirst = go(read, `\n  \nCHECK PASS ${r.head}`);
@@ -241,51 +189,40 @@ export const cases = [
     },
   },
   {
-    name: 'push check: under a stand-down a push of staging with no checker having passed it is refused naming staging, one with a pass of that exact commit passes, and with the off variable present it passes as it did',
-    guards: ['pc_staging_held', 'pc_standing_asked'],
+    name: 'push check: a push of staging with no checker having passed it is refused naming staging, and one with a pass of that exact commit passes',
+    guards: ['pc_staging_held'],
     run(m, dir, h) {
       const r = twoCommits(h);
-      const launch = placeStandDown(h.tmp('pc-launch-'));
-      const env = envFor({ CLAUDE_PROJECT_DIR: launch });
-      const none = push(dir, r.dir, 'git push origin HEAD:staging', session(h, []), env);
-      const headForm = push(dir, r.dir, 'git push origin staging', session(h, []), env);
-      const older = push(dir, r.dir, 'git push origin HEAD:staging', session(h, [{ id: 'c1', first: `CHECK PASS ${r.first}` }]), env);
-      const passed = push(dir, r.dir, 'git push origin HEAD:staging', session(h, [{ id: 'c1', first: `CHECK PASS ${r.head}` }]), env);
-      const noStand = push(dir, r.dir, 'git push origin HEAD:staging', session(h, []), envFor({ CLAUDE_PROJECT_DIR: h.tmp('pc-none-'), HUB_STAND_DOWN_OFF: 'suite' }));
+      const none = push(dir, r.dir, 'git push origin HEAD:staging', session(h, []));
+      const headForm = push(dir, r.dir, 'git push origin staging', session(h, []));
+      const older = push(dir, r.dir, 'git push origin HEAD:staging', session(h, [{ id: 'c1', first: `CHECK PASS ${r.first}` }]));
+      const passed = push(dir, r.dir, 'git push origin HEAD:staging', session(h, [{ id: 'c1', first: `CHECK PASS ${r.head}` }]));
       return h.assertAll([
         ['a push of staging with no checker is refused', refused(none), said(none)],
         ['the refusal names the commit and the branch staging', none.stderr.includes(`The push is of commit ${r.head}.`) && /The push lands on staging\./.test(none.stderr), none.stderr],
         ['a push of the name staging, which names no commit here, is refused too', refused(headForm), said(headForm)],
         ['a pass for the older commit does not let staging go', refused(older), said(older)],
         ['a pass of that exact commit lets the push of staging go and prints nothing', passed.status === 0 && passed.stderr === '', said(passed)],
-        ['with the off variable present a push of staging passes as it did', noStand.status === 0 && noStand.stderr === '', said(noStand)],
       ]);
     },
   },
   {
-    name: 'push check: under a stand-down the connector\'s file writes to staging and main are refused with the reason, and with the off variable present they are judged as they were',
+    name: 'push check: the connector\'s file writes to staging and main are refused with the reason, and a write to another branch is refused by the branch rule',
     guards: ['pc_connector_held'],
     run(m, dir, h) {
-      const launch = placeStandDown(h.tmp('pc-launch-'));
-      const env = envFor({ CLAUDE_PROJECT_DIR: launch });
-      const envNone = envFor({ CLAUDE_PROJECT_DIR: h.tmp('pc-none-'), HUB_STAND_DOWN_OFF: 'suite' });
-      const write = (tool, branch, e) => spawnSync('node', [join(dir, 'push-guard.mjs')], {
-        input: JSON.stringify({ tool_name: tool, tool_input: { branch, path: 'a.txt' }, cwd: dir, session_id: 'pc-session' }), encoding: 'utf8', env: e });
-      const staging = write('mcp__github__create_or_update_file', 'staging', env);
-      const main = write('mcp__github__push_files', 'main', env);
-      const del = write('mcp__github__delete_file', 'staging', env);
-      const noStand = write('mcp__github__create_or_update_file', 'staging', envNone);
-      const noStandMain = write('mcp__github__push_files', 'main', envNone);
-      const other = write('mcp__github__create_or_update_file', 'claude/x', env);
+      const write = (tool, branch) => spawnSync('node', [join(dir, 'push-guard.mjs')], {
+        input: JSON.stringify({ tool_name: tool, tool_input: { branch, path: 'a.txt' }, cwd: dir, session_id: 'pc-session' }), encoding: 'utf8', env });
+      const staging = write('mcp__github__create_or_update_file', 'staging');
+      const main = write('mcp__github__push_files', 'main');
+      const del = write('mcp__github__delete_file', 'staging');
+      const other = write('mcp__github__create_or_update_file', 'claude/x');
       return h.assertAll([
-        ['a connector write to staging under a stand-down is refused', refused(staging), said(staging)],
-        ['the refusal says the writes carry no commit a checker could have passed', /carry no commit a checker could have passed/.test(staging.stderr), staging.stderr],
+        ['a connector write to staging is refused', refused(staging), said(staging)],
+        ['the refusal says the writes carry no commit a checker could have passed', /carry no commit a checker could have passed/.test(staging.stderr) && !/stand-down/i.test(staging.stderr), staging.stderr],
         ['the refusal says work reaches staging and main by a git push after a checker\'s pass', /by a git push after a checker's pass of that exact commit/.test(staging.stderr), staging.stderr],
-        ['a connector write to main under a stand-down is refused', refused(main), said(main)],
-        ['a connector delete to staging under a stand-down is refused', refused(del), said(del)],
-        ['with the off variable present a write to staging passes as it did', noStand.status === 0 && noStand.stderr === '', said(noStand)],
-        ['with the off variable present a write to main passes as it did', noStandMain.status === 0 && noStandMain.stderr === '', said(noStandMain)],
-        ['a write to another branch under a stand-down is still refused by the old rule', other.status === 2 && /only staging and main are written/.test(other.stderr), said(other)],
+        ['a connector write to main is refused', refused(main), said(main)],
+        ['a connector delete to staging is refused', refused(del), said(del)],
+        ['a write to another branch is refused by the branch rule', other.status === 2 && /only staging and main are written/.test(other.stderr), said(other)],
       ]);
     },
   },
@@ -293,13 +230,12 @@ export const cases = [
 
 export const plants = {
   pc_staging_held: ["      if (dst !== 'main' && dst !== 'staging') continue;\n", "      if (dst !== 'main') continue;\n", 'push-guard.mjs'],
-  pc_connector_held: ["      if (standingNow()) return `${CHECK_PREFIX}${tool} writes", "      if (false) return `${CHECK_PREFIX}${tool} writes", 'push-guard.mjs'],
-  pc_standing_asked: ["  if (heldPush) {\n    for (const spec of specs) {", "  if (false) {\n    for (const spec of specs) {", 'push-guard.mjs'],
+  pc_connector_held: ["      return `${CHECK_PREFIX}${tool} writes to ${b},", "      if (!tool) return `${CHECK_PREFIX}${tool} writes to ${b},", 'push-guard.mjs'],
   pc_commit_named: ["The push is of commit ${commit || '(not readable from this repository)'}. `", "The push is of commit (named elsewhere). `", 'push-guard.mjs'],
   pc_pass_read: ["      if (!text) continue;\n", "      if (!text) continue;\n      return { ok: false };\n", 'push-guard.mjs'],
   pc_exact_commit: ["      if (!m || m[1].toLowerCase() !== commit.toLowerCase()) continue;\n", "      if (!m) continue;\n", 'push-guard.mjs'],
   pc_no_edit: ["      if (changedSomething(entries)) continue;\n", '', 'push-guard.mjs'],
   pc_git_write: ["      if (b.name === 'Bash' && runsGitWrite(b.input?.command)) return", "      if (false) return", 'push-guard.mjs'],
   pc_final_text: ["const text = end?.how === 'a report' ? end.last : finalText(entries);", "const text = end?.how === 'a report' ? end.last : '';", 'push-guard.mjs'],
-  pc_unreadable_commit: ["      if (!commit) return checkRefusal('', '', branch);\n", "      if (!commit) return null;\n", 'push-guard.mjs'],
+  pc_unreadable_commit: ["    if (!commit) return checkRefusal('', '', branch);\n", "    if (!commit) return null;\n", 'push-guard.mjs'],
 };

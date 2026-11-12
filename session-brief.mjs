@@ -1,136 +1,33 @@
 #!/usr/bin/env node
-// WHAT A SESSION NEEDS TO KNOW BEFORE IT TOUCHES ANYTHING.
+// THE START BRIEF, A SHELL.
 //
-//   node session-brief.mjs --repo .
+//   node session-brief.mjs --repo <folder>
 //
-// ## Why this exists
-//
-// A session starts with no memory. The only file loaded automatically is
-// `CLAUDE.md`. Everything else — the doctrine, 81 lessons, the repo map, what is
-// staged, what is owed — has to be OPENED, and nothing ever made a session open
-// it. So the knowledge was all written down and none of it was known, and the
-// owner became the layer that carried it between sessions by hand.
-//
-// The hub's own `CLAUDE.md` says "run this FIRST in any sibling session" about
-// `doctrine-sync.mjs`. That sentence has been there for weeks. A sentence is not
-// a mechanism, and the sessions that wrote it went on not running it. This is
-// printed by a SessionStart hook instead, so it arrives whether or not anybody
-// thought to ask for it.
-//
-// ## What it prints, and what it deliberately does not
-//
-// Only what a session cannot get from `CLAUDE.md`, which is already loaded:
-// which branch it is on versus where work belongs, whether the doctrine has
-// moved since this repo last reconciled, the repo family, and the LESSONS index
-// — titles only, because 5,500 lines is not a briefing and a session that is
-// told "there are 81 of these, here are their names" can go and read the four
-// that matter.
-//
-// It states what it could not reach rather than staying quiet about it. A brief
-// that silently omits the hub because the hub is not checked out is worse than
-// one that says so.
-//
-// ## The owner's core asks, one page, at every start and resume
-//
-// Beside the family and before the lessons, a bounded page of the asks that are
-// written in full elsewhere and broken anyway, read from a section of the hub
-// CLAUDE.md (section 3b below). It is printed at a startup, a compaction, a resume
-// and a clear alike. The never-rules page's read is untouched: this is added beside it.
-// The doctrine's index (DOCTRINE.md, which names the file that holds each section) is
-// printed after the lessons, with section 2's reply shapes read from doctrine/plans.md.
-//
-// ## What it prints after a compaction or a resume (LESSONS §385)
-//
-// The lessons' titles are printed at a STARTUP only. After a compaction or a
-// resume the brief prints their count and the folder's path, because the titles
-// were one of three prints that each followed every compaction (with the whole
-// doctrine and every owner message) and each was a large share of a fresh
-// context. Which start this is comes from the due marker doctrine-read-guard.mjs
-// writes at SessionStart, found by the session_id on this process's standard
-// input — the SessionStart payload. Where the marker cannot be read, the brief
-// prints the short form and says why on its own line: it cannot tell a startup
-// from a compaction, and the short form is the one that costs nothing to be
-// wrong about.
-
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { join, resolve, dirname, basename } from 'node:path';
-import { homedir } from 'node:os';
+// Other repositories call this file by its path at a start, so the path stays. It prints the heading line, the branch lines (which
+// branch the repository is on and where its work commits, read from the repository's .branch-guard), and the one line naming the
+// short page. Nothing else.
+import { readFileSync, existsSync } from 'node:fs';
+import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
 const args = process.argv.slice(2);
 const at = args.indexOf('--repo');
-const repo = resolve(at >= 0 ? args[at + 1] : '.');
+const repo = resolve(at >= 0 && args[at + 1] ? args[at + 1] : '.');
 const hub = dirname(fileURLToPath(import.meta.url));
 const name = repo.split('/').filter(Boolean).pop() ?? 'this repo';
 
-const out = [];
-const say = (s = '') => out.push(s);
-const sh = (cmd, cwd = repo) => {
-  try { return execSync(cmd, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); }
+const sh = (cmd) => {
+  try { return execSync(cmd, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); }
   catch { return null; }
 };
 
-say(`=== session brief · ${name} ===`);
-say();
+const out = [];
+out.push(`=== session brief · ${name} ===`);
 
-// --- 0 · IS EITHER CLONE STALE? ---------------------------------------------
-//
-// Before anything else, because everything else is a claim ABOUT these trees
-// and a stale one answers every question confidently and wrongly.
-//
-// A container re-cloned at a months-old commit three times in one session. The
-// tree looks completely normal each time — a real repo, a real branch, tests
-// that pass — and simply does not contain the work. Twice it was measured
-// against before anybody noticed. Once a merge was built on the stale tip that
-// would have rewritten production history had it been pushed.
-//
-// AND THE HUB IS THE ONE THAT MATTERS MOST, because many sessions write to it
-// at once and every sibling reads its doctrine, its lessons and its gates from
-// here. A hub clone 45 commits behind produced a LESSONS entry numbered against
-// a file that ended twenty-nine entries earlier — authored in full, and caught
-// only because somebody else had pushed first and git rejected it. Rejection is
-// not a gate; it depends on a race being lost.
-//
-// The cost of staleness lands when you START WRITING, not when you push. One
-// fetch each, before the session has a chance to conclude anything.
-const checked = new Set();
-for (const [label, dir] of [[name, repo], ['the hub', hub]]) {
-  // The hub itself is both the repository and the hub: its block is printed once.
-  if (checked.has(resolve(dir))) continue;
-  checked.add(resolve(dir));
-  const br = sh('git symbolic-ref --short HEAD', dir);
-  if (!br) continue;
-  sh(`git fetch --quiet origin ${br}`, dir);
-  const behind = parseInt(sh(`git rev-list --count HEAD..origin/${br}`, dir) ?? '0', 10);
-  if (behind > 0) {
-    say(`*** ${label.toUpperCase()} IS STALE — ${behind} commit(s) behind origin/${br}. ***`);
-    say('    The tree looks normal and is not. Do not measure against it, do not');
-    say('    build a merge on it, and do not number anything off the end of a file');
-    say('    in it. Catch up first:');
-    say('');
-    // THE CATCH-UP NAMES NO COMMAND THAT DISCARDS WORK (Q-HUB-322, and the session brief of 9 November, which printed a hard reset over an
-    // unpushed commit). A copy that is behind, clean and holds nothing the remote lacks is told a fast-forward pull; a copy that holds
-    // uncommitted changes or commits the remote lacks is told so, with the counts, and is printed no command.
-    const dirtyCount = (sh('git status --porcelain', dir) ?? '').split('\n').filter(Boolean).length;
-    const aheadCount = parseInt(sh(`git rev-list --count origin/${br}..HEAD`, dir) ?? '0', 10) || 0;
-    if (dirtyCount > 0 || aheadCount > 0) {
-      say(`      ${label.toUpperCase()} HOLDS WORK THE REMOTE LACKS: ${dirtyCount} uncommitted change(s) and ${aheadCount} commit(s) not on origin/${br}.`);
-      say('      No command is printed, because a catch-up that is wrong here would discard it. Commit it, then put the commits on top of the remote as the plan\'s landing step does.');
-    } else {
-      say(`      git -C ${dir} pull --ff-only origin ${br}`);
-    }
-    say('');
-  }
-}
-
-// --- 1 · where am I, and where does work belong -----------------------------
-//
-// First because it is the one that has actually gone wrong repeatedly, and
-// because it is the one a session cannot notice being wrong about.
 const branch = sh('git symbolic-ref --short HEAD') ?? '(detached)';
-const guardPath = join(repo, '.branch-guard');
 let work = null; let promote = null; let escape = null;
+const guardPath = join(repo, '.branch-guard');
 if (existsSync(guardPath)) {
   for (const line of readFileSync(guardPath, 'utf8').split('\n')) {
     const t = line.trim();
@@ -143,284 +40,15 @@ if (existsSync(guardPath)) {
     if (k === 'escape') escape = v;
   }
 }
-say(`BRANCH: on '${branch}'.`);
+out.push(`BRANCH: on '${branch}'.`);
 if (work) {
-  if (branch === work) say(`  Correct — work in this repo commits to '${work}'.`);
-  else if (branch === promote) say(`  This is PRODUCTION. Work belongs on '${work}'. A commit here is refused unless ${escape}=1.`);
-  else say(`  Work in this repo commits to '${work}'. A commit here will be refused.`);
+  if (branch === work) out.push(`  Correct — work in this repo commits to '${work}'.`);
+  else if (branch === promote) out.push(`  This is PRODUCTION. Work belongs on '${work}'. A commit here is refused unless ${escape}=1.`);
+  else out.push(`  Work in this repo commits to '${work}'. A commit here will be refused.`);
 } else {
-  say('  No .branch-guard — this repo is UNGUARDED. Write one and install:');
-  say('    node ../noahjefferson/branch-guard.mjs --repo . --install');
-}
-const dirty = sh('git status --porcelain');
-if (dirty) say(`  ${dirty.split('\n').length} file(s) uncommitted.`);
-say();
-
-// --- 1a · THE STAND-DOWN (stand-down.mjs) ---------------------------------
-//
-// While a stand-down is in force for the launch folder the brief is the lines above (a stale working copy, the branch) and one line
-// saying the stand-down is in force, through which date, and where the record is. Nothing else is printed. A copy of this file without
-// the module prints the whole brief.
-const standing = await import('./stand-down.mjs').then((m) => ({ sd: m.standDownHere(), line: m.standDownLine })).catch(() => null);
-if (standing?.sd.inForce) {
-  say(standing.line(standing.sd));
-  console.log(out.join('\n'));
-  process.exit(0);
+  out.push('  No .branch-guard — this repo is UNGUARDED. Write one and install:');
+  out.push('    node ../noahjefferson/branch-guard.mjs --repo . --install');
 }
 
-// --- 2 · has the doctrine moved -------------------------------------------
-const syncFile = join(repo, '.doctrine-sync');
-if (repo !== hub) {
-  if (!existsSync(join(hub, 'DOCTRINE.md'))) {
-    say('DOCTRINE: the hub is not checked out beside this repo, so drift CANNOT be checked.');
-    say('  Nothing here has verified that this repo is current. Say so rather than assuming it is.');
-  } else if (!existsSync(syncFile)) {
-    say('DOCTRINE: this repo has never recorded a reconciliation. Run:');
-    say('  node ../noahjefferson/doctrine-sync.mjs --repo .');
-  } else {
-    const readAt = readFileSync(syncFile, 'utf8').trim().slice(0, 7);
-    const head = sh('git rev-parse --short HEAD', hub);
-    say(readAt === head
-      ? `DOCTRINE: current — read as of ${readAt}.`
-      : `DOCTRINE: last read at ${readAt}, hub is at ${head}. Run doctrine-sync.mjs --repo . BEFORE working.`);
-  }
-  say();
-}
-
-// --- 3 · the family --------------------------------------------------------
-const reposMd = join(hub, 'REPOS.md');
-if (existsSync(reposMd)) {
-  const names = readFileSync(reposMd, 'utf8')
-    .split('\n').filter((l) => l.startsWith('## njefferson/'))
-    .map((l) => l.replace('## ', '').split(' —')[0].trim());
-  say(`REPOS (${names.length}): ${names.join(', ')}`);
-  say('  Full map, branch models and what each still owes: noahjefferson/REPOS.md');
-} else {
-  say('REPOS: no REPOS.md in the hub — the family is undocumented.');
-}
-say();
-
-// --- 3a · each repository's STATE.md, whole ---------------------------------
-//
-// A repository that keeps a `STATE.md` at its root keeps there what a session needs to
-// know about the state of the work in it and nothing else: where the work stands, what
-// is running, what is owed. Like the lessons above, a state that is written down and not
-// opened is not known, so the brief prints each one WHOLE (never a preview or a count):
-// the repository this brief is for, the hub, and every other repository beside either of
-// them. A repository with none prints nothing of its own; when none has one the brief
-// says so in one line, so that silence is never taken for a read that found nothing.
-const stateRepos = [];
-for (const d of [repo, hub]) if (!stateRepos.includes(d)) stateRepos.push(d);
-for (const parent of new Set([dirname(repo), dirname(hub)])) {
-  let kids = [];
-  try { kids = readdirSync(parent).sort(); } catch { kids = []; }
-  for (const k of kids) {
-    const d = join(parent, k);
-    if (!stateRepos.includes(d) && existsSync(join(d, '.git'))) stateRepos.push(d);
-  }
-}
-let statesPrinted = 0;
-for (const d of stateRepos) {
-  const f = join(d, 'STATE.md');
-  if (!existsSync(f)) continue;
-  let t = '';
-  try { t = readFileSync(f, 'utf8'); } catch { say(`STATE.md of ${basename(d)}: ${f} exists and could not be read.`); say(); continue; }
-  say(`STATE.md of ${basename(d)} (${f}), whole:`);
-  say(t.replace(/\s+$/, ''));
-  say();
-  statesPrinted++;
-}
-if (!statesPrinted) { say(`STATE.md: none of the ${stateRepos.length} repositor${stateRepos.length === 1 ? 'y' : 'ies'} beside this brief keeps one.`); say(); }
-
-// --- 3b · the owner's core asks, one page ---------------------------------
-//
-// Printed at EVERY start and resume (a startup, a compaction, a resume, a clear),
-// beside the brief and not instead of anything in it: the full doctrine read stays
-// as the doctrine sets it (Doctrine §11e). The doctrine is read once, at the start,
-// and is long; what a session breaks four hours later is a handful of asks it read
-// and did not carry. This is those, on one page.
-//
-// The words live in ONE place, a short section of the hub CLAUDE.md, read from the
-// CLAUDE.md beside this script: no copy here, so the card cannot go stale in a
-// second file, and a repo that runs the hub's brief is shown the same page. The
-// page is bounded: past CARD_LINES lines only the first are printed and the rest
-// is counted, so a card that grows into a second doctrine says so rather than
-// scrolling the brief away. A hub without the section prints one line saying the
-// card was not found, never a confident blank.
-const CARD_HEADING = 'The owner\'s core asks, one page';
-const CARD_LINES = 40;
-/**
- * The card's lines.
- * @returns {string[]} the heading line and the body of the `## The owner's core
- *   asks, one page` section of the hub's CLAUDE.md, at most CARD_LINES lines of
- *   it, trailing space trimmed and blank lines at either end dropped, with a last
- *   line counting what was not printed when the section is longer; or one line
- *   saying why there is no card (no CLAUDE.md beside this script, or no such
- *   section, or an empty one). Never throws.
- */
-function ownerCard() {
-  const file = join(hub, 'CLAUDE.md');
-  let text = '';
-  try { text = readFileSync(file, 'utf8'); } catch { return [`THE OWNER'S CORE ASKS: not printed (no CLAUDE.md beside this brief, at ${file}).`]; }
-  const m = new RegExp(`^## ${CARD_HEADING.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\\n]*\\n([\\s\\S]*?)(?=^## |^# |$(?![\\s\\S]))`, 'm').exec(text);
-  const body = (m ? m[1] : '').split('\n').map((l) => l.replace(/\s+$/, ''));
-  while (body.length && !body[0]) body.shift();
-  while (body.length && !body[body.length - 1]) body.pop();
-  if (!body.length) return [`THE OWNER'S CORE ASKS: not printed (the hub CLAUDE.md has no non-empty "## ${CARD_HEADING}" section).`];
-  const shown = body.slice(0, CARD_LINES);
-  return [`THE OWNER'S CORE ASKS (one page, from the hub CLAUDE.md; the never-rules page of the doctrine is read as well):`, ...shown,
-    ...(body.length > shown.length ? [`  … ${body.length - shown.length} more lines in the "${CARD_HEADING}" section of ${file}; a card past ${CARD_LINES} lines is no longer one page.`] : [])];
-}
-for (const l of ownerCard()) say(l);
-say();
-
-// --- 4 · the lessons, by title only ----------------------------------------
-//
-// Titles, never bodies. The point is to make a session able to find the four
-// that apply, not to read it 5,500 lines it will skim.
-// ONE FILE PER LESSON SINCE 2026-08-25, read from `lessons/` rather than from
-// the index — the index is generated, and a brief that reads the generated copy
-// reports what was last generated rather than what is there. The gate holds the
-// two together; this reads the source of truth anyway, because a brief that
-// undercounts is a brief that lies.
-/** The bullet titles of a doctrine section, so a rule that binds CHAT can be
- *  PRINTED into the session rather than linked at it. Nothing can gate a chat
- *  reply — Doctrine 2 says so itself — so arriving is the only enforcement
- *  available. Returns [] when the hub is not checked out, and the caller says
- *  so rather than printing a confident blank. */
-function doctrineSection(n) {
-  // The plan rules page holds section 2 since the doctrine was split into three files; the section ends at the
-  // next heading of its own level (a line opening `## `), not at a heading number a file may no longer hold.
-  const f = join(hub, 'doctrine', 'plans.md');
-  if (!existsSync(f)) return [];
-  const lines = readFileSync(f, 'utf8').split('\n');
-  const at = lines.findIndex((l) => l.startsWith(`## ${n}.`));
-  if (at < 0) return [];
-  const out = [];
-  for (let i = at + 1; i < lines.length && !lines[i].startsWith('## '); i++) {
-    const m = lines[i].match(/^- \*\*(.+?)\*\*/);
-    if (m) out.push(m[1].replace(/\*/g, ''));
-  }
-  return out;
-}
-
-/**
- * The doctrine's index, as DOCTRINE.md carries it.
- * @returns {string[]} the lines of the hub's DOCTRINE.md from its `## The index`
- *   heading to its end, blank lines left out: one line for each section with the
- *   file that holds it, and the closing sentence naming the web domains. [] when
- *   the file or the heading is not there, and the caller says so.
- */
-function doctrineIndex() {
-  const f = join(hub, 'DOCTRINE.md');
-  if (!existsSync(f)) return [];
-  const lines = readFileSync(f, 'utf8').split('\n');
-  const at = lines.findIndex((l) => l.startsWith('## The index'));
-  if (at < 0) return [];
-  return lines.slice(at + 1).filter((l) => l.trim());
-}
-
-/**
- * The SessionStart payload this process was started with, if it was given one.
- * @returns {Promise<object>} the parsed JSON read from standard input, or {} when
- *   the input is a terminal, empty, not JSON, or still open after half a second:
- *   the harness and hook-dispatch.mjs close it after writing, and a run by hand
- *   must never hang waiting for it.
- */
-async function readPayload() {
-  if (process.stdin.isTTY) return {};
-  return new Promise((done) => {
-    let buf = '';
-    const finish = () => {
-      clearTimeout(timer);
-      process.stdin.destroy();
-      try { done(JSON.parse(buf)); } catch { done({}); }
-    };
-    const timer = setTimeout(finish, 500);
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', (d) => { buf += d; });
-    process.stdin.on('end', finish);
-    process.stdin.on('error', finish);
-  });
-}
-
-/**
- * Which kind of start this session had, from the due marker.
- * @param {object} payload  the SessionStart payload (`readPayload`).
- * @returns {{source: string|null, why: string}} the `source` doctrine-read-guard.mjs
- *   recorded in this session's marker (`startup`, `resume`, `compact`, `clear`, or
- *   '' when it recorded none); or source null with, in `why`, the reason it could
- *   not be read. The marker's place is doctrine-read-guard.mjs's `dueFile`, said
- *   again here because importing that file loads the whole dispatcher; the
- *   session-guards test writes the marker with the real one and reads it here, so
- *   the two cannot part without a case failing. Callers print the short form for
- *   a null source.
- */
-function startKind(payload) {
-  const id = String(payload?.session_id ?? '').replace(/[^A-Za-z0-9_-]/g, '_');
-  if (!id) return { source: null, why: 'no SessionStart payload carrying a session_id reached this brief on its standard input, so this session\'s due marker cannot be found' };
-  const f = join(process.env.DOCTRINE_DUE_DIR || join(homedir(), '.claude', 'doctrine-due'), `${id}.json`);
-  if (!existsSync(f)) return { source: null, why: `the due marker ${f} is not there: this brief ran before doctrine-read-guard.mjs --due wrote it, or the marker was removed once the doctrine had been read` };
-  try {
-    const s = JSON.parse(readFileSync(f, 'utf8')).source;
-    return { source: typeof s === 'string' ? s : '', why: '' };
-  } catch { return { source: null, why: `the due marker ${f} could not be read` }; }
-}
-const start = startKind(await readPayload().catch(() => ({})));
-
-const lessonDir = join(hub, 'lessons');
-if (existsSync(lessonDir)) {
-  // Both heading shapes, and the lettered ones. The first version matched only
-  // `## N · ` and reported 64 of 90 — a brief that undercounts is a brief that
-  // lies, and it would have quietly hidden the earliest lessons, which are the
-  // ones a new session is least likely to know exist.
-  const titles = readdirSync(lessonDir).filter((f) => f.endsWith('.md')).sort()
-    .flatMap((f) => readFileSync(join(lessonDir, f), 'utf8')
-      .split('\n').filter((l) => /^## \d+[a-z]?[ .·]/.test(l)).map((l) => l.slice(3).trim()));
-  // A compaction or a resume, or a start this brief cannot identify, gets the
-  // count and the folder and nothing else; the titles are a startup's.
-  const bounded = start.source === null || start.source === 'compact' || start.source === 'resume';
-  if (bounded) {
-    say(`LESSONS (${titles.length}) — each is its own file in ${lessonDir}/:`);
-    say(`  Titles are not printed: ${start.source === null ? start.why : `this session was ${start.source === 'compact' ? 'compacted' : 'resumed'}, and the titles are printed at a startup only`}.`);
-  } else {
-    say(`LESSONS (${titles.length}) — titles only; each is its own file in noahjefferson/lessons/:`);
-    for (const t of titles) say(`  ${t}`);
-  }
-} else {
-  say('LESSONS: the hub is not checked out, so the cross-app record is UNAVAILABLE this session.');
-}
-say();
-
-// THE DOCTRINE'S INDEX, printed so a session knows which file holds a section it is told to read. The doctrine is three
-// files in doctrine/ and DOCTRINE.md is their index: never.md is read at every start, plans.md at the entry to plan mode,
-// and apps.md when a plan's item points at one of its sections (doctrine-read-guard.mjs holds the first two).
-const index = doctrineIndex();
-if (index.length) {
-  say('THE DOCTRINE (index of the three files in doctrine/; never.md is read at every start, plans.md at the entry to plan mode, apps.md when a plan item points at it):');
-  for (const l of index) say(`  ${l}`);
-} else {
-  say('THE DOCTRINE: its index is not reachable this session (no DOCTRINE.md with an index beside this brief).');
-}
-say();
-
-// HOW TO WRITE BACK, printed rather than linked. Doctrine 2 has named these
-// shapes for months and a session broke every one of them in every message of
-// a long evening — which is the same failure as the lessons above: written
-// down, never opened. It is short enough to arrive in full.
-const slots = doctrineSection(2);
-if (slots.length) {
-  say('HOW TO WRITE BACK (Doctrine 2) — shapes that look like content and are not:');
-  for (const l of slots) say(`  ${l}`);
-} else {
-  say('HOW TO WRITE BACK: Doctrine 2 is not reachable this session.');
-}
-say('  And the traverse (Doctrine 11f): strategic, then the real call chain, then');
-say('  BACK UP — given the whole app, was this the right thing to add? Before the');
-say('  commit, not after. Research first, never derive the domain (Doctrine 11e).');
-say();
-
-say('This brief is printed by a SessionStart hook. It exists because every one of');
-say('the facts above was already written down and none of it was being read.');
-
+out.push(`HOW WORK GOES HERE: the short page, ${hub}/plans/native/page.md. The procedures and the roles are files under ${hub}/plans/native/skills and ${hub}/plans/native/roles. The push guard and the check before a push hold every push of staging and main, and the choice popup is refused.`);
 console.log(out.join('\n'));

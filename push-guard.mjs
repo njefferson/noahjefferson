@@ -31,15 +31,14 @@
  *          FILE_WRITES are refused unless their `branch` is staging or main;
  *          those in PR_MERGE and BRANCH_UPDATE are refused whatever they name.
  *
- *   THE CHECK BEFORE A PUSH OF STAGING OR MAIN, UNDER A STAND-DOWN ONLY (plans/native-setup.md): while stand-down.mjs says a stand-down is in
- *          force for the session, the connector's FILE_WRITES to staging or main are refused (they carry no commit a checker could
- *          have passed), and a push that lands on staging or main is refused unless a checker has passed the exact commit it pushes. A
+ *   THE CHECK BEFORE A PUSH OF STAGING OR MAIN, ALWAYS (plans/native-setup.md): the connector's FILE_WRITES to staging or main are
+ *          refused (they carry no commit a checker could have passed), and a push that lands on staging or main is refused unless a
+ *          checker has passed the exact commit it pushes. A
  *          pass is an agent of this session whose hand-back (or, when it ended without that call, its final message, an assistant message of text with no tool call after it) opens
  *          `CHECK PASS` and then the full id of that commit, and whose own
  *          transcript holds no Edit, Write, MultiEdit or NotebookEdit call and no Bash call running git commit, git add or git
  *          push. It is read from the agents' transcripts (agent-read.mjs `agentFiles` and `agentEnd`), never from a file an agent could
- *          write; a transcript that cannot be read is no pass. With no stand-down in force none of this runs and every decision
- *          above is as it was.
+ *          write; a transcript that cannot be read is no pass.
  *
  *   node push-guard.mjs     (payload on stdin; exit 2 refuses, reason on stderr)
  */
@@ -49,12 +48,10 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { commandsIn, commandWordIndex, heredocs } from './shell-words.mjs';
 
-// The stand-down question and the code that reads agents' transcripts are loaded here and not imported statically, so a copy of the
-// guard without them keeps every other decision (the dispatcher loads the stand-down the same way).
-let standMod = null;
+// The code that reads agents' transcripts is loaded here and not imported statically, so a copy of the guard without it keeps every
+// other decision; the check before a push then refuses a push of staging or main, for no pass can be read.
 let reportMod = null;
 let tailMod = null;
-try { standMod = await import('./stand-down.mjs'); } catch { standMod = null; }
 try { reportMod = await import('./agent-read.mjs'); tailMod = await import('./transcript-tail.mjs'); } catch { reportMod = null; tailMod = null; }
 
 const SELF = fileURLToPath(import.meta.url);
@@ -188,14 +185,6 @@ const MUTATING_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const MUTATING_GIT = /\bgit\b(?:\s+(?:-C\s+\S+|-c\s+\S+|--[\w-]+(?:=\S*)?))*\s+(?:commit|add|push)\b/;
 
 /**
- * Is a stand-down in force for this process's session?
- * @returns {boolean} true only when stand-down.mjs loaded and says so; any failure is no.
- */
-function standingNow() {
-  try { return !!standMod?.standDownHere().inForce; } catch { return false; }
-}
-
-/**
  * Does a Bash line run git commit, git add or git push?
  * @param {string} command  the line.
  * @returns {boolean} true when any simple command in it (nested ones included) is one, or the text reads like one.
@@ -307,7 +296,7 @@ function commitOf(spec, dir) {
  * @returns {string} five plain sentences.
  */
 function checkRefusal(commit, unread = '', branch = 'main') {
-  return `${CHECK_PREFIX}The stand-down's check before a push holds. The push is of commit ${commit || '(not readable from this repository)'}. `
+  return `${CHECK_PREFIX}The check before a push holds. The push is of commit ${commit || '(not readable from this repository)'}. `
     + `The push lands on ${branch}. `
     + `No checker has passed that commit${unread ? `, and ${unread}` : ''}. `
     + 'A checker which changes nothing must pass that exact commit first, by handing back CHECK PASS and the full commit id on its first line.';
@@ -395,7 +384,7 @@ export function judgeGit(words, cwd, unsure = '', heldPush = null) {
     if (!ALLOWED.has(d.dst)) return `git push to "${d.dst}" is refused: only staging and main reach a remote.`;
     if (d.dst === 'main' && (force || String(spec).startsWith('+'))) return `git push "${spec}" force-pushes main, and a force-push to main is refused.`;
   }
-  // Under a stand-down only (`heldPush` is null otherwise): a push that lands on staging or main waits for a checker's pass of that exact commit.
+  // A push that lands on staging or main waits for a checker's pass of that exact commit (`heldPush` is null only for a caller that asks no check).
   if (heldPush) {
     for (const spec of specs) {
       const dst = destination(spec, dir).dst;
@@ -433,7 +422,7 @@ export function hasSubshell(cmd) {
  *   `git` command in a Bash line is judged, wherever it sits (inside `$( )`,
  *   `sh -c`, `eval`, behind `xargs` or `find -exec`); a push whose repository
  *   cannot be placed for certain is refused. hook-dispatch.mjs turns a reason
- *   into exit 2 and latches the session on it.
+ *   into exit 2.
  */
 export function decide(p) {
   const tool = String(p.tool_name ?? '');
@@ -446,8 +435,8 @@ export function decide(p) {
     if (FILE_WRITES.some((t) => suffix(t) === name)) {
       const b = String(input.branch ?? '').replace(/^refs\/heads\//, '');
       if (!ALLOWED.has(b)) return `${tool} writes to branch "${b || '(none named)'}", and only staging and main are written. ${RULE}`;
-      // Under a stand-down the connector's writes carry no commit a checker could have passed.
-      if (standingNow()) return `${CHECK_PREFIX}${tool} writes to ${b} while a stand-down is in force, and the connector's writes carry no commit a checker could have passed. Work reaches staging and main by a git push after a checker's pass of that exact commit.`;
+      // The connector's writes carry no commit a checker could have passed.
+      return `${CHECK_PREFIX}${tool} writes to ${b}, and the connector's writes carry no commit a checker could have passed. Work reaches staging and main by a git push after a checker's pass of that exact commit.`;
     }
     return null;
   }
@@ -489,13 +478,11 @@ export function decide(p) {
       }
     }
   }
-  const heldPush = standingNow()
-    ? (commit, branch) => {
-      if (!commit) return checkRefusal('', '', branch);
-      const r = checkerPassed(p, commit);
-      return r.ok ? null : checkRefusal(commit, r.unread, branch);
-    }
-    : null;
+  const heldPush = (commit, branch) => {
+    if (!commit) return checkRefusal('', '', branch);
+    const r = checkerPassed(p, commit);
+    return r.ok ? null : checkRefusal(commit, r.unread, branch);
+  };
   for (const g of gits) {
     const why = judgeGit(g.w, g.cwd, g.via || unsure, heldPush);
     if (why) return why.startsWith(CHECK_PREFIX) ? why : `${why} ${RULE}`;
