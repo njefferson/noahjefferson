@@ -11830,17 +11830,19 @@ const CASES = [
     run(m, dir) {
       const hub = batchHub(dir);
       const file = join(tmp('sg-seedout-'), 'deep', 'print.txt');
+      // The print names the California minute it was made in, and two runs can fall in two minutes, so the minute is set aside when two prints are compared.
+      const noClock = (s) => s.replace(/\b\d{2}:\d{2} California/g, 'HH:MM California');
       const withOut = batchRun(dir, hub, ['--out', file]);
       const whole = batchRun(dir, hub, []).stdout;
       const written = existsSync(file) ? readFileSync(file, 'utf8') : '';
       const first = whole.split('\n')[0];
       const line = withOut.stdout.trim();
-      const batchOk = withOut.status === 0 && written === whole && line.split('\n').length === 1 && line.includes(file) && line.endsWith(`first line: ${first}`);
+      const batchOk = withOut.status === 0 && noClock(written) === noClock(whole) && line.split('\n').length === 1 && line.includes(file) && noClock(line).endsWith(`first line: ${noClock(first)}`);
       const single = seedHub(dir);
       const file2 = join(tmp('sg-seedout-'), 'single.txt');
       const s = seedRun(dir, single, ['--item', 'P-3', '--out', file2]);
       const sWhole = seedRun(dir, single, ['--item', 'P-3']).stdout;
-      const singleOk = s.status === 0 && existsSync(file2) && readFileSync(file2, 'utf8') === sWhole && s.stdout.includes(file2) && s.stdout.trim().split('\n').length === 1;
+      const singleOk = s.status === 0 && existsSync(file2) && noClock(readFileSync(file2, 'utf8')) === noClock(sWhole) && s.stdout.includes(file2) && s.stdout.trim().split('\n').length === 1;
       if (!(batchOk && singleOk && whole.includes('==== THE PLAN ENDS ABOVE THIS LINE ====') && written.includes('MOVABLE READS'))) throw new Error(`batch ${batchOk} (${line.slice(0, 200)}), single ${singleOk}`);
       return assertAll([]);
     },
