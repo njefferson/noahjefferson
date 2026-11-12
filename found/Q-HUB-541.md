@@ -1,0 +1,3 @@
+Q-HUB-541: At the close of the photography app's plan on 11 November, the stop guard asked each queued Found line's note to name a queue key. Sixty lines were edited one by one, though the landing step's report held the whole mapping of lines to keys. Two findings about the hub could not be filed in that session, the hub being closed to it, so the stop had to be declared as open for the owner, with nothing for the owner to decide.
+
+Not placed: `stop-guard.mjs`. The design of the native setup retires the latches and the findings queue as a queue of work (Part D), so no fix is placed in the guard; the finding stands for the guard's remaining life, and a report's mapping of lines to keys is accepted in place of an edit to each line if the guard is kept.

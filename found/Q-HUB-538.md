@@ -1,0 +1,3 @@
+Q-HUB-538: The prompt hook printed the line beginning "OWNER MESSAGE" and ending with "a correction" at each of the 22 agent hand-backs in the photography app's session on 11 November. This is the same fault as Q-HUB-512, met again in a second session. The PreToolUse hold did not follow the printed line, so only the printed line is wrong and nothing was held on account of it.
+
+Not placed: the prompt hook. The design of the native setup retires the holds at each message (Part D), so no fix is placed in the hook; Q-HUB-512 carries the defect for the hook's remaining life, and this finding adds the second sighting and the count of 22 hand-backs.

@@ -1,0 +1,3 @@
+Q-HUB-539: Agents in the photography app's session ran shell lines outside their step's Commands on 11 November, and no guard refused any of them: two ls and one df -m in step 436, and one ls in step 426. A step's list of Commands is therefore not enforced on an agent's shell lines; it holds only as far as the agent keeps to it.
+
+Not placed: no file. No guard in the hub reads a step's Commands against an agent's shell lines, and the design of the native setup replaces such lists with the harness's own list of allowed commands, which asks before any command not on it. The finding records that the four lines passed unrefused.
