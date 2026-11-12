@@ -62,6 +62,18 @@ function session(h, agents) {
   return tr;
 }
 
+/** An agent that ended by writing its last message as text (no hand-back call): `calls` first, then `final` as its last entry when given. */
+function endedSession(h, id, calls, final) {
+  const tr = h.transcript([h.turn(0, 'Please push the finished work.')]);
+  const subs = join(tr.slice(0, -'.jsonl'.length), 'subagents');
+  mkdirSync(subs, { recursive: true });
+  const body = [h.turn(1, 'Check the exact commit and change nothing.'), ...calls,
+    ...(final === undefined ? [] : [{ type: 'assistant', timestamp: new Date(Date.UTC(2026, 0, 1, 0, 0, 30)).toISOString(), message: { role: 'assistant', content: [{ type: 'text', text: final }] } }])];
+  writeFileSync(join(subs, `agent-${id}.jsonl`), body.map((e) => JSON.stringify(e)).join('\n') + '\n');
+  writeFileSync(join(subs, `agent-${id}.meta.json`), JSON.stringify({ agentType: 'checker', description: 'Check the commit' }));
+  return tr;
+}
+
 /** Run the guard on one Bash line in `repoDir`, as the hook does. */
 const push = (dir, repoDir, command, tr, env, sessionId = 'pc-session') => spawnSync('node', [join(dir, 'push-guard.mjs')], {
   input: JSON.stringify({ tool_name: 'Bash', tool_input: { command }, cwd: repoDir, session_id: sessionId, ...(tr ? { transcript_path: tr } : {}) }),
@@ -198,14 +210,44 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'push check: under a stand-down a pass an ended agent wrote as its final message counts for the exact commit, and not from an agent that edited, for another commit, as CHECK FAIL, or from an agent whose last entry is a tool call',
+    guards: ['pc_final_text', 'pc_exact_commit', 'pc_no_edit'],
+    run(m, dir, h) {
+      const r = twoCommits(h);
+      const launch = placeStandDown(h.tmp('pc-launch-'));
+      const env = envFor({ CLAUDE_PROJECT_DIR: launch });
+      const read = [h.tool(2, 'e-b', 'Bash', { command: 'git status' }), h.result(3, 'e-b', 'clean')];
+      const edit = [h.tool(4, 'e-e', 'Edit', { file_path: join(r.dir, 'a.txt'), old_string: 'two', new_string: 'three' }), h.result(5, 'e-e', 'ok')];
+      const go = (calls, final) => push(dir, r.dir, 'git push origin main', endedSession(h, 'e1', calls, final), env);
+      const text = `CHECK PASS ${r.head}\nThe second line says what was read.`;
+      const passed = go(read, text);
+      const blankFirst = go(read, `\n  \nCHECK PASS ${r.head}`);
+      const edited = go([...read, ...edit], text);
+      const other = go(read, `CHECK PASS ${r.first}\nThe second line.`);
+      const failed = go(read, `CHECK FAIL ${r.head}\nThe second line.`);
+      const running = go([...read, h.tool(6, 'e-r', 'Bash', { command: 'git log' })], undefined);
+      const resultLast = go(read, undefined);
+      return h.assertAll([
+        ['a pass in an ended agent\'s final text for this exact commit passes and prints nothing', passed.status === 0 && passed.stderr === '', said(passed)],
+        ['blank lines before the pass line do not matter', blankFirst.status === 0, said(blankFirst)],
+        ['the same text from an agent that made an Edit call is refused', refused(edited), said(edited)],
+        ['the same text for a different commit is refused', refused(other), said(other)],
+        ['final text opening CHECK FAIL is refused', refused(failed), said(failed)],
+        ['an agent whose last entry is a tool call is refused', refused(running), said(running)],
+        ['an agent whose last entry is a tool result is refused', refused(resultLast), said(resultLast)],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
   pc_standing_asked: ["  if (onMain) {\n    for (const spec of specs) {", "  if (false) {\n    for (const spec of specs) {", 'push-guard.mjs'],
   pc_commit_named: ["The push is of commit ${commit || '(not readable from this repository)'}. `", "The push is of commit (named elsewhere). `", 'push-guard.mjs'],
-  pc_pass_read: ["      if (!end || end.how !== 'a report') continue;\n", "      if (!end || end.how !== 'a report') continue;\n      return { ok: false };\n", 'push-guard.mjs'],
+  pc_pass_read: ["      if (!text) continue;\n", "      if (!text) continue;\n      return { ok: false };\n", 'push-guard.mjs'],
   pc_exact_commit: ["      if (!m || m[1].toLowerCase() !== commit.toLowerCase()) continue;\n", "      if (!m) continue;\n", 'push-guard.mjs'],
   pc_no_edit: ["      if (changedSomething(entries)) continue;\n", '', 'push-guard.mjs'],
   pc_git_write: ["      if (b.name === 'Bash' && runsGitWrite(b.input?.command)) return", "      if (false) return", 'push-guard.mjs'],
+  pc_final_text: ["const text = end?.how === 'a report' ? end.last : finalText(entries);", "const text = end?.how === 'a report' ? end.last : '';", 'push-guard.mjs'],
   pc_unreadable_commit: ["      if (!commit) return checkRefusal('');\n", "      if (!commit) return null;\n", 'push-guard.mjs'],
 };

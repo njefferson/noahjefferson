@@ -33,7 +33,8 @@
  *
  *   THE CHECK BEFORE A PUSH OF MAIN, UNDER A STAND-DOWN ONLY (plans/native-setup.md): while stand-down.mjs says a stand-down is in
  *          force for the session, a push that lands on main is refused unless a checker has passed the exact commit it pushes. A
- *          pass is an agent of this session whose hand-back opens `CHECK PASS` and then the full id of that commit, and whose own
+ *          pass is an agent of this session whose hand-back (or, when it ended without that call, its final message, an assistant message of text with no tool call after it) opens
+ *          `CHECK PASS` and then the full id of that commit, and whose own
  *          transcript holds no Edit, Write, MultiEdit or NotebookEdit call and no Bash call running git commit, git add or git
  *          push. It is read from the agents' transcripts (report.mjs `agentFiles` and `agentEnd`), never from a file an agent could
  *          write; a transcript that cannot be read is no pass. With no stand-down in force none of this runs and every decision
@@ -233,6 +234,26 @@ export function changedSomething(entries) {
 }
 
 /**
+ * What an ended agent wrote as its final message.
+ * @param {object[]} entries  the agent's whole transcript.
+ * @returns {string} the text of the transcript's last message when that is an assistant message with text and no tool call; '' when the
+ *   last message is a tool call, a tool result or a user message (the agent is still running or was cut off).
+ */
+export function finalText(entries) {
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const e = entries[i];
+    if (e?.type !== 'assistant' && e?.type !== 'user') continue;
+    const c = e?.message?.content;
+    if (e.type !== 'assistant') return '';
+    if (typeof c === 'string') return c.trim();
+    if (!Array.isArray(c) || c.some((b) => b?.type === 'tool_use')) return '';
+    const texts = c.filter((b) => b?.type === 'text' && String(b.text ?? '').trim());
+    return texts.length ? String(texts[texts.length - 1].text).trim() : '';
+  }
+  return '';
+}
+
+/**
  * Has a checker passed this commit?
  * @param {object} p  the PreToolUse payload (`transcript_path`, `session_id`).
  * @param {string} commit  the full id of the commit being pushed.
@@ -254,8 +275,11 @@ export function checkerPassed(p, commit) {
       const entries = tailMod.tailEntries(a.file, CHECK_READ_BYTES);
       if (!entries.length) continue;
       const end = reportMod.agentEnd(entries, reportMod.agentMeta(a), 0, '');
-      if (!end || end.how !== 'a report') continue;
-      const first = String(end.last ?? '').split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+      // The pass is the hand-back call's text, or else the final message of an agent that ended by writing it (the checker's tools hold no
+      // hand-back call, and an agent under a restored plan mode ends without one): a transcript whose last entry is an assistant message of text.
+      const text = end?.how === 'a report' ? end.last : finalText(entries);
+      if (!text) continue;
+      const first = String(text).split('\n').map((l) => l.trim()).find(Boolean) ?? '';
       const m = /^CHECK PASS\s+([0-9a-f]{40,64})\b/i.exec(first);
       if (!m || m[1].toLowerCase() !== commit.toLowerCase()) continue;
       if (changedSomething(entries)) continue;
