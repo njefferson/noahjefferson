@@ -4263,6 +4263,9 @@ const standNow = () => import('./stand-down.mjs').then((m) => m.standDownHere())
  * @returns {Promise<number>} the exit code: 2 for a refusal, 0 otherwise.
  */
 async function standDownMain(event, raw, p, sd) {
+  const retired = sd?.via === 'retired';
+  // The old gates are retired for every session (via 'retired'): every child started below is told the launch folder, as `main` does.
+  if (retired) process.env.HUB_LAUNCH_DIR = process.env.CLAUDE_PROJECT_DIR ?? '';
   if (event === 'PreToolUse') {
     const tool = String(p.tool_name ?? '');
     if (tool === 'AskUserQuestion') {
@@ -4275,12 +4278,64 @@ async function standDownMain(event, raw, p, sd) {
       process.stderr.write(`push-guard.mjs did not run cleanly (${o.error ?? `exit ${o.status}`}); only reads run until it is fixed.\n`);
       return 2;
     }
-    return 0;
+    return retired ? retiredRepoHooks(event, raw, p) : 0;
+  }
+  if (retired && event === 'SessionStart' && !p.agent_id) {
+    const root = resolve(process.env.CLAUDE_PROJECT_DIR || p.cwd || process.cwd());
+    let lines = [];
+    try { lines = bringForward(p, { root }); } catch { /* the start prints without the lines */ }
+    for (const l of lines) process.stdout.write(`${l}\n`);
+    const words = await import('./stand-down.mjs');
+    process.stdout.write(`${words.standDownLine(sd)}\n`);
   }
   if (event === 'UserPromptSubmit') {
     const { standDownLine } = await import('./stand-down.mjs');
     process.stdout.write(`${standDownLine(sd)}\n`);
   }
+  return retired ? retiredRepoHooks(event, raw, p) : 0;
+}
+
+/**
+ * Each repository's own hooks for an event, for a session whose old gates are retired (`via: 'retired'`). The same walk `main` makes for the
+ * repositories beside and beneath the launch folder (`reposUnder`, each one's `.claude/settings.json`, `matches`, `run`), with the shared shims
+ * plan-guard.sh and stop-guard.sh replaced by the hub's own scripts. No latch is set, because the latch's gates are retired. This copy is
+ * written again on purpose: the copy in `main` is deleted in a later step.
+ * @param {string} event  the hook event.
+ * @param {string} raw  the payload as received.
+ * @param {object} p  the payload parsed.
+ * @returns {number} 2 when a hook refuses (its reason is written to the error output), else 0; what a hook prints at a start or a prompt is
+ *   written to the output.
+ */
+function retiredRepoHooks(event, raw, p) {
+  if (event === 'ConfigChange' || event === 'PreModelSwitch' || event === 'PostModelSwitch') return 0;
+  const root = resolve(process.env.CLAUDE_PROJECT_DIR || p.cwd || process.cwd());
+  const repos = touched(event, p, reposUnder(root));
+  const locked = event === 'PreToolUse' && repos.some((r) => existsSync(join(r, '.claude', 'PLAN-LOCK')));
+  const printed = [];
+  const ran = new Set();
+  for (const repo of repos) {
+    let s = {};
+    try { s = JSON.parse(readFileSync(join(repo, '.claude', 'settings.json'), 'utf8')); } catch { continue; }
+    for (const g of s.hooks?.[event] ?? []) {
+      if (!matches(event, g.matcher, p)) continue;
+      for (const h of g.hooks ?? []) {
+        if (h.type !== 'command' || !h.command) continue;
+        const shim = basename(String(h.command).split(/\s+/)[0]);
+        if (IDENT_SHIMS.has(shim) && idInLaunchResult(p)) continue;
+        let command = h.command;
+        if (SHARED_SHIMS.has(shim)) {
+          if (ran.has(shim)) continue;
+          ran.add(shim);
+          command = `node "${join(HUB, shim.replace(/\.sh$/, '.mjs'))}"`;
+        }
+        const input = locked && shim === 'plan-guard.sh' ? JSON.stringify({ ...p, permission_mode: 'plan', plan_mode_forced: true }) : raw;
+        const o = run(command, input, repo, h.timeout ?? 60);
+        if (o.deny) { process.stderr.write(o.reason + '\n'); return 2; }
+        if (o.out.trim() && (event === 'SessionStart' || event === 'UserPromptSubmit')) printed.push(o.out.trim());
+      }
+    }
+  }
+  if (printed.length) process.stdout.write(printed.join('\n\n') + '\n');
   return 0;
 }
 

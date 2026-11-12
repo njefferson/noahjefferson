@@ -46,10 +46,11 @@ never edits this page: its lines are the owner's to change.
 ## Start here: the brief is printed for you
 Start here: the hub is being rebuilt on the harness's own parts. The design and
 the order of the work are in [`plans/native-setup.md`](plans/native-setup.md), and
-hub work starts from that record. A `STAND-DOWN` file in the repository's
-`.claude` folder frees a session launched in the hub repository from the hub's
-gates through 18 November for the trial; it frees no session launched anywhere
-else.
+hub work starts from that record. From the sixth act of that record the old
+gates are retired for every session in every repository: the push guard, the
+check before a push and the refusal of the choice popup stay, and work goes as
+the short page at plans/native/page.md says. The rules listed below describe the
+retired gates until the pages are archived.
 
 `.claude/hooks/session-start.sh` runs at session start and prints
 [`session-brief.mjs`](session-brief.mjs) — which branch this is versus where work

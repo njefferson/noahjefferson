@@ -1,13 +1,20 @@
 #!/usr/bin/env node
 /**
- * THE STAND-DOWN SWITCH: one question, asked first by every hook that runs for a session.
+ * THE RETIREMENT SWITCH: one question, asked first by every hook that runs for a session.
  *
  * ## What it is
  *
- * A file named STAND-DOWN in a repository's own configuration folder holds two lines: the word until, a colon, a space and a date
- * written year-month-day, then one line of reason. It frees a session of that repository from the hub's gates through the end of that date
- * in California. The file is placed and removed by the owner's hand; no step of a plan writes it. Deleting it, or the passing of its
- * date, brings every gate back, and so does a file that does not read as those two lines.
+ * Since the sixth act of plans/native-setup.md the old gates are retired for every session in every repository, so the answer is yes
+ * (`inForce: true`) unless the off variable is present. It comes in two forms, told apart by `via`:
+ *
+ *   via 'own'      the launch folder's own file STAND-DOWN is in force: the answer is the file's, with its date and its reason. The file
+ *                  is in a repository's own configuration folder and holds two lines: the word until, a colon, a space and a date written
+ *                  year-month-day, then one line of reason. It is placed and removed by the owner's hand; no step of a plan writes it.
+ *   via 'retired'  there is no file, or it does not read as those two lines, or its date has passed: the old gates are retired all the same.
+ *                  Its date is null.
+ *
+ * Where the answer is yes the hub's hooks do what they did under a stand-down: the push guard, the check before a push and the refusal of the
+ * choice popup, and nothing else of the old gates. Only the off variable, which the suite sets, answers no.
  *
  * ## Which folder
  *
@@ -23,20 +30,20 @@
  *
  * ## The off variable
  *
- * While HUB_STAND_DOWN_OFF is present in the environment the answer is no. The suite sets it before its first case, so it judges the
- * gates as they stand with no stand-down whether or not the hub's file stands in the checkout it runs in. It can only bring the gates
- * back and frees nothing.
+ * While HUB_STAND_DOWN_OFF is present in the environment the answer is no. The suite sets it before its first case, so its cases judge
+ * the old gates' code whether or not a file stands in the checkout it runs in. A later step deletes that code and this variable.
  *
  * ## What it exports
  *
- *   standDown(folder, now)    the question for one folder at one moment: { inForce, until, reason }
- *   standDownHere(env, now)   the question for the folder the environment names, with the off variable and the launch folder applied
- *   standDownLine(sd)         the one line that says the stand-down is in force, until which date, and where the record is
- *
- * A missing file, a date that has passed, and a file that does not read as the two lines are each no stand-down.
+ *   standDown(folder, now)    the question of the file for one folder at one moment: { inForce, until, reason }; a missing file, a date
+ *                             that has passed and a file that does not read as the two lines are each no there
+ *   standDownHere(env, now)   the answer for the folder the environment names: no with the off variable; the file's answer with
+ *                             `via: 'own'` where the file is in force; otherwise yes with `via: 'retired'`
+ *   standDownLine(sd)         the one line a session is told: the stand-down's for `via: 'own'`, the retirement's for `via: 'retired'`
  */
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export const OFF_VARIABLE = 'HUB_STAND_DOWN_OFF';
 export const LAUNCH_VARIABLE = 'HUB_LAUNCH_DIR';
@@ -94,24 +101,34 @@ export function standDown(folder, now = new Date()) {
  * Is a stand-down in force for the session this process belongs to?
  * @param {Record<string, string|undefined>} [env]  the environment, this process's when absent.
  * @param {Date|number} [now]  the moment, the clock when absent.
- * @returns {{inForce: boolean, until: string|null, reason: string}} no while the off variable is present; otherwise the answer
- *   for the folder HUB_LAUNCH_DIR names when that is set, else for CLAUDE_PROJECT_DIR. Never throws.
+ * @returns {{inForce: boolean, until: string|null, reason: string, via?: 'own'|'retired'}} no while the off variable is present; otherwise,
+ *   for the folder HUB_LAUNCH_DIR names when that is set, else for CLAUDE_PROJECT_DIR: the file's answer with `via: 'own'` where the file is
+ *   in force, and in every other case yes with `via: 'retired'`. Never throws; a failure to read the file is the retired answer.
  */
 export function standDownHere(env = process.env, now = new Date()) {
   try {
     if (env[OFF_VARIABLE] !== undefined) return NO;
     const folder = env[LAUNCH_VARIABLE] !== undefined ? env[LAUNCH_VARIABLE] : env.CLAUDE_PROJECT_DIR;
-    return standDown(folder ?? '', now);
-  } catch { return NO; }
+    const own = standDown(folder ?? '', now);
+    if (own.inForce) return { ...own, via: 'own' };
+  } catch { /* the retired answer below */ }
+  return { inForce: true, until: null, reason: 'the old gates are retired (plans/native-setup.md)', via: 'retired' };
 }
 
 /**
- * The line a session is told while a stand-down is in force.
- * @param {{until: string, reason: string}} sd  the answer of `standDown`.
- * @returns {string} one line: that the hub's gates stand down for this session, through which date, the file's reason, where the record
- *   is, and the way back.
+ * The line a session is told while the answer is yes.
+ * @param {{until: string, reason: string, via?: string}} sd  the answer of `standDownHere`.
+ * @returns {string} for `via: 'retired'`, one line that the old gates are retired and where the short page, the procedures and the roles
+ *   are; for any other answer, one line: that the hub's gates stand down for this session, through which date, the file's reason, where the
+ *   record is, and the way back.
  */
 export function standDownLine(sd) {
+  if (sd?.via === 'retired') {
+    const hub = dirname(fileURLToPath(import.meta.url));
+    return `THE HUB'S OLD GATES ARE RETIRED. Work goes as the short page says: ${hub}/plans/native/page.md. `
+      + `The procedures and the roles are files under ${hub}/plans/native/skills and ${hub}/plans/native/roles. `
+      + 'The push guard, the check before a push and the refusal of the choice popup stay.';
+  }
   return `STAND-DOWN IN FORCE: the hub's gates stand down for this session through the end of ${sd.until} (California); reason: ${sd.reason}. `
     + `The record of the design is ${RECORD} in the hub. Deleting .claude/STAND-DOWN brings every gate back; the push guard and the refusal of the choice popup stay throughout.`;
 }

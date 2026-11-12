@@ -81,21 +81,24 @@ const push = (dir, repoDir, command, tr, env, sessionId = 'pc-session') => spawn
 
 export const cases = [
   {
-    name: 'push check: with no stand-down in force a push of main passes as it did, with or without a checker, and a push to another branch is refused as it was',
+    name: 'push check: with the suite\'s off variable present a push of main passes as it did, with or without a checker, and a push to another branch is refused as it was; with no stand-down file the check holds the push all the same',
     guards: ['pc_standing_asked'],
     run(m, dir, h) {
       const r = twoCommits(h);
       const bare = session(h, []);
       const launchFile = placeStandDown(h.tmp('pc-launch-'));
       const launchNone = h.tmp('pc-none-');
-      const noFile = push(dir, r.dir, 'git push origin main', bare, envFor({ CLAUDE_PROJECT_DIR: launchNone }));
+      const offNone = { CLAUDE_PROJECT_DIR: launchNone, HUB_STAND_DOWN_OFF: 'suite' };
+      const noFile = push(dir, r.dir, 'git push origin main', bare, envFor(offNone));
+      const retiredHeld = push(dir, r.dir, 'git push origin main', bare, envFor({ CLAUDE_PROJECT_DIR: launchNone }));
       const offVar = push(dir, r.dir, 'git push origin main', bare, envFor({ CLAUDE_PROJECT_DIR: launchFile, HUB_STAND_DOWN_OFF: 'suite' }));
-      const noPayloadSession = push(dir, r.dir, 'git push origin HEAD', undefined, envFor({ CLAUDE_PROJECT_DIR: launchNone }));
+      const noPayloadSession = push(dir, r.dir, 'git push origin HEAD', undefined, envFor(offNone));
       const other = push(dir, r.dir, 'git push origin claude/work', bare, envFor({ CLAUDE_PROJECT_DIR: launchNone }));
       return h.assertAll([
-        ['with no file the push of main passes and prints nothing', noFile.status === 0 && noFile.stderr === '' && noFile.stdout === '', said(noFile)],
+        ['with the off variable present file the push of main with no checker is refused by the check before a push', refused(retiredHeld), said(retiredHeld)],
+        ['with the off variable present the push of main passes and prints nothing', noFile.status === 0 && noFile.stderr === '' && noFile.stdout === '', said(noFile)],
         ['with a file in force but the suite\'s off variable present the push of main passes', offVar.status === 0 && offVar.stderr === '', said(offVar)],
-        ['with no file and no transcript at all a push of HEAD on main passes', noPayloadSession.status === 0 && noPayloadSession.stderr === '', said(noPayloadSession)],
+        ['with the off variable present and no transcript at all a push of HEAD on main passes',noPayloadSession.status === 0 && noPayloadSession.stderr === '', said(noPayloadSession)],
         ['a push to another branch is refused by the old rule and its old words', other.status === 2 && /Only staging and main reach a remote/.test(other.stderr) && !/PUSH CHECK/.test(other.stderr), said(other)],
       ]);
     },
@@ -238,7 +241,7 @@ export const cases = [
     },
   },
   {
-    name: 'push check: under a stand-down a push of staging with no checker having passed it is refused naming staging, one with a pass of that exact commit passes, and with no stand-down it passes as it did',
+    name: 'push check: under a stand-down a push of staging with no checker having passed it is refused naming staging, one with a pass of that exact commit passes, and with the off variable present it passes as it did',
     guards: ['pc_staging_held', 'pc_standing_asked'],
     run(m, dir, h) {
       const r = twoCommits(h);
@@ -248,24 +251,24 @@ export const cases = [
       const headForm = push(dir, r.dir, 'git push origin staging', session(h, []), env);
       const older = push(dir, r.dir, 'git push origin HEAD:staging', session(h, [{ id: 'c1', first: `CHECK PASS ${r.first}` }]), env);
       const passed = push(dir, r.dir, 'git push origin HEAD:staging', session(h, [{ id: 'c1', first: `CHECK PASS ${r.head}` }]), env);
-      const noStand = push(dir, r.dir, 'git push origin HEAD:staging', session(h, []), envFor({ CLAUDE_PROJECT_DIR: h.tmp('pc-none-') }));
+      const noStand = push(dir, r.dir, 'git push origin HEAD:staging', session(h, []), envFor({ CLAUDE_PROJECT_DIR: h.tmp('pc-none-'), HUB_STAND_DOWN_OFF: 'suite' }));
       return h.assertAll([
         ['a push of staging with no checker is refused', refused(none), said(none)],
         ['the refusal names the commit and the branch staging', none.stderr.includes(`The push is of commit ${r.head}.`) && /The push lands on staging\./.test(none.stderr), none.stderr],
         ['a push of the name staging, which names no commit here, is refused too', refused(headForm), said(headForm)],
         ['a pass for the older commit does not let staging go', refused(older), said(older)],
         ['a pass of that exact commit lets the push of staging go and prints nothing', passed.status === 0 && passed.stderr === '', said(passed)],
-        ['with no stand-down a push of staging passes as it did', noStand.status === 0 && noStand.stderr === '', said(noStand)],
+        ['with the off variable present a push of staging passes as it did', noStand.status === 0 && noStand.stderr === '', said(noStand)],
       ]);
     },
   },
   {
-    name: 'push check: under a stand-down the connector\'s file writes to staging and main are refused with the reason, and with no stand-down they are judged as they were',
+    name: 'push check: under a stand-down the connector\'s file writes to staging and main are refused with the reason, and with the off variable present they are judged as they were',
     guards: ['pc_connector_held'],
     run(m, dir, h) {
       const launch = placeStandDown(h.tmp('pc-launch-'));
       const env = envFor({ CLAUDE_PROJECT_DIR: launch });
-      const envNone = envFor({ CLAUDE_PROJECT_DIR: h.tmp('pc-none-') });
+      const envNone = envFor({ CLAUDE_PROJECT_DIR: h.tmp('pc-none-'), HUB_STAND_DOWN_OFF: 'suite' });
       const write = (tool, branch, e) => spawnSync('node', [join(dir, 'push-guard.mjs')], {
         input: JSON.stringify({ tool_name: tool, tool_input: { branch, path: 'a.txt' }, cwd: dir, session_id: 'pc-session' }), encoding: 'utf8', env: e });
       const staging = write('mcp__github__create_or_update_file', 'staging', env);
@@ -280,8 +283,8 @@ export const cases = [
         ['the refusal says work reaches staging and main by a git push after a checker\'s pass', /by a git push after a checker's pass of that exact commit/.test(staging.stderr), staging.stderr],
         ['a connector write to main under a stand-down is refused', refused(main), said(main)],
         ['a connector delete to staging under a stand-down is refused', refused(del), said(del)],
-        ['with no stand-down a write to staging passes as it did', noStand.status === 0 && noStand.stderr === '', said(noStand)],
-        ['with no stand-down a write to main passes as it did', noStandMain.status === 0 && noStandMain.stderr === '', said(noStandMain)],
+        ['with the off variable present a write to staging passes as it did', noStand.status === 0 && noStand.stderr === '', said(noStand)],
+        ['with the off variable present a write to main passes as it did', noStandMain.status === 0 && noStandMain.stderr === '', said(noStandMain)],
         ['a write to another branch under a stand-down is still refused by the old rule', other.status === 2 && /only staging and main are written/.test(other.stderr), said(other)],
       ]);
     },
