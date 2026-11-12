@@ -5868,7 +5868,9 @@ Depends: none.
 
 ### P-591. Q-HUB-537: A review goes stale when a sibling step ends while it runs
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The review gate is deleted with the other retired gates and no hook on main judges a review, as of commit 3240ced.
 
 Acceptance: A review is judged by the step its Next line names, or the review gate is retired by the design's retirement act.
 
@@ -5876,7 +5878,9 @@ Depends: none.
 
 ### P-592. Q-HUB-538: The prompt hook prints a correction line at agent hand-backs, seen again in a second session
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The prompt hook that printed the correction line is deleted with the other retired gates, as of commit 3240ced.
 
 Acceptance: The prompt hook prints no message line at an agent's hand-back, or the hook is retired by the design's retirement act; P-564 carries the defect meanwhile.
 
@@ -5892,7 +5896,9 @@ Depends: none.
 
 ### P-594. Q-HUB-540: The plan check goes red mid-plan on the plan's own work
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The plan check's sections are retired and the plan-scope check stands as a shell that passes, as of commit 3240ced.
 
 Acceptance: The What is quote and the Roadmap line are judged against the files as they stood at approval, or the plan check's sections are retired by the design's retirement act.
 
@@ -5900,7 +5906,9 @@ Depends: none.
 
 ### P-595. Q-HUB-541: The stop guard asks for a queue key on each of sixty Found lines
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The stop guard is retired to a shell that passes and asks for no queue key, as of commit 3240ced.
 
 Acceptance: A report's mapping of Found lines to keys satisfies the stop guard in place of an edit to each line, or the guard is retired by the design's retirement act.
 
@@ -5916,7 +5924,9 @@ Depends: none.
 
 ### P-597. Q-HUB-543: The pending guard's forced turn repeats answered messages and refuses reads of the record
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The pending guard is deleted with the other retired gates and forces no turn, as of commit 3240ced.
 
 Acceptance: The turn the pending guard forces passes reads of the record, as the correction hold does, and a message the guard printed as never given is not delivered again as a prompt to be answered twice; or the guard is retired by the design's retirement act.
 
