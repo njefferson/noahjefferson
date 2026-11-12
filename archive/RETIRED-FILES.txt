@@ -12,3 +12,5 @@ report.mjs
 plan-seed.mjs
 plan-land.mjs
 stand-down.mjs
+aim-review.md
+agent-rules.md
