@@ -186,6 +186,10 @@ issue.
  fixed rows keep their release number; never silently delete a row.
 - Run the a11y audit (axe-core + custom checks, both themes) at the promotion to
  main, once over the release, and never against a staging build or a test page.
+ A release that changes only the patch notes owes it, and the colour inventory
+ with it, because the notes render into the page. The checker's one look at a
+ build's stated result, made before the build is handed to the owner, is not this
+ audit and does not stand in for it.
 
 TREMOR IS A SUPPORTED CONDITION. NOT SUPPORTING IT IS A FAILURE — the same fail
 state as hue-only encoding, and judged the same way. Assume a user whose pointer

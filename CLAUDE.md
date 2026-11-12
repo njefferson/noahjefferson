@@ -761,8 +761,8 @@ Every item below has actually happened.
  partitioned by file that run at once, check their new assertions against the code
  they call and run their own cases and new plants, one landing step that proves in
  the foreground, commits once for each file step, closes in the program and pushes
- once with the live clone pulled last, no run in the background, the cost said, and
- no walk against a staging build. It binds the session's own turns as well as a
+ once with the live clone pulled last, no run in the background, the cost said, a checker's one look at the stated result before a build is handed to the owner, and
+ no other walk against a staging build. It binds the session's own turns as well as a
  plan's steps. (Doctrine §0e rule 4.)
 - **THE PLAN CHECK REFUSES A TITLE, A PULL, A TIER AND A FILES LINE, AND THE CHECK OF
  A CALL PASSES IN PLAN MODE.** `plan-guard.mjs` faults, as faults of shape that set no

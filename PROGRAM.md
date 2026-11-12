@@ -5800,7 +5800,9 @@ Depends: none.
 
 ### P-587. Q-HUB-533: The seed's rule on renders does not name the patch notes
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: done. Plan: none.
+
+Done: The seed's standing text, the plans page and the apps page name a release that changes only the patch notes as owing the accessibility walk and the colour inventory.
 
 Acceptance: The seed's standing text and the plans page say that a release editing only the patch notes owes the accessibility walk and the color inventory, because the patch notes render into the hashed markup.
 
@@ -5816,7 +5818,9 @@ Depends: none.
 
 ### P-589. Q-HUB-535: The check before a push waits for a hand-back call that an agent under a restored plan mode never makes
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The check before a push counts a pass written as the first line of an ended agent's final message, so it no longer waits for a hand-back call; a case in the push guard's tests holds it.
 
 Acceptance: An agent sent under a plan mode the harness restored at a resume, ending with words and no hand-back call, is not read by the check before a push as still running, or the refusal says plainly that such an agent is sent again after the plan is approved at the button; a case in the guard's tests holds it.
 

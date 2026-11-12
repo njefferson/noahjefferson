@@ -172,7 +172,7 @@ export const cases = [
     name: 'step 131: the batch print groups the findings by file with a seam in both steps, gives a finding that names no file no step and lists its key after the plan\'s end, runs the file steps after the take-up and together, adds one commit step, computes the Cost from the estimates, and carries the standing lines of a parallel batch, the index row of the close and the device line',
     guards: ['batch_after_parallel', 'batch_landing_after', 'batch_order_landing', 'batch_no_file_own', 'batch_seam_out', 'batch_seam_in', 'batch_case_file', 'batch_landing_step', 'batch_parallel_rules', 'batch_cost_agent', 'batch_cost_wall',
       'batch_wave_cap', 'batch_wave_header', 'batch_wave_home', 'batch_wave_switch',
-      'tpl_close_index', 'tpl_review_resend', 'tpl_commit_red_case', 'tpl_commit_by_path', 'tpl_rule_no_bg', 'tpl_device_line', 'tpl_push_landing', 'tpl_commit_step_text'],
+      'tpl_close_index', 'tpl_review_resend', 'tpl_commit_red_case', 'tpl_commit_by_path', 'tpl_rule_no_bg', 'tpl_device_line', 'tpl_first_look', 'tpl_patch_notes', 'tpl_push_landing', 'tpl_commit_step_text'],
     run(m, dir, h) {
       const hub = h.batchHub(dir);
       mkdirSync(join(hub, 'guard-cases'), { recursive: true });
@@ -208,6 +208,8 @@ export const cases = [
         ['the landing step puts an existing case turned red right in the owning step\'s file', 'the landing step puts the code right in the owning step\'s file and keeps the finding\'s fix'],
         ['no run of the plan goes in the background', 'No run of this plan goes in the background'],
         ['a number from the device comes from the test page and never a container render', 'names the app\'s test page as its instrument and never a container render'],
+        ['a checker that did none of the work looks first at the built thing in the container', 'a checker that did none of the work opens the built thing in the container'],
+        ['a release of patch notes alone owes the accessibility walk', 'A release that changes only the patch notes owes the accessibility walk'],
         ['nothing is pushed except by the take-up step and the landing step', 'Nothing is pushed except by the take-up step and by the landing step, which is the close step in a plan for one item'],
       ];
       for (const [label, s] of lines) rows.push([`batch: ${label}`, t.includes(s), s]);
@@ -820,6 +822,8 @@ export const plants = {
   tpl_commit_by_path: ['- A suite case never writes into the working copy: a case that needs a program', "- A landing step with several commits stages nothing beforehand and names each commit's own files after the message, because the Commands hold no unstage.\n- A suite case never writes into the working copy: a case that needs a program", 'plans/seed-template.md'],
   tpl_rule_no_bg: ['No run of this plan goes in the background.', 'A run of this plan may go in the background.', 'plans/seed-template.md'],
   tpl_device_line: ["names the app's test page as its instrument and never a container render", "names a container render as its instrument", 'plans/seed-template.md'],
+  tpl_first_look: ['a checker that did none of the work opens the built thing in the container', 'the built thing is first opened on the device', 'plans/seed-template.md'],
+  tpl_patch_notes: ['A release that changes only the patch notes owes the accessibility walk', 'A release that changes only the patch notes owes no accessibility walk', 'plans/seed-template.md'],
   tpl_push_landing: ['Nothing is pushed except by the take-up step and by the landing step, which is the close step in a plan for one item', 'Nothing is pushed except by the take-up step', 'plans/seed-template.md'],
   // step 145: the take-up's partition finding, Q-HUB-363, Q-HUB-364 and Q-HUB-368
   part_merge: ['groups = mergeSharing(groups, claimsOf);', 'void mergeSharing;', 'plan-seed.mjs'],

@@ -437,11 +437,19 @@ the button. A plan does not edit `permissions.allow` of the session's own
    plants by key, its other plants proved by the runner), the checks, one commit
    for each file step, the close in the program, one push, and the pull of the live
    clone last; the landing step proves, commits and pushes by the landing command's verbs and closes by the program command's. A plan whose steps run one after another says in its Branches why
-   they cannot run together. A step that needs a number from the device names the
-   app's test page as its instrument and never a container render, and no
-   accessibility walk, cold read, browser walk or screenshot tour runs against a
-   staging build or a test page as a step of a plan; the gate runs once, at the
-   promotion to main. Several waves may be rounds of one plan: one take-up, then
+   they cannot run together. Before a build is handed to the owner, a checker that
+   did none of the work opens the built thing in the container, in a browser where
+   it has a screen, and tries the stated result once; its report says what it saw
+   and what cannot be seen there. A step that needs a number from the device names
+   the app's test page as its instrument and never a container render, and what
+   only the device can show, its speed and its own graphics, is named as not yet
+   shown until it has been measured there. No accessibility walk, cold read or
+   screenshot tour runs for each step, or against a staging build or a test page as
+   a step of a plan: those run once, over the integrated release, at the promotion
+   to main, and nothing else walks a staging build but the checker's one look at
+   the stated result. A release that changes only the patch notes owes the
+   accessibility walk and the colour inventory, because the notes render into the
+   page. Several waves may be rounds of one plan: one take-up, then
    for each round its file steps and its landing step, the live clone pulled once,
    by the last landing. No gate refuses a plan for this shape itself, by the owner's
    word of 9 November: the seed prints it, this page states it, and the review's
@@ -876,9 +884,14 @@ developing the apps: each repo's ranked roadmap names the next work, and a
 session works it in parallel across the horizon, never one item polished for
 hours while the rest wait. Speed comes from cutting what is unnecessary.
 Verification is not that: it runs once, over the integrated release at the
-promotion to main, which is the public boundary, and never per step. Staging
-carries the owner's own pass on the device and the app's test page as the
-measurement, and nothing walks it.
+promotion to main, which is the public boundary, and never per step. Before a
+build is handed to the owner, a checker that did none of the work opens the built
+thing in the container and tries the stated result once, and says what it saw and
+what cannot be seen there. Staging then carries the owner's own pass on the device
+and the app's test page as the measurement of what only the device can show, and
+nothing walks it but that one look. A release that changes only the patch notes
+owes the accessibility walk and the colour inventory at the promotion, because the
+notes render into the page.
 `stop-guard.mjs` refuses a reply that asks the owner for the next work, and one
 that offers to drop verification to save time. (LESSONS §380.)
 
