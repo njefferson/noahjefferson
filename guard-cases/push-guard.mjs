@@ -58,7 +58,7 @@ function endedSession(h, id, calls, final) {
 /** Run the guard on one Bash line in `repoDir`, as the hook does. */
 const push = (dir, repoDir, command, tr, sessionId = 'pc-session') => spawnSync('node', [join(dir, 'push-guard.mjs')], {
   input: JSON.stringify({ tool_name: 'Bash', tool_input: { command }, cwd: repoDir, session_id: sessionId, ...(tr ? { transcript_path: tr } : {}) }),
-  encoding: 'utf8', env });
+  encoding: 'utf8', timeout: 60000, env });
 
 export const cases = [
   {
@@ -211,7 +211,7 @@ export const cases = [
     guards: ['pc_connector_held'],
     run(m, dir, h) {
       const write = (tool, branch) => spawnSync('node', [join(dir, 'push-guard.mjs')], {
-        input: JSON.stringify({ tool_name: tool, tool_input: { branch, path: 'a.txt' }, cwd: dir, session_id: 'pc-session' }), encoding: 'utf8', env });
+        input: JSON.stringify({ tool_name: tool, tool_input: { branch, path: 'a.txt' }, cwd: dir, session_id: 'pc-session' }), encoding: 'utf8', timeout: 60000, env });
       const staging = write('mcp__github__create_or_update_file', 'staging');
       const main = write('mcp__github__push_files', 'main');
       const del = write('mcp__github__delete_file', 'staging');

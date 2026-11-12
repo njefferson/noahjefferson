@@ -41,6 +41,11 @@ const MADE = [];
 const tmp = (p) => { const d = mkdtempSync(join(tmpdir(), p)); MADE.push(d); return d; };
 // Every file the guards keep per session lands here, never in the real
 const REAL_TMP = tmpdir();
+// NESTING STOPS AT ONE LEVEL. A copy of the suite that a case or a plant starts reads this marker, which every run of the suite sets in its
+// own environment for the children it starts; a copy that finds it set skips the cases that start copies of the suite (`startsCopies`),
+// so a case that tests the plant runner cannot start a run that starts more runs. The old suite had only CASE_FILTER_NESTED, on one case.
+const NESTED = process.env.SG_NESTED === '1';
+process.env.SG_NESTED = '1';
 const STATE = mkdtempSync(join(tmpdir(), 'sg-state-'));
 // The stop guard reads the approval marker under the home directory, and a real
 // session's marker (a plan in force, steps left, no agent of the test's running)
@@ -100,7 +105,7 @@ const transcript = (entries) => { const f = join(tmp('sg-tr-'), 't.jsonl'); writ
 function repo(files, name) {
   const d = name ? join(tmp('sg-repos-'), name) : tmp('sg-repo-');
   if (name) mkdirSync(d);
-  const g = (...a) => spawnSync('git', ['-C', d, ...a], { encoding: 'utf8' });
+  const g = (...a) => spawnSync('git', ['-C', d, ...a], { encoding: 'utf8', timeout: 60000 });
   g('init', '-q'); g('config', 'user.email', 't@example.invalid'); g('config', 'user.name', 't'); g('config', 'commit.gpgsign', 'false');
   for (const [f, c] of Object.entries(files)) writeFileSync(join(d, f), c);
   g('add', '-A'); g('commit', '-q', '-m', 'base');
@@ -250,7 +255,7 @@ const CASES = [
     guards: ['commit_msg_hook_trailer', 'commit_msg_hook_link', 'commit_msg_hook_model', 'commit_msg_hook_install', 'commit_msg_hook_line'],
     run(m, dir) {
       const t = tmp('sg-cmh-');
-      const g = (...a) => spawnSync('git', ['-C', t, ...a], { encoding: 'utf8' });
+      const g = (...a) => spawnSync('git', ['-C', t, ...a], { encoding: 'utf8', timeout: 60000 });
       g('init', '-q', '-b', 'main'); g('config', 'user.email', 't@example.invalid'); g('config', 'user.name', 't'); g('config', 'commit.gpgsign', 'false');
       writeFileSync(join(t, '.branch-guard'), 'work=main\n');
       const inst = spawnSync('node', [join(dir, 'branch-guard.mjs'), '--repo', t, '--install'], { encoding: 'utf8', timeout: 60000 });
@@ -670,9 +675,47 @@ const CASES = [
       ]);
     },
   },
+  {
+    name: 'nesting stops at one level: a copy of the suite that a case or a plant starts skips the cases that start copies and says so in one line, a top-level run sets the marker for its children, and the chunks of a top-level plants run are not nested',
+    guards: ['nest_read', 'nest_set', 'nest_skip', 'nest_chunk'],
+    spawns: true,
+    run(m, dir, h) {
+      const planted = [
+        "import { readFileSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        'export const cases = [',
+        "  { name: 'planted-spawner', spawns: true, guards: ['planted_spawn'], run(m, dir) { console.log('SPAWNER-RAN'); return readFileSync(join(dir, 'planted-target.mjs'), 'utf8').includes('third-line'); } },",
+        "  { name: 'planted-env-reader', run() { console.log('ENV-MARK=' + process.env.SG_NESTED); return true; } },",
+        '];',
+        'export const plants = {',
+        "  planted_spawn: ['third-line', 'x', 'planted-target.mjs'],",
+        '};',
+        '',
+      ].join('\n');
+      const c = h.suiteCopy(dir, { 'planted-target.mjs': PLANTED_TARGET, 'guard-cases/planted-nest.mjs': planted });
+      const both = ['--case=planted-spawner,planted-env-reader'];
+      const nested = c.run(both);
+      const top = c.run(both, { SG_NESTED: '' });
+      const topPlants = c.run(['--plants', '--files=planted-target.mjs'], { SG_NESTED: '' });
+      const nestedPlants = c.run(['--plants', '--files=planted-target.mjs']);
+      const skipLines = (out) => out.split('\n').filter((l) => l.startsWith('NESTED COPY:')).length;
+      return h.assertAll([
+        ['a nested copy skips the case that starts copies', !/SPAWNER-RAN/.test(nested.stdout) && /^PASS  planted-env-reader/m.test(nested.stdout), nested.stdout + nested.stderr],
+        ['and says so in one line', skipLines(nested.stdout) === 1, nested.stdout],
+        ['a top-level run runs that case and prints no skip line', /SPAWNER-RAN/.test(top.stdout) && skipLines(top.stdout) === 0, top.stdout + top.stderr],
+        ['a top-level run sets the marker for the children it starts', /ENV-MARK=1/.test(top.stdout), top.stdout],
+        ['the chunk of a top-level plants run is not nested: the plant on a spawning case is caught', /^CAUGHT  plant "planted_spawn"/m.test(topPlants.stdout), topPlants.stdout + topPlants.stderr],
+        ['the chunk of a nested plants run stays nested: that case is skipped, so the plant is not caught', !/^CAUGHT  plant "planted_spawn"/m.test(nestedPlants.stdout) && skipLines(nestedPlants.stdout) === 1, nestedPlants.stdout + nestedPlants.stderr],
+      ]);
+    },
+  },
 ];
 
 const PLANTS = {
+  nest_read: ["\nconst NESTED = process.env.SG_NESTED === '1';\n", '\nconst NESTED = false;\n', 'session-guards.test.mjs'],
+  nest_set: ["\nprocess.env.SG_NESTED = '1';\n", '\n', 'session-guards.test.mjs'],
+  nest_skip: ['\n    if (NESTED && startsCopies(c)) {\n', '\n    if (false) {\n', 'session-guards.test.mjs'],
+  nest_chunk: ["\n      { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, timeout: CHUNK_TIMEOUT, killSignal: 'SIGKILL', env: { ...process.env, TMPDIR: REAL_TMP, SG_NESTED: NESTED ? '1' : '' } });", "\n      { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, timeout: CHUNK_TIMEOUT, killSignal: 'SIGKILL', env: { ...process.env, TMPDIR: REAL_TMP, SG_NESTED: '1' } });", 'session-guards.test.mjs'],
   cost_item_read: ['item: section.match(/\\bP-\\d+\\b/)?.[0] ?? null };', 'item: null };', 'session-cost.mjs'],
   cost_saved_read: ['if (file && existsSync(file)) return', 'if (false && file && existsSync(file)) return', 'session-cost.mjs'],
   cost_write_read: ['lastWrite = planIdentity(b.input?.content);', 'lastWrite = { title: null, item: null };', 'session-cost.mjs'],
@@ -783,7 +826,7 @@ function suiteCopy(dir, extra = {}) {
   for (const f of FILES) copyGuard(join(dir, f), join(c.dir, f));
   for (const [f, text] of Object.entries(extra)) { mkdirSync(dirname(join(c.dir, f)), { recursive: true }); writeFileSync(join(c.dir, f), text); }
   c.g('add', '-A'); c.g('commit', '-q', '-m', 'guards');
-  const run = (args, env = {}) => spawnSync('node', [join(c.dir, 'session-guards.test.mjs'), ...args], { encoding: 'utf8', timeout: 600000, maxBuffer: 256 * 1024 * 1024, env: { ...process.env, TMPDIR: REAL_TMP, ...env } });
+  const run = (args, env = {}) => spawnSync('node', [join(c.dir, 'session-guards.test.mjs'), ...args], { encoding: 'utf8', timeout: 240000, killSignal: 'SIGKILL', maxBuffer: 256 * 1024 * 1024, env: { ...process.env, TMPDIR: REAL_TMP, ...env } });
   return { ...c, run };
 }
 
@@ -844,7 +887,7 @@ for (const f of CASE_FILE_NAMES) {
 function trackedWatch(dir, list = null) {
   let files = list;
   if (!files) {
-    const ls = spawnSync('git', ['-C', dir, 'ls-files', '-z'], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+    const ls = spawnSync('git', ['-C', dir, 'ls-files', '-z'], { encoding: 'utf8', timeout: 60000, maxBuffer: 256 * 1024 * 1024 });
     if (ls.status !== 0) return null;
     files = (ls.stdout ?? '').split('\0').filter(Boolean);
   }
@@ -876,7 +919,7 @@ let WROTE = 0;
  * @returns {{dir: string, files: string[]}|null} null when `dir` is not a git checkout; else the copy's folder and the files in it
  */
 function checkoutCopy(dir) {
-  const ls = spawnSync('git', ['-C', dir, 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+  const ls = spawnSync('git', ['-C', dir, 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], { encoding: 'utf8', timeout: 60000, maxBuffer: 256 * 1024 * 1024 });
   if (ls.status !== 0) return null;
   const copy = mkdtempSync(join(REAL_TMP, 'sg-run-'));
   const files = [];
@@ -887,6 +930,9 @@ function checkoutCopy(dir) {
   return { dir: copy, files };
 }
 
+// A case starts copies of the suite when it says so (`spawns: true`) or when its text names the suite file or the copy helper.
+const startsCopies = (c) => c.spawns === true || /session-guards\.test\.mjs|suiteCopy/.test(String(c.run));
+let NESTED_SAID = false;
 async function runAll(dir, only, filter, watch = null) {
   const imp = (f) => import(pathToFileURL(join(dir, f)).href + `?v=${Math.random()}`);
   const m = { push: await imp('push-guard.mjs') };
@@ -894,6 +940,10 @@ async function runAll(dir, only, filter, watch = null) {
   for (const c of CASES) {
     if (only && !(c.guards ?? []).includes(only)) continue;
     if (filter && !filter.some((w) => c.name.includes(w))) continue;
+    if (NESTED && startsCopies(c)) {
+      if (!NESTED_SAID) { NESTED_SAID = true; console.log(`NESTED COPY: this run was started by a case or a plant of another run of the suite, so the cases that start copies of the suite are skipped here (first: "${c.name.slice(0, 60)}"); nesting stops at one level.`); }
+      continue;
+    }
     let ok = false, err, bare = false;
     try { ok = await c.run(m, dir, H); } catch (e) { ok = false; err = e?.message; }
     // A CASE THAT ENDS IN A BARE `return true` NAMES NO ASSERTION WHEN IT TURNS RED (Q-HUB-346): the mark assertAll returns is a pass,
@@ -966,7 +1016,7 @@ if (caseList) {
  *   "nothing touched".
  */
 function touchedFiles() {
-  const r = spawnSync('git', ['-C', HERE, 'status', '--porcelain', '-uall'], { encoding: 'utf8' });
+  const r = spawnSync('git', ['-C', HERE, 'status', '--porcelain', '-uall'], { encoding: 'utf8', timeout: 60000 });
   if (r.status !== 0) return null;
   const paths = (r.stdout ?? '').split('\n').filter(Boolean).map((l) => l.slice(3).replace(/^.* -> /, '').trim());
   // A case file is named for the guard file it covers: touching guard-cases/X.mjs touches X.mjs for the plants.
@@ -977,6 +1027,7 @@ function touchedFiles() {
 // heap for good, so one process over three guard files passed two gigabytes near plant 680 and aborted. The plants run in chunks, each
 // chunk in a new process of its own, and the parent prints what the chunks print and adds up their verdicts.
 const PLANT_CHUNK = Math.max(1, Math.floor(Number(process.env.PLANT_CHUNK)) || 25);
+const CHUNK_TIMEOUT = 500000;
 const plantsByFile = () => {
   const n = new Map();
   for (const [, , f] of Object.values(PLANTS)) n.set(f, (n.get(f) ?? 0) + 1);
@@ -1055,7 +1106,7 @@ if (process.argv.includes('--plants') && argValue('plant-keys') !== undefined) {
   for (let i = 0; i < keys.length; i += PLANT_CHUNK) {
     const chunk = keys.slice(i, i + PLANT_CHUNK);
     const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), '--plants', `--plant-keys=${chunk.join(',')}`, ...passThrough],
-      { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, env: { ...process.env, TMPDIR: REAL_TMP } });
+      { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, timeout: CHUNK_TIMEOUT, killSignal: 'SIGKILL', env: { ...process.env, TMPDIR: REAL_TMP, SG_NESTED: NESTED ? '1' : '' } });
     let end = null;
     const reported = new Set();
     for (const line of (r.stdout ?? '').split('\n')) {

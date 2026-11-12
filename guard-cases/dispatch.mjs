@@ -21,7 +21,7 @@ function disp(h, hub, event, payload = {}, o = {}) {
 function planted(h, hooks, name = 'repo', launch = h.tmp('dp-launch-')) {
   const repo = join(launch, name);
   mkdirSync(join(repo, '.claude', 'hooks'), { recursive: true });
-  spawnSync('git', ['init', '-q', repo]);
+  spawnSync('git', ['init', '-q', repo], { timeout: 60000 });
   writeFileSync(join(repo, '.claude', 'settings.json'), JSON.stringify({ hooks }));
   return { launch, repo };
 }
@@ -134,12 +134,12 @@ export const cases = [
       work.g('checkout', '-q', '-B', 'main');
       const launch = h.tmp('dp-launch-');
       const clone = join(launch, 'hubcopy');
-      spawnSync('git', ['clone', '-q', work.dir, clone]);
+      spawnSync('git', ['clone', '-q', work.dir, clone], { timeout: 60000 });
       work.write('a.txt', 'a later commit\n');
       work.stage();
       work.g('commit', '-q', '-m', 'a later commit on main');
       const head = work.g('rev-parse', 'HEAD').stdout.trim();
-      const cloneHead = () => spawnSync('git', ['-C', clone, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim();
+      const cloneHead = () => spawnSync('git', ['-C', clone, 'rev-parse', 'HEAD'], { encoding: 'utf8', timeout: 60000 }).stdout.trim();
       const before = cloneHead();
       const compact = disp(h, dir, 'SessionStart', { source: 'compact' }, { launch });
       const afterCompact = cloneHead();
