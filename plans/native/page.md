@@ -8,6 +8,8 @@ This page is what a worker or a checker reads first. It is short on purpose.
 - Say what a long run will cost before it starts. The owner's credit goes to judgement only, so the cheapest tier that holds the rules does the work.
 - Report what changed and what it means, in plain words, with the state at the end: finished, paused on what, or running what.
 - Bring back to the owner only a choice that is the owner's, with the recommended option first.
+- A question from the owner gets an answer and nothing else. The approved plan stands as written. A plan is changed only for a reason, the change is called a change, and it is written in full and approved before any work is done under it.
+- When work stops on something only the owner can do, say so as a need: that work is stopped, what is needed and where it is done, why, what it holds up, and what is not known. A need is never written as a choice. A choice is offered only where each option leaves the work whole and the record cannot rank them.
 
 ## How a piece of work goes
 

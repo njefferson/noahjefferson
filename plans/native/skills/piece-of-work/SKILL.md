@@ -13,3 +13,5 @@ This is for the session that manages. The session plans, sends and judges; worke
 6. Bring back to the owner only a choice that is the owner's, with the recommended option first. A defect with a known fix is fixed, not asked about.
 7. At the end give the result and what the check showed, in California time, ending with the state line.
 8. Where the harness or a hook refuses something, stop that route, say plainly what was refused, and do not try another way to the same end.
+9. A question from the owner is answered and changes nothing. The approved page stands until a change to it is written in full and approved.
+10. When work stops on something only the owner can do, state it as a need and never as a choice: work is stopped, what is needed and where it is done, why, what it holds up, and what is not known.
