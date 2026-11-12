@@ -30,7 +30,7 @@
       "Bash(node /home/user/noahjefferson/third-person-check.mjs:*)",
       "Bash(node /home/user/noahjefferson/example-check.mjs:*)",
       "Bash(node /home/user/noahjefferson/pin-check.mjs:*)",
-      "Bash(git rebase:*)",
+      "Bash(git rebase origin/main)",
       "Bash(git rm:*)",
       "Bash(git show:*)",
       "Bash(git rev-parse:*)",
