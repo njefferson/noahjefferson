@@ -58,6 +58,24 @@ const entryOf = (root, key) => new RegExp(`### ${key}\\. [\\s\\S]*?(?=\\n### |\\
 
 const out = (r) => `exit ${r.status}: ${String(r.stdout)}${String(r.stderr).slice(0, 400)}`;
 
+/** A planted transcript with two approved plans, an owner message and a turn in each, a cost entry, and (when asked) one refused stop in the first plan. */
+function plantedTwoPlans(withStop) {
+  const L = (o) => JSON.stringify(o);
+  const approval = (ts, title, item) => L({ type: 'user', timestamp: ts, message: { role: 'user', content: [{ type: 'tool_result', content: `User has approved your plan. You can now start.\n\n## Approved Plan:\n# ${title}\n\n## Item\n\n${item} of the planted program.\n\n## Asked\n\nnothing` }] } });
+  const said = (ts) => L({ type: 'user', timestamp: ts, origin: { kind: 'human' }, message: { role: 'user', content: 'carry on, go' } });
+  const turn = (id, ts) => L({ type: 'assistant', timestamp: ts, message: { id, role: 'assistant', model: 'model-x', usage: { input_tokens: 20, output_tokens: 40, cache_read_input_tokens: 200, cache_creation_input_tokens: 100 } } });
+  return [
+    approval('2026-11-01T01:03:00.000Z', 'First close plan', 'P-1'),
+    said('2026-11-01T01:04:00.000Z'),
+    turn('plant-turn-one', '2026-11-01T01:05:00.000Z'),
+    approval('2026-11-01T02:03:00.000Z', 'Second close plan', 'P-2'),
+    said('2026-11-01T02:04:00.000Z'),
+    turn('plant-turn-two', '2026-11-01T02:05:00.000Z'),
+    ...(withStop ? [L({ type: 'system', subtype: 'stop_hook_summary', timestamp: '2026-11-01T02:05:30.000Z', hookErrors: ['[$CLAUDE_PROJECT_DIR/.claude/hooks/stop-guard.sh]: STOP REFUSED this reply says the work is not finished ("still running")'] })] : []),
+    L({ type: 'cost-state', timestamp: '2026-11-01T02:06:00.000Z', totalCostUSD: 12.5, modelUsage: { 'model-x': { inputTokens: 40, outputTokens: 80, cacheReadInputTokens: 400, cacheCreationInputTokens: 200 } } }),
+  ].join('\n') + '\n';
+}
+
 export const cases = [
   {
     name: 'step 199: the claim verb sets each named open item planned with the plan\'s title on its plan line, leaves the others, refuses an item that is not open or not held with nothing written, and an unknown verb exits 2',
@@ -198,6 +216,65 @@ export const cases = [
     },
   },
   {
+    name: 'step 200: the measure verb writes the entry of a transcript whose print holds the words STOP REFUSED inside a count of refused stops, and does not refuse it',
+    guards: ['prog_measure_count_words'],
+    run(m, dir, h) {
+      const root = makeRoot(h);
+      const transcript = join(h.tmp('prog-stop-'), 'session.jsonl');
+      writeFileSync(transcript, plantedTwoPlans(true));
+      const printed = spawnSync('node', [join(dir, 'session-cost.mjs'), transcript], { encoding: 'utf8', timeout: 120000, maxBuffer: 64 * 1024 * 1024 });
+      const before = snap(root);
+      const r = run(dir, root, ['measure', transcript]);
+      return h.assertAll([
+        ['the instrument prints a count of stop refusals whose line holds the words STOP REFUSED', printed.status === 0 && /^\s+- 1\s+stop-guard\.sh: .*STOP REFUSED/m.test(printed.stdout), printed.stdout.slice(-1500)],
+        ['the verb writes the entry of the last plan and does not refuse', r.status === 0 && /wrote the close entry of plan 2 under P-10/.test(r.stdout) && snap(root) !== before, out(r)],
+        ['the entry counts the one stop-hook message', entryOf(root, 'P-10').includes('- Stop-hook messages: 1 in 1 stops.'), entryOf(root, 'P-10')],
+      ]);
+    },
+  },
+  {
+    name: 'step 200: the measure verb still refuses a transcript the instrument itself refuses to read, by its own refusal line, with nothing written',
+    guards: ['prog_measure_refuses'],
+    run(m, dir, h) {
+      const root = makeRoot(h);
+      const agentPath = join(h.tmp('prog-agent-'), 'subagents', 'agent-x.jsonl');
+      const printed = spawnSync('node', [join(dir, 'session-cost.mjs'), agentPath], { encoding: 'utf8', timeout: 120000, maxBuffer: 64 * 1024 * 1024 });
+      const before = snap(root);
+      const r = run(dir, root, ['measure', agentPath]);
+      return h.assertAll([
+        ['the instrument opens a line with its own refusal', /^REFUSED /m.test(printed.stdout), printed.stdout.slice(0, 600)],
+        ['the verb refuses with nothing written', r.status === 1 && /the cost instrument refused the transcript/.test(r.stdout) && snap(root) === before, out(r)],
+      ]);
+    },
+  },
+  {
+    name: 'step 200: the measure verb with --plan=1 writes the entry of the first of two plans with the wording of a plan that had ended and without the sentence on being short by what follows, without the switch writes the last plan with the old wording, and an unknown number is refused naming it with nothing written',
+    guards: ['prog_measure_plan_switch'],
+    run(m, dir, h) {
+      const root = makeRoot(h);
+      const transcript = join(h.tmp('prog-two-'), 'session.jsonl');
+      writeFileSync(transcript, plantedTwoPlans(false));
+      const before = snap(root);
+      const unknown = run(dir, root, ['measure', transcript, '--plan=7']);
+      const afterUnknown = snap(root);
+      const first = run(dir, root, ['measure', transcript, '--plan=1']);
+      const p10 = entryOf(root, 'P-10');
+      const entry = p10.slice(p10.indexOf('Close entry of the plan ('));
+      const second = run(dir, root, ['measure', transcript]);
+      const both = entryOf(root, 'P-10');
+      const lastEntry = both.slice(both.lastIndexOf('Close entry of the plan ('));
+      return h.assertAll([
+        ['an unknown plan number is refused naming it with nothing written', unknown.status === 1 && /REFUSED, the instrument's print holds no plan numbered "7"/.test(unknown.stdout) && afterUnknown === before, out(unknown)],
+        ['--plan=1 writes plan 1', first.status === 0 && /wrote the close entry of plan 1 under P-10/.test(first.stdout) && entry.startsWith('Close entry of the plan (P-1: First close plan)'), out(first) + entry],
+        ['the first line says the plan had ended when the instrument ran', entry.split('\n')[0].includes("transcript, the plan having ended when the instrument ran. The instrument numbers it plan 1") && !entry.includes('so far and before the push'), entry],
+        ['the dollars line leaves out being short by what follows', /reads 12\.5 dollars for the whole session/.test(entry) && !entry.includes('short by what follows') && entry.includes('(Q-HUB-132).'), entry],
+        ['without the switch the last plan is written with the old wording', second.status === 0 && /wrote the close entry of plan 2 under P-10/.test(second.stdout)
+          && lastEntry.startsWith('Close entry of the plan (P-2: Second close plan)') && lastEntry.split('\n')[0].includes('transcript, so far and before the push that follows. The instrument numbers it plan 2')
+          && lastEntry.includes('Like every close entry written in a middle step it is short by what follows (Q-HUB-252)'), lastEntry],
+      ]);
+    },
+  },
+  {
     name: 'step 199: the lesson verb writes the next lesson\'s file under its number and its row after the last row of the index, and refuses a gate file the hub does not hold, a judgement with no smell line and a body that attributes a message to a person, with nothing written',
     guards: ['prog_lesson_writes', 'prog_lesson_row', 'prog_lesson_gate', 'prog_lesson_number', 'prog_lesson_slug', 'prog_lesson_text', 'prog_refuse_exit'],
     run(m, dir, h) {
@@ -253,7 +330,9 @@ export const plants = {
   prog_measure_writes: ['lines.splice(at + 1, 0, \'\', ...entry);', 'lines.splice(at + 1, 0, \'\');', 'program.mjs'],
   prog_measure_figures: ['of which ${own[1]} end in a go-word', 'of which ${own[2]} end in a go-word', 'program.mjs'],
   prog_measure_turns: ['return m ? `${m[2]} on ${m[1]} with ${m[3]} output tokens` : x;', 'return m ? `${m[2]} on ${m[1]} with ${m[2]} output tokens` : x;', 'program.mjs'],
-  prog_measure_refuses: ['/PLANTED COUNTS DO NOT MATCH|SKIPPED|REFUSED/.test(out)) causes.push(\'the cost instrument refused', '/PLANTED COUNTS DO NOT MATCH/.test(out)) causes.push(\'the cost instrument did not refuse', 'program.mjs'],
+  prog_measure_refuses: ['/^(?:PLANTED COUNTS DO NOT MATCH |REFUSED |SKIPPED )/m.test(out)) causes.push(\'the cost instrument refused', '/^(?:PLANTED COUNTS DO NOT MATCH |SKIPPED )/m.test(out)) causes.push(\'the cost instrument refused', 'program.mjs'],
+  prog_measure_count_words: ['/^(?:PLANTED COUNTS DO NOT MATCH |REFUSED |SKIPPED )/m.test(out)) causes.push(\'the cost instrument refused', '/PLANTED COUNTS DO NOT MATCH|SKIPPED|REFUSED/.test(out)) causes.push(\'the cost instrument refused', 'program.mjs'],
+  prog_measure_plan_switch: ['const last = wanted === null ? lastPlan : plans.find((m) => m[1] === wanted);', 'const last = lastPlan;', 'program.mjs'],
   prog_lesson_writes: ['write(root, join(P.lessons, name), text, wrote);', 'wrote.push(name);', 'program.mjs'],
   prog_lesson_row: ['rows.splice(lastRow + 1, 0, ', 'rows.splice(0, 0, ', 'program.mjs'],
   prog_lesson_gate: ['else if (g[1] === \'hub\' && !existsSync(join(root, g[2])))', 'else if (false)', 'program.mjs'],

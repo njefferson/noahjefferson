@@ -487,6 +487,36 @@ Close entry of the plan of a test set for Quietkeep (P-585), passed in by the Qu
 - The whole session, 16 approved plans since 21 September: 168 agents, all claude-sonnet-5-5, 3,606 turns, 2,665,781 output tokens; 103 agent hook refusals (94 plan fence); 9 compactions and 28 resumes before the run; the harness's running cost entry reads 911.57 dollars for the whole session.
 - These figures also stand as input to the fourth act of plans/native-setup.md, where the cost of the old way is set beside the new.
 
+Close entry of the plan (P-567: The hub's gates stand down for a trial of the harness's own parts: one switch that every hook honours, the approved design written where a session starts from it, and a map of the hub's wiring), from the cost instrument run on this session's transcript, the plan having ended when the instrument ran. The instrument numbers it plan 11 and it was approved Nov 11, 09:59 California time, approved again after an amendment at Nov 11, 11:16 California time and Nov 11, 12:52 California time and Nov 11, 13:59 California time:
+- The owner's messages: 13 in the plan, of which 11 end in a go-word and 2 do not; none carries the whole word stop.
+- Stop-hook messages: 11 in 11 stops.
+- Main-thread refusals: 12 (pending-guard 6, plan-guard (plan mode) 3, manager fence 1, plan rules gate 1, correction hold 1).
+- Agents: 12, usage claude-sonnet-5-5 with 190,912 output tokens, 42,694,009 cache-read tokens and 2,002,678 cache-written tokens; 6 hook refusals (plan fence 6).
+- Main-thread turns: 73 on claude-opus-5-5 with 44,856 output tokens; 50 on claude-fable-5-2 with 239,617 output tokens; 1 on <synthetic> with 0 output tokens.
+- Compactions: 1. Resumes: 4. Pushes: the instrument does not count them.
+- The whole transcript over its approved plans: 117 owner messages (68 go-words, 49 without, 8 carrying the whole word stop), 468 agents, 9 compactions, 26 resumes.
+- The harness's own running cost entry, the last of 40, reads 1599.6319502999993 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
+
+Close entry of the plan (no item read: The hub's second act: the short page, the worker and the checker, two procedures, and the check before a push), from the cost instrument run on this session's transcript, the plan having ended when the instrument ran. The instrument numbers it plan 12 and it was approved Nov 11, 14:48 California time:
+- The owner's messages: 8 in the plan, of which 8 end in a go-word and 0 do not; none carries the whole word stop.
+- Stop-hook messages: 20 in 20 stops.
+- Main-thread refusals: 0.
+- Agents: 13, usage claude-sonnet-5-5 with 110,947 output tokens, 16,864,703 cache-read tokens and 2,756,487 cache-written tokens; 1 hook refusals (push gate 1).
+- Main-thread turns: 61 on claude-opus-5-5 with 52,888 output tokens; 25 on claude-fable-5-2 with 52,947 output tokens.
+- Compactions: 1. Resumes: 0. Pushes: the instrument does not count them.
+- The whole transcript over its approved plans: 117 owner messages (68 go-words, 49 without, 8 carrying the whole word stop), 468 agents, 9 compactions, 26 resumes.
+- The harness's own running cost entry, the last of 40, reads 1599.6319502999993 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
+
+Close entry of the plan (no item read: The hub's third act: the first look at built work goes to a checker, never to the owner), from the cost instrument run on this session's transcript, the plan having ended when the instrument ran. The instrument numbers it plan 13 and it was approved Nov 11, 19:17 California time:
+- The owner's messages: 3 in the plan, of which 3 end in a go-word and 0 do not; none carries the whole word stop.
+- Stop-hook messages: 2 in 2 stops.
+- Main-thread refusals: 0.
+- Agents: 2, usage claude-sonnet-5-5 with 21,935 output tokens, 815,364 cache-read tokens and 189,530 cache-written tokens; 0 hook refusals.
+- Main-thread turns: 17 on claude-opus-5-5 with 13,965 output tokens; 7 on claude-fable-5-2 with 29,824 output tokens.
+- Compactions: 0. Resumes: 0. Pushes: the instrument does not count them.
+- The whole transcript over its approved plans: 117 owner messages (68 go-words, 49 without, 8 carrying the whole word stop), 468 agents, 9 compactions, 26 resumes.
+- The harness's own running cost entry, the last of 40, reads 1599.6319502999993 dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).
+
 State: done; step 61 landed the plan and pushed it once, and the plan of 3 November set P-1 to P-10 done in its step 63.
 
 ## Parked settings
@@ -5774,7 +5804,9 @@ Depends: none.
 
 ### P-584. Q-HUB-531: The verb measure refuses a transcript on a stop-hook refusal count
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The verb measure matches only the instrument's own refusal lines, writes the cost entry for a transcript whose print holds the words STOP REFUSED in a count, and can be told which plan to write; a case holds each, and the stand-down plan's entry stands under the measure item.
 
 Acceptance: The verb measure writes the cost entry for a transcript whose print holds the words STOP REFUSED in a count, and still refuses a transcript the instrument itself refused, and a case holds each.
 

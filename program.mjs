@@ -9,7 +9,7 @@
  *   claim P-12 P-13 --plan <plan file>             sets each open item planned, with the plan's title on its plan line
  *   file <findings.json>                           files each finding: its file in found/, its item in the program, both counts raised
  *   done --item "P-12=One sentence." [--item ...]  sets each item done, with its Done sentence
- *   measure <session transcript> [--root ...]      writes the close entry of the plan last approved in the transcript under P-10, from session-cost.mjs
+ *   measure <session transcript> [--plan=<n>] [--root ...]   writes the close entry of the plan the instrument numbers n (the plan last approved without --plan) under P-10, from session-cost.mjs
  *   lesson --title <t> --declaration <d> --body <file>   writes the next lesson's file and its row in LESSONS.md
  *
  * A verb that refuses writes nothing, names each cause on its own line and exits 1. A verb that writes prints one line for each thing it wrote.
@@ -255,13 +255,18 @@ function measure(a, root) {
   const r = t ? spawnSync('node', [join(HERE, 'session-cost.mjs'), t], { encoding: 'utf8', timeout: 120000, maxBuffer: 64 * 1024 * 1024 }) : null;
   if (r && (r.error || r.status !== 0)) causes.push(`the cost instrument did not run: ${String(r.error?.message ?? `exit ${r.status}`)}`);
   const out = r ? String(r.stdout) : '';
-  if (r && !causes.length && /PLANTED COUNTS DO NOT MATCH|SKIPPED|REFUSED/.test(out)) causes.push('the cost instrument refused the transcript or failed its own planted counts');
+  if (r && !causes.length && /^(?:PLANTED COUNTS DO NOT MATCH |REFUSED |SKIPPED )/m.test(out)) causes.push('the cost instrument refused the transcript or failed its own planted counts');
   const text = slurp(P.program);
   if (text === null) causes.push('PROGRAM.md cannot be read');
   if (causes.length) refuse('measure', causes);
   const plans = [...out.matchAll(/^## Plan (\d+) \((.*)\), approved (.*)$/gm)];
-  const last = plans[plans.length - 1];
-  if (!last) refuse('measure', ['the instrument printed no approved plan for the transcript']);
+  const lastPlan = plans[plans.length - 1];
+  if (!lastPlan) refuse('measure', ['the instrument printed no approved plan for the transcript']);
+  const planSwitch = a.find((x) => x.startsWith('--plan='));
+  const wanted = planSwitch === undefined ? null : planSwitch.slice('--plan='.length).trim();
+  const last = wanted === null ? lastPlan : plans.find((m) => m[1] === wanted);
+  if (!last) refuse('measure', [`the instrument's print holds no plan numbered ${JSON.stringify(wanted)}`]);
+  const isLast = last === lastPlan;
   const b = bucketOf(out, new RegExp(`^## Plan ${last[1]} \\(`));
   const tot = bucketOf(out, /^## Total over every transcript/);
   const cost = /^The harness's own running cost entry, the last of ([\d,]+): total (\S+) dollars/m.exec(out);
@@ -284,7 +289,7 @@ function measure(a, root) {
   const use = listUnder(b, 'Agent usage by model').map((x) => { const m = /^(.*?): ([\d,]+) turns \(.*?\), input [\d,]+, output ([\d,]+), cache read ([\d,]+), cache written ([\d,]+)/.exec(x); return m ? `${m[1]} with ${m[3]} output tokens, ${m[4]} cache-read tokens and ${m[5]} cache-written tokens` : x; });
   const planLabel = last[2];
   const entry = [
-    `Close entry of the plan (${planLabel}), from the cost instrument run on this session's transcript, so far and before the push that follows. The instrument numbers it plan ${last[1]} and it was approved ${last[3]}:`,
+    `Close entry of the plan (${planLabel}), from the cost instrument run on this session's transcript${isLast ? ', so far and before the push that follows' : ', the plan having ended when the instrument ran'}. The instrument numbers it plan ${last[1]} and it was approved ${last[3]}:`,
     `- The owner's messages: ${own[0]} in the plan, of which ${own[1]} end in a go-word and ${own[2]} do not; ${own[3] === '0' ? 'none carries' : `${own[3]} carry`} the whole word stop.`,
     `- Stop-hook messages: ${stops[0]} in ${stops[1]} stops.`,
     `- Main-thread refusals: ${refs[0]}${refs[0] === '0' ? '' : ` (${gates('Hook refusals on the main thread')})`}.`,
@@ -293,7 +298,7 @@ function measure(a, root) {
     `- Compactions: ${comp[0]}. Resumes: ${starts[1]}. Pushes: the instrument does not count them.`,
   ];
   if (totOwn && totAg && totComp && totStarts) entry.push(`- The whole transcript over its approved plans: ${totOwn[0]} owner messages (${totOwn[1]} go-words, ${totOwn[2]} without, ${totOwn[3]} carrying the whole word stop), ${totAg[0]} agents, ${totComp[0]} compactions, ${totStarts[1]} resumes.`);
-  if (cost) entry.push(`- The harness's own running cost entry, the last of ${cost[1]}, reads ${cost[2]} dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132). Like every close entry written in a middle step it is short by what follows (Q-HUB-252): the agents of the sends after it are not in it.`);
+  if (cost) entry.push(`- The harness's own running cost entry, the last of ${cost[1]}, reads ${cost[2]} dollars for the whole session; the transcript holds no price list and that entry lags the transcript, so no dollars are derived by plan (Q-HUB-132).${isLast ? ' Like every close entry written in a middle step it is short by what follows (Q-HUB-252): the agents of the sends after it are not in it.' : ''}`);
   const lines = text.split('\n');
   const blk = blockOf(lines, 'P-10');
   if (!blk) refuse('measure', ['the program holds no item P-10']);
