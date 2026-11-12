@@ -12476,7 +12476,7 @@ const PLANTS = {
   push_connector_merge: ['    if (PR_MERGE.some(', '    if (false && PR_MERGE.some(', 'push-guard.mjs'],
   push_connector_update: ['    if (BRANCH_UPDATE.some(', '    if (false && BRANCH_UPDATE.some(', 'push-guard.mjs'],
   push_redirect: ['  const args = dropRedirects(words.slice(k + 1));', '  const args = words.slice(k + 1);', 'push-guard.mjs'],
-  push_wired: ['`node "${join(HUB, \'push-guard.mjs\')}"`, ', '', 'hook-dispatch.mjs'],
+  push_wired: ['`node "${join(HUB, \'push-guard.mjs\')}"`, `node "${join(HUB, \'plan-fence.mjs\')}"`', '`node "${join(HUB, \'plan-fence.mjs\')}"`', 'hook-dispatch.mjs'],
   // The plan fence.
   fence_write: ['    return `${HEAD} ${tool} to', '    return null; // ', 'plan-fence.mjs'],
   fence_scratch: ['${esc(sid)}/scratchpad/.', '[^/]+/scratchpad/.', 'hook-dispatch.mjs'],
