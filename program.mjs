@@ -21,7 +21,6 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { programEntries } from './plan-seed.mjs';
 import { DISCLOSURE, ATTRIBUTION, OWNER_LIFE, SESSION_LINKS } from './privacy-patterns.mjs';
 import { PRONOUN_G, POSSESSIVE_G, ATTRIBUTION_G } from './third-person-check.mjs';
 
@@ -29,6 +28,29 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const TAG = 'Q-HUB';
 const KINDS = { 'fix in': ['Fix in', 'fix-in'], 'fix-in': ['Fix in', 'fix-in'], 'put right already': ['Put right already', 'put-right'], 'put-right': ['Put right already', 'put-right'],
   'not the repository\'s': ['Not the repository\'s', 'not-repo'], 'not-repo': ['Not the repository\'s', 'not-repo'], 'not placed': ['Not placed', 'not-placed'], 'not-placed': ['Not placed', 'not-placed'] };
+
+/**
+ * The program's entries, copied from plan-seed.mjs so this file stands on nothing that is retired.
+ * @param {string} text  PROGRAM.md.
+ * @returns {{key: string, n: number, title: string, block: string, state: string, repository: string, depends: string, acceptance: string}[]} one per `### P-N. title`
+ *   heading, in file order. `block` runs from the heading to the line before the next `##` or `###` heading, so the dependency line and the
+ *   acceptance are read from THAT block and from no other: the entry above is a different item.
+ */
+export function programEntries(text) {
+  const lines = String(text ?? '').split('\n');
+  const heads = [];
+  lines.forEach((l, i) => { const m = /^### P-(\d+)\.\s*(.*)$/.exec(l); if (m) heads.push({ i, n: Number(m[1]), title: m[2].trim() }); });
+  return heads.map((h) => {
+    let end = lines.length;
+    for (let j = h.i + 1; j < lines.length; j++) if (/^#{2,3} /.test(lines[j])) { end = j; break; }
+    const block = lines.slice(h.i, end).join('\n').replace(/\s+$/, '');
+    const state = /^Repository:[^\n]*?\bState:\s*([\w-]+)/m.exec(block)?.[1] ?? '';
+    const repository = /^Repository:\s*(.*?)\.\s+(?:Goal|State)\b/m.exec(block)?.[1]?.trim() ?? '';
+    const depends = /^Depends:\s*(.*)$/m.exec(block)?.[1]?.trim() ?? '';
+    const acceptance = /^Acceptance:\s*([\s\S]*?)(?=\n\s*\n|$)/m.exec(block)?.[1]?.replace(/\s*\n\s*/g, ' ').trim() ?? '';
+    return { key: `P-${h.n}`, n: h.n, title: h.title, block, state, repository, depends, acceptance };
+  });
+}
 
 const slurp = (f) => { try { return readFileSync(f, 'utf8'); } catch { return null; } };
 /** The value of a switch (the word after it), or undefined. */

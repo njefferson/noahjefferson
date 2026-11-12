@@ -38,7 +38,13 @@ import { readFileSync, readdirSync, statSync, existsSync, mkdtempSync, writeFile
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { isOwnerMessage, textOf } from './transcript-tail.mjs';
-import { endsWithGoWord } from './hook-dispatch.mjs';
+
+// The words an owner message may end with, and the test of them, copied from hook-dispatch.mjs so this file stands on nothing that is retired.
+const GO_WORDS = ['go', 'ok', 'continue', 'approved', 'yes'];
+const endsWithGoWord = (text) => {
+  const words = String(text ?? '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ');
+  return GO_WORDS.includes(words[words.length - 1]);
+};
 
 console.log('MADE TO FAIL: the planted transcript holds 3 owner messages (2 ending in a go-word), 1 stop refusal, 2 main-thread turns, 3 approved plans (the first approved 2 times, the third saved as a large-output file) with their titles and program items, 1 agent and 1 compaction; the counts and the two titles printed next must read the same');
 console.log('nothing below is trustworthy unless the planted counts printed next equal those figures');

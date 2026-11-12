@@ -132,7 +132,7 @@ const FILES = ['pending-guard.mjs', 'keep-info-guard.mjs', 'compact-recall.mjs',
   'plan-guard.mjs', 'hook-dispatch.mjs', 'report.mjs', 'drive-guard.mjs', 'approved-plan-guard.mjs', 'plan-scope-check.mjs', 'stop-guard.mjs',
   'push-guard.mjs', 'plan-fence.mjs', 'doctrine-read-guard.mjs', 'session-brief.mjs', 'CLAUDE.md', 'agent-rules.md', 'DOCTRINE.md',
   'doctrine/never.md', 'doctrine/plans.md', 'doctrine/apps.md', 'session-cost.mjs', 'plan-seed.mjs', 'plans/seed-template.md', 'session-guards.test.mjs', 'CONFIG.md', 'privacy-patterns.mjs', 'branch-guard.mjs', 'lessons-check.mjs',
-  'hub-pin-check.mjs', 'gate-args.mjs', 'third-person-check.mjs', 'binary-files.mjs', 'stand-down.mjs'];
+  'hub-pin-check.mjs', 'gate-args.mjs', 'third-person-check.mjs', 'binary-files.mjs', 'stand-down.mjs', 'shell-words.mjs', 'agent-read.mjs'];
 // Every copy of the guards makes a file's folder before it copies it: the doctrine's three pages sit in doctrine/.
 const copyGuard = (from, to) => { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to); };
 // The shared rules file the guards read beside themselves: its version, and the pointer line a plan writes for the hub
@@ -12056,6 +12056,28 @@ const CASES = [
     },
   },
   {
+    name: 'the lessons check prints a citation of a retired gate file as retired and passes, and fails a missing gate file that is not on the retired list',
+    guards: ['lessons_retired_listed'],
+    run(m, dir, h) {
+      const hub = (gate) => {
+        const d = h.tmp('sg-lessons-retired-');
+        copyFileSync(join(dir, 'lessons-check.mjs'), join(d, 'lessons-check.mjs'));
+        mkdirSync(join(d, 'lessons'));
+        mkdirSync(join(d, 'archive'));
+        writeFileSync(join(d, 'archive', 'RETIRED-FILES.txt'), '# Planted: the retired gate files of the case.\n\nplanted-retired-gate.mjs\n');
+        writeFileSync(join(d, 'lessons', '1-a-planted-lesson.md'), `## 1 · A planted lesson\n\n**Enforced by:** GATE hub:${gate} the planted gate that is cited.\n`);
+        writeFileSync(join(d, 'LESSONS.md'), '# Lessons\n\nPlanted prose of the case.\n\n- **§1** — [A planted lesson](lessons/1-a-planted-lesson.md)\n');
+        return spawnSync('node', [join(d, 'lessons-check.mjs')], { encoding: 'utf8', timeout: 60000 });
+      };
+      const listed = hub('planted-retired-gate.mjs');
+      const other = hub('planted-other-gate.mjs');
+      return h.assertAll([
+        ['a missing gate file that is on the list passes and is printed as retired', listed.status === 0 && /^RETIRED \(1\)/m.test(listed.stdout) && /planted-retired-gate\.mjs, a gate file this repository retired/.test(listed.stdout) && /^PASS/m.test(listed.stdout), listed.stdout + listed.stderr],
+        ['a missing gate file that is not on the list fails as it did', other.status === 1 && /planted-other-gate\.mjs, which DOES NOT EXIST/.test(other.stdout) && !/RETIRED \(/.test(other.stdout), other.stdout + other.stderr],
+      ]);
+    },
+  },
+  {
     name: 'step 119: a case filter cut at a space is refused, as stray words among the arguments and as a filter that selects more than half of the suite, --allow-wide runs the wide one on purpose, and a quoted value with a space is read whole',
     guards: ['case_filter_stray', 'case_filter_wide'],
     run(m, dir, h) {
@@ -13630,6 +13652,7 @@ const PLANTS = {
   tracked_watch: ['\n        if (h !== b.sum) out.push(', '\n        if (false) out.push(', 'session-guards.test.mjs'],
   tracked_watch_fail: ['\n    if (wrote.length) { ok = false; WROTE++;', '\n    if (false) { ok = false; WROTE++;', 'session-guards.test.mjs'],
   lessons_red_first: ['\nif (failures.length) {\n  console.log(`=== lessons gate: RED', '\nif (false) {\n  console.log(`=== lessons gate: RED', 'lessons-check.mjs'],
+  lessons_retired_listed: ['\n      } else if (!existsSync(join(base, path)) && base === HUB && retiredFiles().has(path)) {', '\n      } else if (!existsSync(join(base, path)) && base === HUB && false && retiredFiles().has(path)) {', 'lessons-check.mjs'],
   case_filter_stray: ['\nif (strayWords.length) {\n', '\nif (false) {\n', 'session-guards.test.mjs'],
   case_filter_wide: ["\n  if (selected * 2 > CASES.length && !process.argv.includes('--allow-wide')) {", '\n  if (false) {', 'session-guards.test.mjs'],
   // Q-HUB-401 and Q-HUB-402. Each line opens with a newline, so the first match is the code and not this map.

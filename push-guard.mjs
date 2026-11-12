@@ -10,7 +10,7 @@
  * PreToolUse, run by hook-dispatch.mjs for the main thread and every agent:
  *
  *   Bash   every `git push` the line runs (inside `$( )`, `sh -c`, `eval` too,
- *          as reply-guard.mjs's `commandsIn` opens them) must land on `staging`
+ *          as shell-words.mjs's `commandsIn` opens them) must land on `staging`
  *          or `main`. A push with no refspec, or with `HEAD`, is the repo's
  *          current branch, read from the repo the push runs in (a plain `cd`,
  *          `-C`). A shell redirect on the push (`2>&1`, `> out`) and its target
@@ -37,7 +37,7 @@
  *          pass is an agent of this session whose hand-back (or, when it ended without that call, its final message, an assistant message of text with no tool call after it) opens
  *          `CHECK PASS` and then the full id of that commit, and whose own
  *          transcript holds no Edit, Write, MultiEdit or NotebookEdit call and no Bash call running git commit, git add or git
- *          push. It is read from the agents' transcripts (report.mjs `agentFiles` and `agentEnd`), never from a file an agent could
+ *          push. It is read from the agents' transcripts (agent-read.mjs `agentFiles` and `agentEnd`), never from a file an agent could
  *          write; a transcript that cannot be read is no pass. With no stand-down in force none of this runs and every decision
  *          above is as it was.
  *
@@ -47,7 +47,7 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import { resolve, basename, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { commandsIn, commandWordIndex, heredocs } from './reply-guard.mjs';
+import { commandsIn, commandWordIndex, heredocs } from './shell-words.mjs';
 
 // The stand-down question and the code that reads agents' transcripts are loaded here and not imported statically, so a copy of the
 // guard without them keeps every other decision (the dispatcher loads the stand-down the same way).
@@ -55,7 +55,7 @@ let standMod = null;
 let reportMod = null;
 let tailMod = null;
 try { standMod = await import('./stand-down.mjs'); } catch { standMod = null; }
-try { reportMod = await import('./report.mjs'); tailMod = await import('./transcript-tail.mjs'); } catch { reportMod = null; tailMod = null; }
+try { reportMod = await import('./agent-read.mjs'); tailMod = await import('./transcript-tail.mjs'); } catch { reportMod = null; tailMod = null; }
 
 const SELF = fileURLToPath(import.meta.url);
 const ALLOWED = new Set(['staging', 'main']);

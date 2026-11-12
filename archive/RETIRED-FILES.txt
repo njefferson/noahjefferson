@@ -1,0 +1,14 @@
+# The gate files retired on 12 November 2026; the lessons citing them are kept as written.
+pending-guard.mjs
+approved-plan-guard.mjs
+doctrine-read-guard.mjs
+reply-guard.mjs
+reply-guard.test.mjs
+plan-fence.mjs
+drive-guard.mjs
+keep-info-guard.mjs
+compact-recall.mjs
+report.mjs
+plan-seed.mjs
+plan-land.mjs
+stand-down.mjs

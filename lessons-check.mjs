@@ -115,6 +115,17 @@ const lines = src.split('\n');
 
 let lessonCount = 0;
 const unverified = [];
+const retired = [];
+// The gate files this repository retired, one repository-relative path to a line in archive/RETIRED-FILES.txt; blank lines and lines opening
+// with # are ignored. A lesson that cites one of them is kept as written, so its citation prints as retired and does not fail.
+let retiredList = null;
+const retiredFiles = () => {
+  if (retiredList) return retiredList;
+  let raw = '';
+  try { raw = readFileSync(join(HUB, 'archive', 'RETIRED-FILES.txt'), 'utf8'); } catch { raw = ''; }
+  retiredList = new Set(raw.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#')));
+  return retiredList;
+};
 const checklist = [];
 const gates = [];
 const judgements = [];
@@ -308,6 +319,9 @@ for (let k = 0; k < heads.length - 1; k++) {
 
       if (!base) {
         unverified.push(`${where}: cites GATE ${repo}:${path} — ${repo} is not checked out here, so its existence is UNVERIFIED.`);
+      } else if (!existsSync(join(base, path)) && base === HUB && retiredFiles().has(path)) {
+        // A gate file this repository retired: the lesson that cites it is kept as written, and the citation is printed, never skipped.
+        retired.push(`${where}: cites GATE ${repo}:${path}, a gate file this repository retired (archive/RETIRED-FILES.txt).`);
       } else if (!existsSync(join(base, path))) {
         failures.push(
           `${where}: cites GATE ${repo}:${path}, which DOES NOT EXIST. `
@@ -404,6 +418,10 @@ if (unverified.length) {
   // §4's rule: exemptions are PRINTED, never silent.
   console.log(`\nUNVERIFIED HERE (${unverified.length}) — reported, never skipped:`);
   for (const u of unverified) console.log(`  ? ${u}`);
+}
+if (retired.length) {
+  console.log(`\nRETIRED (${retired.length}) — a cited gate file this repository retired, reported, never skipped:`);
+  for (const r of retired) console.log(`  ~ ${r}`);
 }
 
 console.log('\nPASS — every lesson declares how it is enforced, and every cited gate exists.');
