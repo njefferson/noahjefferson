@@ -2871,9 +2871,7 @@ Depends: P-168.
 
 ### P-234. Q-HUB-193: two Found lines of one review were filed as one finding
 
-Repository: hub. Goal: 6. State: done. Plan: none.
-
-Done: found/Q-HUB-154.md names both the CI text checks and the blockquote shape of the quote check, and P-194 in PROGRAM.md stands at state done, so each of the two lines is answered and the found file names nothing else owed.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
 Acceptance: the notes' two lines, the CI text checks and the blockquote shape, are each answered by P-194 and Q-HUB-154's file; nothing else is owed.
 
