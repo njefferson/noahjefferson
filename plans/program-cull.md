@@ -537,3 +537,59 @@ These are the standing and the unclear items, grouped by repository, with the pa
 
 - The repository's .claude/settings.json still lists a command for the retired reply guard.
 - The checker role requires the full commit id, while P-195, P-221 and P-225 ask for a rule against hex ids.
+
+## The way forward
+
+Approved on 13 November 2026. This part gives the order in which what stands is taken. Each piece is scoped on its own page and approved once when its turn comes. Costs are estimates, on the sonnet tier.
+
+### Set done on 13 November 2026
+
+- P-58: A read of /home/user/noahjefferson on main showed git status empty, git stash list empty, lessons 394 to 398 already committed under lessons/, and the name hasGoWord in no .mjs file, so no uncommitted go-word work stands and the line is dropped with that read as its reason.
+- P-70: Read doctrine/apps.md line 106, which states the ruling of 2026-07-29 on the inline exception to the 44 pixel target, and a search of doctrine/apps.md, doctrine/never.md and DOCTRINE.md for the sentence opening Open for the owner found none.
+- P-80: The command git stash list in /home/user/noahjefferson printed nothing, so no stash entry of that plan stands.
+- P-124: In /home/user/noahjefferson the branch read main and git status printed nothing, so no modified tracked file or untracked lesson of that stretch stands and the line is dropped with that read as its reason.
+- P-141: found/Q-HUB-89.md records the whole read sent again as the main thread's own call, and lessons/432-instructions-doctrine-and-hooks-outrank-the-notices-the-harness-prints.md exists and records that whole read, so the line records a held call and no change is owed.
+- P-142: found/Q-HUB-90.md records the harness line followed over the gate, and lessons/432-instructions-doctrine-and-hooks-outrank-the-notices-the-harness-prints.md exists and holds the rule that a harness notice yields to a gate, so the line records a held call and no change is owed.
+- P-234: found/Q-HUB-154.md names both the CI text checks and the blockquote shape of the quote check, and P-194 in PROGRAM.md stands at state done, so each of the two lines is answered and the found file names nothing else owed.
+- P-531: Read session-brief.mjs (54 lines) and a search of it for the words lesson, 81 and 490 found none, so its comments state no count of the lessons.
+- P-543: Read CLAUDE.md (34 lines): its only gates line says the gates before 12 November 2026 are retired and names no gates file, and every file path it names exists in the hub tree.
+- P-588: report.mjs, the file that sorted the Found lines, is listed in archive/RETIRED-FILES.txt and is absent from the tree (ls report.mjs failed), and no other .mjs file holds Found line sorting, so the file that sorts them is retired.
+
+Six more were looked at and not set done, P-15, P-52, P-268, P-457, P-505 and P-561, each because a part of its acceptance was not observed, and each is listed below.
+
+### The order
+
+1. Workflows and the supply chain: P-167, P-184, P-185, P-280, P-282, P-289, P-290, P-353, P-586. A workflow that handles secrets runs a package unpinned, two workflows use secrets with no environment set, dependency branches and one session branch sit on the remote, and one check is not wired into the gates. It is first because it is the only piece about secrets. About four agents and 250,000 tokens.
+2. The procedures and the roles: P-74, P-77, P-130, P-136, P-149, P-189, P-223, P-266, P-270, P-277, P-284, P-364, P-464, P-556, P-561, P-562, P-575. Pages only: what the landing reads before and after a push, what the roles say about shell shapes and writes, and two sentences the apps page lacks. It is second because it is the cheapest and reaches every session at its next start. About three agents and 100,000 tokens.
+3. The checks agree with their words: P-72, P-89, P-152, P-183, P-248, P-253, P-515, P-533, P-542. Checks that list files two ways, skip untracked files, or say more than they do. It comes third because guard files change, so the full suite and every planted failure run. About five agents and 300,000 tokens.
+4. The suite's runner: P-105, P-108, P-163, P-164, P-235, P-279, P-455, P-457, P-505, P-506, P-509, P-514, P-526, P-555. One guard file, the full suite and every planted failure. About four agents and 300,000 tokens.
+5. The list and the records: the list's head rewritten for the new way, and P-93, P-161, P-192, P-206, P-210, P-211, P-251, P-264, P-269, P-283, P-291, P-320, P-443, P-503, P-596. It comes after the pieces whose results it records. About four agents and 200,000 tokens.
+6. The cost instrument: P-52, P-172, P-173, P-174, P-175, P-176, P-197. It was built to measure plans, and plans in that form are gone. It waits on the owner's word that a measure by piece of work is still wanted, so it is last.
+
+### Waits on the owner
+
+Each stays parked or open as it is.
+
+- Branch protection on main, set at GitHub: P-11, P-188.
+- The environment's stop hook, set in the cloud environment: P-12, P-49, P-379, P-467.
+- The settings allow list, including the bare Artifact entry and two entries naming another repository's paths: P-13, P-16, P-186, P-193, P-213, P-593.
+- The preferences file outside any repository: P-14.
+- One commit in the remote's history, kept or rewritten: P-44.
+- What of the never page is trimmed: P-249.
+- What of an earlier research plan's reports is kept: P-232.
+- A rule against hex ids, which the checker's role now contradicts by requiring the full commit id: P-195, P-221, P-225. Recommended: retire the three, because the role is the later word.
+- P-15: the acceptance needs the top tier on a plan's writing and every eject and the next tier on management, and no setting or record of that split was observed.
+- P-268: the acceptance needs a recorded choice from a list of CLAUDE.md shapes, and no such record was observed.
+
+### Belongs to the apps
+
+Each is taken at that app's next session started alone, after its move: the eight knowledge layers P-22 and P-24 to P-30; the nine pins and sweep callers P-35 to P-43; and P-68, P-73, P-117, P-120, P-162, P-204, P-215 and P-558.
+
+### The harness's or the environment's
+
+Nothing planned. P-55, P-144, P-202, P-462, P-463, P-465 and P-502 stay as they are.
+
+### Found in this run and left alone
+
+- The Done line of P-194 names plans/seed-template.md, which is absent from the tree and kept under archive/.
+- The suite's by-file case compares two dry listings and no real narrowed run, which is why P-457 and P-505 stand.

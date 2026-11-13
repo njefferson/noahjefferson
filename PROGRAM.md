@@ -51,6 +51,8 @@ The plan field names the plan that carries the item, or none. The redesign plan 
 
 ### Rank
 
+From 13 November 2026 the order in which the standing items are taken is the way forward in plans/program-cull.md. The paragraph below is how the list was first ranked.
+
 The list is the rank. The items the redesign plan builds come first, then the parked settings, then the harness items (the blind areas and the documented mechanisms), then the knowledge layers, then the dependency updates and the sibling pins, then the findings of the Found queue, in the order the audit of 1 November 2026 ranks them where it names them and by key otherwise.
 
 ## Items
@@ -1117,7 +1119,9 @@ Depends: none.
 
 ### P-58. Q-HUB-2: the go-word rule and lessons 394 to 398 of an old uncommitted checkout collide with main
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: A read of /home/user/noahjefferson on main showed git status empty, git stash list empty, lessons 394 to 398 already committed under lessons/, and the name hasGoWord in no .mjs file, so no uncommitted go-word work stands and the line is dropped with that read as its reason.
 
 Acceptance: a read of the checkout shows whether the work the line names is still uncommitted; if it is, it is landed with the lessons renumbered once past 398 and every citation of them renamed, and if it is not, the line is dropped with that read as the reason.
 
@@ -1237,7 +1241,9 @@ Depends: P-5, which moves the rule into the plan rules file.
 
 ### P-70. Q-HUB-16: the doctrine still carries an open question the accessibility section records as ruled on 29 July 2026
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: Read doctrine/apps.md line 106, which states the ruling of 2026-07-29 on the inline exception to the 44 pixel target, and a search of doctrine/apps.md, doctrine/never.md and DOCTRINE.md for the sentence opening Open for the owner found none.
 
 Acceptance: the accessibility section states the ruling of 29 July 2026 on the inline exception to the 44 pixel target and no open question on it remains.
 
@@ -1331,7 +1337,9 @@ Depends: none.
 
 ### P-80. Q-HUB-26: a stash entry stays in the hub repository because the classifier refused its drop
 
-Repository: hub. Goal: 6. State: parked. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The command git stash list in /home/user/noahjefferson printed nothing, so no stash entry of that plan stands.
 
 Parked: The stash entry and the refusal of its drop belong to the harness's classifier and the checkout, and the hub's checkout holds no stash ref now.
 
@@ -1775,7 +1783,9 @@ Depends: P-3; the agent rules change lands in the redesign plan's last step.
 
 ### P-124. Q-HUB-71: the hub working copy stood on a session branch with eight modified tracked files and five untracked lessons
 
-Repository: hub. Goal: 5. State: parked. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: In /home/user/noahjefferson the branch read main and git status printed nothing, so no modified tracked file or untracked lesson of that stretch stands and the line is dropped with that read as its reason.
 
 Parked: The working copy's branch and its uncommitted files are the state of the container, and landing them waits on an event no step can make, the collisions Q-HUB-2 names being settled first.
 
@@ -1947,7 +1957,9 @@ Depends: P-17; Q-HUB-105.
 
 ### P-141. Q-HUB-89: a whole read of the manager notes was sent again unchanged after its error said to read in parts
 
-Repository: hub. Goal: 6. State: parked. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: found/Q-HUB-89.md records the whole read sent again as the main thread's own call, and lessons/432-instructions-doctrine-and-hooks-outrank-the-notices-the-harness-prints.md exists and records that whole read, so the line records a held call and no change is owed.
 
 Parked: The main thread's own call, recorded in lesson 432, and not a gate's behaviour.
 
@@ -1957,7 +1969,9 @@ Depends: none.
 
 ### P-142. Q-HUB-90: a status page publish was sent again unchanged because a harness message asked for one repeat
 
-Repository: hub. Goal: 6. State: parked. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: found/Q-HUB-90.md records the harness line followed over the gate, and lessons/432-instructions-doctrine-and-hooks-outrank-the-notices-the-harness-prints.md exists and holds the rule that a harness notice yields to a gate, so the line records a held call and no change is owed.
 
 Parked: The repeat of an identical call was asked for by a harness tool message, which is the harness's behaviour, and lesson 432 already records the rule that the doctrine and the hooks outrank such notices.
 
@@ -2857,7 +2871,9 @@ Depends: P-168.
 
 ### P-234. Q-HUB-193: two Found lines of one review were filed as one finding
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: found/Q-HUB-154.md names both the CI text checks and the blockquote shape of the quote check, and P-194 in PROGRAM.md stands at state done, so each of the two lines is answered and the found file names nothing else owed.
 
 Acceptance: the notes' two lines, the CI text checks and the blockquote shape, are each answered by P-194 and Q-HUB-154's file; nothing else is owed.
 
@@ -5735,7 +5751,9 @@ Depends: none.
 
 ### P-531. Q-HUB-482: the comment in the session brief says the lessons number 81 where the folder holds 490
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: Read session-brief.mjs (54 lines) and a search of it for the words lesson, 81 and 490 found none, so its comments state no count of the lessons.
 
 Acceptance: the comment states no count of the lessons, or reads it from the folder.
 
@@ -5849,7 +5867,9 @@ Depends: none.
 
 ### P-543. Q-HUB-493: the instruction file names a gates file the hub does not hold
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: Read CLAUDE.md (34 lines): its only gates line says the gates before 12 November 2026 are retired and names no gates file, and every file path it names exists in the hub tree.
 
 Acceptance: the line names a file the hub holds, or is removed.
 
@@ -6273,7 +6293,9 @@ Depends: none.
 
 ### P-588. Q-HUB-534: A resend's report reorders the Found lines and the earlier sorts attach to different findings
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: report.mjs, the file that sorted the Found lines, is listed in archive/RETIRED-FILES.txt and is absent from the tree (ls report.mjs failed), and no other .mjs file holds Found line sorting, so the file that sorts them is retired.
 
 Acceptance: A sort written for a Found line stays with that finding when a later report of the same step lists its Found lines in another order, or the file that sorts them is retired.
 
