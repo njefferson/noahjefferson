@@ -16,7 +16,7 @@ Editing `DOCTRINE.md` or this file is docs-only. Changing anything in `public/`
 is a site change — verify the rendered page before pushing.
 
 ## What a session's hooks run
-- `hook-dispatch.mjs` is the one dispatcher. It refuses the choice popup, runs `push-guard.mjs`, brings the hub's copy forward at a start, runs each repository's own hooks, and prints one line naming the short page.
+- `hook-dispatch.mjs` is the one dispatcher. It refuses the choice popup, runs `push-guard.mjs`, brings the hub's copy forward at a start, runs each repository's own hooks, and prints one line naming the short page and, at a start or a resume of a session that holds more than one repository, one line naming the repositories.
 - `push-guard.mjs` lets a push reach only `staging` or `main`, and holds every push of either until a checker that changed nothing has passed that exact commit.
 - `plan-guard.mjs`, `stop-guard.mjs`, `session-brief.mjs` and `plan-scope-check.mjs` are shells kept at their paths because other repositories call them.
 - The gates that ran before 12 November 2026 are retired. Their pages are in `archive/`, kept as written, and no session loads them.

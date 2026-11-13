@@ -35,6 +35,12 @@ Its first session is started with the new repository alone, and section 13 of do
 - The hub absent from the container: the session says so in its first reply, and commits and pushes nothing until the owner has answered, because nothing guards a push there. What follows is the one line above that starts the move, or the session started again in the app's own environment.
 - A session with no hub that reads none of its instructions is told by nothing.
 
+## When a session is locked
+
+- There is no stand-down. The hub's hooks run in every session, and nothing frees a session from them; the stand-down file was deleted on 12 November 2026.
+- What can still lock a session: when the push guard fails to run, the dispatcher refuses every tool that is not a read, and says so in its refusal line, until the guard is fixed. The hub's copy is brought forward from the hub's main at every start and resume, so a commit on main that breaks the push guard reaches every session at its next start or resume, and a locked session cannot write or push its own fix.
+- The way out: revert the hub's commit on GitHub, then resume the session. The resume brings the reverted main into the container, and the session has its tools again.
+
 ## Mode
 
 - Plan mode for the scope, because it gives the approve button.
