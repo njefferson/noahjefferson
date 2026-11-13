@@ -10,7 +10,9 @@
  *                  push guard did not run cleanly; then each repository's own hooks run.
  *   SessionStart   no agent_id: at a startup or a resume this folder's own copy of the hub, and any hub checkout beneath or beside the
  *                  launch folder, are brought forward from the remote's main (`bringForward`); the lines are printed, then the one
- *                  line naming the short page, then each repository's own hooks and what they print.
+ *                  line naming the short page, then each repository's own hooks and what they print. After the short-page line, at a
+ *                  startup or a resume, one more line names the repositories when the launch folder is not itself a repository and two or
+ *                  more sit directly beneath it (`moreThanOneRepoLine`); it tells and refuses nothing.
  *   UserPromptSubmit   the one line, then each repository's own hooks and what they print.
  *   every other event  each repository's own hooks.
  *
@@ -218,6 +220,23 @@ export function bringForward(p, opts = {}) {
 }
 
 /**
+ * The one line a start or a resume prints when the session holds more than one repository.
+ * @param {object} p  the SessionStart payload: `source`, `agent_id`.
+ * @param {string} root  the launch folder.
+ * @returns {string} the line (no line break), naming the folders of the repositories beneath the launch folder, when the event has no
+ *   agent_id, its source is startup or resume, the launch folder has no `.git` of its own and `reposUnder` finds two or more repositories
+ *   directly beneath it; '' in every other case, a launch folder that is itself a repository included. It reads only; it can refuse nothing.
+ */
+export function moreThanOneRepoLine(p, root) {
+  if (p?.agent_id || !(p?.source === 'startup' || p?.source === 'resume')) return '';
+  const at = resolve(String(root));
+  if (existsSync(join(at, '.git'))) return '';
+  const names = reposUnder(at).filter((d) => dirname(d) === at).map((d) => basename(d));
+  if (names.length < 2) return '';
+  return `MORE THAN ONE REPOSITORY IN THIS SESSION: ${names.join(', ')}. None of them loaded its own roles, settings or instruction file. Sessions are started with one repository, the app alone: ${HUB}/plans/native/running.md`;
+}
+
+/**
  * Each repository's own hooks for an event: the walk over the repositories beside and beneath the launch folder (`reposUnder`), each
  * one's `.claude/settings.json`, `matches` and `run`, with the shared shims plan-guard.sh and stop-guard.sh replaced by this folder's
  * plan-guard.mjs and stop-guard.mjs, each run once.
@@ -282,6 +301,7 @@ async function main(event, raw, p) {
     try { lines = bringForward(p, { root }); } catch { /* the start prints without the lines */ }
     for (const l of lines) process.stdout.write(`${l}\n`);
     process.stdout.write(`${PAGE_LINE}\n`);
+    try { const more = moreThanOneRepoLine(p, root); if (more) process.stdout.write(`${more}\n`); } catch { /* the start prints without the line */ }
   }
   if (event === 'UserPromptSubmit') process.stdout.write(`${PAGE_LINE}\n`);
   return repoHooks(event, raw, p);

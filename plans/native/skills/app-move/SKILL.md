@@ -6,7 +6,7 @@ description: How an app's session moves that app to the hub's new way, once: the
 This is for a session in one app's repository, started with that app alone. It is done once for an app. It was approved in the hub on 12 November 2026 as part of the record plans/app-sessions.md, and being asked to move the app starts it. Read the short page first, at /root/.claude/hub/plans/native/page.md. If that file is absent, the hub is not installed in this container: clone https://github.com/njefferson/noahjefferson.git to /root/.claude/hub, read the page there, and carry on.
 
 The result
-- This repository's CLAUDE.md holds this app's own facts and one line naming the short page, and no longer describes the gates retired on 12 November 2026. The hub's own CLAUDE.md is the model: what the repository is, its branches and its release route, what its own hooks run, and where things are.
+- This repository's CLAUDE.md holds this app's own facts and one line naming the short page, and no longer describes the gates retired on 12 November 2026. That line also says what to do when the page is absent, and reads: Read the short page first, at /root/.claude/hub/plans/native/page.md. If that file is absent, the hub is not installed in this session: say so before any work, and commit and push nothing until the owner has answered. The hub's own CLAUDE.md is the model: what the repository is, its branches and its release route, what its own hooks run, and where things are.
 - This session's environment carries the setup script below, so a new container has the hub's hooks before its session starts.
 - Every one of this repository's own hooks and checks runs with the app alone in the container. One that looks for the hub beside the app looks at /root/.claude/hub.
 

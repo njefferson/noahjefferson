@@ -29,6 +29,12 @@ Move this app to the hub's new way: follow plans/native/skills/app-move/SKILL.md
 
 Its first session is started with the new repository alone, and section 13 of doctrine/apps.md places the setup script on its environment by one card.
 
+## When a session is started wrong
+
+- Two repositories in the session: the dispatcher prints one line at the start and at each resume, naming them. None of them loaded its own roles, settings or instruction file. The work under way is finished there, and the next session for that app is started alone.
+- The hub absent from the container: the session says so in its first reply, and commits and pushes nothing until the owner has answered, because nothing guards a push there. What follows is the one line above that starts the move, or the session started again in the app's own environment.
+- A session with no hub that reads none of its instructions is told by nothing.
+
 ## Mode
 
 - Plan mode for the scope, because it gives the approve button.

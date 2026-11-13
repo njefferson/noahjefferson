@@ -324,6 +324,81 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'dispatch: a planted launch folder that is not a repository and holds two repositories gets the line naming both and the running page, after the bring-forward line and the one line, at a start and at a resume, and the start exits 0',
+    guards: ['dp_more_print'],
+    run(m, dir, h) {
+      const work = h.repo({ 'DOCTRINE.md': 'planted\n', 'hook-dispatch.mjs': 'planted\n' }, 'origin-hub');
+      work.g('checkout', '-q', '-B', 'main');
+      const launch = h.tmp('dp-launch-');
+      spawnSync('git', ['clone', '-q', work.dir, join(launch, 'hubcopy')], { timeout: 60000 });
+      work.write('a.txt', 'a later commit\n');
+      work.stage();
+      work.g('commit', '-q', '-m', 'a later commit on main');
+      planted(h, {}, 'beta', launch);
+      const start = disp(h, dir, 'SessionStart', { source: 'startup' }, { launch });
+      const lines = start.stdout.split('\n');
+      const resume = disp(h, dir, 'SessionStart', { source: 'resume' }, { launch });
+      const more = lines[2] ?? '';
+      return h.assertAll([
+        ['the start exits 0', start.status === 0, said(start)],
+        ['the bring-forward line comes first', /^HUB COPY \(the hub checkout .*hubcopy\): brought forward by 1 commit/.test(lines[0]), start.stdout],
+        ['the one line comes second', lines[1] === pageLine(dir), start.stdout],
+        ['the new line comes third, begins MORE THAN ONE REPOSITORY IN THIS SESSION, names both folders and the running page', more.startsWith('MORE THAN ONE REPOSITORY IN THIS SESSION') && /\bhubcopy\b/.test(more) && /\bbeta\b/.test(more) && more.includes(`${dir}/plans/native/running.md`), start.stdout],
+        ['nothing else is printed', lines.length === 4 && lines[3] === '', start.stdout],
+        ['a resume prints the line too and exits 0', resume.status === 0 && /^MORE THAN ONE REPOSITORY IN THIS SESSION: /m.test(resume.stdout), said(resume)],
+      ]);
+    },
+  },
+  {
+    name: 'dispatch: a launch folder that is itself one repository gets no line about repositories, also when another repository sits beside it or two sit inside it',
+    guards: ['dp_more_launch_repo'],
+    run(m, dir, h) {
+      const parent = h.tmp('dp-parent-');
+      const app = planted(h, {}, 'app', parent);
+      planted(h, {}, 'side', parent);
+      const alone = disp(h, dir, 'SessionStart', { source: 'startup' }, { launch: app.repo });
+      planted(h, {}, 'in-one', app.repo);
+      planted(h, {}, 'in-two', app.repo);
+      const nested = disp(h, dir, 'SessionStart', { source: 'resume' }, { launch: app.repo });
+      return h.assertAll([
+        ['a repository with another beside it prints the one line and nothing else', alone.status === 0 && alone.stdout === `${pageLine(dir)}\n`, said(alone)],
+        ['a repository with two inside it prints the one line and nothing else', nested.status === 0 && nested.stdout === `${pageLine(dir)}\n`, said(nested)],
+      ]);
+    },
+  },
+  {
+    name: 'dispatch: a planted launch folder that is not a repository and holds one repository gets no line about repositories, another folder beside the repository included',
+    guards: ['dp_more_two'],
+    run(m, dir, h) {
+      const p = planted(h, {});
+      mkdirSync(join(p.launch, 'notes'), { recursive: true });
+      const start = disp(h, dir, 'SessionStart', { source: 'startup' }, { launch: p.launch });
+      const resume = disp(h, dir, 'SessionStart', { source: 'resume' }, { launch: p.launch });
+      return h.assertAll([
+        ['a start prints the one line and nothing else', start.status === 0 && start.stdout === `${pageLine(dir)}\n`, said(start)],
+        ['a resume prints the one line and nothing else', resume.status === 0 && resume.stdout === `${pageLine(dir)}\n`, said(resume)],
+      ]);
+    },
+  },
+  {
+    name: 'dispatch: two planted repositories under the launch folder get no line about repositories in an agent\'s start, and none in a start whose source is neither startup nor resume',
+    guards: ['dp_more_source'],
+    run(m, dir, h) {
+      const a = planted(h, {}, 'one');
+      planted(h, {}, 'two', a.launch);
+      const agent = disp(h, dir, 'SessionStart', { source: 'startup', agent_id: 'a1' }, { launch: a.launch });
+      const agentResume = disp(h, dir, 'SessionStart', { source: 'resume', agent_id: 'a1' }, { launch: a.launch });
+      const compact = disp(h, dir, 'SessionStart', { source: 'compact' }, { launch: a.launch });
+      const clear = disp(h, dir, 'SessionStart', { source: 'clear' }, { launch: a.launch });
+      return h.assertAll([
+        ['an agent\'s start prints nothing', agent.status === 0 && agent.stdout === '', said(agent)],
+        ['an agent\'s resume prints nothing', agentResume.status === 0 && agentResume.stdout === '', said(agentResume)],
+        ['a compaction prints the one line and nothing else', compact.status === 0 && compact.stdout === `${pageLine(dir)}\n`, said(compact)],
+        ['a clear prints the one line and nothing else', clear.status === 0 && clear.stdout === `${pageLine(dir)}\n`, said(clear)],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
@@ -356,4 +431,8 @@ export const plants = {
   sb_page: ['out.push(`HOW WORK GOES HERE:', 'out.push(`HOW WORK GOES ELSEWHERE:', 'session-brief.mjs'],
   psc_line: ["console.log('The plan-scope check was retired on 12 November 2026; this passes.');", "console.log('The plan-scope check passes.');", 'plan-scope-check.mjs'],
   psc_exit: ["this passes.');\nprocess.exit(0);", "this passes.');\nprocess.exit(1);", 'plan-scope-check.mjs'],
+  dp_more_print: ['if (more) process.stdout.write(`${more}\\n`);', 'if (false) process.stdout.write(`${more}\\n`);', 'hook-dispatch.mjs'],
+  dp_more_two: ["  if (names.length < 2) return '';", "  if (names.length < 1) return '';", 'hook-dispatch.mjs'],
+  dp_more_launch_repo: ["  if (existsSync(join(at, '.git'))) return '';\n  const names", "  const names", 'hook-dispatch.mjs'],
+  dp_more_source: ["  if (p?.agent_id || !(p?.source === 'startup' || p?.source === 'resume')) return '';", '  if (p?.agent_id) return \'\';', 'hook-dispatch.mjs'],
 };

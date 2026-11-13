@@ -12,6 +12,12 @@ The apps this governs: photo-pointer, clear-horizons, Bird-location-scouting
 the noahjefferson hub.
 They deliberately share conventions.
 
+## Before any work: the start check
+
+- One repository is in this session, the app alone. If more than one is, say so once in the first reply: each repository's own roles, settings and instruction file did not load. Work already under way carries on.
+- The hub's copy is at `/root/.claude/hub` and its dispatcher is wired. If it is absent, say so in the first reply: nothing guards a push in this session. Commit and push nothing until the owner has answered.
+- What follows either way is on `plans/native/running.md`.
+
 ---
 
 ## The index

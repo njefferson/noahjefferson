@@ -139,6 +139,16 @@ The four workflow runs for eb6d9930659344d5c1ce1071cd683d44bfed8bcf (the deploy,
 
 A second page was approved on 12 November 2026, California date. It changes hub pages only. It puts the operating answers on plans/native/running.md, makes the move a procedure, adds two lines to the short page, brings section 13 of doctrine/apps.md in line and corrects three call forms in HUB-REFERENCE.md. This run does not check that a session in an app finds the page and names the move. That is seen at the first app's next session started alone.
 
+A third page was approved on 12 November 2026, California date. It changes hub files only. It adds the start check to the doctrine's head, one line the dispatcher prints at a start and a resume when a session holds more than one repository, with its cases in the suite, a change to the move procedure's first result, a part on the running page for a session started wrong, and one call form in the start brief. This run does not check the dispatcher's line in a real session started with two repositories. That is seen at the next resume of a session that has two.
+
+The third run showed this. The dispatcher's line is made by a small function in hook-dispatch.mjs and is printed after the bring-forward lines and the short-page line, inside its own guard. It prints only when the launch folder is not itself a repository and holds two or more.
+
+The approved page names session-guards.test.mjs for the new cases. The suite keeps its dispatcher cases in guard-cases/dispatch.mjs, so they are there: four cases and four planted failures. The suite passed 69 of 69, and each of the four planted failures was caught.
+
+The run took six agents, one more than the five the approved page named, because the cases' home was outside the first worker's step and a further worker added them.
+
+Found and left alone: the hub's instruction file lists what the dispatcher does and does not yet name the new line.
+
 ## The block for an app's session
 
 This block is pasted at the start of an app's next session started with that app alone.
@@ -290,3 +300,96 @@ Move this app to the hub's new way: follow plans/native/skills/app-move/SKILL.md
 
 - The setup script on the Default environment. It would cover any session started there, and it would also put the hub's hooks on every other project that uses it.
 - The hub's session starting the apps' move sessions itself. An app may have a session mid-work, and the move is cheapest at the moment that app is next opened.
+
+## The third approved page
+
+### The start check: a change to the app-sessions project
+
+This is a third page of the project recorded in `plans/app-sessions.md`. The first two are finished and on main at c2dca15fec672240d9e2485488b3b3a2fd19cedc. Approving this page starts a third run. It changes hub files only.
+
+#### Why
+
+Nothing checks how a session was started. Read on 12 November 2026: the start brief prints the branch and the short-page line; the dispatcher brings the hub's copy forward; the move's first step checks the layout once and never again. A wrong start therefore fails quietly, in one of two ways:
+
+- **The hub is absent**, because the session's environment has no setup script. No push guard, no check before a push, the choice popup is not refused, the app's instruction file names a page that is not there, and the app's checks that look at the installed hub skip or fail.
+- **Two repositories are in the session.** The app's own roles, settings and instruction file do not load.
+
+The intended outcome: a wrong start says so at the start, by three routes, so the telling does not depend on any one of them being installed. It tells; it refuses nothing, because sessions already running with two repositories are to be left to finish.
+
+#### What a wrong start looks like afterwards
+
+- Two repositories, hub installed: the dispatcher prints one line at the start and at each resume.
+- App alone, hub absent, app already moved: the app's instruction file tells the session to say so first, and to commit and push nothing until answered.
+- Any layout, nothing installed: the doctrine's head carries the check, and the standing instruction has every session read that file first. This is the widest net and the weakest, since it rests on the session doing the read.
+
+#### 1. The result
+
+Five things on main, in one commit.
+
+**A. The doctrine's head, `DOCTRINE.md`, gains a short part, "Before any work: the start check".** Three lines:
+
+- One repository is in this session, the app alone. If more than one is, say so once in the first reply: each repository's own roles, settings and instruction file did not load. Work already under way carries on.
+- The hub's copy is at `/root/.claude/hub` and its dispatcher is wired. If it is absent, say so in the first reply: nothing guards a push in this session. Commit and push nothing until the owner has answered.
+- What follows either way is on `plans/native/running.md`.
+
+**B. The dispatcher, `hook-dispatch.mjs`, prints one line at a start and at a resume when the session holds more than one repository.** The line names the repositories, says their own roles, settings and instruction files did not load, and names the running page. It refuses nothing and prints nothing for one repository. It is placed after the bring-forward and the short-page line, inside its own guard, so a fault in it cannot stop either. It reuses `reposUnder` from the same file. Two cases join the suite, `session-guards.test.mjs`: a planted launch folder with two repositories prints the line, and one repository prints nothing.
+
+**C. The move procedure, `plans/native/skills/app-move/SKILL.md`.** Its first result changes in one way: the line the app's instruction file carries names the short page and also says what to do when that page is absent, which is to say so before any work, and to commit and push nothing until the owner has answered.
+
+**D. The running page, `plans/native/running.md`, gains a part, "When a session is started wrong".** It gives the two cases, what each prints or says, and what follows: for two repositories, finish the work under way and start the next session alone; for an absent hub, the one line that starts the move, or the right environment.
+
+**E. One call form in the start brief, `session-brief.mjs`.** Its hint for a repository with no branch guard reaches the hub at a path beside the app; it reaches the installed copy at `/root/.claude/hub`.
+
+The record, `plans/app-sessions.md`, gains this page and a line on what the run showed.
+
+#### 2. How it is checked
+
+- A checker that did none of the work opens the exact commit before the push.
+  - `DOCTRINE.md`: the diff is the one new part at the head and nothing else; it says what A says; the index below it is untouched.
+  - The dispatcher: the checker runs the suite and reads the two new cases. It reads the new code and confirms it sits after the bring-forward and the short-page line and inside its own guard, and that nothing in it can return a refusal.
+  - The checker runs the dispatcher's start once by hand in the hub's own working copy and confirms it prints no such line there, since that session holds one repository.
+  - The procedure and the running page: each diff is the one change named, and neither contradicts the record or the short page.
+  - The start brief: the one call form and nothing else.
+  - Nothing quotes or names the owner, and there is no table.
+- The hub's seven checks and the suite pass, the remote's head is read after the push, and the four workflow runs for the pushed commit are read once.
+- Not checked in this run, and said so in the record: the line in a real session started with two repositories. A session can be started from here with one repository only, so it is seen at the next resume of a session that has two.
+
+#### 3. The steps
+
+1. Worker A changes the dispatcher, adds the two cases, corrects the start brief's call form, and runs the suite.
+2. Worker B, at the same time, adds the part to the doctrine's head, changes the procedure's first result, adds the part to the running page, and adds this page to the record.
+3. One landing by the hub's landing procedure: a worker commits and runs the seven checks and the suite, the checker passes the exact commit, a worker pushes main once and reads the remote's head.
+4. The managing session reads the four workflow runs once and reports.
+
+#### 4. The cost
+
+- Five agents in five sends, all on the sonnet tier: two workers, a worker for the commit, a checker, a worker for the push. A failed check adds two.
+- About 150,000 tokens by the harness's figures for the last run, and about 30 minutes. The suite adds about two minutes.
+- One push of main. The agents run in the foreground, so no turn forced by the environment's git hook is expected; one is forced if a turn ends before the push.
+- Nothing in the run needs the top tier. The main thread can be switched down after the approval.
+
+#### 5. The way back
+
+- The commit is reverted on main through the same check. The reverted files reach each session at its next start or resume, because the bring-forward runs before the new line and is not touched.
+- No environment is touched, nothing under a `.claude` folder is written, and nothing in any app is touched.
+
+#### What only the owner does
+
+- Approves this page. Nothing else in this run.
+
+#### Where it can fail, and what follows
+
+- **The dispatcher runs in every session.** A fault in the new line could print noise everywhere. It is guarded so it cannot refuse or stop a start, the suite covers both cases, and one revert removes it.
+- **A false line.** A session with one repository and some other folder beside it must print nothing. The one-repository case in the suite covers the plain form; a form it misses is reported and fixed from the first session that shows it.
+- **A check refuses a wording.** The form is changed and never the meaning; a change that would alter the meaning stops the step and is reported.
+- **A hook or the harness refuses a step.** That route stops, the refusal is reported word for word, and no other way to the same end is tried.
+
+#### Not caught by this, said plainly
+
+- A session with no hub installed that reads none of its instructions. Nothing in a repository can reach it.
+- A session started in the wrong environment that still has the script. Nothing reads which environment a session is in; where the script is there, the hub is there, so nothing breaks.
+
+#### Left out on purpose
+
+- The app's own start hook cloning and installing the hub when it is absent. It would repair a wrong environment by itself, and it costs one write under each app's `.claude` folder, which the harness asks the owner for in accept-edits mode. It stays as the move's second route.
+- Refusing work in a session started with two repositories. Sessions now running that way are to finish.

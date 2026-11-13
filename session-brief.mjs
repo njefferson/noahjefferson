@@ -47,7 +47,7 @@ if (work) {
   else out.push(`  Work in this repo commits to '${work}'. A commit here will be refused.`);
 } else {
   out.push('  No .branch-guard — this repo is UNGUARDED. Write one and install:');
-  out.push('    node ../noahjefferson/branch-guard.mjs --repo . --install');
+  out.push('    node /root/.claude/hub/branch-guard.mjs --repo . --install');
 }
 
 out.push(`HOW WORK GOES HERE: the short page, ${hub}/plans/native/page.md. The procedures and the roles are files under ${hub}/plans/native/skills and ${hub}/plans/native/roles. The push guard and the check before a push hold every push of staging and main, and the choice popup is refused.`);
