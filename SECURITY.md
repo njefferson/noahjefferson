@@ -246,6 +246,18 @@ check in this file and still be one leaked credential from anything.
  on the deploy job (a one-line workflow change). **Do not do the workflow half
  first** — it creates an unprotected environment and changes nothing.
 
+ **The same finding stands in two more workflows,** `cf-analytics.yml` and
+ `deploy-myfax.yml`, read under the auditor persona on 13 November 2026. The
+ first reads three secrets outside an environment: `CLOUDFLARE_ANALYTICS_TOKEN`,
+ `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`. The second reads seven:
+ `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_WORKER_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
+ `FAXDROP_TEST_API_KEY`, `FAXDROP_API_KEY`, `SENDER_EMAIL` and `ACCESS_CODE`.
+ Both run only by a manual dispatch. It stands for the same reason: the
+ environment and its secrets are GitHub settings of Part 2 that only the owner
+ makes. The same order holds, the settings first and the `environment:` line in
+ the workflow last. The finding for a job without a name, which the audit also
+ showed in both, was closed by giving each job a name.
+
  **And the standing gap that is not zizmor's to find:** Gates and Deploy are
  separate workflows with no dependency, so a red gate does not stop a deploy.
  That is recorded in this repo's own status page as found-and-not-fixed, and it

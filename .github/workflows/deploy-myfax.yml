@@ -52,6 +52,7 @@ env:
 
 jobs:
   deploy:
+    name: Deploy MyFax to Cloudflare
     runs-on: ubuntu-latest
     steps:
       # Doctrine §16.5 — friction in proportion to damage. `live` sends real
@@ -150,9 +151,15 @@ jobs:
           ACCESS_CODE: ${{ secrets.ACCESS_CODE }}
           KEY_CHOICE: ${{ inputs.fax_key }}
         run: |
-          # Pinned: this receives a live API key on stdin. Bare `npx wrangler`
-          # resolved whatever npm served at dispatch time (Doctrine §16.2).
-          WR="npx --yes wrangler@${WRANGLER_VERSION}"
+          # Pinned: this receives a live API key on stdin. The Deploy relay
+          # Worker step above installed wrangler at WRANGLER_VERSION into this
+          # folder, so this runs that copy and fetches nothing (Doctrine §16.2).
+          WR="npx --no-install wrangler"
+          # Stop before any key is sent unless the installed tool is the pinned one.
+          if ! $WR --version | grep -qF "$WRANGLER_VERSION"; then
+            echo "wrangler $WRANGLER_VERSION is not installed in this folder - no secret was pushed." >&2
+            exit 1
+          fi
           put () {
             NAME="$1"; VAL="$2"
             if [ -n "$VAL" ]; then

@@ -558,7 +558,7 @@ Seven more were looked at and not set done, P-15, P-52, P-234, P-268, P-457, P-5
 
 ### The order
 
-1. Workflows and the supply chain: P-167, P-184, P-185, P-280, P-282, P-289, P-290, P-353, P-586. A workflow that handles secrets runs a package unpinned, two workflows use secrets with no environment set, dependency branches and one session branch sit on the remote, and one check is not wired into the gates. It is first because it is the only piece about secrets. About four agents and 250,000 tokens.
+1. Workflows and the supply chain: P-167, P-184, P-185, P-280, P-282, P-289, P-290, P-353, P-586. A workflow that handles secrets runs a package unpinned, two workflows use secrets with no environment set, dependency branches and one session branch sit on the remote, and one check is not wired into the gates. It is first because it is the only piece about secrets. About four agents and 250,000 tokens. Run on 13 November 2026; what it did is under Piece 1 below.
 2. The procedures and the roles: P-74, P-77, P-130, P-136, P-149, P-189, P-223, P-266, P-270, P-277, P-284, P-364, P-464, P-556, P-561, P-562, P-575. Pages only: what the landing reads before and after a push, what the roles say about shell shapes and writes, and two sentences the apps page lacks. It is second because it is the cheapest and reaches every session at its next start. About three agents and 100,000 tokens.
 3. The checks agree with their words: P-72, P-89, P-152, P-183, P-248, P-253, P-515, P-533, P-542. Checks that list files two ways, skip untracked files, or say more than they do. It comes third because guard files change, so the full suite and every planted failure run. About five agents and 300,000 tokens.
 4. The suite's runner: P-105, P-108, P-163, P-164, P-235, P-279, P-455, P-457, P-505, P-506, P-509, P-514, P-526, P-555. One guard file, the full suite and every planted failure. About four agents and 300,000 tokens.
@@ -579,10 +579,12 @@ Each stays parked or open as it is.
 - A rule against hex ids, which the checker's role now contradicts by requiring the full commit id: P-195, P-221, P-225. Recommended: retire the three, because the role is the later word.
 - P-15: the acceptance needs the top tier on a plan's writing and every eject and the next tier on management, and no setting or record of that split was observed.
 - P-268: the acceptance needs a recorded choice from a list of CLAUDE.md shapes, and no such record was observed.
+- P-185: a session branch on the remote that holds 357 commits main lacks, to be landed or removed.
+- P-184: whether a check that makes a stale dependency pull request an item is still wanted, now that no dependency pull request is open.
 
 ### Belongs to the apps
 
-Each is taken at that app's next session started alone, after its move: the eight knowledge layers P-22 and P-24 to P-30; the nine pins and sweep callers P-35 to P-43; and P-68, P-73, P-117, P-120, P-162, P-204, P-215 and P-558.
+Each is taken at that app's next session started alone, after its move: the eight knowledge layers P-22 and P-24 to P-30; the nine pins and sweep callers P-35 to P-43; and P-68, P-73, P-117, P-120, P-162, P-204, P-215 and P-558; P-167, which depends on the siblings' own pins; and P-586, which is about siblings whose CI installs a browser, the hub's own gate having passed on the current runner image on 13 November 2026.
 
 ### The harness's or the environment's
 
@@ -592,3 +594,29 @@ Nothing planned. P-55, P-144, P-202, P-462, P-463, P-465 and P-502 stay as they 
 
 - The Done line of P-194 names plans/seed-template.md, which is absent from the tree and kept under archive/, and that is why P-234 stands.
 - The suite's by-file case compares two dry listings and no real narrowed run, which is why P-457 and P-505 stand.
+
+### Piece 1, run on 13 November 2026
+
+The fax deploy's last step now runs the copy of wrangler that the pinned wrangler action installs in the worker folder, behind a version check, so a missing or wrong tool stops the step before any key is sent. The jobs in the fax deploy and in the analytics report were given names. The security page's paragraph now records the ten secrets-outside-environment findings of those two workflows with the reason they stand. The browser note in package.json was rewritten to the pair that was run. Pull requests 10 and 12 were closed without merging, after each one's change was read on main.
+
+Set done:
+
+- P-280: the accessibility gate ran once at playwright-core 1.64.1 and chromium revision 1243, ended with exit code 0 and its PASS line, and the note says so.
+- P-282: two of the four dependency branches were gone, and the pull requests of the other two were closed after their changes were read on main.
+- P-289: the fax deploy's last step runs the installed wrangler behind a version check, and the pin check prints no note for the file.
+- P-290: the audit shows no anonymous-definition finding after the two jobs were named, and the findings left are recorded in SECURITY.md.
+- P-353: the note was put right in the workflow itself, and the pin check ends with no note about it.
+
+Moved:
+
+- P-184 went to waits on the owner, as a question of whether the check is still wanted.
+- P-185 went to waits on the owner, to be landed or removed.
+- P-167 went to belongs to the apps, because it depends on the siblings' own pins.
+- P-586 went to belongs to the apps, because it is about the siblings' CI images.
+
+Not checked: a real run of the fax deploy needs the owner's dispatch and live credentials. Its first dispatch with the test key shows the change. A missing or wrong tool stops the step before any key is sent.
+
+Found and left alone:
+
+- The job in deploy.yml has no name, which the audit shows as informational and P-290 does not name.
+- The two dependency branch names still stood on the remote after their pull requests were closed.

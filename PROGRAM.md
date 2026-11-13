@@ -3301,7 +3301,9 @@ Depends: none.
 
 ### P-280. Q-HUB-239: the browser note in package.json pairs the sandbox chromium with a playwright-core version that moved
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The accessibility gate was run once in the sandbox on 13 November 2026 at playwright-core 1.64.1 with the sandbox's chromium revision 1243, it ended with exit code 0 and its PASS line, and the note in package.json was rewritten to what was seen.
 
 Acceptance: the accessibility gate is run in the sandbox once at the installed playwright-core version, and the note is rewritten to what was seen or the pair is pinned.
 
@@ -3319,7 +3321,9 @@ Depends: none.
 
 ### P-282. Q-HUB-241: the four dependency branches stand on the remote after their changes landed on main
 
-Repository: hub. Goal: 5. State: parked. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Read on 13 November 2026: two of the four dependency branches were gone, and the pull requests of the two that remained, numbers 10 and 12, were closed without merging after each one's change was read on main; the two branch names still stood on the remote at that read.
 
 Parked: The dependency branches stand on the remote until GitHub closes their pull requests, an event that must come first and that no step can make.
 
@@ -3367,7 +3371,9 @@ Depends: none.
 
 ### P-289. Q-HUB-249: the fax deploy workflow runs npx without its no-install flag in a job that handles secrets
 
-Repository: hub. Goal: 6. State: parked. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The last step of .github/workflows/deploy-myfax.yml runs npx --no-install wrangler, the copy the wrangler action's step installs at the pinned version in the worker folder, behind a version check, and pin-check.mjs prints no note for the file.
 
 Parked: The workflow that runs npx without its no-install flag is in the fax repository, and pin-check only prints the note.
 
@@ -3377,7 +3383,9 @@ Depends: none.
 
 ### P-290. Q-HUB-250: the analytics and fax deploy workflows show secrets outside an environment and an anonymous definition under the auditor persona
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: zizmor 1.31.1 under the auditor persona over cf-analytics.yml and deploy-myfax.yml reports no anonymous-definition finding after each job was given a name, and the ten secrets-outside-env findings left are recorded in SECURITY.md with the reason they stand.
 
 Acceptance: zizmor's auditor persona over each of the two files reports no secrets-outside-environment and no anonymous-definition finding, or each remaining finding is recorded with the reason it stands.
 
@@ -3995,7 +4003,9 @@ Depends: none.
 
 ### P-353. Q-HUB-310: the pin check prints a note about a workflow that handles secrets and runs an unpinned tool
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The note was put right in the workflow: .github/workflows/deploy-myfax.yml runs npx --no-install wrangler behind a version check, and pin-check.mjs ends with no note about it.
 
 Back to open by step 128 of the plan of the standing problems of the gates: step 126 could not put it right. Line 155 of the myfax deploy workflow runs the pinned tool with the yes switch and nothing installs it first, so the line cannot take the no-install switch, and the pin check reads no declared acceptance from any place. The fix needs the pin check taught to read a declared acceptance, or the workflow given a step that installs the pinned tool with npm ci before the run.
 
