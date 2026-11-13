@@ -407,7 +407,7 @@ export const plants = {
   dp_push_refusal: ["    if (o.deny) { process.stderr.write(o.reason + '\\n'); return 2; }\n    if (o.status !== 0", "    if (false) { process.stderr.write(o.reason + '\\n'); return 2; }\n    if (o.status !== 0", 'hook-dispatch.mjs'],
   dp_unclean: ['    if (o.status !== 0 && !READS.has(tool)) {', '    if (false) {', 'hook-dispatch.mjs'],
   dp_page_prompt: ["  if (event === 'UserPromptSubmit') process.stdout.write(`${PAGE_LINE}\\n`);", "  if (false) process.stdout.write(`${PAGE_LINE}\\n`);", 'hook-dispatch.mjs'],
-  dp_page_start: ["    process.stdout.write(`${PAGE_LINE}\\n`);\n  }\n  if (event === 'UserPromptSubmit')", "    void 0;\n  }\n  if (event === 'UserPromptSubmit')", 'hook-dispatch.mjs'],
+  dp_page_start: ["    process.stdout.write(`${PAGE_LINE}\\n`);\n    try { const more = moreThanOneRepoLine(p, root);", "    void 0;\n    try { const more = moreThanOneRepoLine(p, root);", 'hook-dispatch.mjs'],
   dp_start_main_only: ["  if (event === 'SessionStart' && !p.agent_id) {\n    const root", "  if (event === 'SessionStart') {\n    const root", 'hook-dispatch.mjs'],
   dp_bring_merge: ["    const merged = git(dir, ['merge', '--ff-only', 'origin/main']);", "    const merged = git(dir, ['status']);", 'hook-dispatch.mjs'],
   dp_bring_source: ["  if (p?.agent_id || !(p?.source === 'startup' || p?.source === 'resume')) return [];", '  if (p?.agent_id) return [];', 'hook-dispatch.mjs'],

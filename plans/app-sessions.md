@@ -149,6 +149,16 @@ The run took six agents, one more than the five the approved page named, because
 
 Found and left alone: the hub's instruction file lists what the dispatcher does and does not yet name the new line.
 
+The third page's commit, 1c44220d821b3162dcae993eb0affa200f679a51, was pushed on 12 November 2026 at about 21:15 California time after a checker's pass. Three of its four workflow runs ended in success and the doctrine gates failed, at the step that runs the suite's cases and then every planted failure.
+
+The cause was one planted failure that already existed, dp_page_start. It finds the dispatcher's write of the short-page line by its exact text, and the new guarded call was placed directly after that line, so the text it looked for was gone. The suite counts a stale planted failure as a failure. Nothing a session runs was wrong.
+
+It was not seen before the push because the commit step and the checker ran the cases and the four new planted failures, and not every planted failure. The full suite is the cases and every planted failure, and a change to a guard file runs both before a push.
+
+The planted failure was re-pointed to where the line moved, and the full suite then passed: 69 of 69 cases passed, 160 of 160 planted failures ran, none missed and none stale.
+
+The third page's run took ten agents in all, five more than the five the approved page named: one for the cases' home, one to reproduce the red run, and three for this fix.
+
 ## The block for an app's session
 
 This block is pasted at the start of an app's next session started with that app alone.
