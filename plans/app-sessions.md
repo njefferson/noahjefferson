@@ -119,6 +119,24 @@ The approved page's own cost part did not name those turns, and the run met one 
 
 The fix and the second check took the run to six agents, two more than the four the approved page named.
 
+On 12 November 2026 at about 20:39 California time the setup script was proposed again, from another Claude app that could show the approval, and it was placed. The environment read back shows the three lines as the approved page wrote them.
+
+The proof was run at once. One new session was started in the Hub environment with the hub's repository and one read-only question, on the sonnet tier, and it changed nothing.
+
+The environment's own start log for that session shows the order: the repository cloned, the setup script run, and Claude Code started after it. The script's output was the dispatcher's line that it wired the nine events in /root/.claude/settings.json.
+
+That session's start printed the session brief, then the dispatcher's two lines: the hub copy already current, and the short-page line at /root/.claude/hub. It printed no line saying the hub clone was absent, so the start hook's own clone and install did not run.
+
+In that container /root/.claude/hub/hook-dispatch.mjs was present, the hub copy's head was eb6d9930659344d5c1ce1071cd683d44bfed8bcf, and the settings file held nine entries naming the dispatcher. The settings file was written at 20:39:56 California time, before Claude Code started.
+
+The proof session was archived after its one answer. Its own result gave its cost as about 0.13 dollars at list price.
+
+So a brand-new container of the Hub environment has the hub's hooks before its session starts. What remains of this project is the nine apps, each at its next session started with that app alone, with the block below.
+
+A correction to the count above: the first landing took seven agents, not six, because the push was made by a fresh worker. Bringing this entry onto main takes three more: a worker, a checker and a worker for the push.
+
+The four workflow runs for eb6d9930659344d5c1ce1071cd683d44bfed8bcf (the deploy, the doctrine gates, the accessibility gate and the code scan) each ended in success, read at 18:21 California time on 12 November 2026.
+
 ## The block for an app's session
 
 This block is pasted at the start of an app's next session started with that app alone.
