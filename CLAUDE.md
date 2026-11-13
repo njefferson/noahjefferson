@@ -23,7 +23,7 @@ is a site change — verify the rendered page before pushing.
 
 ## Where things are
 - `plans/native-setup.md`: the record of how the hub was rebuilt, and where the work stands.
-- `plans/native/`: the short page, the worker and checker roles, the two procedures, and what the new way cost.
+- `plans/native/`: the short page, the page on how sessions are started and run, the worker and checker roles, the three procedures, and what the new way cost.
 - `REPOS.md`: the ten repositories, their branches and their deploy targets.
 - `PROGRAM.md`: the ranked list of work across the hub and the apps. `program.mjs` writes it.
 - `DOCTRINE.md`, `doctrine/never.md` and `doctrine/apps.md`: the standing rules in full, and the rules every app is built to.

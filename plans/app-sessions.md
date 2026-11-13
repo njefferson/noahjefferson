@@ -137,9 +137,13 @@ A correction to the count above: the first landing took seven agents, not six, b
 
 The four workflow runs for eb6d9930659344d5c1ce1071cd683d44bfed8bcf (the deploy, the doctrine gates, the accessibility gate and the code scan) each ended in success, read at 18:21 California time on 12 November 2026.
 
+A second page was approved on 12 November 2026, California date. It changes hub pages only. It puts the operating answers on plans/native/running.md, makes the move a procedure, adds two lines to the short page, brings section 13 of doctrine/apps.md in line and corrects three call forms in HUB-REFERENCE.md. This run does not check that a session in an app finds the page and names the move. That is seen at the first app's next session started alone.
+
 ## The block for an app's session
 
 This block is pasted at the start of an app's next session started with that app alone.
+
+The procedure plans/native/skills/app-move/SKILL.md now stands in this block's place, and the block is kept as written.
 
 ```
 A piece of work from the hub's record: plans/app-sessions.md in njefferson/noahjefferson, approved there on 12 November 2026. Pasting this page here starts it. Read the short page first, at /root/.claude/hub/plans/native/page.md. If that file is absent, the hub is not installed in this container: clone https://github.com/njefferson/noahjefferson.git to /root/.claude/hub, read the page there, and carry on.
@@ -174,3 +178,115 @@ Where it can fail
 - The card does not appear or is declined: say so plainly and change nothing in the environment. The second route is this repository's own start hook, which clones the hub to /root/.claude/hub when it is absent and runs the install from that clone, as the hub's .claude/hooks/session-start.sh does. That write is under the configuration folder, so the harness asks for it.
 - A hook or the harness refuses a step: stop that route, report the refusal word for word, and try no other way to the same end.
 ```
+
+## The second approved page
+
+### Operating answers that stand: a change to the app-sessions project
+
+This is a change to the project recorded in `plans/app-sessions.md`. The first page is finished: the never page is rewritten, the Hub environment has the setup script and it is proven, and the record is on main at 6fa70795bb78dae6d1a86b38a0bcb02d0830b88d. Approving this page starts a second run. It changes hub pages only.
+
+#### Why
+
+The operating questions of 12 November were answered in one chat and stand nowhere: how many repositories a session is started with, what to do with sessions already running with two, what is done once for an app, how a new app starts, which mode, which model, and what updates by itself. Three standing pages also still say the old thing or nothing:
+
+- The move is a block to paste, and remembering to paste it is left to a person.
+- The new-app checklist, section 13 of `doctrine/apps.md`, tells a session to start a new app with both the new repository and the hub, and has no step for the setup script.
+- `HUB-REFERENCE.md` gives three call forms that reach the hub at a path beside the app, which does not exist when an app is started alone.
+
+The intended outcome: any session in any repository answers an operating question from one hub page, and an app that is not moved yet is noticed by the session, not remembered by a person.
+
+#### What the owner does afterwards
+
+- Sessions now running with two repositories: nothing. They finish their work as they are.
+- An app's next session: started with that app alone. The session names the move, or "move this app" starts it. One approval card, once for that app.
+- An app not opened for a long time: nothing until it is next opened.
+- A new app: its first session started with the new repository alone. The checklist places the script by one card.
+
+#### 1. The result
+
+Five things on main, in one commit.
+
+**A. A new page, `plans/native/running.md`: how sessions are started and run.** One screen, with these parts:
+
+- Starting a session: one repository for each session, the app alone, in its own environment. The hub is not picked beside it. The hub's own session is the hub alone.
+- Sessions already running with two repositories: left to finish. A session's repositories are fixed when it is made, so none is converted. The next session for that app is started alone.
+- Once for each app, the move: done at the app's first session started alone, by the procedure in B. The session offers it when the app's instruction file still describes the retired gates. The owner's part is one approval card. An app not opened for a long time needs nothing until then.
+- The one line that starts the move where the hub is not in the container yet, as one fenced block:
+
+```
+Move this app to the hub's new way: follow plans/native/skills/app-move/SKILL.md in njefferson/noahjefferson.
+```
+
+- A new app: first session with the new repository alone; section 13 of `doctrine/apps.md` places the setup script.
+- Mode: plan mode for the scope, because it gives the approve button. The run after approval in a mode that does not ask before each edit. Accept edits only when a session says it needs a write under a repository's `.claude` folder, and the session says when the last such write is done.
+- Model: the worker and the checker carry their own tier. The main thread costs what it runs on. The top tier is for the scope and for a surprise that needs judgement; a lower tier holds the run after approval. A session cannot change its own model, and says plainly when the work in front of it does not need the top tier.
+- What updates by itself: at every start and resume the hub's copy in the container is brought forward from the hub's main, with the short page, the roles, the procedures, the push guard and the dispatcher.
+- What does not: an app's CI runs the hub's checks at the hub commit that app pins; the setup script's text changes only by a card in a session of that environment.
+
+**B. The move as a procedure, `plans/native/skills/app-move/SKILL.md`.** It carries what the record's block carries: confirm the session was started with the app alone and stop if the hub sits beside it; put the three-line script on the session's environment by one card; shorten the app's instruction file to its own facts and one line naming the short page; point any check that looks for the hub beside the app at `/root/.claude/hub`; land on the work branch after a checker's pass; and the second route through the app's own start hook when the card cannot be shown. It adds one thing: when the last write under the configuration folder is done, the session says so, so the mode can be changed back. The block in the record stays as written, with one line added to the record saying the procedure now stands in its place.
+
+**C. Two lines on the short page, `plans/native/page.md`,** at the end of "What is wanted from a session":
+
+- A question about how sessions are started or run is answered from the hub's `plans/native/running.md`, in whatever repository it is asked.
+- Where a repository's own instruction file still describes the gates retired on 12 November 2026, say so once at the start and name the move procedure, the hub's `plans/native/skills/app-move/SKILL.md`. Start it when asked.
+
+**D. Section 13 of `doctrine/apps.md`, in three places and no others.**
+
+- The session note that says to start with both the new repository and the hub is replaced: a new app's session is started with the new repository alone, and the hub reaches it through the installed copy at `/root/.claude/hub`.
+- Step 1 gains: and one line naming the short page.
+- A new step 5b: at the first session, read the session's environment and propose the three-line setup script by one approval card. The line that says who does which steps names 5b as the session's, with the card the owner's.
+
+**E. Two small lines.** `HUB-REFERENCE.md`'s three call forms, at lines 278, 495 and 513, reach the hub at `/root/.claude/hub`. The hub's `CLAUDE.md` list of where things are gains the running page.
+
+#### 2. How it is checked
+
+- A checker that did none of the work opens the exact commit before the push.
+  - The running page: each part above is there, in plain words, and nothing on it contradicts the record `plans/app-sessions.md`, the short page or `plans/native-setup.md` section G.
+  - The procedure: it holds everything the record's block holds, by a side-by-side read, and the one added line.
+  - The short page: the diff is exactly the two added lines.
+  - Section 13: the diff is the three places and nothing else, and no other section of `doctrine/apps.md` changed.
+  - `HUB-REFERENCE.md`: the three call forms and nothing else. `CLAUDE.md`: the one line.
+  - Nothing quotes or names the owner, and there is no table.
+- The hub's seven checks pass, the remote's head is read after the push, and the four workflow runs for the pushed commit are read once.
+- Not checked in this run, and said so in the record: that a session in an app finds the page and names the move. That is seen at the first app's next session started alone.
+
+#### 3. The steps
+
+1. Worker A writes the running page and the procedure, and adds to the record this page as approved and the line about the procedure, and the one line in `CLAUDE.md`.
+2. Worker B, at the same time, adds the two lines to the short page, changes section 13 in its three places, and corrects the three call forms.
+3. One landing by the hub's landing procedure: a worker commits and runs the seven checks, the checker passes the exact commit, a worker pushes main once and reads the remote's head.
+4. The managing session reads the four workflow runs once and reports.
+
+#### 4. The cost
+
+- Five agents in five sends, all on the sonnet tier: two workers, a worker for the commit, a checker, a worker for the push. A failed check adds two: a fix and a second look.
+- By the last run's figures, between 13,000 and 45,000 tokens for each agent as the harness printed them, about 150,000 in all, and about 30 minutes.
+- One push of main. The agents run in the foreground, so no turn forced by the environment's git hook is expected; one is forced if a turn ends before the push.
+- Nothing in the run needs the top tier. The main thread can be switched down after the approval.
+
+#### 5. The way back
+
+- The commit is reverted on main through the same check. The reverted pages reach each session at its next start or resume.
+- No environment is touched, nothing under a `.claude` folder is written, and nothing in any app is touched.
+
+#### What only the owner does
+
+- Approves this page. Nothing else in this run.
+
+#### Where it can fail, and what follows
+
+- **A line on the short page misleads.** Every session reads that page. The checker reads the two lines against the record, and the way back is one revert.
+- **A check refuses a wording.** The form is changed and never the meaning; a change that would alter the meaning stops the step and is reported.
+- **An app's session has no hub in its container and an instruction file that says the old thing.** Nothing can tell that session about the move. The one fenced line on the running page starts it there.
+- **A hook or the harness refuses a step.** That route stops, the refusal is reported word for word, and no other way to the same end is tried.
+
+#### Not known
+
+- Which apps' own start hooks already install the hub when the app is started alone.
+- Whether a session started with two repositories gets the hub's hooks once its environment has the script.
+- Which environment Cv-Thalweg's sessions use.
+
+#### Left out on purpose
+
+- The setup script on the Default environment. It would cover any session started there, and it would also put the hub's hooks on every other project that uses it.
+- The hub's session starting the apps' move sessions itself. An app may have a session mid-work, and the move is cheapest at the moment that app is next opened.

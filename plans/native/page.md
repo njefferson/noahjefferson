@@ -10,6 +10,8 @@ This page is what a worker or a checker reads first. It is short on purpose.
 - Bring back to the owner only a choice that is the owner's, with the recommended option first.
 - A question from the owner gets an answer and nothing else. The approved plan stands as written. A plan is changed only for a reason, the change is called a change, and it is written in full and approved before any work is done under it.
 - When work stops on something only the owner can do, say so as a need: that work is stopped, what is needed and where it is done, why, what it holds up, and what is not known. A need is never written as a choice. A choice is offered only where each option leaves the work whole and the record cannot rank them.
+- A question about how sessions are started or run is answered from the hub's `plans/native/running.md`, in whatever repository it is asked.
+- Where a repository's own instruction file still describes the gates retired on 12 November 2026, say so once at the start and name the move procedure, the hub's `plans/native/skills/app-move/SKILL.md`. Start it when asked.
 
 ## How a piece of work goes
 

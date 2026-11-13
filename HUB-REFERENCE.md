@@ -275,7 +275,7 @@ existing.
 - [`palette-check.mjs`](palette-check.mjs) — the colour floors (PALETTES.md).
 - [`docs-check.mjs`](docs-check.mjs) — the no-grid rule (Doctrine §2) over every
  tracked `.md`. `node docs-check.mjs .` from the hub, or
- `node ../noahjefferson/docs-check.mjs .` from a sibling.
+ `node /root/.claude/hub/docs-check.mjs .` from a sibling.
 - [`lessons-check.mjs`](lessons-check.mjs) — every lesson in LESSONS.md
  declares `GATE`, `CHECKLIST` or `JUDGEMENT`, and a cited gate that does not
  exist FAILS. `--checklist` prints the steps no script can perform; run it
@@ -492,7 +492,7 @@ names. `hub-pin-check.mjs` reads every workflow for this reason; a session
 checking by hand has to do the same. (LESSONS §240.)
 
 - [`hub-pin-check.mjs`](hub-pin-check.mjs) — **every pin on this hub is a commit
- the hub's `main` reaches.** `node ../noahjefferson/hub-pin-check.mjs --repo .`
+ the hub's `main` reaches.** `node /root/.claude/hub/hub-pin-check.mjs --repo .`
  reads every workflow under `.github/workflows` for a `uses:` line naming this
  hub and refuses a pin that is not a full 40-character commit, one the hub does
  not have, or one `git merge-base --is-ancestor` says its `main` does not reach,
@@ -510,7 +510,7 @@ checking by hand has to do the same. (LESSONS §240.)
  have is printed as absent from it. **The sibling copies of the local runner are
  superseded by this one.**
 - [`doctrine-sync.mjs`](doctrine-sync.mjs) — **run this FIRST in any sibling
- session**: `node ../noahjefferson/doctrine-sync.mjs --repo .`. It says what has
+ session**: `node /root/.claude/hub/doctrine-sync.mjs --repo .`. It says what has
  landed in the hub since that repo last reconciled — which files, which commits,
  and **which sections of DOCTRINE.md**, because "DOCTRINE.md changed" sends you
  to re-read 900 lines and "§7e changed" sends you to the paragraph. Each sibling

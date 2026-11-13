@@ -523,14 +523,14 @@ and is MISSING its `CLAUDE.md`, `LICENSE`, or `NOTES.md`, proactively say so and
 OFFER to run this checklist — do not wait for the owner to name it or remember a
 keyword. Any plain-language ask also counts ("set this up", "make it like the
 others", "it's new", "onboard it"). (Session note: a session can only reach repos
-picked at its start and CANNOT add one mid-session — so to work on or set up a
-new app, start the session with BOTH the new repo AND the noahjefferson hub
-selected, because this Doctrine lives in the hub.)
+picked at its start and CANNOT add one mid-session. A new app's session is
+started with the new repository alone; the hub reaches it through the installed
+copy at `/root/.claude/hub`, which the environment's setup script puts there.)
 
-The session does 1–5 and 6b; the owner does 6 and 7 (the hub is the owner's to decide — §0c;
+The session does 1–5, 5b and 6b, and the owner approves the card of 5b; the owner does 6 and 7 (the hub is the owner's to decide — §0c;
 metadata is a manual GitHub-UI step — §10):
 1. `CLAUDE.md` — the standard pointer header (link to this Doctrine + "the
- Doctrine wins") followed by repo-specific facts only. Keep it thin.
+ Doctrine wins") and one line naming the short page, followed by repo-specific facts only. Keep it thin.
 2. `LICENSE` — PolyForm Noncommercial 1.0.0, unless a data source's terms force
  something stricter. Correct Required-Notice URL + a scope block for any
  third-party material shipped or consumed.
@@ -540,6 +540,9 @@ metadata is a manual GitHub-UI step — §10):
  app with a UI also ships the on-screen build stamp from its first release
  (§7b), with its contrast pair registered.
 5. Branches: `staging` and `main` only.
+5b. The environment's setup script: at the first session, read the session's
+ environment and propose the three-line script that installs the hub (the hub's
+ `plans/app-sessions.md` gives it), by one approval card.
 6. Wire it into the hub: the hub links OUT to the app, the app links BACK, and
  its About links the shared accessibility statement. **The two halves are not
  the same job.** The app's own links back are the session's to build. The
