@@ -101,7 +101,7 @@ Step 1 of the plan, second part. The script's three lines were tried against a s
 
 No line ended non-zero in any of the three runs, which is what a setup script needs, because a failing one stops a session from starting. The scratch folder was deleted and a listing confirmed it was gone.
 
-Step 2, on 12 November 2026. Six passages of doctrine/never.md were rewritten, in sections 0, 0d, 0f, 9b (two) and 11b, 25 lines in and 51 out. None of these names remains in the page: plan-fence.mjs, approved-plan-guard.mjs, report.mjs, the manager fence, tierGate, dispatchGate, PLAN-LOCK, the gate index, and the plan sections "Asked" and "Cost". The names plan-guard.mjs, plan-scope-check.mjs and stop-guard.mjs remain where the page says what each shell does today. The hub's seven checks each ended 0.
+Step 2, on 12 November 2026. Six passages of doctrine/never.md were rewritten, in sections 0, 0d, 0f, 9b (two) and 11b, 25 lines in and 51 out, a figure that is the first commit's, ff227e8e377f8f2c46a140674b0f351b4d4f1b19. None of these names remains in the page: plan-fence.mjs, approved-plan-guard.mjs, report.mjs, the manager fence, tierGate, dispatchGate, PLAN-LOCK, the gate index, and the plan sections "Asked" and "Cost". The names plan-guard.mjs, plan-scope-check.mjs and stop-guard.mjs remain where the page says what each shell does today. The hub's seven checks each ended 0.
 
 Two leads in section 9b changed, because each claimed what the code no longer does. Nothing refuses a commit line before git runs; the commit-message hook that branch-guard.mjs installs refuses a chat link, an attribution trailer or a model's name at the commit. The wiring status of the privacy step lives in each repository's entry in REPOS.md.
 
@@ -110,6 +110,14 @@ Step 3, on 12 November 2026 at about 18:10 California time. The setup script was
 What that leaves: the hub's own sessions are not held up, because the hub's start hook clones the hub and runs the install when the clone is absent. For an app's session the block's second route stands until the card can be shown.
 
 Found in the run and left alone, each outside the approved page: branch-guard.mjs line 284 names the retired plan-fence.mjs in a comment; lessons 447 and 448 point at a gate index in the hub's instruction file, which has none; the lessons check passes and lists 26 citations of retired gates in LESSONS.md.
+
+A checker that did none of the work failed the first commit on one fault and found the rest to hold. The rewrite of section 11b had dropped a duty: that a page which sends agents states its run in its cost part, and that one which holds its commits for one push at its end names the turns the environment's git hook will force.
+
+The sentence was restored in a second commit, with the retired section's name replaced by the cost part of the page, and the two lesson numbers put back beside it.
+
+The approved page's own cost part did not name those turns, and the run met one of them on 12 November 2026, when the environment's stop hook asked for a commit and a push while a worker was still writing.
+
+The fix and the second check took the run to six agents, two more than the four the approved page named.
 
 ## The block for an app's session
 

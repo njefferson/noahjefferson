@@ -369,7 +369,10 @@ cost before it starts, and the cheapest tier that holds the rules does the work)
 the cost and tier named in a piece of work's scope, and the checker's read hold it.
 The gates that read the serving model and refused on a tier were retired on
 12 November 2026, their pages are kept in the archive folder as written, and
-`stop-guard.mjs` is a shell that never refuses a stop. (LESSONS §434, §458, §459, §469.)
+`stop-guard.mjs` is a shell that never refuses a stop. (LESSONS §434, §459.)
+A page that sends agents states its run in its cost part, the pushes, the sends
+and the tier of each step, and one that holds its commits for one push at its end
+names the turns the environment's git hook will force (LESSONS §458, §469).
 
 ## 11d. Never start a process you are not going to manage. Every repo, forever.
 
