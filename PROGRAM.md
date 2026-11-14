@@ -1279,7 +1279,9 @@ Depends: each repository's own session.
 
 ### P-74. Q-HUB-20: nothing reads the remote's head just before a push, a merge or a pull
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Both landing procedures read the remote's head immediately before the push and stop for a fetch, a rebase and a new check if it moved; the case half is dropped by the page approved on 13 November 2026, because the rebuild keeps no gate for it.
 
 Acceptance: a push step reads the remote's head immediately before the push, so a commit another session pushed in between is found before the refusal and not by it; a case.
 
@@ -1307,7 +1309,9 @@ Depends: none.
 
 ### P-77. Q-HUB-23: an agent cannot wait on a CI run except by repeated reads
 
-Repository: hub. Goal: 2. State: parked. Plan: none.
+Repository: hub. Goal: 2. State: done. Plan: none.
+
+Done: Both landing procedures say a worker reads the workflow runs once and does not wait, and both managing procedures name the managing session's read at its next turn as the step after.
 
 Parked: The harness gives an agent no wait on a CI run, so the run is read by the main thread after the step ends.
 
@@ -1847,7 +1851,9 @@ Depends: P-3.
 
 ### P-130. Q-HUB-77: the Doctrine gates run for the commit that landed step 186's work was still in progress when read
 
-Repository: hub. Goal: 5. State: parked. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Both landing procedures require every workflow run for the exact commit to be read by name and reported as concluded, with its conclusion, or as still running.
 
 Parked: The conclusion of a CI run for a pushed commit is an event that must come first, and no step can make it arrive before the step ends.
 
@@ -1907,7 +1913,9 @@ Depends: P-4.
 
 ### P-136. Q-HUB-83: the Doctrine gates run and the code scan for a hub commit were still in progress at two reads
 
-Repository: hub. Goal: 5. State: parked. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Both landing procedures have each run reported as concluded or still running, and both managing procedures have a run still running named in the state line and read again at the next turn.
 
 Parked: A run still in progress at a read is the CI service's timing, and only a later read of the run can show its conclusion.
 
@@ -2041,7 +2049,9 @@ Depends: none.
 
 ### P-149. Q-HUB-97: the first push of a lessons commit hung past the shell's two-minute limit with no output
 
-Repository: hub. Goal: 2. State: parked. Plan: none.
+Repository: hub. Goal: 2. State: done. Plan: none.
+
+Done: Both landing procedures give the push a five-minute limit as one foreground command and read the remote's head before any second push; the background run with its output in a file is dropped by the page approved on 13 November 2026.
 
 Parked: The two-minute limit on a foreground command is the environment's, and the plan that pushes names a time limit for the push in its own step.
 
@@ -2435,7 +2445,9 @@ Depends: P-11.
 
 ### P-189. Q-HUB-149: a check run before git add cannot see a new file
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: Both landing procedures stage every changed and new file by name before the first check runs.
 
 Acceptance: a plan that lists checks lists git add before them, and the plan check or the agent rules say so; the checks of the redesign plan's later steps already name it.
 
@@ -2763,7 +2775,9 @@ Depends: P-6.
 
 ### P-223. Q-HUB-183: no guard serialises two agents' staging and commits in one worktree
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Both worker roles and both managing procedures say that workers running together stage nothing and commit nothing, and one worker stages and commits after them; the case half is dropped by the page approved on 13 November 2026.
 
 Acceptance: the After line or a guard prevents two steps from staging in one worktree at once, or each step works in its own worktree; a case plants two.
 
@@ -3179,7 +3193,9 @@ Depends: none.
 
 ### P-266. Q-HUB-226: agents broke the shell-shape rules three times in the redesign plan
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Both roles say never to change directory, not even inside a longer command, and name the remedy, git with -C and npm with --prefix; the refusal and the pipe rule are dropped by the page approved on 13 November 2026, because the fence that refused them is retired.
 
 Acceptance: a change of directory and a pipe are refused with the remedy in the refusal's text, or the step's Kill line names the shape; each cost a review and a send.
 
@@ -3205,7 +3221,9 @@ Depends: P-268.
 
 ### P-270. Q-HUB-229: an agent cannot wait on a background run, and a latched agent returns its report each time a run ends
 
-Repository: hub. Goal: 5. State: parked. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Both worker roles say to run in the foreground, not to hand back while a background run is unread, and to read earlier output before repeating a command when sent on again; the case half is dropped by the page approved on 13 November 2026.
 
 Parked: Waking a resent agent when an earlier agent's background run ends is behaviour of the harness, which no plan command can wait on.
 
@@ -3275,7 +3293,9 @@ Depends: none.
 
 ### P-277. Q-HUB-236: a review agent can read the Next line's move as work to do
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Both checker roles open by saying the checker did none of the work and changes nothing, and now say a file needed for a check is written only in the scratchpad; the refusal half is dropped by the page approved on 13 November 2026.
 
 Acceptance: aim-review.md opens with the sentence that a review does none of the move it judges; a review that writes outside the scratchpad is refused with that sentence in the refusal.
 
@@ -3343,7 +3363,9 @@ Depends: none.
 
 ### P-284. Q-HUB-243: a review agent put a format string with a vertical bar on a git read and was latched
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: retired. Plan: none.
+
+Retired: The latch on a git read carrying a format string was the plan fence's, plan-fence.mjs is in archive/RETIRED-FILES.txt, and no standing file refuses a git read, so nothing is left to write.
 
 Acceptance: aim-review.md names the bare git reads a review may make and says a format string or percent code is not among them.
 
@@ -4117,7 +4139,9 @@ Depends: none.
 
 ### P-364. Q-HUB-321: a plan's steps keep every landed send's text, so the steps file outgrows one Read
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: Both roles say the short page is read as the first call and alone; the steps file half is dropped by the page approved on 13 November 2026, because no steps file is kept any more.
 
 Acceptance: a landed send's text moves out of the step into the plan's record once its hand-back opens DONE, so the steps file holds the send in force alone, and the agent rules say the rules' Read is the one call of an agent's first turn.
 
@@ -5105,7 +5129,9 @@ Depends: none.
 
 ### P-464. Q-HUB-417: an allowed-hosts change made during a session did not reach the web fetch tool in that session
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Section 15c of doctrine/apps.md says a host added during a session is probed with one fetch of the tool before it is called open, and that work waiting on a host carries the probe as a step of its own.
 
 Acceptance: the doctrine's rule on a denied host says how such a change is read, and a plan that waits on a host carries a probe of the tool as a step.
 
@@ -6003,7 +6029,9 @@ Depends: none.
 
 ### P-556. Q-HUB-506: the checks read tracked files, so a new file is not scanned before its commit
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: Both landing procedures stage each new file by name before the first run of the checks; the case half is dropped by the page approved on 13 November 2026.
 
 Acceptance: the landing stages each new file before the first run of the checks, with a case on an untracked file that holds a find.
 
@@ -6049,7 +6077,9 @@ Depends: none.
 
 ### P-561. Q-HUB-509: a worker's restart closed an approval request that nobody refused
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: found/Q-HUB-509.md records the restart as the harness's own, and plans/native/running.md says under Mode that approval is only the button and the page is put up again.
 
 Acceptance: the harness's behaviour is recorded as not the repository's, with the remedies left to the rule that approval is only the button.
 
@@ -6175,7 +6205,9 @@ Depends: none.
 
 ### P-575. Q-HUB-522: A review agent ran the bare scratchpad prefix and was latched
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Both roles say a script goes in the session's scratchpad, is written before the command that runs it, and is run by its full path.
 
 Acceptance: The review file names the script's full path and orders its write before the command that runs it.
 

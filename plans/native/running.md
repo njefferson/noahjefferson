@@ -46,6 +46,7 @@ Its first session is started with the new repository alone, and section 13 of do
 - Plan mode for the scope, because it gives the approve button.
 - The run after approval in a mode that does not ask before each edit.
 - Accept edits only when a session says it needs a write under a repository's .claude folder, and the session says when the last such write is done.
+- Approval is only the button. A typed word approves nothing. A restart of the session's process that closes an approval request nobody answered is the harness's own, and the page is put up again.
 
 ## Model
 

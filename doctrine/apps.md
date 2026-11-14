@@ -843,6 +843,12 @@ whose entire subject is epistemic care. Two identifiers were missing and were
 supplied, and one date ambiguity was resolved from the publisher record. None of
 that was reachable without asking.*
 
+**A HOST ADDED DURING A SESSION IS NOT OPEN UNTIL THE TOOL HAS BEEN TRIED.** A
+host added to the allowed list while a session runs may not reach every tool in
+that session. Probe the tool with one fetch before saying the host is open.
+Where the probe still fails, say so, and say that a new session reads the list
+afresh. Work that waits on a host carries that probe as a step of its own.
+
 ---
 
 ## 7d. Every app shows the reader WHAT CHANGED

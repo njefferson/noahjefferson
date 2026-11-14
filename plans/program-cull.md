@@ -559,7 +559,7 @@ Seven more were looked at and not set done, P-15, P-52, P-234, P-268, P-457, P-5
 ### The order
 
 1. Workflows and the supply chain: P-167, P-184, P-185, P-280, P-282, P-289, P-290, P-353, P-586. A workflow that handles secrets runs a package unpinned, two workflows use secrets with no environment set, dependency branches and one session branch sit on the remote, and one check is not wired into the gates. It is first because it is the only piece about secrets. About four agents and 250,000 tokens. Run on 13 November 2026; what it did is under Piece 1 below.
-2. The procedures and the roles: P-74, P-77, P-130, P-136, P-149, P-189, P-223, P-266, P-270, P-277, P-284, P-364, P-464, P-556, P-561, P-562, P-575. Pages only: what the landing reads before and after a push, what the roles say about shell shapes and writes, and two sentences the apps page lacks. It is second because it is the cheapest and reaches every session at its next start. About three agents and 100,000 tokens.
+2. The procedures and the roles: P-74, P-77, P-130, P-136, P-149, P-189, P-223, P-266, P-270, P-277, P-284, P-364, P-464, P-556, P-561, P-562, P-575. Pages only: what the landing reads before and after a push, what the roles say about shell shapes and writes, and two sentences the apps page lacks. It is second because it is the cheapest and reaches every session at its next start. About three agents and 100,000 tokens. Run on 13 November 2026; what it did is under Piece 2 below.
 3. The checks agree with their words: P-72, P-89, P-152, P-183, P-248, P-253, P-515, P-533, P-542. Checks that list files two ways, skip untracked files, or say more than they do. It comes third because guard files change, so the full suite and every planted failure run. About five agents and 300,000 tokens.
 4. The suite's runner: P-105, P-108, P-163, P-164, P-235, P-279, P-455, P-457, P-505, P-506, P-509, P-514, P-526, P-555. One guard file, the full suite and every planted failure. About four agents and 300,000 tokens.
 5. The list and the records: the list's head rewritten for the new way, and P-93, P-161, P-192, P-206, P-210, P-211, P-234, P-251, P-264, P-269, P-283, P-291, P-320, P-443, P-503, P-596. It comes after the pieces whose results it records. About four agents and 200,000 tokens.
@@ -584,7 +584,7 @@ Each stays parked or open as it is.
 
 ### Belongs to the apps
 
-Each is taken at that app's next session started alone, after its move: the eight knowledge layers P-22 and P-24 to P-30; the nine pins and sweep callers P-35 to P-43; and P-68, P-73, P-117, P-120, P-162, P-204, P-215 and P-558; P-167, which depends on the siblings' own pins; and P-586, which is about siblings whose CI installs a browser, the hub's own gate having passed on the current runner image on 13 November 2026.
+Each is taken at that app's next session started alone, after its move: the eight knowledge layers P-22 and P-24 to P-30; the nine pins and sweep callers P-35 to P-43; and P-68, P-73, P-117, P-120, P-162, P-204, P-215 and P-558; P-562, because the route for a pasted test-page report is the app's to give; P-167, which depends on the siblings' own pins; and P-586, which is about siblings whose CI installs a browser, the hub's own gate having passed on the current runner image on 13 November 2026.
 
 ### The harness's or the environment's
 
@@ -620,3 +620,41 @@ Found and left alone:
 
 - The job in deploy.yml has no name, which the audit shows as informational and P-290 does not name.
 - The two dependency branch names still stood on the remote after their pull requests were closed.
+
+### Piece 2, run on 13 November 2026
+
+Four sentences were written into both landing procedures, five into both worker roles, three into both checker roles and two into both managing procedures. One bullet was added to the running page under Mode, and one paragraph to section 15c of the apps page. Each pair of copies, the one under plans/native and the one under .claude, carries the same sentence in its own wording of paths and step numbers.
+
+Set done in full:
+
+- P-77
+- P-130
+- P-136
+- P-189
+- P-464
+- P-561
+- P-575
+
+Set done with a half dropped by the approved page:
+
+- P-74: the case is dropped.
+- P-223: the case is dropped.
+- P-270: the case is dropped.
+- P-556: the case is dropped.
+- P-266: the refusal is dropped.
+- P-277: the refusal is dropped.
+- P-149: the background run with its output in a file is dropped.
+- P-364: the steps file is dropped.
+
+The halves were dropped because the rebuild of 12 November keeps a hook for three rules only, so no gate was built.
+
+Marked retired: P-284.
+
+Moved: P-562 to the apps.
+
+Not checked: that a session follows the new sentences, which the next pieces show.
+
+Found and left alone:
+
+- Nothing in the repository holds the two copies of a role or a procedure together, which is left for piece 3.
+- The two copies of each role name the short page at different paths on purpose.
