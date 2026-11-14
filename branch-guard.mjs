@@ -374,7 +374,7 @@ if (install) {
   writeFileSync(cmLivePath, cmWant);
   chmodSync(cmLivePath, 0o755);
   console.log(`  wrote .githooks/commit-msg (tracked) and ${cmLivePath} (live)`);
-  if (msgAlso.length > 0) console.log(`  commit-msg also runs ${msgAlso.length} declared check(s): ${msgAlso.join(', ')}`);
+  if (msgAlso.length > 0) console.log(`  msg-also= runs ${msgAlso.length} declared check(s) after the hub's refusals, each given the message file's path: ${msgAlso.join(', ')}`);
   // And into .git/hooks, which no branch owns and no checkout can remove.
   mkdirSync(liveDir, { recursive: true });
   writeFileSync(livePath, want);
