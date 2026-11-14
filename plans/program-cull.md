@@ -698,3 +698,29 @@ Found and left:
 - The out flag takes only the form with an equals sign.
 - A throw that escapes a plain run of the cases is not wrapped.
 - The entry of P-235 gives 384 planted failures for hook-dispatch.mjs, and the suite holds 68 for that file today.
+
+### Piece 5, run on 14 November 2026
+
+Landed: a dated note of 14 November 2026 at the end of each of five lessons (320, 383, 385, 387 and 398), saying which gate the lesson's account describes and what of it still stands. A count verb in program.mjs, with cases for a line that holds, a wrong opening number, a breakdown that does not sum, a line with no breakdown and the real PROGRAM.md, and planted failures for each. The items count line under "## Items" corrected to open with 597 and sum to 597, adding 15 other entries and counting 537 findings from Q-HUB-1 to Q-HUB-543. The three goal lines in the head of PROGRAM.md, for goals 3, 4 and 5. The rest of the head was left as written, because the pages it summarises were made live again on 14 November 2026.
+
+Set done: P-206, P-234, P-596, P-192, P-93, P-251, P-264 and P-291. P-192 was set done on a read of run 557 made through the connector on 14 November 2026, which had concluded with success on 2 November 2026.
+
+Stay, each with a Known line of 14 November 2026 in its entry:
+
+- P-161: four of the seven matters it names are in no entry, and the plan that named them is not in the tree.
+- P-283: it waits on a run for a commit the item does not name, which was not read.
+- P-210: Q-HUB-110 and P-162 still name no repository, and naming it needs a read of the app's own repository.
+- P-211: P-13's Known line now gives 21 allow rules on 2 November 2026 and 34 today; the step 32 report is not in the tree, so the item stays open.
+- P-269: the close entry under P-10 still reads as taken before the push, and the list of paragraphs that P-268 reads is not kept in the repository.
+- P-320: no lesson yet says to read an app's own research file whole, and the seed print has no file left to stand in.
+- P-503: no entry is ranked for Q-HUB-246, Q-HUB-247 or Q-HUB-248, and three entries would change the item count.
+- P-443: left open and not parked; the doctrine records only an append with a pull before each write and an eject on conflict, which was not built, and the design is work for a page of its own.
+
+Found and left:
+
+- The lines of this record that retired an item because a file was absent rest, for doctrine/plans.md, plans/seed-template.md, agent-rules.md, aim-review.md and for the size of hook-dispatch.mjs and stop-guard.mjs, on a state of the tree that changed on 14 November 2026. Those retired items need a second read.
+- archive/RETIRED-FILES.txt still lists agent-rules.md and aim-review.md, which are in the tree again.
+- The done of P-194 may not hold, because agent-rules.md does not name the quote check's blockquote refusal.
+- P-124 carries both a Done line and a Parked line.
+- The seed template's list of checks lacks two checks the workflow runs.
+- Lesson 320's declaration line still says checklist, with the choice written only in its note.

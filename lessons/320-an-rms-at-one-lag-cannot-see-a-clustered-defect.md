@@ -58,3 +58,5 @@ from something already known, print it, and say in words that nothing below is
 trustworthy if it is not there. It cost nothing and it refused a table of eight
 confident wrong rows — including one that would have exonerated a change made
 the day before.
+
+**Noted 2026-11-14.** The gate this account describes is a line a harness prints before its own results, and the lesson declares it a checklist item and cites a phrase and no file. No file in the tree is its gate, and none of the files in `archive/RETIRED-FILES.txt` was. `agent-rules.md`, listed there and back in the tree, carries the same rule for every scratch script, so the item stays a checklist and the rule it asks for stands, with nothing that refuses a harness lacking the line.

@@ -9,3 +9,5 @@
 **What to do with it.** Treat a resume line at the top of a turn as the first instruction of that turn. Read the doctrine lines it names, from the live clone, before the call the turn was going to make, and then make that call. Doing it in that order costs the same two reads and no refusal; doing it the other way costs the same two reads and a refused call first.
 
 **What the checklist cannot see.** Nothing counts the resume lines a session has had, so a turn that skips the reads is found by the refusal and not before it. The refusal is the gate working, and the reads it asks for are the ones in the checklist item above.
+
+**Noted 2026-11-14.** The gate this account describes is `doctrine-read-guard.mjs`, as it stood before lesson 398, when every resume re-armed the due marker and cost two reads. That file is in `archive/RETIRED-FILES.txt` and is not in the tree, so no resume re-arms anything now and no refusal arrives. The checklist item stays true in what it asks: the doctrine pages, `doctrine/never.md` and `doctrine/hub.md`, are read whole at every start and after a compaction, before any other call, and nothing now stops a session that does not.

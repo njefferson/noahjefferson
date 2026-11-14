@@ -11,6 +11,7 @@
  *   done --item "P-12=One sentence." [--item ...]  sets each item done, with its Done sentence
  *   measure <session transcript> [--plan=<n>] [--root ...]   writes the close entry of the plan the instrument numbers n (the plan last approved without --plan) under P-10, from session-cost.mjs
  *   lesson --title <t> --declaration <d> --body <file>   writes the next lesson's file and its row in LESSONS.md
+ *   count [--root ...]                             writes nothing; exits 1 when the items count line does not open with the count of the entries or its breakdown does not sum to it (P-291)
  *
  * A verb that refuses writes nothing, names each cause on its own line and exits 1. A verb that writes prints one line for each thing it wrote.
  * The findings file is a JSON array (or an object with a findings array); each finding holds text, kind (Fix in, Put right already, Not the
@@ -50,6 +51,60 @@ export function programEntries(text) {
     const acceptance = /^Acceptance:\s*([\s\S]*?)(?=\n\s*\n|$)/m.exec(block)?.[1]?.replace(/\s*\n\s*/g, ' ').trim() ?? '';
     return { key: `P-${h.n}`, n: h.n, title: h.title, block, state, repository, depends, acceptance };
   });
+}
+
+/**
+ * The faults of the items count line under "## Items" (P-291): its opening number is not the count of the entries, or the breakdown it gives after
+ * the bracket does not sum to that number. The breakdown is read at the top level of the line, so a number inside a bracket is not a part of it; each
+ * part that opens with a number (an "and" before it is dropped) is a kind, and a part that opens with a word is a remark and is not summed.
+ * @param {string} text  PROGRAM.md.
+ * @returns {{opens: number|null, entries: number, sum: number|null, parts: number[], problems: string[]}} the figures read and one sentence for each fault.
+ */
+export function countLineCheck(text) {
+  const src = String(text ?? '');
+  const entries = programEntries(src).length;
+  const at = src.split('\n').findIndex((l) => /^\d+ items\b/.test(l));
+  const problems = [];
+  if (at < 0) return { opens: null, entries, sum: null, parts: [], problems: ['the items count line is not where the program prints it'] };
+  const line = src.split('\n')[at];
+  const opens = Number(/^(\d+) items\b/.exec(line)[1]);
+  if (opens !== entries) problems.push(`the items count line opens with ${opens} and the program holds ${entries} entries`);
+  // The bracket after "items" holds the key ranges and is skipped; the breakdown follows its colon.
+  let depth = 0;
+  let from = line.indexOf('items') + 5;
+  for (let i = from; i < line.length; i++) {
+    const c = line[i];
+    if (c === '(') depth++;
+    else if (c === ')') { depth--; if (depth === 0) { from = i + 1; break; } }
+    else if (depth === 0 && c === ':') { from = i; break; }
+  }
+  const rest = line.slice(from).replace(/^\s*:/, '');
+  const parts = [];
+  let seg = '';
+  depth = 0;
+  const flush = () => { const m = /^(?:and\s+)?(\d+)\s/.exec(seg.trim()); if (m) parts.push(Number(m[1])); seg = ''; };
+  for (const c of rest) {
+    if (c === '(') depth++;
+    if (c === ')') depth--;
+    if (c === ',' && depth === 0) flush(); else seg += c;
+  }
+  flush();
+  const sum = parts.length ? parts.reduce((x, y) => x + y, 0) : null;
+  if (sum === null) problems.push('the items count line gives no breakdown to sum');
+  else if (sum !== opens) problems.push(`the breakdown of the items count line sums to ${sum} (${parts.join(' + ')}) and the line opens with ${opens}`);
+  return { opens, entries, sum, parts, problems };
+}
+
+function count(a, root) {
+  const text = slurp(paths(root).program);
+  if (text === null) refuse('count', ['PROGRAM.md cannot be read']);
+  const r = countLineCheck(text);
+  process.stdout.write(`program count: the line opens with ${r.opens}; the program holds ${r.entries} entries; the breakdown sums to ${r.sum}${r.parts.length ? ` (${r.parts.join(' + ')})` : ''}\n`);
+  if (r.problems.length) {
+    for (const p of r.problems) process.stdout.write(`program count: FAILED, ${p}\n`);
+    process.exit(1);
+  }
+  process.stdout.write('program count: the count line holds\n');
 }
 
 const slurp = (f) => { try { return readFileSync(f, 'utf8'); } catch { return null; } };
@@ -381,10 +436,10 @@ if (isMain) {
   const rootAt = a.indexOf('--root');
   const root = rootAt >= 0 && a[rootAt + 1] ? resolve(a[rootAt + 1]) : HERE;
   const rest = rootAt >= 0 ? a.filter((_, i) => i !== rootAt && i !== rootAt + 1) : a;
-  const verbs = { claim, file: fileFindings, done, measure, lesson };
+  const verbs = { claim, file: fileFindings, done, measure, lesson, count };
   const verb = rest[0];
   if (!verbs[verb]) {
-    process.stdout.write('usage: node program.mjs <claim|file|done|measure|lesson> [switches] [--root <path>]; see the header of this file for each verb\'s switches\n');
+    process.stdout.write('usage: node program.mjs <claim|file|done|measure|lesson|count> [switches] [--root <path>]; see the header of this file for each verb\'s switches\n');
     process.exit(2);
   }
   verbs[verb](rest.slice(1), root);

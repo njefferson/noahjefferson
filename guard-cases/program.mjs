@@ -76,7 +76,53 @@ function plantedTwoPlans(withStop) {
   ].join('\n') + '\n';
 }
 
+/** A program of the given number of entries under the given items count line, for the count verb. */
+const countProgram = (line, entries) => ['# The program', '', '## Items', '', line, '', '## Items the redesign plan builds', '',
+  ...Array.from({ length: entries }, (_, i) => `### P-${i + 1}. Item number ${i + 1}\n\nRepository: hub. Goal: 2. State: open. Plan: none.\n\nAcceptance: planted.\n\nDepends: none.\n`)].join('\n');
+
+/** The count verb run against a planted program holding that line and that many entries. */
+function countRun(dir, h, line, entries) {
+  const root = h.tmp('prog-count-');
+  writeFileSync(join(root, 'PROGRAM.md'), countProgram(line, entries));
+  return run(dir, root, ['count']);
+}
+
 export const cases = [
+  {
+    name: 'P-291: the count verb passes an items count line that opens with the count of the entries and whose breakdown sums to it, however many brackets and numbers inside them the line holds, and writes nothing',
+    guards: ['prog_count_bracket', 'prog_count_exit'],
+    run(m, dir, h) {
+      const line = '5 items (P-1 to P-5, 3 of them found in 2 sends): 2 built, 1 parked items (the 4 of x, the 6 of y, and z), and 2 findings, one for each key of the Found queue (P-1 to P-3, 99 of them).';
+      const r = countRun(dir, h, line, 5);
+      return h.assertAll([
+        ['the line holds', r.status === 0 && /the count line holds/.test(r.stdout), out(r)],
+        ['the breakdown is read as 2 + 1 + 2 and the numbers inside brackets are not summed', /the breakdown sums to 5 \(2 \+ 1 \+ 2\)/.test(r.stdout), out(r)],
+      ]);
+    },
+  },
+  {
+    name: 'P-291: the count verb fails, naming both numbers, when the line opens with a number that is not the count of the entries, and when the breakdown does not sum to the number the line opens with',
+    guards: ['prog_count_opens', 'prog_count_sum', 'prog_count_exit'],
+    run(m, dir, h) {
+      const wrongOpen = countRun(dir, h, '6 items (P-1 to P-5): 4 built, and 2 findings, one for each key.', 5);
+      const wrongSum = countRun(dir, h, '5 items (P-1 to P-5): 4 built, and 2 findings, one for each key.', 5);
+      const bare = countRun(dir, h, '5 items (P-1 to P-5), kinds not given.', 5);
+      return h.assertAll([
+        ['an opening number that is not the count of the entries fails', wrongOpen.status === 1 && /opens with 6 and the program holds 5 entries/.test(wrongOpen.stdout), out(wrongOpen)],
+        ['a breakdown that sums to the opening number but not to the entries fails once, on the entries', !/the breakdown of the items count line sums to/.test(wrongOpen.stdout), out(wrongOpen)],
+        ['a breakdown that does not sum to the opening number fails and names the sum, the parts and the number', wrongSum.status === 1 && /sums to 6 \(4 \+ 2\) and the line opens with 5/.test(wrongSum.stdout) && !/FAILED, the items count line opens/.test(wrongSum.stdout), out(wrongSum)],
+        ['a line with no breakdown fails', bare.status === 1 && /gives no breakdown to sum/.test(bare.stdout), out(bare)],
+      ]);
+    },
+  },
+  {
+    name: 'P-291: the count verb holds the real PROGRAM.md, whose items count line opens with the count of its entries and whose breakdown sums to it',
+    guards: [],
+    run(m, dir, h) {
+      const r = spawnSync('node', [join(dir, 'program.mjs'), 'count', '--root', dir], { encoding: 'utf8', timeout: 120000 });
+      return h.assertAll([['the real line holds', r.status === 0 && /the count line holds/.test(r.stdout), out(r)]]);
+    },
+  },
   {
     name: 'step 199: the claim verb sets each named open item planned with the plan\'s title on its plan line, leaves the others, refuses an item that is not open or not held with nothing written, and an unknown verb exits 2',
     guards: ['prog_claim_sets', 'prog_claim_not_open', 'prog_claim_unheld', 'prog_refuse_exit', 'prog_usage'],
@@ -308,6 +354,10 @@ export const cases = [
 ];
 
 export const plants = {
+  prog_count_opens: ['if (opens !== entries) problems.push(', 'if (false) problems.push(', 'program.mjs'],
+  prog_count_sum: ['else if (sum !== opens) problems.push(', 'else if (false) problems.push(', 'program.mjs'],
+  prog_count_bracket: ['if (c === \',\' && depth === 0) flush(); else seg += c;', 'if (c === \',\') flush(); else seg += c;', 'program.mjs'],
+  prog_count_exit: ['    process.exit(1);\n  }\n  process.stdout.write(\'program count: the count line holds', '    process.exit(0);\n  }\n  process.stdout.write(\'program count: the count line holds', 'program.mjs'],
   prog_claim_sets: ['=> `State: planned. Plan: ${title}.`', '=> `State: open. Plan: ${title}.`', 'program.mjs'],
   prog_claim_not_open: ['else if (e.state !== \'open\') causes.push(', 'else if (false) causes.push(', 'program.mjs'],
   prog_claim_unheld: ['if (!e) causes.push(`${k} is not an item of the program`);\n    else if (e.state', 'if (false) causes.push(`${k} is not an item of the program`);\n    else if (e?.state', 'program.mjs'],
