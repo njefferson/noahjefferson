@@ -672,6 +672,13 @@ Left open:
 
 - P-72 stays open. The check's own words now agree with what it refuses, and three other descriptions still say it holds no undeclared dependencies: doctrine/hub.md line 1137, HUB-REFERENCE.md line 287 and .github/workflows/doctrine.yml line 19. The first is a line of a rules page, which this piece did not change.
 - P-515 stays open. Neither the item, its finding found/Q-HUB-466.md, nor any lesson names the word orders, so nothing was changed.
-- P-89 and P-152 stay open. The send of the worker for that step was refused by the harness's permission check on 14 November 2026 and was not sent again, so the four checks still read different sets of files.
+- The worker for P-89 and P-152 was sent again later on 14 November 2026 and its send passed.
+- The four checks now read one set of files through gate-files.mjs, tracked files and new files that are not ignored.
+- P-89 and P-152 are both set done.
+
+Found and left:
+
+- The quote check's sweep mode still lists files with its own tracked list.
+- The hub's landing procedure still gives "because the checks read tracked files" as the reason for staging first. It is a line of a rules page and was not changed.
 
 Left out of this piece on purpose: P-183, P-533, P-542, and a check to hold the two copies of a role or a procedure together.

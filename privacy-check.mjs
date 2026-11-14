@@ -40,7 +40,7 @@
 // EXITS NON-ZERO on any hit.
 
 import { readFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { gateFiles } from './gate-files.mjs';
 import { ATTRIBUTION, DISCLOSURE, OWNER_LIFE, REGION_FORBIDDEN, SESSION_LINKS, split } from './privacy-patterns.mjs';
 import { repoFromArgv } from './gate-args.mjs';
 import { BINARY } from './binary-files.mjs';
@@ -72,9 +72,9 @@ const { REPO, NAME } = repoFromArgv(process.argv.slice(2), { gate: 'privacy-chec
 // inside Type 1 glyph data over there and unread over here. binary-files.mjs is
 // the one list now, which is what the paragraph above was asking for.
 
-const files = execFileSync('git', ['-C', REPO, 'ls-files'], { encoding: 'utf8' })
-  .split('\n')
-  .filter(f => f && !BINARY.test(f));
+// THE SET IS THE ONE THE DOCS, QUOTE AND THIRD-PERSON CHECKS READ (gate-files.mjs): tracked files, and new files that are not ignored. The
+// tracked list alone left a new file unread until it was staged.
+const files = gateFiles(REPO).filter(f => !BINARY.test(f));
 
 const hits = [];
 // Files the gate could not fully read. A separate list from `hits` on purpose:
@@ -149,4 +149,4 @@ if (hits.length) {
   console.error('never who reported it or in what words.');
 }
 if (hits.length || blind.length) process.exit(1);
-console.log('no personal disclosures in tracked files.');
+console.log('no personal disclosures in tracked files and new files that are not ignored.');

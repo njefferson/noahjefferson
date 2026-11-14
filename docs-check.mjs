@@ -26,6 +26,7 @@
 
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
+import { gateMarkdown } from './gate-files.mjs';
 
 /** Directories never worth walking. */
 // `.hub` is a sibling repo's CI checkout of THIS repo, vendored so it can run
@@ -98,8 +99,16 @@ export function findGrids(source) {
   return hits;
 }
 
-/** Every .md under a root, minus the directories nobody edits by hand. */
+/**
+ * Every .md under a root. In a git repository this is the set the quote, privacy and
+ * third-person checks read too (gate-files.mjs): tracked files, and new files that are
+ * not ignored, so the counts of the checks agree and a new file is read before it is
+ * staged. The walk below is for a folder that is not a repository, which has no such set.
+ */
 function markdownFiles(root) {
+  let listed = null;
+  try { listed = gateMarkdown(root); } catch { /* not a repository: walk it */ }
+  if (listed) return listed.map((f) => join(root, f)).sort();
   const out = [];
   const walk = (dir) => {
     for (const entry of readdirSync(dir)) {

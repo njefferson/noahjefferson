@@ -72,6 +72,7 @@ import { execSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BINARY, LOCKFILE } from './binary-files.mjs';
+import { gateFiles } from './gate-files.mjs';
 
 // THE PATTERNS ARE EXPORTED, AND THE SCAN RUNS ONLY WHEN THIS FILE IS RUN (Q-HUB-379). The plan guard reads a plan's title with these same
 // patterns, so a title the check would refuse is refused at the plan check. Importing the file scans nothing and exits nothing; what the
@@ -133,7 +134,8 @@ console.log(`\n=== third-person gate - ${name} ===`);
 
 let files;
 try {
-  files = execSync('git ls-files', { cwd: repo, encoding: 'utf8' }).split('\n').filter(Boolean);
+  // THE SET THE DOCS, QUOTE AND PRIVACY CHECKS READ (gate-files.mjs): tracked files, and new files that are not ignored.
+  files = gateFiles(repo);
 } catch {
   console.error(`  not a git repository: ${repo}`);
   process.exit(2);
@@ -299,7 +301,7 @@ if (undeclared.length) {
   console.log('        and never in what words.');
 }
 
-if (!failed) console.log('no third-person references to the owner in tracked files.');
+if (!failed) console.log('no third-person references to the owner in tracked files and new files that are not ignored.');
 console.log('');
 process.exit(failed);
 }

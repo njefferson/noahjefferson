@@ -1435,7 +1435,9 @@ Depends: P-3, whose Facts label carries it.
 
 ### P-89. Q-HUB-36: the quote check and the docs check count tracked markdown files differently
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The docs check and the quote check now read one set of files through gate-files.mjs and print the same count on the hub's tree, 1085 markdown files each, run on 14 November 2026.
 
 Acceptance: both gates report the same count on the same tree, or the line records an untracked markdown file as the whole difference after the two counts are read again once the file is added.
 
@@ -2081,7 +2083,9 @@ Depends: none.
 
 ### P-152. Q-HUB-100: the privacy and third-person checks list tracked files and so miss new untracked ones
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: The privacy and third-person checks now read tracked files and new files that are not ignored, and the full run of the suite passes the cases that put a new unstaged file in front of each check (111 of 111 cases, 241 of 241 planted failures caught), run on 14 November 2026.
 
 Acceptance: the two checks read untracked files, or the step that runs them adds the files first; a case with an untracked lesson.
 

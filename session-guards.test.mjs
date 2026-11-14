@@ -34,7 +34,8 @@ import { createHash } from 'node:crypto';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FILES = ['transcript-tail.mjs', 'shell-words.mjs', 'agent-read.mjs', 'push-guard.mjs', 'hook-dispatch.mjs', 'plan-guard.mjs', 'stop-guard.mjs', '.claude/hooks/stop-guard.sh',
   'session-brief.mjs', 'plan-scope-check.mjs', 'session-cost.mjs', 'session-guards.test.mjs', 'privacy-patterns.mjs', 'branch-guard.mjs',
-  'lessons-check.mjs', 'hub-pin-check.mjs', 'gate-args.mjs', 'third-person-check.mjs', 'binary-files.mjs', 'program.mjs', 'rules-keep-check.mjs'];
+  'lessons-check.mjs', 'hub-pin-check.mjs', 'gate-args.mjs', 'third-person-check.mjs', 'binary-files.mjs', 'program.mjs', 'rules-keep-check.mjs',
+  'docs-check.mjs', 'quote-check.mjs', 'privacy-check.mjs', 'gate-files.mjs'];
 // Every copy of the guards makes a file's folder before it copies it: the doctrine's three pages sit in doctrine/.
 const copyGuard = (from, to) => { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to); };
 const MADE = [];

@@ -12,7 +12,7 @@
  * silently scanned the hub instead, and printed
  *
  *     === privacy gate · noahjefferson ===
- *     no personal disclosures in tracked files.
+ *     no personal disclosures in tracked files and new files that are not ignored.
  *
  * A clean green, under the wrong repo's name, with not one file of the intended
  * repo opened. This is LESSONS 34's shape (a gate reading the wrong file) with

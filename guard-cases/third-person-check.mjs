@@ -1,5 +1,6 @@
 // The case and plants of third-person-check.mjs (they stood in the plan guard's case file, which went with the plan check). The shape is shape.mjs.
 import { spawnSync } from 'node:child_process';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -25,9 +26,28 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'third-person-check.mjs reads a new file that is not staged and not an ignored one: a pronoun in an unstaged file fails the run and names the file, the same line in an ignored file passes',
+    guards: ['tp_check_one_set'],
+    run(m, dir, h) {
+      const r = h.repo({ 'a.md': 'The note was written by the role.\n', '.gitignore': 'out-ignored/\n' });
+      mkdirSync(join(r.dir, 'out-ignored'));
+      writeFileSync(join(r.dir, 'out-ignored', 'b.md'), `${PRON} wrote the note\n`);
+      const runIt = () => spawnSync('node', [join(dir, 'third-person-check.mjs'), '--repo', r.dir], { encoding: 'utf8', timeout: 30000 });
+      const clean = runIt();
+      r.write('fresh.md', `${PRON} wrote the note\n`);
+      const dirty = runIt();
+      return h.assertAll([
+        ['a tree whose only pronoun is in an ignored file passes', clean.status === 0, `exit ${clean.status}: ${clean.stdout}${clean.stderr}`],
+        ['a pronoun in a new file that is not staged fails', dirty.status === 1, `exit ${dirty.status}: ${dirty.stdout}${dirty.stderr}`],
+        ['the failure names the new file and not the ignored one', /fresh\.md/.test(dirty.stdout) && !/b\.md/.test(dirty.stdout), dirty.stdout],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
+  tp_check_one_set: ['files = gateFiles(repo);', "files = execSync('git ls-files', { cwd: repo, encoding: 'utf8' }).split('\\n').filter(Boolean);", 'third-person-check.mjs'],
   pg_tp_exports: ['export const PRONOUN_G = /', 'const PRONOUN_G = /', 'third-person-check.mjs'],
   pg_title_main_guard: ['const isMain = !!process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);', 'const isMain = true;', 'third-person-check.mjs'],
 };

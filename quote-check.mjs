@@ -74,6 +74,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { resolve, join } from 'node:path';
+import { gateMarkdown } from './gate-files.mjs';
 
 const args = process.argv.slice(2);
 const repoAt = args.indexOf('--repo');
@@ -109,7 +110,8 @@ const gistOf = (line) => line
 
 let files;
 try {
-  files = execSync('git ls-files', { cwd: repo }).toString().split('\n').filter((f) => f.endsWith('.md'));
+  // THE SET THE DOCS, PRIVACY AND THIRD-PERSON CHECKS READ (gate-files.mjs): tracked files and new files that are not ignored.
+  files = gateMarkdown(repo);
 } catch {
   console.error(`  ${name} is not a git repository this tool can read.\n`);
   process.exit(2);
@@ -130,10 +132,10 @@ for (const f of files) {
 // LESSONS 100). Nothing here can distinguish "no quotations" from "found no
 // files", so the file count is stated and an empty file list is a failure.
 if (files.length === 0) {
-  console.error('  no tracked .md files found — this gate cannot run.\n');
+  console.error('  no .md files found — this gate cannot run.\n');
   process.exit(2);
 }
-console.log(`  read ${files.length} tracked markdown file(s)`);
+console.log(`  read ${files.length} markdown file(s)`);
 
 const listPath = join(repo, '.quote-allow');
 const declared = [];
