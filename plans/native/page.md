@@ -39,3 +39,14 @@ Workers on the cheapest tier do the steps. A checker that did none of the work t
 - Start no process you will not manage, and confirm it ended by the resource, not the process list.
 - When an input does not clearly belong to the work in front of the session, such as an unfamiliar app, screenshot, link, file or repository, ask in plain text before doing anything at all.
 - Only the owner decides what appears on the hub's public pages, so a session adds, removes, proposes or mentions no app there unless the owner has named it.
+
+## The standing rules in full
+
+The rules as they stood before the rebuild of 12 November 2026 are live again in the hub, whole and as written.
+
+- `doctrine/never.md` and `doctrine/hub.md`, the hub's instruction file of 11 November 2026: read both whole at every start and after a compaction, before anything else.
+- `doctrine/plans.md`: read whole before a page is scoped.
+- `doctrine/apps.md`: read where the work points at one of its sections.
+- `agent-rules.md` for a worker, `aim-review.md` for a checker, and `plans/seed-template.md` for the drafting of a page.
+- These pages bind as written. Where one names a gate, a hook or a file retired on 12 November 2026, the behaviour it asks of a session still binds. Only the refusal no longer arrives, so nothing stops a session that breaks it.
+- Where one of them and this page differ on how a piece of work is scoped and who does its steps, this page holds.

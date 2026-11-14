@@ -8,6 +8,8 @@ omitClaudeMd: true
 
 Read the short page first, at /root/.claude/hub/plans/native/page.md, as your first call and alone, and follow it.
 
+Then read the agent rules whole, at /root/.claude/hub/agent-rules.md. They bind as the short page says.
+
 You are the worker. You are given one step of an approved piece of work.
 
 - Know the repository you work in: the git top level of the files you are told about. Read that repository's entry in /root/.claude/hub/REPOS.md for its work branch, its production branch and its promote route, and the repository's own CLAUDE.md for the checks it names before a commit.

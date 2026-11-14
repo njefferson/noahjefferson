@@ -1,6 +1,6 @@
 # Noah Jefferson — Universal App Doctrine
 
-The plans page was retired with the old gates on 12 November 2026 and is kept in the archive as written. The never page and the apps page stand. How work goes is the short page at plans/native/page.md.
+The plans page was retired with the old gates on 12 November 2026 and was made live again on 14 November 2026, as it stood before the rebuild. The never page and the apps page stand. How work goes is the short page at plans/native/page.md, and the rules in full are the pages it lists.
 
 The shared operating agreement for every Claude session on any of the owner's apps.
 This is the SINGLE source of truth for the rules that are the same everywhere.
@@ -24,7 +24,7 @@ They deliberately share conventions.
 
 The three files in the `doctrine/` folder are the doctrine, and this file is the
 index to them. The never-rules are on one short page, `doctrine/never.md`,
-which the hub's instruction file points at. The plan rules are in `archive/doctrine-plans.md`, which the hub's instruction file points at. The rest, the product, taste, accessibility and release sections, are
+read at every start. The plan rules are in `doctrine/plans.md`, read whole before a page is scoped. The hub's instruction file as it stood on 11 November 2026 is `doctrine/hub.md`, read whole at every start. The rest, the product, taste, accessibility and release sections, are
 in `doctrine/apps.md`, read when a plan item points at one. Every section number
 cited anywhere in the hub is the number in the lines below.
 
@@ -38,13 +38,13 @@ cited anywhere in the hub is the number in the lines below.
 - 11: Standing facts about the environment (doctrine/never.md)
 - 11b: The credit is the owner's money. Spend it like it is. (doctrine/never.md)
 - 11d: Never start a process you are not going to manage. Every repo, forever. (doctrine/never.md)
-- 0e: PLAN MODE ONLY, AND TALK DURING THE WORK. (archive/doctrine-plans.md)
-- 0g: Act from the owner's goal and the record, and verify once. (archive/doctrine-plans.md)
-- 2: Audience and working method (archive/doctrine-plans.md)
-- 11c: An approved plan is standing authority. Do not stop at its seams. (archive/doctrine-plans.md)
-- 11e: STOP BEFORE EACH NEW THING AND GO AND LOOK IT UP (archive/doctrine-plans.md)
-- 11f: THREE ALTITUDES, AND THE RETURN TRIP IS THE ONE THAT GETS SKIPPED (archive/doctrine-plans.md)
-- 12: Source-of-truth files (naming convention) (archive/doctrine-plans.md)
+- 0e: PLAN MODE ONLY, AND TALK DURING THE WORK. (doctrine/plans.md)
+- 0g: Act from the owner's goal and the record, and verify once. (doctrine/plans.md)
+- 2: Audience and working method (doctrine/plans.md)
+- 11c: An approved plan is standing authority. Do not stop at its seams. (doctrine/plans.md)
+- 11e: STOP BEFORE EACH NEW THING AND GO AND LOOK IT UP (doctrine/plans.md)
+- 11f: THREE ALTITUDES, AND THE RETURN TRIP IS THE ONE THAT GETS SKIPPED (doctrine/plans.md)
+- 12: Source-of-truth files (naming convention) (doctrine/plans.md)
 - 1: Product identity — what these apps ARE (doctrine/apps.md)
 - 3: Taste (doctrine/apps.md)
 - 4: Accessibility is a hard gate (top priority, owner mandate) (doctrine/apps.md)

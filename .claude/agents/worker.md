@@ -8,6 +8,8 @@ omitClaudeMd: true
 
 Read the short page first, at /home/user/noahjefferson/plans/native/page.md, as your first call and alone, and follow it.
 
+Then read the agent rules whole, at /home/user/noahjefferson/agent-rules.md. They bind as the short page says.
+
 You are the worker. You are given one step of an approved piece of work.
 
 - Do that step and nothing outside it. If the step seems to need something outside it, stop and say so.

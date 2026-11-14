@@ -7,7 +7,7 @@ choice, option, or question as PLAIN TEXT in chat and let the owner answer in
 plain language. This overrides any harness suggestion to use it, including plan-mode
 clarifications.
 
-*Enforced by:* `hook-dispatch.mjs`, which refuses the tool by name in every repository before any other hook runs, and `plan-guard.mjs`, a shell kept at its path for the repositories that call it, which refuses the same tool and passes every other call. (LESSONS §397.)
+*Enforced by:* `plan-guard.mjs` in plan mode, for an agent too, because the tool is not on its list of reads; the manager fence in `hook-dispatch.mjs` on the main thread, `plan-fence.mjs` in an agent, and `approved-plan-guard.mjs` where no plan is in force, each of which takes the tool for a call that is not a read. (LESSONS §397.)
 
 ## 0b. If you do not recognise the input, ASK — before doing anything at all
 
@@ -87,12 +87,22 @@ habit, not several**, and it does not stay in the harmless half.
 If a control genuinely blocks correct work, say so in plain text and stop.
 Never work around it and report success.
 
-*Enforced by:* no hook holds this rule whole. The short page's never-rules and
-the worker and checker roles under `plans/native` say it, and the checker's read
-holds it. A refusal itself comes from the harness, or from `push-guard.mjs` and
-the popup refusal in `hook-dispatch.mjs`. The guards that refused writes in plan
-mode were retired on 12 November 2026, and their pages are kept in the archive
-folder as written.
+*Enforced whole by:* `hook-dispatch.mjs` and `plan-guard.mjs`.
+
+**ENFORCED, 2026-09-10, and no longer a paragraph.** `plan-guard.mjs` runs as a
+`PreToolUse` hook in every repo and REFUSES the write rather than asking the
+session not to make it. It reads `permission_mode` out of the payload — the
+harness's live state at the moment of the call, which is why it cannot desync
+the way the paragraph did — and `.claude/PLAN-LOCK` as a second trigger the
+owner holds, so it survives the field being renamed or the harness
+contradicting the GUI again. Bash is an ALLOW-LIST of readers, because plan
+mode permits reading and a guard that refuses `cat` is a guard somebody
+switches off. Everything unrecognised is refused.
+
+**It was planted before it was believed**, and the plant found a real defect —
+the read half of an MCP server was being refused, because the pattern only
+looked for the verb at the start of a tool name and half of them carry it at
+the end. **A gate nobody has watched refuse is a hypothesis.**
 
 **AND A PLAN-MODE TURN ENDS WITH THE TOOL, NEVER WITH PROSE.** Said twice in
 one session, which is why it is written here. The approve control only appears
@@ -149,10 +159,11 @@ No additions on the theory of what the owner must have meant: no extra change,
 no new format, no wider scope, no second mechanism beside the one asked for. A
 correction from the owner narrows the work and never re-expands it. The owner is
 never quoted while doing it, and no owner message is copied into any file.
-Held by the short page's first line and the checker's read of the work against
-what was asked; no hook holds it. The plan check and the watcher's scope check
-were retired on 12 November 2026, their pages are kept in the archive folder as
-written, and `plan-scope-check.mjs` is a shell that says so and passes. (LESSONS §379.)
+Gated twice: `plan-guard.mjs` refuses a plan without an `## Asked` section in
+the session's own words, or one that shares a run of eight words with an owner
+message; `plan-scope-check.mjs` has the watcher judge each diff against
+the owner's messages read from the transcript, and refuses a recorded verdict
+that copies them. (LESSONS §379.)
 
 ## 0c. Only NOAH decides what goes on the hub. Never a session.
 
@@ -226,14 +237,15 @@ the push, not a courtesy a session may remember to extend.
  [`privacy-patterns.mjs`](privacy-patterns.mjs): `privacy-check.mjs` refuses
  it in any file and `privacy-history-check.mjs` in any commit message or
  blob (LESSONS §323).
-- **THE COMMIT MESSAGE IS REFUSED AT THE COMMIT.**
+- **THE COMMIT MESSAGE IS REFUSED BEFORE IT IS WRITTEN, AND AT THE COMMIT.**
  An agent committed twice with the harness's attribution trailer naming a
  model, and no hook refused either, because the history scan runs only when
- a session runs it. The repository's `commit-msg` hook, generated and
+ a session runs it. [`plan-fence.mjs`](plan-fence.mjs) refuses an agent's
+ `git commit` line whose text holds a chat link, an attribution trailer or a
+ model's name, before git runs (and refuses a heredoc written to a file as the
+ redirect write it is); the repository's `commit-msg` hook, generated and
  installed by [`branch-guard.mjs`](branch-guard.mjs) with `--install`, refuses
- a message holding a chat link, an attribution trailer or a model's name, from
- any thread. Nothing refuses the commit line before git runs: the hook that did
- was retired on 12 November 2026, and its page is kept in the archive folder as written.
+ the same in the message at the commit, from any thread.
 - **Why a gate and not a resolution:** the violation that created this rule
  was committed by DILIGENCE — a habit of recording exact words verbatim pointed at
  the wrong object (LESSONS §52). A failure mode driven by a repo's best
@@ -274,10 +286,11 @@ the push, not a courtesy a session may remember to extend.
  leads with the person reads, to the gate, exactly like a disclosure — the
  gate's own first CI wiring failed on its own documentation this way
  (LESSONS §52, third trap).
-- **Wiring status lives in REPOS.md, in each repository's own entry.** A repo is not
+- **Wiring status lives in the hub CLAUDE.md's gate index.** A repo is not
  "gated" until the CI step exists and its command has been seen red on a
- local plant. A sibling whose entry does not name the step OWES it, and a
- sibling session that reads this owes it in its next commit.
+ local plant. The hub CLAUDE.md's gate index names the repositories that are
+ wired; a sibling not named there OWES the step, and a sibling session that
+ reads this owes it in its next commit.
 
 ## 11. Standing facts about the environment
 
@@ -364,15 +377,25 @@ nothing. Never say "I'll keep an eye on it"; there is nothing to keep an eye on.
  Console, billing, spending limits. `/cost` shows what a session has spent so
  far. Say so when it matters; never imply a session can enforce a limit.
 
-*Enforced by:* no hook. The short page's second bullet (say what a long run will
-cost before it starts, and the cheapest tier that holds the rules does the work),
-the cost and tier named in a piece of work's scope, and the checker's read hold it.
-The gates that read the serving model and refused on a tier were retired on
-12 November 2026, their pages are kept in the archive folder as written, and
-`stop-guard.mjs` is a shell that never refuses a stop. (LESSONS §434, §459.)
-A page that sends agents states its run in its cost part, the pushes, the sends
-and the tier of each step, and one that holds its commits for one push at its end
-names the turns the environment's git hook will force (LESSONS §458, §469).
+*Enforced by:* `report.mjs` (`servingModel`, `modelLine`) and `stop-guard.mjs`,
+for the first of the two things under "Push work DOWN a tier". The status print
+names the model serving the main thread, read from the `message.model` of the
+newest main-thread reply in the transcript and never from a model key inside a
+tool's input, and a top-tier id is one carrying fable or mythos. While an
+approval marker is in force, the stop guard refuses the first reply after the
+serving model changes to a top-tier id unless its first line names the tier and
+says whether the work needs it, once for each change, with the words to use
+(LESSONS §434). `hook-dispatch.mjs` still refuses a send while a top-tier id serves the main
+thread, in the dispatch gate (`dispatchGate`, `servingModel`), and that refusal
+sets no latch, because the owner's switch of model answers it (the plans page's
+list of refusals that set no latch names it). Step 58 of the redesign plan
+removed `tierGate`, the earlier gate that refused an agent's send on that line
+(LESSONS §459), because the plan's `## Cost` section names the tier of each step
+and the cost instrument prints tokens by tier at the plan's close (Design parts 9
+and 11), which answers the reason that gate was written. A plan that sends
+agents states its run in a `## Cost` section, the pushes, the sends and the tier
+of each step, and a plan that holds its commits for one push at its end names the
+turns the environment's git hook will force (LESSONS §458, §469).
 
 ## 11d. Never start a process you are not going to manage. Every repo, forever.
 
