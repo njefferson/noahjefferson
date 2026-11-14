@@ -15,10 +15,13 @@ for word under its own `## Goals` and adds only goals from the app's own roadmap
 its goal 1.
 
 2. The owner's time and credit go to judgement only: agents on the cheapest model that holds the rules, nothing at the top model but management, and no turn spent watching.
-3. The work is visible every few minutes without being asked for: a status at each agent's return and at each timer return.
-4. Nothing comes back to the owner for a decision but a choice only the owner can make, shown with pictures where it is about how a photograph looks, and the end of the plan.
-5. An approved plan runs to its end through agents with no amendment; a refusal, a failure or a defect found on the way is handled by the main thread and recorded for the next plan, never handed back.
+   Goal 3 was removed on 14 November 2026. Background work is checked by the owner directly, and the status reports did not say what was needed.
+4. No work waits on a question the owner will not see for hours. Only a choice the owner alone can make comes back, and everything that does not depend on it goes on meanwhile.
+   Why: asking is the easy way out. The question sits unseen for hours, and the work is paused the whole time.
+5. An approved plan runs through agents without coming back to the owner, and trouble on the way is handled and recorded. A plan that what was found has made moot is ejected with its reason, never run on.
+   Why: a plan serves a purpose. Running it on after what was found has made it moot spends money on work nobody wants.
 6. The owner's rules bind as written, and the main thread is held by gates that leave it no choice to make, never by the owner reading its replies; where two rules meet, the conflict and one suggestion go to the owner once.
+   Why: a rule that holds only when someone reads the replies does not hold when nobody is there.
 
 ## The owner's core asks, one page
 This section is printed at every start and resume by `session-brief.mjs`, beside

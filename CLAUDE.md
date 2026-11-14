@@ -20,6 +20,8 @@ is a site change — verify the rendered page before pushing.
 - `push-guard.mjs` lets a push reach only `staging` or `main`, and holds every push of either until a checker that changed nothing has passed that exact commit.
 - `plan-guard.mjs`, `stop-guard.mjs`, `session-brief.mjs` and `plan-scope-check.mjs` are shells kept at their paths because other repositories call them.
 - The gates that ran before 12 November 2026 are retired. Their pages are in `archive/`, kept as written, and no session loads them.
+- The dispatcher also holds the main thread: under the owner's word (the word stop, or a message with no go-word), after a refusal, and from doing the work itself. `plans/native/running.md` says what each holds and what lifts it.
+- `stop-guard.mjs` refuses a final reply past 150 words, or one that names a feeling, promises conduct or asks for a go-word, and `rules-keep-check.mjs` fails a commit that drops a line from a rules page.
 
 ## Where things are
 - `plans/native-setup.md`: the record of how the hub was rebuilt, and where the work stands.

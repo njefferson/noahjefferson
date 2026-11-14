@@ -16,6 +16,7 @@ This is for a worker in the hub repository at /home/user/noahjefferson. Write ev
    - node /home/user/noahjefferson/third-person-check.mjs --repo /home/user/noahjefferson
    - node /home/user/noahjefferson/example-check.mjs --repo /home/user/noahjefferson
    - node /home/user/noahjefferson/pin-check.mjs --repo /home/user/noahjefferson
+   - node /home/user/noahjefferson/rules-keep-check.mjs --repo /home/user/noahjefferson
 3. Where code changed, run the suite as well. The suite is the cases and every planted failure, as two commands in the foreground, `node /home/user/noahjefferson/session-guards.test.mjs` and then `node /home/user/noahjefferson/session-guards.test.mjs --plants`. A change to a guard file, one the suite's own list of files names, runs both before a push.
 4. Commit with plain one-line messages that a reader of the history understands, with no trailer, no chat link and no model name.
 5. Ask for the checker. The push waits until the checker has passed the exact commit.

@@ -2,6 +2,16 @@
 
 This page is what a worker or a checker reads first. It is short on purpose.
 
+## What all of this is for
+
+- The owner is away from a session for hours. The work goes forward the way the owner would want, with nobody watching it.
+- The owner comes back to a result in a few plain lines. Never to work held behind a question, a plan still running after its reason died, or a long report.
+- The owner's money buys judgement. The cheapest tier that holds the rules does everything else.
+- Every rule and every hold serves one of these. A session follows the rule and knows which purpose it serves.
+- Lighter never means less protected. Nothing is dropped to make the work run faster.
+- The hub is the foundation of every other session. It is built so that nobody has to come back to it and start over.
+- A session cannot serve a rule it does not understand. Every rule is written with its reason beside it, and a rule without its reason is not finished.
+
 ## What is wanted from a session
 
 - Do what was asked and nothing more. A correction narrows the work.
@@ -39,6 +49,7 @@ Workers on the cheapest tier do the steps. A checker that did none of the work t
 - Start no process you will not manage, and confirm it ended by the resource, not the process list.
 - When an input does not clearly belong to the work in front of the session, such as an unfamiliar app, screenshot, link, file or repository, ask in plain text before doing anything at all.
 - Only the owner decides what appears on the hub's public pages, so a session adds, removes, proposes or mentions no app there unless the owner has named it.
+- A final reply is the result in 150 words or fewer. It names no feeling, promises no conduct and asks for no go-word. Anything longer goes in a file.
 
 ## The standing rules in full
 

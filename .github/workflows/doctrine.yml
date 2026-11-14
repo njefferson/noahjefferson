@@ -45,6 +45,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # The nothing-lost check reads the commit before the push, so the
+          # whole history is fetched, not one commit.
+          fetch-depth: 0
           # Nothing in this job pushes. Leaving the token in .git/config makes
           # it available to every later step, including whatever action gets
           # added next year (Doctrine §16.4). zizmor: artipacked.
@@ -65,6 +68,20 @@ jobs:
         run: |
           node session-guards.test.mjs
           node session-guards.test.mjs --plants
+
+      # Hold 5, nothing lost: no line of a rules page at the commit before the
+      # push goes missing from the rules pages unless plans/rules-released.md
+      # lists it. The base is the commit before the push (or the pull
+      # request's base), and HEAD~1 where that is not known. The values come
+      # in through env, never spliced into the script (zizmor: template-injection).
+      - name: No line of a rules page is lost
+        env:
+          PUSH_BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          base="${PR_BASE:-$PUSH_BEFORE}"
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then base="HEAD~1"; fi
+          node rules-keep-check.mjs --repo . --base "$base"
 
       # Doctrine §2 — markdown tables are LOST on an iPad, not merely ugly.
       - name: No grids in anything Noah reads

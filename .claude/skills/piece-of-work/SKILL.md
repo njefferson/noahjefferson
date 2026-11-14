@@ -14,3 +14,4 @@ This is for the session that manages. The session plans, sends and judges; worke
 7. Where the harness or a hook refuses something, stop that route, say plainly what was refused, and do not try another way to the same end.
 8. A question from the owner is answered and changes nothing. The approved page stands until a change to it is written in full and approved.
 9. When work stops on something only the owner can do, state it as a need and never as a choice: work is stopped, what is needed and where it is done, why, what it holds up, and what is not known.
+10. From the first uncommitted change to the push, the session that manages does not end its turn. The commit, the checker and the push follow one another, so a stop hook that asks for a commit and a push is answered by finishing them.
