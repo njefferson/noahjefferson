@@ -24,7 +24,7 @@
  * check, the transcript reader, the program tool, the hub pin check, and the small dispatcher with the four shells (guard-cases/).
  * The whole suite runs under an empty home.
  */
-import { mkdtempSync, writeFileSync, copyFileSync, readFileSync, rmSync, appendFileSync, mkdirSync, existsSync, utimesSync, readdirSync, statSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, copyFileSync, readFileSync, rmSync, appendFileSync, mkdirSync, existsSync, utimesSync, readdirSync, statSync, chmodSync } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { tmpdir, homedir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -276,6 +276,41 @@ const CASES = [
       if (held_rows.every(([, ok]) => ok)) held_rows.push(['modelOk', (modelOk)]);
       if (held_rows.every(([, ok]) => ok)) held_rows.push(['plain.status === 0', (plain.status === 0)]);
       if (held_rows.every(([, ok]) => ok)) held_rows.push(['check.status === 0', (check.status === 0)]);
+      return assertAll(held_rows);
+    },
+  },
+  {
+    name: 'step114b: .branch-guard msg-also= makes the commit-msg hook run the declared check after the hub\'s own refusals, with the message file as its argument, and refuse when the check refuses or is missing, in a temporary repository; a repository declaring none gets the text it always did',
+    guards: ['commit_msg_also_call', 'commit_msg_also_missing', 'commit_msg_also_arg'],
+    run(m, dir) {
+      const t = tmp('sg-cma-');
+      const g = (...a) => spawnSync('git', ['-C', t, ...a], { encoding: 'utf8', timeout: 60000 });
+      g('init', '-q', '-b', 'main'); g('config', 'user.email', 't@example.invalid'); g('config', 'user.name', 't'); g('config', 'commit.gpgsign', 'false');
+      writeFileSync(join(t, '.branch-guard'), 'work=main\nmsg-also=tools/need-fixed.sh\n');
+      mkdirSync(join(t, 'tools'));
+      const script = join(t, 'tools', 'need-fixed.sh');
+      writeFileSync(script, '#!/bin/sh\ngrep -q Fixed "$1" || exit 1\n'); chmodSync(script, 0o755);
+      const inst = spawnSync('node', [join(dir, 'branch-guard.mjs'), '--repo', t, '--install'], { encoding: 'utf8', timeout: 60000 });
+      if (inst.status !== 0 || !existsSync(join(t, '.git', 'hooks', 'commit-msg'))) throw new Error(`install: ${inst.status} ${inst.stdout} ${inst.stderr}`);
+      writeFileSync(join(t, 'a.txt'), 'a\n'); g('add', '-A');
+      const trailer = 'Co-Authored-' + 'By: Someone <a@example.invalid>';
+      const commit = (msg) => { writeFileSync(join(t, 'msg.txt'), msg); return g('commit', '-q', '-F', join(t, 'msg.txt')); };
+      const noWord = commit('Tidy the toolbar\n');
+      const withWord = commit('Fixed the toolbar\n');
+      writeFileSync(join(t, 'b.txt'), 'b\n'); g('add', '-A');
+      const hubFirst = commit(`Fixed the toolbar\n\n${trailer}\n`);
+      rmSync(script);
+      const gone = commit('Fixed the toolbar again\n');
+      const plainA = tmp('sg-cma-a-'); const plainB = tmp('sg-cma-b-');
+      writeFileSync(join(plainA, '.branch-guard'), 'work=main\n'); writeFileSync(join(plainB, '.branch-guard'), 'work=main\n');
+      for (const p of [plainA, plainB]) { spawnSync('git', ['-C', p, 'init', '-q', '-b', 'main']); spawnSync('node', [join(dir, 'branch-guard.mjs'), '--repo', p, '--install'], { encoding: 'utf8', timeout: 60000 }); }
+      const same = readFileSync(join(plainA, '.githooks', 'commit-msg'), 'utf8') === readFileSync(join(plainB, '.githooks', 'commit-msg'), 'utf8');
+      const text = readFileSync(join(plainA, '.githooks', 'commit-msg'), 'utf8');
+      const held_rows = [['a message without Fixed is refused', noWord.status !== 0]];
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['a message with Fixed is committed', withWord.status === 0]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['a trailer is refused with the hub\'s own text', hubFirst.status !== 0 && /plain and reader-facing/.test(hubFirst.stderr)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['a missing check refuses and names msg-also=tools/need-fixed.sh', gone.status !== 0 && gone.stderr.includes('msg-also=tools/need-fixed.sh') && !/need-fixed\.sh: /.test(gone.stderr)]);
+      if (held_rows.every(([, ok]) => ok)) held_rows.push(['no msg-also= leaves the text the step114 case installs (ends exit 0, no check run)', same && text.endsWith('exit 0\n') && !text.includes('msg-also')]);
       return assertAll(held_rows);
     },
   },
@@ -756,6 +791,9 @@ const PLANTS = {
   commit_msg_hook_model: ['(Sonnet|Opus|Haiku|Fable|Mythos)', '(Nosuchmodelname)', 'branch-guard.mjs'],
   commit_msg_hook_install: ['  writeFileSync(cmLivePath, cmWant);\n', '\n', 'branch-guard.mjs'],
   commit_msg_hook_line: ['echo "      $2" >&2', 'echo "      " >&2', 'branch-guard.mjs'],
+  commit_msg_also_call: ['out.push(`"${path}" "$msg" || exit 1`);', '/* no call */', 'branch-guard.mjs'],
+  commit_msg_also_missing: ["out.push('  exit 1');", "out.push('  :');", 'branch-guard.mjs'],
+  commit_msg_also_arg: ['${path}" "$msg" || exit 1', '${path}" || exit 1', 'branch-guard.mjs'],
   plants_files_flag: ["const todo = Object.entries(PLANTS).filter(([, [, , file]]) => !narrowTo || narrowTo.includes(file));\n  // EVERY PLANT WHOSE LINE", "const todo = Object.entries(PLANTS);\n  // EVERY PLANT WHOSE LINE", 'session-guards.test.mjs'],
   plants_touched_flag: ["else if (process.argv.includes('--touched')) {\n    narrowTo = touchedFiles();", "else if (process.argv.includes('--touched')) {\n    narrowTo = [];", 'session-guards.test.mjs'],
   plants_dry: ["if (process.argv.includes('--dry')) {\n    console.log(`PLANTS TO RUN", "if (false) {\n    console.log(`PLANTS TO RUN", 'session-guards.test.mjs'],

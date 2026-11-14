@@ -18,13 +18,16 @@
 // Fonts are here in every spelling a vendored library ships. A `.pfb` is Type 1
 // font data — glyph outlines in a binary envelope, with word-boundaried
 // fragments in it that are not words. Reporting those trains a reader to skim
-// the gate's output, which is how a real find gets missed.
+// the gate's output, which is how a real find gets missed. Model weights ship as
+// a model file and as its parts, `.onnx` and `.part`, and their bytes hold
+// word-boundaried fragments that are not words.
 export const BINARY = new RegExp('\\.('
   + 'png|jpe?g|gif|webp|avif|bmp|tiff?|ico|svgz'
   + '|pdf|zip|gz|tgz|bz2|xz|7z'
   + '|woff2?|ttf|otf|eot|pfb|pfm|afm'
   + '|mp[34]|m4a|wav|ogg|webm|mov|avi'
   + '|wasm|db|sqlite3?'
+  + '|onnx|part'
   + ')$', 'i');
 
 /** Lockfiles are text and carry no prose: a hash is a word-boundaried fragment

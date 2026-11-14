@@ -246,6 +246,9 @@ existing.
  a commit that changes its UI without re-rendering the walkthrough photographs
  it ships; the general shape is **anything generated FROM the app that would
  otherwise go stale in the tree**, which an instruction in a file never once managed.
+ `msg-also=` (repeatable) names a repo-local check that reads the commit message;
+ the generated commit-msg hook runs it after the hub's own refusals, with the
+ message file's path as its one argument, and a non-zero exit refuses the commit.
  The hook accepts a commit made inside a rebase of the work branch, because HEAD
  is detached there: it reads the rebase's own head-name record, and a rebase of
  any other branch or of a detached HEAD is still refused (LESSONS §449). A session checks
