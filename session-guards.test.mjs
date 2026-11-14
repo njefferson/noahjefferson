@@ -10,6 +10,14 @@
  *                                          the WHOLE switch, as shown. A filter that selects more than half of the suite is refused:
  *                                          `--allow-wide` runs it anyway. Every --case= switch of a run is read and the names joined.
  *   --plants --files=a.mjs,b.mjs | --touched | --dry   narrow or list the plants;  --plants --plant-keys=a,b runs those keys
+ *   --out=<file>                           also writes the run's whole print to the file (emptied first); a file that cannot be written is refused, exit 2
+ *
+ * HOW A RUN ENDS. A run of the cases ends with its red cases and then the count: `RED CASES (n):` with a `RED CASE: <name>` line for each
+ * (or `RED CASES: none`), and `<passed>/<run> passed` as the last line, after every passing case and every note. A plants run ends with its
+ * counts, `PLANTS LEFT OUT` for a narrowed run, and the lines that repeat every plant missed or stale. A plant that makes the run throw prints CAUGHT.
+ * A narrowed run, dry or not, says which guard files it left out and how many plants that is. The dry listing also names a plant whose find
+ * stands in more than one place of its file (AMBIGUOUS PLANTS), a plant of this file whose find sits inside a case body (STALE BY DESIGN:
+ * the run reads the case from its own memory, so the changed copy is never run; only a case that reads the file's text can catch it), and how many of the listed plants a run would run.
  *
  * CASE FILES. Beside the cases and the plants below, the suite loads every `.mjs` file in `guard-cases/`, one per guard file, named for it.
  * A case file exports `cases` (an array whose `run(m, dir, h)` gets the helpers of this file as its third argument) and `plants` (the shape
@@ -20,8 +28,16 @@
  * in one process and runs the next chunk in a new one. Before it runs, a plants run names every plant whose line to take out its file no
  * longer holds, and its last lines repeat every plant missed or stale.
  *
- * Covered: the push guard and the check before a push, the commit-message hook of the branch guard, the cost instrument, the lessons
- * check, the transcript reader, the program tool, the hub pin check, and the small dispatcher with the four shells (guard-cases/).
+ * Covered, in this file: the push gate (branch rule, flags, force, redirects, unresolvable pushes, the connector's tools), the commit-msg
+ * hook that branch-guard.mjs installs (trailer, link, model name, msg-also=), the plants run (narrowing by --files= and --touched, --dry,
+ * the by-file counts, chunks, stale plants, plants that throw, the left-out line), the case filter (--case= substrings, wide filters,
+ * several switches), the cost instrument (plan titles, saved approvals), the case files under guard-cases/ and the runner's holds (the watch
+ * on tracked files, the run that copies the checkout, bare booleans, nesting, the NOT LOADED line, the red cases and the count at the end,
+ * --out), and the lessons check.
+ * Covered, by the case files under guard-cases/, one per guard file, named for it: binary-files.mjs, dispatch.mjs (the small dispatcher with
+ * the four shells), docs-check.mjs, doctrine-sync.mjs, gate-files.mjs, hub-pin-check.mjs, lessons-check.mjs, pin-check.mjs, privacy-check.mjs,
+ * program.mjs, push-guard.mjs, quote-check.mjs, rules-keep-check.mjs, stop-guard.mjs, third-person-check.mjs, transcript-tail.mjs.
+ * A case holds this comment to the case list: every case file is named here and every case of this file belongs to a group named here.
  * The whole suite runs under an empty home.
  */
 import { mkdtempSync, writeFileSync, copyFileSync, readFileSync, rmSync, appendFileSync, mkdirSync, existsSync, utimesSync, readdirSync, statSync, chmodSync } from 'node:fs';
@@ -30,12 +46,13 @@ import { tmpdir, homedir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { format } from 'node:util';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FILES = ['transcript-tail.mjs', 'shell-words.mjs', 'agent-read.mjs', 'push-guard.mjs', 'hook-dispatch.mjs', 'plan-guard.mjs', 'stop-guard.mjs', '.claude/hooks/stop-guard.sh',
   'session-brief.mjs', 'plan-scope-check.mjs', 'session-cost.mjs', 'session-guards.test.mjs', 'privacy-patterns.mjs', 'branch-guard.mjs',
   'lessons-check.mjs', 'hub-pin-check.mjs', 'gate-args.mjs', 'third-person-check.mjs', 'binary-files.mjs', 'program.mjs', 'rules-keep-check.mjs',
-  'docs-check.mjs', 'quote-check.mjs', 'privacy-check.mjs', 'gate-files.mjs'];
+  'docs-check.mjs', 'quote-check.mjs', 'privacy-check.mjs', 'gate-files.mjs', 'doctrine-sync.mjs', 'pin-check.mjs'];
 // Every copy of the guards makes a file's folder before it copies it: the doctrine's three pages sit in doctrine/.
 const copyGuard = (from, to) => { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to); };
 const MADE = [];
@@ -745,6 +762,191 @@ const CASES = [
       ]);
     },
   },
+  {
+    name: 'Q-HUB-409, Q-HUB-457: a run of the cases ends with the names of its red cases and then the count, after every passing case and every note, and a green run ends with none and the count',
+    guards: ['run_red_names', 'run_count_last'],
+    run(m, dir, h) {
+      const c = h.suiteCopy(dir, { 'planted-target.mjs': PLANTED_TARGET, 'guard-cases/planted.mjs': PLANTED_CASE_FILE });
+      const redRun = c.run(['--case=planted-caught-case,planted-failing-case']);
+      const greenRun = c.run(['--case=planted-caught-case']);
+      const lines = redRun.stdout.split('\n').filter(Boolean);
+      const green = greenRun.stdout.split('\n').filter(Boolean);
+      const lastCaseLine = lines.findLastIndex((l) => /^(PASS|FAIL)  /.test(l));
+      const redAt = lines.findIndex((l) => l === 'RED CASE: planted-failing-case');
+      const noteAt = lines.findIndex((l) => l.startsWith('PLANTS NOT RUN:'));
+      return h.assertAll([
+        ['the red run exits 1 and reads one of two passed', redRun.status === 1 && /^1\/2 passed$/m.test(redRun.stdout), redRun.stdout + redRun.stderr],
+        ['the last line is the count', lines.at(-1) === '1/2 passed', lines.slice(-4).join(' | ')],
+        ['the line before the count names the red case, and the line before that says how many there are', lines.at(-2) === 'RED CASE: planted-failing-case' && lines.at(-3) === 'RED CASES (1):', lines.slice(-4).join(' | ')],
+        ['the red names come after every PASS and FAIL line and after the notes', redAt > lastCaseLine && lastCaseLine >= 0 && noteAt >= 0 && redAt > noteAt, lines.join(' | ')],
+        ['the count stands once', lines.filter((l) => /^\d+\/\d+ passed$/.test(l)).length === 1, redRun.stdout],
+        ['a green run ends with the none line and the count', green.at(-2) === 'RED CASES: none' && green.at(-1) === '1/1 passed' && greenRun.status === 0, greenRun.stdout + greenRun.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-114: --out=<file> writes the whole print of a run of the cases and of a plants run to the file, as the run printed it, and a file that cannot be written is refused with exit 2',
+    guards: ['run_out_flag'],
+    run(m, dir, h) {
+      const c = h.suiteCopy(dir, { 'planted-target.mjs': PLANTED_TARGET, 'guard-cases/planted.mjs': PLANTED_CASE_FILE });
+      const d = h.tmp('sg-out-');
+      const caseFile = join(d, 'cases.txt');
+      const dryFile = join(d, 'dry.txt');
+      const cases = c.run(['--case=planted-caught-case,planted-failing-case', `--out=${caseFile}`]);
+      const dry = c.run(['--plants', '--dry', '--files=planted-target.mjs', `--out=${dryFile}`]);
+      const refused = c.run(['--case=planted-caught-case', `--out=${join(d, 'no-such-folder', 'x.txt')}`]);
+      const read = (f) => { try { return readFileSync(f, 'utf8'); } catch { return null; } };
+      return h.assertAll([
+        ['the file holds the print of a run of the cases, byte for byte', read(caseFile) !== null && read(caseFile) === cases.stdout && cases.stdout.length > 0, `${read(caseFile)} | ${cases.stdout}`],
+        ['and its last line is the count', (read(caseFile) ?? '').endsWith('1/2 passed\n'), read(caseFile)],
+        ['the file holds the print of a plants run, byte for byte', read(dryFile) !== null && read(dryFile) === dry.stdout && /^PLANTS TO RUN: 3 of /m.test(dry.stdout), `${read(dryFile)} | ${dry.stdout}`],
+        ['a file that cannot be written is refused with exit 2 and named', refused.status === 2 && /^OUT REFUSED: the file .*x\.txt cannot be written/m.test(refused.stdout) && !/passed$/m.test(refused.stdout), refused.stdout + refused.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-111: a plant that takes out an export another guard file imports prints CAUGHT with the throw named, where the run used to end in a throw with no verdict',
+    guards: ['run_plant_throw'],
+    run(m, dir, h) {
+      const thrower = [
+        'export const cases = [',
+        "  { name: 'planted-throw-case', guards: ['planted_throw'], run() { return true; } },",
+        '];',
+        'export const plants = {',
+        "  planted_throw: ['export function heredocs(cmd) {', 'function heredocs(cmd) {', 'shell-words.mjs'],",
+        '};',
+        '',
+      ].join('\n');
+      const c = h.suiteCopy(dir, { 'guard-cases/planted-throw.mjs': thrower });
+      const r = c.run(['--plants', '--plant-keys=planted_throw']);
+      return h.assertAll([
+        ['the run exits 0 and prints CAUGHT for the plant', r.status === 0 && /^CAUGHT  plant "planted_throw" in shell-words\.mjs$/m.test(r.stdout) && !/^MISSED /m.test(r.stdout), r.stdout + r.stderr],
+        ['the throw is named on a line of its own', /^PLANT planted_throw: the run threw \(.+\), which reads as caught$/m.test(r.stdout), r.stdout],
+        ['the process did not die of the throw: its end line was read', /^CHUNK-END bad=0 /m.test(r.stdout) && !/node:internal|Unhandled/.test(r.stderr), r.stdout + r.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-52: a plants run narrowed to some guard files ends its count with a line naming the guard files it left out and how many plants that is, and the numbers add up to the total',
+    guards: ['plants_left_out', 'plants_left_out_run'],
+    run(m, dir, h) {
+      const c = h.suiteCopy(dir, { 'planted-target.mjs': PLANTED_TARGET, 'guard-cases/planted.mjs': PLANTED_CASE_FILE });
+      const r = c.run(['--plants', '--files=planted-target.mjs']);
+      const ran = /^PLANTS RUN: (\d+) of (\d+) /m.exec(r.stdout);
+      const left = /^PLANTS LEFT OUT: (\d+) of (\d+) plants, in (\d+) guard files not run \((.*)\); the full run over the whole change is the gate\.$/m.exec(r.stdout);
+      const named = left ? left[4].split(', ').map((x) => [x.slice(0, x.lastIndexOf(' ')), Number(x.slice(x.lastIndexOf(' ') + 1))]) : [];
+      return h.assertAll([
+        ['the run prints the count line and the left-out line', Boolean(ran) && Boolean(left), r.stdout],
+        ['the left-out count is the total less what ran, and the total is the count line\'s', Number(left?.[1]) === Number(ran?.[2]) - Number(ran?.[1]) && Number(left?.[2]) === Number(ran?.[2]) && Number(left?.[1]) > 0, `${left?.[0]} | ${ran?.[0]}`],
+        ['the files named add up to the count, in as many files as the line says', named.length === Number(left?.[3]) && named.reduce((s, [, n]) => s + n, 0) === Number(left?.[1]), left?.[4]],
+        ['a file that was left out is named and the file that ran is not', named.some(([f]) => f === 'push-guard.mjs') && !named.some(([f]) => f === 'planted-target.mjs'), left?.[4]],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-411, Q-HUB-456, P-105: a narrowed dry listing prints the line of the guard files it leaves out as the narrowed run prints it, a whole listing prints none, and the plants the listing says a run would run are the plants a narrowed run runs, for a file holding a stale plant and for a file of the hub',
+    guards: ['plants_dry_left_out', 'plants_dry_would_run'],
+    run(m, dir, h) {
+      const c = h.suiteCopy(dir, { 'planted-target.mjs': PLANTED_TARGET, 'guard-cases/planted.mjs': PLANTED_CASE_FILE });
+      const listed = (r) => Number(/^PLANTS TO RUN: (\d+) of/m.exec(r.stdout)?.[1] ?? -1);
+      const would = (r) => Number(/^PLANTS A RUN WOULD RUN: (\d+) of the (\d+) listed; (\d+) stale/m.exec(r.stdout)?.[1] ?? -1);
+      const wouldStale = (r) => Number(/^PLANTS A RUN WOULD RUN: (\d+) of the (\d+) listed; (\d+) stale/m.exec(r.stdout)?.[3] ?? -1);
+      const verdicts = (r) => (r.stdout.match(/^(CAUGHT|MISSED)  plant "/gm) ?? []).length;
+      const leftLine = (r) => /^PLANTS LEFT OUT: .*$/m.exec(r.stdout)?.[0] ?? null;
+      const dryPlanted = c.run(['--plants', '--dry', '--files=planted-target.mjs']);
+      const runPlanted = c.run(['--plants', '--files=planted-target.mjs']);
+      const dryReal = c.run(['--plants', '--dry', '--files=binary-files.mjs']);
+      const runReal = c.run(['--plants', '--files=binary-files.mjs']);
+      const dryWhole = c.run(['--plants', '--dry']);
+      return h.assertAll([
+        ['the listing of the planted file lists three plants and says two would run, one stale skipped', listed(dryPlanted) === 3 && would(dryPlanted) === 2 && wouldStale(dryPlanted) === 1, dryPlanted.stdout],
+        ['the narrowed run of that file runs as many plants as the listing says, and names the stale one it skipped', verdicts(runPlanted) === would(dryPlanted) && /^PLANT planted_stale: the line to take out is not in planted-target\.mjs/m.test(runPlanted.stdout), runPlanted.stdout],
+        ['the listing\'s two counts differ by the stale plants it names', listed(dryPlanted) - would(dryPlanted) === wouldStale(dryPlanted), dryPlanted.stdout],
+        ['for a file of the hub the listing, the plants a run would run and the verdicts of the narrowed run agree', listed(dryReal) === 1 && would(dryReal) === 1 && verdicts(runReal) === 1, `${dryReal.stdout} | ${runReal.stdout}`],
+        ['the narrowed dry listing prints the left-out line, and it is the line the narrowed run prints', leftLine(dryPlanted) !== null && leftLine(dryPlanted) === leftLine(runPlanted) && /guard files not run \(.*push-guard\.mjs \d+/.test(leftLine(dryPlanted) ?? ''), `${leftLine(dryPlanted)} | ${leftLine(runPlanted)}`],
+        ['the left-out line of the dry listing of a real file is the run\'s too', leftLine(dryReal) !== null && leftLine(dryReal) === leftLine(runReal), `${leftLine(dryReal)} | ${leftLine(runReal)}`],
+        ['a whole listing prints no left-out line', leftLine(dryWhole) === null && /^PLANTS TO RUN: /m.test(dryWhole.stdout), dryWhole.stdout],
+      ]);
+    },
+  },
+  {
+    name: 'Q-HUB-465, Q-HUB-460: the dry listing names a plant whose find stands in more than one place of its file, and a plant of the suite file whose find sits inside a case body as stale by design, and names neither for a plant whose find stands once outside a case body',
+    guards: ['plants_dry_ambiguous', 'plants_dry_by_design'],
+    run(m, dir, h) {
+      const suite = readFileSync(join(dir, 'session-guards.test.mjs'), 'utf8');
+      // The finds are built, so that this case's own text does not hold them and each stands once in its file.
+      const inCase = 'the push gate refuses --all, ' + '--mirror, --tags';
+      const outside = '\nconst NESTED' + " = process.env.SG_NESTED === '1';\n";
+      const places = (s, f) => s.split(f).length - 1;
+      const plants = { planted_twice: ['line', 'LINE', 'planted-target.mjs'], planted_once: ['alpha-line', 'beta-line', 'planted-target.mjs'],
+        planted_in_case: [inCase, 'x', 'session-guards.test.mjs'], planted_outside: [outside, '\n', 'session-guards.test.mjs'] };
+      const c = h.suiteCopy(dir, { 'planted-target.mjs': PLANTED_TARGET, 'guard-cases/planted-places.mjs': `export const cases = [];\nexport const plants = ${JSON.stringify(plants)};\n` });
+      const r = c.run(['--plants', '--dry', '--files=planted-target.mjs,session-guards.test.mjs']);
+      const many = /^AMBIGUOUS PLANTS \(\d+\): (.*)\. The run takes out the first place only/m.exec(r.stdout)?.[1] ?? '';
+      const design = /^STALE BY DESIGN \(\d+\): (.*?)\. Each find sits inside a case body/m.exec(r.stdout)?.[1] ?? '';
+      return h.assertAll([
+        ['the planted finds stand as meant: the first thrice in its target, the in-case find once in the suite file, the other outside the case bodies', places(PLANTED_TARGET, 'line') === 3 && places(suite, inCase) === 1 && places(suite, outside) === 1 && suite.indexOf(inCase) < suite.indexOf('\nconst PLANTS = {\n') && suite.indexOf(outside) < suite.indexOf('\nconst CASES = [\n'), `${places(suite, inCase)} ${places(suite, outside)}`],
+        ['a plant whose find stands in three places is named with the count', many.includes('planted_twice in planted-target.mjs (3 places)'), r.stdout],
+        ['a plant whose find stands once is not named as ambiguous', !many.includes('planted_once') && !many.includes('planted_in_case') && !many.includes('planted_outside'), many],
+        ['a plant of the suite file whose find sits in a case body is named as stale by design', design.includes('planted_in_case in session-guards.test.mjs'), r.stdout],
+        ['a plant of the suite file whose find sits outside the case bodies is not, nor is a plant of another file', !design.includes('planted_outside') && !design.includes('planted_once') && !design.includes('planted_twice'), design],
+        ['the listing still says how many it lists, and the planted plants are among them', /^PLANTS TO RUN: \d+ of \d+: .*planted_twice.*planted_once/m.test(r.stdout) && /planted_in_case/.test(r.stdout.split('\n').find((l) => l.startsWith('PLANTS TO RUN:')) ?? ''), r.stdout],
+      ]);
+    },
+  },
+  {
+    name: 'P-555, Q-HUB-505: the suite\'s file list names every root command file of the hub, that is every root .mjs file that a case file under guard-cases/ is named for or a plant is on, lists no file that is gone from the tree or on the retired list, and the reading names a planted gap and a planted retired file',
+    guards: ['files_list_root'],
+    run(m, dir, h) {
+      const text = readFileSync(join(dir, 'session-guards.test.mjs'), 'utf8');
+      const listOf = (t) => { const mm = /\nconst FILES = \[([^\]]*)\]/.exec(t); return mm ? [...mm[1].matchAll(/'([^']+)'/g)].map((x) => x[1]) : []; };
+      const rootOnly = (f) => /^[^/]+\.mjs$/.test(f);
+      const needed = [...new Set([
+        ...readdirSync(join(dir, 'guard-cases')).filter((f) => rootOnly(f) && existsSync(join(h.HERE, f))),
+        ...Object.values(PLANTS).map(([, , f]) => f).filter(rootOnly),
+      ])].sort();
+      const retiredPath = join(h.HERE, 'archive', 'RETIRED-FILES.txt');
+      const retired = existsSync(retiredPath) ? readFileSync(retiredPath, 'utf8').split('\n').filter((l) => l && !l.startsWith('#')) : [];
+      const list = listOf(text);
+      const missing = (l) => needed.filter((f) => !l.includes(f));
+      const gone = (l) => l.filter((f) => !existsSync(join(h.HERE, f)));
+      const retiredIn = (l) => l.filter((f) => retired.includes(f));
+      return h.assertAll([
+        ['the list was read and the hub has root command files to hold it to, program.mjs among them', list.length > 20 && needed.length > 20 && needed.includes('program.mjs'), `${list.length} listed, ${needed.length} needed`],
+        ['every root command file is in the list', missing(list).length === 0, missing(list).join(', ')],
+        ['program.mjs is in the list', list.includes('program.mjs'), list.join(', ')],
+        ['no file of the list is gone from the tree', gone(list).length === 0, gone(list).join(', ')],
+        ['the retired list was read, names plan-land.mjs, and no file of the suite\'s list is on it', retired.length > 5 && retired.includes('plan-land.mjs') && retiredIn(list).length === 0, retiredIn(list).join(', ')],
+        ['the reading names a root command file taken out of the list', missing(list.filter((f) => f !== 'pin-check.mjs')).join(',') === 'pin-check.mjs', missing(list.filter((f) => f !== 'pin-check.mjs')).join(',')],
+        ['and a file gone from the tree, and a retired file put in', gone([...list, 'no-such-planted-file.mjs']).join(',') === 'no-such-planted-file.mjs' && retiredIn([...list, 'plan-land.mjs']).join(',') === 'plan-land.mjs', 'the readings'],
+      ]);
+    },
+  },
+  {
+    name: 'P-108, Q-HUB-55: the header comment of the suite names every case file under guard-cases/ and a word for every group of cases of this file, and every case of this file belongs to one of the groups it names, and the reading names a planted case file and a planted case that no group holds',
+    guards: ['header_names_groups'],
+    run(m, dir, h) {
+      const text = readFileSync(join(dir, 'session-guards.test.mjs'), 'utf8');
+      const files = readdirSync(join(dir, 'guard-cases')).filter((f) => f.endsWith('.mjs')).sort();
+      // The group words are lower case and each is a word of the case names it holds: a case whose name holds none of them belongs to no group.
+      const GROUPS = ['push gate', 'commit-msg hook', 'plant', '--case', 'case filter', 'cost instrument', 'guard-cases', 'tracked files', 'copies the checkout', 'bare', 'nesting', 'not loaded', 'red cases', '--out', 'lessons check'];
+      const gapsOf = (t, names) => {
+        const head = t.slice(t.indexOf('/**'), t.indexOf('\n */')).replace(/\n \*/g, ' ').replace(/\s+/g, ' ').toLowerCase();
+        const body = t.slice(t.indexOf('\nconst CASES = [\n'), t.indexOf('\nconst PLANTS = {\n'));
+        const caseNames = body.split('\n').filter((l) => /^ {4}name: /.test(l));
+        return { files: names.filter((f) => !head.includes(f)), words: GROUPS.filter((w) => !head.includes(w)), ungrouped: caseNames.filter((l) => !GROUPS.some((w) => l.toLowerCase().includes(w))).map((l) => l.trim().slice(0, 60)), cases: caseNames.length };
+      };
+      const real = gapsOf(text, files);
+      const planted = gapsOf(text.replace('\nconst CASES = [\n', "\nconst CASES = [\n  {\n    name: 'a case about nothing at all',\n"), [...files, 'planted-new-guard.mjs']);
+      return h.assertAll([
+        ['the comment was read and the suite holds cases to group', files.length > 10 && real.cases > 30, `${files.length} files, ${real.cases} cases`],
+        ['every case file under guard-cases/ is named in the comment', real.files.length === 0, real.files.join(', ')],
+        ['every group word is in the comment', real.words.length === 0, real.words.join(', ')],
+        ['every case of this file belongs to a group the comment names', real.ungrouped.length === 0, real.ungrouped.join(' | ')],
+        ['the reading names a planted case file and a planted case that belong to none', planted.files.join(',') === 'planted-new-guard.mjs' && planted.ungrouped.length === 1 && planted.ungrouped[0].includes('a case about nothing'), JSON.stringify(planted)],
+      ]);
+    },
+  },
 ];
 
 const PLANTS = {
@@ -795,7 +997,7 @@ const PLANTS = {
   commit_msg_also_call: ['out.push(`"${path}" "$msg" || exit 1`);', '/* no call */', 'branch-guard.mjs'],
   commit_msg_also_missing: ["out.push('  exit 1');", "out.push('  :');", 'branch-guard.mjs'],
   commit_msg_also_arg: ['${path}" "$msg" || exit 1', '${path}" || exit 1', 'branch-guard.mjs'],
-  plants_files_flag: ["const todo = Object.entries(PLANTS).filter(([, [, , file]]) => !narrowTo || narrowTo.includes(file));\n  // EVERY PLANT WHOSE LINE", "const todo = Object.entries(PLANTS);\n  // EVERY PLANT WHOSE LINE", 'session-guards.test.mjs'],
+  plants_files_flag: ["const todo = Object.entries(PLANTS).filter(([, [, , file]]) => !narrowTo || narrowTo.includes(file));\n  // WHAT A NARROWED RUN LEFT OUT", "const todo = Object.entries(PLANTS);\n  // WHAT A NARROWED RUN LEFT OUT", 'session-guards.test.mjs'],
   plants_touched_flag: ["else if (process.argv.includes('--touched')) {\n    narrowTo = touchedFiles();", "else if (process.argv.includes('--touched')) {\n    narrowTo = [];", 'session-guards.test.mjs'],
   plants_dry: ["if (process.argv.includes('--dry')) {\n    console.log(`PLANTS TO RUN", "if (false) {\n    console.log(`PLANTS TO RUN", 'session-guards.test.mjs'],
   nl_loader: ["continue; }\n  const cs = mod.cases ?? [];", "throw new Error('planted'); }\n  const cs = mod.cases ?? [];", 'session-guards.test.mjs'],
@@ -828,11 +1030,23 @@ const PLANTS = {
   plants_chunk: ['\nconst PLANT_CHUNK = Math.max(1, Math.floor(Number(process.env.PLANT_CHUNK)) || 25);', '\nconst PLANT_CHUNK = 25;', 'session-guards.test.mjs'],
   plants_closing_missed: ['\n  console.log(missed.length ? `MISSED PLANTS (', '\n  console.log(false ? `MISSED PLANTS (', 'session-guards.test.mjs'],
   plants_closing_stale: ['\n  console.log(stale.length ? `STALE PLANTS (', '\n  console.log(false ? `STALE PLANTS (', 'session-guards.test.mjs'],
-  plants_by_file: ['\n    console.log(plantsByFile());\n    rmSync(STATE', '\n    rmSync(STATE', 'session-guards.test.mjs'],
+  plants_by_file: ['\n    console.log(plantsByFile());\n    if (leftOutLine) console.log(leftOutLine);\n    // THE COUNT', '\n    if (leftOutLine) console.log(leftOutLine);\n    // THE COUNT', 'session-guards.test.mjs'],
   run_in_copy: ['\n  const copy = checkoutCopy(HERE);\n', '\n  const copy = null;\n', 'session-guards.test.mjs'],
   bare_detect: ['\n    else if (ok === true) bare = true;\n', '\n', 'session-guards.test.mjs'],
   bare_list: ["\n  if (process.argv.includes('--bare-list')) for", "\n  if (false) for", 'session-guards.test.mjs'],
   asserted_mark: ['\n  return ASSERTED;\n};', '\n  return true;\n};', 'session-guards.test.mjs'],
+  run_red_names: ['\n  for (const x of red) console.log(`RED CASE: ${x.name}`);\n', '\n', 'session-guards.test.mjs'],
+  run_count_last: ['\n  console.log(`${r.length - failedN}/${r.length} passed`);\n', '\n  console.log(`${r.length - failedN}/${r.length} passed`);\n  console.log(\'PLANTS NOT RUN: a line after the count\');\n', 'session-guards.test.mjs'],
+  run_out_flag: ['\nif (outFile) {\n', '\nif (false) {\n', 'session-guards.test.mjs'],
+  run_plant_throw: ['\n  try { r = await runAll(dir, key, caseList); } catch (e) {', '\n  { r = await runAll(dir, key, caseList); } if (false) {', 'session-guards.test.mjs'],
+  plants_left_out: ['\n  const leftOutLine = narrowTo ? `PLANTS LEFT OUT:', '\n  const leftOutLine = false ? `PLANTS LEFT OUT:', 'session-guards.test.mjs'],
+  plants_left_out_run: ['\n  if (leftOutLine) console.log(leftOutLine);\n', '\n', 'session-guards.test.mjs'],
+  plants_dry_left_out: ['\n    if (leftOutLine) console.log(leftOutLine);\n', '\n', 'session-guards.test.mjs'],
+  plants_dry_would_run: ['\n    console.log(`PLANTS A RUN WOULD RUN: ${keys.length}', '\n    console.log(`PLANTS A RUN WOULD RUN: ${todo.length}', 'session-guards.test.mjs'],
+  plants_dry_ambiguous: ['\n    console.log(many.length ? `AMBIGUOUS PLANTS (', '\n    console.log(false ? `AMBIGUOUS PLANTS (', 'session-guards.test.mjs'],
+  plants_dry_by_design: ['\n    console.log(design.length ? `STALE BY DESIGN (', '\n    console.log(false ? `STALE BY DESIGN (', 'session-guards.test.mjs'],
+  files_list_root: ["'gate-files.mjs'" + ", 'doctrine-sync.mjs', 'pin-check.mjs'];", "'gate-files.mjs'" + '];', 'session-guards.test.mjs'],
+  header_names_groups: ['\n * Covered, by the case files under guard-cases/, one per guard file, named for it: binary-files.mjs,', '\n * Covered, by the case files under guard-cases/, one per guard file, named for it:', 'session-guards.test.mjs'],
 };
 
 /**
@@ -1008,6 +1222,14 @@ async function runAll(dir, only, filter, watch = null) {
 // gates a commit touches), and with --dry it lists the plants it would run and runs none. A narrowed run is a quick look at what
 // an edit can have broken: a case exercises more than one file, so the full run stays the gate.
 const argValue = (name) => process.argv.find((x) => x.startsWith(`--${name}=`))?.slice(name.length + 3);
+// --out=<file> WRITES THE RUN'S PRINT TO THE FILE (Q-HUB-114): the switch was read by nothing and the print went to the task's output only,
+// which the tool cuts. Every line the run prints with console.log is also written to the file, which is emptied first.
+const outFile = argValue('out');
+if (outFile) {
+  try { writeFileSync(outFile, ''); } catch (e) { console.log(`OUT REFUSED: the file ${outFile} cannot be written (${String(e?.message ?? e).split('\n')[0]}).`); process.exit(2); }
+  const printed = console.log.bind(console);
+  console.log = (...a) => { printed(...a); appendFileSync(outFile, `${format(...a)}\n`); };
+}
 // --case= takes a comma-separated list of substrings with no space in the value (a space is cut by the shell at its first word,
 // Q-HUB-245, Q-HUB-269); a case runs when any one of them is in its name. An empty value is no filter.
 const caseWords = (v) => {
@@ -1084,9 +1306,13 @@ async function runPlant(key) {
   const dir = mkdtempSync(join(tmpdir(), 'sg-plant-'));
   for (const f of FILES) copyGuard(join(HERE, f), join(dir, f));
   writeFileSync(join(dir, file), src.replace(from, to));
-  const r = await runAll(dir, key, caseList);
-  const caught = r.length > 0 && r.some((x) => !x.ok);
-  if (!r.length) console.log(`PLANT ${key}: no case names it in its guards`);
+  // A PLANT THAT MAKES THE RUN THROW IS CAUGHT (Q-HUB-111): a plant that takes out an export another guard file imports makes that import
+  // fail before any case runs, and the throw used to end the whole process with no verdict. The throw is the guard going red.
+  let r = [], thrown = null;
+  try { r = await runAll(dir, key, caseList); } catch (e) { thrown = String(e?.message ?? e).split('\n')[0]; }
+  const caught = thrown !== null || (r.length > 0 && r.some((x) => !x.ok));
+  if (thrown !== null) console.log(`PLANT ${key}: the run threw (${thrown}), which reads as caught`);
+  if (!r.length && thrown === null) console.log(`PLANT ${key}: no case names it in its guards`);
   console.log(`${caught ? 'CAUGHT' : 'MISSED'}  plant "${key}" in ${file}${caught ? '' : ' — its cases still passed'}`);
   rmSync(dir, { recursive: true, force: true });
   return caught ? 'caught' : 'missed';
@@ -1120,6 +1346,10 @@ if (process.argv.includes('--plants') && argValue('plant-keys') !== undefined) {
     if (narrowTo === null) { console.log('--touched needs a git checkout of the guards; this directory is not one, so nothing is run.'); process.exit(1); }
   }
   const todo = Object.entries(PLANTS).filter(([, [, , file]]) => !narrowTo || narrowTo.includes(file));
+  // WHAT A NARROWED RUN LEFT OUT (Q-HUB-52, Q-HUB-129, P-105): the guard files not selected, with the plants each holds; the dry listing prints it too.
+  const leftOut = new Map();
+  for (const [, , f] of Object.values(PLANTS)) if (!narrowTo?.includes(f)) leftOut.set(f, (leftOut.get(f) ?? 0) + 1);
+  const leftOutLine = narrowTo ? `PLANTS LEFT OUT: ${Object.keys(PLANTS).length - todo.length} of ${Object.keys(PLANTS).length} plants, in ${leftOut.size} guard files not run (${[...leftOut].map(([f, c]) => `${f} ${c}`).join(', ') || 'none'}); the full run over the whole change is the gate.` : null;
   // EVERY PLANT WHOSE LINE ITS FILE NO LONGER HOLDS IS NAMED BEFORE ANY IS RUN (Q-HUB-285): an edit that moves a plant's line is found
   // here, in one line, where it used to be found one plant at a time in the middle of a long run.
   const sources = new Map();
@@ -1129,16 +1359,30 @@ if (process.argv.includes('--plants') && argValue('plant-keys') !== undefined) {
   // A FILE THAT DID NOT LOAD FAILS A WHOLE PLANTS RUN, AND A NARROWED ONE ONLY WHERE IT SELECTED NOTHING (Q-HUB-476).
   const notLoadedFails = NOT_LOADED.length > 0 && ((!narrowTo && !caseList) || todo.length === 0);
   if (notLoadedFails) console.log(`NOT LOADED FAILS THIS RUN (${todo.length === 0 ? 'nothing was selected among the files that loaded' : 'no narrowing'}): ${notLoadedNames()}`);
+  const keys = todo.map(([k]) => k).filter((k) => !stale.includes(k));
   if (process.argv.includes('--dry')) {
     console.log(`PLANTS TO RUN: ${todo.length} of ${Object.keys(PLANTS).length}: ${todo.map(([k]) => k).join(', ')}`);
     console.log(plantsByFile());
+    if (leftOutLine) console.log(leftOutLine);
+    // THE COUNT A RUN RUNS (Q-HUB-411, Q-HUB-456): a stale plant is listed above and is skipped by the run, so the plants a run would run are the
+    // listed ones less the stale.
+    console.log(`PLANTS A RUN WOULD RUN: ${keys.length} of the ${todo.length} listed; ${stale.length} stale ${stale.length === 1 ? 'is' : 'are'} skipped`);
+    // A FIND THAT STANDS IN MORE THAN ONE PLACE (Q-HUB-465): the run takes out the first of them, which may not be the line the plant was written for.
+    const placesOf = (s, f) => { let n = 0, i = s.indexOf(f); while (f.length && i >= 0) { n++; i = s.indexOf(f, i + f.length); } return n; };
+    const many = todo.filter(([, [from, , file]]) => placesOf(sourceOf(file) ?? '', from) > 1).map(([k, [from, , file]]) => `${k} in ${file} (${placesOf(sourceOf(file) ?? '', from)} places)`);
+    console.log(many.length ? `AMBIGUOUS PLANTS (${many.length}): ${many.join(', ')}. The run takes out the first place only; make the find stand once.` : 'AMBIGUOUS PLANTS: none');
+    // A PLANT OF THIS FILE WHOSE FIND SITS IN A CASE BODY CAN NEVER BE CAUGHT (Q-HUB-460): the run keeps the cases of its own memory and runs them
+    // against the changed copy, so the changed case text is never run. Such a plant is stale by design.
+    const own = sourceOf('session-guards.test.mjs') ?? '';
+    const caseFrom = own.indexOf('\nconst CASES = [\n'), caseTo = own.indexOf('\nconst PLANTS = {\n');
+    const design = todo.filter(([, [from, , file]]) => file === 'session-guards.test.mjs' && caseFrom >= 0 && own.indexOf(from) > caseFrom && own.indexOf(from) < caseTo).map(([k]) => k);
+    console.log(design.length ? `STALE BY DESIGN (${design.length}): ${design.map((k) => `${k} in session-guards.test.mjs`).join(', ')}. Each find sits inside a case body, which a run reads from its own memory and not from the copy it changes, so no case that runs can catch the plant; only a case that reads this file's text from the copy can, and a plant no such case cites is never caught.` : 'STALE BY DESIGN: none');
     rmSync(STATE, { recursive: true, force: true });
     process.exit(stale.length || noPlant.length || notLoadedFails ? 1 : 0);
   }
   if (narrowTo) console.log(`NARROWED to ${narrowTo.length ? narrowTo.join(', ') : 'no guard file'}: ${todo.length} of ${Object.keys(PLANTS).length} plants. The plants of the other files were not run; the full run is the gate.`);
   bad += stale.length;
   for (const k of stale) console.log(`PLANT ${k}: the line to take out is not in ${PLANTS[k][2]} — the plant is stale`);
-  const keys = todo.map(([k]) => k).filter((k) => !stale.includes(k));
   const passThrough = process.argv.slice(2).filter((a) => a.startsWith('--case=') || a === '--allow-wide');
   if (keys.length) console.log(`PLANT PROCESSES: ${Math.ceil(keys.length / PLANT_CHUNK)} of at most ${PLANT_CHUNK} plants each, a new process for each (Q-HUB-315).`);
   let leaks = 0;
@@ -1165,6 +1409,9 @@ if (process.argv.includes('--plants') && argValue('plant-keys') !== undefined) {
   }
   console.log(`PLANTS RUN: ${todo.length} of ${Object.keys(PLANTS).length}${narrowTo ? ` (the plants of ${narrowTo.join(', ') || 'no guard file'}; add the counts of the by-file runs against the total of ${Object.keys(PLANTS).length})` : ' (all of them)'}.`);
   console.log(plantsByFile());
+  // A NARROWED RUN SAYS WHAT IT LEFT OUT (Q-HUB-52): a narrowed run's green was read as the suite's, and the plants of the files it did
+  // not select were never run. The guard files left out are named with the plants each holds, and the sum is the count not run.
+  if (leftOutLine) console.log(leftOutLine);
   // THE LAST LINES REPEAT EVERY PLANT MISSED OR STALE (Q-HUB-330): one missed plant in a long log took six searches to find.
   console.log(missed.length ? `MISSED PLANTS (${missed.length}): ${missed.join(', ')}` : 'MISSED PLANTS: none');
   console.log(stale.length ? `STALE PLANTS (${stale.length}): ${stale.join(', ')}` : 'STALE PLANTS: none');
@@ -1178,7 +1425,6 @@ if (process.argv.includes('--plants') && argValue('plant-keys') !== undefined) {
   const r = await runAll(copy ? copy.dir : HERE, undefined, caseList, watch);
   for (const x of r) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.name}${x.err ? ` (${x.err})` : ''}`);
   const failedN = r.filter((x) => !x.ok).length;
-  console.log(`${r.length - failedN}/${r.length} passed`);
   console.log(copy ? `RUN IN A COPY: the cases ran against a copy of ${copy.files.length} files made when the run started; an edit of the working copy during the run is not read as a case's write` : 'RUN IN THE WORKING COPY: this folder is not a git checkout, so no copy was made');
   console.log(`BARE BOOLEAN CASES: ${r.filter((x) => x.bare).length} of ${r.length} cases ended in a bare true and name no assertion if they turn red; each is changed to end in h.assertAll, and --bare-list names them`);
   if (process.argv.includes('--bare-list')) for (const x of r.filter((y) => y.bare)) console.log(`BARE BOOLEAN CASE: ${x.name}`);
@@ -1192,6 +1438,13 @@ if (process.argv.includes('--plants') && argValue('plant-keys') !== undefined) {
   const nothingSelected = r.length === 0;
   if (NOT_LOADED.length && nothingSelected) console.log(`NOTHING SELECTED among the files that loaded; not loaded: ${notLoadedNames()}`);
   else if (NOT_LOADED.length && !caseList) console.log(`CASES NOT RUN: every case of ${notLoadedNames()} (not loaded); the run exits non-zero for it.`);
+  // THE LAST LINES OF A RUN ARE THE RED CASES AND THE COUNT (Q-HUB-409, Q-HUB-457): the tool cuts a long print in its middle and at its
+  // end, so a red line among the PASS lines, or a count line printed before the notes, could be lost. After every passing case and every
+  // note, each red case is named again, and the count is the last line.
+  const red = r.filter((x) => !x.ok);
+  console.log(red.length ? `RED CASES (${red.length}):` : 'RED CASES: none');
+  for (const x of red) console.log(`RED CASE: ${x.name}`);
+  console.log(`${r.length - failedN}/${r.length} passed`);
   rmSync(STATE, { recursive: true, force: true });
   process.exit(failedN || (NOT_LOADED.length && (!caseList || nothingSelected)) ? 1 : 0);
 }

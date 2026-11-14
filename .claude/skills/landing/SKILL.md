@@ -8,7 +8,7 @@ This is for a worker in the hub repository at /home/user/noahjefferson. Write ev
 1. Fetch and rebase onto the remote's main, with these two commands:
    - git -C /home/user/noahjefferson fetch origin main
    - git -C /home/user/noahjefferson rebase origin/main
-2. Stage every changed and new file by name, because the checks read tracked files. Then run the hub's eight checks, as the hub's own landing command spells them, each as its own command in the foreground:
+2. Stage every changed and new file by name, so that the commit holds each file the checks read. Then run the hub's eight checks, as the hub's own landing command spells them, each as its own command in the foreground:
    - node /home/user/noahjefferson/docs-check.mjs /home/user/noahjefferson
    - node /home/user/noahjefferson/lessons-check.mjs
    - node /home/user/noahjefferson/quote-check.mjs --repo /home/user/noahjefferson

@@ -4,6 +4,7 @@
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const pageLine = (hub) => `HOW WORK GOES HERE: the short page, ${hub}/plans/native/page.md. The procedures and the roles are files under ${hub}/plans/native/skills and ${hub}/plans/native/roles. The push guard and the check before a push hold every push of staging and main, and the choice popup is refused.`;
 const said = (r) => `exit ${r.status}: ${r.stdout}${r.stderr}`.slice(0, 600);
@@ -170,6 +171,34 @@ export const cases = [
         ['a startup brings the clone forward to the remote\'s main', cloneHead() === head, said(start)],
         ['its line says so, by one commit with its subject', /^HUB COPY \(the hub checkout .*hubcopy\): brought forward by 1 commit: a later commit on main\.$/.test(lines[0]), start.stdout],
         ['the one line follows it', lines[1] === pageLine(dir), start.stdout],
+      ]);
+    },
+  },
+  {
+    name: 'dispatch: the seconds each git call of the start is given is a value bringForward takes, and one second ends a planted fetch that sleeps for six',
+    guards: ['dp_bring_limit', 'dp_bring_default'],
+    async run(m, dir, h) {
+      const work = h.repo({ 'DOCTRINE.md': 'planted\n', 'hook-dispatch.mjs': 'planted\n' }, 'origin-hub');
+      work.g('checkout', '-q', '-B', 'main');
+      const clone = join(h.tmp('dp-launch-'), 'hubcopy');
+      spawnSync('git', ['clone', '-q', work.dir, clone], { timeout: 60000 });
+      const realGit = spawnSync('sh', ['-c', 'command -v git'], { encoding: 'utf8', timeout: 60000 }).stdout.trim();
+      const bin = h.tmp('dp-bin-');
+      writeFileSync(join(bin, 'git'), `#!/bin/sh\nfor a in "$@"; do\n  if [ "$a" = fetch ]; then exec sleep 6; fi\ndone\nexec ${realGit} "$@"\n`, { mode: 0o755 });
+      const mod = await import(`${pathToFileURL(join(dir, 'hook-dispatch.mjs')).href}?v=${Math.random()}`);
+      const savedPath = process.env.PATH;
+      let lines = [];
+      let took = Infinity;
+      try {
+        process.env.PATH = `${bin}:${savedPath}`;
+        const t0 = Date.now();
+        lines = mod.bringForward({ source: 'startup' }, { copy: clone, repos: [], seconds: 1 });
+        took = Date.now() - t0;
+      } finally { process.env.PATH = savedPath; }
+      return h.assertAll([
+        ['the planted fetch was ended at the one second given, long before its six', took < 4500, `took ${took} ms`],
+        ['the start printed the line for a failed fetch and no other', lines.length === 1 && /^HUB COPY \(the gates' copy\): left as it stands, the fetch failed\.$/.test(lines[0]), JSON.stringify(lines)],
+        ['the function states the default of twenty seconds a call and gives the limit to the call', /const seconds = opts\.seconds \?\? 20;/.test(readFileSync(join(dir, 'hook-dispatch.mjs'), 'utf8')) && /timeout: seconds \* 1000/.test(readFileSync(join(dir, 'hook-dispatch.mjs'), 'utf8')), 'source'],
       ]);
     },
   },
@@ -741,6 +770,8 @@ export const plants = {
   dp_start_main_only: ["  if (event === 'SessionStart' && !p.agent_id) {\n    const root", "  if (event === 'SessionStart') {\n    const root", 'hook-dispatch.mjs'],
   dp_bring_merge: ["    const merged = git(dir, ['merge', '--ff-only', 'origin/main']);", "    const merged = git(dir, ['status']);", 'hook-dispatch.mjs'],
   dp_bring_source: ["  if (p?.agent_id || !(p?.source === 'startup' || p?.source === 'resume')) return [];", '  if (p?.agent_id) return [];', 'hook-dispatch.mjs'],
+  dp_bring_limit: ["timeout: seconds * 1000, env: { ...process.env, GIT_TERMINAL_PROMPT", "timeout: 20000, env: { ...process.env, GIT_TERMINAL_PROMPT", 'hook-dispatch.mjs'],
+  dp_bring_default: ['  const seconds = opts.seconds ?? 20;', '  const seconds = opts.seconds ?? 99;', 'hook-dispatch.mjs'],
   dp_repo_print: ["        if (o.out.trim() && (event === 'SessionStart' || event === 'UserPromptSubmit')) printed.push(o.out.trim());", '        if (false) printed.push(o.out.trim());', 'hook-dispatch.mjs'],
   dp_repo_refuse: ["        if (o.deny) { process.stderr.write(o.reason + '\\n'); if (onRefuse) onRefuse(o.reason); return 2; }\n        if (o.out.trim()", "        void 0;\n        if (o.out.trim()", 'hook-dispatch.mjs'],
   dp_exit2: ['  if (r.status === 2 || jsonDeny) {', '  if (jsonDeny) {', 'hook-dispatch.mjs'],

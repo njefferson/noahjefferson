@@ -682,3 +682,19 @@ Found and left:
 - The hub's landing procedure still gives "because the checks read tracked files" as the reason for staging first. It is a line of a rules page and was not changed.
 
 Left out of this piece on purpose: P-183, P-533, P-542, and a check to hold the two copies of a role or a procedure together.
+
+### Piece 4, run on 14 November 2026
+
+Landed: a run of the cases ends with its red cases and then the count line. A planted failure whose run throws prints CAUGHT with the throw named. The out flag, written --out=<file>, writes the run's print to the file. A narrowed run and a narrowed dry listing each print the line naming the guard files left out and how many planted failures that is. The dry listing gained three lines: the count it would run, the plants whose find stands in more than one place, and the plants stale by design. The suite's header comment names every group of cases and every case file, and a case holds it. The suite's file list names every root command file, with plan-land.mjs gone and doctrine-sync.mjs and pin-check.mjs added, and a case holds it. A new case passes one second to the start's git call against a planted fetch that sleeps for six. The turn rule and the staging line were changed in the procedures, and their old lines are released in plans/rules-released.md.
+
+Set done: P-455, P-506, P-163, P-164, P-105, P-457, P-505, P-509, P-514, P-555, P-108, P-526 and P-235. The data point of P-235 stands as a Known line in the entries of P-54 and P-169. The full run over the whole change was made once: 120 of 120 cases passed and 255 of 255 planted failures were caught, none missed and none stale.
+
+Left open: P-279 stays open. The full dry listing shows no planted failure whose file a full run does not run, and no record names the eleven.
+
+Found and left:
+
+- The dry listing names bare_source_read as stale by design although its run is caught, because its case reads the suite's own text.
+- The new listing lines do not change the listing's exit code.
+- The out flag takes only the form with an equals sign.
+- A throw that escapes a plain run of the cases is not wrapped.
+- The entry of P-235 gives 384 planted failures for hook-dispatch.mjs, and the suite holds 68 for that file today.

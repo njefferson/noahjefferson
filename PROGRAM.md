@@ -1083,6 +1083,8 @@ Done: A plants run now starts a new process for each chunk, so the heap is bound
 
 Acceptance: a run of all plants ends with a verdict in this container, or the run by guard file with its counts added is the written route and the run says so in its last line.
 
+Known: data point of P-235: the finding Q-HUB-194 recorded one process running all 384 planted failures of hook-dispatch.mjs to the end, where the earlier failed runs were over about 790; on 14 November 2026 one process ran the full count of 255 planted failures to its end.
+
 Depends: Q-HUB-129.
 
 ### P-55. Q-HUB-127: the harness names the session's plan file from the words of an owner message
@@ -1597,7 +1599,9 @@ Depends: none.
 
 ### P-105. Q-HUB-52: a narrowed plants run does not run the cases other files' plants cite
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: a narrowed run and a narrowed dry listing each print the line naming the guard files left out and how many planted failures that is, read in the narrowed dry listing of the suite file, which printed PLANTS LEFT OUT: 203 of 255 plants in 22 guard files, and in the cases Q-HUB-52 and P-105 passing; the full run over the whole change was made once in this step and ended PLANTS RUN: 255 of 255 with no missed and no stale plant
 
 Acceptance: every narrowed plants run prints which guard files it left out and how many plants that is, and the full run over the integrated change is made once and counted, as the redesign plan's step 61 does.
 
@@ -1627,7 +1631,9 @@ Depends: P-4.
 
 ### P-108. Q-HUB-55: the header comment of the suite does not mention four cases step 138 added
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: the header comment names every group of cases and every case file, held by a case, read in the case P-108, Q-HUB-55 passing on 14 November 2026, which reads a planted case file and a planted case that no group holds
 
 Acceptance: the header comment names every group of cases in the suite, checked by a read of the comment against the case list.
 
@@ -2199,7 +2205,9 @@ Depends: that app's own session.
 
 ### P-163. Q-HUB-111: a plant that deletes an export another guard file imports makes the plants harness throw
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: a planted failure whose run throws prints CAUGHT, read in the full run of the planted failures on 14 November 2026, where run_plant_throw was CAUGHT, and the case Q-HUB-111 passed
 
 Acceptance: such a plant prints CAUGHT or MISSED, because each plant run is wrapped so a throw is read as caught; a case.
 
@@ -2207,7 +2215,9 @@ Depends: none.
 
 ### P-164. Q-HUB-114: the output flag of the suite is ignored
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: the out flag, written --out=<file>, writes the run's print to the file, read in the case Q-HUB-114 passing on 14 November 2026, and a file that cannot be written is refused with exit 2
 
 Acceptance: the flag writes the run's output to the named file, or it is removed from the usage; a case.
 
@@ -2260,6 +2270,8 @@ Repository: hub. Goal: 6. State: done. Plan: none.
 Done: The case runs the plants in chunks and a plant takes the chunk size out. Found held in `session-guards.test.mjs` by the triage of the plan of 10 November.
 
 Acceptance: the runner loads each guard module once for a file or releases it, a run of all plants ends with a verdict in this container, and memory after many plants is flat in a read; the by-file count lines of step 21 of the plan of 1 November 2026 already stand.
+
+Known: data point of P-235: the finding Q-HUB-194 recorded one process running all 384 planted failures of hook-dispatch.mjs to the end, where the earlier failed runs were over about 790; on 14 November 2026 one process ran the full count of 255 planted failures to its end.
 
 Depends: Q-HUB-84.
 
@@ -2897,7 +2909,9 @@ Depends: P-194.
 
 ### P-235. Q-HUB-194: one process ran all 384 plants of hook-dispatch.mjs to the end
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: the data point stands as a Known line in the entries of P-54 and P-169 in PROGRAM.md, read there on 14 November 2026: the finding recorded one process running all 384 planted failures of hook-dispatch.mjs to the end, and one process ran the full 255 to its end on that day
 
 Acceptance: a data point for P-54 and P-169 recorded with them; the earlier runs that failed were over about 790 plants.
 
@@ -5051,7 +5065,9 @@ Depends: none.
 
 ### P-455. Q-HUB-409: a long run of the suite is cut in the middle by the tool, so a red line can be lost
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: done. Plan: none.
+
+Done: a run of the cases ends with its red cases and then the count line, read in the full run of the cases on 14 November 2026, which ended RED CASES: none and 120/120 passed
 
 Acceptance: the names of the failed cases are printed again as the last lines before the count, with a case on a planted failing case.
 
@@ -5069,7 +5085,9 @@ Depends: none.
 
 ### P-457. Q-HUB-411: the dry listing with the files switch counts more plants than the narrowed run runs
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: a case compares the dry listing's count with what a narrowed run runs, read in the case Q-HUB-411, Q-HUB-456, P-105 passing on 14 November 2026, and the narrowed dry listing of the suite file printed 52 of the 52 listed with 0 stale skipped
 
 Acceptance: the listing counts the plants the narrowed run runs, with a case that compares the two counts for one file.
 
@@ -5545,7 +5563,9 @@ Depends: none.
 
 ### P-505. Q-HUB-456: Q-HUB-411 may describe no defect
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: a case compares the dry listing's count with what a narrowed run runs, read in the case Q-HUB-411, Q-HUB-456, P-105 passing on 14 November 2026; the finding Q-HUB-411 is closed by its result, because both counted the same list and the new line states the one difference, the stale ones a run skips
 
 Acceptance: a case compares the dry listing's plant count with the narrowed run's count for the same files, and Q-HUB-411 is closed by its result.
 
@@ -5553,7 +5573,9 @@ Depends: none.
 
 ### P-506. Q-HUB-457: the print of a whole run of the suite is cut by the tool and its count line is not always readable
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: a run of the cases ends with its red cases and then the count line, read in the full run of the cases on 14 November 2026, which ended RED CASES: none and 120/120 passed, and the case Q-HUB-409 passed
 
 Acceptance: the run prints the red cases and the count line after every passing case, with a case on the order of a planted red run.
 
@@ -5581,7 +5603,9 @@ Depends: none.
 
 ### P-509. Q-HUB-460: a plant in the suite file whose find sits in a case body can never be caught
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: the dry listing names a planted failure inside a case body as stale by design, read in the narrowed dry listing of the suite file, which printed STALE BY DESIGN (1): bare_source_read, and in the case Q-HUB-465 passing on 14 November 2026
 
 Acceptance: the dry listing names such a plant as stale by design, with a case on a planted one.
 
@@ -5629,7 +5653,9 @@ Depends: none.
 
 ### P-514. Q-HUB-465: the dry listing reads a plant as current when its find matches another line of its file
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: the dry listing names a planted failure whose find stands in more than one place, read in the case Q-HUB-465 passing on 14 November 2026, which also holds that a plant whose find stands once outside a case body is named by neither line
 
 Acceptance: the dry listing names a plant whose find matches more than one place in its file, with a case on a plant whose find also stands in another line.
 
@@ -5745,7 +5771,9 @@ Depends: none.
 
 ### P-526. Q-HUB-477: the limit of twenty seconds on a git call of the startup bring-forward has no case
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: the start's git limit is a value its function takes, bringForward, as it already was, and the new case passes one second against a planted fetch that sleeps for six, read in the case on the seconds of each git call of the start passing on 14 November 2026
 
 Acceptance: the limit is a value the function takes, and a case passes one second against a planted fetch that sleeps longer.
 
@@ -6029,7 +6057,9 @@ Depends: none.
 
 ### P-555. Q-HUB-505: the suite's list of guard files does not name the two command files
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: plan-land.mjs is retired and absent, program.mjs was already listed, doctrine-sync.mjs and pin-check.mjs joined the suite's file list, and a case holds every root command file to it, read in the case P-555, Q-HUB-505 passing on 14 November 2026
 
 Acceptance: both files join the list, with a case that holds every root command file of the hub to it.
 
