@@ -3021,7 +3021,9 @@ Depends: P-4.
 
 ### P-248. Q-HUB-208: the sibling drift tool lists only DOCTRINE.md
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: doctrine-sync.mjs lists a changed file under doctrine/ with the headings of its changed sections, and its case (P-248) passed in the full run of the suite's cases on 14 November 2026.
 
 Acceptance: `doctrine-sync.mjs` lists the files under `doctrine/` and reads changed sections from their headings, so a change there reaches every sibling session. Ranked high: until it is done a doctrine change reaches no sibling.
 
@@ -3065,7 +3067,9 @@ Depends: none.
 
 ### P-253. Q-HUB-213: the doctrine's citation form is not settled
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: DOCTRINE.md states that an item inside a section is cited as the section's number, a point and the item's number, and lessons-check.mjs reads a citation written with a point after the word LESSONS as the lesson number; its cases (P-253) passed in the full run on 14 November 2026.
 
 Acceptance: one form is chosen for an item inside a section, a check reads it and the lesson numbers that share the section sign, and the fifteen places that cite with a decimal point are made to agree.
 

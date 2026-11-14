@@ -658,3 +658,20 @@ Found and left alone:
 
 - Nothing in the repository holds the two copies of a role or a procedure together, which is left for piece 3.
 - The two copies of each role name the short page at different paths on purpose.
+
+### Piece 3, run on 14 November 2026
+
+Landed: the three fixes of the proof of 14 November, P-248 and P-253, and the pin check's own header and pass line narrowed to what it refuses. The hub's stop shim now stands aside where the dispatcher is wired, so a refusal prints once, and still runs the guard where none is wired. CLAUDE.md lists three shells. The hub's landing procedure says eight checks. The drift tool lists a changed file under doctrine/ with the headings of its changed sections, and the lessons check reads a citation written with a point as the lesson number, with one sentence in DOCTRINE.md that states the form.
+
+Set done:
+
+- P-248: doctrine-sync.mjs lists a changed file under doctrine/ with its changed headings, and its case passed in the full run.
+- P-253: DOCTRINE.md states the form and lessons-check.mjs reads it, and its cases passed in the full run.
+
+Left open:
+
+- P-72 stays open. The check's own words now agree with what it refuses, and three other descriptions still say it holds no undeclared dependencies: doctrine/hub.md line 1137, HUB-REFERENCE.md line 287 and .github/workflows/doctrine.yml line 19. The first is a line of a rules page, which this piece did not change.
+- P-515 stays open. Neither the item, its finding found/Q-HUB-466.md, nor any lesson names the word orders, so nothing was changed.
+- P-89 and P-152 stay open. The send of the worker for that step was refused by the harness's permission check on 14 November 2026 and was not sent again, so the four checks still read different sets of files.
+
+Left out of this piece on purpose: P-183, P-533, P-542, and a check to hold the two copies of a role or a procedure together.

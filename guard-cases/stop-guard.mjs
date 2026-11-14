@@ -1,6 +1,7 @@
 // The cases and plants of stop-guard.mjs, hold 4 of the plan of 14 November. The shape is guard-cases/shape.mjs.
 // The sentences for a feeling, a promise and a go-word are the ones the old stop guard's cases refused (commit 4ea3157).
 import { join } from 'node:path';
+import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 const words = (n) => Array.from({ length: n }, (_, i) => `w${i}`).join(' ');
@@ -156,9 +157,39 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'stop guard shim: with the dispatcher wired in the user settings the shim runs nothing, so a refusal prints once; with none wired, or no settings file, it runs the guard and the refusal comes back',
+    guards: ['stop_shim_stands_aside'],
+    run(m, dir, h) {
+      const root = h.tmp('sg-shim-');
+      const proj = join(root, 'noahjefferson');
+      mkdirSync(proj, { recursive: true });
+      const log = join(root, 'runs.txt');
+      writeFileSync(join(proj, 'stop-guard.mjs'), `import { appendFileSync } from 'node:fs';\nappendFileSync(${JSON.stringify(log)}, 'run\\n');\nprocess.stderr.write('planted shim refusal\\n');\nprocess.exit(2);\n`);
+      const wired = join(root, 'wired.json');
+      const bare = join(root, 'bare.json');
+      writeFileSync(wired, JSON.stringify({ hooks: { Stop: [{ matcher: '', hooks: [{ type: 'command', command: 'node "/planted/hook-dispatch.mjs" Stop' }] }] } }));
+      writeFileSync(bare, JSON.stringify({ hooks: {} }));
+      const shim = existsSync(join(dir, '.claude', 'hooks', 'stop-guard.sh')) ? join(dir, '.claude', 'hooks', 'stop-guard.sh') : join(h.HERE, '.claude', 'hooks', 'stop-guard.sh');
+      const runs = () => (existsSync(log) ? readFileSync(log, 'utf8').split('\n').filter(Boolean).length : 0);
+      const go = (settings) => spawnSync('bash', [shim], { input: '{}', encoding: 'utf8', timeout: 30000, env: { ...process.env, CLAUDE_PROJECT_DIR: proj, HOOK_DISPATCH_SETTINGS_FILE: settings } });
+      const stood = go(wired);
+      const afterWired = runs();
+      const alone = go(bare);
+      const afterBare = runs();
+      const missing = go(join(root, 'absent.json'));
+      const afterMissing = runs();
+      return h.assertAll([
+        ['with the dispatcher wired the shim exits 0, prints nothing and runs the guard no time', stood.status === 0 && stood.stderr === '' && afterWired === 0, stood.status + stood.stderr + afterWired],
+        ['with no dispatcher in the settings the shim runs the guard once and the refusal comes back', refused(alone, /planted shim refusal/) && afterBare - afterWired === 1, alone.status + alone.stderr + (afterBare - afterWired)],
+        ['with no settings file the shim still runs the guard once', refused(missing, /planted shim refusal/) && afterMissing - afterBare === 1, missing.status + missing.stderr + (afterMissing - afterBare)],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
+  stop_shim_stands_aside: ["if grep -qs 'hook-dispatch\\.mjs' \"$HOOK_SETTINGS\"; then exit 0; fi", 'if false; then exit 0; fi', '.claude/hooks/stop-guard.sh'],
   stop_word_limit: ['if (words > WORD_LIMIT)', 'if (false)', 'stop-guard.mjs'],
   stop_fence_set_aside: ["const prose = reply.replace(/```[\\s\\S]*?```/g, ' ');", 'const prose = reply;', 'stop-guard.mjs'],
   stop_feeling: ['if (EMOTION.some((re) => re.test(prose)))', 'if (false)', 'stop-guard.mjs'],

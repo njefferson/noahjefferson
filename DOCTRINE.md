@@ -27,6 +27,7 @@ index to them. The never-rules are on one short page, `doctrine/never.md`,
 read at every start. The plan rules are in `doctrine/plans.md`, read whole before a page is scoped. The hub's instruction file as it stood on 11 November 2026 is `doctrine/hub.md`, read whole at every start. The rest, the product, taste, accessibility and release sections, are
 in `doctrine/apps.md`, read when a plan item points at one. Every section number
 cited anywhere in the hub is the number in the lines below.
+An item inside a section is cited as the section's number, a point and the item's number.
 
 - 0: Never use the AskUserQuestion / choice-popup tool. Ever. (doctrine/never.md)
 - 0b: If you do not recognise the input, ASK — before doing anything at all (doctrine/never.md)

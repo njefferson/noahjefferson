@@ -242,6 +242,20 @@ for (const [n, titles] of byNumber) {
   );
 }
 
+// A CITATION OF AN ITEM INSIDE A LESSON IS READ AS THE LESSON'S NUMBER (P-253). An item is cited as the section's number, a point and the
+// item's number (`LESSONS §7h.2`), and the point and the item are not part of the address: the lesson is. Written with a point it used to be
+// read as nothing at all, so a citation of `LESSONS §999.1` passed where `LESSONS §999` failed. Only a citation that names LESSONS is read
+// here; a bare `§16.8` names a section of whichever page the sentence is about, and is not this check's to resolve.
+const citationOf = (text) => [...text.matchAll(/\bLESSONS\s+§(\d+[a-z]?)(?:\.(\d+))?/g)]
+  .map((m) => ({ section: m[1], item: m[2] ?? null, cited: m[0] }));
+for (const [n, e] of onDisk) {
+  for (const c of citationOf(e.body)) {
+    if (!onDisk.has(c.section)) {
+      failures.push(`${e.file} cites ${c.cited}${c.item ? ` (item ${c.item} of lesson ${c.section})` : ''}, and no lesson is numbered ${c.section}, so the citation resolves to nothing.`);
+    }
+  }
+}
+
 for (let k = 0; k < heads.length - 1; k++) {
   const [head, at] = heads[k];
   const body = lines.slice(at + 1, heads[k + 1][1]).join('\n');

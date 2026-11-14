@@ -9,5 +9,10 @@
 # loudly when the hub is absent.
 set -uo pipefail
 cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}" || exit 0
+# WHERE THE DISPATCHER IS WIRED THIS SHIM STANDS ASIDE. The dispatcher runs stop-guard.mjs once on the main thread, and a session
+# started in the hub reads this shim too, so running the guard here would print a refusal twice. Where the user-level settings do not
+# name hook-dispatch.mjs, nothing else runs the guard, so the shim runs it.
+HOOK_SETTINGS="${HOOK_DISPATCH_SETTINGS_FILE:-$HOME/.claude/settings.json}"
+if grep -qs 'hook-dispatch\.mjs' "$HOOK_SETTINGS"; then exit 0; fi
 [ -f ../noahjefferson/stop-guard.mjs ] || exit 0
 exec node ../noahjefferson/stop-guard.mjs

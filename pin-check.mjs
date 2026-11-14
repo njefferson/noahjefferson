@@ -12,9 +12,11 @@
 // concept of. Workflow security is `zizmor --offline --strict-collection` in
 // regex over `uses:` was reinventing a maintained tool badly.
 //
-// What is left here is the part zizmor does not cover: npm hygiene. A lockfile
-// exists, automation uses `npm ci`, and no script runs on undeclared
-// dependencies.
+// What is left here is the part zizmor does not cover: npm hygiene. It refuses
+// three things and no more: a package.json with no package-lock.json, an
+// `npm install` in a workflow, and .mjs scripts at the repo root where there is
+// no package.json. It does not read what a script imports, so a script that
+// imports a package a package.json does not declare is not caught.
 //
 // EXITS NON-ZERO on any failure.
 
@@ -100,4 +102,4 @@ if (failures.length) {
   console.log('Exiting non-zero.');
   process.exit(1);
 }
-console.log('PASS — lockfile present, no `npm install` in automation, no undeclared deps.');
+console.log('PASS — no `npm install` in a workflow, a lockfile beside every package.json, and no root .mjs script without a package.json.');
