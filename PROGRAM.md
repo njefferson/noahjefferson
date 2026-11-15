@@ -1223,13 +1223,15 @@ Depends: P-7, whose one file for each finding is the keyed record.
 
 ### P-67. Q-HUB-12: the state page gate holds nothing while the page does not exist
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: Searched hook-dispatch.mjs for a state page gate or a status gate after a compaction and found none; its only page reference is the short-page line.
 
 Known: read on 14 November 2026: doctrine/hub.md lines 592 to 596 and doctrine/plans.md lines 612 to 613 describe the state page gate, so the page is back; no gate in hook-dispatch.mjs and no page-writing status command are in the tree.
 
 Acceptance: after a compaction with no page file, the main thread is held to a status until the page is written; a case.
+
+Retired: Closed unbuilt because the goals at the top of doctrine/hub.md, line 18, say goal 3 was removed on 14 November 2026 since the status reports did not say what was needed, and this item asks for a hold to a status page.
 
 Depends: P-4, which turns the page gate off outside an approved plan.
 
@@ -1539,13 +1541,15 @@ Depends: none.
 
 ### P-97. Q-HUB-44: the status page's source outgrew the Read tool's size cap
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: Searched for report.mjs (in RETIRED-FILES.txt, absent) and for a status page gate or large-read flag in hook-dispatch.mjs; the page gate was not found.
 
 Known: read on 14 November 2026: doctrine/plans.md lines 92 to 93 and doctrine/hub.md lines 592 to 596 describe the status page and its page gate, so the page is back; report.mjs, which wrote the page, and the gate are not in the tree.
 
 Acceptance: a read of the status page at the end of a long plan returns it whole, because the source stays under the cap or the page gate's read uses the large-read flag.
+
+Retired: Closed unbuilt because the goals at the top of doctrine/hub.md, line 18, say goal 3 was removed on 14 November 2026 since the status reports did not say what was needed, and this item is about the source of the status page.
 
 Depends: none.
 
@@ -1747,7 +1751,7 @@ Depends: none.
 
 ### P-116. Q-HUB-63: the plan gate keeps holding a name the plan has dropped until a tool result prints it
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: Searched plan-guard.mjs (now a shell) and hook-dispatch.mjs for heldNames or a held dropped name; not found, and the plan approval gate is retired.
 
@@ -1756,6 +1760,8 @@ Known: read on 14 November 2026: doctrine/hub.md lines 310 to 314 describe the n
 Parked: HeldNames in plan-guard.mjs holds a dropped name on purpose and its refusal says so under Doctrine section 0d, which is the owner's rule.
 
 Acceptance: a name dropped from the plan is no longer held on the next approval call; a case.
+
+Retired: Closed unbuilt because the short page, line 28, says the session scopes the work on one page with five parts and the plan is approved once, which sets aside the plan approval gate and its held names (the page dates the retired gates to 12 November 2026 at line 24).
 
 Depends: none.
 
@@ -2167,7 +2173,7 @@ Depends: Q-HUB-98; Q-HUB-104.
 
 ### P-154. Q-HUB-102: a status named a step as the next move because it read the notes before an edit in the same message landed
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: Searched for report.mjs and a status command that prints a notes change (retired, absent) and for a gate ordering calls in hook-dispatch.mjs; not found.
 
@@ -2176,6 +2182,8 @@ Known: read on 14 November 2026: doctrine/plans.md lines 39, 87 and 531 describe
 Parked: Calls sent in one message run together, which is the harness's behaviour, so a status read of a notes line must be sent in the message after the edit.
 
 Acceptance: the status command run in the same message as a notes edit prints that the notes changed after its read, or a gate orders the two; until then a status that must read a fresh line runs in the message after the edit.
+
+Retired: Closed unbuilt because the goals at the top of doctrine/hub.md, line 18, say goal 3 was removed on 14 November 2026 since the status reports did not say what was needed, and this item is about what a status printed after a notes edit.
 
 Depends: none.
 
@@ -2203,7 +2211,7 @@ Depends: Q-HUB-98; Q-HUB-101.
 
 ### P-157. Q-HUB-105: the restart gate reads a plan mode the person enters by hand as the first act after a resume as the restart's
 
-Repository: hub. Goal: 1. State: open. Plan: none.
+Repository: hub. Goal: 1. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: Searched hook-dispatch.mjs for the restart gate, restartedPlanMode and start-mode.json; the gate and its plan-mode logic are not present.
 
@@ -2214,6 +2222,8 @@ Parked: The session-start input at harness version 2.1.316 carries no permission
 Note: the marker route of the plan of 4 November (step 68) is inert at harness version 2.1.316, because a session start's input carries no permission mode; the next route is the harness supplying the mode or a transcript shape that tells the two apart.
 
 Acceptance: a mark tells the two apart, so a plan mode entered by hand is judged as the plan mode of a new plan and a restart's is judged as the restart's; a case each way.
+
+Retired: Closed unbuilt because the short page, line 28, says the plan is scoped on one page and approved once, with approval at the button only as plans/native/running.md, Mode, says, which sets aside the restart gate (the page dates the retired gates to 12 November 2026 at line 24).
 
 Depends: P-17; Q-HUB-88.
 
@@ -2943,13 +2953,15 @@ Depends: P-1.
 
 ### P-230. Q-HUB-189: a refused approval call resets the talk the plan gate requires
 
-Repository: hub. Goal: 4. State: open. Plan: none.
+Repository: hub. Goal: 4. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: The reset of the required talk by a refused approval call was searched for in /home/user/noahjefferson/plan-guard.mjs, which is now a shell with no plan gate or talk, and in hook-dispatch.mjs, and not found.
 
 Known: read on 14 November 2026: the rule that a talk comes before the approval call is live at doctrine/plans.md lines 313-330, but plan-guard.mjs lines 22-30 refuse only the choice popup and no file in the tree holds the talk or its reset, so the page is back and the gate is not.
 
 Acceptance: a refused approval call does not reset the talk, or the refusal's text says that it does, and a case shows the chosen behaviour; each reset costs the owner a go-word.
+
+Retired: Closed unbuilt because the short page, line 28, says the session scopes the work on one page with five parts and the plan is approved once, which sets aside the talk-before-approval gate (the page dates the retired gates to 12 November 2026 at line 24).
 
 Depends: none.
 
@@ -3019,13 +3031,15 @@ Depends: P-1.
 
 ### P-237. Q-HUB-196: the dispatch gate's new words for a closed pointer have no case or plant
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: The dispatch gate's refusal words for a closed pointer were searched for in /home/user/noahjefferson/hook-dispatch.mjs and guard-cases/dispatch.mjs (no pointer, Order or review step) and not found.
 
 Known: read on 14 November 2026: the dispatch gate and its pointer are described at doctrine/plans.md lines 536-544 and 810-812, but hook-dispatch.mjs and guard-cases/dispatch.mjs hold no dispatch gate, pointer, Order or refusal for a closed pointer, so the page is back and the gate is not.
 
 Acceptance: a case and a plant reach the branch for a plan with an Order, no review step and a closed pointer, and the plants run catches the plant.
+
+Retired: Closed unbuilt because the short page, line 63, says that where a rules page and it differ on how work is scoped and who does its steps it holds, which sets aside the dispatch gate and its pointer (the page dates the retired gates to 12 November 2026 at line 24).
 
 Depends: P-2.
 
@@ -3061,13 +3075,15 @@ Depends: P-10.
 
 ### P-241. Q-HUB-201: the cost of reading the pointer on each main-thread call was not measured
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: The plan phase's pointer read on each main-thread call was searched for in /home/user/noahjefferson/hook-dispatch.mjs and not found, as the dispatcher no longer reads a pointer.
 
 Known: read on 14 November 2026: the pointer is described at doctrine/plans.md lines 75-98 and planPhase is named at line 639, but hook-dispatch.mjs holds no pointer read on a main-thread call and report.mjs is still retired; the read the item asks to time is not in the tree, and whether the page alone keeps the item alive is not settled by a read.
 
 Acceptance: the time of the plan phase's pointer read is measured on a session with several agents and written here; the status gate did a comparable read.
+
+Retired: Closed unbuilt because the short page, line 63, says that where a rules page and it differ on how work is scoped and who does its steps it holds, which sets aside the pointer read on each call (the page dates the retired gates to 12 November 2026 at line 24).
 
 Depends: none.
 
@@ -3083,13 +3099,15 @@ Depends: none.
 
 ### P-243. Q-HUB-203: the review gate and the rules gate still judge a send in conversation
 
-Repository: hub. Goal: 4. State: open. Plan: none.
+Repository: hub. Goal: 4. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: The review gate and rules gate named in the finding were searched for in /home/user/noahjefferson/hook-dispatch.mjs (322 lines) and not found.
 
 Known: read on 14 November 2026: the review gate and the rules gate are described at doctrine/plans.md lines 118-131 and 572-579 and at agent-rules.md line 7, but hook-dispatch.mjs holds neither, so the pages are back and the gates are not.
 
 Acceptance: the rules gate is narrowed as the review gate was, so that a send in conversation is refused for having no plan and not for its rules version, or the two are left and the reason is written.
+
+Retired: Closed unbuilt because the short page, line 63, says that where a rules page and it differ on how work is scoped and who does its steps it holds, which sets aside the review gate and the rules gate (the page dates the retired gates to 12 November 2026 at line 24).
 
 Depends: P-4.
 
@@ -5321,13 +5339,15 @@ Depends: none.
 
 ### P-468. Q-HUB-421: the manager fence refuses the status command with no quoted line without naming the form that passes
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/hook-dispatch.mjs and the whole tree for a manager fence or a status-command refusal and found none; plans/native/cost.md and old plan pages mention it only as history.
 
 Known: read on 14 November 2026: the manager fence is back at hook-dispatch.mjs lines 290 and 535 and the live pages at doctrine/plans.md lines 531-535 and 580-582 describe the status command passing it, but the fence has no rule about the status command and the status command's file is still retired.
 
 Acceptance: the refusal prints the one form the fence passes, with a case on the bare command.
+
+Retired: Closed unbuilt because the goals at the top of doctrine/hub.md, line 18, say goal 3 was removed on 14 November 2026 since the status reports did not say what was needed, and this item is about the status command.
 
 Depends: none.
 
@@ -5413,13 +5433,15 @@ Depends: none.
 
 ### P-476. Q-HUB-429: a cleared close step could not be sent while the top tier served for the next plan's writing
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/hook-dispatch.mjs and plan-seed.mjs for a tier gate on a cleared close step and found none; plan-seed.mjs is retired and the dispatcher no longer holds plan or step gates.
 
 Known: read on 14 November 2026: the top-tier rule for a new plan is live at doctrine/plans.md lines 449-457 and doctrine/hub.md lines 770-771, and the dispatcher is back with three holds, but hook-dispatch.mjs holds no tier gate, step gate or cleared close step, and plan-seed.mjs is still retired.
 
 Acceptance: a plan's close is sent before the next plan's writing begins, or the gate passes a step cleared before the tier changed, with a case on a tier change after a review.
+
+Retired: Closed unbuilt because the short page, line 63, says that where a rules page and it differ on how work is scoped and who does its steps it holds, and line 36 has workers on the cheapest tier do the steps, which sets aside the step gate on a cleared close step (the page dates the retired gates to 12 November 2026 at line 24).
 
 Depends: none.
 
@@ -5837,13 +5859,15 @@ Depends: none.
 
 ### P-516. Q-HUB-467: an unnumbered Next line written above an older one is not the one the review reads
 
-Repository: hub. Goal: 3. State: open. Plan: none.
+Repository: hub. Goal: 3. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: Searched the standing files for "Next" line, notes, status page and a review reading them; none found, report.mjs and aim-review.md are retired.
 
 Known: read on 14 November 2026: aim-review.md lines 42 to 47 and plans/seed-template.md line 74 read the unnumbered Next line of the manager notes again, while the status that was to take the same line (report.mjs) is still retired and absent.
 
 Acceptance: the status and the review file take the same line of the notes as the move, with a case on notes that hold two unnumbered Next lines.
+
+Retired: Closed unbuilt because the goals at the top of doctrine/hub.md, line 18, say goal 3 was removed on 14 November 2026 since the status reports did not say what was needed, and this item asks that the status take the unnumbered Next line.
 
 Depends: none.
 
@@ -5881,7 +5905,7 @@ Depends: none.
 
 ### P-520. Q-HUB-471: four things the plan check taught are in neither the template nor the plans page
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: Searched for plans/seed-template.md, doctrine/plans.md and a plan check in plan-guard.mjs (a retired shell); the template and the page are absent.
 
@@ -5889,17 +5913,21 @@ Known: read on 14 November 2026: doctrine/plans.md (the plan check paragraphs, l
 
 Acceptance: the template and the page state the four, and the check of a call prints that it does not judge the correction hold, each with a case.
 
+Retired: Closed unbuilt because the short page, line 63, says that where a rules page and it differ on how work is scoped and who does its steps it holds, which sets aside the plan check and its check-of-a-call print (the page dates the retired gates to 12 November 2026 at line 24).
+
 Depends: none.
 
 ### P-521. Q-HUB-472: the plan check does not fault a plan with steps that holds no line of priced sends
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/hook-dispatch.mjs for a plan check fault on a missing Sends priced line and found none, and the plan check is retired.
 
 Known: read on 14 November 2026: the Sends priced line is in the live pages (doctrine/plans.md lines 401 to 403, plans/seed-template.md line 7), and the plan check that faults a plan without it is not back (plan-guard.mjs lines 16 to 19, hook-dispatch.mjs holds none).
 
 Acceptance: the plan check faults a plan with steps whose own rules hold no Sends priced line, with a case on a plan with the line and one without.
+
+Retired: Closed unbuilt because the short page, line 28, sets the page of five parts with the cost as part 4 in place of the plan check's fault for a missing Sends priced line, and line 63 holds it over the old shape where they differ (the page dates the retired gates to 12 November 2026 at line 24).
 
 Depends: none.
 
@@ -5959,13 +5987,15 @@ Depends: none.
 
 ### P-527. Q-HUB-478: the stop guard calls the pointer with no set of running steps
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/stop-guard.mjs for the pointer call and the plant eject_pointer_notes and found neither; the file reads and discards input and exits 0.
 
 Known: read on 14 November 2026: the stop guard is back (stop-guard.mjs) and doctrine/plans.md lines 75 to 100 and 221 to 235 state the pointer and the running-step count, but stop-guard.mjs makes no pointer call and the pointer's file report.mjs is still retired.
 
 Acceptance: the call passes the running steps of the state, the plant eject_pointer_notes takes the new text, and a case holds a Done line beside a running agent.
+
+Retired: Closed unbuilt because the goals at the top of doctrine/hub.md, line 18, say goal 3 was removed on 14 November 2026 since the status reports did not say what was needed, and the pointer with its running-step count is a status print.
 
 Depends: none.
 
@@ -6159,13 +6189,15 @@ Depends: none.
 
 ### P-546. Q-HUB-496: the print at each prompt and hand-back holds the gates and not the next move
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: The print of the plan's goal and next move at each prompt was a hook-dispatch.mjs behaviour; the rewritten dispatcher prints only the one short-page line and holds no pointer or manager-notes reader.
 
 Known: read on 14 November 2026: the print of the next move is stated in doctrine/plans.md lines 75 to 100, and neither hook-dispatch.mjs (line 647) nor any file in the tree prints it, since report.mjs is still retired.
 
 Acceptance: the print opens with one line of the plan's goal 1 and one line of the next move, above every reminder, with a case that reads both lines in a print.
+
+Retired: Closed unbuilt because the goals at the top of doctrine/hub.md, line 18, say goal 3 was removed on 14 November 2026 since the status reports did not say what was needed, and the print of the goal and the next move at each prompt is a status print.
 
 Depends: none.
 
@@ -6227,7 +6259,7 @@ Depends: none.
 
 ### P-552. Q-HUB-502: the dispatcher's refusal at the price does not say the top tier is wanted
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: The refusal at the price was in hook-dispatch.mjs; the rewritten dispatcher counts no sends and has no price refusal (searched, not found).
 
@@ -6235,17 +6267,21 @@ Known: read on 14 November 2026: the refusal past the priced count is stated in 
 
 Acceptance: the refusal says the top tier is wanted for the amendment, with a case that reads the words.
 
+Retired: Closed unbuilt because the short page, line 63, says that where a rules page and it differ on how work is scoped and who does its steps it holds, and line 18 has the cost said before a long run starts, which sets aside the refusal at the price and the count of a plan's sends (the page dates the retired gates to 12 November 2026 at line 24).
+
 Depends: none.
 
 ### P-553. Q-HUB-503: the count of a plan's sends and the plan's price are read from two approvals
 
-Repository: hub. Goal: 2. State: open. Plan: none.
+Repository: hub. Goal: 2. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: The send count was in hook-dispatch.mjs and doctrine/plans.md; the count is not in the rewritten dispatcher and the plans page is only archive/doctrine-plans.md.
 
 Known: read on 14 November 2026: doctrine/plans.md lines 401 to 403 and 624 to 627 and plans/seed-template.md line 7 state the count and the price, and the count itself is not in hook-dispatch.mjs.
 
 Acceptance: the count and the plans page say the same thing, with a case on a plan approved twice.
+
+Retired: Closed unbuilt because the short page, line 63, says that where a rules page and it differ on how work is scoped and who does its steps it holds, and line 18 has the cost said before a long run starts, which sets aside the count of a plan's sends against its price (the page dates the retired gates to 12 November 2026 at line 24).
 
 Depends: none.
 
@@ -6407,7 +6443,7 @@ Depends: none.
 
 ### P-570. Q-HUB-517: The refusal at the price does not name the tier
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: The refusal at the price was in hook-dispatch.mjs; the rewritten dispatcher holds no price refusal.
 
@@ -6415,17 +6451,21 @@ Known: read on 14 November 2026: the refusal at the price is stated in doctrine/
 
 Acceptance: The refusal at the price names the top tier as wanted for the amendment, and a case holds the words.
 
+Retired: Closed unbuilt because the short page, line 63, says that where a rules page and it differ on how work is scoped and who does its steps it holds, and line 18 has the cost said before a long run starts, which sets aside the refusal at the price (the page dates the retired gates to 12 November 2026 at line 24).
+
 Depends: none.
 
 ### P-571. Q-HUB-518: The count of sends and the price of an amendment disagree
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: retired. Plan: none.
 
 Known: retired on 13 November 2026 with this line: The send count and the price were in hook-dispatch.mjs and the plans page; neither stands in the live tree.
 
 Known: read on 14 November 2026: the count and the price are stated in doctrine/plans.md lines 401 to 403 and 624 to 627 and plans/seed-template.md line 7, and no count of sends stands in hook-dispatch.mjs.
 
 Acceptance: The count of sends and the plans page agree on what the price covers, and a case holds an amended plan's first send.
+
+Retired: Closed unbuilt because the short page, line 21, says a plan is changed only for a reason, written in full and approved before any work is done under it, and line 63 holds the page over the old shape where they differ, which sets aside the count of sends against an amendment's price (the page dates the retired gates to 12 November 2026 at line 24).
 
 Depends: none.
 

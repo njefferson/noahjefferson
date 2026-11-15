@@ -815,31 +815,9 @@ Not a hold, and left open as work:
 
 #### Group 1, held already
 
-- P-60: The stop-word hold in hook-dispatch.mjs (hasStopWord line 273, holdWord lines 400 to 408) holds every call but a read while a typed message carries the whole word, as CLAUDE.md line 23 states.
-- P-106: The push guard's refusal, at push-guard.mjs lines 298 to 303, prints five plain sentences with no command and no path, and the dispatcher's refusals print none, so no refusal names a hook path in the live clone.
-- P-113: The latch in hook-dispatch.mjs writes none for an agent's refusal (setLatch lines 444 to 445) and passes an agent's calls (holdLatch line 459), so two fetches in one message cannot latch an agent.
-- P-126: The correction hold in hook-dispatch.mjs (lines 409 to 412) holds new starts and file writes only, so Bash and reads, history reads among them, pass it.
-- P-127: stop-guard.mjs lines 46 to 63 and 106 hold the go-word refusal with its six verbs, as the item describes.
-- P-132: The main-thread latch in hook-dispatch.mjs (setLatch lines 444 to 449, holdLatch lines 457 to 466) leaves agents' calls out, so a running agent is not ended by it.
-- P-158: The manager hold in hook-dispatch.mjs passes every read (holdManager line 537 and READS lines 59 to 60), so a check-in that reads a run in progress is not refused.
-- P-160: stop-guard.mjs refuses only four kinds of reply and caps its own refusals at two in a chain (lines 27, 75 to 85, 111), so it holds no final stop on a step's sends.
-- P-231: stop-guard.mjs lines 98 to 116 refuse a reply on four faults and its text never tells the session to send an agent, so it cannot meet the correction hold at hook-dispatch.mjs lines 285 and 409 to 412.
-- P-244: The dispatcher runs the stop guard on the main thread only (hook-dispatch.mjs line 632) and stop-guard.mjs line 89 passes an agent's stop, so no agent is judged by plan state, which is what the acceptance records as designed.
-- P-274: The manager hold in hook-dispatch.mjs (MANAGER_TEXT line 290, holdManager line 535) names a worker as the remedy and no rules gate exists in the file to refuse it.
-- P-279: The suite's full run in session-guards.test.mjs runs every plant (the PLANTS RUN line near 1410), and a narrowed run names the guard files it left out with the count of plants (near 1383), so a plant belonging to no file that ran is shown; doubt written: the eleven plants are not named by any record and the suite's plant total has changed since the item was filed.
-- P-488: The latch is set and read for the main thread only (setLatch refuses at once for a call carrying an agent id, hook-dispatch.mjs line 445; holdLatch returns null for an agent, line 459), so a latched agent's report write is never refused.
-- P-491: A call to enter plan mode passes every hold and sets no latch (hook-dispatch.mjs lines 59 to 60, where the plan-mode calls are in READS, which each hold passes at lines 402, 459 and 537); the status print half of the acceptance went with goal 3.
-- P-492: The word hold (hold 1, holdWord in hook-dispatch.mjs lines 399 to 413) lets a plan-file write pass while a correction stands (mayWrite, line 411), and its refusal text names the plan file as writable, which is the second branch of the acceptance.
-- P-519: The word hold is lifted by a message ending with a go-word (holdWord and ownerHolds in hook-dispatch.mjs lines 267 to 275 and 399 to 413; first hold in plans/native/running.md, "When a session is locked"), and a plan-file write passes the correction hold meanwhile (line 411); the separate pending-message hold the item names is not in the tree, so no call is held by it.
-- P-536: The latch never reaches an agent (setLatch returns at once for a call carrying an agent id, hook-dispatch.mjs line 445; holdLatch returns null for an agent, line 459), so an agent's report of a second or later send passes it.
-- P-541: The word hold reads the word stop only from a typed message, with an agent's hand-back set aside (hook-dispatch.mjs lines 18 to 19 and 374 to 413, hold 1 in plans/native/running.md), and the line printed at each prompt (line 647) states no such reading, so a hand-back naming the stop guard's file is not read as a stop.
-- P-564: The word hold sets a hand-back aside and reads a correction or a stop only from a typed message (hook-dispatch.mjs lines 18 to 19 and 374 to 386, hold 1 in plans/native/running.md); the line printed at each prompt (line 647) names no correction and no stop, so a hand-back, or a report holding the word stop, is not read as a stop.
-- P-581: The manager hold passes every read on the main thread (holdManager, hook-dispatch.mjs line 537, with READS at lines 59 to 60), so a read of the hub's configuration, code and cost record passes. Doubt written: doctrine/plans.md lines 509 to 523 state a read fence and P-478 asks for it, so the two are settled together at the choice.
-
 #### Group 2, set aside by a later page
 
 - P-67: The goals at the top of doctrine/hub.md say goal 3 was removed on 14 November 2026 because the status reports did not say what was needed, and this item is about the gate on the status page.
-- P-69: The short page's sentence that where a rules page and the short page differ on how work is scoped and who does its steps the short page holds, with the five-part page it gives, sets aside the pointer print this item is about.
 - P-97: The goals at the top of doctrine/hub.md say goal 3 was removed on 14 November 2026, and this item is about the source of the status page that went with it.
 - P-116: The short page's sentence that the session scopes the work on one page with five parts and the plan is approved once sets aside the plan approval gate and its held names, described at doctrine/hub.md lines 310 to 314.
 - P-154: The goals at the top of doctrine/hub.md say goal 3 was removed on 14 November 2026, and this item is about what a status printed after a notes edit.
@@ -850,18 +828,15 @@ Not a hold, and left open as work:
 - P-243: The short page's sentence that where a rules page and the short page differ on how work is scoped and who does its steps the short page holds sets aside the review gate and rules gate described at doctrine/plans.md lines 118 to 131 and 572 to 579.
 - P-468: The status command is a status report, which went with goal 3 ("Goal 3 was removed on 14 November 2026. Background work is checked ... directly, and the status reports did not say what was needed.", the goals at the top of doctrine/hub.md).
 - P-476: A step gate on a cleared close step belongs to the old shape of a plan's steps; the short page says "Where one of them and this page differ on how a piece of work is scoped and who does its steps, this page holds" (line 63), and "Workers on the cheapest tier do the steps" (line 36).
-- P-508: The rule on reading the status and the batch print both concern the status print (report.mjs, retired), which went with goal 3 ("the status reports did not say what was needed", the goals at the top of doctrine/hub.md); the seed's own-files rule is already at plans/seed-template.md line 78.
 - P-516: The status that was to take the unnumbered Next line (report.mjs) is a status report, which went with goal 3 (the goals at the top of doctrine/hub.md); the review file's own reading of that line is already at aim-review.md lines 42 to 47.
 - P-520: The item is about the plan check and its check-of-a-call print (plan-guard.mjs lines 16 to 19, retired) and the template's copy of its teachings, all of the old shape of a plan; the short page says "Where one of them and this page differ on how a piece of work is scoped and who does its steps, this page holds" (line 63).
 - P-521: The plan check's fault for a missing Sends priced line is of the old shape of a plan's steps; the short page's page of five parts, with the cost as its part 4, replaced it, and line 63 says this page holds where they differ.
 - P-527: The pointer and its running-step count are the status and next-move print (report.mjs, retired), a status report that went with goal 3 (the goals at the top of doctrine/hub.md).
 - P-546: The print of the plan's goal and the next move at each prompt is a status print (report.mjs, retired), which went with goal 3 (the goals at the top of doctrine/hub.md).
-- P-547: The plan-mode line "the status prints" and the way forward in the prompt print are status reports, which went with goal 3 (the goals at the top of doctrine/hub.md). Doubt written: the plan-mode kind is a mode fact, not a status, if it is wanted on its own.
 - P-552: The refusal at the price and the count of a plan's sends are of the old shape of a plan's steps; the short page says "Say what a long run will cost before it starts" (line 18) and, where it differs on how work is scoped, "this page holds" (line 63).
 - P-553: The count of a plan's sends against the plan's price is of the old shape of a plan's steps; the short page says "Say what a long run will cost before it starts" (line 18) and "this page holds" where they differ (line 63).
 - P-570: The refusal at the price is of the old shape of a plan's steps; the short page says "Say what a long run will cost before it starts" (line 18) and "this page holds" where they differ on how work is scoped (line 63).
 - P-571: The count of sends against the amendment's price is of the old shape of a plan's steps; the short page says "A plan is changed only for a reason ... written in full and approved before any work is done under it" (line 21) and "this page holds" (line 63).
-- P-573: The proof order against the manifest-first verb concerns the landing command plan-land.mjs (retired) and the old shape of a plan's landing steps; the short page says "this page holds" where they differ on how work is scoped and who does its steps (line 63). Doubt written: the template's lines 63, 66 and 69 are live and could be read as a wording edit (group 4).
 
 #### Group 3, a gap
 
@@ -894,6 +869,7 @@ Not a hold, and left open as work:
 - P-524: The rule that the start brings the hub forward only with no plan of the session open (doctrine/plans.md lines 861 to 862) is held by nothing, since bringForward in hook-dispatch.mjs lines 203 to 246 reads no approval marker and no plan in force; it serves the purpose that the work goes forward with nobody watching it (a start must not run over work in progress).
 - P-537: The rule against a run of seven or more hex-set characters in a write (agent-rules.md line 21, plans/seed-template.md line 13) is held by no gate, since plan-fence.mjs is retired and neither hook-dispatch.mjs nor push-guard.mjs has one; it serves "Lighter never means less protected". Doubt written: the item asks only that the gate not refuse plain words, which is moot until a gate stands.
 - P-540: The rule that an agent's shell line carries no redirect (agent-rules.md lines 18 and 20) is held by nothing, since holdManager passes every agent call (hook-dispatch.mjs line 537) and judges redirects for the main thread only (lines 543 to 547); it serves "Lighter never means less protected".
+- P-547: The rule that the print at each prompt says plan mode is on and what kind it is (doctrine/plans.md lines 300 to 302 and 344 to 370) is held by nothing, since hook-dispatch.mjs lines 644 to 647 print no plan-mode line; it serves the purpose that no work waits on a refusal a session could have avoided; the way forward half of the item went with goal 3.
 - P-550: The rule that a plan is changed only for a reason and approved before work is done under it (the short page, "What is wanted from a session", line 21) is held by nothing against a rewrite of the plan file while it runs, since mayWrite passes a plan-file write (hook-dispatch.mjs lines 319 to 322 and 539); it serves the purpose that the work goes forward with nobody watching it.
 - P-554: The rule that the manager notes' lines opening File at the close are filed with the reports' Found lines (doctrine/plans.md lines 156 to 166, plans/seed-template.md lines 72 and 84) is held by nothing, since program.mjs lines 236 to 290 take no such input; it serves "Lighter never means less protected" (nothing found is dropped). Doubt written: the manager notes are of the old plan shape, so the notes may be set aside at the choice.
 - P-560: The rule that a declared stop for the talk turn says in its first line that nothing is running and a message is awaited (doctrine/plans.md lines 456 to 457 and 464 to 467) is held by none of the faults in stop-guard.mjs lines 87 to 119; it serves the purpose that no work is held behind a question or a plan left running (the reader learns at once that nothing runs).
@@ -904,19 +880,28 @@ Not a hold, and left open as work:
 #### Group 4, records and wording
 
 - P-45: The edit is in plans/seed-template.md, whose line 12 and the ten-minute rule at agent-rules.md line 30 differ from the item's wording.
+- P-69: The edit is in doctrine/plans.md lines 75 to 77, where the pointer sentence says the next move is read from a print that no file now makes, while the review that names the move is described at lines 101 to 110; the sentence is to say what is true of the code.
 - P-71: The edit is in doctrine/plans.md lines 1030 to 1045, the paragraph on the stop guard's teeth, which disagrees with the four refusals now at stop-guard.mjs lines 98 to 115.
 - P-72: The pin check's header now agrees with what it refuses, and three descriptions still say it holds no undeclared dependencies: doctrine/hub.md line 1137, HUB-REFERENCE.md line 287 and .github/workflows/doctrine.yml line 19, so the edit is in those three files.
 - P-84: The edit is in agent-rules.md, lines 28 and 29, which carry the failure-block and harness rules but do not say a library file a scratch script imports needs the block.
 - P-88: The edit is in plans/seed-template.md, lines 20 to 24, and agent-rules.md line 22, to say a step that reads another step's output names the file in its Facts.
+- P-106: The edit is to the item's entry in PROGRAM.md (reword or retire against the refusals now printed at push-guard.mjs lines 298 to 303), and to doctrine/hub.md lines 375 and 657 to 664, which still describe printed check commands that no live gate prints.
+- P-113: The edit is to the item's entry in PROGRAM.md (reword or retire, since the reply guard that counted fetches is gone) or a case in guard-cases/dispatch.mjs with two WebFetch calls to one host and no latch file written; the entry's acceptance names a case that does not exist.
 - P-123: The edit is in agent-rules.md, which does not carry the eight-word limit that doctrine/never.md lines 162 to 166 state.
+- P-126: The edit is in guard-cases/dispatch.mjs, adding to the correction case at line 529 a Bash git log that passes with no refusal, with the item's entry reworded to say readOfRecord and gitHistoryRead are not in the code.
 - P-150: The edit is in doctrine/plans.md lines 830 to 835, which name a Drive guard as running when it is absent from the tree, and the doubt on how much of it the page describes is written here.
 - P-153: The edit is in doctrine/plans.md lines 830 to 835, which name a Drive guard as running when it is absent from the tree.
 - P-156: The edit is in doctrine/plans.md lines 830 to 835, which name a Drive guard as running when it is absent from the tree.
+- P-158: The edit is to the item's entry in PROGRAM.md (reword or retire against the short page's closing, where the main thread reads the runs after the push), or a case in guard-cases/dispatch.mjs that a read-only Bash of a run in progress passes the manager hold.
+- P-160: The edit is to the item's entry in PROGRAM.md (reword or retire, since no live gate holds a final stop on a step's sends), as stop-guard.mjs lines 87 to 116 judge a reply only.
 - P-183: The finding gives two ways out, naming the one repository in the family list of REPOS.md or correcting the nineteen citations, so the edit is in REPOS.md or the lesson files under lessons/; no rule on a live page is broken, because lessons-check.mjs checks cited gate files and not repository names. Taken with what waits, as the order says.
 - P-209: The acceptance asks that the baseline state the result of a search of the guard files, so the edit is in doctrine/plans.md lines 844 to 848, which still says a ConfigChange record is held by hook-dispatch.mjs.
 - P-211: The edit is in PROGRAM.md, in the entry of P-13 and in any other record carrying the count of 20 allow entries; the step 32 report that carried it is not in the tree, so the entry may need its wording changed to say so.
 - P-236: The acceptance allows the wall line to be the main thread's reading by design with the page saying so, and the edit is in doctrine/plans.md line 801, which states that no gate reads it, and its mention of the rules version.
+- P-244: The edit is in doctrine/plans.md lines 824 to 835, which state agent sends judged in every state and a stop guard run under a plan only, where the code passes an agent's stop and runs the guard on the main thread only, and the record the acceptance asks for is to be added there.
 - P-269: The edit is in PROGRAM.md, in the close entry under P-10 and the list of paragraphs that P-268 reads, which is not kept in the repository; the offset of the keys is already stated in the items line.
+- P-274: The edit is to the item's entry in PROGRAM.md (reword or retire, since the rules gate it names is retired), and to agent-rules.md line 7 and doctrine/plans.md lines 572 to 579, which still describe a rules gate and a pin that no live file holds.
+- P-279: The edit is to the item's entry in PROGRAM.md, which names 11 plants of a total of 1098 that the suite has since replaced, so the entry is reworded or retired against the dry listing and the full plants run recorded for 14 November 2026.
 - P-284: The acceptance asks that aim-review.md name the bare git reads a review may make and say a format string is not among them, so the edit is in aim-review.md.
 - P-320: The edit is a new lesson under lessons/ in the shape of lesson 472, saying to read an app's own research file whole before outside sources are named, and the seed print it also asks for has no file left to stand in.
 - P-342: The edit is in doctrine/plans.md, which has no line stating a shape for research.
@@ -924,22 +909,35 @@ Not a hold, and left open as work:
 - P-470: The edit is in agent-rules.md and aim-review.md (a sentence that no step or review checks a version or makes a folder) and in plans/seed-template.md (the Commands block at lines 27 to 54).
 - P-472: The edit is in plans/seed-template.md, which holds no reading step; the rule that every route is tried is already at doctrine/plans.md lines 470 to 471.
 - P-474: The live page doctrine/plans.md line 523 says a web read passes the manager fence, so the item asks for the opposite of a rule on a live page; the edit is to the item's entry in PROGRAM.md (reword or retire against that line), not to code. Doubt written: if a refusal of web calls is wanted, it is a new rule and not a restored one.
+- P-488: The edit is to the item's entry in PROGRAM.md (reword or retire, since no agent is latched), or a case in guard-cases/dispatch.mjs in which an agent writes a report file twice with a latch standing; doctrine/plans.md lines 592 to 597 still say an agent is latched.
+- P-491: The edit is to the item's entry in PROGRAM.md, dropping the status print that went with goal 3, and a case in guard-cases/dispatch.mjs near line 542 that makes the entry call with permission_mode set to plan.
+- P-492: The edit is in guard-cases/dispatch.mjs, adding to the correction case at line 529 a newest message that is a pasted test report with the plan-file write still passing, and the entry's wording noting that the second branch of the acceptance is the one the code holds.
 - P-503: The edit is in PROGRAM.md, which needs an entry ranked for each of Q-HUB-246, Q-HUB-247 and Q-HUB-248, and the items count line changes with them.
 - P-507: The edit is in plans/seed-template.md line 21 (the rule for a changed print or guard, to add the text and counts the old print produced).
+- P-508: The edit is in plans/seed-template.md line 78, whose rule on reading the working copy's status beside other steps is to name a folder another step writes under as owned whole; the batch print half is of the retired seed command and is not asked.
 - P-510: The edit is in doctrine/plans.md lines 854 to 858 and plans/seed-template.md lines 72, 84 and 87 (a sentence that a line names no person and no message sent to the session).
 - P-512: The edit is in plans/seed-template.md (rule lines at 9, 78 and 84 to be replaced with the fifth wave's wording); the case file it names is retired.
+- P-519: The edit is in guard-cases/dispatch.mjs, adding a case with two plan-file writes and a go message between them, and the item's entry reworded to say the pending-message hold is not in the tree.
 - P-530: The edit is in doctrine/plans.md lines 300 to 303 (give the list the code holds in READS and STOP_TEXT, hook-dispatch.mjs lines 59 to 60 and 280 to 284).
 - P-532: The edit is in doctrine/hub.md line 36 (the index bullet on the review gate, to state the plans page's rule or point at doctrine/plans.md lines 101 to 146).
 - P-533: The edit is in doctrine/apps.md, putting right the eleven remnants of the scrub; the small check refusing an empty pair of brackets is a hygiene addition and no live rule requires it.
+- P-536: The edit is to the item's entry in PROGRAM.md (reword or retire, since no agent is latched), or a case in guard-cases/dispatch.mjs in which an agent writes a second send's report with a latch standing; doctrine/plans.md lines 718 to 731 still say an agent is latched.
+- P-541: The edit is to the item's entry in PROGRAM.md, reworded to the hold at hook-dispatch.mjs lines 374 to 413 in place of a printed line, and a hand-back naming stop-guard.mjs added to the case at guard-cases/dispatch.mjs line 503.
 - P-542: The edit is in DOCTRINE.md and doctrine/never.md, where one of two sections takes a free id and every citation is swept in the same change.
 - P-548: The edit is in plans/seed-template.md line 9 (the file step's order, naming one run for the step's own cases); the one-repair rule already stands at agent-rules.md line 25, and the fence half names retired plan-fence.mjs, so no fence is asked for here.
 - P-563: The edit, if any, is in plans/seed-template.md, which already keeps the landing step as its own block at lines 83 to 87 apart from the file steps' rules at lines 77 to 78; the entry's record is what changes.
+- P-564: The edit is to the item's entry in PROGRAM.md, reworded to the hold at hook-dispatch.mjs lines 374 to 386 in place of a printed line, with a case at guard-cases/dispatch.mjs near line 503 for a hand-back that closes a step.
+- P-573: The edit is in plans/seed-template.md lines 63, 66 and 69, where each take-up block orders the landing command's proof for the checks alone before the manifest is written, though that command is retired; the order is to be put right or the line dropped with the command.
 - P-579: The edit is in plans/seed-template.md (the Commands list at lines 27 to 54, to add the can-check line for a step that reads a guard's refusals).
+- P-581: The edit is in guard-cases/dispatch.mjs, a case for a read of the hub's configuration, code and cost record under the manager hold and a plant that takes the exemption of reads out of holdManager, with doctrine/plans.md lines 509 to 523 reworded against P-478's settling.
 
 #### Group 5, waits
 
+- P-60: It waits on the choice between the whole word in any typed message and a reading by meaning, which the acceptance names and which is not recorded, while hook-dispatch.mjs lines 273 to 275 and 400 to 408 hold the whole word as CLAUDE.md line 23 states. The checker's finding is confirmed.
 - P-62: It waits on another repository, because the harness guard it names is a hook of the app's repository and is not in this tree.
 - P-68: Half of it is a refusal in the hub's plan guard, but the other half is each sibling repository's own notes parser, which only a session in that repository can read or change, and the way forward of 13 November 2026 already sent it to the apps.
+- P-127: It waits on the choice whether the go-word refusal's six verbs at stop-guard.mjs lines 46 to 63 are widened by a plan that names them or are left as they are, which the acceptance names and which is not recorded. The checker's finding is confirmed.
+- P-132: It waits on the choice whether a main-thread refusal reaches work already running, which the acceptance names and which is not recorded, while the latch at hook-dispatch.mjs lines 444 to 466 leaves agents out as the line suggested. The sorting into held already is corrected.
 - P-174: It waits on the owner's decision whether a measure by piece of work is still wanted, which is piece 6 of the way forward of 13 November 2026; session-cost.mjs still holds the instrument.
 - P-176: It waits on the same decision of the owner as the rest of the cost instrument, piece 6 of the way forward of 13 November 2026, because it asks the instrument to name a plan's step and a plan's close, and plans in that form are gone.
 - P-184: It waits on the owner, whether a check that makes a stale dependency pull request an item is still wanted, now that none is open; the way forward of 13 November 2026 lists it under waits on the owner.
@@ -948,7 +946,49 @@ Not a hold, and left open as work:
 - P-197: It waits on the owner, who confirms or changes the list the cost measure prints, and on P-10, which is piece 6 of the way forward of 13 November 2026.
 - P-210: It waits on another repository: naming the repository for Q-HUB-110 and P-162 needs a read of the app's own repository, which is not opened in this session.
 - P-215: It waits on another repository, since each sibling's pin is read from that sibling's own workflows, and the way forward of 13 November 2026 sent it to the apps.
+- P-231: It waits on the owner, to whom the acceptance says the conflict is put once with one suggestion, though the stop guard now holds no instruction to send an agent and the conflict cannot arise at hook-dispatch.mjs lines 285 and 409 to 412 and stop-guard.mjs lines 98 to 116.
 - P-321: It waits on the choice of the stop word's shape, which the item's acceptance names and which is still unmade, while the stop hold at hook-dispatch.mjs lines 272 to 275 and 404 to 408 takes the whole word in any typed message as the live rule states.
 - P-502: It waits on the harness, whose connector returns a job log's lines too long to read, unless the finding is parked as the harness's.
 - P-562: It waits on another repository, because the way forward of 13 November 2026 sent it to the apps: the route for a pasted test-page report is the app's to give.
 - P-586: It waits on another repository, since each sibling whose CI installs a browser must be read for its image and Playwright version, and the hub's own gate passed on the current runner image on 13 November 2026.
+
+### Pieces 1 and 2 of the way forward from 14 November 2026, run that day
+
+Each of the 44 items of groups 1 and 2 was read against its own acceptance, not against the line that sorted it. The 24 lines that stay open were moved to the group their answer gives and reworded to say what the reading found. The 20 retired keep their lines where they stood. The counts and the order written above were left as they were.
+
+Set aside by a later page, 24 items. 20 are retired, each with the sentence that set it aside as its Retired line, a "Retired:" line in its entry, and its state now retired: P-67, P-97, P-116, P-154, P-157, P-230, P-237, P-241, P-243, P-468, P-476, P-516, P-520, P-521, P-527, P-546, P-552, P-553, P-570 and P-571. 4 stay open, because each asks for the wording of a live page or for a fact a session needs, which the sentence does not settle:
+
+- P-69, now group 4: doctrine/plans.md lines 75 to 77 still say the next move is read from a print that no file makes, and the sentence is to say what is true of the code.
+- P-508, now group 4: the rule on reading the working copy's status beside other steps, at plans/seed-template.md line 78, still names no folder another step writes under as owned whole.
+- P-573, now group 4: the take-up blocks at plans/seed-template.md lines 63, 66 and 69 still order the proof for the checks alone before the manifest, for a command that is retired.
+- P-547, now group 3: the rule that the print at each prompt says plan mode is on and what kind it is is held by nothing, and the way forward half of the item went with goal 3.
+
+Held already, 20 items. None was set done. In 16 of them the hold does what the item wants, and the acceptance still asks for a case, a planted failure, a print or a line of a page that does not exist. 4 wait on a choice.
+
+- The 16, now in group 4: P-106, P-113, P-126, P-158, P-160, P-244, P-274, P-279, P-488, P-491, P-492, P-519, P-536, P-541, P-564 and P-581.
+- The 4 that wait on a choice, now in group 5: P-60 (the whole word in any typed message or a reading by meaning), P-127 (whether the six verbs of the go-word refusal are widened), P-132 (whether a refusal of the main thread reaches work already running) and P-231 (a conflict that can no longer arise, put once with one suggestion).
+
+The cases the 16 ask for are work for a piece of its own, in guard-cases/dispatch.mjs unless another file is named, with the keys each would close:
+
+- A Bash git log that passes under a correction, added to the correction case near line 529 (P-126).
+- A newest message that is a pasted test report with the plan-file write still passing, added to the same case (P-492).
+- Two plan-file writes with a go message between them (P-519).
+- Two WebFetch calls to one host in one message, with no latch file written (P-113).
+- An agent that writes its report file twice with a latch standing (P-488).
+- An agent that writes a second send's report with a latch standing (P-536).
+- A call to enter plan mode with the permission mode set to plan, near line 542 (P-491).
+- A hand-back that names stop-guard.mjs, and a hand-back that closes a step with no stop word, near line 503 (P-541 and P-564).
+- A read-only Bash of a run in progress that passes the manager hold (P-158).
+- A read of the hub's configuration, code and cost record under the manager hold, and a planted failure that takes the exemption of reads out of holdManager (P-581).
+- No case can be written yet for P-106, P-160, P-274, P-244 and P-279. Each asks for a print, a gate, a case on a send or a record that no live file holds, so the entry is to be reworded or retired first; P-244 asks for a line in doctrine/plans.md, and P-279 for a full run of the plants listing against a total the suite has since replaced.
+
+Counts of the open hub items by group after this piece, from the corrected items list with the 20 retired left out: group 1, held already, 0; group 2, set aside by a later page, 0; group 3, a gap, 36; group 4, records and wording, 51; group 5, waits, 18. Total 105. The program holds 123 open entries, because 18 open entries are not hub items and were never sorted.
+
+Found and left:
+
+- The cases the suite holds for the dispatcher cover the hold on the typed word, the correction hold, the latch and the manager hold, but none uses a git log under a correction, a fetch, a write of a report by an agent, a pasted report, a plan-file write between two messages, or a read of the hub's configuration under the manager hold.
+- The answers files end with a tally and carry no Found line, so the lines here are taken from their doubts: P-231 may be struck, because the conflict no longer exists; P-158 may belong with the items set aside by a later page, because the short page's own closing is a checker's pass and a read of the runs after the push; the acceptances of P-541 and P-564 describe a printed line that does not exist, and the behaviour wanted is held; P-581 and P-478 ask opposite things and are settled together; P-69 and P-547 may be struck instead of reworded, since the print each describes went with goal 3.
+- The eleven plants of P-279 are named in no record, and the total they were counted against is no longer the suite's.
+- doctrine/hub.md still describes the status page gate and the plan gate's name check.
+- aim-review.md still falls back on a status line that is retired.
+- agent-rules.md still describes the rules gate and the plan check.
