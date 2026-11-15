@@ -14,3 +14,4 @@ plan-land.mjs
 stand-down.mjs
 aim-review.md
 agent-rules.md
+# Note of 14 November 2026: aim-review.md and agent-rules.md, both listed above, are in the tree again at the root of the hub. The other thirteen files listed above were checked by name and are not in the tree. No line above was removed.

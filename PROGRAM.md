@@ -985,9 +985,11 @@ Depends: the owner's choice; P-35 to P-43 if the history is rewritten.
 
 ### P-45. Q-HUB-112: a narrowed plants run outruns ten minutes and an agent has no wait tool
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched the tree for plans/seed-template.md (found only archive/plans/seed-template.md) and for a plan check that refuses a step (plan-guard.mjs is a shell that checks nothing, its --check prints that the plan check is retired); not found.
+Known: retired on 13 November 2026 with this line: Searched the tree for plans/seed-template.md (found only archive/plans/seed-template.md) and for a plan check that refuses a step (plan-guard.mjs is a shell that checks nothing, its --check prints that the plan check is retired); not found.
+
+Known: read on 14 November 2026: plans/seed-template.md line 12 and agent-rules.md line 30 show the seed and the ten-minute rule are back, but the seed's wording differs from the item's sentence and the plan check that would refuse a step without it is still retired (plan-guard.mjs lines 16 to 19).
 
 Acceptance: a plan that sends a run which may pass ten minutes says in the step that the agent ends its turn and the run's completion resumes it, and the plan check refuses a step that names such a run without that sentence; a case each way.
 
@@ -1131,9 +1133,11 @@ Depends: Q-HUB-71.
 
 ### P-59. Q-HUB-3: the pending-message guard reads a halt message's stop word by its first word only
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched the tree for pending-guard.mjs (in RETIRED-FILES.txt, absent) and for any queued-message stop-word test in hook-dispatch.mjs; not found.
+Known: retired on 13 November 2026 with this line: Searched the tree for pending-guard.mjs (in RETIRED-FILES.txt, absent) and for any queued-message stop-word test in hook-dispatch.mjs; not found.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 303 to 312 and doctrine/hub.md lines 401 to 408 describe the pending-message guard and hook-dispatch.mjs line 273 and 382 reads the stop word anywhere in a typed message, so the page and the dispatcher's word hold are back; pending-guard.mjs and its test of a queued message are not.
 
 Acceptance: a queued halt message that carries the stop word second holds agents before it is delivered, as the hold in the dispatcher already does when it reads the word anywhere; a case in the suite fails without the change.
 
@@ -1141,9 +1145,11 @@ Depends: P-4; the pending-message guard is read only in the redesign plan.
 
 ### P-60. Q-HUB-4: the stop word holds the session even in a message that only discusses it
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched hook-dispatch.mjs, CLAUDE.md, DOCTRINE.md, doctrine/never.md and plans/native/page.md for a hold on the stop word anywhere in a message and found none.
+Known: retired on 13 November 2026 with this line: Searched hook-dispatch.mjs, CLAUDE.md, DOCTRINE.md, doctrine/never.md and plans/native/page.md for a hold on the stop word anywhere in a message and found none.
+
+Known: read on 14 November 2026: hook-dispatch.mjs lines 273 to 275 and 400 to 408 show the hold on the stop word anywhere in a typed message is back, stated at CLAUDE.md line 23 and doctrine/hub.md line 421; no reading by meaning is in the tree.
 
 Parked: The hold on the stop word anywhere in a message is the owner's standing rule in the doctrine, recorded as a cost and not a defect, so no step changes that hold without the owner's word.
 
@@ -1163,9 +1169,11 @@ Depends: none.
 
 ### P-62. Q-HUB-6: the harness guard and the identifier guard the plan's rules lean on are hooks of Jefferson-Photography-Studio
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched CLAUDE.md, DOCTRINE.md, doctrine/never.md, .claude/hooks and hook-dispatch.mjs for a rule that every scratchpad file is run through a harness and found none (only a comment on the app's identifier guard shims).
+Known: retired on 13 November 2026 with this line: Searched CLAUDE.md, DOCTRINE.md, doctrine/never.md, .claude/hooks and hook-dispatch.mjs for a rule that every scratchpad file is run through a harness and found none (only a comment on the app's identifier guard shims).
+
+Known: read on 14 November 2026: agent-rules.md line 29 and aim-review.md line 111 state the rule that every scratchpad file is run through a harness, so the page is back; no hub gate refuses a run without the failure block, since the guard is the app repository's hook.
 
 Parked: The harness guard and the identifier guard are hooks of the Jefferson-Photography-Studio repository, so the rule holds only in a session that has that repository checked out beside the hub.
 
@@ -1215,9 +1223,11 @@ Depends: P-7, whose one file for each finding is the keyed record.
 
 ### P-67. Q-HUB-12: the state page gate holds nothing while the page does not exist
 
-Repository: hub. Goal: 3. State: retired. Plan: none.
+Repository: hub. Goal: 3. State: open. Plan: none.
 
-Retired: Searched hook-dispatch.mjs for a state page gate or a status gate after a compaction and found none; its only page reference is the short-page line.
+Known: retired on 13 November 2026 with this line: Searched hook-dispatch.mjs for a state page gate or a status gate after a compaction and found none; its only page reference is the short-page line.
+
+Known: read on 14 November 2026: doctrine/hub.md lines 592 to 596 and doctrine/plans.md lines 612 to 613 describe the state page gate, so the page is back; no gate in hook-dispatch.mjs and no page-writing status command are in the tree.
 
 Acceptance: after a compaction with no page file, the main thread is held to a status until the page is written; a case.
 
@@ -1233,9 +1243,11 @@ Depends: P-7.
 
 ### P-69. Q-HUB-15: Doctrine rule 2 describes a pointer no plan that can go up uses
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for doctrine/plans.md and for Doctrine rule 2's pointer sentence; the file is absent from the tree and doctrine holds only apps.md and never.md.
+Known: retired on 13 November 2026 with this line: Searched for doctrine/plans.md and for Doctrine rule 2's pointer sentence; the file is absent from the tree and doctrine holds only apps.md and never.md.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 75 to 77 carry the pointer sentence the item is about, and lines 101 to 110 carry the review step that names the move; the sentence is back as written and the print it describes (report.mjs) is not.
 
 Acceptance: the sentence says the review names the next move, which is what the code does; a read of the rule finds no claim the code contradicts.
 
@@ -1253,9 +1265,11 @@ Depends: P-5, which moves the section into the apps file.
 
 ### P-71. Q-HUB-17: the doctrine's paragraph on the stop guard's teeth is out of date
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for doctrine/plans.md and its paragraph on the stop guard's teeth (absent), and stop-guard.mjs is now a shell that refuses nothing.
+Known: retired on 13 November 2026 with this line: Searched for doctrine/plans.md and its paragraph on the stop guard's teeth (absent), and stop-guard.mjs is now a shell that refuses nothing.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 1030 to 1045 carry the paragraph on the stop guard's teeth and stop-guard.mjs lines 9 to 12 and 98 to 115 refuse four kinds of reply, so both the paragraph and the guard are back and they disagree as the item says.
 
 Acceptance: the paragraph lists the kinds of reply the stop guard refuses as the file stands when it is written, counted from the file.
 
@@ -1333,9 +1347,11 @@ Depends: none.
 
 ### P-79. Q-HUB-25: a Commands entry's flags are held only by a step's wording
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for plan-fence.mjs, which the item names (in RETIRED-FILES.txt, absent), and for a Commands-entry flag match anywhere in hook-dispatch.mjs; not found.
+Known: retired on 13 November 2026 with this line: Searched for plan-fence.mjs, which the item names (in RETIRED-FILES.txt, absent), and for a Commands-entry flag match anywhere in hook-dispatch.mjs; not found.
+
+Known: read on 14 November 2026: agent-rules.md line 18 and doctrine/hub.md lines 381 to 382 state the Commands rule, so the page is back; plan-fence.mjs, which matched the entry, is not in the tree and nothing refuses a command carrying a flag the entry does not name.
 
 Acceptance: an agent's command carrying a flag its Commands entry does not name is refused by the fence; a case.
 
@@ -1387,9 +1403,11 @@ Depends: none.
 
 ### P-84. Q-HUB-31: the agent rules do not say a library file a scratch script imports needs the failure block
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched the standing files (page.md, worker.md, checker.md, the landing, piece-of-work and app-move skills) for "failure block", "syntax", "scratch" and a guard on a library file a script imports; none found, the item was machinery of the app's retired guard and agent-rules.md.
+Known: retired on 13 November 2026 with this line: Searched the standing files (page.md, worker.md, checker.md, the landing, piece-of-work and app-move skills) for "failure block", "syntax", "scratch" and a guard on a library file a script imports; none found, the item was machinery of the app's retired guard and agent-rules.md.
+
+Known: read on 14 November 2026: agent-rules.md lines 28 and 29 are back and carry the failure-block rule and the harness rule, but neither says a library file a scratch script imports needs the block, and the app's guard that refused such a file is not in the tree.
 
 Acceptance: the agent rules say so, or the app's guard stops refusing a syntax check on such a file; a read of both agrees.
 
@@ -1427,9 +1445,11 @@ Depends: none.
 
 ### P-88. Q-HUB-35: a step that reads another step's output is not told which file holds it
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched for a plan check that refuses a step reading another's output, and for the seed, the template and agent rules the item names (archive only); not found.
+Known: retired on 13 November 2026 with this line: Searched for a plan check that refuses a step reading another's output, and for the seed, the template and agent rules the item names (archive only); not found.
+
+Known: read on 14 November 2026: agent-rules.md lines 22 and 23 and plans/seed-template.md lines 20 to 24 are back, but none states that a step reading another's output names the file in its Facts, and the plan check that would refuse it (plan-guard.mjs lines 16 to 19) is still retired.
 
 Acceptance: a step that reads another step's output names the file in its Facts, and a land step writes the pushed commit into its report; the plan check refuses a step that reads another's output with no file named.
 
@@ -1467,9 +1487,11 @@ Depends: none.
 
 ### P-92. Q-HUB-39: the doctrine read guard counts lines and not text
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched the tree for doctrine-read-guard.mjs (in RETIRED-FILES.txt, absent) and for a line count of a doctrine read in hook-dispatch.mjs; not found.
+Known: retired on 13 November 2026 with this line: Searched the tree for doctrine-read-guard.mjs (in RETIRED-FILES.txt, absent) and for a line count of a doctrine read in hook-dispatch.mjs; not found.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 1112 to 1132 describe the doctrine read guard and its count of lines, so the page is back; doctrine-read-guard.mjs is not in the tree and no code counts a doctrine read.
 
 Acceptance: an edit that keeps the file's length between a read and a resume is seen, by comparing the file's change time with the times of the read results; a case.
 
@@ -1517,9 +1539,11 @@ Depends: none.
 
 ### P-97. Q-HUB-44: the status page's source outgrew the Read tool's size cap
 
-Repository: hub. Goal: 3. State: retired. Plan: none.
+Repository: hub. Goal: 3. State: open. Plan: none.
 
-Retired: Searched for report.mjs (in RETIRED-FILES.txt, absent) and for a status page gate or large-read flag in hook-dispatch.mjs; the page gate was not found.
+Known: retired on 13 November 2026 with this line: Searched for report.mjs (in RETIRED-FILES.txt, absent) and for a status page gate or large-read flag in hook-dispatch.mjs; the page gate was not found.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 92 to 93 and doctrine/hub.md lines 592 to 596 describe the status page and its page gate, so the page is back; report.mjs, which wrote the page, and the gate are not in the tree.
 
 Acceptance: a read of the status page at the end of a long plan returns it whole, because the source stays under the cap or the page gate's read uses the large-read flag.
 
@@ -1611,9 +1635,11 @@ Depends: Q-HUB-129.
 
 ### P-106. Q-HUB-53: the check command a refusal prints names a hook path that reads the live clone's copy only after a pull
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched push-guard.mjs (checkRefusal) and hook-dispatch.mjs for a refusal that prints a check command naming a hook path in the live clone; the refusal prints no command or path, and the gates that printed one are retired.
+Known: retired on 13 November 2026 with this line: Searched push-guard.mjs (checkRefusal) and hook-dispatch.mjs for a refusal that prints a check command naming a hook path in the live clone; the refusal prints no command or path, and the gates that printed one are retired.
+
+Known: read on 14 November 2026: doctrine/hub.md lines 375 and 657 to 664 and doctrine/plans.md lines 617 and 707 to 708 describe refusals that print a command naming the live clone's hook path, so those pages are back; push-guard.mjs lines 298 to 303 print no command and the gates that printed one are still retired.
 
 Parked: The path a refusal prints is the live clone's copy, which holds the working copy's code only after the landing step has pulled the clone, so the event that must come first is that pull.
 
@@ -1673,9 +1699,11 @@ Depends: none.
 
 ### P-112. Q-HUB-59: the reply guard recorded an owner route for a fetch that failed with a 404 on a wrong path
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for reply-guard.mjs (in RETIRED-FILES.txt, absent) and for a 404 or owner-route record in hook-dispatch.mjs and push-guard.mjs; none found.
+Known: retired on 13 November 2026 with this line: Searched for reply-guard.mjs (in RETIRED-FILES.txt, absent) and for a 404 or owner-route record in hook-dispatch.mjs and push-guard.mjs; none found.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 472 to 475 and agent-rules.md line 25 describe the reply guard's record of a declined host and doctrine/apps.md line 763 reads a 404 as reachable, so the pages are back; reply-guard.mjs, which kept the record, is not in the tree.
 
 Acceptance: a 404 from a host that answered is not recorded as a host the container cannot reach; a case.
 
@@ -1683,9 +1711,11 @@ Depends: none.
 
 ### P-113. Q-HUB-60: two fetches to one host in one message latched an agent
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for reply-guard.mjs and plan-fence.mjs (both retired and absent) and for a latch on two fetches to one host in hook-dispatch.mjs and push-guard.mjs; none found.
+Known: retired on 13 November 2026 with this line: Searched for reply-guard.mjs and plan-fence.mjs (both retired and absent) and for a latch on two fetches to one host in hook-dispatch.mjs and push-guard.mjs; none found.
+
+Known: read on 14 November 2026: doctrine/hub.md lines 657 to 664 describe the reply guard's latch, so its page is back, and hook-dispatch.mjs lines 443 to 445 write no latch for an agent's call; nothing in the tree counts fetches to one host, and the guard that did (reply-guard.mjs) is not in the tree, so whether the subject is back is in doubt.
 
 Acceptance: two fetches to one host in one message do not latch; a case.
 
@@ -1693,9 +1723,11 @@ Depends: none.
 
 ### P-114. Q-HUB-61: the shared reply ledger keeps a decline in force after the agent that met it has ended
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for reply-guard.mjs (retired, absent) and a shared reply ledger or decline record in hook-dispatch.mjs and push-guard.mjs; none found.
+Known: retired on 13 November 2026 with this line: Searched for reply-guard.mjs (retired, absent) and a shared reply ledger or decline record in hook-dispatch.mjs and push-guard.mjs; none found.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 472 to 475 and doctrine/hub.md lines 657 to 664 describe the reply guard's record of declines and its release, so the pages are back; reply-guard.mjs and its shared ledger are not in the tree.
 
 Acceptance: a decline recorded by an ended agent no longer applies to other agents; a case.
 
@@ -1703,9 +1735,11 @@ Depends: none.
 
 ### P-115. Q-HUB-62: the reply guard does not flag a failed lookup as a failed call
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for reply-guard.mjs (retired, absent) and a failed-call ledger in hook-dispatch.mjs and push-guard.mjs; none found.
+Known: retired on 13 November 2026 with this line: Searched for reply-guard.mjs (retired, absent) and a failed-call ledger in hook-dispatch.mjs and push-guard.mjs; none found.
+
+Known: read on 14 November 2026: agent-rules.md line 25 and doctrine/apps.md lines 309 to 316 treat a failed call and its recorded reading, so the pages are back; reply-guard.mjs and its failed-call ledger are not in the tree, and whether a lookup counts as a failed call is stated nowhere.
 
 Acceptance: a lookup that failed is flagged as a failed call; a case.
 
@@ -1713,9 +1747,11 @@ Depends: none.
 
 ### P-116. Q-HUB-63: the plan gate keeps holding a name the plan has dropped until a tool result prints it
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched plan-guard.mjs (now a shell) and hook-dispatch.mjs for heldNames or a held dropped name; not found, and the plan approval gate is retired.
+Known: retired on 13 November 2026 with this line: Searched plan-guard.mjs (now a shell) and hook-dispatch.mjs for heldNames or a held dropped name; not found, and the plan approval gate is retired.
+
+Known: read on 14 November 2026: doctrine/hub.md lines 310 to 314 describe the name check and heldNames, so the page is back; plan-guard.mjs lines 1 to 34 is a shell and no code holds a name.
 
 Parked: HeldNames in plan-guard.mjs holds a dropped name on purpose and its refusal says so under Doctrine section 0d, which is the owner's rule.
 
@@ -1735,9 +1771,11 @@ Depends: that repository's own session.
 
 ### P-118. Q-HUB-65: the reply guard's reading of a failed call quotes only the kept part of the error
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for reply-guard.mjs (retired, absent) and a failed-call reading in hook-dispatch.mjs and push-guard.mjs; none found.
+Known: retired on 13 November 2026 with this line: Searched for reply-guard.mjs (retired, absent) and a failed-call reading in hook-dispatch.mjs and push-guard.mjs; none found.
+
+Known: read on 14 November 2026: agent-rules.md line 25 and doctrine/hub.md lines 657 to 664 state the character-for-character notice and the release command, so the page is back; reply-guard.mjs, which offered the reading, is not in the tree.
 
 Acceptance: the reading the guard offers carries the captured notice whole, character for character; a case.
 
@@ -1767,9 +1805,11 @@ Depends: each app's own session.
 
 ### P-121. Q-HUB-68: the pending-message guard holds every call of the turn a message lands in
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for pending-guard.mjs (in RETIRED-FILES.txt, absent) and a pending-message hold in hook-dispatch.mjs; not found.
+Known: retired on 13 November 2026 with this line: Searched for pending-guard.mjs (in RETIRED-FILES.txt, absent) and a pending-message hold in hook-dispatch.mjs; not found.
+
+Known: read on 14 November 2026: doctrine/hub.md lines 401 to 408 and doctrine/plans.md lines 303 to 312 describe the pending-message hold, so the pages are back; pending-guard.mjs and any pending-message hold in hook-dispatch.mjs are not in the tree.
 
 Acceptance: a message that arrives in the middle of a turn holds that turn's calls only until it is delivered once; a case.
 
@@ -1787,9 +1827,11 @@ Depends: none.
 
 ### P-123. Q-HUB-70: an agent learns of the scope record's eight-word limit only when its verdict is refused
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched the standing files for "verdict", "eight" and any limit on a scope record or a refusal that names it; none found, the item was machinery of the retired plan check and agent-rules.md.
+Known: retired on 13 November 2026 with this line: Searched the standing files for "verdict", "eight" and any limit on a scope record or a refusal that names it; none found, the item was machinery of the retired plan check and agent-rules.md.
+
+Known: read on 14 November 2026: doctrine/never.md lines 162 to 166 state the eight-word limit, so the page is back; plan-guard.mjs and plan-scope-check.mjs are shells that refuse nothing and agent-rules.md does not carry the limit.
 
 Acceptance: the agent rules or the step's Facts tell the agent of the limit before it writes the verdict, or the record's refusal names the shared passage so the verdict is written once more.
 
@@ -1819,9 +1861,11 @@ Depends: none.
 
 ### P-126. Q-HUB-73: a standing correction holds the main thread's history reads
 
-Repository: hub. Goal: 4. State: retired. Plan: none.
+Repository: hub. Goal: 4. State: open. Plan: none.
 
-Retired: Searched hook-dispatch.mjs (322 lines) for the correction hold and readOfRecord or gitHistoryRead; neither is present.
+Known: retired on 13 November 2026 with this line: Searched hook-dispatch.mjs (322 lines) for the correction hold and readOfRecord or gitHistoryRead; neither is present.
+
+Known: read on 14 November 2026: hook-dispatch.mjs lines 409 to 412 and doctrine/hub.md lines 415 to 417 show the correction hold is back, but it holds new starts and file writes only, and readOfRecord and gitHistoryRead, which the page names, are not in the code.
 
 Acceptance: a git log of a repository passes the correction hold as a read of the record; a case.
 
@@ -1829,9 +1873,11 @@ Depends: P-4.
 
 ### P-127. Q-HUB-74: the stop guard's go-word refusal counts six verbs, so a reply or an answer no longer counts as an instruction
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched stop-guard.mjs (an 11-line shell that discards input and exits 0) for the go-word refusal and its six verbs; not found.
+Known: retired on 13 November 2026 with this line: Searched stop-guard.mjs (an 11-line shell that discards input and exits 0) for the go-word refusal and its six verbs; not found.
+
+Known: read on 14 November 2026: stop-guard.mjs lines 46 to 63 and 106 show the go-word refusal with its six verbs is back as the item describes it.
 
 Acceptance: the list of verbs is widened by a plan that names them, with a case for each verb added, or the owner has chosen not to.
 
@@ -1875,7 +1921,7 @@ Depends: Q-HUB-83; Q-HUB-23.
 
 Repository: hub. Goal: 6. State: retired. Plan: none.
 
-Retired: Searched hook-dispatch.mjs (rewritten to 322 lines) for pageDueFile; the declaration is not present.
+Retired: Searched hook-dispatch.mjs (rewritten to 663 lines), the other .mjs files and the live pages for pageDueFile; the declaration is not present.
 
 Acceptance: the space before the parenthesis of the pageDueFile declaration is restored by the next plan that edits hook-dispatch.mjs, and a diff of that function shows only that.
 
@@ -1883,9 +1929,11 @@ Depends: none.
 
 ### P-132. Q-HUB-79: the main thread's latch ends agents that are already running
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched hook-dispatch.mjs for a main-thread latch that ends running agents and for a reach of a main-thread refusal; not found.
+Known: retired on 13 November 2026 with this line: Searched hook-dispatch.mjs for a main-thread latch that ends running agents and for a reach of a main-thread refusal; not found.
+
+Known: read on 14 November 2026: hook-dispatch.mjs lines 444 to 466 show the main-thread latch is back and lines 445 and 459 leave agents' calls out of it; whether that is the choice the item asks for is not judged here.
 
 Acceptance: the owner has chosen whether a main-thread refusal reaches reviews already cleared and agents already running, the latch implements that choice, and a case covers it.
 
@@ -1893,9 +1941,11 @@ Depends: the owner's choice; the line records the suggestion that it should not 
 
 ### P-133. Q-HUB-80: the stop guard's compaction line and its repeat check disagree
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched stop-guard.mjs (an 11-line shell) for a compaction line or a repeat check; not found.
+Known: retired on 13 November 2026 with this line: Searched stop-guard.mjs (an 11-line shell) for a compaction line or a repeat check; not found.
+
+Known: read on 14 November 2026: doctrine/hub.md lines 810 to 815 describe the compaction line and stop-guard.mjs lines 65 to 85 hold a chain limit on its own refusals, so the page and a repeat limit are back; the compaction line check is not in stop-guard.mjs.
 
 Acceptance: the repeat check sets aside the line the compaction check asks for; a case.
 
@@ -1945,9 +1995,11 @@ Depends: P-17.
 
 ### P-138. Q-HUB-86: the correction gate reads a bare option number given to answer a choice as a correction
 
-Repository: hub. Goal: 4. State: retired. Plan: none.
+Repository: hub. Goal: 4. State: open. Plan: none.
 
-Retired: Searched hook-dispatch.mjs for the correction gate and a bare option number reading; no correction gate is present.
+Known: retired on 13 November 2026 with this line: Searched hook-dispatch.mjs for the correction gate and a bare option number reading; no correction gate is present.
+
+Known: read on 14 November 2026: hook-dispatch.mjs lines 384 and 409 to 412 and doctrine/hub.md lines 409 to 429 show the correction hold is back; a bare option number is held like any message with no go-word, and no reading of it as an answer is in the tree.
 
 Acceptance: a bare option number answers a choice and is not held; a case.
 
@@ -1957,7 +2009,7 @@ Depends: P-4.
 
 Repository: hub. Goal: 3. State: retired. Plan: none.
 
-Retired: The finding's own text says the notes that outgrew the read live in the session scratchpad, and a search of the tree for a manager notes file found none (NOTES.md is a different file); the file is absent from the tree.
+Retired: Searched the tree and the live pages for a manager notes file and for a rule that prunes them or reads them in parts; none found, the notes live in a session's scratchpad (NOTES.md is a different file).
 
 Acceptance: the notes of ended plans are moved to a file of their own, so one read returns the notes in force whole.
 
@@ -2021,7 +2073,7 @@ Depends: none.
 
 Repository: hub. Goal: 3. State: retired. Plan: none.
 
-Retired: Searched for reply-guard.mjs (retired, absent) and a publish-repeat key in hook-dispatch.mjs and push-guard.mjs; not found.
+Retired: Searched for reply-guard.mjs (still retired, absent) and for a publish-repeat key in hook-dispatch.mjs, push-guard.mjs and the live pages; not found.
 
 Acceptance: a publish with a changed description is not refused as the same call; a case.
 
@@ -2071,9 +2123,11 @@ Depends: none.
 
 ### P-150. Q-HUB-98: the Drive guard refused a folder search for a folder outside the index and outside the transcript's recent window
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for drive-guard.mjs (in RETIRED-FILES.txt, absent) and a folder search guard in hook-dispatch.mjs; not found.
+Known: retired on 13 November 2026 with this line: Searched for drive-guard.mjs (in RETIRED-FILES.txt, absent) and a folder search guard in hook-dispatch.mjs; not found.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 830 to 835 name the Drive guard as running, so a page naming it is back; drive-guard.mjs and any folder search guard are not in the tree.
 
 Acceptance: the guard passes a folder listed anywhere in the session or named by a link; a case.
 
@@ -2101,9 +2155,11 @@ Depends: none.
 
 ### P-153. Q-HUB-101: the Drive guard passes a listed folder only while its listing sits in the transcript's last eight megabytes
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for drive-guard.mjs (retired, absent); transcript-tail.mjs stands but no Drive guard reads a listing from it in hook-dispatch.mjs or push-guard.mjs.
+Known: retired on 13 November 2026 with this line: Searched for drive-guard.mjs (retired, absent); transcript-tail.mjs stands but no Drive guard reads a listing from it in hook-dispatch.mjs or push-guard.mjs.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 830 to 835 name the Drive guard and transcript-tail.mjs stands, so the page and the tail reader are back; drive-guard.mjs, which read a listing from the tail, is not in the tree.
 
 Acceptance: the pass does not decay as the transcript grows; a case.
 
@@ -2111,9 +2167,11 @@ Depends: Q-HUB-98; Q-HUB-104.
 
 ### P-154. Q-HUB-102: a status named a step as the next move because it read the notes before an edit in the same message landed
 
-Repository: hub. Goal: 3. State: retired. Plan: none.
+Repository: hub. Goal: 3. State: open. Plan: none.
 
-Retired: Searched for report.mjs and a status command that prints a notes change (retired, absent) and for a gate ordering calls in hook-dispatch.mjs; not found.
+Known: retired on 13 November 2026 with this line: Searched for report.mjs and a status command that prints a notes change (retired, absent) and for a gate ordering calls in hook-dispatch.mjs; not found.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 39, 87 and 531 describe the status command so its page is back; report.mjs, which printed it, and any gate ordering a status after a notes edit are not in the tree.
 
 Parked: Calls sent in one message run together, which is the harness's behaviour, so a status read of a notes line must be sent in the message after the edit.
 
@@ -2133,9 +2191,11 @@ Depends: none.
 
 ### P-156. Q-HUB-104: the Drive guard counts a listed folder from the main thread's transcript only
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for drive-guard.mjs (retired, absent) and a count of listed folders in hook-dispatch.mjs; not found.
+Known: retired on 13 November 2026 with this line: Searched for drive-guard.mjs (retired, absent) and a count of listed folders in hook-dispatch.mjs; not found.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 830 to 835 name the Drive guard, so a page naming it is back; drive-guard.mjs and any count of listed folders are not in the tree.
 
 Acceptance: a folder an agent lists passes for a later agent, and a compaction does not empty the listings; a case.
 
@@ -2143,9 +2203,11 @@ Depends: Q-HUB-98; Q-HUB-101.
 
 ### P-157. Q-HUB-105: the restart gate reads a plan mode the person enters by hand as the first act after a resume as the restart's
 
-Repository: hub. Goal: 1. State: retired. Plan: none.
+Repository: hub. Goal: 1. State: open. Plan: none.
 
-Retired: Searched hook-dispatch.mjs for the restart gate, restartedPlanMode and start-mode.json; the gate and its plan-mode logic are not present.
+Known: retired on 13 November 2026 with this line: Searched hook-dispatch.mjs for the restart gate, restartedPlanMode and start-mode.json; the gate and its plan-mode logic are not present.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 330 to 347 and doctrine/hub.md lines 638 to 641 describe the restart gate and restartedPlanMode, so the pages are back; no gate or plan-mode logic is in the tree.
 
 Parked: The session-start input at harness version 2.1.316 carries no permission mode (Q-HUB-244), so only a route the harness supplies can tell a restart's plan mode from the person's.
 
@@ -2157,9 +2219,11 @@ Depends: P-17; Q-HUB-88.
 
 ### P-158. Q-HUB-106: the fence refused the main thread's scheduled check-in for reading a run still in progress
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched hook-dispatch.mjs for the manager fence and a scheduled check-in pass; the fence is not present.
+Known: retired on 13 November 2026 with this line: Searched hook-dispatch.mjs for the manager fence and a scheduled check-in pass; the fence is not present.
+
+Known: read on 14 November 2026: the manager fence is back as holdManager at hook-dispatch.mjs line 535 and the live plans page describes the wait it passes at doctrine/plans.md lines 232-233 and 535, but the fence refuses only writes outside the plans folder and scratchpad, git changes and redirects, no scheduled check-in or read of a run in progress is handled by name, and report.mjs, the wait it names, is still retired.
 
 Acceptance: the closing of a plan has a way to read a run that is still going, without the fence refusing the scheduled check-in; a case.
 
@@ -2177,9 +2241,11 @@ Depends: P-3.
 
 ### P-160. Q-HUB-108: a step whose second send also ends at a refused call with no hand-back leaves the stop guard holding the final stop
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched stop-guard.mjs (an 11-line shell that never refuses a stop) for a send count or hold on a final stop; not found.
+Known: retired on 13 November 2026 with this line: Searched stop-guard.mjs (an 11-line shell that never refuses a stop) for a send count or hold on a final stop; not found.
+
+Known: read on 14 November 2026: stop-guard.mjs is live again and refuses a final reply at lines 98-116 with a cap of two refusals at line 111, and the send rule is at plans/seed-template.md line 7, but no send count and no hold of a final stop on a step's sends is in stop-guard.mjs, and the plan fence that caused the refused call is still retired.
 
 Acceptance: where the second send ends at a refused call with no hand-back, a third send is allowed or the stop guard releases the stop on the evidence of the report; a case. Since step 229 a hand-back that opens DONE after a refusal already counts.
 
@@ -2665,9 +2731,11 @@ Depends: P-49, P-52.
 
 ### P-209. Q-HUB-169: the baseline says no gate does the config-change hook's job from a read of three guard files only
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: The baseline (CONFIG.md, absent from the live tree) that carries the claim was searched for; the ConfigChange hook now exists in /home/user/noahjefferson/hook-dispatch.mjs and the gates named in the claim (plan-fence, approved-plan-guard) are retired.
+Known: retired on 13 November 2026 with this line: The baseline (CONFIG.md, absent from the live tree) that carries the claim was searched for; the ConfigChange hook now exists in /home/user/noahjefferson/hook-dispatch.mjs and the gates named in the claim (plan-fence, approved-plan-guard) are retired.
+
+Known: read on 14 November 2026: the baseline is described at doctrine/plans.md lines 844-848 and ConfigChange is wired as an event at hook-dispatch.mjs line 58, but CONFIG.md itself is not in the live tree, no ConfigChange record or handler is in hook-dispatch.mjs, and the two gates the claim names are still retired.
 
 Acceptance: every guard file is searched for a settings file's change and the baseline states the result.
 
@@ -2813,9 +2881,11 @@ Depends: none.
 
 ### P-224. Q-HUB-184: keys filed in the new folder are invisible to the live stop guard until the live clone is pulled
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: The live stop guard's closing check of the found folder was searched for in /home/user/noahjefferson/stop-guard.mjs, which is now an 11-line shell that reads and discards its input, and in hook-dispatch.mjs, and no closing check exists.
+Known: retired on 13 November 2026 with this line: The live stop guard's closing check of the found folder was searched for in /home/user/noahjefferson/stop-guard.mjs, which is now an 11-line shell that reads and discards its input, and in hook-dispatch.mjs, and no closing check exists.
+
+Known: read on 14 November 2026: the closing check of the found folder is described at doctrine/plans.md lines 850-863 and doctrine/hub.md line 1279 and stop-guard.mjs is live again, but neither stop-guard.mjs nor hook-dispatch.mjs holds a found-folder check or foundQueue, so the page is back and the check is not.
 
 Acceptance: answered by the next plan's first act, the pull of the live clone; after it a key filed under the folder is read by the closing check.
 
@@ -2873,9 +2943,11 @@ Depends: P-1.
 
 ### P-230. Q-HUB-189: a refused approval call resets the talk the plan gate requires
 
-Repository: hub. Goal: 4. State: retired. Plan: none.
+Repository: hub. Goal: 4. State: open. Plan: none.
 
-Retired: The reset of the required talk by a refused approval call was searched for in /home/user/noahjefferson/plan-guard.mjs, which is now a shell with no plan gate or talk, and in hook-dispatch.mjs, and not found.
+Known: retired on 13 November 2026 with this line: The reset of the required talk by a refused approval call was searched for in /home/user/noahjefferson/plan-guard.mjs, which is now a shell with no plan gate or talk, and in hook-dispatch.mjs, and not found.
+
+Known: read on 14 November 2026: the rule that a talk comes before the approval call is live at doctrine/plans.md lines 313-330, but plan-guard.mjs lines 22-30 refuse only the choice popup and no file in the tree holds the talk or its reset, so the page is back and the gate is not.
 
 Acceptance: a refused approval call does not reset the talk, or the refusal's text says that it does, and a case shows the chosen behaviour; each reset costs the owner a go-word.
 
@@ -2883,9 +2955,11 @@ Depends: none.
 
 ### P-231. Q-HUB-190: the stop hook's instruction to send an agent and the correction hold's instruction to run nothing meet in one turn
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: The stop hook's instruction to send an agent was searched for in /home/user/noahjefferson/stop-guard.mjs, which never refuses a stop and prints nothing, and the correction hold is not in hook-dispatch.mjs; neither side of the conflict exists.
+Known: retired on 13 November 2026 with this line: The stop hook's instruction to send an agent was searched for in /home/user/noahjefferson/stop-guard.mjs, which never refuses a stop and prints nothing, and the correction hold is not in hook-dispatch.mjs; neither side of the conflict exists.
+
+Known: read on 14 November 2026: the correction hold is back at hook-dispatch.mjs lines 285 and 409-412 and stop-guard.mjs is back as a reply judge at lines 98-116, but no stop instruction to send an agent is in stop-guard.mjs, so one side of the conflict is present and the other is not.
 
 Acceptance: the conflict is put to the owner once with one suggestion, as the sixth standing goal requires, or one of the two is made to yield under a correction.
 
@@ -2933,9 +3007,11 @@ Depends: P-54, P-169.
 
 ### P-236. Q-HUB-195: no gate reads the wall line
 
-Repository: hub. Goal: 1. State: retired. Plan: none.
+Repository: hub. Goal: 1. State: open. Plan: none.
 
-Retired: Searched the standing files for "wall" in a report or review hand-back; worker.md's report order (done, seen, files, Found) has no wall line and no gate or rule reads one; the rule sat in retired agent-rules.md and aim-review.md.
+Known: retired on 13 November 2026 with this line: Searched the standing files for "wall" in a report or review hand-back; worker.md's report order (done, seen, files, Found) has no wall line and no gate or rule reads one; the rule sat in retired agent-rules.md and aim-review.md.
+
+Known: read on 14 November 2026: the wall-line rule is back at agent-rules.md line 24, aim-review.md lines 77-86 and plans/seed-template.md line 10, with doctrine/plans.md line 801 stating that no gate reads it, so the rule is back and the check that refuses a report without one is not.
 
 Acceptance: a check refuses a report or a review hand-back with no wall line, or the check is the main thread's reading by design and the plan says so; the rule is carried by the agent rules at version 5 and `aim-review.md`.
 
@@ -2943,9 +3019,11 @@ Depends: P-1.
 
 ### P-237. Q-HUB-196: the dispatch gate's new words for a closed pointer have no case or plant
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: The dispatch gate's refusal words for a closed pointer were searched for in /home/user/noahjefferson/hook-dispatch.mjs and guard-cases/dispatch.mjs (no pointer, Order or review step) and not found.
+Known: retired on 13 November 2026 with this line: The dispatch gate's refusal words for a closed pointer were searched for in /home/user/noahjefferson/hook-dispatch.mjs and guard-cases/dispatch.mjs (no pointer, Order or review step) and not found.
+
+Known: read on 14 November 2026: the dispatch gate and its pointer are described at doctrine/plans.md lines 536-544 and 810-812, but hook-dispatch.mjs and guard-cases/dispatch.mjs hold no dispatch gate, pointer, Order or refusal for a closed pointer, so the page is back and the gate is not.
 
 Acceptance: a case and a plant reach the branch for a plan with an Order, no review step and a closed pointer, and the plants run catches the plant.
 
@@ -2983,9 +3061,11 @@ Depends: P-10.
 
 ### P-241. Q-HUB-201: the cost of reading the pointer on each main-thread call was not measured
 
-Repository: hub. Goal: 2. State: retired. Plan: none.
+Repository: hub. Goal: 2. State: open. Plan: none.
 
-Retired: The plan phase's pointer read on each main-thread call was searched for in /home/user/noahjefferson/hook-dispatch.mjs and not found, as the dispatcher no longer reads a pointer.
+Known: retired on 13 November 2026 with this line: The plan phase's pointer read on each main-thread call was searched for in /home/user/noahjefferson/hook-dispatch.mjs and not found, as the dispatcher no longer reads a pointer.
+
+Known: read on 14 November 2026: the pointer is described at doctrine/plans.md lines 75-98 and planPhase is named at line 639, but hook-dispatch.mjs holds no pointer read on a main-thread call and report.mjs is still retired; the read the item asks to time is not in the tree, and whether the page alone keeps the item alive is not settled by a read.
 
 Acceptance: the time of the plan phase's pointer read is measured on a session with several agents and written here; the status gate did a comparable read.
 
@@ -3003,9 +3083,11 @@ Depends: none.
 
 ### P-243. Q-HUB-203: the review gate and the rules gate still judge a send in conversation
 
-Repository: hub. Goal: 4. State: retired. Plan: none.
+Repository: hub. Goal: 4. State: open. Plan: none.
 
-Retired: The review gate and rules gate named in the finding were searched for in /home/user/noahjefferson/hook-dispatch.mjs (322 lines) and not found.
+Known: retired on 13 November 2026 with this line: The review gate and rules gate named in the finding were searched for in /home/user/noahjefferson/hook-dispatch.mjs (322 lines) and not found.
+
+Known: read on 14 November 2026: the review gate and the rules gate are described at doctrine/plans.md lines 118-131 and 572-579 and at agent-rules.md line 7, but hook-dispatch.mjs holds neither, so the pages are back and the gates are not.
 
 Acceptance: the rules gate is narrowed as the review gate was, so that a send in conversation is refused for having no plan and not for its rules version, or the two are left and the reason is written.
 
@@ -3013,9 +3095,11 @@ Depends: P-4.
 
 ### P-244. Q-HUB-204: agents are judged as under a plan in every state
 
-Repository: hub. Goal: 4. State: retired. Plan: none.
+Repository: hub. Goal: 4. State: open. Plan: none.
 
-Retired: The stop hold the item narrows for agents is gone: /home/user/noahjefferson/stop-guard.mjs is a shell that discards input and never refuses, and a search of hook-dispatch.mjs and plans/native found no per-agent plan-state judgement.
+Known: retired on 13 November 2026 with this line: The stop hold the item narrows for agents is gone: /home/user/noahjefferson/stop-guard.mjs is a shell that discards input and never refuses, and a search of hook-dispatch.mjs and plans/native found no per-agent plan-state judgement.
+
+Known: read on 14 November 2026: an agent's stop is passed unjudged at stop-guard.mjs line 89 and hook-dispatch.mjs line 632, and doctrine/plans.md lines 824-835 describe sends judged in every state, but no plan-state judgement of an agent is in the dispatcher, so the stop guard is back as a reply judge and the per-agent judgement is not.
 
 Acceptance: recorded by design; the literal text that the stop hold does not run was narrowed for agents on purpose, and a plan that wants an agent in conversation says how.
 
@@ -3305,9 +3389,11 @@ Depends: none.
 
 ### P-274. Q-HUB-233: the manager fence names a remedy that the rules gate then refuses
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: The manager fence and the rules gate it names are not in the tree; plan-fence.mjs is retired and a search for the rules pin found nothing outside PROGRAM.md.
+Known: retired on 13 November 2026 with this line: The manager fence and the rules gate it names are not in the tree; plan-fence.mjs is retired and a search for the rules pin found nothing outside PROGRAM.md.
+
+Known: read on 14 November 2026: the manager fence is back at hook-dispatch.mjs lines 290 and 535 and the rules pin is described at agent-rules.md line 7 and doctrine/plans.md lines 572-579, but no rules gate that could refuse the fence's named remedy is in hook-dispatch.mjs, and plan-fence.mjs is still retired.
 
 Acceptance: a refusal that names an agent as the route names one that the other gates pass in the same state; a case with the pull of the live clone while the plan's pin and the clone's version differ.
 
@@ -3407,9 +3493,11 @@ Depends: none.
 
 ### P-284. Q-HUB-243: a review agent put a format string with a vertical bar on a git read and was latched
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: The latch on a git read carrying a format string was the plan fence's, plan-fence.mjs is in archive/RETIRED-FILES.txt, and no standing file refuses a git read, so nothing is left to write.
+Known: retired on 13 November 2026 with this line: The latch on a git read carrying a format string was the plan fence's, plan-fence.mjs is in archive/RETIRED-FILES.txt, and no standing file refuses a git read, so nothing is left to write.
+
+Known: read on 14 November 2026: aim-review.md is back but does not name the bare git reads, while plans/seed-template.md lines 11 and 75 carry the bare-read rule with no format string, and the latch is back for refusals at hook-dispatch.mjs line 457 but no standing file refuses a git read with a format string, so the review file named by the acceptance lacks the wording and the gate that latched is still retired.
 
 Acceptance: aim-review.md names the bare git reads a review may make and says a format string or percent code is not among them.
 
@@ -3633,9 +3721,11 @@ Depends: none.
 
 ### P-308. Q-HUB-268: a read taken at once after a change does not see the ConfigChange record
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: hook-dispatch.mjs lists ConfigChange as an event but writes no configuration-change record and holds no read of one; the plan that plants a change to read it is also retired.
+Known: retired on 13 November 2026 with this line: hook-dispatch.mjs lists ConfigChange as an event but writes no configuration-change record and holds no read of one; the plan that plants a change to read it is also retired.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 844-848 state a ConfigChange record held by hook-dispatch.mjs, and hook-dispatch.mjs lines 58 and 66 wire ConfigChange as an event, but the file still writes and reads no configuration-change record, so the page is back and the record is not.
 
 Parked: The harness writes its configuration-change record some seconds after the change, so a read taken at once cannot see it.
 
@@ -3765,9 +3855,11 @@ Depends: P-288.
 
 ### P-342. Q-HUB-301: the plan rules page states no shape for research
 
-Repository: hub. Goal: 2. State: retired. Plan: none.
+Repository: hub. Goal: 2. State: open. Plan: none.
 
-Retired: The plan rules page is archive/doctrine-plans.md and the named fix file doctrine/plans.md is absent; a search of plans/native for research lanes found nothing and no plan rules page remains.
+Known: retired on 13 November 2026 with this line: The plan rules page is archive/doctrine-plans.md and the named fix file doctrine/plans.md is absent; a search of plans/native for research lanes found nothing and no plan rules page remains.
+
+Known: read on 14 November 2026: the plan rules page doctrine/plans.md is live again, 1247 lines, so the page the fix goes into is back, but no line of it states a shape for research lanes (a search of it, doctrine/hub.md and plans/native found none).
 
 Acceptance: the plan rules page states that research lanes gather and choose nothing, that the manager judges on the top tier from the lanes' files, and that the judgement is written into the build plan's Design for the owner to read at the button.
 
@@ -3785,9 +3877,11 @@ Depends: P-341.
 
 ### P-321. Q-HUB-280: the stop hold takes an ordinary sentence carrying the word stop as a stop order
 
-Repository: hub. Goal: 4. State: retired. Plan: none.
+Repository: hub. Goal: 4. State: open. Plan: none.
 
-Retired: The stop hold is gone: /home/user/noahjefferson/stop-guard.mjs discards input and never refuses a stop, so no stop word is read by a hold.
+Known: retired on 13 November 2026 with this line: The stop hold is gone: /home/user/noahjefferson/stop-guard.mjs discards input and never refuses a stop, so no stop word is read by a hold.
+
+Known: read on 14 November 2026: the stop hold is back in hook-dispatch.mjs at lines 272-275 and 404-408 and reads the whole word stop in any typed message not ending with a go-word, which is the shape the item is about, and stop-guard.mjs is live again as a reply judge.
 
 Parked: The owner's word on the stop word's shape must come first, and the finding records that the go of 6 November kept the shape as written.
 
@@ -3907,9 +4001,11 @@ Depends: none.
 
 ### P-333. Q-HUB-292: a stop declared at a wall with a door is let through
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: The item is about a gate refusing a stop; stop-guard.mjs is now a shell that never refuses a stop by design, and the reply guard is retired.
+Known: retired on 13 November 2026 with this line: The item is about a gate refusing a stop; stop-guard.mjs is now a shell that never refuses a stop by design, and the reply guard is retired.
+
+Known: read on 14 November 2026: stop-guard.mjs is back and refuses a reply at lines 98-116 and the latch is back at hook-dispatch.mjs lines 456-466, but no gate in either refuses a declared stop while the call a refusal names was not made, and reply-guard.mjs is still retired.
 
 Acceptance: a gate refuses the stop while the call a refusal names was not made, its shape designed in its own plan and a plant watched refusing before it is believed.
 
@@ -5203,9 +5299,11 @@ Depends: none.
 
 ### P-466. Q-HUB-419: the close of a plan hands back lines no step of a finished plan can record, and its last runs may not have concluded
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched for the seed's close lines (plans/seed-template.md and plan-seed.mjs, the files the finding names) and neither is in the tree; the item is wholly about the seed's plan close.
+Known: retired on 13 November 2026 with this line: Searched for the seed's close lines (plans/seed-template.md and plan-seed.mjs, the files the finding names) and neither is in the tree; the item is wholly about the seed's plan close.
+
+Known: read on 14 November 2026: the seed's close step is back at plans/seed-template.md lines 71-72 and its landing text reads a run's state as concluded or still running at lines 57 and 60, but it holds no final line that records what a close could not read, and plan-seed.mjs, which printed it, is still retired.
 
 Acceptance: a close carries a final line recording what it could not read, such as a run in progress, for the next plan, with a case on a close read before its runs end.
 
@@ -5223,9 +5321,11 @@ Depends: none.
 
 ### P-468. Q-HUB-421: the manager fence refuses the status command with no quoted line without naming the form that passes
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched /home/user/noahjefferson/hook-dispatch.mjs and the whole tree for a manager fence or a status-command refusal and found none; plans/native/cost.md and old plan pages mention it only as history.
+Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/hook-dispatch.mjs and the whole tree for a manager fence or a status-command refusal and found none; plans/native/cost.md and old plan pages mention it only as history.
+
+Known: read on 14 November 2026: the manager fence is back at hook-dispatch.mjs lines 290 and 535 and the live pages at doctrine/plans.md lines 531-535 and 580-582 describe the status command passing it, but the fence has no rule about the status command and the status command's file is still retired.
 
 Acceptance: the refusal prints the one form the fence passes, with a case on the bare command.
 
@@ -5233,9 +5333,11 @@ Depends: none.
 
 ### P-469. Q-HUB-422: the plan rules gate asked for the whole 1190-line rules page three times in one afternoon
 
-Repository: hub. Goal: 2. State: retired. Plan: none.
+Repository: hub. Goal: 2. State: open. Plan: none.
 
-Retired: Searched the tree for a plan rules gate that asks for the rules page and found none; plan-guard.mjs refuses only the choice popup, and the 1190-line rules page doctrine/plans.md is absent.
+Known: retired on 13 November 2026 with this line: Searched the tree for a plan rules gate that asks for the rules page and found none; plan-guard.mjs refuses only the choice popup, and the 1190-line rules page doctrine/plans.md is absent.
+
+Known: read on 14 November 2026: the rules page doctrine/plans.md is back (1247 lines) and its line 1112 names doctrine-read-guard.mjs as the gate that asks for its read, but that gate file is still retired and no gate in the tree asks for the page.
 
 Acceptance: the gate asks for the lines changed since the last full read, or counts a read made in the same turn as the entry, with a case on a pull that changes three lines.
 
@@ -5243,9 +5345,11 @@ Depends: none.
 
 ### P-470. Q-HUB-423: three sends of 9 November ended on a command their plan's Commands did not hold
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched the standing files for "version", "mkdir" as a forbidden check, and a plan's "Commands" or a seed; only app-move's setup script makes a folder, as its own step; the rule sat in retired agent-rules.md, aim-review.md and the seed.
+Known: retired on 13 November 2026 with this line: Searched the standing files for "version", "mkdir" as a forbidden check, and a plan's "Commands" or a seed; only app-move's setup script makes a folder, as its own step; the rule sat in retired agent-rules.md, aim-review.md and the seed.
+
+Known: read on 14 November 2026: agent-rules.md, aim-review.md and plans/seed-template.md are all live again and the seed holds a Commands block at lines 27-54, but none of the three says that no step or review checks a version or makes a folder, and plan-seed.mjs is still retired.
 
 Acceptance: the agent rules and the review file say that no step or review checks a version or makes a folder, and the seed's standing Commands hold the reads a step needs.
 
@@ -5263,9 +5367,11 @@ Depends: none.
 
 ### P-472. Q-HUB-425: a reading step named one route and wrote each refused page down as unread
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched for the seed's reading step in plans/seed-template.md and plan-seed.mjs and both are absent from the tree (plan-seed.mjs is in /home/user/noahjefferson/archive/RETIRED-FILES.txt).
+Known: retired on 13 November 2026 with this line: Searched for the seed's reading step in plans/seed-template.md and plan-seed.mjs and both are absent from the tree (plan-seed.mjs is in /home/user/noahjefferson/archive/RETIRED-FILES.txt).
+
+Known: read on 14 November 2026: plans/seed-template.md is live again but holds no reading step and no list of routes, and doctrine/plans.md lines 470-471 state the rule that every route is tried before a limit is reported, so the seed file is back, the rule is back in the page and the seed's reading step and plan-seed.mjs are not.
 
 Acceptance: the seed's reading step lists every route a page can be reached by and sends a refused page to the next, with a case on a reading step that names one route.
 
@@ -5273,9 +5379,11 @@ Depends: none.
 
 ### P-473. Q-HUB-426: a choice put to the owner named a route no step had tried
 
-Repository: hub. Goal: 4. State: retired. Plan: none.
+Repository: hub. Goal: 4. State: open. Plan: none.
 
-Retired: Searched /home/user/noahjefferson/stop-guard.mjs (a shell that refuses nothing) for a refusal of an untried-route choice and found none; the other guard named, reply-guard.mjs, is in /home/user/noahjefferson/archive/RETIRED-FILES.txt.
+Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/stop-guard.mjs (a shell that refuses nothing) for a refusal of an untried-route choice and found none; the other guard named, reply-guard.mjs, is in /home/user/noahjefferson/archive/RETIRED-FILES.txt.
+
+Known: read on 14 November 2026: stop-guard.mjs is live again as a reply judge but has no test for a choice that names an untried route (stop-guard.mjs lines 98-106), the rule is at doctrine/plans.md lines 470-471 and 481-492, and reply-guard.mjs, the other guard named, is still retired.
 
 Acceptance: a choice that names an untried route as an option is refused, with a case on a choice that does.
 
@@ -5283,9 +5391,11 @@ Depends: none.
 
 ### P-474. Q-HUB-427: web fetch and search calls ran on the main thread on the top tier and nothing refused them
 
-Repository: hub. Goal: 2. State: retired. Plan: none.
+Repository: hub. Goal: 2. State: open. Plan: none.
 
-Retired: Searched /home/user/noahjefferson/hook-dispatch.mjs for a manager fence or a refusal of the web fetch and search tools on the main thread and found none.
+Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/hook-dispatch.mjs for a manager fence or a refusal of the web fetch and search tools on the main thread and found none.
+
+Known: read on 14 November 2026: the manager hold is back at hook-dispatch.mjs line 535 but WebFetch and WebSearch are in READS at lines 59-60 and pass it, so no refusal of a web call on the main thread is in the tree, and doctrine/plans.md line 523 says a web read passes.
 
 Acceptance: the manager fence refuses the web fetch tool and the web search tool on the main thread while a plan is in force, with a case on each.
 
@@ -5303,9 +5413,11 @@ Depends: none.
 
 ### P-476. Q-HUB-429: a cleared close step could not be sent while the top tier served for the next plan's writing
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched /home/user/noahjefferson/hook-dispatch.mjs and plan-seed.mjs for a tier gate on a cleared close step and found none; plan-seed.mjs is retired and the dispatcher no longer holds plan or step gates.
+Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/hook-dispatch.mjs and plan-seed.mjs for a tier gate on a cleared close step and found none; plan-seed.mjs is retired and the dispatcher no longer holds plan or step gates.
+
+Known: read on 14 November 2026: the top-tier rule for a new plan is live at doctrine/plans.md lines 449-457 and doctrine/hub.md lines 770-771, and the dispatcher is back with three holds, but hook-dispatch.mjs holds no tier gate, step gate or cleared close step, and plan-seed.mjs is still retired.
 
 Acceptance: a plan's close is sent before the next plan's writing begins, or the gate passes a step cleared before the tier changed, with a case on a tier change after a review.
 
@@ -5323,9 +5435,11 @@ Depends: none.
 
 ### P-478. Q-HUB-431: the main thread read the session's environment outside every step of the plan, and the call held the session
 
-Repository: hub. Goal: 2. State: retired. Plan: none.
+Repository: hub. Goal: 2. State: open. Plan: none.
 
-Retired: Searched /home/user/noahjefferson/hook-dispatch.mjs for a manager fence refusing an environment read and found none.
+Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/hook-dispatch.mjs for a manager fence refusing an environment read and found none.
+
+Known: read on 14 November 2026: the manager fence is back as holdManager at hook-dispatch.mjs line 535 and the live page at doctrine/plans.md lines 509-524 says it refuses reads outside the record and names the step to send, but the code refuses no read and names no step, so the page is back and the read refusal is not.
 
 Acceptance: the refusal of an environment read names the step whose text may carry it, with a case on the read.
 
@@ -5425,9 +5539,11 @@ Depends: none.
 
 ### P-488. Q-HUB-439: a latched agent could not write its report, so a stale line said a step was still running
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched for a latch on agents or an agent's report file in the progress folder; no guard in the tree latches an agent, since the dispatcher holds none of those gates.
+Known: retired on 13 November 2026 with this line: Searched for a latch on agents or an agent's report file in the progress folder; no guard in the tree latches an agent, since the dispatcher holds none of those gates.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 592-597 describe a latch on an agent and the latch is back for the main thread at hook-dispatch.mjs lines 444-466, but the code latches no agent (lines 444 and 459), no progress-folder report rule is in the dispatcher, and whether the item survives that is not settled by a read.
 
 Acceptance: a latched agent's own report file in the progress folder passes, with a case on a latched agent that writes the report a second time.
 
@@ -5435,9 +5551,11 @@ Depends: none.
 
 ### P-489. Q-HUB-440: a plan's end message listed addresses with no sentence saying what was wanted of them
 
-Repository: hub. Goal: 4. State: retired. Plan: none.
+Repository: hub. Goal: 4. State: open. Plan: none.
 
-Retired: Searched for a plan's end message rule (the finding is about the stop guard and plan pages); stop-guard.mjs refuses nothing and doctrine/plans.md is absent.
+Known: retired on 13 November 2026 with this line: Searched for a plan's end message rule (the finding is about the stop guard and plan pages); stop-guard.mjs refuses nothing and doctrine/plans.md is absent.
+
+Known: read on 14 November 2026: the end-message rule is at doctrine/plans.md lines 466-469 and stop-guard.mjs is live as a reply judge, but stop-guard.mjs lines 98-106 hold no test of an end message's addresses, so the page and the guard file are back and the test is not.
 
 Acceptance: the end message states for each address what is wanted of it, with a case on an end message that lists addresses without one.
 
@@ -5445,9 +5563,11 @@ Depends: none.
 
 ### P-490. Q-HUB-441: a worker restart lost the record of an approval twice on one day
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched /home/user/noahjefferson/hook-dispatch.mjs for an approval marker written from the transcript's approved exit and found no approval or marker logic.
+Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/hook-dispatch.mjs for an approval marker written from the transcript's approved exit and found no approval or marker logic.
+
+Known: read on 14 November 2026: the reading of an approved exit from the transcript is back at hook-dispatch.mjs lines 348-365 and the marker is described at doctrine/plans.md lines 330-339 and 547-552, but the dispatcher writes no approval marker at any call, so the read is back and the marker is not.
 
 Acceptance: the dispatcher writes the approval marker from the transcript's approved exit at the first call after a restart, with a case on a restart between the go-word and the approval call.
 
@@ -5455,9 +5575,11 @@ Depends: none.
 
 ### P-491. Q-HUB-442: a call to enter plan mode made with plan mode already on was refused by two gates in opposite senses and latched the session
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched /home/user/noahjefferson/plan-guard.mjs and the dispatcher for a refusal of entering plan mode, a latch or a status print and found none; plan-guard.mjs passes every call but the choice popup.
+Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/plan-guard.mjs and the dispatcher for a refusal of entering plan mode, a latch or a status print and found none; plan-guard.mjs passes every call but the choice popup.
+
+Known: read on 14 November 2026: the entry to plan mode passes every hold at hook-dispatch.mjs lines 59-60 and plan-guard.mjs refuses only the popup, while doctrine/plans.md lines 335-357 describe the refusal and its no-latch rule and the latch is back at hook-dispatch.mjs line 457, so the page and the latch are back, the two refusals are not, and no status print reads the mode.
 
 Acceptance: the entry to plan mode passes with no latch when the mode the harness reports is already plan, and the status print reads the mode at the time of the print, with a case on an entry call made in plan mode.
 
@@ -5465,9 +5587,11 @@ Depends: none.
 
 ### P-492. Q-HUB-443: pasted test reports each ended the turn as a correction and delayed the plan's writing past a compaction
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched for the correction hold and its refusal in the tree and found none; the pending guard is retired (pending-guard.mjs in /home/user/noahjefferson/archive/RETIRED-FILES.txt).
+Known: retired on 13 November 2026 with this line: Searched for the correction hold and its refusal in the tree and found none; the pending guard is retired (pending-guard.mjs in /home/user/noahjefferson/archive/RETIRED-FILES.txt).
+
+Known: read on 14 November 2026: the correction hold is back at hook-dispatch.mjs lines 285, 384 and 409-412 and its text names the plan file as writable meanwhile, but no rule takes a pasted report as material and not as a correction, and pending-guard.mjs is still retired.
 
 Acceptance: a pasted report that carries no request is taken as material and not as a correction, or the hold's first refusal says the plan file may be written meanwhile, with a case on a pasted report as the newest message.
 
@@ -5495,9 +5619,11 @@ Depends: none.
 
 ### P-495. Q-HUB-446: the first reply after a compaction was refused for a compaction line whose time no print had given
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched /home/user/noahjefferson/session-brief.mjs and hook-dispatch.mjs for a start print after a compaction stating its time and found none; a compaction start prints nothing.
+Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/session-brief.mjs and hook-dispatch.mjs for a start print after a compaction stating its time and found none; a compaction start prints nothing.
+
+Known: read on 14 November 2026: the compaction line is described at doctrine/hub.md lines 810-813 and doctrine/plans.md lines 1112-1119, but neither session-brief.mjs nor hook-dispatch.mjs lines 639-646 prints a compaction's time, so the page is back and the print is not.
 
 Acceptance: the start print after a compaction states the compaction's California time on a line of its own, with a case on the first reply after a compaction.
 
@@ -5505,9 +5631,11 @@ Depends: none.
 
 ### P-496. Q-HUB-447: a numbered option describing a proposed plan was refused by the stop guard as a statement of state
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched /home/user/noahjefferson/stop-guard.mjs for the statement-of-state test and found none; the file reads and discards input and exits 0.
+Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/stop-guard.mjs for the statement-of-state test and found none; the file reads and discards input and exits 0.
+
+Known: read on 14 November 2026: stop-guard.mjs is live again as a reply judge and doctrine/hub.md lines 268-273 describe a statement-of-state refusal, but stop-guard.mjs lines 98-106 hold no statement-of-state test, so the file and the page are back and the test is not.
 
 Acceptance: the statement-of-state test leaves out the text of a numbered option that opens with a verb of proposing, with a case on such an option beside a plain statement of state.
 
@@ -5613,9 +5741,11 @@ Depends: none.
 
 ### P-507. Q-HUB-458: the search for cases a changed print makes stale finds them by words of their names only
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for plans/seed-template.md and guard-cases/plan-seed.mjs, the files the finding names, and both are absent from the tree.
+Known: retired on 13 November 2026 with this line: Searched for plans/seed-template.md and guard-cases/plan-seed.mjs, the files the finding names, and both are absent from the tree.
+
+Known: read on 14 November 2026: plans/seed-template.md is live again and its line 21 holds the rule for a changed print or guard, naming the words and status codes the old behaviour produced and not its counts, while guard-cases/plan-seed.mjs and plan-seed.mjs are still absent, so the rule is partly back and the case file is not.
 
 Acceptance: the template's rule on a changed print or guard says to search also for the text and counts the old print produced, with a case that reads the rule in a print.
 
@@ -5623,9 +5753,11 @@ Depends: none.
 
 ### P-508. Q-HUB-459: a step that writes a whole folder beside a step that reads the status leaves the status unreadable
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched for plans/seed-template.md and plan-seed.mjs, the files named, and found both absent; plan-seed.mjs is in /home/user/noahjefferson/archive/RETIRED-FILES.txt.
+Known: retired on 13 November 2026 with this line: Searched for plans/seed-template.md and plan-seed.mjs, the files named, and found both absent; plan-seed.mjs is in /home/user/noahjefferson/archive/RETIRED-FILES.txt.
+
+Known: read on 14 November 2026: plans/seed-template.md is live again and its parallel-rules block at line 78 keeps each file step to its own files, but no rule names a folder another step writes under as owned whole, the status print and the batch print (report.mjs and plan-seed.mjs) are still retired, and whether the seed file alone keeps the item alive is not settled by a read.
 
 Acceptance: the rule on reading the status names a folder another step writes under as owned whole, and the batch print orders a step that writes many files after the steps that read the status, with a case on each.
 
@@ -5643,9 +5775,11 @@ Depends: none.
 
 ### P-510. Q-HUB-461: the rule on the four lines does not say a line names no person and no message sent to the session
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for doctrine/plans.md and plans/seed-template.md, the pages the finding names, and both are absent from the tree.
+Known: retired on 13 November 2026 with this line: Searched for doctrine/plans.md and plans/seed-template.md, the pages the finding names, and both are absent from the tree.
+
+Known: read on 14 November 2026: doctrine/plans.md (the paragraph on the four kinds of a finding's last line, lines 854 to 858) and plans/seed-template.md (the same rule at lines 72, 84 and 87) are in the tree again, and neither holds the sentence that a line names no person and no message sent to the session.
 
 Acceptance: the plans page and the template's copy of the rule say a line names no person and no message sent to the session, with a case that reads the sentence in a print.
 
@@ -5663,9 +5797,11 @@ Depends: none.
 
 ### P-512. Q-HUB-463: the seed's template prints rule lines the last three waves replaced by hand
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for plans/seed-template.md and guard-cases/plan-seed.mjs, which the finding names, and both are absent from the tree.
+Known: retired on 13 November 2026 with this line: Searched for plans/seed-template.md and guard-cases/plan-seed.mjs, which the finding names, and both are absent from the tree.
+
+Known: read on 14 November 2026: plans/seed-template.md is in the tree again (rules at lines 9, 78 and 84, with the finding's rule on the report after a red run not among them), and the case file guard-cases/plan-seed.mjs and the seed command plan-seed.mjs are not.
 
 Acceptance: the template prints the rules on a file step's own cases and plants, on a check's find, on the report after a red run, on a send that goes on with every run it owes and on the landing step's first send, word for word as the fifth wave's plan holds them, with a case that reads each in a print.
 
@@ -5701,9 +5837,11 @@ Depends: none.
 
 ### P-516. Q-HUB-467: an unnumbered Next line written above an older one is not the one the review reads
 
-Repository: hub. Goal: 3. State: retired. Plan: none.
+Repository: hub. Goal: 3. State: open. Plan: none.
 
-Retired: Searched the standing files for "Next" line, notes, status page and a review reading them; none found, report.mjs and aim-review.md are retired.
+Known: retired on 13 November 2026 with this line: Searched the standing files for "Next" line, notes, status page and a review reading them; none found, report.mjs and aim-review.md are retired.
+
+Known: read on 14 November 2026: aim-review.md lines 42 to 47 and plans/seed-template.md line 74 read the unnumbered Next line of the manager notes again, while the status that was to take the same line (report.mjs) is still retired and absent.
 
 Acceptance: the status and the review file take the same line of the notes as the move, with a case on notes that hold two unnumbered Next lines.
 
@@ -5731,9 +5869,11 @@ Depends: none.
 
 ### P-519. Q-HUB-470: a message that arrives while the plan file is being written holds every call until the turn ends
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched for the correction hold and its release; pending-guard.mjs, the file named in the finding, is in /home/user/noahjefferson/archive/RETIRED-FILES.txt and no hold exists in the tree.
+Known: retired on 13 November 2026 with this line: Searched for the correction hold and its release; pending-guard.mjs, the file named in the finding, is in /home/user/noahjefferson/archive/RETIRED-FILES.txt and no hold exists in the tree.
+
+Known: read on 14 November 2026: the correction hold and its release by a go-word are in hook-dispatch.mjs lines 399 to 413 and 267 to 275 and stated in doctrine/plans.md lines 263 to 312, but the pending-message hold of the finding (pending-guard.mjs) is not back.
 
 Acceptance: a message that ends with a go-word and carries no stop releases the hold once it has arrived as a prompt, with a case on a message that arrives between two writes of the plan file.
 
@@ -5741,9 +5881,11 @@ Depends: none.
 
 ### P-520. Q-HUB-471: four things the plan check taught are in neither the template nor the plans page
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for plans/seed-template.md, doctrine/plans.md and a plan check in plan-guard.mjs (a retired shell); the template and the page are absent.
+Known: retired on 13 November 2026 with this line: Searched for plans/seed-template.md, doctrine/plans.md and a plan check in plan-guard.mjs (a retired shell); the template and the page are absent.
+
+Known: read on 14 November 2026: doctrine/plans.md (the plan check paragraphs, lines 371 to 407) and plans/seed-template.md (lines 5 to 25) are in the tree again, while the plan check and its --check mode in plan-guard.mjs lines 16 to 19 are still retired.
 
 Acceptance: the template and the page state the four, and the check of a call prints that it does not judge the correction hold, each with a case.
 
@@ -5751,9 +5893,11 @@ Depends: none.
 
 ### P-521. Q-HUB-472: the plan check does not fault a plan with steps that holds no line of priced sends
 
-Repository: hub. Goal: 2. State: retired. Plan: none.
+Repository: hub. Goal: 2. State: open. Plan: none.
 
-Retired: Searched /home/user/noahjefferson/hook-dispatch.mjs for a plan check fault on a missing Sends priced line and found none, and the plan check is retired.
+Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/hook-dispatch.mjs for a plan check fault on a missing Sends priced line and found none, and the plan check is retired.
+
+Known: read on 14 November 2026: the Sends priced line is in the live pages (doctrine/plans.md lines 401 to 403, plans/seed-template.md line 7), and the plan check that faults a plan without it is not back (plan-guard.mjs lines 16 to 19, hook-dispatch.mjs holds none).
 
 Acceptance: the plan check faults a plan with steps whose own rules hold no Sends priced line, with a case on a plan with the line and one without.
 
@@ -5771,9 +5915,11 @@ Depends: none.
 
 ### P-523. Q-HUB-474: the talk before a plan does not say in its first line what brings the button and the lower tier
 
-Repository: hub. Goal: 4. State: retired. Plan: none.
+Repository: hub. Goal: 4. State: open. Plan: none.
 
-Retired: Searched /home/user/noahjefferson/stop-guard.mjs for a refusal of a reply's first line and found none (it refuses nothing), and doctrine/plans.md is absent.
+Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/stop-guard.mjs for a refusal of a reply's first line and found none (it refuses nothing), and doctrine/plans.md is absent.
+
+Known: read on 14 November 2026: the stop guard judging a final reply is back in stop-guard.mjs lines 87 to 119 and the rule is stated in doctrine/plans.md lines 313 to 318 and 456 to 457, but the refusal of a first line that lacks the two statements is not among its four faults.
 
 Acceptance: the stop guard refuses such a reply whose first line lacks the two statements and the page states the rule, with a case on a reply with them and one without.
 
@@ -5781,9 +5927,11 @@ Depends: none.
 
 ### P-524. Q-HUB-475: the startup bring-forward reads an approved plan of an earlier session as in force
 
-Repository: hub. Goal: 2. State: retired. Plan: none.
+Repository: hub. Goal: 2. State: open. Plan: none.
 
-Retired: Searched /home/user/noahjefferson/hook-dispatch.mjs, bringForward included, for an approval marker or a plan in force and found none; bringForward judges only branch, uncommitted changes and fetch.
+Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/hook-dispatch.mjs, bringForward included, for an approval marker or a plan in force and found none; bringForward judges only branch, uncommitted changes and fetch.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 861 to 862 state that the start brings the hub forward only with no plan of the session open, and hook-dispatch.mjs bringForward at lines 203 to 246 still reads no approval marker and no plan in force.
 
 Acceptance: a plan counts as in force at a start only when the approval marker names the starting session, with a case on a marker of another session.
 
@@ -5811,9 +5959,11 @@ Depends: none.
 
 ### P-527. Q-HUB-478: the stop guard calls the pointer with no set of running steps
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched /home/user/noahjefferson/stop-guard.mjs for the pointer call and the plant eject_pointer_notes and found neither; the file reads and discards input and exits 0.
+Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/stop-guard.mjs for the pointer call and the plant eject_pointer_notes and found neither; the file reads and discards input and exits 0.
+
+Known: read on 14 November 2026: the stop guard is back (stop-guard.mjs) and doctrine/plans.md lines 75 to 100 and 221 to 235 state the pointer and the running-step count, but stop-guard.mjs makes no pointer call and the pointer's file report.mjs is still retired.
 
 Acceptance: the call passes the running steps of the state, the plant eject_pointer_notes takes the new text, and a case holds a Done line beside a running agent.
 
@@ -5833,7 +5983,7 @@ Depends: none.
 
 Repository: hub. Goal: 4. State: retired. Plan: none.
 
-Retired: Searched the standing files for a doctrine review file, a pruning list and "review" of entries; none found, and plans/doctrine-review.md is absent.
+Retired: Searched the tree outside archive/ for plans/doctrine-review.md and the older pruning list plans/doctrine-and-claude-md-pruning-list.md and found neither (both stand only under archive/plans/), and the restored doctrine pages hold no review of their entries.
 
 Acceptance: the review file names the older list and says, item by item, which entries the review repeats, extends or contradicts.
 
@@ -5841,9 +5991,11 @@ Depends: none.
 
 ### P-530. Q-HUB-481: the plans page lists what the stop refusal passes differently from the code
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched for doctrine/plans.md and for a constant listing what the stop refusal passes; the page is absent and stop-guard.mjs refuses nothing.
+Known: retired on 13 November 2026 with this line: Searched for doctrine/plans.md and for a constant listing what the stop refusal passes; the page is absent and stop-guard.mjs refuses nothing.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 300 to 303 and the constants READS and STOP_TEXT in hook-dispatch.mjs lines 59 to 60 and 280 to 284 are both in the tree, so the page and the code can be read against each other, and no case in guard-cases reads one against the other.
 
 Acceptance: the page gives the code's list, with a case that reads the page's list against the constant.
 
@@ -5861,9 +6013,11 @@ Depends: none.
 
 ### P-532. Q-HUB-483: the instruction file and the plans page give two rules for the review gate
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched CLAUDE.md (34 lines), DOCTRINE.md, doctrine/ and plans/native/ for an index bullet on the review gate's rule and found none; the plans page doctrine/plans.md is in archive/doctrine-plans.md.
+Known: retired on 13 November 2026 with this line: Searched CLAUDE.md (34 lines), DOCTRINE.md, doctrine/ and plans/native/ for an index bullet on the review gate's rule and found none; the plans page doctrine/plans.md is in archive/doctrine-plans.md.
+
+Known: read on 14 November 2026: the index bullet on the review gate is in doctrine/hub.md line 36 with the gate's paragraph at lines 553 to 558, and the page's rule is in doctrine/plans.md lines 101 to 146, while the gate itself (reviewGate) is not in hook-dispatch.mjs.
 
 Acceptance: the index bullet states the plans page's rule or points at its paragraph.
 
@@ -5899,9 +6053,11 @@ Depends: none.
 
 ### P-536. Q-HUB-486: a resent step's report named with the send's number is refused to a latched agent
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: The latch and report-name rule were in plan-fence.mjs and hook-dispatch.mjs; plan-fence.mjs is absent from the tree and hook-dispatch.mjs (322 lines) holds no latch or report-file name.
+Known: retired on 13 November 2026 with this line: The latch and report-name rule were in plan-fence.mjs and hook-dispatch.mjs; plan-fence.mjs is absent from the tree and hook-dispatch.mjs (322 lines) holds no latch or report-file name.
+
+Known: read on 14 November 2026: the latch on an agent and the passing of its report are stated in doctrine/plans.md lines 718 to 731 and the second send's report name in plans/seed-template.md line 16, while hook-dispatch.mjs lines 444 to 466 latches the main thread only and plan-fence.mjs is still retired.
 
 Acceptance: a latched agent's own report of a second or later send passes the latch, with a case on a latched agent that writes it.
 
@@ -5909,9 +6065,11 @@ Depends: none.
 
 ### P-537. Q-HUB-487: the identifier gate takes a word made of hex-set letters for a hash
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: The identifier gate on hex-set words was in plan-fence.mjs, which is absent; a search of hook-dispatch.mjs and push-guard.mjs for a hash or hex gate found none.
+Known: retired on 13 November 2026 with this line: The identifier gate on hex-set words was in plan-fence.mjs, which is absent; a search of hook-dispatch.mjs and push-guard.mjs for a hash or hex gate found none.
+
+Known: read on 14 November 2026: the rule on hex-set runs is in agent-rules.md line 21 and plans/seed-template.md line 13, and no gate that refuses a word made of hex-set letters stands in the tree (plan-fence.mjs retired, none in hook-dispatch.mjs or push-guard.mjs).
 
 Acceptance: a search pattern or a report holding an English word of letters alone is not refused as a hash, or the refusal says what it met and how to spell the search, with a case on each.
 
@@ -5939,9 +6097,11 @@ Depends: none.
 
 ### P-540. Q-HUB-490: the plan fence passes a redirect into the scratchpad though the rules forbid one
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: The redirect refusal was in plan-fence.mjs, which is absent from the tree; no redirect fence is in hook-dispatch.mjs or push-guard.mjs for agent lines in a scratchpad.
+Known: retired on 13 November 2026 with this line: The redirect refusal was in plan-fence.mjs, which is absent from the tree; no redirect fence is in hook-dispatch.mjs or push-guard.mjs for agent lines in a scratchpad.
+
+Known: read on 14 November 2026: the refusal of a redirect outside the scratchpad is back for the main thread in hook-dispatch.mjs lines 503 to 511 and 547, and the rule against an agent's redirect is in agent-rules.md line 18, but no gate refuses an agent's redirect (line 537 passes agents) and plan-fence.mjs is still retired.
 
 Acceptance: the fence refuses a redirect in an agent's shell line wherever the target lies, with a case on a line that redirects into the scratchpad.
 
@@ -5949,9 +6109,11 @@ Depends: none.
 
 ### P-541. Q-HUB-491: the prompt line reads an agent's hand-back that names the stop guard's file as a message carrying the word stop
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: Searched hook-dispatch.mjs for a printed line reading the word stop in a message and found none; the prompt event prints only the one short-page line.
+Known: retired on 13 November 2026 with this line: Searched hook-dispatch.mjs for a printed line reading the word stop in a message and found none; the prompt event prints only the one short-page line.
+
+Known: read on 14 November 2026: the reading of the word stop from a typed message only, with a hand-back set aside, is back in hook-dispatch.mjs lines 18 to 19 and 374 to 413, but the printed line at each prompt (line 647) still carries no such reading and the page's printed line (doctrine/plans.md lines 300 to 303) is not printed.
 
 Acceptance: the printed line reads the word stop only in a message the session was typed, with a case on a hand-back that names the stop guard's file.
 
@@ -5997,9 +6159,11 @@ Depends: none.
 
 ### P-546. Q-HUB-496: the print at each prompt and hand-back holds the gates and not the next move
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: The print of the plan's goal and next move at each prompt was a hook-dispatch.mjs behaviour; the rewritten dispatcher prints only the one short-page line and holds no pointer or manager-notes reader.
+Known: retired on 13 November 2026 with this line: The print of the plan's goal and next move at each prompt was a hook-dispatch.mjs behaviour; the rewritten dispatcher prints only the one short-page line and holds no pointer or manager-notes reader.
+
+Known: read on 14 November 2026: the print of the next move is stated in doctrine/plans.md lines 75 to 100, and neither hook-dispatch.mjs (line 647) nor any file in the tree prints it, since report.mjs is still retired.
 
 Acceptance: the print opens with one line of the plan's goal 1 and one line of the next move, above every reminder, with a case that reads both lines in a print.
 
@@ -6007,9 +6171,11 @@ Depends: none.
 
 ### P-547. Q-HUB-497: the print at each prompt does not carry the plan-mode line the status prints
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: The plan-mode line in the prompt print was a hook-dispatch.mjs behaviour; the rewritten dispatcher has no plan-mode print (searched, not found).
+Known: retired on 13 November 2026 with this line: The plan-mode line in the prompt print was a hook-dispatch.mjs behaviour; the rewritten dispatcher has no plan-mode print (searched, not found).
+
+Known: read on 14 November 2026: the plan-mode print is stated in doctrine/plans.md lines 300 to 302 and 344 to 370, and hook-dispatch.mjs prints no plan-mode line (lines 644 to 647).
 
 Acceptance: the print carries the plan-mode line, the kind of plan mode and the way forward whenever plan mode is on, with a case on a plan mode brought back after an approval.
 
@@ -6017,9 +6183,11 @@ Depends: none.
 
 ### P-548. Q-HUB-498: an agent that runs its cases one to a run spends its one repair, and the fence refuses writes after a red run
 
-Repository: hub. Goal: 2. State: retired. Plan: none.
+Repository: hub. Goal: 2. State: open. Plan: none.
 
-Retired: The item's files are plans/seed-template.md (now only archive/plans/seed-template.md), plan-fence.mjs (absent) and hook-dispatch.mjs (no red-run fence); none of the behaviour stands.
+Known: retired on 13 November 2026 with this line: The item's files are plans/seed-template.md (now only archive/plans/seed-template.md), plan-fence.mjs (absent) and hook-dispatch.mjs (no red-run fence); none of the behaviour stands.
+
+Known: read on 14 November 2026: the template's order of a file step and the rule on the one repair are back (plans/seed-template.md lines 9 and 78, agent-rules.md line 25), and the fence that allows the one repair after a red run is not (plan-fence.mjs retired, none in hook-dispatch.mjs).
 
 Acceptance: the template's order of a file step names one run for the step's own cases, and the fence allows the one repair after the first red run, with a case on each.
 
@@ -6037,9 +6205,11 @@ Depends: none.
 
 ### P-550. Q-HUB-500: the main thread on the lower tier rewrites the plan file while a plan is in force
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: The manager fence's write refusal of the plan file was in hook-dispatch.mjs; the rewritten dispatcher has no manager fence (searched for managerFence and plan-file writes, not found).
+Known: retired on 13 November 2026 with this line: The manager fence's write refusal of the plan file was in hook-dispatch.mjs; the rewritten dispatcher has no manager fence (searched for managerFence and plan-file writes, not found).
+
+Known: read on 14 November 2026: the manager fence is back as hook-dispatch.mjs holdManager lines 535 to 551, and it passes a write of a plan file (lines 319 to 322), so the refusal of such a write while a plan is in force named by the item is not back.
 
 Acceptance: the manager fence refuses every write of the plan file outside plan mode while a plan is in force, with a case on a write.
 
@@ -6057,9 +6227,11 @@ Depends: none.
 
 ### P-552. Q-HUB-502: the dispatcher's refusal at the price does not say the top tier is wanted
 
-Repository: hub. Goal: 2. State: retired. Plan: none.
+Repository: hub. Goal: 2. State: open. Plan: none.
 
-Retired: The refusal at the price was in hook-dispatch.mjs; the rewritten dispatcher counts no sends and has no price refusal (searched, not found).
+Known: retired on 13 November 2026 with this line: The refusal at the price was in hook-dispatch.mjs; the rewritten dispatcher counts no sends and has no price refusal (searched, not found).
+
+Known: read on 14 November 2026: the refusal past the priced count is stated in doctrine/plans.md lines 401 to 403 and 624 to 627 and the priced line is in plans/seed-template.md line 7, and hook-dispatch.mjs holds no price refusal.
 
 Acceptance: the refusal says the top tier is wanted for the amendment, with a case that reads the words.
 
@@ -6067,9 +6239,11 @@ Depends: none.
 
 ### P-553. Q-HUB-503: the count of a plan's sends and the plan's price are read from two approvals
 
-Repository: hub. Goal: 2. State: retired. Plan: none.
+Repository: hub. Goal: 2. State: open. Plan: none.
 
-Retired: The send count was in hook-dispatch.mjs and doctrine/plans.md; the count is not in the rewritten dispatcher and the plans page is only archive/doctrine-plans.md.
+Known: retired on 13 November 2026 with this line: The send count was in hook-dispatch.mjs and doctrine/plans.md; the count is not in the rewritten dispatcher and the plans page is only archive/doctrine-plans.md.
+
+Known: read on 14 November 2026: doctrine/plans.md lines 401 to 403 and 624 to 627 and plans/seed-template.md line 7 state the count and the price, and the count itself is not in hook-dispatch.mjs.
 
 Acceptance: the count and the plans page say the same thing, with a case on a plan approved twice.
 
@@ -6077,9 +6251,11 @@ Depends: none.
 
 ### P-554. Q-HUB-504: a landing has no rule to file the lines of the manager notes that open File at the close
 
-Repository: hub. Goal: 2. State: retired. Plan: none.
+Repository: hub. Goal: 2. State: open. Plan: none.
 
-Retired: Searched program.mjs and the live tree for manager notes or File at the close lines and found none; the landing step lived in plans/seed-template.md, which is now only in archive/plans/.
+Known: retired on 13 November 2026 with this line: Searched program.mjs and the live tree for manager notes or File at the close lines and found none; the landing step lived in plans/seed-template.md, which is now only in archive/plans/.
+
+Known: read on 14 November 2026: the landing and close steps are back in plans/seed-template.md lines 72 and 84, and the manager notes are described in doctrine/plans.md lines 156 to 166, but no file in the tree names a File at the close line and program.mjs lines 236 to 290 take no such input.
 
 Acceptance: the landing step and the program command's verb file read those lines with the reports' Found lines, with a case on a notes file that holds one.
 
@@ -6135,9 +6311,11 @@ Depends: none.
 
 ### P-560. Q-HUB-508: a stop for the talk turn does not say that nothing is running
 
-Repository: hub. Goal: 3. State: retired. Plan: none.
+Repository: hub. Goal: 3. State: open. Plan: none.
 
-Retired: The stop refusal was in plan-guard.mjs and stop-guard.mjs; stop-guard.mjs is now an 11-line shell that never refuses a stop.
+Known: retired on 13 November 2026 with this line: The stop refusal was in plan-guard.mjs and stop-guard.mjs; stop-guard.mjs is now an 11-line shell that never refuses a stop.
+
+Known: read on 14 November 2026: the stop guard is back in stop-guard.mjs lines 87 to 119 and the declared stop is stated in doctrine/plans.md lines 456 to 457 and 464 to 467, but no refusal there says that nothing is running and a message is awaited.
 
 Acceptance: the refusal that ends such a stop says in its first line that nothing is running and that a message is awaited, with a case that reads the line.
 
@@ -6163,9 +6341,11 @@ Depends: none.
 
 ### P-563. Q-HUB-511: a step that writes several documents and then lands them is large for one send
 
-Repository: hub. Goal: 2. State: retired. Plan: none.
+Repository: hub. Goal: 2. State: open. Plan: none.
 
-Retired: The landing-step rule was for plans/seed-template.md, which is absent from the tree (only archive/plans/seed-template.md remains).
+Known: retired on 13 November 2026 with this line: The landing-step rule was for plans/seed-template.md, which is absent from the tree (only archive/plans/seed-template.md remains).
+
+Known: read on 14 November 2026: plans/seed-template.md keeps the landing step as its own block (lines 83 to 87) apart from the file steps' rules (line 77 to 78), and doctrine/plans.md lines 426 to 439 state the shape.
 
 Acceptance: the plan template keeps the landing step apart from the step that writes the documents it lands.
 
@@ -6173,9 +6353,11 @@ Depends: none.
 
 ### P-564. Q-HUB-512: the prompt hook reads an agent's hand-back as a message the session was typed
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
-Retired: The prompt hook's correction and stop reading was in hook-dispatch.mjs; the rewritten dispatcher prints only the one short-page line (searched, not found).
+Known: retired on 13 November 2026 with this line: The prompt hook's correction and stop reading was in hook-dispatch.mjs; the rewritten dispatcher prints only the one short-page line (searched, not found).
+
+Known: read on 14 November 2026: the correction and stop reading that sets a hand-back aside is back in hook-dispatch.mjs lines 18 to 19 and 374 to 386 as a hold, and the line printed at each prompt (line 647) still names no correction and no stop.
 
 Acceptance: the line printed at each prompt names a correction or a stop only for a message the session was typed, with a case on a hand-back that closes a step and one whose report holds the word stop.
 
@@ -6203,9 +6385,11 @@ Depends: none.
 
 ### P-568. Q-HUB-515: The main thread rewrote the plan file while agents ran
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: The manager fence refusing plan-file writes was in hook-dispatch.mjs; the rewritten dispatcher holds no manager fence (searched, not found).
+Known: retired on 13 November 2026 with this line: The manager fence refusing plan-file writes was in hook-dispatch.mjs; the rewritten dispatcher holds no manager fence (searched, not found).
+
+Known: read on 14 November 2026: the manager fence is back as hook-dispatch.mjs holdManager lines 535 to 551 and passes a write of a plan file (lines 319 to 322), so the refusal of a plan-file write with a plan in force is not back.
 
 Acceptance: A write of the plan file by the main thread outside plan mode, with a plan in force, is refused by the manager fence, and a case and a plant hold it.
 
@@ -6223,9 +6407,11 @@ Depends: none.
 
 ### P-570. Q-HUB-517: The refusal at the price does not name the tier
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: The refusal at the price was in hook-dispatch.mjs; the rewritten dispatcher holds no price refusal.
+Known: retired on 13 November 2026 with this line: The refusal at the price was in hook-dispatch.mjs; the rewritten dispatcher holds no price refusal.
+
+Known: read on 14 November 2026: the refusal at the price is stated in doctrine/plans.md lines 624 to 627 and the priced line is in plans/seed-template.md line 7, and hook-dispatch.mjs holds no price refusal to name the tier in.
 
 Acceptance: The refusal at the price names the top tier as wanted for the amendment, and a case holds the words.
 
@@ -6233,9 +6419,11 @@ Depends: none.
 
 ### P-571. Q-HUB-518: The count of sends and the price of an amendment disagree
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: The send count and the price were in hook-dispatch.mjs and the plans page; neither stands in the live tree.
+Known: retired on 13 November 2026 with this line: The send count and the price were in hook-dispatch.mjs and the plans page; neither stands in the live tree.
+
+Known: read on 14 November 2026: the count and the price are stated in doctrine/plans.md lines 401 to 403 and 624 to 627 and plans/seed-template.md line 7, and no count of sends stands in hook-dispatch.mjs.
 
 Acceptance: The count of sends and the plans page agree on what the price covers, and a case holds an amended plan's first send.
 
@@ -6243,9 +6431,11 @@ Depends: none.
 
 ### P-572. Q-HUB-519: The manager notes' File at the close lines have no rule to file them
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: Searched program.mjs for the manager notes' File at the close lines and found none; the manager notes and the seed template are retired, so the verb file has no such input to take.
+Known: retired on 13 November 2026 with this line: Searched program.mjs for the manager notes' File at the close lines and found none; the manager notes and the seed template are retired, so the verb file has no such input to take.
+
+Known: read on 14 November 2026: the seed template (plans/seed-template.md lines 72 and 84) and the manager notes' description (doctrine/plans.md lines 156 to 166) are back, but program.mjs lines 236 to 290 and every live file lack any File at the close line.
 
 Acceptance: The program command's verb file takes the manager notes' File at the close lines beside the reports' Found lines, and a case holds it.
 
@@ -6253,9 +6443,11 @@ Depends: none.
 
 ### P-573. Q-HUB-520: The template orders a proof before the manifest it needs
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: The template's proof order and the manifest-first verb were in plans/seed-template.md and plan-land.mjs; neither stands in the live tree.
+Known: retired on 13 November 2026 with this line: The template's proof order and the manifest-first verb were in plans/seed-template.md and plan-land.mjs; neither stands in the live tree.
+
+Known: read on 14 November 2026: the template whose proof order the item names is back in plans/seed-template.md lines 63, 66 and 69, and the landing command with its manifest-first verb (plan-land.mjs) is still retired and absent.
 
 Acceptance: A plan typed from the template can run its first proof for the checks alone without a refusal for a missing manifest.
 
@@ -6313,9 +6505,11 @@ Depends: none.
 
 ### P-579. Q-HUB-526: The Commands do not list the can-check for a step that reads a guard's refusals
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: The Commands lists and the can-check line were in plans/seed-template.md, absent from the live tree.
+Known: retired on 13 November 2026 with this line: The Commands lists and the can-check line were in plans/seed-template.md, absent from the live tree.
+
+Known: read on 14 November 2026: the template's Commands list is back at plans/seed-template.md lines 27 to 54 with no can-check line in it, and the can-check itself, named in doctrine/plans.md lines 553 to 561, is not in hook-dispatch.mjs.
 
 Acceptance: A plan typed from the template lists the can-check line in a step that reads a guard's refusals.
 
@@ -6333,9 +6527,11 @@ Depends: none.
 
 ### P-581. Q-HUB-528: The manager fence refuses the planner every read of the hub's own record
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
-Retired: The manager fence's refusal of reads was in hook-dispatch.mjs; the rewritten dispatcher has no manager fence (searched, not found).
+Known: retired on 13 November 2026 with this line: The manager fence's refusal of reads was in hook-dispatch.mjs; the rewritten dispatcher has no manager fence (searched, not found).
+
+Known: read on 14 November 2026: the manager hold is back in hook-dispatch.mjs lines 535 to 551 and refuses no read (line 537), while the read fence of doctrine/plans.md lines 509 to 530 that the item's defect lay in is not in the tree.
 
 Acceptance: The manager fence passes a read of the hub's configuration, code and cost record on the main thread, and a case and a plant hold it.
 

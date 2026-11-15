@@ -724,3 +724,26 @@ Found and left:
 - P-124 carries both a Done line and a Parked line.
 - The seed template's list of checks lacks two checks the workflow runs.
 - Lesson 320's declaration line still says checklist, with the choice written only in its note.
+
+### The retired items read a second time, 14 November 2026
+
+Why: several subjects of the retirements came back on 14 November 2026. The plans page, the agent rules, the review file and the seed's standing text are live again, the dispatcher holds the main thread again, and the stop guard judges a final reply again. So some Retired lines of 13 November 2026 were no longer true, and an item closed for a reason that stopped being true is an item lost.
+
+Read again: 104 of the 217 retired items named one of those files or holds. Each was read against the tree as it stands today. The other 113 were not touched. No item was judged for whether its acceptance is met, and none was set done.
+
+Counts: 98 are open again and 6 stay retired. Of the 6, four have a new Retired line that says what was looked for today and not found (P-131, P-139, P-145 and P-529) and two keep their old line because it is still true (P-46 and P-566). Retired fell from 217 to 119, and open rose from 45 to 143. Done stays 301, parked 32 and answered 2. The items count line still opens with 597 and holds.
+
+Open again, 98 keys: P-45, P-59, P-60, P-62, P-67, P-69, P-71, P-79, P-84, P-88, P-92, P-97, P-106, P-112, P-113, P-114, P-115, P-116, P-118, P-121, P-123, P-126, P-127, P-132, P-133, P-138, P-150, P-153, P-154, P-156, P-157, P-158, P-160, P-209, P-224, P-230, P-231, P-236, P-237, P-241, P-243, P-244, P-274, P-284, P-308, P-321, P-333, P-342, P-466, P-468, P-469, P-470, P-472, P-473, P-474, P-476, P-478, P-488, P-489, P-490, P-491, P-492, P-495, P-496, P-507, P-508, P-510, P-512, P-516, P-519, P-520, P-521, P-523, P-524, P-527, P-530, P-532, P-536, P-537, P-540, P-541, P-546, P-547, P-548, P-550, P-552, P-553, P-554, P-560, P-563, P-564, P-568, P-570, P-571, P-572, P-573, P-579 and P-581.
+
+Still retired, 6 keys: P-46, P-131, P-139, P-145, P-529 and P-566.
+
+What was written: for each of the 98, the state is open, the old Retired line is kept word for word as a Known line headed "retired on 13 November 2026 with this line", and a second Known line headed "read on 14 November 2026" says which file and line shows its subject in the tree today and which part is still not there. The title, the Acceptance and the Depends line were not changed. program.mjs has no verb that writes this change, so the edits were made by a script run once.
+
+Why so many: nearly all of those open again are cases where a rules page is live again and the gate that enforced it is still retired. Each waits on which gates are built again. The open list has grown by 98, from 45 open items to 143. Ranking them is for a later page.
+
+Found and left:
+
+- The page at doctrine/plans.md says an agent is latched after a refusal, while the dispatcher latches the main thread only (P-488).
+- P-308's old line is true of the code. It is open only because the plans page states the record.
+- P-554 and P-572 name a rule, the manager notes' File at the close lines, that stands in no live file.
+- archive/RETIRED-FILES.txt gained a note that agent-rules.md and aim-review.md are in the tree again. No line of it was removed.
