@@ -5859,15 +5859,13 @@ Depends: none.
 
 ### P-516. Q-HUB-467: an unnumbered Next line written above an older one is not the one the review reads
 
-Repository: hub. Goal: 3. State: retired. Plan: none.
+Repository: hub. Goal: 3. State: open. Plan: none.
 
 Known: retired on 13 November 2026 with this line: Searched the standing files for "Next" line, notes, status page and a review reading them; none found, report.mjs and aim-review.md are retired.
 
 Known: read on 14 November 2026: aim-review.md lines 42 to 47 and plans/seed-template.md line 74 read the unnumbered Next line of the manager notes again, while the status that was to take the same line (report.mjs) is still retired and absent.
 
 Acceptance: the status and the review file take the same line of the notes as the move, with a case on notes that hold two unnumbered Next lines.
-
-Retired: Closed unbuilt because the goals at the top of doctrine/hub.md, line 18, say goal 3 was removed on 14 November 2026 since the status reports did not say what was needed, and this item asks that the status take the unnumbered Next line.
 
 Depends: none.
 
@@ -5905,15 +5903,13 @@ Depends: none.
 
 ### P-520. Q-HUB-471: four things the plan check taught are in neither the template nor the plans page
 
-Repository: hub. Goal: 6. State: retired. Plan: none.
+Repository: hub. Goal: 6. State: open. Plan: none.
 
 Known: retired on 13 November 2026 with this line: Searched for plans/seed-template.md, doctrine/plans.md and a plan check in plan-guard.mjs (a retired shell); the template and the page are absent.
 
 Known: read on 14 November 2026: doctrine/plans.md (the plan check paragraphs, lines 371 to 407) and plans/seed-template.md (lines 5 to 25) are in the tree again, while the plan check and its --check mode in plan-guard.mjs lines 16 to 19 are still retired.
 
 Acceptance: the template and the page state the four, and the check of a call prints that it does not judge the correction hold, each with a case.
-
-Retired: Closed unbuilt because the short page, line 63, says that where a rules page and it differ on how work is scoped and who does its steps it holds, which sets aside the plan check and its check-of-a-call print (the page dates the retired gates to 12 November 2026 at line 24).
 
 Depends: none.
 
@@ -5987,15 +5983,13 @@ Depends: none.
 
 ### P-527. Q-HUB-478: the stop guard calls the pointer with no set of running steps
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
 Known: retired on 13 November 2026 with this line: Searched /home/user/noahjefferson/stop-guard.mjs for the pointer call and the plant eject_pointer_notes and found neither; the file reads and discards input and exits 0.
 
 Known: read on 14 November 2026: the stop guard is back (stop-guard.mjs) and doctrine/plans.md lines 75 to 100 and 221 to 235 state the pointer and the running-step count, but stop-guard.mjs makes no pointer call and the pointer's file report.mjs is still retired.
 
 Acceptance: the call passes the running steps of the state, the plant eject_pointer_notes takes the new text, and a case holds a Done line beside a running agent.
-
-Retired: Closed unbuilt because the goals at the top of doctrine/hub.md, line 18, say goal 3 was removed on 14 November 2026 since the status reports did not say what was needed, and the pointer with its running-step count is a status print.
 
 Depends: none.
 
@@ -6189,15 +6183,13 @@ Depends: none.
 
 ### P-546. Q-HUB-496: the print at each prompt and hand-back holds the gates and not the next move
 
-Repository: hub. Goal: 5. State: retired. Plan: none.
+Repository: hub. Goal: 5. State: open. Plan: none.
 
 Known: retired on 13 November 2026 with this line: The print of the plan's goal and next move at each prompt was a hook-dispatch.mjs behaviour; the rewritten dispatcher prints only the one short-page line and holds no pointer or manager-notes reader.
 
 Known: read on 14 November 2026: the print of the next move is stated in doctrine/plans.md lines 75 to 100, and neither hook-dispatch.mjs (line 647) nor any file in the tree prints it, since report.mjs is still retired.
 
 Acceptance: the print opens with one line of the plan's goal 1 and one line of the next move, above every reminder, with a case that reads both lines in a print.
-
-Retired: Closed unbuilt because the goals at the top of doctrine/hub.md, line 18, say goal 3 was removed on 14 November 2026 since the status reports did not say what was needed, and the print of the goal and the next move at each prompt is a status print.
 
 Depends: none.
 
