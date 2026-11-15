@@ -77,6 +77,8 @@ function world(h) {
 /** An approval at the button as the transcript records it: the ExitPlanMode call and its result. */
 const approval = (h, s, id) => [h.tool(s, id, 'ExitPlanMode', { plan: 'a plan' }), h.result(s + 1, id, 'User has approved your plan. You can now start coding. Start with updating your todo list if applicable')];
 const typed = (h, s, text) => h.turn(s, text);
+/** An agent's hand-back as the harness enqueues it: the words of an agent-message tag, "[Subagent hand-back]" inside it, on an entry that carries a human origin. */
+const handBack = (h, s, text) => ({ type: 'user', timestamp: h.ts(s), origin: { kind: 'human' }, message: { role: 'user', content: `<agent-message from="worker-one">\n[Subagent hand-back] ${text}\n</agent-message>` } });
 const call = (tool_name, tool_input, tr, extra = {}) => ({ tool_name, tool_input, ...(tr ? { transcript_path: tr } : {}), ...extra });
 const held = (r, re) => r.status === 2 && re.test(r.stderr);
 const passes = (r) => r.status === 0 && r.stdout === '' && r.stderr === '';
@@ -577,6 +579,249 @@ export const cases = [
     },
   },
   {
+    name: 'hold 1 (correction): P-126: a Bash git log of a repository passes under a standing correction, in the plain form and with -C and a pipe, while an Agent send is still held',
+    guards: ['cr_git_log_read'],
+    run(m, dir, h) {
+      const w = world(h);
+      const tr = h.transcript([typed(h, 0, 'Ok but change the plan first.')]);
+      const repoDir = join(w.launch, 'repo');
+      const log = (command) => w.run(dir, call('Bash', { command }, tr, { cwd: repoDir }));
+      const plain = log('git log --oneline -5');
+      const dashC = log(`git -C ${repoDir} log -3 --stat`);
+      const piped = log('git log --format=%s | head -20');
+      const send = w.run(dir, call('Agent', { prompt: 'x' }, tr));
+      return h.assertAll([
+        ['the correction stands: an Agent send is refused as a new start', held(send, /NEW STARTS HELD/), said(send)],
+        ['a plain git log passes with nothing printed', passes(plain), said(plain)],
+        ['a git log with -C passes', passes(dashC), said(dashC)],
+        ['a git log piped to head passes', passes(piped), said(piped)],
+        ['no latch was written', readdirSync(w.latch).length === 0, readdirSync(w.latch).join(',')],
+      ]);
+    },
+  },
+  {
+    name: 'hold 1 (correction): P-492: when the newest message is a pasted test report the plan file and the scratchpad can still be written, and the first refusal of a new start says so',
+    guards: ['cr_pasted_report_plan'],
+    run(m, dir, h) {
+      const w = world(h);
+      const report = 'Test report from the last run:\nRED CASES: none\n312 of 312 passed\nPLANTS NOT RUN: this run ran the cases only';
+      const tr = h.transcript([typed(h, 0, 'Go.'), h.tool(1, 'r1', 'Bash', { command: 'git status' }), h.result(2, 'r1', 'clean'), typed(h, 5, report)]);
+      const planW = w.run(dir, call('Write', { file_path: w.plan, content: 'x' }, tr));
+      const planE = w.run(dir, call('Edit', { file_path: w.plan, old_string: 'a', new_string: 'b' }, tr));
+      const scratchW = w.run(dir, call('Write', { file_path: w.scratch, content: 'x' }, tr));
+      const send = w.run(dir, call('Agent', { prompt: 'x' }, tr));
+      const repoW = w.run(dir, call('Write', { file_path: w.repoFile, content: 'x' }, tr));
+      return h.assertAll([
+        ['a Write of the plan file passes with nothing printed', passes(planW), said(planW)],
+        ['an Edit of the plan file passes', passes(planE), said(planE)],
+        ['a Write in the scratchpad passes', passes(scratchW), said(scratchW)],
+        ['an Agent send is refused, and the refusal says a plan file directly under the plans folder may be written meanwhile', held(send, /NEW STARTS HELD: .*no write of a file other than a plan file directly under ~\/\.claude\/plans\/ or a file in the session scratchpad/s), said(send)],
+        ['a repository Write is refused by the same hold', held(repoW, /NEW STARTS HELD/), said(repoW)],
+        ['no latch was written', readdirSync(w.latch).length === 0, readdirSync(w.latch).join(',')],
+      ]);
+    },
+  },
+  {
+    name: 'hold 1 (correction): P-519: a message ending with a go-word that arrives between two writes of the plan file releases the hold, so the second write and an Agent send pass, and before it an Agent send is held',
+    guards: ['cr_go_between_writes'],
+    run(m, dir, h) {
+      const w = world(h);
+      const firstWrite = [h.tool(1, 'w1', 'Write', { file_path: w.plan, content: 'one' }), h.result(2, 'w1', 'File created')];
+      const before = h.transcript([typed(h, 0, 'Ok but change the plan first.'), ...firstWrite]);
+      const after = h.transcript([typed(h, 0, 'Ok but change the plan first.'), ...firstWrite, typed(h, 10, 'Fine, carry on with the plan. Go.')]);
+      const send = (tr) => w.run(dir, call('Agent', { prompt: 'x' }, tr));
+      const write = (tr) => w.run(dir, call('Write', { file_path: w.plan, content: 'two' }, tr));
+      return h.assertAll([
+        ['before the go message the first write of the plan file passes', passes(write(before)), said(write(before))],
+        ['before the go message an Agent send is held', held(send(before), /NEW STARTS HELD/), said(send(before))],
+        ['after the go message the second write of the plan file passes', passes(write(after)), said(write(after))],
+        ['after the go message an Agent send passes: the hold is released', passes(send(after)), said(send(after))],
+      ]);
+    },
+  },
+  {
+    name: 'hold 1 (stop): P-541: an agent\'s hand-back that names stop-guard.mjs is no word stop and no correction: nothing is held and the prompt prints the one line only, while a typed stop still holds',
+    guards: ['hb_names_stop_file'],
+    run(m, dir, h) {
+      const w = world(h);
+      const tr = h.transcript([typed(h, 0, 'Go.'), handBack(h, 5, 'DONE\nThe stop guard file stop-guard.mjs was read and nothing in it was changed.')]);
+      const typedStop = h.transcript([typed(h, 0, 'Please stop.')]);
+      const bashR = w.run(dir, call('Bash', { command: 'ls' }, tr));
+      const send = w.run(dir, call('Agent', { prompt: 'x' }, tr));
+      const edit = w.run(dir, call('Write', { file_path: w.plan, content: 'x' }, tr));
+      const prompt = disp(h, dir, 'UserPromptSubmit', { prompt: 'Hello', transcript_path: tr });
+      const live = w.run(dir, call('Bash', { command: 'ls' }, typedStop));
+      return h.assertAll([
+        ['a Bash passes with nothing printed', passes(bashR), said(bashR)],
+        ['an Agent send passes, so the hand-back set no correction either', passes(send), said(send)],
+        ['a write of the plan file passes', passes(edit), said(edit)],
+        ['the prompt prints the one line and names no stop and no correction', prompt.status === 0 && prompt.stdout === `${pageLine(dir)}\n` && !/stop|correction/i.test(prompt.stdout.replace(pageLine(dir), '')), said(prompt)],
+        ['the hold is live: a typed stop holds a Bash', held(live, /STOP: /), said(live)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 1 (stop): P-564: an agent\'s hand-back that closes a step, and one whose report holds the word stop, are no typed message: nothing is held and the prompt prints the one line only',
+    guards: ['hb_closes_step'],
+    run(m, dir, h) {
+      const w = world(h);
+      const closes = h.transcript([typed(h, 0, 'Go.'), handBack(h, 5, 'DONE\nThe step is closed: the case file was written and the run passed.')]);
+      const wordStop = h.transcript([typed(h, 0, 'Go.'), handBack(h, 5, 'REFUSED\nThe hook said stop and the step ended there.')]);
+      const seen = [];
+      for (const [label, tr] of [['a hand-back that closes a step', closes], ['a hand-back whose report holds the word stop', wordStop]]) {
+        const bashR = w.run(dir, call('Bash', { command: 'ls' }, tr));
+        const send = w.run(dir, call('Agent', { prompt: 'x' }, tr));
+        const prompt = disp(h, dir, 'UserPromptSubmit', { prompt: 'Hello', transcript_path: tr });
+        seen.push([`${label}: a Bash passes with nothing printed`, passes(bashR), said(bashR)]);
+        seen.push([`${label}: an Agent send passes, so it set no correction`, passes(send), said(send)]);
+        seen.push([`${label}: the prompt prints the one line and names no stop and no correction`, prompt.status === 0 && prompt.stdout === `${pageLine(dir)}\n`, said(prompt)]);
+      }
+      return h.assertAll(seen);
+    },
+  },
+  {
+    name: 'hold 2 (latch): P-113: two WebFetch calls to one host in one message write no latch, for the main thread and for an agent, and a Bash after them passes',
+    guards: ['wf_two_fetches'],
+    run(m, dir, h) {
+      const w = world(h);
+      const fetchOne = [h.tool(1, 'f1', 'WebFetch', { url: 'https://example.org/one', prompt: 'Read it' }), h.result(2, 'f1', 'page one')];
+      const first = h.transcript([typed(h, 0, 'Go and read both pages.')]);
+      const second = h.transcript([typed(h, 0, 'Go and read both pages.'), ...fetchOne]);
+      const a = w.run(dir, call('WebFetch', { url: 'https://example.org/one', prompt: 'Read it' }, first));
+      const b = w.run(dir, call('WebFetch', { url: 'https://example.org/two', prompt: 'Read it' }, second));
+      const agentA = w.run(dir, call('WebFetch', { url: 'https://example.org/one', prompt: 'Read it' }, first, { agent_id: 'ag1' }));
+      const agentB = w.run(dir, call('WebFetch', { url: 'https://example.org/two', prompt: 'Read it' }, second, { agent_id: 'ag1' }));
+      const files = readdirSync(w.latch);
+      const next = w.run(dir, call('Bash', { command: 'ls' }, second));
+      return h.assertAll([
+        ['the first fetch passes with nothing printed', passes(a), said(a)],
+        ['the second fetch to the same host passes with nothing printed', passes(b), said(b)],
+        ['an agent\'s two fetches pass', passes(agentA) && passes(agentB), said(agentA) + said(agentB)],
+        ['no latch file was written', files.length === 0, files.join(',')],
+        ['a main-thread Bash after them passes', passes(next), said(next)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 2 (latch): P-488: with a latch standing an agent writes its own report file in the progress folder, and writes it a second time, and both pass while the main thread stays held',
+    guards: ['lg_report_again'],
+    run(m, dir, h) {
+      const w = world(h);
+      const tr = h.transcript([typed(h, 0, 'Do the next thing. Go.')]);
+      const popup = w.run(dir, call('AskUserQuestion', { questions: [] }, tr));
+      const report = `${SCRATCH}/progress/step-1-report.txt`;
+      const write = () => w.run(dir, call('Write', { file_path: report, content: 'DONE\nThe wall line.' }, tr, { agent_id: 'ag1' }));
+      const once = write();
+      const again = write();
+      const edit = w.run(dir, call('Edit', { file_path: report, old_string: 'a', new_string: 'b' }, tr, { agent_id: 'ag1' }));
+      const files = readdirSync(w.latch);
+      const main = w.run(dir, call('Bash', { command: 'ls' }, tr));
+      return h.assertAll([
+        ['the latch was written by the popup refusal and stands', popup.status === 2 && files.length === 1, said(popup) + files.join(',')],
+        ['the main thread is held by it', held(main, /REFUSAL LATCH: /), said(main)],
+        ['the agent\'s write of its report passes with nothing printed', passes(once), said(once)],
+        ['its second write of the same report passes', passes(again), said(again)],
+        ['an edit of the report passes', passes(edit), said(edit)],
+        ['the latch still stands', readdirSync(w.latch).length === 1, readdirSync(w.latch).join(',')],
+      ]);
+    },
+  },
+  {
+    name: 'hold 2 (latch): P-536: with a latch standing an agent writes the report of a first, a second and a third send, named for the step, the send\'s number and -report.txt, and every write passes',
+    guards: ['lg_report_second_send'],
+    run(m, dir, h) {
+      const w = world(h);
+      const tr = h.transcript([typed(h, 0, 'Do the next thing. Go.')]);
+      const popup = w.run(dir, call('AskUserQuestion', { questions: [] }, tr));
+      const write = (name) => w.run(dir, call('Write', { file_path: `${SCRATCH}/progress/${name}`, content: 'DONE\nThe wall line.' }, tr, { agent_id: 'ag1' }));
+      const first = write('step-1-report.txt');
+      const second = write('step-1-2-report.txt');
+      const third = write('step-1-3-report.txt');
+      const note = write('step-1-2.txt');
+      return h.assertAll([
+        ['the latch stands', popup.status === 2 && readdirSync(w.latch).length === 1, said(popup)],
+        ['the report of the first send passes', passes(first), said(first)],
+        ['the report of the second send passes', passes(second), said(second)],
+        ['the report of the third send passes', passes(third), said(third)],
+        ['the progress note of the second send passes', passes(note), said(note)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 2 (latch): P-491: a call to enter plan mode passes with nothing printed and no latch when the permission mode the harness reports is already plan, under a go message and under a correction',
+    guards: ['pm_enter_plan'],
+    run(m, dir, h) {
+      const w = world(h);
+      const goTr = h.transcript([typed(h, 0, 'Do the next thing. Go.')]);
+      const corrTr = h.transcript([typed(h, 0, 'Ok but change the plan first.')]);
+      const inPlanGo = w.run(dir, call('EnterPlanMode', {}, goTr, { permission_mode: 'plan' }));
+      const inPlanCorr = w.run(dir, call('EnterPlanMode', {}, corrTr, { permission_mode: 'plan' }));
+      const inPlanTwice = w.run(dir, call('EnterPlanMode', {}, goTr, { permission_mode: 'plan' }));
+      const files = readdirSync(w.latch);
+      const next = w.run(dir, call('Bash', { command: 'ls' }, goTr));
+      return h.assertAll([
+        ['an entry in plan mode under a go message passes with nothing printed', passes(inPlanGo), said(inPlanGo)],
+        ['an entry in plan mode under a correction passes', passes(inPlanCorr), said(inPlanCorr)],
+        ['a second entry in plan mode passes', passes(inPlanTwice), said(inPlanTwice)],
+        ['no latch file was written', files.length === 0, files.join(',')],
+        ['a main-thread Bash after them passes', passes(next), said(next)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 3 (manager): P-158: a read-only Bash of a run in progress passes on the main thread: a tail of its output, a cat, a listing, a process list, a wait and a tail, a git log, and a read of its task output',
+    guards: ['mg_check_in'],
+    run(m, dir, h) {
+      const w = world(h);
+      const tr = h.transcript([typed(h, 0, 'Go.')]);
+      const out = '/tmp/claude-0/dp-proj/tasks/bk7x3q9zd.output';
+      const main = (command) => w.run(dir, call('Bash', { command }, tr, { cwd: join(w.launch, 'repo') }));
+      const rows = [
+        ['a tail of the output file', main(`tail -n 40 ${out}`)],
+        ['a tail of a file in the scratchpad', main(`tail -n 40 ${SCRATCH}/run.out`)],
+        ['a cat piped to a count', main(`cat ${out} | wc -l`)],
+        ['a listing of the task folder', main('ls -la /tmp/claude-0/dp-proj/tasks')],
+        ['a process list searched', main('ps -ef | grep session-guards')],
+        ['a wait and a tail', main(`sleep 30 && tail -n 5 ${out}`)],
+        ['a git log of the repository', main('git log --oneline -3')],
+        ['a stderr merged into the output', main(`tail -n 5 ${out} 2>&1`)],
+      ];
+      const taskOut = w.run(dir, call('TaskOutput', { task_id: 'bk7x3q9zd', block: false }, tr));
+      const taskList = w.run(dir, call('TaskList', {}, tr));
+      return h.assertAll([
+        ...rows.map(([k, r]) => [`${k} passes`, passes(r), said(r)]),
+        ['a read of the task output passes', passes(taskOut), said(taskOut)],
+        ['a task list passes', passes(taskList), said(taskList)],
+        ['the hold is live: a redirect into the repository is still refused', held(w.run(dir, call('Bash', { command: 'echo hi > out.txt' }, tr, { cwd: join(w.launch, 'repo') })), /MANAGER DOES NO WORK/), 'redirect'],
+      ]);
+    },
+  },
+  {
+    name: 'hold 3 (manager): P-581: the main thread\'s read of the hub\'s configuration, code and cost record passes the manager hold, by Read, Grep, Glob and Bash',
+    guards: ['mg_reads_of_record'],
+    run(m, dir, h) {
+      const w = world(h);
+      const tr = h.transcript([typed(h, 0, 'Go.')]);
+      const settings = join(w.home, '.claude', 'settings.json');
+      const code = join(dir, 'hook-dispatch.mjs');
+      const cost = join(w.home, '.claude', 'projects', 'dp-proj', 'dp-session.jsonl');
+      const main = (command) => w.run(dir, call('Bash', { command }, tr, { cwd: w.launch }));
+      const rows = [
+        ['a Read of the configuration', w.run(dir, call('Read', { file_path: settings }, tr))],
+        ['a Read of the code', w.run(dir, call('Read', { file_path: code }, tr))],
+        ['a Read of the cost record', w.run(dir, call('Read', { file_path: cost }, tr))],
+        ['a Grep over the code', w.run(dir, call('Grep', { pattern: 'holdManager', path: dir }, tr))],
+        ['a Grep over the cost record', w.run(dir, call('Grep', { pattern: 'usage', path: cost }, tr))],
+        ['a Glob of the code folder', w.run(dir, call('Glob', { pattern: '*.mjs', path: dir }, tr))],
+        ['a Bash cat of the configuration', main(`cat ${settings}`)],
+        ['a Bash grep of the code', main(`grep -n holdManager ${code}`)],
+        ['a Bash read of the cost record by the cost script', main(`node ${join(dir, 'session-cost.mjs')} ${cost}`)],
+        ['a Bash head of the cost record', main(`head -c 400 ${cost}`)],
+      ];
+      return h.assertAll(rows.map(([k, r]) => [`${k} passes with nothing printed`, passes(r), said(r)]));
+    },
+  },
+  {
     name: 'hold 2 (latch): a popup refusal latches, a later main-thread Bash is refused with the first refusal repeated, a read and TaskStop pass, an agent is not held, and a message typed after it clears it',
     guards: ['hy_latch', 'hl_popup','hl_repeat', 'hl_reads', 'hl_clear', 'hl_agent_free'],
     run(m, dir, h) {
@@ -834,6 +1079,17 @@ export const plants = {
   hm_scratch: ['  return !inScratchpad(absPath(p, t), p.session_id);', '  return true;', 'hook-dispatch.mjs'],
   hm_listing: ["  if (sub === 'stash') return !['list', 'show'].includes(rest[0]);", "  if (sub === 'stash') return true;", 'hook-dispatch.mjs'],
   hm_plan: ["  return dirname(a) === join(homedir(), '.claude', 'plans') ||", "  return a.startsWith(join(homedir(), '.claude', 'plans')) ||", 'hook-dispatch.mjs'],
+  cr_git_log_read: ["  if (NEW_STARTS.has(tool)) return CORRECTION_TEXT;\n  if (FILE_WRITES.has(tool) && !mayWrite(", "  if (NEW_STARTS.has(tool)) return CORRECTION_TEXT;\n  if (tool === 'Bash' && /\\bgit\\s+(?:-C\\s+\\S+\\s+)?log\\b/.test(String(p.tool_input?.command ?? ''))) return CORRECTION_TEXT;\n  if (FILE_WRITES.has(tool) && !mayWrite(", 'hook-dispatch.mjs'],
+  cr_pasted_report_plan: ["if (FILE_WRITES.has(tool) && !mayWrite(p, p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '')) return CORRECTION_TEXT;", 'if (FILE_WRITES.has(tool)) return CORRECTION_TEXT;', 'hook-dispatch.mjs'],
+  cr_go_between_writes: ['export function endsWithGoWord(text) { const w = wordsOf(text); return GO_WORDS.includes(w[w.length - 1]); }', 'export function endsWithGoWord(text) { const w = wordsOf(text); return false; }', 'hook-dispatch.mjs'],
+  hb_names_stop_file: ['  entries.forEach((e, i) => { if (tail.isOwnerMessage(e)) idx.push(i); });', '  entries.forEach((e, i) => { if (tail.isOwnerMessage(e) || /stop-guard\\.mjs/.test(tail.textOf(e))) idx.push(i); });', 'hook-dispatch.mjs'],
+  hb_closes_step: ['  entries.forEach((e, i) => { if (tail.isOwnerMessage(e)) idx.push(i); });', '  entries.forEach((e, i) => { if (tail.isOwnerMessage(e) || /\\[Subagent hand-back\\]/.test(tail.textOf(e))) idx.push(i); });', 'hook-dispatch.mjs'],
+  wf_two_fetches: ['    const held = holds(p);\n    if (held) {', "    if (tool === 'WebFetch') latchAfter(p, 'planted refusal of a fetch');\n    const held = holds(p);\n    if (held) {", 'hook-dispatch.mjs'],
+  pm_enter_plan: ['    const held = holds(p);\n    if (held) {', "    if (tool === 'EnterPlanMode' && p.permission_mode === 'plan') { const why = 'planted refusal of an entry to plan mode'; process.stderr.write(why + '\\n'); latchAfter(p, why); return 2; }\n    const held = holds(p);\n    if (held) {", 'hook-dispatch.mjs'],
+  lg_report_again: ["  if (p.agent_id || READS.has(tool) || tool === 'TaskStop') return null;\n  const l = latchStanding(p);", "  if (READS.has(tool) || tool === 'TaskStop') return null;\n  const l = latchStanding(p);", 'hook-dispatch.mjs'],
+  lg_report_second_send: ["  if (p.agent_id || READS.has(tool) || tool === 'TaskStop') return null;\n  const l = latchStanding(p);", "  if (READS.has(tool) || tool === 'TaskStop') return null;\n  if (p.agent_id && !/step-\\d+-report\\.txt$/.test(String(p.tool_input?.file_path ?? ''))) return null;\n  const l = latchStanding(p);", 'hook-dispatch.mjs'],
+  mg_check_in: ["  if (tool !== 'Bash') return null;\n  const { shell: line }", "  if (tool !== 'Bash') return null;\n  if (/\\b(?:tail|cat|ps|sleep|ls)\\b/.test(String(p.tool_input?.command ?? ''))) return MANAGER_TEXT('a check-in on a run');\n  const { shell: line }", 'hook-dispatch.mjs'],
+  mg_reads_of_record: ['  if (p.agent_id || READS.has(tool)) return null;', "  if (p.agent_id) return null;\n  if (READS.has(tool)) return MANAGER_TEXT('a read outside the plans folder and the scratchpad');", 'hook-dispatch.mjs'],
   hx_catch: ['    } catch (e) {\n      process.stderr.write(`hook-dispatch.mjs: ${name} failed', '    } catch (e) {\n      throw e;\n      process.stderr.write(`hook-dispatch.mjs: ${name} failed', 'hook-dispatch.mjs'],
   hs_run: ["  if (event === 'Stop' && !p.agent_id) {", '  if (false) {', 'hook-dispatch.mjs'],
   hs_once: ["    return repoHooks(event, raw, p, new Set(['stop-guard.sh']));", '    return repoHooks(event, raw, p, new Set());', 'hook-dispatch.mjs'],

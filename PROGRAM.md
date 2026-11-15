@@ -1715,7 +1715,9 @@ Depends: none.
 
 ### P-113. Q-HUB-60: two fetches to one host in one message latched an agent
 
-Repository: hub. Goal: 6. State: open. Plan: none.
+Repository: hub. Goal: 6. State: done. Plan: none.
+
+Done: Done on 15 November 2026: the case named P-113 in guard-cases/dispatch.mjs holds two WebFetch calls to one host in one message writing no latch, for the main thread and for an agent, and its planted failure wf_two_fetches was caught, in the full run of the cases (134 of 134) and of every plant (270 of 270) that passed on that day.
 
 Known: retired on 13 November 2026 with this line: Searched for reply-guard.mjs and plan-fence.mjs (both retired and absent) and for a latch on two fetches to one host in hook-dispatch.mjs and push-guard.mjs; none found.
 
@@ -1867,7 +1869,9 @@ Depends: none.
 
 ### P-126. Q-HUB-73: a standing correction holds the main thread's history reads
 
-Repository: hub. Goal: 4. State: open. Plan: none.
+Repository: hub. Goal: 4. State: done. Plan: none.
+
+Done: Done on 15 November 2026: the case named P-126 in guard-cases/dispatch.mjs holds a git log, plain, with -C and piped, passing under a standing correction while an Agent send stays held, and its planted failure cr_git_log_read was caught, in the full run of the cases (134 of 134) and of every plant (270 of 270) that passed on that day.
 
 Known: retired on 13 November 2026 with this line: Searched hook-dispatch.mjs (322 lines) for the correction hold and readOfRecord or gitHistoryRead; neither is present.
 
@@ -2236,6 +2240,8 @@ Known: retired on 13 November 2026 with this line: Searched hook-dispatch.mjs fo
 Known: read on 14 November 2026: the manager fence is back as holdManager at hook-dispatch.mjs line 535 and the live plans page describes the wait it passes at doctrine/plans.md lines 232-233 and 535, but the fence refuses only writes outside the plans folder and scratchpad, git changes and redirects, no scheduled check-in or read of a run in progress is handled by name, and report.mjs, the wait it names, is still retired.
 
 Acceptance: the closing of a plan has a way to read a run that is still going, without the fence refusing the scheduled check-in; a case.
+
+Known: read on 15 November 2026: the case named P-158 in guard-cases/dispatch.mjs holds that read-only Bash calls of a run in progress (a tail, a cat, a listing, a process list, a wait and a tail, a git log) and a read of its task output pass the manager hold on the main thread while a redirect is still refused, with its planted failure mg_check_in, but no named way for the closing of a plan to read a run still going is written down, so that part remains.
 
 Depends: Q-HUB-23; Q-HUB-83.
 
@@ -5561,7 +5567,9 @@ Depends: none.
 
 ### P-488. Q-HUB-439: a latched agent could not write its report, so a stale line said a step was still running
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Done on 15 November 2026: the case named P-488 in guard-cases/dispatch.mjs holds a latched agent writing its own report file in the progress folder twice, and editing it, with every write passing while the main thread stays held, and its planted failure lg_report_again was caught, in the full run of the cases (134 of 134) and of every plant (270 of 270) that passed on that day.
 
 Known: retired on 13 November 2026 with this line: Searched for a latch on agents or an agent's report file in the progress folder; no guard in the tree latches an agent, since the dispatcher holds none of those gates.
 
@@ -5605,11 +5613,15 @@ Known: read on 14 November 2026: the entry to plan mode passes every hold at hoo
 
 Acceptance: the entry to plan mode passes with no latch when the mode the harness reports is already plan, and the status print reads the mode at the time of the print, with a case on an entry call made in plan mode.
 
+Known: read on 15 November 2026: the case named P-491 in guard-cases/dispatch.mjs holds an entry to plan mode passing with nothing printed and no latch when the reported mode is already plan, under a go message and under a correction, with its planted failure pm_enter_plan, but nothing reads or prints the mode at the time of a status print, so that part of the acceptance remains.
+
 Depends: none.
 
 ### P-492. Q-HUB-443: pasted test reports each ended the turn as a correction and delayed the plan's writing past a compaction
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Done on 15 November 2026: the case named P-492 in guard-cases/dispatch.mjs holds a plan-file Write and Edit and a scratchpad Write passing when the newest message is a pasted test report, and the first refusal of a new start saying the plan file may be written meanwhile, and its planted failure cr_pasted_report_plan was caught, in the full run of the cases (134 of 134) and of every plant (270 of 270) that passed on that day.
 
 Known: retired on 13 November 2026 with this line: Searched for the correction hold and its refusal in the tree and found none; the pending guard is retired (pending-guard.mjs in /home/user/noahjefferson/archive/RETIRED-FILES.txt).
 
@@ -5891,7 +5903,9 @@ Depends: none.
 
 ### P-519. Q-HUB-470: a message that arrives while the plan file is being written holds every call until the turn ends
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Done on 15 November 2026: the case named P-519 in guard-cases/dispatch.mjs holds a go message arriving between two writes of the plan file releasing the correction hold, so the second write and an Agent send pass while an Agent send before it is held, and its planted failure cr_go_between_writes was caught, in the full run of the cases (134 of 134) and of every plant (270 of 270) that passed on that day.
 
 Known: retired on 13 November 2026 with this line: Searched for the correction hold and its release; pending-guard.mjs, the file named in the finding, is in /home/user/noahjefferson/archive/RETIRED-FILES.txt and no hold exists in the tree.
 
@@ -6077,7 +6091,9 @@ Depends: none.
 
 ### P-536. Q-HUB-486: a resent step's report named with the send's number is refused to a latched agent
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Done on 15 November 2026: the case named P-536 in guard-cases/dispatch.mjs holds a latched agent writing the report of a first, second and third send, and the second send's note, with every write passing, and its planted failure lg_report_second_send was caught, in the full run of the cases (134 of 134) and of every plant (270 of 270) that passed on that day.
 
 Known: retired on 13 November 2026 with this line: The latch and report-name rule were in plan-fence.mjs and hook-dispatch.mjs; plan-fence.mjs is absent from the tree and hook-dispatch.mjs (322 lines) holds no latch or report-file name.
 
@@ -6140,6 +6156,8 @@ Known: retired on 13 November 2026 with this line: Searched hook-dispatch.mjs fo
 Known: read on 14 November 2026: the reading of the word stop from a typed message only, with a hand-back set aside, is back in hook-dispatch.mjs lines 18 to 19 and 374 to 413, but the printed line at each prompt (line 647) still carries no such reading and the page's printed line (doctrine/plans.md lines 300 to 303) is not printed.
 
 Acceptance: the printed line reads the word stop only in a message the session was typed, with a case on a hand-back that names the stop guard's file.
+
+Known: read on 15 November 2026: the case named P-541 in guard-cases/dispatch.mjs holds that a hand-back naming stop-guard.mjs is no word stop, holds nothing and leaves the prompt printing the one line only, while a typed stop still holds, with its planted failure hb_names_stop_file, but the prompt prints no line that reads the word stop for a typed message, so the printed line the acceptance describes is not there to hold and that part remains.
 
 Depends: none.
 
@@ -6389,6 +6407,8 @@ Known: read on 14 November 2026: the correction and stop reading that sets a han
 
 Acceptance: the line printed at each prompt names a correction or a stop only for a message the session was typed, with a case on a hand-back that closes a step and one whose report holds the word stop.
 
+Known: read on 15 November 2026: the case named P-564 in guard-cases/dispatch.mjs holds that a hand-back that closes a step, and one whose report holds the word stop, set no hold and leave the prompt printing the one line only, with its planted failure hb_closes_step, but the prompt prints no line naming a correction or a stop for a typed message, so the typed side of the acceptance has nothing to hold and that part remains.
+
 Depends: none.
 
 ### P-565. Q-HUB-513: a run of the scope check ended with no line closing the printed messages
@@ -6566,6 +6586,8 @@ Known: retired on 13 November 2026 with this line: The manager fence's refusal o
 Known: read on 14 November 2026: the manager hold is back in hook-dispatch.mjs lines 535 to 551 and refuses no read (line 537), while the read fence of doctrine/plans.md lines 509 to 530 that the item's defect lay in is not in the tree.
 
 Acceptance: The manager fence passes a read of the hub's configuration, code and cost record on the main thread, and a case and a plant hold it.
+
+Known: read on 15 November 2026: the case named P-581 in guard-cases/dispatch.mjs holds a main-thread read of a settings file, the hub's code and a session transcript passing the manager hold, by Read, Grep, Glob and Bash, with its planted failure mg_reads_of_record, but no page or code in the tree says what the cost record is, so whether a session transcript is that record is in doubt and the item stays open until that is settled.
 
 Depends: none.
 

@@ -890,7 +890,7 @@ Not a hold, and left open as work:
 - P-150: The edit is in doctrine/plans.md lines 830 to 835, which name a Drive guard as running when it is absent from the tree, and the doubt on how much of it the page describes is written here.
 - P-153: The edit is in doctrine/plans.md lines 830 to 835, which name a Drive guard as running when it is absent from the tree.
 - P-156: The edit is in doctrine/plans.md lines 830 to 835, which name a Drive guard as running when it is absent from the tree.
-- P-158: The edit is to the item's entry in PROGRAM.md (reword or retire against the short page's closing, where the main thread reads the runs after the push), or a case in guard-cases/dispatch.mjs that a read-only Bash of a run in progress passes the manager hold.
+- P-158: The case for a read-only Bash of a run in progress is written, and what remains is a named way for the closing of a plan to read a run still going, which no page or code names.
 - P-160: The edit is to the item's entry in PROGRAM.md (reword or retire, since no live gate holds a final stop on a step's sends), as stop-guard.mjs lines 87 to 116 judge a reply only.
 - P-183: The finding gives two ways out, naming the one repository in the family list of REPOS.md or correcting the nineteen citations, so the edit is in REPOS.md or the lesson files under lessons/; no rule on a live page is broken, because lessons-check.mjs checks cited gate files and not repository names. Taken with what waits, as the order says.
 - P-209: The acceptance asks that the baseline state the result of a search of the guard files, so the edit is in doctrine/plans.md lines 844 to 848, which still says a ConfigChange record is held by hook-dispatch.mjs.
@@ -908,7 +908,7 @@ Not a hold, and left open as work:
 - P-472: The edit is in plans/seed-template.md, which holds no reading step; the rule that every route is tried is already at doctrine/plans.md lines 470 to 471.
 - P-474: The live page doctrine/plans.md line 523 says a web read passes the manager fence, so the item asks for the opposite of a rule on a live page; the edit is to the item's entry in PROGRAM.md (reword or retire against that line), not to code. Doubt written: if a refusal of web calls is wanted, it is a new rule and not a restored one.
 - P-488: The edit is to the item's entry in PROGRAM.md (reword or retire, since no agent is latched), or a case in guard-cases/dispatch.mjs in which an agent writes a report file twice with a latch standing; doctrine/plans.md lines 592 to 597 still say an agent is latched.
-- P-491: The edit is to the item's entry in PROGRAM.md, dropping the status print that went with goal 3, and a case in guard-cases/dispatch.mjs near line 542 that makes the entry call with permission_mode set to plan.
+- P-491: The case for the entry call made in plan mode is written, and what remains is the status print that reads the mode at the time of the print, which nothing prints.
 - P-492: The edit is in guard-cases/dispatch.mjs, adding to the correction case at line 529 a newest message that is a pasted test report with the plan-file write still passing, and the entry's wording noting that the second branch of the acceptance is the one the code holds.
 - P-503: The edit is in PROGRAM.md, which needs an entry ranked for each of Q-HUB-246, Q-HUB-247 and Q-HUB-248, and the items count line changes with them.
 - P-507: The edit is in plans/seed-template.md line 21 (the rule for a changed print or guard, to add the text and counts the old print produced).
@@ -922,14 +922,14 @@ Not a hold, and left open as work:
 - P-532: The edit is in doctrine/hub.md line 36 (the index bullet on the review gate, to state the plans page's rule or point at doctrine/plans.md lines 101 to 146).
 - P-533: The edit is in doctrine/apps.md, putting right the eleven remnants of the scrub; the small check refusing an empty pair of brackets is a hygiene addition and no live rule requires it.
 - P-536: The edit is to the item's entry in PROGRAM.md (reword or retire, since no agent is latched), or a case in guard-cases/dispatch.mjs in which an agent writes a second send's report with a latch standing; doctrine/plans.md lines 718 to 731 still say an agent is latched.
-- P-541: The edit is to the item's entry in PROGRAM.md, reworded to the hold at hook-dispatch.mjs lines 374 to 413 in place of a printed line, and a hand-back naming stop-guard.mjs added to the case at guard-cases/dispatch.mjs line 503.
+- P-541: The case for a hand-back naming stop-guard.mjs is written, and what remains is the printed line that reads the word stop in a typed message, which the prompt does not print, so the entry is to be reworded to the hold.
 - P-542: The edit is in DOCTRINE.md and doctrine/never.md, where one of two sections takes a free id and every citation is swept in the same change.
 - P-548: The edit is in plans/seed-template.md line 9 (the file step's order, naming one run for the step's own cases); the one-repair rule already stands at agent-rules.md line 25, and the fence half names retired plan-fence.mjs, so no fence is asked for here.
 - P-563: The edit, if any, is in plans/seed-template.md, which already keeps the landing step as its own block at lines 83 to 87 apart from the file steps' rules at lines 77 to 78; the entry's record is what changes.
-- P-564: The edit is to the item's entry in PROGRAM.md, reworded to the hold at hook-dispatch.mjs lines 374 to 386 in place of a printed line, with a case at guard-cases/dispatch.mjs near line 503 for a hand-back that closes a step.
+- P-564: The case for a hand-back that closes a step and one whose report holds the word stop is written, and what remains is the typed side, a printed line naming a correction or a stop, which the prompt does not print, so the entry is to be reworded to the hold.
 - P-573: The edit is in plans/seed-template.md lines 63, 66 and 69, where each take-up block orders the landing command's proof for the checks alone before the manifest is written, though that command is retired; the order is to be put right or the line dropped with the command.
 - P-579: The edit is in plans/seed-template.md (the Commands list at lines 27 to 54, to add the can-check line for a step that reads a guard's refusals).
-- P-581: The edit is in guard-cases/dispatch.mjs, a case for a read of the hub's configuration, code and cost record under the manager hold and a plant that takes the exemption of reads out of holdManager, with doctrine/plans.md lines 509 to 523 reworded against P-478's settling.
+- P-581: The case and the planted failure are written, and what remains is a settled meaning of the cost record, which no page or code gives, and the rewording of doctrine/plans.md lines 509 to 523 against P-478's settling.
 
 #### Group 5, waits
 
@@ -999,3 +999,42 @@ Found and left:
 - doctrine/hub.md still describes the status page gate and the plan gate's name check.
 - aim-review.md still falls back on a status line that is retired.
 - agent-rules.md still describes the rules gate and the plan check.
+
+### The cases the holds lacked, run on 15 November 2026
+
+Eleven things the holds do today were held by no case, so a later change could have undone any of them unseen. Pieces 1 and 2 of the way forward found them when each item's acceptance asked for a case the suite did not have. This piece writes the eleven cases and a planted failure for each, in guard-cases/dispatch.mjs, and reads each item against its case.
+
+The eleven cases, each with its planted failure:
+
+- P-126: a Bash git log, plain, with -C and piped, passes under a standing correction while an Agent send stays held (cr_git_log_read).
+- P-492: with a pasted test report as the newest message, the plan file and the scratchpad can be written, and the first refusal of a new start says so (cr_pasted_report_plan).
+- P-519: a go message between two writes of the plan file releases the correction hold (cr_go_between_writes).
+- P-113: two fetches to one host in one message write no latch, for the main thread and for an agent (wf_two_fetches).
+- P-488: a latched agent writes its own report file twice, and edits it, while the main thread stays held (lg_report_again).
+- P-536: a latched agent writes the report of a first, second and third send, and the second send's note (lg_report_second_send).
+- P-491: an entry to plan mode passes with nothing printed and no latch when the reported mode is already plan (pm_enter_plan).
+- P-541: a hand-back naming stop-guard.mjs is no word stop and no correction, and a typed stop still holds (hb_names_stop_file).
+- P-564: a hand-back that closes a step, and one whose report holds the word stop, set no hold and leave the one prompt line (hb_closes_step).
+- P-158: read-only Bash calls of a run in progress and a read of its task output pass the manager hold, and a redirect is still refused (mg_check_in).
+- P-581: the main thread's Read, Grep, Glob and Bash of a settings file, the hub's code and a session transcript pass the manager hold (mg_reads_of_record).
+
+No hold was changed. hook-dispatch.mjs and stop-guard.mjs are as they were, and each new planted failure edits a copy of the hold in the plant's own run.
+
+Set done, six: P-126, P-492, P-519, P-113, P-488 and P-536. Each case meets every part of its acceptance, and the done line names the case, the planted failure and the full run that passed them.
+
+Left open, five, each with a Known line in its entry saying what remains:
+
+- P-491: the status print that reads the mode at the time of the print, which nothing prints.
+- P-541: the printed line that reads the word stop in a typed message, which the prompt does not print. The entry is to be reworded to the hold.
+- P-564: the typed side, a printed line naming a correction or a stop, which the prompt does not print. The entry is to be reworded to the hold.
+- P-158: a named way for the closing of a plan to read a run still going, which no page or code names.
+- P-581: what the cost record is, which no page or code says, so whether a session transcript is that record is in doubt.
+
+The suite after the run: 134 of 134 cases passed with none red, and 270 of 270 planted failures were caught with none missed and none stale. Before this piece it held 123 cases and 259 planted failures. The program holds 121 open entries where it held 127, and 307 done where it held 301. The count verb holds the items count line at 597.
+
+Found and left:
+
+- Several of the new planted failures share a find line with an older one, and the dry listing does not name them as ambiguous: hb_names_stop_file and hb_closes_step share one with hw_harness, wf_two_fetches and pm_enter_plan share one with each other, and the two latch plants lg_report_again and lg_report_second_send carry the line of hl_agent_free inside their own.
+- P-158 may belong with the items set aside by a later page, since the short page's closing is a checker's pass and a read of the runs after the push.
+- P-541 and P-564 ask for a printed line the prompt does not print, and what they want is held, so their entries are to be reworded.
+- The cost record named by P-581 has no definition in the tree.
