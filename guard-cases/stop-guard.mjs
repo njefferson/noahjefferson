@@ -21,15 +21,17 @@ function run(h, dir, entries, payload = {}) {
 }
 const reply = (h, dir, text) => run(h, dir, [ask, say(text)]);
 const refused = (r, re) => r.status === 2 && re.test(r.stderr);
+const STATE = 'State: finished';
 
 export const cases = [
   {
     name: 'stop guard: a reply of 151 words is refused with its count and the way to cut it, one of 150 passes, and 400 words inside a fenced block with 20 outside pass',
     guards: ['stop_word_limit', 'stop_fence_set_aside'],
     run(m, dir, h) {
-      const over = reply(h, dir, words(151));
-      const exact = reply(h, dir, words(150));
-      const fenced = reply(h, dir, `${words(20)}\n\n\`\`\`\n${words(400)}\n\`\`\`\n`);
+      // The planted replies end with a state line (two words), so the counts are made up to 151 and 150 with it.
+      const over = reply(h, dir, `${words(149)}\n\n${STATE}`);
+      const exact = reply(h, dir, `${words(148)}\n\n${STATE}`);
+      const fenced = reply(h, dir, `${words(20)}\n\n\`\`\`\n${words(400)}\n\`\`\`\n\n${STATE}`);
       return h.assertAll([
         ['151 words is refused with its count', refused(over, /runs to 151 words, past 150/) && /put anything longer in a file/.test(over.stderr), over.status + over.stderr],
         ['150 words passes', exact.status === 0, exact.status + exact.stderr],
@@ -43,8 +45,8 @@ export const cases = [
     run(m, dir, h) {
       const sentences = ['I understand your frustration with the status page. The list now reads from the notes file.', 'You are clearly annoyed about this, and the record shows why.', 'The owner is upset by the stale page.'];
       const bad = sentences.map((s) => reply(h, dir, s));
-      const plain = reply(h, dir, 'The list now reads from the notes file, and the status page shows it.');
-      const quoted = reply(h, dir, 'The refusal said:\n\n```\nI understand your frustration.\n```\nThat is all it said.');
+      const plain = reply(h, dir, `The list now reads from the notes file, and the status page shows it.\n\n${STATE}`);
+      const quoted = reply(h, dir, `The refusal said:\n\n\`\`\`\nI understand your frustration.\n\`\`\`\nThat is all it said.\n\n${STATE}`);
       return h.assertAll([
         ['each feeling sentence is refused as a feeling', bad.every((r) => refused(r, /names a feeling of the owner/)), bad.map((r) => r.status + r.stderr).join(' | ')],
         ['a plain sentence passes', plain.status === 0, plain.status + plain.stderr],
@@ -58,7 +60,7 @@ export const cases = [
     run(m, dir, h) {
       const sentences = ['The fence refused the read. From now on I will read the record first.', 'This will not happen again.', 'I promise the record is read.'];
       const bad = sentences.map((s) => reply(h, dir, s));
-      const plain = reply(h, dir, 'The fence refused the read, and the record was read first this time.');
+      const plain = reply(h, dir, `The fence refused the read, and the record was read first this time.\n\n${STATE}`);
       return h.assertAll([
         ['each promise is refused as a promise', bad.every((r) => refused(r, /promises conduct for a later turn/)), bad.map((r) => r.status + r.stderr).join(' | ')],
         ['a plain sentence passes', plain.status === 0, plain.status + plain.stderr],
@@ -70,8 +72,8 @@ export const cases = [
     guards: ['stop_go_word'],
     run(m, dir, h) {
       const bad = ['Say go to continue.', 'You can type go when the step should be sent.', 'Please give approval so the plan can run.', 'Send a go-word and the step goes.'].map((s) => reply(h, dir, s));
-      const plain = ['The go-word is a thing the owner gives.', 'The review gate holds the next step until a message carries a go-word.', 'Stopping here, then paused; you say go and the gate sends the step.'].map((s) => reply(h, dir, s));
-      const later = reply(h, dir, 'The page lists the open steps.\n\nSay go to continue.');
+      const plain = ['The go-word is a thing the owner gives.', 'The review gate holds the next step until a message carries a go-word.', 'Stopping here, then paused; you say go and the gate sends the step.'].map((s) => reply(h, dir, `${s}\n\n${STATE}`));
+      const later = reply(h, dir, `The page lists the open steps.\n\nSay go to continue.\n\n${STATE}`);
       return h.assertAll([
         ['each ask is refused as a go-word ask', bad.every((r) => refused(r, /asks the owner for a go-word/)), bad.map((r) => r.status + r.stderr).join(' | ')],
         ['sentences that only name a go-word pass', plain.every((r) => r.status === 0), plain.map((r) => r.status + r.stderr).join(' | ')],
@@ -83,11 +85,84 @@ export const cases = [
     name: 'stop guard: every fault of one reply is listed together in one refusal, and the refusal does not print the reply',
     guards: ['stop_word_limit', 'stop_feeling', 'stop_promise', 'stop_go_word'],
     run(m, dir, h) {
-      const r = reply(h, dir, `Say go to continue. I understand your frustration. This will not happen again. ${words(160)}`);
+      const r = reply(h, dir, `Say go to continue. I understand your frustration. This will not happen again. ${words(160)}\n\n${STATE}`);
       return h.assertAll([
         ['exit 2', r.status === 2, r.status],
         ['all four faults are named', /words, past 150/.test(r.stderr) && /feeling of the owner/.test(r.stderr) && /promises conduct/.test(r.stderr) && /go-word/.test(r.stderr), r.stderr],
+        ['the refusal counts four faults', /^STOP REFUSED: this reply has 4 faults\./.test(r.stderr), r.stderr],
         ['the refusal does not quote the reply', !/frustration|w100/.test(r.stderr), r.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'stop guard: a reply with no state line is refused and the refusal names the state line and gives its three forms',
+    guards: ['stop_state_line'],
+    run(m, dir, h) {
+      const r = reply(h, dir, 'The list now reads from the notes file.');
+      return h.assertAll([
+        ['a reply with no state line is refused', r.status === 2, r.status + r.stderr],
+        ['the refusal names the state line fault and its three forms', /^- its last line is not a state line\. .*State: finished.*State: paused.*State: running/m.test(r.stderr), r.stderr],
+        ['it is the only fault, counted as one', /^STOP REFUSED: this reply has 1 fault\./.test(r.stderr), r.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'stop guard: a reply whose last line is State: finished passes',
+    guards: ['stop_state_finished'],
+    run(m, dir, h) {
+      const r = reply(h, dir, 'The list now reads from the notes file.\n\nState: finished');
+      return h.assertAll([['State: finished as the last line passes', r.status === 0, r.status + r.stderr]]);
+    },
+  },
+  {
+    name: 'stop guard: a reply whose last line is State: paused on something passes',
+    guards: ['stop_state_paused'],
+    run(m, dir, h) {
+      const r = reply(h, dir, 'The list needs a key only a person can make.\n\nState: paused on the key');
+      return h.assertAll([['State: paused as the last line passes', r.status === 0, r.status + r.stderr]]);
+    },
+  },
+  {
+    name: 'stop guard: a reply whose last line is State: running something passes, with blank lines after it',
+    guards: ['stop_state_running'],
+    run(m, dir, h) {
+      const r = reply(h, dir, 'The check was started.\n\nState: running the check\n\n\n');
+      return h.assertAll([['State: running as the last non-empty line passes', r.status === 0, r.status + r.stderr]]);
+    },
+  },
+  {
+    name: 'stop guard: a state line that is not the last line is refused, and a word other than finished, paused or running does not make one',
+    guards: ['stop_state_last_line', 'stop_state_line'],
+    run(m, dir, h) {
+      const early = reply(h, dir, 'State: finished\n\nOne more line after it.');
+      const other = reply(h, dir, 'The list was changed.\n\nState: done');
+      return h.assertAll([
+        ['a state line followed by another line is refused as a state-line fault', refused(early, /last line is not a state line/), early.status + early.stderr],
+        ['State with another word is refused', refused(other, /last line is not a state line/), other.status + other.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'stop guard: a state line inside a fenced block does not count, and one before a fenced block still does',
+    guards: ['stop_state_fence_inside', 'stop_fence_set_aside'],
+    run(m, dir, h) {
+      const inside = reply(h, dir, 'The list was changed.\n\n```\nState: finished\n```');
+      const before = reply(h, dir, 'The list was changed.\n\nState: finished\n\n```\nsome output\n```');
+      return h.assertAll([
+        ['a state line only inside a fence is refused', refused(inside, /last line is not a state line/), inside.status + inside.stderr],
+        ['a state line with a fence after it passes', before.status === 0, before.status + before.stderr],
+      ]);
+    },
+  },
+  {
+    name: 'stop guard: the count of faults is right when the missing state line stands beside another fault',
+    guards: ['stop_state_line', 'stop_promise'],
+    run(m, dir, h) {
+      const two = reply(h, dir, 'This will not happen again.');
+      const one = reply(h, dir, `This will not happen again.\n\n${STATE}`);
+      return h.assertAll([
+        ['two faults are counted and both named', /^STOP REFUSED: this reply has 2 faults\./.test(two.stderr) && /promises conduct/.test(two.stderr) && /not a state line/.test(two.stderr), two.status + two.stderr],
+        ['with the state line given, one fault is counted and the state line is not named', /^STOP REFUSED: this reply has 1 fault\./.test(one.stderr) && !/state line/.test(one.stderr), one.status + one.stderr],
       ]);
     },
   },
@@ -139,7 +214,7 @@ export const cases = [
     guards: ['stop_why'],
     run(m, dir, h) {
       const rs = [words(151), 'This will not happen again.', 'Say go to continue.', 'I understand your frustration.'].map((t) => reply(h, dir, t));
-      const why = 'Why: the reader wants the end result, not what was done or how, and cannot read a long reply. A feeling is not the session\'s to name, a promise is words about a later turn, and a go-word is for the one who types it to give.';
+      const why = 'Why: the reader wants the end result, not what was done or how, and cannot read a long reply, and must be able to tell at once whether the work is finished, paused on something, or still running. A feeling is not the session\'s to name, a promise is words about a later turn, and a go-word is for the one who types it to give.';
       return h.assertAll([
         ['each refusal ends with the Why sentence as its last line', rs.every((r) => r.status === 2 && r.stderr.trimEnd().split('\n').pop() === why), rs.map((r) => r.stderr).join(' | ')],
       ]);
@@ -195,6 +270,12 @@ export const plants = {
   stop_feeling: ['if (EMOTION.some((re) => re.test(prose)))', 'if (false)', 'stop-guard.mjs'],
   stop_promise: ['if (PROMISE.some((re) => re.test(prose)))', 'if (false)', 'stop-guard.mjs'],
   stop_go_word: ['if (asksGoWord(open))', 'if (false)', 'stop-guard.mjs'],
+  stop_state_line: ['if (!STATE_LINE.test(lastLine))', 'if (false)', 'stop-guard.mjs'],
+  stop_state_finished: ['(?:finished|', '(?:finishedx|', 'stop-guard.mjs'],
+  stop_state_paused: ['|paused|', '|pausedx|', 'stop-guard.mjs'],
+  stop_state_running: ['|running)\\b/i;', '|runningx)\\b/i;', 'stop-guard.mjs'],
+  stop_state_last_line: ['.filter(Boolean).pop() ?? \'\';', '.filter(Boolean).shift() ?? \'\';', 'stop-guard.mjs'],
+  stop_state_fence_inside: ["const lastLine = prose.split('\\n')", "const lastLine = reply.replace(/^```.*$/gm, '').split('\\n')", 'stop-guard.mjs'],
   stop_agent: ['hook.agent_id || ', '', 'stop-guard.mjs'],
   stop_tool_call: ['if (Array.isArray(content) && content.some(', 'if (false && content.some(', 'stop-guard.mjs'],
   stop_chain_cap: ['if (held >= CHAIN_LIMIT)', 'if (false)', 'stop-guard.mjs'],

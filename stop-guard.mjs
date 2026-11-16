@@ -9,7 +9,9 @@
  *   a. runs past 150 words, counted outside fenced code blocks;
  *   b. names a feeling of the owner's;
  *   c. promises conduct for a later turn;
- *   d. asks the owner for a go-word on its open line.
+ *   d. asks the owner for a go-word on its open line;
+ *   e. does not end with a state line: its last line outside fenced blocks that is not empty must open with State: and then say
+ *      finished, paused or running.
  * Every fault of one reply is listed in one refusal, and the refusal never prints or quotes a message of the owner's. A turn that ended in
  * a tool call, or in no text, has nothing to judge and passes. It can never loop: after two refusals in one chain of stops (the Stop-hook
  * refusals the transcript shows since the newest tool call) it passes with one line saying so. Any error inside it exits 0.
@@ -22,7 +24,8 @@
 import { readFileSync } from 'node:fs';
 import { tailEntries, textOf, isOwnerMessage } from './transcript-tail.mjs';
 
-const WHY = 'Why: the reader wants the end result, not what was done or how, and cannot read a long reply. A feeling is not the session\'s to name, a promise is words about a later turn, and a go-word is for the one who types it to give.';
+const WHY = 'Why: the reader wants the end result, not what was done or how, and cannot read a long reply, and must be able to tell at once whether the work is finished, paused on something, or still running. A feeling is not the session\'s to name, a promise is words about a later turn, and a go-word is for the one who types it to give.';
+const STATE_LINE = /^State:\s*(?:finished|paused|running)\b/i;
 const WORD_LIMIT = 150;
 const CHAIN_LIMIT = 2;
 
@@ -104,6 +107,8 @@ try {
   if (PROMISE.some((re) => re.test(prose))) faults.push('it promises conduct for a later turn. Say what was wrong and what was done, and stop there.');
   const open = prose.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
   if (asksGoWord(open)) faults.push('it asks the owner for a go-word. A go-word is the owner\'s to give: end the turn and let the work that does not depend on it go on.');
+  const lastLine = prose.split('\n').map((l) => l.trim()).filter(Boolean).pop() ?? '';
+  if (!STATE_LINE.test(lastLine)) faults.push('its last line is not a state line. End the reply with one line that opens with State: and then says finished, paused or running, as State: finished, State: paused on what, or State: running what.');
   if (!faults.length) process.exit(0);
 
   // The cap holds whatever the payload says: stop_hook_active true with two of this guard's refusals in the chain is the case it is for,

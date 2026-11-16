@@ -24,3 +24,11 @@ Each fenced block below holds lines that left a rules page, under a line giving 
 10. From the first uncommitted change to the push, the session that manages does not end its turn. The commit, the checker and the push follow one another, so a stop hook that asks for a commit and a push is answered by finishing them.
 2. Stage every changed and new file by name, because the checks read tracked files. Then run the hub's eight checks, as the hub's own landing command spells them, each as its own command in the foreground:
 ```
+
+16 November 2026: the dispatcher and the reply hold each hold more, so the two lines of `CLAUDE.md` that say what they hold were brought to it, and the running page's count of the holds was brought to six.
+
+```
+- Five holds run in every session. Each says in its refusal what it holds and what lifts it.
+- The dispatcher also holds the main thread: under the owner's word (the word stop, or a message with no go-word), after a refusal, and from doing the work itself. `plans/native/running.md` says what each holds and what lifts it.
+- `stop-guard.mjs` refuses a final reply past 150 words, or one that names a feeling, promises conduct or asks for a go-word, and `rules-keep-check.mjs` fails a commit that drops a line from a rules page.
+```

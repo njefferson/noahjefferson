@@ -7,8 +7,11 @@
  *
  *   PreToolUse     the choice popup (AskUserQuestion) is refused in every repository; push-guard.mjs, from this folder, judges the call
  *                  and its refusal is returned (the check before a push is always on); a tool that is not a read is refused when the
- *                  push guard did not run cleanly; then three holds, in this order, each wrapped so that an error inside it passes
+ *                  push guard did not run cleanly; then five holds, in this order, each wrapped so that an error inside it passes
  *                  the call and prints one line to the error output, and none of them ever refusing a read (READS):
+ *                    0. the read at a start (holdRead): after a start, a clear or a compaction the main thread may only read until the
+ *                       short page, doctrine/never.md and doctrine/hub.md have each been read whole, in the hub's copy or in a checkout of
+ *                       the hub; an agent is not held by it (HOOK_DISPATCH_READ_HOLD=off is its test seam).
  *                    1. the typed word: a newest typed message with the whole word stop and no go-word at its end holds every call of
  *                       the main thread and of every agent but a read (and TaskStop on the main thread, an agent's own hand-back);
  *                       a newest typed message with no go-word at its end holds the main thread's new starts (Agent, Task,
@@ -16,7 +19,9 @@
  *                       session scratchpad). A later message ending with go, ok, continue, approved or yes lifts either, and so does
  *                       an approval of a plan at the button (the result of ExitPlanMode opening "User has approved your plan") that
  *                       comes after the message. A task notification, an agent's hand-back, hook feedback, a restart notice, a
- *                       slash command's entry and a system reminder are harness text and set or lift nothing.
+ *                       slash command's entry and a system reminder are harness text and set or lift nothing. A typed message still
+ *                       waiting in the queue (waitingMessages) holds as a delivered one does, its refusal says a message is waiting and
+ *                       prints it, and it lifts nothing.
  *                    2. the latch: a main-thread call the dispatcher refused (the popup, the push guard, a repository's own hook)
  *                       writes a latch file for the session; while it stands the main thread passes only reads and TaskStop, and the
  *                       refusal repeats what was first refused. Only a message typed after the latch clears it. A refusal of hold 1
@@ -24,6 +29,8 @@
  *                    3. the manager does no work: on the main thread, a write of a file that is neither directly under
  *                       ~/.claude/plans/ nor in the session scratchpad, a git command that changes a repository, and a Bash line that
  *                       writes a file outside the scratchpad by a redirect, sed -i or tee, are refused. An agent is not held by it.
+ *                    4. the approved page (holdPlan): on the main thread, a write of a file under ~/.claude/plans/ passes only in plan
+ *                       mode; where the call does not say its mode it passes, as before.
  *                  Then each repository's own hooks run.
  *   Stop           on the main thread, stop-guard.mjs from this folder is run once with the payload on its input and its refusal is
  *                  returned, whether or not a repository's settings carry a shim for it; then each repository's own other hooks.
@@ -290,6 +297,23 @@ const CORRECTION_TEXT = `NEW STARTS HELD: the newest typed message does not end 
 const MANAGER_TEXT = (what) => `MANAGER DOES NO WORK: ${what} is refused on the main thread. The main thread manages and a worker does the step: send a worker with the approved page's path and the step number. `
   + 'Reads, Bash that changes no repository and no file outside the scratchpad, a plan file directly under ~/.claude/plans/ and the session scratchpad pass. '
   + WHY_MANAGER.trimEnd();
+const WHY_WAITING = 'Why: a message that waits in the queue while a turn runs is not seen by the session, so without the hold the work goes on over it and it is never answered. ';
+const WHY_READ = 'Why: every other rule rests on the standing pages, because a session that has not read the rules cannot follow them. ';
+const WHY_PLAN = 'Why: an approved page is changed only by a change that is written and approved, and the button follows only in plan mode, so a write outside it puts work under a page nobody approved. ';
+/** The refusal of a message still waiting; it prints each waiting message word for word, so that it can be answered. */
+const WAITING_TEXT = (stop, texts) => `MESSAGE WAITING: ${texts.length === 1 ? 'a typed message is' : `${texts.length} typed messages are`} in the queue and not yet delivered to the session, and the session cannot see ${texts.length === 1 ? 'it' : 'them'} until the turn ends. `
+  + (stop
+    ? 'One carries the word stop and does not end with a go-word, so every call is held, the main thread\'s and every agent\'s. Only reads pass, and TaskStop on the main thread (an agent may still hand back what it has). '
+    : 'The newest does not end with a go-word, so the main thread starts nothing new: no Agent, Task, SendMessage or Workflow, and no write of a file other than a plan file directly under ~/.claude/plans/ or a file in the session scratchpad. Reads, Bash, plan mode and its exit pass, and agents already running go on. ')
+  + `A later typed message whose last word is one of ${GO_WORDS.join(', ')} lifts it, and so does an approval of a plan at the button given after it. `
+  + WHY_WAITING
+  + 'Answer it now in plain text, point by point, and end the turn; ending the turn is what delivers it. '
+  + `The waiting message${texts.length === 1 ? '' : 's'}, word for word:\n${texts.map((t, i) => `--- message ${i + 1} of ${texts.length} ---\n${t}`).join('\n')}\n--- end ---`;
+const PLAN_TEXT = 'PLAN FILE WRITE OUTSIDE PLAN MODE: a write of a file under ~/.claude/plans/ is refused on the main thread unless the call is made in plan mode, where the button follows. '
+  + 'Reads, an agent\'s calls, and every write of a file outside the plans folder are not held by it. '
+  + 'Entering plan mode lifts it for the writes made there, and the change is written in full and approved at the button before any work goes on under it. '
+  + WHY_PLAN
+  + 'Say in plain text what change the page needs, and make it in plan mode.';
 const NEW_STARTS = new Set(['Agent', 'Task', 'SendMessage', 'Workflow']);
 const FILE_WRITES = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const AGENT_RETURN = /^(?:SubagentHandback|StructuredOutput)$/;
@@ -364,31 +388,89 @@ export function approvalIndexes(entries) {
   return out;
 }
 
+const normText = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
+/**
+ * The typed messages still waiting in the harness's queue (lifted from the retired pending guard's count of the queue).
+ * The transcript records a typed message the moment it is sent, as a queue-operation entry with the operation enqueue and the words as
+ * `content`; it reaches the session later, as a turn's prompt or as a queued_command attachment, and the queue logs a dequeue (no
+ * content) or a remove (with the content) when it lets go. A message counts as delivered when a later user entry or attachment carries
+ * its words, or a remove carries them; when every enqueue has been dequeued or removed nothing waits, whatever the words found. The
+ * harness's own enqueues (a task notification, an agent's hand-back, and the other tags of HARNESS_TAG) are no typed message and are
+ * set aside, so a worker's hand-back never holds anything. A message is let go once a message typed after it has arrived.
+ * @returns {{i: number, text: string, at: number}[]} each waiting typed message, oldest first: the index of its enqueue entry, its
+ *   words exactly as enqueued, and the time it was typed in ms.
+ */
+export function waitingMessages(entries) {
+  const items = [];
+  const given = [];
+  let size = 0;
+  const deliver = (t, arrivedAt, byOwner) => {
+    let hit = false;
+    for (const x of items) {
+      if (!x.done && x.key && (t.includes(x.key) || (x.key.includes(t) && t.length > 40))) {
+        x.done = true; hit = true;
+        if (x.owner && x.at) given.push(x.at);
+      }
+    }
+    if (!hit && byOwner && Number.isFinite(arrivedAt) && arrivedAt > 0) given.push(arrivedAt);
+  };
+  entries.forEach((e, i) => {
+    const at = Date.parse(e?.timestamp ?? '');
+    if (e?.type === 'queue-operation') {
+      const c = typeof e.content === 'string' ? e.content : null;
+      if (e.operation === 'enqueue') {
+        items.push({ i, text: c, key: normText(c), at: Number.isFinite(at) ? at : 0, owner: !!(c && c.trim() && !tail.HARNESS_TAG.test(c)), done: false });
+        size++;
+      } else if (e.operation === 'dequeue') {
+        size = Math.max(0, size - 1);
+      } else if (e.operation === 'remove') {
+        size = Math.max(0, size - 1);
+        if (c) { const it = items.find((x) => !x.done && x.key === normText(c)); if (it) it.done = true; }
+      } else if (/^(?:popAll|clear)$/.test(String(e.operation ?? ''))) {
+        size = 0;
+      }
+      return;
+    }
+    const delivered = (e?.type === 'user' && !e.isMeta && !e.isCompactSummary) || (e?.type === 'attachment' && e.attachment?.type === 'queued_command');
+    if (!delivered) return;
+    const t = normText(tail.textOf(e));
+    if (t) deliver(t, at, tail.isOwnerMessage(e) && !tail.HARNESS_TAG.test(tail.textOf(e)));
+  });
+  if (size <= 0) return [];
+  return items.filter((x) => !x.done && x.key).slice(-size).filter((x) => x.owner && !given.some((g) => g > x.at)).map((x) => ({ i: x.i, text: x.text, at: x.at }));
+}
+
 /**
  * What the typed messages hold, read from transcript entries.
- * @returns {{stop: boolean, correction: boolean, settled: boolean}} `stop`: the newest stop message has no later go message and no
- *   approval after it. `correction`: the newest typed message does not end with a go-word, is not a stop and has no approval after it.
- *   `settled`: the entries hold a stop or a go message, so a wider tail could not change `stop`. A message is judged by
- *   `isOwnerMessage` of transcript-tail.mjs, which sets harness text aside.
+ * @returns {{stop: boolean, correction: boolean, settled: boolean, waiting: string[]}} `stop`: the newest stop message has no later go
+ *   message and no approval after it. `correction`: the newest typed message does not end with a go-word, is not a stop and has no
+ *   approval after it. `settled`: the entries hold a stop or a go message, so a wider tail could not change `stop`. A message is judged
+ *   by `isOwnerMessage` of transcript-tail.mjs, which sets harness text aside. A message still waiting in the queue
+ *   (`waitingMessages`) holds as a delivered one does, by the same words, but lifts nothing, because the session has not seen it;
+ *   `waiting` is the words of each waiting message, oldest first.
  */
 export function holdsIn(entries) {
   const idx = [];
   entries.forEach((e, i) => { if (tail.isOwnerMessage(e)) idx.push(i); });
-  if (!idx.length) return { stop: false, correction: false, settled: false };
+  const wait = waitingMessages(entries);
+  if (!idx.length && !wait.length) return { stop: false, correction: false, settled: false, waiting: [] };
   const approvals = approvalIndexes(entries);
   const text = (i) => tail.textOf(entries[i]);
-  const lifted = (i) => idx.some((j) => j > i && endsWithGoWord(text(j))) || approvals.some((a) => a > i);
-  let stopAt = -1;
-  for (let k = idx.length - 1; k >= 0; k--) if (isStopMessage(text(idx[k]))) { stopAt = idx[k]; break; }
-  const last = idx[idx.length - 1];
-  const correction = !endsWithGoWord(text(last)) && !isStopMessage(text(last)) && !approvals.some((a) => a > last);
-  return { stop: stopAt >= 0 && !lifted(stopAt), correction, settled: stopAt >= 0 || idx.some((i) => endsWithGoWord(text(i))) };
+  const all = [...idx.map((i) => ({ i, text: text(i), waiting: false })), ...wait.map((w) => ({ i: w.i, text: w.text, waiting: true }))].sort((a, b) => a.i - b.i);
+  const lifted = (m) => (!m.waiting && idx.some((j) => j > m.i && endsWithGoWord(text(j)))) || approvals.some((a) => a > m.i);
+  let stopMsg = null;
+  for (let k = all.length - 1; k >= 0; k--) if (isStopMessage(all[k].text)) { stopMsg = all[k]; break; }
+  // A waiting go message lifts nothing: the newest message that can hold is the one a correction is read from.
+  const holders = all.filter((m) => !(m.waiting && endsWithGoWord(m.text)));
+  const last = holders[holders.length - 1];
+  const correction = !!last && !endsWithGoWord(last.text) && !isStopMessage(last.text) && !approvals.some((a) => a > last.i);
+  return { stop: !!stopMsg && !lifted(stopMsg), correction, settled: !!stopMsg || idx.some((i) => endsWithGoWord(text(i))), waiting: wait.map((w) => w.text) };
 }
 
 /** The holds standing for a call, read from the session's transcript through a tail that widens (2, 8, then 32 MB) until it is settled. */
 export function ownerHolds(p) {
   const file = mainTranscript(p);
-  let h = { stop: false, correction: false, settled: false };
+  let h = { stop: false, correction: false, settled: false, waiting: [] };
   for (const mb of [2, 8, 32]) {
     h = holdsIn(tail.tailEntries(file, mb * 1024 * 1024));
     if (h.settled) break;
@@ -404,11 +486,12 @@ function holdWord(p) {
   if (h.stop) {
     if (!p.agent_id && tool === 'TaskStop') return null;
     if (p.agent_id && AGENT_RETURN.test(tool)) return null;
-    return STOP_TEXT;
+    return h.waiting.length ? WAITING_TEXT(true, h.waiting) : STOP_TEXT;
   }
   if (p.agent_id || !h.correction) return null;
-  if (NEW_STARTS.has(tool)) return CORRECTION_TEXT;
-  if (FILE_WRITES.has(tool) && !mayWrite(p, p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '')) return CORRECTION_TEXT;
+  const text = h.waiting.length ? WAITING_TEXT(false, h.waiting) : CORRECTION_TEXT;
+  if (NEW_STARTS.has(tool)) return text;
+  if (FILE_WRITES.has(tool) && !mayWrite(p, p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '')) return text;
   return null;
 }
 
@@ -550,12 +633,136 @@ function holdManager(p) {
   return null;
 }
 
+// ---- the read at a start and the approved page ----
+
+/** The three standing pages, each as a path beneath a copy of the hub. */
+export const STANDING_PAGES = ['plans/native/page.md', 'doctrine/never.md', 'doctrine/hub.md'];
+const canon = (f) => { try { return realpathSync(String(f)); } catch { return resolve(String(f)); } };
+
+/** The copies of the hub whose pages count: this folder, the clone every gate runs from, and any hub checkout beneath or beside the launch folder. */
+function hubCopies(p) {
+  const out = [HUB, join(homedir(), '.claude', 'hub')];
+  try { for (const r of reposUnder(resolve(process.env.CLAUDE_PROJECT_DIR || p.cwd || process.cwd()))) if (isHubCheckout(r)) out.push(r); } catch { /* the other copies stand */ }
+  return [...new Set(out.map(canon))];
+}
+
+/** @returns {{text: number, split: number}|null} the lines of text a file holds and the count the harness records as its total (the empty text after a final newline counted); null when it cannot be read. */
+function linesOf(file) {
+  try {
+    const parts = readFileSync(file, 'utf8').split('\n');
+    return { text: parts.length - (parts[parts.length - 1] === '' ? 1 : 0), split: parts.length };
+  } catch { return null; }
+}
+
 /**
- * Run the three holds on a call.
+ * Have Read results in these entries covered every line of a file as it stands?
+ * @returns {boolean} true when the Read results of the main thread that are not errors, taken together, return every line of the file.
+ *   A result comes from the harness's own record (`toolUseResult.file`: its first line, its count of lines and the file's total) or,
+ *   where that is absent, from the line numbers in its text. A result recorded with a total that is not the file's now was made of
+ *   other text and counts for nothing; a call's offset and limit count for nothing, only the lines returned do.
+ */
+export function readWhole(entries, file) {
+  const n = linesOf(file);
+  if (!n) return false;
+  if (n.text === 0) return true;
+  const want = canon(file);
+  const asked = new Map();
+  for (const e of entries) {
+    const c = e?.message?.content;
+    if (e?.type === 'assistant' && !e.isSidechain && !e.agentId && Array.isArray(c)) for (const b of c) if (b?.type === 'tool_use' && b.name === 'Read') asked.set(b.id, String(b.input?.file_path ?? ''));
+  }
+  const got = new Set();
+  for (const e of entries) {
+    const c = e?.message?.content;
+    if (e?.type !== 'user' || e.isSidechain || e.agentId || !Array.isArray(c)) continue;
+    for (const b of c) {
+      if (b?.type !== 'tool_result' || b.is_error || !asked.has(b.tool_use_id)) continue;
+      const rec = e.toolUseResult?.file;
+      if (canon(rec?.filePath || asked.get(b.tool_use_id)) !== want) continue;
+      if (rec && Number.isFinite(rec.startLine) && Number.isFinite(rec.numLines) && typeof rec.content === 'string') {
+        if (Number(rec.totalLines) > 0 && Number(rec.totalLines) !== n.text && Number(rec.totalLines) !== n.split) continue;
+        for (let k = 0; k < rec.numLines; k++) got.add(rec.startLine + k);
+      } else {
+        const t = typeof b.content === 'string' ? b.content : Array.isArray(b.content) ? b.content.map((x) => x?.text ?? '').join('\n') : '';
+        for (const m of t.matchAll(/^\s*(\d+)\t/gm)) got.add(Number(m[1]));
+      }
+    }
+  }
+  for (let k = 1; k <= n.text; k++) if (!got.has(k)) return false;
+  return true;
+}
+
+/** The last compaction in the entries: the system compact_boundary or the summary that follows it. @returns {number} its index, or -1. */
+function lastCompaction(entries) {
+  let at = -1;
+  entries.forEach((e, i) => { if ((e?.type === 'system' && e.subtype === 'compact_boundary') || (e?.type === 'user' && e.isCompactSummary === true)) at = i; });
+  return at;
+}
+
+/**
+ * HOLD 4: the standing pages are read, whole, before anything else.
+ * After a start, a clear or a compaction the main thread may only read until the short page, doctrine/never.md and doctrine/hub.md have
+ * each been read whole, in the hub's copy or in a checkout of the hub. The reads are looked for in the session's transcript since its last
+ * compaction (all of it where there is none), through a tail that widens (2, 8, then 32 MB). A resume holds the same transcript, so it
+ * owes the read only where the transcript since the last start or compaction does not hold it. A transcript that cannot be read, or whose
+ * reach cannot be settled, leaves the call through. An agent's call is never held: workers and checkers read their own pages.
+ * HOOK_DISPATCH_READ_HOLD=off is the test seam that sets the hold aside, for the cases of the other holds, whose transcripts hold no reads.
+ * @returns {string|null} the refusal, or null.
+ */
+function holdRead(p) {
+  if (process.env.HOOK_DISPATCH_READ_HOLD === 'off') return null;
+  const tool = String(p.tool_name ?? '');
+  if (!p.agent_id && tool === 'TaskStop') return null;
+  if (p.agent_id) return null;
+  if (READS.has(tool)) return null;
+  const file = mainTranscript(p);
+  if (!file) return null;
+  let size = 0;
+  try { size = statSync(file).size; } catch { return null; }
+  const copies = hubCopies(p);
+  const pages = STANDING_PAGES.map((rel) => ({ rel, files: copies.map((c) => join(c, rel)).filter((f) => existsSync(f)) })).filter((pg) => pg.files.length);
+  if (!pages.length) return null;
+  for (const mb of [2, 8, 32]) {
+    const entries = tail.tailEntries(file, mb * 1024 * 1024);
+    if (!entries.length) return null;
+    const cut = lastCompaction(entries);
+    const live = entries.slice(cut + 1);
+    const unread = pages.filter((pg) => !pg.files.some((f) => readWhole(live, f)));
+    if (!unread.length) return null;
+    if (cut >= 0 || size <= mb * 1024 * 1024) {
+      const list = unread.map((pg) => `${pg.files[0]} (every line, ${linesOf(pg.files[0])?.text} lines)`).join('; ');
+      return `STANDING PAGES UNREAD: this session started or was compacted and has not read ${unread.length === 1 ? 'a standing page' : 'the standing pages'} whole since, so the main thread may only read until ${unread.length === 1 ? 'it has' : 'each has'} been read: ${list}. `
+        + 'Only reads pass, and TaskStop on the main thread; an agent\'s calls are not held by it, and it sets no latch. Read each in full, in as many Read calls as it takes, in the hub\'s copy or in a checkout of the hub; a summary or another copy is not the page. '
+        + 'Read results that between them return every line lift it, and a compaction makes the read due again. '
+        + WHY_READ.trimEnd();
+    }
+  }
+  return null;
+}
+
+/**
+ * HOLD 5: the approved page is changed only in plan mode.
+ * A write of a file under ~/.claude/plans/ passes on the main thread only in plan mode, where the button follows. The mode is the
+ * harness's own word on the call (`permission_mode`); where the call does not say one, the harness has not told which mode the call is
+ * made in, and the write passes as it did before this hold. An agent's call is not held by it.
+ * @returns {string|null} the refusal, or null.
+ */
+function holdPlan(p) {
+  const tool = String(p.tool_name ?? '');
+  if (p.agent_id || !FILE_WRITES.has(tool)) return null;
+  const mode = p.permission_mode;
+  if (typeof mode !== 'string' || !mode.trim() || /plan/i.test(mode)) return null;
+  const root = join(homedir(), '.claude', 'plans');
+  const a = absPath(p, p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '');
+  return a.startsWith(root + '/') ? PLAN_TEXT : null;
+}
+
+/**
+ * Run the holds on a call.
  * @returns {string|null} the first refusal. A hold that throws is set aside, one line goes to the error output and the call passes it.
  */
 function holds(p) {
-  for (const [key, name, hold] of [['word', 'the typed word hold', holdWord], ['latch', 'the latch hold', holdLatch], ['manager', 'the manager hold', holdManager]]) {
+  for (const [key, name, hold] of [['read', 'the read hold', holdRead], ['word', 'the typed word hold', holdWord], ['latch', 'the latch hold', holdLatch], ['manager', 'the manager hold', holdManager], ['plan', 'the plan file hold', holdPlan]]) {
     try {
       if (process.env.HOOK_DISPATCH_THROW === key) throw new Error('planted fault');
       const why = hold(p);

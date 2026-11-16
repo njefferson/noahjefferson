@@ -9,10 +9,13 @@ import { pathToFileURL } from 'node:url';
 const pageLine = (hub) => `HOW WORK GOES HERE: the short page, ${hub}/plans/native/page.md. The procedures and the roles are files under ${hub}/plans/native/skills and ${hub}/plans/native/roles. The push guard and the check before a push hold every push of staging and main, and the choice popup is refused.`;
 const said = (r) => `exit ${r.status}: ${r.stdout}${r.stderr}`.slice(0, 600);
 
-/** Run `node <hub>/hook-dispatch.mjs <event>` with a payload on its input, in a launch folder, under a home of its own. */
+/**
+ * Run `node <hub>/hook-dispatch.mjs <event>` with a payload on its input, in a launch folder, under a home of its own.
+ * The read at a start is set aside (HOOK_DISPATCH_READ_HOLD=off) unless a case turns it on: the transcripts of the other holds' cases hold no reads.
+ */
 function disp(h, hub, event, payload = {}, o = {}) {
   const launch = o.launch ?? h.tmp('dp-launch-');
-  const env = { ...process.env, HOME: h.tmp('dp-home-'), CLAUDE_PROJECT_DIR: launch, ...(o.env ?? {}) };
+  const env = { ...process.env, HOME: h.tmp('dp-home-'), CLAUDE_PROJECT_DIR: launch, HOOK_DISPATCH_READ_HOLD: 'off', ...(o.env ?? {}) };
   delete env.HUB_LAUNCH_DIR;
   return spawnSync('node', [join(hub, 'hook-dispatch.mjs'), ...(Array.isArray(event) ? event : [event])], {
     input: o.raw ?? JSON.stringify({ hook_event_name: event, cwd: launch, session_id: 'dp-session', ...payload }), encoding: 'utf8', timeout: 60000, env });
@@ -83,6 +86,41 @@ const call = (tool_name, tool_input, tr, extra = {}) => ({ tool_name, tool_input
 const held = (r, re) => r.status === 2 && re.test(r.stderr);
 const passes = (r) => r.status === 0 && r.stdout === '' && r.stderr === '';
 const gaveNoMessage = (r, words) => !new RegExp(words, 'i').test(r.stderr);
+
+// ---- the read at a start: a hub copy with three planted pages, and the Read results the harness records ----
+const STANDING = ['plans/native/page.md', 'doctrine/never.md', 'doctrine/hub.md'];
+const PAGE_LINES = { 'plans/native/page.md': 4, 'doctrine/never.md': 6, 'doctrine/hub.md': 9 };
+const pageRows = (rel) => Array.from({ length: PAGE_LINES[rel] }, (_, k) => `${rel} planted line ${k + 1}`);
+/** A copy of the hub's dispatcher files with the three standing pages planted in it, each ending in a newline. */
+function pagedHub(h, dir) {
+  const hub = hubCopy(h, dir);
+  for (const rel of STANDING) { mkdirSync(join(hub, rel, '..'), { recursive: true }); writeFileSync(join(hub, rel), pageRows(rel).join('\n') + '\n'); }
+  return hub;
+}
+/**
+ * A Read call and its result as the harness records them: lines `from` to `to` of a page whose total the harness counts as one more than
+ * its lines of text (the empty text after the final newline). `form` is 'file' for the harness's own record, 'text' for line numbers in the text only.
+ */
+function readOf(h, s, id, file, rel, from, to, { form = 'file', total, isError = false } = {}) {
+  const rows = [...pageRows(rel), ''];
+  const raw = rows.slice(from - 1, to).join('\n');
+  const text = rows.slice(from - 1, to).map((l, k) => `${from + k}\t${l}`).join('\n');
+  const rec = { ...h.result(s + 1, id, text, isError) };
+  if (form === 'file') rec.toolUseResult = { type: 'text', file: { filePath: file, content: raw, numLines: to - from + 1, startLine: from, totalLines: total ?? rows.length } };
+  return [h.tool(s, id, 'Read', { file_path: file }), rec];
+}
+/** The whole of one page read in one call. */
+const readAll = (h, s, id, hub, rel, o) => readOf(h, s, id, join(hub, rel), rel, 1, PAGE_LINES[rel] + 1, o);
+/** All three pages read whole, from the step number `s`. */
+const readAllThree = (h, s, hub, o) => STANDING.flatMap((rel, k) => readAll(h, s + k * 2, `rd${s}-${k}`, hub, rel, o));
+// ---- a typed message still waiting in the queue, as the harness records it ----
+const enqueue = (h, s, text) => ({ type: 'queue-operation', operation: 'enqueue', timestamp: h.ts(s), content: text });
+const dequeue = (h, s) => ({ type: 'queue-operation', operation: 'dequeue', timestamp: h.ts(s) });
+const removed = (h, s, text) => ({ type: 'queue-operation', operation: 'remove', timestamp: h.ts(s), content: text, reason: 'absorbed_mid_turn' });
+/** A queued message delivered between tool calls, as the attachment the harness writes. */
+const absorbed = (h, s, text) => ({ type: 'attachment', timestamp: h.ts(s), attachment: { type: 'queued_command', prompt: text, commandMode: 'prompt', origin: { kind: 'human' }, timestamp: h.ts(s) } });
+const reading = (w, hub, payload) => w.run(hub, payload, { HOOK_DISPATCH_READ_HOLD: 'on' });
+const compaction = (h, s) => [{ type: 'system', subtype: 'compact_boundary', timestamp: h.ts(s) }, { type: 'user', timestamp: h.ts(s + 1), isCompactSummary: true, message: { role: 'user', content: 'This session is being continued from a previous conversation. Summary: planted.' } }];
 
 export const cases = [
   {
@@ -606,14 +644,15 @@ export const cases = [
       const w = world(h);
       const report = 'Test report from the last run:\nRED CASES: none\n312 of 312 passed\nPLANTS NOT RUN: this run ran the cases only';
       const tr = h.transcript([typed(h, 0, 'Go.'), h.tool(1, 'r1', 'Bash', { command: 'git status' }), h.result(2, 'r1', 'clean'), typed(h, 5, report)]);
-      const planW = w.run(dir, call('Write', { file_path: w.plan, content: 'x' }, tr));
-      const planE = w.run(dir, call('Edit', { file_path: w.plan, old_string: 'a', new_string: 'b' }, tr));
+      // A plan file is written in plan mode, the only mode in which the approved page's hold lets it through.
+      const planW = w.run(dir, call('Write', { file_path: w.plan, content: 'x' }, tr, { permission_mode: 'plan' }));
+      const planE = w.run(dir, call('Edit', { file_path: w.plan, old_string: 'a', new_string: 'b' }, tr, { permission_mode: 'plan' }));
       const scratchW = w.run(dir, call('Write', { file_path: w.scratch, content: 'x' }, tr));
       const send = w.run(dir, call('Agent', { prompt: 'x' }, tr));
       const repoW = w.run(dir, call('Write', { file_path: w.repoFile, content: 'x' }, tr));
       return h.assertAll([
-        ['a Write of the plan file passes with nothing printed', passes(planW), said(planW)],
-        ['an Edit of the plan file passes', passes(planE), said(planE)],
+        ['a Write of the plan file in plan mode passes with nothing printed', passes(planW), said(planW)],
+        ['an Edit of the plan file in plan mode passes', passes(planE), said(planE)],
         ['a Write in the scratchpad passes', passes(scratchW), said(scratchW)],
         ['an Agent send is refused, and the refusal says a plan file directly under the plans folder may be written meanwhile', held(send, /NEW STARTS HELD: .*no write of a file other than a plan file directly under ~\/\.claude\/plans\/ or a file in the session scratchpad/s), said(send)],
         ['a repository Write is refused by the same hold', held(repoW, /NEW STARTS HELD/), said(repoW)],
@@ -630,11 +669,12 @@ export const cases = [
       const before = h.transcript([typed(h, 0, 'Ok but change the plan first.'), ...firstWrite]);
       const after = h.transcript([typed(h, 0, 'Ok but change the plan first.'), ...firstWrite, typed(h, 10, 'Fine, carry on with the plan. Go.')]);
       const send = (tr) => w.run(dir, call('Agent', { prompt: 'x' }, tr));
-      const write = (tr) => w.run(dir, call('Write', { file_path: w.plan, content: 'two' }, tr));
+      // Both writes are made in plan mode, where a plan file may be written.
+      const write = (tr) => w.run(dir, call('Write', { file_path: w.plan, content: 'two' }, tr, { permission_mode: 'plan' }));
       return h.assertAll([
-        ['before the go message the first write of the plan file passes', passes(write(before)), said(write(before))],
+        ['before the go message the first write of the plan file in plan mode passes', passes(write(before)), said(write(before))],
         ['before the go message an Agent send is held', held(send(before), /NEW STARTS HELD/), said(send(before))],
-        ['after the go message the second write of the plan file passes', passes(write(after)), said(write(after))],
+        ['after the go message the second write of the plan file in plan mode passes', passes(write(after)), said(write(after))],
         ['after the go message an Agent send passes: the hold is released', passes(send(after)), said(send(after))],
       ]);
     },
@@ -1003,6 +1043,244 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'hold 0 (read): a start whose transcript holds no read of the three standing pages refuses a main-thread Bash, Edit and Agent send with the pages named, passes reads, an agent, and sets no latch; reading all three whole lifts it',
+    guards: ['rd_hold', 'rd_agent', 'rd_reads', 'rd_why', 'rd_no_latch', 'rd_lift', 'rd_taskstop'],
+    run(m, dir, h) {
+      const w = world(h);
+      const hub = pagedHub(h, dir);
+      const start = h.transcript([typed(h, 0, 'Do the next thing. Go.')]);
+      const bashR = reading(w, hub, call('Bash', { command: 'ls' }, start));
+      const edit = reading(w, hub, call('Write', { file_path: w.scratch, content: 'x' }, start));
+      const send = reading(w, hub, call('Agent', { prompt: 'x' }, start));
+      const read = reading(w, hub, call('Read', { file_path: join(hub, STANDING[0]) }, start));
+      const grep = reading(w, hub, call('Grep', { pattern: 'x', path: hub }, start));
+      const agentBash = reading(w, hub, call('Bash', { command: 'ls' }, start, { agent_id: 'ag1' }));
+      const stopMain = reading(w, hub, call('TaskStop', { task_id: 'bk7x3q9zd' }, start));
+      const files = readdirSync(w.latch);
+      const read3 = h.transcript([typed(h, 0, 'Do the next thing. Go.'), ...readAllThree(h, 1, hub)]);
+      const lifted = reading(w, hub, call('Bash', { command: 'ls' }, read3));
+      const lines = (r) => r.stderr.split('\n').filter(Boolean).length;
+      return h.assertAll([
+        ['a main-thread Bash is refused with the name in capitals, what passes, and what lifts it', held(bashR, /^STANDING PAGES UNREAD: .*may only read.*Only reads pass, and TaskStop on the main thread; an agent's calls are not held.*Read each in full.*lift/s), said(bashR)],
+        ['the refusal names each of the three pages with its path in the hub copy and its lines', STANDING.every((rel) => bashR.stderr.includes(`${hub}/${rel} (every line, ${PAGE_LINES[rel]} lines)`)), said(bashR)],
+        ['the refusal carries its Why sentence', /Why: every other rule rests on the standing pages, because a session that has not read the rules cannot follow them\./.test(bashR.stderr), said(bashR)],
+        ['a write and an Agent send are refused by it too', held(edit, /STANDING PAGES UNREAD/) && held(send, /STANDING PAGES UNREAD/), said(edit) + said(send)],
+        ['a Read and a Grep pass with nothing printed', passes(read) && passes(grep), said(read) + said(grep)],
+        ['an agent\'s Bash is not held by it', passes(agentBash), said(agentBash)],
+        ['the main thread\'s TaskStop passes with nothing printed, so a session can always stop what it started', passes(stopMain), said(stopMain)],
+        ['no latch was written', files.length === 0 && lines(bashR) === 1, files.join(',')],
+        ['after the three pages are read whole a Bash passes with nothing printed', passes(lifted), said(lifted)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 0 (read): what counts as read whole: parts that between them cover every line, the line numbers in the text alone, a read in a hub checkout beneath the launch folder; and what counts for nothing: part of a page, an errored result, a total from other text, a copy that is not the hub\'s',
+    guards: ['rd_partial', 'rd_stale', 'rd_error', 'rd_other_copy', 'rd_numlines', 'rd_text_form', 'rd_checkout'],
+    run(m, dir, h) {
+      const w = world(h);
+      const hub = pagedHub(h, dir);
+      const base = [typed(h, 0, 'Go.')];
+      const [pg, nv, hb] = STANDING;
+      const last = (rel) => PAGE_LINES[rel] + 1;
+      const others = (skip) => STANDING.flatMap((rel, k) => (rel === skip ? [] : readAll(h, 10 + k * 2, `o${k}`, hub, rel)));
+      const check = (extra) => reading(w, hub, call('Bash', { command: 'ls' }, h.transcript([...base, ...extra])));
+      const parts = check([...readOf(h, 1, 'a1', join(hub, hb), hb, 1, 3), ...readOf(h, 3, 'a2', join(hub, hb), hb, 4, last(hb)), ...others(hb)]);
+      const textOnly = check(STANDING.flatMap((rel, k) => readAll(h, 1 + k * 2, `t${k}`, hub, rel, { form: 'text' })));
+      const partial = check([...readOf(h, 1, 'p1', join(hub, nv), nv, 1, 3), ...others(nv)]);
+      const stale = check([...readAll(h, 1, 's1', hub, nv, { total: 40 }), ...others(nv)]);
+      const errored = check([...readAll(h, 1, 'e1', hub, pg, { isError: true }), ...others(pg)]);
+      const elsewhere = h.tmp('dp-else-');
+      mkdirSync(join(elsewhere, 'plans', 'native'), { recursive: true });
+      writeFileSync(join(elsewhere, pg), pageRows(pg).join('\n') + '\n');
+      const copyRead = check([...readAll(h, 1, 'c1', elsewhere, pg), ...others(pg)]);
+      // A hub checkout beneath the launch folder: a folder with its own .git and the dispatcher's file and the doctrine's index.
+      const launch = h.tmp('dp-launch-');
+      const co = join(launch, 'hubcopy');
+      mkdirSync(join(co, '.git'), { recursive: true });
+      mkdirSync(join(co, 'plans', 'native'), { recursive: true });
+      mkdirSync(join(co, 'doctrine'), { recursive: true });
+      for (const f of ['hook-dispatch.mjs', 'DOCTRINE.md']) writeFileSync(join(co, f), 'planted\n');
+      for (const rel of STANDING) writeFileSync(join(co, rel), pageRows(rel).join('\n') + '\n');
+      const atCheckout = disp(h, hub, 'PreToolUse', call('Bash', { command: 'ls' }, h.transcript([...base, ...readAllThree(h, 1, co)])), { launch, env: { HOOK_DISPATCH_READ_HOLD: 'on' } });
+      return h.assertAll([
+        ['a page read in two parts that between them cover every line counts', passes(parts), said(parts)],
+        ['a result with line numbers in its text and no record of its own counts', passes(textOnly), said(textOnly)],
+        ['part of a page leaves it due, and the refusal names that page alone', held(partial, /STANDING PAGES UNREAD: .*never\.md/s) && !/page\.md|doctrine\/hub\.md/.test(partial.stderr), said(partial)],
+        ['a result whose total is not the page\'s now counts for nothing', held(stale, /STANDING PAGES UNREAD: .*never\.md/s), said(stale)],
+        ['an errored result counts for nothing', held(errored, /STANDING PAGES UNREAD: .*page\.md/s), said(errored)],
+        ['a copy of a page that is not in a hub counts for nothing', held(copyRead, /STANDING PAGES UNREAD: .*page\.md/s), said(copyRead)],
+        ['a read of the pages in a hub checkout beneath the launch folder counts', passes(atCheckout), said(atCheckout)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 0 (read): the read is due again after a compaction, a read after it lifts it again, a resumed transcript is judged by the same reads since its last start or compaction, and a transcript that cannot be read or whose pages cannot be found leaves the call through',
+    guards: ['rd_compaction', 'rd_unknown'],
+    run(m, dir, h) {
+      const w = world(h);
+      const hub = pagedHub(h, dir);
+      const before = h.transcript([typed(h, 0, 'Go.'), ...readAllThree(h, 1, hub)]);
+      const after = h.transcript([typed(h, 0, 'Go.'), ...readAllThree(h, 1, hub), ...compaction(h, 20), typed(h, 22, 'Carry on. Go.')]);
+      const again = h.transcript([typed(h, 0, 'Go.'), ...readAllThree(h, 1, hub), ...compaction(h, 20), typed(h, 22, 'Carry on. Go.'), ...readAllThree(h, 30, hub)]);
+      const call1 = (tr) => reading(w, hub, call('Bash', { command: 'ls' }, tr));
+      const resumed = call1(before);
+      const compacted = call1(after);
+      const lifted = call1(again);
+      const noFile = call1(join(h.tmp('dp-nofile-'), 'nothing.jsonl'));
+      const bare = reading(w, hub, { tool_name: 'Bash', tool_input: { command: 'ls' } });
+      const bareHub = hubCopy(h, dir);
+      const noPages = reading(w, bareHub, call('Bash', { command: 'ls' }, after));
+      return h.assertAll([
+        ['a transcript with the three reads since its start passes, a resumed one too', passes(resumed), said(resumed)],
+        ['after a compaction the pages are due again and a Bash is refused', held(compacted, /STANDING PAGES UNREAD/), said(compacted)],
+        ['reading them after the compaction lifts it', passes(lifted), said(lifted)],
+        ['a transcript file that does not exist leaves the call through, with nothing printed', passes(noFile), said(noFile)],
+        ['a call with no transcript leaves the call through', passes(bare), said(bare)],
+        ['a hub copy that holds none of the pages leaves the call through', passes(noPages), said(noPages)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 1 (waiting): a typed message with the word stop still waiting in the queue holds a main-thread Bash and an agent\'s Edit, the refusal says a message is waiting and prints it word for word, reads and the main thread\'s TaskStop pass, and no latch is set',
+    guards: ['wq_hold', 'wq_stop_text', 'wq_print', 'wq_why'],
+    run(m, dir, h) {
+      const w = world(h);
+      const said1 = 'Please stop the build now, and wait for me.';
+      const tr = h.transcript([typed(h, 0, 'Go.'), h.tool(1, 'b1', 'Bash', { command: 'ls' }), h.result(2, 'b1', 'clean'), enqueue(h, 5, said1)]);
+      const bashR = w.run(dir, call('Bash', { command: 'ls' }, tr));
+      const agentEdit = w.run(dir, call('Edit', { file_path: '/x/y.txt', old_string: 'a', new_string: 'b' }, tr, { agent_id: 'ag1' }));
+      const read = w.run(dir, call('Read', { file_path: '/x/y.txt' }, tr));
+      const stopTask = w.run(dir, call('TaskStop', { task_id: 'bk7x3q9zd' }, tr));
+      const exitPlan = w.run(dir, call('ExitPlanMode', {}, tr));
+      return h.assertAll([
+        ['a main-thread Bash is refused, opening MESSAGE WAITING, with what passes and what lifts it', held(bashR, /^MESSAGE WAITING: .*not yet delivered.*Only reads pass, and TaskStop.*go, ok, continue, approved, yes.*approval of a plan at the button/s), said(bashR)],
+        ['the refusal prints the waiting message word for word', bashR.stderr.includes(`--- message 1 of 1 ---\n${said1}\n--- end ---`), said(bashR)],
+        ['the refusal carries its Why sentence', /Why: a message that waits in the queue while a turn runs is not seen by the session, so without the hold the work goes on over it and it is never answered\./.test(bashR.stderr), said(bashR)],
+        ['an agent\'s Edit is refused by it too', held(agentEdit, /MESSAGE WAITING/), said(agentEdit)],
+        ['a Read, ExitPlanMode and the main thread\'s TaskStop pass', passes(read) && passes(exitPlan) && passes(stopTask), said(read) + said(exitPlan) + said(stopTask)],
+        ['no latch was written', readdirSync(w.latch).length === 0, readdirSync(w.latch).join(',')],
+      ]);
+    },
+  },
+  {
+    name: 'hold 1 (waiting): a typed message with no go-word still waiting in the queue holds new starts as a delivered one does, prints itself, and passes Bash, a plan file in plan mode and the scratchpad; an agent is not held; and a waiting go message lifts nothing',
+    guards: ['wq_correction', 'wq_new_text', 'wq_nolift', 'hw_agent_free'],
+    run(m, dir, h) {
+      const w = world(h);
+      const said1 = 'Change the plan first, and drop the third step.';
+      const tr = h.transcript([typed(h, 0, 'Go.'), enqueue(h, 5, said1)]);
+      const send = w.run(dir, call('Agent', { prompt: 'x' }, tr));
+      const edit = w.run(dir, call('Edit', { file_path: w.repoFile, old_string: 'a', new_string: 'b' }, tr));
+      const bashR = w.run(dir, call('Bash', { command: 'ls' }, tr));
+      const planW = w.run(dir, call('Write', { file_path: w.plan, content: 'x' }, tr, { permission_mode: 'plan' }));
+      const scratchW = w.run(dir, call('Write', { file_path: w.scratch, content: 'x' }, tr));
+      const agentSend = w.run(dir, call('Agent', { prompt: 'x' }, tr, { agent_id: 'ag1' }));
+      // a delivered correction, then a go message that is still waiting: the session has not seen the go, so the correction stands
+      const goWaits = h.transcript([typed(h, 0, 'Ok but change the plan first.'), enqueue(h, 5, 'Fine, carry on with it. Go.')]);
+      const stillHeld = w.run(dir, call('Agent', { prompt: 'x' }, goWaits));
+      const stopThenGo = h.transcript([typed(h, 0, 'Please stop.'), enqueue(h, 5, 'Fine, ok')]);
+      const stopHeld = w.run(dir, call('Bash', { command: 'ls' }, stopThenGo));
+      return h.assertAll([
+        ['an Agent send is refused, opening MESSAGE WAITING, with what is held, what passes and what lifts it', held(send, /^MESSAGE WAITING: .*not yet delivered.*starts nothing new.*Reads, Bash, plan mode and its exit pass.*go, ok, continue, approved, yes.*approval of a plan at the button/s), said(send)],
+        ['it prints the waiting message word for word', send.stderr.includes(`--- message 1 of 1 ---\n${said1}\n--- end ---`), said(send)],
+        ['a repository Edit is refused by it', held(edit, /MESSAGE WAITING/), said(edit)],
+        ['a Bash passes', passes(bashR), said(bashR)],
+        ['a plan file written in plan mode and a scratchpad file pass', passes(planW) && passes(scratchW), said(planW) + said(scratchW)],
+        ['an agent already running is not held', passes(agentSend), said(agentSend)],
+        ['a go message still waiting lifts no correction: the Agent send is held, and the refusal prints the go message', held(stillHeld, /MESSAGE WAITING/) && stillHeld.stderr.includes('Fine, carry on with it. Go.'), said(stillHeld)],
+        ['a go message still waiting lifts no stop: a Bash is held', held(stopHeld, /MESSAGE WAITING/), said(stopHeld)],
+        ['no latch was written', readdirSync(w.latch).length === 0, readdirSync(w.latch).join(',')],
+      ]);
+    },
+  },
+  {
+    name: 'hold 1 (waiting): a message the session has been given, one the queue let go of, a worker\'s hand-back and a task notification waiting in the queue, one overtaken by a message typed after it that arrived, and a waiting go message alone hold nothing',
+    guards: ['wq_delivered', 'wq_count', 'wq_harness', 'wq_given', 'hw_correction_lift'],
+    run(m, dir, h) {
+      const w = world(h);
+      const stopText = 'Please stop the build now.';
+      const run1 = (entries, tool = 'Bash') => w.run(dir, call(tool, tool === 'Agent' ? { prompt: 'x' } : { command: 'ls' }, h.transcript(entries)));
+      // delivered between tool calls: its words arrive as the attachment and the queue removes it; the delivered stop holds, as a delivered one, not as a waiting one
+      const absorbedStop = run1([typed(h, 0, 'Go.'), enqueue(h, 5, stopText), absorbed(h, 6, stopText), removed(h, 6, stopText)]);
+      // delivered, and the queue never logged its release: the count says it still waits, and its words say it arrived
+      const arrivedNoLog = run1([typed(h, 0, 'Go.'), enqueue(h, 5, stopText), absorbed(h, 5, stopText)]);
+      // the queue let go of it (a dequeue) and no delivery carries its words, as a slash command is delivered
+      const letGo = run1([typed(h, 0, 'Go.'), enqueue(h, 5, stopText), dequeue(h, 6)]);
+      const handBackQ = run1([typed(h, 0, 'Go.'), enqueue(h, 5, '<agent-message from="worker-one">\n[Subagent hand-back] DONE\nThe hook said stop and the step ended there.\n</agent-message>')]);
+      const noticeQ = run1([typed(h, 0, 'Go.'), enqueue(h, 5, '<task-notification> the task was stopped, stop </task-notification>')]);
+      // a waiting stop that a later-typed message, delivered, has overtaken
+      const overtaken = run1([typed(h, 0, 'Go.'), enqueue(h, 5, 'Please stop the work.'), enqueue(h, 6, 'Fine, ok'), dequeue(h, 7), typed(h, 8, 'Fine, ok')]);
+      // a go message waiting alone, after a delivered go: no correction, nothing to hold
+      const goAlone = run1([typed(h, 0, 'Go.'), enqueue(h, 5, 'Carry on with the next one. Go.')], 'Agent');
+      const empty = run1([typed(h, 0, 'Go.'), enqueue(h, 5, '   ')]);
+      return h.assertAll([
+        ['a stop delivered as an attachment and removed from the queue holds as a delivered stop, not as a waiting message', held(absorbedStop, /^STOP: /) && !/MESSAGE WAITING/.test(absorbedStop.stderr), said(absorbedStop)],
+        ['a stop whose words arrived while the queue still counts it holds as a delivered stop, not as a waiting message', held(arrivedNoLog, /^STOP: /) && !/MESSAGE WAITING/.test(arrivedNoLog.stderr), said(arrivedNoLog)],
+        ['an enqueue the queue let go of with a dequeue holds nothing', passes(letGo), said(letGo)],
+        ['a worker\'s hand-back waiting in the queue holds nothing, though it carries the word stop', passes(handBackQ), said(handBackQ)],
+        ['a task notification waiting in the queue holds nothing', passes(noticeQ), said(noticeQ)],
+        ['a waiting stop overtaken by a later message that arrived holds nothing', passes(overtaken), said(overtaken)],
+        ['a go message waiting alone starts no hold', passes(goAlone), said(goAlone)],
+        ['an empty message waiting holds nothing', passes(empty), said(empty)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 4 (approved page): a write of a plan file on the main thread outside plan mode is refused with the words, in plan mode it passes, and where the call does not say its mode, for an agent, for a read and for a file outside the plans folder it is not held by this hold',
+    guards: ['pl_hold', 'pl_plan_mode', 'pl_unknown', 'pl_agent', 'pl_why', 'pl_scope', 'pl_no_latch'],
+    run(m, dir, h) {
+      const w = world(h);
+      const tr = h.transcript([typed(h, 0, 'Go.')]);
+      const outside = (tool, input, mode, extra = {}) => w.run(dir, call(tool, input, tr, { permission_mode: mode, ...extra }));
+      const write = outside('Write', { file_path: w.plan, content: 'x' }, 'default');
+      const edit = outside('Edit', { file_path: w.plan, old_string: 'a', new_string: 'b' }, 'auto');
+      const multi = outside('MultiEdit', { file_path: w.plan, edits: [] }, 'acceptEdits');
+      const nb = outside('NotebookEdit', { notebook_path: w.plan, new_source: 'x' }, 'bypassPermissions');
+      const tilde = outside('Write', { file_path: '~/.claude/plans/p.md', content: 'x' }, 'default');
+      const files = readdirSync(w.latch);
+      const inPlan = outside('Write', { file_path: w.plan, content: 'x' }, 'plan');
+      const inPlanEdit = outside('Edit', { file_path: w.plan, old_string: 'a', new_string: 'b' }, 'plan');
+      const noMode = w.run(dir, call('Write', { file_path: w.plan, content: 'x' }, tr));
+      const emptyMode = outside('Write', { file_path: w.plan, content: 'x' }, '');
+      const agent = outside('Write', { file_path: w.plan, content: 'x' }, 'default', { agent_id: 'ag1' });
+      const read = outside('Read', { file_path: w.plan }, 'default');
+      const scratch = outside('Write', { file_path: w.scratch, content: 'x' }, 'default');
+      const repoOutside = outside('Write', { file_path: w.repoFile, content: 'x' }, 'default');
+      const repoInPlan = outside('Write', { file_path: w.repoFile, content: 'x' }, 'plan');
+      const thrown = w.run(dir, call('Write', { file_path: w.plan, content: 'x' }, tr, { permission_mode: 'default' }), { HOOK_DISPATCH_THROW: 'plan' });
+      return h.assertAll([
+        ['a Write of a plan file outside plan mode is refused, opening its name, with what passes and what lifts it', held(write, /^PLAN FILE WRITE OUTSIDE PLAN MODE: .*unless the call is made in plan mode, where the button follows.*Reads, an agent's calls.*Entering plan mode lifts it/s), said(write)],
+        ['the refusal carries its Why sentence', /Why: an approved page is changed only by a change that is written and approved, and the button follows only in plan mode, so a write outside it puts work under a page nobody approved\./.test(write.stderr), said(write)],
+        ['an Edit, a MultiEdit and a NotebookEdit of a plan file outside plan mode are refused too, in each mode the harness has', held(edit, /PLAN FILE WRITE OUTSIDE PLAN MODE/) && held(multi, /PLAN FILE WRITE OUTSIDE PLAN MODE/) && held(nb, /PLAN FILE WRITE OUTSIDE PLAN MODE/), said(edit) + said(multi) + said(nb)],
+        ['a path written with the tilde is the same folder', held(tilde, /PLAN FILE WRITE OUTSIDE PLAN MODE/), said(tilde)],
+        ['no latch was written', files.length === 0, files.join(',')],
+        ['in plan mode a Write and an Edit of a plan file pass with nothing printed', passes(inPlan) && passes(inPlanEdit), said(inPlan) + said(inPlanEdit)],
+        ['where the call does not say its mode the write passes, as before (the harness has not told the mode)', passes(noMode) && passes(emptyMode), said(noMode) + said(emptyMode)],
+        ['an agent\'s write of a plan file passes', passes(agent), said(agent)],
+        ['a Read of a plan file passes', passes(read), said(read)],
+        ['a write in the scratchpad outside plan mode passes', passes(scratch), said(scratch)],
+        ['a repository file is still refused by the manager hold, in plan mode and outside it', held(repoOutside, /MANAGER DOES NO WORK/) && held(repoInPlan, /MANAGER DOES NO WORK/), said(repoOutside) + said(repoInPlan)],
+        ['a plan file hold that throws passes the write with one line to the error output', thrown.status === 0 && thrown.stdout === '' && thrown.stderr.split('\n').filter(Boolean).length === 1 && /the plan file hold failed and let the call pass/.test(thrown.stderr), said(thrown)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 0 (read): a read hold that throws passes the call with one line to the error output, and the other holds still judge it',
+    guards: ['hx_catch'],
+    run(m, dir, h) {
+      const w = world(h);
+      const hub = pagedHub(h, dir);
+      const start = h.transcript([typed(h, 0, 'Please stop.')]);
+      const plain = reading(w, hub, call('Bash', { command: 'ls' }, start));
+      const thrown = w.run(hub, call('Bash', { command: 'ls' }, start), { HOOK_DISPATCH_READ_HOLD: 'on', HOOK_DISPATCH_THROW: 'read' });
+      const lines = thrown.stderr.split('\n').filter(Boolean);
+      return h.assertAll([
+        ['with the read due and a stop standing the read hold speaks first', held(plain, /STANDING PAGES UNREAD/), said(plain)],
+        ['with the read hold thrown the call is still held, by the stop, and one line says the read hold failed', held(thrown, /STOP: /) && lines.filter((l) => /the read hold failed and let the call pass/.test(l)).length === 1, said(thrown)],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
@@ -1044,23 +1322,23 @@ export const plants = {
   hy_new: ["  + WHY_WORD\n  + 'Answer the message", "  + 'Answer the message", 'hook-dispatch.mjs'],
   hy_latch: ['    + WHY_LATCH\n', '', 'hook-dispatch.mjs'],
   hy_manager: ['  + WHY_MANAGER.trimEnd();', "  + '';", 'hook-dispatch.mjs'],
-  hw_stop_hold: ['    return STOP_TEXT;\n', '    return null;\n', 'hook-dispatch.mjs'],
+  hw_stop_hold: ['    return h.waiting.length ? WAITING_TEXT(true, h.waiting) : STOP_TEXT;\n', '    return null;\n', 'hook-dispatch.mjs'],
   hw_stop_agents: ["    if (!p.agent_id && tool === 'TaskStop') return null;", "    if (tool === 'TaskStop') return null;", 'hook-dispatch.mjs'],
   hw_reads: ['  if (READS.has(tool)) return null;\n  const h = ownerHolds(p);', '  const h = ownerHolds(p);', 'hook-dispatch.mjs'],
   hw_word_whole: ["wordsOf(text).includes('stop')", "String(text).toLowerCase().includes('stop')", 'hook-dispatch.mjs'],
   hw_no_latch: ["    if (held) { process.stderr.write(held + '\\n'); return 2; }", "    if (held) { process.stderr.write(held + '\\n'); latchAfter(p, held); return 2; }", 'hook-dispatch.mjs'],
   hw_main_tr: ['  if (m) return `${m[1]}.jsonl`;', '  void 0;', 'hook-dispatch.mjs'],
-  hw_goword_lift: ['const lifted = (i) => idx.some((j) => j > i && endsWithGoWord(text(j))) || approvals', 'const lifted = (i) => false || approvals', 'hook-dispatch.mjs'],
-  hw_approval_lift: ['|| approvals.some((a) => a > i);', '|| false;', 'hook-dispatch.mjs'],
+  hw_goword_lift: ['const lifted = (m) => (!m.waiting && idx.some((j) => j > m.i && endsWithGoWord(text(j)))) || approvals', 'const lifted = (m) => false || approvals', 'hook-dispatch.mjs'],
+  hw_approval_lift: ['|| approvals.some((a) => a > m.i);', '|| false;', 'hook-dispatch.mjs'],
   hw_approval_name: ["if (name === 'ExitPlanMode' ||", 'if (true ||', 'hook-dispatch.mjs'],
   hw_goword_last: ['GO_WORDS.includes(w[w.length - 1])', 'w.some((x) => GO_WORDS.includes(x))', 'hook-dispatch.mjs'],
   hw_harness: ['  entries.forEach((e, i) => { if (tail.isOwnerMessage(e)) idx.push(i); });', '  entries.forEach((e, i) => { if (tail.isOwnerMessage(e) || /^Stop hook feedback/.test(tail.textOf(e))) idx.push(i); });', 'hook-dispatch.mjs'],
-  hw_correction_new: ['  if (NEW_STARTS.has(tool)) return CORRECTION_TEXT;', '  if (false) return CORRECTION_TEXT;', 'hook-dispatch.mjs'],
-  hw_correction_write: ["  if (FILE_WRITES.has(tool) && !mayWrite(p, p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '')) return CORRECTION_TEXT;", '  void 0;', 'hook-dispatch.mjs'],
+  hw_correction_new: ['  if (NEW_STARTS.has(tool)) return text;', '  if (false) return text;', 'hook-dispatch.mjs'],
+  hw_correction_write: ["  if (FILE_WRITES.has(tool) && !mayWrite(p, p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '')) return text;", '  void 0;', 'hook-dispatch.mjs'],
   hw_plan_pass: ["  return dirname(a) === join(homedir(), '.claude', 'plans') || inScratchpad(a, p.session_id);", '  return inScratchpad(a, p.session_id);', 'hook-dispatch.mjs'],
   hw_agent_free: ['  if (p.agent_id || !h.correction) return null;', '  if (!h.correction) return null;', 'hook-dispatch.mjs'],
-  hw_correction_approval_before: ['!approvals.some((a) => a > last)', '!approvals.some((a) => a > -1)', 'hook-dispatch.mjs'],
-  hw_correction_lift: ['const correction = !endsWithGoWord(text(last)) &&', 'const correction = true &&', 'hook-dispatch.mjs'],
+  hw_correction_approval_before: ['!approvals.some((a) => a > last.i)', '!approvals.some((a) => a > -1)', 'hook-dispatch.mjs'],
+  hw_correction_lift: ['const correction = !!last && !endsWithGoWord(last.text) &&', 'const correction = !!last &&', 'hook-dispatch.mjs'],
   hl_popup: ['      latchAfter(p, why);\n      return 2;', '      return 2;', 'hook-dispatch.mjs'],
   hl_repeat: ['What was first refused: ${l.reason}', 'What was first refused: none', 'hook-dispatch.mjs'],
   hl_reads: ["  if (p.agent_id || READS.has(tool) || tool === 'TaskStop') return null;", "  if (p.agent_id || tool === 'TaskStop') return null;", 'hook-dispatch.mjs'],
@@ -1079,8 +1357,8 @@ export const plants = {
   hm_scratch: ['  return !inScratchpad(absPath(p, t), p.session_id);', '  return true;', 'hook-dispatch.mjs'],
   hm_listing: ["  if (sub === 'stash') return !['list', 'show'].includes(rest[0]);", "  if (sub === 'stash') return true;", 'hook-dispatch.mjs'],
   hm_plan: ["  return dirname(a) === join(homedir(), '.claude', 'plans') ||", "  return a.startsWith(join(homedir(), '.claude', 'plans')) ||", 'hook-dispatch.mjs'],
-  cr_git_log_read: ["  if (NEW_STARTS.has(tool)) return CORRECTION_TEXT;\n  if (FILE_WRITES.has(tool) && !mayWrite(", "  if (NEW_STARTS.has(tool)) return CORRECTION_TEXT;\n  if (tool === 'Bash' && /\\bgit\\s+(?:-C\\s+\\S+\\s+)?log\\b/.test(String(p.tool_input?.command ?? ''))) return CORRECTION_TEXT;\n  if (FILE_WRITES.has(tool) && !mayWrite(", 'hook-dispatch.mjs'],
-  cr_pasted_report_plan: ["if (FILE_WRITES.has(tool) && !mayWrite(p, p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '')) return CORRECTION_TEXT;", 'if (FILE_WRITES.has(tool)) return CORRECTION_TEXT;', 'hook-dispatch.mjs'],
+  cr_git_log_read: ["  if (NEW_STARTS.has(tool)) return text;\n  if (FILE_WRITES.has(tool) && !mayWrite(", "  if (NEW_STARTS.has(tool)) return text;\n  if (tool === 'Bash' && /\\bgit\\s+(?:-C\\s+\\S+\\s+)?log\\b/.test(String(p.tool_input?.command ?? ''))) return text;\n  if (FILE_WRITES.has(tool) && !mayWrite(", 'hook-dispatch.mjs'],
+  cr_pasted_report_plan: ["if (FILE_WRITES.has(tool) && !mayWrite(p, p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '')) return text;", 'if (FILE_WRITES.has(tool)) return text;', 'hook-dispatch.mjs'],
   cr_go_between_writes: ['export function endsWithGoWord(text) { const w = wordsOf(text); return GO_WORDS.includes(w[w.length - 1]); }', 'export function endsWithGoWord(text) { const w = wordsOf(text); return false; }', 'hook-dispatch.mjs'],
   hb_names_stop_file: ['  entries.forEach((e, i) => { if (tail.isOwnerMessage(e)) idx.push(i); });', '  entries.forEach((e, i) => { if (tail.isOwnerMessage(e) || /stop-guard\\.mjs/.test(tail.textOf(e))) idx.push(i); });', 'hook-dispatch.mjs'],
   hb_closes_step: ['  entries.forEach((e, i) => { if (tail.isOwnerMessage(e)) idx.push(i); });', '  entries.forEach((e, i) => { if (tail.isOwnerMessage(e) || /\\[Subagent hand-back\\]/.test(tail.textOf(e))) idx.push(i); });', 'hook-dispatch.mjs'],
@@ -1094,4 +1372,38 @@ export const plants = {
   hs_run: ["  if (event === 'Stop' && !p.agent_id) {", '  if (false) {', 'hook-dispatch.mjs'],
   hs_once: ["    return repoHooks(event, raw, p, new Set(['stop-guard.sh']));", '    return repoHooks(event, raw, p, new Set());', 'hook-dispatch.mjs'],
   hs_refuse: ["    if (s.deny) { process.stderr.write(s.reason + '\\n'); return 2; }", "    if (false) { process.stderr.write(s.reason + '\\n'); return 2; }", 'hook-dispatch.mjs'],
+  rd_hold: ['    if (!unread.length) return null;\n    if (cut >= 0', '    return null;\n    if (cut >= 0', 'hook-dispatch.mjs'],
+  rd_agent: ['  if (p.agent_id) return null;\n  if (READS.has(tool)) return null;\n  const file = mainTranscript(p);', '  if (READS.has(tool)) return null;\n  const file = mainTranscript(p);', 'hook-dispatch.mjs'],
+  rd_reads: ['  if (p.agent_id) return null;\n  if (READS.has(tool)) return null;\n  const file = mainTranscript(p);', '  if (p.agent_id) return null;\n  const file = mainTranscript(p);', 'hook-dispatch.mjs'],
+  rd_taskstop: ["  if (!p.agent_id && tool === 'TaskStop') return null;\n  if (p.agent_id) return null;", '  if (p.agent_id) return null;', 'hook-dispatch.mjs'],
+  rd_why: ['        + WHY_READ.trimEnd();', "        + '';", 'hook-dispatch.mjs'],
+  rd_no_latch: ['    if (cut >= 0 || size <= mb * 1024 * 1024) {\n', "    if (cut >= 0 || size <= mb * 1024 * 1024) {\n      latchAfter(p, 'planted read refusal');\n", 'hook-dispatch.mjs'],
+  rd_lift: ['    const unread = pages.filter((pg) => !pg.files.some((f) => readWhole(live, f)));', '    const unread = pages;', 'hook-dispatch.mjs'],
+  rd_partial: ['for (let k = 1; k <= n.text; k++) if (!got.has(k)) return false;', 'for (let k = 1; k <= 1; k++) if (!got.has(k)) return false;', 'hook-dispatch.mjs'],
+  rd_stale: ['if (Number(rec.totalLines) > 0 && Number(rec.totalLines) !== n.text && Number(rec.totalLines) !== n.split) continue;', 'void 0;', 'hook-dispatch.mjs'],
+  rd_error: ["if (b?.type !== 'tool_result' || b.is_error || !asked.has(b.tool_use_id)) continue;\n      const rec", "if (b?.type !== 'tool_result' || !asked.has(b.tool_use_id)) continue;\n      const rec", 'hook-dispatch.mjs'],
+  rd_other_copy: ['if (canon(rec?.filePath || asked.get(b.tool_use_id)) !== want) continue;', 'void 0;', 'hook-dispatch.mjs'],
+  rd_numlines: ['for (let k = 0; k < rec.numLines; k++) got.add(rec.startLine + k);', 'for (let k = 0; k < 1; k++) got.add(rec.startLine + k);', 'hook-dispatch.mjs'],
+  rd_text_form: ['        for (const m of t.matchAll(/^\\s*(\\d+)\\t/gm)) got.add(Number(m[1]));', '        void 0;', 'hook-dispatch.mjs'],
+  rd_checkout: ['if (isHubCheckout(r)) out.push(r);', 'void 0;', 'hook-dispatch.mjs'],
+  rd_compaction: ['    const live = entries.slice(cut + 1);', '    const live = entries;', 'hook-dispatch.mjs'],
+  rd_unknown: ['try { size = statSync(file).size; } catch { return null; }', 'size = statSync(file).size;', 'hook-dispatch.mjs'],
+  wq_hold: ['  const wait = waitingMessages(entries);\n', '  const wait = [];\n', 'hook-dispatch.mjs'],
+  wq_stop_text: ['WAITING_TEXT(true, h.waiting) : STOP_TEXT', 'STOP_TEXT : STOP_TEXT', 'hook-dispatch.mjs'],
+  wq_new_text: ['const text = h.waiting.length ? WAITING_TEXT(false, h.waiting) : CORRECTION_TEXT;', 'const text = CORRECTION_TEXT;', 'hook-dispatch.mjs'],
+  wq_print: ['`--- message ${i + 1} of ${texts.length} ---\\n${t}`', '`--- message ${i + 1} of ${texts.length} ---\\n`', 'hook-dispatch.mjs'],
+  wq_why: ["  + WHY_WAITING\n  + 'Answer it now", "  + 'Answer it now", 'hook-dispatch.mjs'],
+  wq_correction: ['  const holders = all.filter(', '  if (wait.length) return { stop: false, correction: false, settled: false, waiting: [] };\n  const holders = all.filter(', 'hook-dispatch.mjs'],
+  wq_nolift: ['const holders = all.filter((m) => !(m.waiting && endsWithGoWord(m.text)));', 'const holders = all;', 'hook-dispatch.mjs'],
+  wq_delivered: ['if (!x.done && x.key && (t.includes(x.key)', 'if (false && x.key && (t.includes(x.key)', 'hook-dispatch.mjs'],
+  wq_count: ['  if (size <= 0) return [];\n  return items', '  return items', 'hook-dispatch.mjs'],
+  wq_harness: ['owner: !!(c && c.trim() && !tail.HARNESS_TAG.test(c))', 'owner: !!(c && c.trim())', 'hook-dispatch.mjs'],
+  wq_given: ['.filter((x) => x.owner && !given.some((g) => g > x.at))', '.filter((x) => x.owner)', 'hook-dispatch.mjs'],
+  pl_hold: ["  return a.startsWith(root + '/') ? PLAN_TEXT : null;", '  return null;', 'hook-dispatch.mjs'],
+  pl_plan_mode: ["if (typeof mode !== 'string' || !mode.trim() || /plan/i.test(mode)) return null;", "if (typeof mode !== 'string' || !mode.trim()) return null;", 'hook-dispatch.mjs'],
+  pl_unknown: ["if (typeof mode !== 'string' || !mode.trim() || /plan/i.test(mode)) return null;", 'if (/plan/i.test(mode)) return null;', 'hook-dispatch.mjs'],
+  pl_agent: ['  if (p.agent_id || !FILE_WRITES.has(tool)) return null;\n  const mode', '  if (!FILE_WRITES.has(tool)) return null;\n  const mode', 'hook-dispatch.mjs'],
+  pl_why: ['  + WHY_PLAN\n', '', 'hook-dispatch.mjs'],
+  pl_scope: ["  return a.startsWith(root + '/') ? PLAN_TEXT : null;", '  return PLAN_TEXT;', 'hook-dispatch.mjs'],
+  pl_no_latch: ["  return a.startsWith(root + '/') ? PLAN_TEXT : null;", "  if (a.startsWith(root + '/')) { latchAfter(p, 'planted plan file refusal'); return PLAN_TEXT; }\n  return null;", 'hook-dispatch.mjs'],
 };
