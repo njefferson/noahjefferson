@@ -29,11 +29,13 @@ The session scopes the work on one page with five parts, and the owner approves 
 
 1. The result, as something that can be seen: a file, a page, a running thing, a number.
 2. How it is checked: who opens the real output, and against what.
-3. The steps, in a few lines, each small enough for one worker.
+3. The steps, each a list that cannot be done wrong and small enough for one worker: what it depends on, exactly what to do and with which commands, what must be seen for it to be done, and what ends it.
 4. The cost: how many agents, on which tier, and about how long.
 5. The way back: what removes the work if it goes wrong.
 
 Workers on the cheapest tier do the steps. A checker that did none of the work then opens the real output and judges it against the stated result, and nothing is pushed until it has passed the exact commit. The owner gets the result and what the check showed.
+
+A step that meets what its page did not foresee ejects, and the run stops there. Back on the top tier, the session finds the cause before it changes the page: what the step met, why the page was drawn that way, and how far that cause reaches. The changed page opens with those, and where the cause reaches past the page it carries one recommendation for it, to be made a page of its own.
 
 ## The never-rules
 

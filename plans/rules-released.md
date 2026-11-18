@@ -32,3 +32,9 @@ Each fenced block below holds lines that left a rules page, under a line giving 
 - The dispatcher also holds the main thread: under the owner's word (the word stop, or a message with no go-word), after a refusal, and from doing the work itself. `plans/native/running.md` says what each holds and what lifts it.
 - `stop-guard.mjs` refuses a final reply past 150 words, or one that names a feeling, promises conduct or asks for a go-word, and `rules-keep-check.mjs` fails a commit that drops a line from a rules page.
 ```
+
+17 November 2026: the short page's line on the steps was reworded. It said a step is a few lines, which let a page give a worker a step it could do wrong. It now says a step is a list that cannot be done wrong, as the agent rules and the requirements of 2 November ask.
+
+```
+3. The steps, in a few lines, each small enough for one worker.
+```
