@@ -1,0 +1,3 @@
+Q-HUB-554: Three stops of one piece of work on 17 and 18 November had one cause. Its page was drawn from what the work needed, and not from what each gate on its route asks of a step: the agent rules of a worker, the template's lines for a step that edits a guard file, the hub's own landing procedure, and the push guard's rule for a checker. No one place lists them, and nothing reads a page against them before the button, as the plan check did before the rebuild.
+
+Fix in: `.claude/skills/piece-of-work/SKILL.md`, `plans/native/skills/piece-of-work/SKILL.md`. The procedure lists the gates on a piece of work's route and what each asks of a step, and a page is read against that list before it goes up, by a check where one can be built.

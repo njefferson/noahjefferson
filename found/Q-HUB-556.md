@@ -1,0 +1,3 @@
+Q-HUB-556: On 18 November a landing failed on one stale planted failure. The steps that edited the dispatcher ran only their own new planted failures, no step read the listing that names a stale one, and the landing had no way to re-point one. The template for drafting a page has those lines, and nothing told the drafter to carry them into a step.
+
+Fix in: `.claude/skills/piece-of-work/SKILL.md`, `plans/native/skills/piece-of-work/SKILL.md`. The procedure says what a step that edits a file the suite covers carries: the search for the cases and planted failures that hold the old behaviour, the listing of stale ones with each re-pointed and run by its key, the whole suite once after its last edit, and a landing that may make the edits the reports leave for it.
