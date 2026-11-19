@@ -38,3 +38,10 @@ Each fenced block below holds lines that left a rules page, under a line giving 
 ```
 3. The steps, in a few lines, each small enough for one worker.
 ```
+
+17 November 2026: two lines were reworded. The running page counted its holds, and the count is gone because four holds were added. The worker's role named three first words for a report, and now names the fourth, EJECT, which the agent rules already gave.
+
+```
+- Six holds run in every session. Each says in its refusal what it holds and what lifts it.
+Report, in this order: what was done, what was seen, the files changed, and anything found and not fixed, each on a line opening with Found. The first word of the report is DONE, FAILED or REFUSED.
+```

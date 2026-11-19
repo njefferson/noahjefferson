@@ -63,6 +63,9 @@ try { shell = await import('./shell-words.mjs'); } catch { shell = null; }
 
 const HUB = dirname(fileURLToPath(import.meta.url));
 const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'Stop', 'PreModelSwitch', 'PostModelSwitch', 'ConfigChange'];
+// The model command that puts the main thread a tier lower for a run, and the one that puts it on the top tier for a page.
+const RUN_TIER_LINE = '/model claude-opus-5-5';
+const PLAN_TIER_LINE = '/model claude-fable-5-2';
 const READS = new Set(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'ToolSearch', 'TaskList', 'TaskGet',
   'ListAgents', 'ReadNotifications', 'EnterPlanMode', 'ExitPlanMode', 'Skill']);
 // Repo shims that only call a hub script: run once per event, not once per repo, as this folder's script.
@@ -277,7 +280,7 @@ const wordsOf = (t) => String(t ?? '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,
 /** @returns {boolean} true when, case and punctuation set aside, the last word of the text is a go-word. */
 export function endsWithGoWord(text) { const w = wordsOf(text); return GO_WORDS.includes(w[w.length - 1]); }
 /** @returns {boolean} true when the whole word stop is anywhere in the text ("stopped" and "unstoppable" are not it). */
-export function hasStopWord(text) { return wordsOf(text).includes('stop'); }
+export function hasStopWord(text) { return wordsOf(String(text ?? '').replace(/\bstop[ -](?:hooks?|guard)\b/gi, ' ')).includes('stop'); }
 /** @returns {boolean} a stop message: it has the whole word stop and does not end with a go-word. */
 export function isStopMessage(text) { return hasStopWord(text) && !endsWithGoWord(text); }
 
@@ -285,12 +288,12 @@ const WHY_WORD = 'Why: without the hold the work goes on over a message and the 
 const WHY_LATCH = 'Why: another route to the same end puts the session\'s judgement above the control that refused it. ';
 const WHY_MANAGER = 'Why: the top tier is paid for judgement, and the cheapest tier that holds the rules does the rest. ';
 const STOP_TEXT =`STOP: the newest typed message carries the word stop and does not end with a go-word, so every call is held, the main thread's and every agent's. `
-  + 'Only reads pass, and TaskStop on the main thread (an agent may still hand back what it has). '
+  + 'Only reads pass, TaskStop on the main thread, and a write of a plan file directly under ~/.claude/plans/ made in plan mode (an agent may still hand back what it has). The session\'s own entry to plan mode and the button are refused. '
   + `A later typed message whose last word is one of ${GO_WORDS.join(', ')} lifts it, and so does an approval of a plan at the button given after it. `
   + WHY_WORD
   + 'Say in plain text what was running and that it is stopped, and end the turn.';
 const CORRECTION_TEXT = `NEW STARTS HELD: the newest typed message does not end with a go-word, so the main thread starts nothing new: no Agent, Task, SendMessage or Workflow, and no write of a file other than a plan file directly under ~/.claude/plans/ or a file in the session scratchpad. `
-  + 'Reads, Bash, plan mode and its exit pass, and agents already running go on. '
+  + 'Reads, Bash, plan mode set in the app and the button pass, and agents already running go on; the session\'s own entry to plan mode is refused. '
   + `A later typed message whose last word is one of ${GO_WORDS.join(', ')} lifts it, and so does an approval of a plan at the button given after it. `
   + WHY_WORD
   + 'Answer the message in plain text first.';
@@ -303,12 +306,16 @@ const WHY_PLAN = 'Why: an approved page is changed only by a change that is writ
 /** The refusal of a message still waiting; it prints each waiting message word for word, so that it can be answered. */
 const WAITING_TEXT = (stop, texts) => `MESSAGE WAITING: ${texts.length === 1 ? 'a typed message is' : `${texts.length} typed messages are`} in the queue and not yet delivered to the session, and the session cannot see ${texts.length === 1 ? 'it' : 'them'} until the turn ends. `
   + (stop
-    ? 'One carries the word stop and does not end with a go-word, so every call is held, the main thread\'s and every agent\'s. Only reads pass, and TaskStop on the main thread (an agent may still hand back what it has). '
-    : 'The newest does not end with a go-word, so the main thread starts nothing new: no Agent, Task, SendMessage or Workflow, and no write of a file other than a plan file directly under ~/.claude/plans/ or a file in the session scratchpad. Reads, Bash, plan mode and its exit pass, and agents already running go on. ')
+    ? 'One carries the word stop and does not end with a go-word, so every call is held, the main thread\'s and every agent\'s. Only reads pass, TaskStop on the main thread, and a write of a plan file directly under ~/.claude/plans/ made in plan mode (an agent may still hand back what it has). The session\'s own entry to plan mode and the button are refused. '
+    : 'The newest does not end with a go-word, so the main thread starts nothing new: no Agent, Task, SendMessage or Workflow, and no write of a file other than a plan file directly under ~/.claude/plans/ or a file in the session scratchpad. Reads, Bash, plan mode set in the app and the button pass, and agents already running go on; the session\'s own entry to plan mode is refused. ')
   + `A later typed message whose last word is one of ${GO_WORDS.join(', ')} lifts it, and so does an approval of a plan at the button given after it. `
   + WHY_WAITING
   + 'Answer it now in plain text, point by point, and end the turn; ending the turn is what delivers it. '
   + `The waiting message${texts.length === 1 ? '' : 's'}, word for word:\n${texts.map((t, i) => `--- message ${i + 1} of ${texts.length} ---\n${t}`).join('\n')}\n--- end ---`;
+const NO_PAGE_TEXT = 'NO PAGE WAS ASKED FOR: the newest typed message does not end with a go-word, and the session\'s own entry to plan mode is refused under it. '
+  + 'A page is drawn after a message that ends with a go-word, or when plan mode is set in the app, which is not held. '
+  + 'Why: plan mode set in the app is itself the ask for a page, and a page nobody asked for costs a turn of the top tier. '
+  + 'Answer the message in plain text.';
 const PLAN_TEXT = 'PLAN FILE WRITE OUTSIDE PLAN MODE: a write of a file under ~/.claude/plans/ is refused on the main thread unless the call is made in plan mode, where the button follows. '
   + 'Reads, an agent\'s calls, and every write of a file outside the plans folder are not held by it. '
   + 'Entering plan mode lifts it for the writes made there, and the change is written in full and approved at the button before any work goes on under it. '
@@ -481,11 +488,19 @@ export function ownerHolds(p) {
 /** HOLD 1. @returns {string|null} the refusal, or null. */
 function holdWord(p) {
   const tool = String(p.tool_name ?? '');
-  if (READS.has(tool)) return null;
+  const planEntry = !p.agent_id && tool === 'EnterPlanMode' && !/plan/i.test(String(p.permission_mode ?? ''));
+  const planExit = !p.agent_id && tool === 'ExitPlanMode';
+  if (READS.has(tool) && !planEntry && !planExit) return null;
   const h = ownerHolds(p);
+  if (planEntry || planExit) {
+    if (h.stop) return h.waiting.length ? WAITING_TEXT(true, h.waiting) : STOP_TEXT;
+    return planEntry && h.correction ? NO_PAGE_TEXT : null;
+  }
   if (h.stop) {
     if (!p.agent_id && tool === 'TaskStop') return null;
     if (p.agent_id && AGENT_RETURN.test(tool)) return null;
+    if (!p.agent_id && FILE_WRITES.has(tool) && /plan/i.test(String(p.permission_mode ?? ''))
+      && dirname(absPath(p, p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '')) === join(homedir(), '.claude', 'plans')) return null;
     return h.waiting.length ? WAITING_TEXT(true, h.waiting) : STOP_TEXT;
   }
   if (p.agent_id || !h.correction) return null;
@@ -758,11 +773,136 @@ function holdPlan(p) {
 }
 
 /**
+ * The model that serves the main thread, read from entries.
+ * @returns {string|null} the id named by the newest reply of the main thread (an assistant entry with no agent id that carries
+ *   `message.model`), or by a model command entry (a user entry whose text holds "Set model to" and then the id between backticks) that
+ *   comes after that reply; an empty id and `<synthetic>` are skipped. Null where there is none.
+ */
+export function servingModel(entries) {
+  let id = null;
+  for (const e of entries ?? []) {
+    if (!e || e.isSidechain || e.agentId) continue;
+    if (e.type === 'assistant') {
+      const m = e.message?.model;
+      if (typeof m === 'string' && m.trim() && m.trim() !== '<synthetic>') id = m.trim();
+    } else if (e.type === 'user') {
+      const m = /Set model to[^`]*`([^`]*)`/.exec(tail.textOf(e));
+      if (m && m[1].trim() && m[1].trim() !== '<synthetic>') id = m[1].trim();
+    }
+  }
+  return id;
+}
+/** Is the model id a top-tier one? @returns {boolean} true where the id carries fable or mythos. */
+export function isTopTier(id) { return /fable|mythos/i.test(String(id ?? '')); }
+
+const tierRefusal = (head, id, what, line) => `${head} the main thread is served by ${id}, read from the newest reply of the thread or from a model command after it. ${what} `
+  + `Type ${line} alone while the thread is idle. Say so in one plain line and end the turn.`;
+
+/**
+ * HOLD 6: the run waits for its tier. On the main thread a new start is refused while a top-tier model serves.
+ * @returns {string|null} the refusal, or null. An agent's call, a read and an unknown model pass; no latch is set.
+ */
+function holdRunTier(p) {
+  if (p.agent_id || !NEW_STARTS.has(String(p.tool_name ?? ''))) return null;
+  const id = servingModel(tail.tailEntries(mainTranscript(p), 2 * 1024 * 1024));
+  if (!id || !isTopTier(id)) return null;
+  return tierRefusal('RUN WAITS FOR ITS TIER:', id, 'A run is made a tier lower, because the top tier is paid for judgement and a run needs none.', RUN_TIER_LINE);
+}
+
+/**
+ * HOLD 7: the page waits for its tier. On the main thread a write of a plan file is refused while a model below the top serves.
+ * @returns {string|null} the refusal, or null. An agent's call, a write elsewhere and an unknown model pass; no latch is set.
+ */
+function holdPlanTier(p) {
+  const tool = String(p.tool_name ?? '');
+  if (p.agent_id || !FILE_WRITES.has(tool)) return null;
+  const a = absPath(p, p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '');
+  if (!a.startsWith(join(homedir(), '.claude', 'plans') + '/')) return null;
+  const id = servingModel(tail.tailEntries(mainTranscript(p), 2 * 1024 * 1024));
+  if (!id || isTopTier(id)) return null;
+  return tierRefusal('PAGE WAITS FOR ITS TIER:', id, 'Drawing a page, or changing one, is judgement and is done on the top tier.', PLAN_TIER_LINE);
+}
+
+/**
+ * HOLD 8: the tier of a send. On the main thread an Agent or Task call that names a model carrying neither sonnet nor haiku is refused.
+ * @returns {string|null} the refusal, or null. A send naming no model, an agent's call and any other tool pass; no latch is set.
+ */
+function holdSendTier(p) {
+  if (p.agent_id || !/^(?:Agent|Task)$/.test(String(p.tool_name ?? ''))) return null;
+  const m = p.tool_input?.model;
+  if (typeof m !== 'string' || /sonnet|haiku/i.test(m)) return null;
+  return `SEND NAMES A HIGHER TIER: the send names the model "${m}", which is above the sonnet tier. The roles carry their tier, so the send goes again with no model named.`;
+}
+
+// ---- the eject: a worker's hand-back that opens EJECT stops the run until a plan is approved at the button ----
+const ejectFile = (p) => join(homedir(), '.claude', 'eject', `${safeId(p)}.json`);
+const EJECT_OPENING = /^\s*EJECT(?![A-Za-z0-9])/;
+const PAGE_CAUSE = ['What was met', 'Why the page was drawn that way', 'How far it reaches'];
+
+/** Write the session's eject record for an agent's hand-back that opens with EJECT. Never refuses; a failure is one line on the error output. */
+function recordEject(p) {
+  try {
+    if (!p.agent_id || String(p.tool_name ?? '') !== 'SubagentHandback') return;
+    const message = String(p.tool_input?.message ?? '');
+    if (!EJECT_OPENING.test(message)) return;
+    mkdirSync(dirname(ejectFile(p)), { recursive: true });
+    writeFileSync(ejectFile(p), JSON.stringify({ at: Date.now(), text: message.slice(0, 300) }, null, 1));
+  } catch (e) { process.stderr.write(`hook-dispatch.mjs: the eject record was not written: ${e?.message ?? e}\n`); }
+}
+
+/**
+ * The eject record standing for the main thread, or null. An approval at the button whose entry time is later than the record's removes it.
+ * @returns {{at: number, text: string}|null}
+ */
+export function ejectStanding(p) {
+  let r;
+  try { r = JSON.parse(readFileSync(ejectFile(p), 'utf8')); } catch { return null; }
+  const at = Number(r?.at) || 0;
+  const entries = tail.tailEntries(mainTranscript(p), 16 * 1024 * 1024);
+  if (approvalIndexes(entries).some((i) => Date.parse(entries[i]?.timestamp ?? '') > at)) { rmSync(ejectFile(p), { force: true }); return null; }
+  return { at, text: String(r?.text ?? '') };
+}
+
+/** Does the page open with its cause: the heading Why it stopped and, after it, the three openings? */
+function pageHasCause(text) {
+  const lines = String(text).split('\n');
+  const h = lines.findIndex((l) => /^## Why it stopped\s*$/.test(l));
+  if (h < 0) return false;
+  const after = lines.slice(h + 1);
+  return PAGE_CAUSE.every((w) => after.some((l) => new RegExp(`^\\s*(?:- )?${esc(w)}`).test(l)));
+}
+
+/**
+ * HOLD 9: an eject is held. While a record stands, on the main thread a new start is refused, and the button is refused while the newest
+ * file directly under ~/.claude/plans/ does not open with its cause.
+ * @returns {string|null} the refusal, or null. An agent's call and any other tool pass; no latch is set.
+ */
+function holdEject(p) {
+  const tool = String(p.tool_name ?? '');
+  if (p.agent_id || !(NEW_STARTS.has(tool) || tool === 'ExitPlanMode')) return null;
+  const rec = ejectStanding(p);
+  if (!rec) return null;
+  if (tool === 'ExitPlanMode') {
+    const root = join(homedir(), '.claude', 'plans');
+    let newest = '';
+    let best = -1;
+    try { for (const f of readdirSync(root)) { const m = statSync(join(root, f)); if (m.isFile() && m.mtimeMs > best) { best = m.mtimeMs; newest = join(root, f); } } } catch { /* none */ }
+    let text = '';
+    try { text = newest ? readFileSync(newest, 'utf8') : ''; } catch { /* none */ }
+    if (pageHasCause(text)) return null;
+    return `THE PAGE DOES NOT OPEN WITH ITS CAUSE: a step ejected, and the page is not approved until the newest page under ~/.claude/plans/ holds the heading "## Why it stopped" and, after it, three lines that open with "${PAGE_CAUSE[0]}", "${PAGE_CAUSE[1]}" and "${PAGE_CAUSE[2]}".`;
+  }
+  const id = servingModel(tail.tailEntries(mainTranscript(p), 2 * 1024 * 1024));
+  return `A STEP EJECTED: ${rec.text} The run is stopped. The cause is found before the page is changed, and the page is changed in plan mode and approved at the button before anything more is sent.`
+    + (isTopTier(id) ? '' : ` Type ${PLAN_TIER_LINE} alone while the thread is idle. Say so in one plain line and end the turn.`);
+}
+
+/**
  * Run the holds on a call.
  * @returns {string|null} the first refusal. A hold that throws is set aside, one line goes to the error output and the call passes it.
  */
 function holds(p) {
-  for (const [key, name, hold] of [['read', 'the read hold', holdRead], ['word', 'the typed word hold', holdWord], ['latch', 'the latch hold', holdLatch], ['manager', 'the manager hold', holdManager], ['plan', 'the plan file hold', holdPlan]]) {
+  for (const [key, name, hold] of [['read', 'the read hold', holdRead], ['word', 'the typed word hold', holdWord], ['latch', 'the latch hold', holdLatch], ['manager', 'the manager hold', holdManager], ['plan', 'the plan file hold', holdPlan], ['eject', 'the eject hold', holdEject], ['runtier', 'the run tier hold', holdRunTier], ['plantier', 'the page tier hold', holdPlanTier], ['sendtier', 'the send tier hold', holdSendTier]]) {
     try {
       if (process.env.HOOK_DISPATCH_THROW === key) throw new Error('planted fault');
       const why = hold(p);
@@ -826,6 +966,7 @@ async function main(event, raw, p) {
       latchAfter(p, why);
       return 2;
     }
+    recordEject(p);
     const o = run(`node "${join(HUB, 'push-guard.mjs')}"`, raw, resolve(process.env.CLAUDE_PROJECT_DIR || process.cwd()));
     if (o.deny) { process.stderr.write(o.reason + '\n'); latchAfter(p, o.reason); return 2; }
     if (o.status !== 0 && !READS.has(tool)) {
