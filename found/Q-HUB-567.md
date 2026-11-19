@@ -1,0 +1,3 @@
+Q-HUB-567: The push guard counts a checker's call of a writing tool on a file outside the session's scratchpad, and a call of git add, git commit or git push through the shell. A checker that changes a file of the repository by another shell command, a redirect or an edit in place among them, is still counted as having changed nothing. Read from the guard's code on 18 November 2026.
+
+Fix in: `push-guard.mjs`, `guard-cases/push-guard.mjs`. The guard reads a checker's shell lines for a write to a file outside the session's scratchpad, as far as a line can be read, and counts one against the pass.

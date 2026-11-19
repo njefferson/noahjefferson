@@ -36,9 +36,10 @@
  *          checker has passed the exact commit it pushes. A
  *          pass is an agent of this session whose hand-back (or, when it ended without that call, its final message, an assistant message of text with no tool call after it) opens
  *          `CHECK PASS` and then the full id of that commit, and whose own
- *          transcript holds no Edit, Write, MultiEdit or NotebookEdit call and no Bash call running git commit, git add or git
- *          push. It is read from the agents' transcripts (agent-read.mjs `agentFiles` and `agentEnd`), never from a file an agent could
- *          write; a transcript that cannot be read is no pass.
+ *          transcript holds no Edit, Write, MultiEdit or NotebookEdit call on a file outside the session's own scratchpad and no Bash
+ *          call running git commit, git add or git push. A file in the scratchpad is passed because the checker's role and the review
+ *          file give the checker one for a check, and it is no part of the work. It is read from the agents' transcripts (agent-read.mjs
+ *          `agentFiles` and `agentEnd`), never from a file an agent could write; a transcript that cannot be read is no pass.
  *
  *   node push-guard.mjs     (payload on stdin; exit 2 refuses, reason on stderr)
  */
@@ -46,6 +47,7 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import { resolve, basename, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { tmpdir } from 'node:os';
 import { commandsIn, commandWordIndex, heredocs } from './shell-words.mjs';
 
 // The code that reads agents' transcripts is loaded here and not imported statically, so a copy of the guard without it keeps every
@@ -204,19 +206,37 @@ export function runsGitWrite(command) {
   return false;
 }
 
+const scratchEsc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Is a path inside this session's own scratchpad? The same test as `inScratchpad` in hook-dispatch.mjs, kept here so that the push guard
+ * loads without the dispatcher.
+ * @param {string} path  the file a call names.
+ * @param {string} sid  the session's id.
+ * @returns {boolean} true only for a path strictly below that session's scratchpad folder, under the temporary folder.
+ */
+export function inSessionScratch(path, sid) {
+  if (!sid || !path) return false;
+  const t = resolve(String(path));
+  const bases = [...new Set(['/tmp', tmpdir()])].map(scratchEsc).join('|');
+  return new RegExp(`^(?:${bases})/claude-\\d+/[^/]+/${scratchEsc(sid)}/scratchpad/.`).test(t);
+}
+
 /**
  * What an agent's own transcript shows it changed.
  * @param {object[]} entries  the agent's whole transcript.
- * @returns {string} '' when it holds no call of Edit, Write, MultiEdit or NotebookEdit and no Bash call running git commit, git add
- *   or git push; otherwise the first such call, named.
+ * @param {string} [sid]  the session's id; a writing-tool call on a file in that session's scratchpad is not counted, and with no id every
+ *   such call is counted.
+ * @returns {string} '' when it holds no call of Edit, Write, MultiEdit or NotebookEdit on a file outside the session's scratchpad and no
+ *   Bash call running git commit, git add or git push; otherwise the first such call, named.
  */
-export function changedSomething(entries) {
+export function changedSomething(entries, sid = '') {
   for (const e of entries) {
     const c = e?.message?.content;
     if (e?.type !== 'assistant' || !Array.isArray(c)) continue;
     for (const b of c) {
       if (b?.type !== 'tool_use') continue;
-      if (MUTATING_TOOLS.has(String(b.name))) return `a call of ${b.name}`;
+      if (MUTATING_TOOLS.has(String(b.name)) && !inSessionScratch(b.input?.file_path ?? b.input?.notebook_path, sid)) return `a call of ${b.name}`;
       if (b.name === 'Bash' && runsGitWrite(b.input?.command)) return 'a Bash call running git commit, git add or git push';
     }
   }
@@ -272,7 +292,7 @@ export function checkerPassed(p, commit) {
       const first = String(text).split('\n').map((l) => l.trim()).find(Boolean) ?? '';
       const m = /^CHECK PASS\s+([0-9a-f]{40,64})\b/i.exec(first);
       if (!m || m[1].toLowerCase() !== commit.toLowerCase()) continue;
-      if (changedSomething(entries)) continue;
+      if (changedSomething(entries, String(p?.session_id ?? ''))) continue;
       return { ok: true };
     } catch { /* an agent that cannot be read is no pass */ }
   }

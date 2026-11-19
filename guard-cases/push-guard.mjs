@@ -118,7 +118,7 @@ export const cases = [
   },
   {
     name: 'push check: a "pass" from an agent that made an Edit, Write or NotebookEdit call, or ran git commit, git add or git push, is no pass',
-    guards: ['pc_no_edit', 'pc_git_write'],
+    guards: ['pc_no_edit', 'pc_git_write', 'pc_scratch_off', 'pc_scratch_wide', 'pc_scratch_session'],
     run(m, dir, h) {
       const r = twoCommits(h);
       const first = `CHECK PASS ${r.head}`;
@@ -132,6 +132,8 @@ export const cases = [
       const add = tried(call('Bash', { command: `git -C ${r.dir} add -A` }));
       const pushed = tried(call('Bash', { command: 'git status && git push origin staging' }));
       const nested = tried(call('Bash', { command: 'sh -c "git commit --allow-empty -m x"' }));
+      const ownScratch = tried(call('Write', { file_path: '/tmp/claude-0/planted-project/pc-session/scratchpad/scratch/check.mjs', content: 'x' }));
+      const otherScratch = tried(call('Write', { file_path: '/tmp/claude-0/planted-project/another-session/scratchpad/scratch/check.mjs', content: 'x' }));
       return h.assertAll([
         ['control: the same hand-back from an agent that only read passes', control.status === 0, said(control)],
         ['an Edit call makes the pass no pass', refused(edit), said(edit)],
@@ -141,6 +143,8 @@ export const cases = [
         ['a Bash call running git add through -C makes the pass no pass', refused(add), said(add)],
         ['a Bash call running git push makes the pass no pass', refused(pushed), said(pushed)],
         ['a git commit inside sh -c makes the pass no pass', refused(nested), said(nested)],
+        ['a Write of a file in the session\'s own scratchpad leaves the pass a pass', ownScratch.status === 0, said(ownScratch)],
+        ['a Write of a file in another session\'s scratchpad makes the pass no pass', refused(otherScratch), said(otherScratch)],
       ]);
     },
   },
@@ -234,7 +238,10 @@ export const plants = {
   pc_commit_named: ["The push is of commit ${commit || '(not readable from this repository)'}. `", "The push is of commit (named elsewhere). `", 'push-guard.mjs'],
   pc_pass_read: ["      if (!text) continue;\n", "      if (!text) continue;\n      return { ok: false };\n", 'push-guard.mjs'],
   pc_exact_commit: ["      if (!m || m[1].toLowerCase() !== commit.toLowerCase()) continue;\n", "      if (!m) continue;\n", 'push-guard.mjs'],
-  pc_no_edit: ["      if (changedSomething(entries)) continue;\n", '', 'push-guard.mjs'],
+  pc_no_edit: ["      if (changedSomething(entries, String(p?.session_id ?? ''))) continue;\n", '', 'push-guard.mjs'],
+  pc_scratch_off: ["      if (MUTATING_TOOLS.has(String(b.name)) && !inSessionScratch(b.input?.file_path ?? b.input?.notebook_path, sid)) return", "      if (MUTATING_TOOLS.has(String(b.name))) return", 'push-guard.mjs'],
+  pc_scratch_wide: ["/scratchpad/.`).test(t);\n", "/scratchpad/.`).test(t) || true;\n", 'push-guard.mjs'],
+  pc_scratch_session: ["/${scratchEsc(sid)}/scratchpad/", "/[^/]+/scratchpad/", 'push-guard.mjs'],
   pc_git_write: ["      if (b.name === 'Bash' && runsGitWrite(b.input?.command)) return", "      if (false) return", 'push-guard.mjs'],
   pc_final_text: ["const text = end?.how === 'a report' ? end.last : finalText(entries);", "const text = end?.how === 'a report' ? end.last : '';", 'push-guard.mjs'],
   pc_unreadable_commit: ["    if (!commit) return checkRefusal('', '', branch);\n", "    if (!commit) return null;\n", 'push-guard.mjs'],
