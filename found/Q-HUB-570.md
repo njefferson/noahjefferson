@@ -1,0 +1,3 @@
+Q-HUB-570: On 19 November a page said GitHub's interface asks for a sign-in for two reads. Only the status code had been read, and the answer says the harness's proxy does not permit those paths. The same page gave the first lines of eight files in running prose, and three workers wrote three forms of them. Both are asked for already: a state is read and not inferred, and text to be copied is one fenced block.
+
+Fix in: `.claude/skills/piece-of-work/SKILL.md`, `plans/native/skills/piece-of-work/SKILL.md`. The check of a page before the button reads that text a step is to copy stands in a fenced block, and the procedure says a line under What is gives what an answer said and never what its status suggests.

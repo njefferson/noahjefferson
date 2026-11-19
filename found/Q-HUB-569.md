@@ -1,0 +1,3 @@
+Q-HUB-569: On 19 November a step was asked for every settings file in a container, and its page listed two and a search of the configuration folder. The page had not read that folder. A worker read a settings file the page did not know, went to a folder that file names, and the harness refused the read, which ended the step with nothing written. Two other workers ran reads their steps named no command for, and one could not count two folders.
+
+Fix in: `.claude/skills/piece-of-work/SKILL.md`, `plans/native/skills/piece-of-work/SKILL.md`. The procedure says a step that reads lists every place it may open, that its questions ask only what those places can answer, and that anything else is recorded as not known and never searched for.

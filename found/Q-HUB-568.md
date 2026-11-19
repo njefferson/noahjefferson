@@ -1,0 +1,3 @@
+Q-HUB-568: On 19 November a page gave eight steps one line each and one list between them, and numbered its files one below its steps. A worker sent for the third step wrote the file numbered 03, which was the fourth step's, over that step's finished file. Nothing in a step makes a worker stop when its file already stands, and nothing reads a page for a step that is not whole under its own number.
+
+Fix in: `.claude/skills/piece-of-work/SKILL.md`, `plans/native/skills/piece-of-work/SKILL.md`. The procedure says each step is whole under its own number, that steps sent together name different files, and that a step that writes a new file first reads that the file is not there.
