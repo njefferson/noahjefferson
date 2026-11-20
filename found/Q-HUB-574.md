@@ -1,0 +1,3 @@
+Q-HUB-574: Part 3 of plans/hub-analysis.md. The requirements name three ejects, and the old rules let a step be put right under a fresh review while only a change of scope went back to the button. Today any change of a page needs the button: a write of a plan file passes only in plan mode, and after an eject nothing is sent until an approval. All seven stops of 17 to 19 November were defects of a step's wording, and none moved a page's result.
+
+Fix in: `hook-dispatch.mjs`, `plans/native/page.md`, `plans/native/running.md`. What is approved is a page's result, its check, its cost and its way back; the top tier puts a step right with its cause found and filed, a checker walks the page again, and the run goes on, twice at most; a change of the scope goes to the button.

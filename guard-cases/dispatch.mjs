@@ -1300,30 +1300,6 @@ export const cases = [
     },
   },
   {
-    name: 'hold 7 (page tier): on the main thread a write of a plan file is refused while a model below the top serves, with the line that puts the thread on the top tier',
-    guards: ['pt_hold', 'pt_scope', 'pt_agent', 'pt_line'],
-    run(m, dir, h) {
-      const w = world(h);
-      const opusTr = h.transcript([typed(h, 0, 'Go.'), modelReply(h, 1, 'claude-opus-5-5')]);
-      const planWrite = (tr, extra = {}) => w.run(dir, call('Write', { file_path: w.plan, content: 'x' }, tr, { permission_mode: 'plan', ...extra }));
-      const opus = planWrite(opusTr);
-      const afterRefusal = w.run(dir, call('Bash', { command: 'ls' }, opusTr));
-      const files = readdirSync(w.latch);
-      const fable = planWrite(h.transcript([typed(h, 0, 'Go.'), modelReply(h, 1, 'claude-fable-5-2')]));
-      const scratch = w.run(dir, call('Write', { file_path: w.scratch, content: 'x' }, opusTr, { permission_mode: 'plan' }));
-      const none = planWrite(h.transcript([typed(h, 0, 'Go.')]));
-      const agent = planWrite(opusTr, { agent_id: 'ag1' });
-      return h.assertAll([
-        ['with an opus reply a Write of a plan file in plan mode exits 2 with PAGE WAITS FOR ITS TIER, the model and the line', held(opus, /^PAGE WAITS FOR ITS TIER: .*claude-opus-5-5.*newest reply.*\/model claude-fable-5-2/s), said(opus)],
-        ['a Bash read after the refusal passes, so no latch was set', passes(afterRefusal) && files.length === 0, said(afterRefusal) + files.join(',')],
-        ['with a fable reply the write passes', passes(fable), said(fable)],
-        ['with an opus reply a Write of a scratchpad file passes', passes(scratch), said(scratch)],
-        ['with no reply the write passes', passes(none), said(none)],
-        ['an agent\'s write of a plan file passes', passes(agent), said(agent)],
-      ]);
-    },
-  },
-  {
     name: 'hold 8 (send tier): on the main thread an Agent or Task send naming a model above sonnet is refused, and one naming sonnet, haiku or none passes',
     guards: ['st_hold', 'st_sonnet', 'st_task', 'st_agent'],
     run(m, dir, h) {
@@ -1353,7 +1329,7 @@ export const cases = [
   },
   {
     name: 'hold 9 (eject): after a hand-back that opens EJECT a send is refused with the record\'s words until an approval later than the record; DONE, FAILED and REFUSED hold nothing; an agent is not held',
-    guards: ['ej_record', 'ej_mark', 'ej_hold', 'ej_lift', 'ej_agent', 'ej_line'],
+    guards: ['ej_record', 'ej_mark', 'ej_hold', 'ej_lift', 'ej_agent'],
     run(m, dir, h) {
       const base = Date.parse('2026-10-01T12:00:00Z');
       const record = (w, atMs, text) => {
@@ -1386,7 +1362,7 @@ export const cases = [
       const agentSend = send(wAgent, opusTr, { agent_id: 'ag1' });
       return h.assertAll([
         ['a hand-back that opens EJECT and a full stop passes unchanged and writes the session\'s record', passes(backStop) && existsSync(recordPath(wStop)), said(backStop)],
-        ['then a main-thread Agent send exits 2 with A STEP EJECTED, the record\'s words and the line for the top tier', held(sentStop, /^A STEP EJECTED: EJECT\. The step met a file it did not name\..*plan mode.*button.*\/model claude-fable-5-2/s), said(sentStop)],
+        ['then a main-thread Agent send exits 2 with A STEP EJECTED and the record\'s words, and names no model command', held(sentStop, /^A STEP EJECTED: EJECT\. The step met a file it did not name\..*plan mode.*button/s) && !/\/model/.test(sentStop.stderr), said(sentStop)],
         ['a Bash read after the refusal passes, so no latch was set', passes(afterRefusal) && filesStop.length === 0, said(afterRefusal) + filesStop.join(',')],
         ['a hand-back that opens EJECT with no mark after it holds the next send too', held(sentBare, /^A STEP EJECTED: EJECT\nThe step met another thing/), said(sentBare)],
         ...quiet.map((q, k) => [`a hand-back that opens ${['DONE', 'FAILED', 'REFUSED'][k]} writes no record and holds nothing`, passes(q.b) && passes(q.sent) && !q.there, said(q.b) + said(q.sent)]),
@@ -1431,6 +1407,223 @@ export const cases = [
         ['a file with the heading and one opening is refused', held(onlyOne.r, /THE PAGE DOES NOT OPEN WITH ITS CAUSE/), said(onlyOne.r)],
         ['the newest file counts: where it lacks the part the button is refused though an older file holds it', held(newestLacks.r, /THE PAGE DOES NOT OPEN WITH ITS CAUSE/), said(newestLacks.r)],
         ['where the newest file holds the part the button passes though an older one lacks it', passes(newestGood.r), said(newestGood.r)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 10 (walk): where the checker\'s role says what a walk is, the button waits for a checker that walked the page as it stands, and on the top tier the checker sent a page\'s path and the word walk passes in plan mode',
+    guards: ['wk_hold', 'wk_scope', 'wk_scope_text', 'wk_word', 'wk_agent', 'wk_send', 'wk_send_word', 'wk_send_eject', 'wk_send_type', 'wk_send_mode', 'wk_send_place'],
+    run(m, dir, h) {
+      const PAGE = '# A page\n\nOne step.\n';
+      const base = Date.parse('2026-10-01T12:00:00Z');
+      const idOf = (file) => spawnSync('git', ['hash-object', file], { encoding: 'utf8', timeout: 60000 }).stdout.trim();
+      const walked = (typedText, first, final = false) => {
+        const tr = h.transcript([typed(h, 0, typedText), modelReply(h, 1, 'claude-fable-5-2')]);
+        if (first === undefined) return tr;
+        const subs = join(tr.slice(0, -'.jsonl'.length), 'subagents');
+        mkdirSync(subs, { recursive: true });
+        const end = final
+          ? [{ type: 'assistant', timestamp: h.ts(30), message: { role: 'assistant', content: [{ type: 'text', text: `${first}\nNo gap was met.` }] } }]
+          : [h.tool(20, 'k-h', 'SubagentHandback', { message: `${first}\nNo gap was met.` }), h.result(21, 'k-h', 'Report delivered to your caller.')];
+        const body = [h.turn(1, 'Walk the page.'), h.tool(2, 'k-b', 'Bash', { command: 'git hash-object /x/p.md' }), h.result(3, 'k-b', 'printed'), ...end];
+        writeFileSync(join(subs, 'agent-k1.jsonl'), body.map((e) => JSON.stringify(e)).join('\n') + '\n');
+        writeFileSync(join(subs, 'agent-k1.meta.json'), JSON.stringify({ agentType: 'checker', description: 'Walk the page' }));
+        return tr;
+      };
+      const press = (o = {}) => {
+        const w = world(h);
+        mkdirSync(join(w.home, '.claude', 'plans'), { recursive: true });
+        writeFileSync(w.plan, PAGE);
+        if (o.role !== false) { mkdirSync(join(w.launch, '.claude', 'agents'), { recursive: true }); writeFileSync(join(w.launch, '.claude', 'agents', 'checker.md'), o.role === 'plain' ? 'A planted role that speaks of no such send.\n' : 'A planted role: where the words sent are a page\'s path and the word walk, the page is walked.\n'); }
+        const id = idOf(w.plan);
+        const tr = walked(o.typed ?? 'Draw the page.', o.first === undefined ? undefined : o.first.replace('ID', id), o.final);
+        const r = w.run(dir, call('ExitPlanMode', { plan: 'x' }, tr, { permission_mode: 'plan', ...(o.extra ?? {}) }));
+        return { r, id, after: w.run(dir, call('Bash', { command: 'ls' }, tr)), latch: readdirSync(w.latch) };
+      };
+      const none = press();
+      const clear = press({ first: 'CHECK PASS ID' });
+      const finalText = press({ first: 'CHECK PASS ID', final: true });
+      const other = press({ first: `CHECK PASS ${'0'.repeat(40)}` });
+      const failed = press({ first: 'CHECK FAIL ID' });
+      const noRole = press({ role: false });
+      const plainRole = press({ role: 'plain' });
+      const word = press({ typed: 'Put the page up without a walk.' });
+      const agent = press({ extra: { agent_id: 'ag1' } });
+      const goTr = h.transcript([typed(h, 0, 'Go.'), modelReply(h, 1, 'claude-fable-5-2')]);
+      const corrTr = h.transcript([typed(h, 0, 'Draw the page.'), modelReply(h, 1, 'claude-fable-5-2')]);
+      const w = world(h);
+      const send = (input, tr = goTr, mode = 'plan', wd = w) => wd.run(dir, call('Agent', { description: 'x', ...input }, tr, { permission_mode: mode }));
+      const walk = { subagent_type: 'checker', prompt: `${w.plan} walk` };
+      const walkGo = send(walk);
+      const walkCorr = send(walk, corrTr);
+      const worker = send({ subagent_type: 'worker', prompt: `${w.plan} walk` });
+      const noWord = send({ subagent_type: 'checker', prompt: `${w.plan} step 1` });
+      const elsewhere = send({ subagent_type: 'checker', prompt: `${w.repoFile} walk` });
+      const notPlan = send(walk, goTr, 'auto');
+      const wE = world(h);
+      mkdirSync(join(wE.home, '.claude', 'eject'), { recursive: true });
+      writeFileSync(join(wE.home, '.claude', 'eject', 'dp-session.json'), JSON.stringify({ at: base + 5000, text: 'EJECT. Planted.' }));
+      const walkEject = send({ subagent_type: 'checker', prompt: `${wE.plan} walk` }, goTr, 'plan', wE);
+      const workerEject = send({ subagent_type: 'worker', prompt: `${wE.plan} step 1` }, goTr, 'plan', wE);
+      return h.assertAll([
+        ['with no walk the button exits 2 with THE PAGE HAS NOT BEEN WALKED, the page\'s content id and the words of the send', held(none.r, /^THE PAGE HAS NOT BEEN WALKED: /) && none.r.stderr.includes(none.id) && /p\.md walk/.test(none.r.stderr), said(none.r)],
+        ['a Bash read after the refusal passes, so no latch was set', passes(none.after) && none.latch.length === 0, said(none.after) + none.latch.join(',')],
+        ['after a checker\'s hand-back that opens CHECK PASS and the id of the page as it stands the button passes', passes(clear.r), said(clear.r)],
+        ['the same words as the final message of a checker that ended without a hand-back pass too', passes(finalText.r), said(finalText.r)],
+        ['a pass that names another id is refused', held(other.r, /THE PAGE HAS NOT BEEN WALKED/), said(other.r)],
+        ['CHECK FAIL for the page is refused', held(failed.r, /THE PAGE HAS NOT BEEN WALKED/), said(failed.r)],
+        ['in a launch folder that holds no checker role the button passes', passes(noRole.r), said(noRole.r)],
+        ['in a launch folder whose checker\'s role does not speak of a walk the button passes', passes(plainRole.r), said(plainRole.r)],
+        ['where the newest typed message carries the words without a walk the button passes', passes(word.r), said(word.r)],
+        ['an agent\'s own call passes', passes(agent.r), said(agent.r)],
+        ['on the top tier in plan mode, after a go message, the checker sent a page\'s path and the word walk passes', passes(walkGo), said(walkGo)],
+        ['the same send passes under a typed message with no go-word', passes(walkCorr), said(walkCorr)],
+        ['the same words sent to another role are refused', held(worker, /RUN WAITS FOR ITS TIER/), said(worker)],
+        ['the checker sent a page\'s path and other words is refused', held(noWord, /RUN WAITS FOR ITS TIER/), said(noWord)],
+        ['the checker sent a path outside the plans folder is refused', held(elsewhere, /RUN WAITS FOR ITS TIER/), said(elsewhere)],
+        ['outside plan mode the same send is refused', held(notPlan, /RUN WAITS FOR ITS TIER/), said(notPlan)],
+        ['with an eject standing the walk still passes, and a worker\'s send is refused', passes(walkEject) && held(workerEject, /A STEP EJECTED/), said(walkEject) + said(workerEject)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 6 (run tier, the top tier\'s run): on the top tier the hub\'s run script launched for a page that stands as it was approved passes, and a worker or a checker sent that page\'s path and a step passes only once the script has been launched for it; another script, a changed script, a page changed since its approval, no approval, plan mode and a path elsewhere are refused',
+    guards: ['rn_send', 'rn_mode', 'rn_script', 'rn_script_same', 'rn_place', 'rn_text', 'rn_approval', 'rn_step_role', 'rn_step_words', 'rn_step_first', 'rn_step_after', 'rn_step_page', 'rn_what'],
+    run(m, dir, h) {
+      const PAGE = '# A page\n\nOne step.\n';
+      const SCRIPT = 'planted run script\n';
+      const hub = hubCopy(h, dir);
+      mkdirSync(join(hub, 'plans', 'native'), { recursive: true });
+      writeFileSync(join(hub, 'plans', 'native', 'run-page.js'), SCRIPT);
+      const approved = (s, id, file, text) => [h.tool(s, id, 'ExitPlanMode', { plan: text }), { ...h.result(s + 1, id, 'User has approved your plan. You can now start coding. Start with updating your todo list if applicable'), toolUseResult: { plan: text, isAgent: false, filePath: file } }];
+      const launchedFor = (s, id, scriptPath, page) => [h.tool(s, id, 'Workflow', { scriptPath, args: { page, steps: [{ n: 1, role: 'worker' }] } }), h.result(s + 1, id, 'Workflow launched in background.')];
+      const make = (o = {}) => {
+        const w = world(h);
+        mkdirSync(join(w.home, '.claude', 'plans'), { recursive: true });
+        if (o.missing !== true) writeFileSync(w.plan, o.now ?? PAGE);
+        const other = join(w.home, '.claude', 'plans', 'q.md');
+        writeFileSync(other, PAGE);
+        const outside = join(w.launch, 'outside.md');
+        writeFileSync(outside, PAGE);
+        mkdirSync(join(w.launch, 'plans', 'native'), { recursive: true });
+        const script = join(w.launch, 'plans', 'native', 'run-page.js');
+        if (o.script !== false) writeFileSync(script, o.script ?? SCRIPT);
+        const elsewhere = join(w.launch, 'another.js');
+        writeFileSync(elsewhere, SCRIPT);
+        const model = o.model ?? 'claude-fable-5-2';
+        const entries = [typed(h, 0, 'Go.'), modelReply(h, 1, model),
+          ...(o.before ? launchedFor(2, 'r0', script, w.plan) : []),
+          ...(o.approval === false ? [] : approved(4, 'ap1', o.approvedFile === 'outside' ? outside : w.plan, PAGE)),
+          ...(o.after ? launchedFor(6, 'r1', o.afterScript === 'elsewhere' ? elsewhere : script, o.afterFor === 'other' ? other : w.plan) : []),
+          modelReply(h, 8, model)];
+        const tr = h.transcript(entries);
+        const launch = (input, mode = 'auto') => w.run(hub, call('Workflow', input, tr, { permission_mode: mode }));
+        const send = (input, mode = 'auto') => w.run(hub, call('Agent', { description: 'x', ...input }, tr, { permission_mode: mode }));
+        const args = (page) => ({ page, steps: [{ n: 1, role: 'worker' }] });
+        return { w, launch, send, other, outside, script, elsewhere, args, tr };
+      };
+      const a = make();
+      const run = a.launch({ scriptPath: a.script, args: a.args(a.w.plan) });
+      const runFrom = a.launch({ scriptPath: a.script, args: { ...a.args(a.w.plan), from: 3 } });
+      const runNoMode = a.w.run(hub, call('Workflow', { scriptPath: a.script, args: a.args(a.w.plan) }, a.tr));
+      const runPlanMode = a.launch({ scriptPath: a.script, args: a.args(a.w.plan) }, 'plan');
+      const runInline = a.launch({ script: 'export const meta = {}', args: a.args(a.w.plan) });
+      const runElsewhere = a.launch({ scriptPath: a.elsewhere, args: a.args(a.w.plan) });
+      const runNoPage = a.launch({ scriptPath: a.script, args: { steps: [] } });
+      const runOther = a.launch({ scriptPath: a.script, args: a.args(a.other) });
+      const stepFirst = a.send({ subagent_type: 'worker', prompt: `${a.w.plan} step 1` });
+      const afterRefusal = a.w.run(hub, call('Bash', { command: 'ls' }, h.transcript([typed(h, 0, 'Go.'), modelReply(h, 1, 'claude-fable-5-2')])));
+      const latch = readdirSync(a.w.latch);
+      const changedScript = make({ script: 'another text\n' });
+      const runChangedScript = changedScript.launch({ scriptPath: changedScript.script, args: changedScript.args(changedScript.w.plan) });
+      const noScript = make({ script: false });
+      const runNoScript = noScript.launch({ scriptPath: noScript.script, args: noScript.args(noScript.w.plan) });
+      const out = make({ approvedFile: 'outside' });
+      const runOutside = out.launch({ scriptPath: out.script, args: out.args(out.outside) });
+      const changed = make({ now: PAGE + 'One more line.\n' });
+      const runChanged = changed.launch({ scriptPath: changed.script, args: changed.args(changed.w.plan) });
+      const none = make({ approval: false });
+      const runNone = none.launch({ scriptPath: none.script, args: none.args(none.w.plan) });
+      const gone = make({ missing: true });
+      const runGone = gone.launch({ scriptPath: gone.script, args: gone.args(gone.w.plan) });
+      const b = make({ after: true });
+      const stepWorker = b.send({ subagent_type: 'worker', prompt: `${b.w.plan} step 1` });
+      const stepChecker = b.send({ subagent_type: 'checker', prompt: `${b.w.plan} step 3` });
+      const stepOtherRole = b.send({ subagent_type: 'general-purpose', prompt: `${b.w.plan} step 1` });
+      const stepWords = b.send({ subagent_type: 'worker', prompt: `${b.w.plan} step 1 and more` });
+      const stepPlanMode = b.send({ subagent_type: 'worker', prompt: `${b.w.plan} step 1` }, 'plan');
+      const before = make({ before: true });
+      const stepBefore = before.send({ subagent_type: 'worker', prompt: `${before.w.plan} step 1` });
+      const forOther = make({ after: true, afterFor: 'other' });
+      const stepForOther = forOther.send({ subagent_type: 'worker', prompt: `${forOther.w.plan} step 1` });
+      const byOther = make({ after: true, afterScript: 'elsewhere' });
+      const stepByOther = byOther.send({ subagent_type: 'worker', prompt: `${byOther.w.plan} step 1` });
+      const opus = make({ model: 'claude-opus-5-5', approval: false });
+      const opusAny = opus.launch({ script: 'x' });
+      const refused = (r) => held(r, /^RUN WAITS FOR ITS TIER: /);
+      return h.assertAll([
+        ['on the top tier, outside plan mode, the hub\'s run script launched for a page that stands as it was approved passes', passes(run), said(run)],
+        ['a launch from a later step passes too', passes(runFrom), said(runFrom)],
+        ['where the call does not say its mode the launch passes', passes(runNoMode), said(runNoMode)],
+        ['in plan mode the launch is refused', refused(runPlanMode), said(runPlanMode)],
+        ['a script passed inline is refused, and the refusal names the three calls that pass', refused(runInline) && /Three calls pass on the top tier: in plan mode, the checker sent a page\'s path and the word walk; outside plan mode, the hub\'s run script launched with the Workflow tool for a page that stands as it was approved; and, once that script has been launched for the page, a worker or a checker sent the page\'s path, the word step and the step\'s number\./.test(runInline.stderr), said(runInline)],
+        ['a Bash read after the refusal passes, so no latch was set', passes(afterRefusal) && latch.length === 0, said(afterRefusal) + latch.join(',')],
+        ['another file with the same text is not the run script', refused(runElsewhere), said(runElsewhere)],
+        ['a launch that names no page is refused', refused(runNoPage), said(runNoPage)],
+        ['a page with no approval of its own is refused, though another page of the folder was approved', refused(runOther), said(runOther)],
+        ['a run script whose text is not the live copy\'s launches nothing, and neither does a missing one', refused(runChangedScript) && refused(runNoScript), said(runChangedScript) + said(runNoScript)],
+        ['a file outside the plans folder is refused though the transcript holds an approval of it', refused(runOutside), said(runOutside)],
+        ['a page changed since its approval is refused', refused(runChanged), said(runChanged)],
+        ['with no approval in the transcript the launch is refused', refused(runNone), said(runNone)],
+        ['a page that is not there is refused', refused(runGone), said(runGone)],
+        ['a step is refused while the script has not been launched for the page', refused(stepFirst), said(stepFirst)],
+        ['once the script has been launched for the page, a worker and a checker sent its path and a step pass', passes(stepWorker) && passes(stepChecker), said(stepWorker) + said(stepChecker)],
+        ['a step sent to another role, and one with words after its number, are refused', refused(stepOtherRole) && refused(stepWords), said(stepOtherRole) + said(stepWords)],
+        ['a step in plan mode is refused', refused(stepPlanMode), said(stepPlanMode)],
+        ['a launch before the newest approval does not count', refused(stepBefore), said(stepBefore)],
+        ['a launch for another page does not count', refused(stepForOther), said(stepForOther)],
+        ['a launch of another script does not count', refused(stepByOther), said(stepByOther)],
+        ['a tier below the top is not held, whatever it launches', passes(opusAny), said(opusAny)],
+      ]);
+    },
+  },
+  {
+    name: 'the run script (plans/native/run-page.js): it sends each step in order to the role named, on the sonnet tier, sends a FAILED step once more, stops at the first step that does not end as it should, and returns each step, what stopped it and every Found line',
+    guards: [],
+    async run(m, dir, h) {
+      const src = readFileSync(join(dir, 'plans', 'native', 'run-page.js'), 'utf8');
+      const body = src.slice(src.indexOf('phase(\'Run\')'));
+      const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
+      const S = [{ n: 1, role: 'worker' }, { n: 2, role: 'worker' }, { n: 3, role: 'checker' }];
+      const go = async (answers, extra = {}) => {
+        const calls = [];
+        const agent = async (prompt, opts) => { calls.push({ prompt, opts }); const x = answers[calls.length - 1]; return x === undefined ? null : x; };
+        const r = await new AsyncFunction('agent', 'phase', 'args', body)(agent, () => {}, { page: '/p.md', steps: S, ...extra });
+        return { r, sent: calls.map((c) => `${c.prompt}|${c.opts.agentType}|${c.opts.model}`).join(' ; ') };
+      };
+      const done = await go(['DONE\nall', 'DONE\nFound: a thing left', 'CHECK PASS abc']);
+      const again = await go(['FAILED\nred', 'DONE', 'DONE', 'CHECK PASS x']);
+      const twice = await go(['FAILED\nred', 'FAILED\nred again', 'DONE']);
+      const eject = await go(['DONE', 'EJECT\nnot foreseen', 'CHECK PASS x']);
+      const checkFail = await go(['DONE', 'DONE', 'CHECK FAIL x\nfault']);
+      const workerPass = await go(['CHECK PASS x']);
+      const none = await go(['DONE', undefined]);
+      const from = await go(['CHECK PASS x'], { from: 3 });
+      const noWord = await go(['All good.']);
+      const longer = await go(['DONEISH']);
+      const stop = (x) => (x.r.stopped ? `${x.r.stopped.step}:${x.r.stopped.word}` : 'none');
+      return h.assertAll([
+        ['three steps that end as they should are sent in order, each to its role on the sonnet tier, and the run ends done', done.r.ended === 'done' && done.sent === '/p.md step 1|worker|sonnet ; /p.md step 2|worker|sonnet ; /p.md step 3|checker|sonnet', JSON.stringify(done)],
+        ['a line an answer opens with Found is returned with its step', JSON.stringify(done.r.found) === JSON.stringify(['step 2: Found: a thing left']), JSON.stringify(done.r.found)],
+        ['each step is returned with its word and its first line', JSON.stringify(done.r.steps[2]) === JSON.stringify({ step: 3, role: 'checker', word: 'CHECK PASS', first: 'CHECK PASS abc' }), JSON.stringify(done.r.steps)],
+        ['a step that hands back FAILED is sent once more, and the run goes on where it then ends DONE', again.r.ended === 'done' && again.sent.split(' ; ').length === 4 && again.sent.startsWith('/p.md step 1|worker|sonnet ; /p.md step 1|worker|sonnet'), again.sent],
+        ['a second FAILED stops the run at that step, with its whole answer', stop(twice) === '1:FAILED' && twice.sent.split(' ; ').length === 2 && twice.r.stopped.answer === 'FAILED\nred again', JSON.stringify(twice)],
+        ['EJECT stops the run and nothing more is sent', stop(eject) === '2:EJECT' && eject.sent.split(' ; ').length === 2, JSON.stringify(eject)],
+        ['CHECK FAIL stops the run', stop(checkFail) === '3:CHECK FAIL', JSON.stringify(checkFail)],
+        ['CHECK PASS from a worker is not DONE and stops the run', stop(workerPass) === '1:CHECK PASS', JSON.stringify(workerPass)],
+        ['no answer stops the run', stop(none) === '2:NO ANSWER', JSON.stringify(none)],
+        ['a launch from step 3 sends only step 3', from.r.ended === 'done' && from.sent === '/p.md step 3|checker|sonnet', from.sent],
+        ['an answer that opens with no word, or with a longer word, stops the run', stop(noWord) === '1:NO WORD' && stop(longer) === '1:NO WORD', JSON.stringify(noWord) + JSON.stringify(longer)],
       ]);
     },
   },
@@ -1643,10 +1836,6 @@ export const plants = {
   rt_command: ["const m = /Set model to[^`]*`([^`]*)`/.exec(tail.textOf(e));", 'const m = null;', 'hook-dispatch.mjs'],
   rt_line: ["const RUN_TIER_LINE = '/model claude-opus-5-5';", "const RUN_TIER_LINE = '/model planted';", 'hook-dispatch.mjs'],
   rt_no_latch: ["  if (!id || !isTopTier(id)) return null;\n  return tierRefusal('RUN WAITS", "  if (!id || !isTopTier(id)) return null;\n  latchAfter(p, 'planted run tier refusal');\n  return tierRefusal('RUN WAITS", 'hook-dispatch.mjs'],
-  pt_hold: ['  if (!id || isTopTier(id)) return null;', '  return null;', 'hook-dispatch.mjs'],
-  pt_scope: ["  if (!a.startsWith(join(homedir(), '.claude', 'plans') + '/')) return null;", '  void 0;', 'hook-dispatch.mjs'],
-  pt_agent: ['  if (p.agent_id || !FILE_WRITES.has(tool)) return null;\n  const a = absPath', '  if (!FILE_WRITES.has(tool)) return null;\n  const a = absPath', 'hook-dispatch.mjs'],
-  pt_line: ["const PLAN_TIER_LINE = '/model claude-fable-5-2';", "const PLAN_TIER_LINE = '/model planted';", 'hook-dispatch.mjs'],
   st_hold: ["  if (typeof m !== 'string' || /sonnet|haiku/i.test(m)) return null;", '  return null;', 'hook-dispatch.mjs'],
   st_sonnet: ["/sonnet|haiku/i.test(m)", '/sonnet/i.test(m)', 'hook-dispatch.mjs'],
   st_task: ['/^(?:Agent|Task)$/.test(String(p.tool_name ?? \'\'))', '/^Agent$/.test(String(p.tool_name ?? \'\'))', 'hook-dispatch.mjs'],
@@ -1656,11 +1845,34 @@ export const plants = {
   ej_hold: ['  if (!rec) return null;\n  if (tool === \'ExitPlanMode\') {', '  return null;\n  if (tool === \'ExitPlanMode\') {', 'hook-dispatch.mjs'],
   ej_lift: ["entries[i]?.timestamp ?? '') > at)) { rmSync", "entries[i]?.timestamp ?? '') > Infinity)) { rmSync", 'hook-dispatch.mjs'],
   ej_agent: ["  if (p.agent_id || !(NEW_STARTS.has(tool) || tool === 'ExitPlanMode')) return null;", "  if (!(NEW_STARTS.has(tool) || tool === 'ExitPlanMode')) return null;", 'hook-dispatch.mjs'],
-  ej_line: ["(isTopTier(id) ? '' : ` Type ${PLAN_TIER_LINE}", "(true ? '' : ` Type ${PLAN_TIER_LINE}", 'hook-dispatch.mjs'],
   ej_page: ['    if (pageHasCause(text)) return null;\n', '    return null;\n', 'hook-dispatch.mjs'],
   ej_page_all: ['return PAGE_CAUSE.every((w) => after.some(', 'return PAGE_CAUSE.some((w) => after.some(', 'hook-dispatch.mjs'],
   ej_page_scope: ["const h = lines.findIndex((l) => /^## Why it stopped\\s*$/.test(l));\n  if (h < 0) return false;", "const h = lines.findIndex((l) => /^## Why it stopped\\s*$/.test(l));\n  if (h < 0) return PAGE_CAUSE.every((w) => lines.some((l) => l.includes(w)));", 'hook-dispatch.mjs'],
   ej_newest: ['m.mtimeMs > best)', 'true)', 'hook-dispatch.mjs'],
+  wk_hold: ["  if (pushGuard.checkerPassed(p, id).ok) return null;\n", "  return null;\n", 'hook-dispatch.mjs'],
+  wk_scope: ["  if (!roleWalks(resolve(process.env.CLAUDE_PROJECT_DIR || p.cwd || process.cwd()))) return null;\n", '', 'hook-dispatch.mjs'],
+  wk_scope_text: ["/\\bthe word walk\\b/.test(readFileSync(join(root, '.claude', 'agents', 'checker.md'), 'utf8'))", "!!readFileSync(join(root, '.claude', 'agents', 'checker.md'), 'utf8')", 'hook-dispatch.mjs'],
+  wk_word: ["  if (/\\bwithout a walk\\b/i.test(lastTyped(p))) return null;\n", '', 'hook-dispatch.mjs'],
+  wk_agent: ["  if (p.agent_id || String(p.tool_name ?? '') !== 'ExitPlanMode') return null;", "  if (String(p.tool_name ?? '') !== 'ExitPlanMode') return null;", 'hook-dispatch.mjs'],
+  wk_send: ["  if (isWalkSend(p)) return null;\n  if (isRunSend(p, id)) return null;", "  if (isRunSend(p, id)) return null;", 'hook-dispatch.mjs'],
+  wk_send_word: ["  if (isWalkSend(p)) return null;\n  if (NEW_STARTS.has(tool)) return text;", "  if (NEW_STARTS.has(tool)) return text;", 'hook-dispatch.mjs'],
+  wk_send_eject: ["  if (isWalkSend(p)) return null;\n  return `A STEP EJECTED:", "  return `A STEP EJECTED:", 'hook-dispatch.mjs'],
+  wk_send_type: ["  if (String(p.tool_input?.subagent_type ?? '') !== 'checker') return false;\n", '', 'hook-dispatch.mjs'],
+  wk_send_mode: [" || !/plan/i.test(String(p.permission_mode ?? ''))) return false;", ") return false;", 'hook-dispatch.mjs'],
+  wk_send_place: ["dirname(absPath(p, m[1])) === join(homedir(), '.claude', 'plans')", 'true', 'hook-dispatch.mjs'],
+  rn_send: ["  if (isRunSend(p, id)) return null;\n", '', 'hook-dispatch.mjs'],
+  rn_mode: ["  if (!isTopTier(id) || /plan/i.test(String(p.permission_mode ?? ''))) return false;", "  if (!isTopTier(id)) return false;", 'hook-dispatch.mjs'],
+  rn_script: ["script && canon(absPath(p, String(input?.scriptPath ?? ''))) === canon(script) && ", "script && ", 'hook-dispatch.mjs'],
+  rn_script_same: ["readFileSync(mine, 'utf8') === readFileSync(join(HUB, 'plans', 'native', 'run-page.js'), 'utf8') ? mine : ''", "readFileSync(mine, 'utf8') ? mine : ''", 'hook-dispatch.mjs'],
+  rn_place: ["  if (dirname(page) !== join(homedir(), '.claude', 'plans')) return null;\n", '', 'hook-dispatch.mjs'],
+  rn_text: ['  return ok && ok.text.trim() === now.trim() ? ok : null;', '  return ok || null;', 'hook-dispatch.mjs'],
+  rn_approval: ['  return ok && ok.text.trim() === now.trim() ? ok : null;', '  return !ok || ok.text.trim() === now.trim() ? (ok || { entries: [], at: -1 }) : null;', 'hook-dispatch.mjs'],
+  rn_step_role: ["  if (!m || !(role === 'worker' || role === 'checker')) return false;", '  if (!m) return false;', 'hook-dispatch.mjs'],
+  rn_step_words: ["const m = /^(\\S+) step \\d+$/.exec(String(p.tool_input?.prompt ?? '').trim());", "const m = /^(\\S+) step \\d+/.exec(String(p.tool_input?.prompt ?? '').trim());", 'hook-dispatch.mjs'],
+  rn_step_first: ['  return ok.entries.slice(ok.at + 1).some(', '  return true || ok.entries.slice(ok.at + 1).some(', 'hook-dispatch.mjs'],
+  rn_step_after: ['ok.entries.slice(ok.at + 1).some(', 'ok.entries.some(', 'hook-dispatch.mjs'],
+  rn_step_page: ['&& launched(b.input) === page));', '&& !!launched(b.input)));', 'hook-dispatch.mjs'],
+  rn_what: ["return tierRefusal('RUN WAITS FOR ITS TIER:', id, RUN_TIER_WHAT, RUN_TIER_LINE);", "return tierRefusal('RUN WAITS FOR ITS TIER:', id, 'A run is made a tier lower.', RUN_TIER_LINE);", 'hook-dispatch.mjs'],
   wp_enter_none: ['    return planEntry && h.correction ? NO_PAGE_TEXT : null;', '    return null;', 'hook-dispatch.mjs'],
   wp_enter_mode: ["tool === 'EnterPlanMode' && !/plan/i.test(String(p.permission_mode ?? ''));", "tool === 'EnterPlanMode';", 'hook-dispatch.mjs'],
   wp_enter_stop: ['    if (h.stop) return h.waiting.length ? WAITING_TEXT(true, h.waiting) : STOP_TEXT;\n    return planEntry', '    if (h.stop && planExit) return h.waiting.length ? WAITING_TEXT(true, h.waiting) : STOP_TEXT;\n    return planEntry', 'hook-dispatch.mjs'],

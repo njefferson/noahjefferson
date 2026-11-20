@@ -1,0 +1,3 @@
+Q-HUB-572: On 19 November a page's section on what a research file holds named two sources for one heading, and the lists of places its steps might open left both out. Its rule on a step's report stood in a section of its own, and one worker read its step's words, that it touches no other file, as forbidding a report and wrote none. The path the page gave for a report is not the path the agent rules give. Each part was written at a different drawing of the page, and nothing but the writer's own reading put them side by side before the button.
+
+Fix in: `hook-dispatch.mjs`, `plans/native/roles/checker.md`. A checker walks the page before the button and reads each part against the others, and the dispatcher refuses the button until a walk has passed the page as it stands.

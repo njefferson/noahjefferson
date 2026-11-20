@@ -1,0 +1,3 @@
+Q-HUB-581: Part 9 of plans/hub-analysis.md. A role loads as the harness's own definition only in a session started in the repository that holds it. The checker's role stands in the hub's own agents folder and the run script in the hub's checkout, so in an app's session the script has no roles to send its steps to and the walk hold is not in force. Two app sessions wait: one at a page put to the button on 14 November, one held on 16 November.
+
+Fix in: `plans/native/skills/app-move/SKILL.md`, `plans/native/run-page.js`, `hook-dispatch.mjs`. The move procedure places the roles in an app's own agents folder and gives the run script's path, and the two sessions that wait are answered.

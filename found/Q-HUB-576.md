@@ -1,0 +1,3 @@
+Q-HUB-576: Part 5 of plans/hub-analysis.md. The mechanism that filed every typed message whole after a compaction, and held the main thread to reading the file, was retired on 12 November. The rule came back on 14 November as text in doctrine/hub.md with nothing behind it. A session then worked from its own summary after three compactions, and offered again a route its own earlier assessment had ruled out.
+
+Fix in: `hook-dispatch.mjs`, `plans/native/running.md`. At a start that follows a compaction the dispatcher files every typed message of the session, whole and in order, in the session's scratchpad, and the read hold adds that file to the pages owed.

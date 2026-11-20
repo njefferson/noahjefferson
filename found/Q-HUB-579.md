@@ -1,0 +1,3 @@
+Q-HUB-579: Part 7 of plans/hub-analysis.md. The short page, doctrine/never.md and doctrine/hub.md are read whole at every start and after every compaction. doctrine/hub.md is 1,499 lines that describe the gates as they stood on 11 November. The harness's documentation says adherence falls as an instruction file passes about 200 lines. Lesson 428 asks that a proposal to read less answer the written reason of the rule it would weaken.
+
+Fix in: `hook-dispatch.mjs`, `doctrine/hub.md`, `plans/native/page.md`. After the lines told at the act have shown by a measure that they hold, the read at a start becomes the pages that apply, with every line of the others kept on a page read at its point or released by name.

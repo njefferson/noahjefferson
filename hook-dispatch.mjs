@@ -53,6 +53,7 @@ import { join, dirname, resolve, basename } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 // The readers of a transcript and of a shell line are loaded here and not imported statically, so a copy of the dispatcher without
 // them still runs every other decision (push-guard.mjs does the same); a hold that needs one then errors, and an error passes the call.
@@ -60,12 +61,14 @@ let tail = null;
 let shell = null;
 try { tail = await import('./transcript-tail.mjs'); } catch { tail = null; }
 try { shell = await import('./shell-words.mjs'); } catch { shell = null; }
+// The push guard's reading of a checker's answer serves the walk of a page as well: one reading, held by the push guard's own cases.
+let pushGuard = null;
+try { pushGuard = await import('./push-guard.mjs'); } catch { pushGuard = null; }
 
 const HUB = dirname(fileURLToPath(import.meta.url));
 const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'Stop', 'PreModelSwitch', 'PostModelSwitch', 'ConfigChange'];
-// The model command that puts the main thread a tier lower for a run, and the one that puts it on the top tier for a page.
+// The model command that puts the main thread a tier lower for a run.
 const RUN_TIER_LINE = '/model claude-opus-5-5';
-const PLAN_TIER_LINE = '/model claude-fable-5-2';
 const READS = new Set(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'ToolSearch', 'TaskList', 'TaskGet',
   'ListAgents', 'ReadNotifications', 'EnterPlanMode', 'ExitPlanMode', 'Skill']);
 // Repo shims that only call a hub script: run once per event, not once per repo, as this folder's script.
@@ -505,6 +508,7 @@ function holdWord(p) {
   }
   if (p.agent_id || !h.correction) return null;
   const text = h.waiting.length ? WAITING_TEXT(false, h.waiting) : CORRECTION_TEXT;
+  if (isWalkSend(p)) return null;
   if (NEW_STARTS.has(tool)) return text;
   if (FILE_WRITES.has(tool) && !mayWrite(p, p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '')) return text;
   return null;
@@ -795,32 +799,25 @@ export function servingModel(entries) {
 /** Is the model id a top-tier one? @returns {boolean} true where the id carries fable or mythos. */
 export function isTopTier(id) { return /fable|mythos/i.test(String(id ?? '')); }
 
+// What the run tier's refusal says of the sends that pass on the top tier.
+const RUN_TIER_WHAT = 'A run is made on the cheapest tier, because the top tier is paid for judgement and a run needs none. '
+  + 'Three calls pass on the top tier: in plan mode, the checker sent a page\'s path and the word walk; outside plan mode, the hub\'s run script launched with the Workflow tool for a page that stands as it was approved; '
+  + 'and, once that script has been launched for the page, a worker or a checker sent the page\'s path, the word step and the step\'s number. For any other send the thread is put a tier lower.';
 const tierRefusal = (head, id, what, line) => `${head} the main thread is served by ${id}, read from the newest reply of the thread or from a model command after it. ${what} `
   + `Type ${line} alone while the thread is idle. Say so in one plain line and end the turn.`;
 
 /**
- * HOLD 6: the run waits for its tier. On the main thread a new start is refused while a top-tier model serves.
+ * HOLD 6: the run waits for its tier. On the main thread a new start is refused while a top-tier model serves, but for the walk of a page
+ * (`isWalkSend`) and for the hub's run script launched for an approved page, or a step of that page once the script has been launched (`isRunSend`).
  * @returns {string|null} the refusal, or null. An agent's call, a read and an unknown model pass; no latch is set.
  */
 function holdRunTier(p) {
   if (p.agent_id || !NEW_STARTS.has(String(p.tool_name ?? ''))) return null;
   const id = servingModel(tail.tailEntries(mainTranscript(p), 2 * 1024 * 1024));
+  if (isWalkSend(p)) return null;
+  if (isRunSend(p, id)) return null;
   if (!id || !isTopTier(id)) return null;
-  return tierRefusal('RUN WAITS FOR ITS TIER:', id, 'A run is made a tier lower, because the top tier is paid for judgement and a run needs none.', RUN_TIER_LINE);
-}
-
-/**
- * HOLD 7: the page waits for its tier. On the main thread a write of a plan file is refused while a model below the top serves.
- * @returns {string|null} the refusal, or null. An agent's call, a write elsewhere and an unknown model pass; no latch is set.
- */
-function holdPlanTier(p) {
-  const tool = String(p.tool_name ?? '');
-  if (p.agent_id || !FILE_WRITES.has(tool)) return null;
-  const a = absPath(p, p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '');
-  if (!a.startsWith(join(homedir(), '.claude', 'plans') + '/')) return null;
-  const id = servingModel(tail.tailEntries(mainTranscript(p), 2 * 1024 * 1024));
-  if (!id || isTopTier(id)) return null;
-  return tierRefusal('PAGE WAITS FOR ITS TIER:', id, 'Drawing a page, or changing one, is judgement and is done on the top tier.', PLAN_TIER_LINE);
+  return tierRefusal('RUN WAITS FOR ITS TIER:', id, RUN_TIER_WHAT, RUN_TIER_LINE);
 }
 
 /**
@@ -892,9 +889,122 @@ function holdEject(p) {
     if (pageHasCause(text)) return null;
     return `THE PAGE DOES NOT OPEN WITH ITS CAUSE: a step ejected, and the page is not approved until the newest page under ~/.claude/plans/ holds the heading "## Why it stopped" and, after it, three lines that open with "${PAGE_CAUSE[0]}", "${PAGE_CAUSE[1]}" and "${PAGE_CAUSE[2]}".`;
   }
-  const id = servingModel(tail.tailEntries(mainTranscript(p), 2 * 1024 * 1024));
-  return `A STEP EJECTED: ${rec.text} The run is stopped. The cause is found before the page is changed, and the page is changed in plan mode and approved at the button before anything more is sent.`
-    + (isTopTier(id) ? '' : ` Type ${PLAN_TIER_LINE} alone while the thread is idle. Say so in one plain line and end the turn.`);
+  if (isWalkSend(p)) return null;
+  return `A STEP EJECTED: ${rec.text} The run is stopped. The cause is found before the page is changed, and the page is changed in plan mode and approved at the button before anything more is sent.`;
+}
+
+// ---- the walk and the run: a page is walked by a fresh reader before the button, and the run is the hub's script, launched after it ----
+/** The id git gives a file's content. @returns {string} forty characters. */
+const contentId = (buf) => createHash('sha1').update(`blob ${buf.length}\0`).update(buf).digest('hex');
+
+/** The newest file directly under ~/.claude/plans/, or '' where there is none. */
+function newestPage() {
+  const root = join(homedir(), '.claude', 'plans');
+  let newest = '';
+  let best = -1;
+  try { for (const f of readdirSync(root)) { const s = statSync(join(root, f)); if (s.isFile() && s.mtimeMs > best) { best = s.mtimeMs; newest = join(root, f); } } } catch { /* none */ }
+  return newest;
+}
+
+/** The words of the newest message the owner typed, or '' where there is none. */
+function lastTyped(p) {
+  let text = '';
+  for (const e of tail.tailEntries(mainTranscript(p), 2 * 1024 * 1024)) if (tail.isOwnerMessage(e)) text = tail.textOf(e);
+  return text;
+}
+
+/**
+ * Is the call the walk of a page: in plan mode, the checker sent a page's path and the word walk?
+ * @returns {boolean} true only for an Agent call in plan mode whose agent type is checker and whose prompt is the path of a file directly
+ *   under ~/.claude/plans/, a space and the word walk.
+ */
+function isWalkSend(p) {
+  if (String(p.tool_name ?? '') !== 'Agent' || !/plan/i.test(String(p.permission_mode ?? ''))) return false;
+  if (String(p.tool_input?.subagent_type ?? '') !== 'checker') return false;
+  const m = /^(\S+) walk$/.exec(String(p.tool_input?.prompt ?? '').trim());
+  return !!m && dirname(absPath(p, m[1])) === join(homedir(), '.claude', 'plans');
+}
+
+/**
+ * The text approved at the newest approval of a page: what that approval's own entry in the session's transcript carries for the file.
+ * @returns {{text: string, at: number, entries: object[]}|null} the approved text, the index of the approval's entry and the entries read;
+ *   null where the transcript holds no approval of that file. It is read from the harness's record and never from a file an agent could write.
+ */
+function approvedPage(p, page) {
+  const entries = tail.tailEntries(mainTranscript(p), 16 * 1024 * 1024);
+  let found = null;
+  for (const i of approvalIndexes(entries)) {
+    const r = entries[i]?.toolUseResult;
+    if (r && typeof r.plan === 'string' && r.filePath && canon(String(r.filePath)) === canon(page)) found = { text: r.plan, at: i, entries };
+  }
+  return found;
+}
+
+/** The hub's run script: the launch folder's own file, where its content is the live copy's, so a script changed in a working copy launches nothing. @returns {string} its path, or ''. */
+function runScript(p) {
+  const mine = join(resolve(process.env.CLAUDE_PROJECT_DIR || p.cwd || process.cwd()), 'plans', 'native', 'run-page.js');
+  try { return readFileSync(mine, 'utf8') === readFileSync(join(HUB, 'plans', 'native', 'run-page.js'), 'utf8') ? mine : ''; } catch { return ''; }
+}
+
+/** Does a page directly under ~/.claude/plans/ stand as it was approved? @returns {object|null} the approval (`approvedPage`), or null. */
+function approvedAsItStands(p, page) {
+  if (dirname(page) !== join(homedir(), '.claude', 'plans')) return null;
+  let now = '';
+  try { now = readFileSync(page, 'utf8'); } catch { return null; }
+  const ok = approvedPage(p, page);
+  return ok && ok.text.trim() === now.trim() ? ok : null;
+}
+
+/**
+ * Is the call one the top tier may make for the run of an approved page?
+ * Outside plan mode: a Workflow call whose scriptPath is the hub's run script (`runScript`) and whose args.page is a page that stands as
+ * it was approved; or an Agent call to a worker or a checker whose prompt is such a page's path, the word step and a number, where the
+ * transcript holds, after that approval, a launch of the run script for the page. The script goes first, and the top tier sends a step
+ * itself only where the script could not.
+ * @param {object} p  the call.
+ * @param {string|null} id  the model serving the main thread; a model below the top tier is not judged here.
+ * @returns {boolean}
+ */
+function isRunSend(p, id) {
+  if (!isTopTier(id) || /plan/i.test(String(p.permission_mode ?? ''))) return false;
+  const tool = String(p.tool_name ?? '');
+  const script = runScript(p);
+  const launched = (input) => (script && canon(absPath(p, String(input?.scriptPath ?? ''))) === canon(script) && typeof input?.args?.page === 'string' ? absPath(p, input.args.page) : '');
+  if (tool === 'Workflow') { const page = launched(p.tool_input); return !!page && !!approvedAsItStands(p, page); }
+  if (tool !== 'Agent') return false;
+  const m = /^(\S+) step \d+$/.exec(String(p.tool_input?.prompt ?? '').trim());
+  const role = String(p.tool_input?.subagent_type ?? '');
+  if (!m || !(role === 'worker' || role === 'checker')) return false;
+  const page = absPath(p, m[1]);
+  const ok = approvedAsItStands(p, page);
+  if (!ok) return false;
+  return ok.entries.slice(ok.at + 1).some((e) => e?.type === 'assistant' && !e.isSidechain && !e.agentId && Array.isArray(e.message?.content)
+    && e.message.content.some((b) => b?.type === 'tool_use' && b.name === 'Workflow' && launched(b.input) === page));
+}
+
+/** Does the launch folder hold a checker's role that says what a walk is? A repository whose checker was never told of a walk is not held to one. */
+function roleWalks(root) {
+  try { return /\bthe word walk\b/.test(readFileSync(join(root, '.claude', 'agents', 'checker.md'), 'utf8')); } catch { return false; }
+}
+
+/**
+ * HOLD 10: the button waits for a walk. On the main thread, in a repository whose checker's role says what a walk is, ExitPlanMode is refused until a
+ * checker that changed nothing has answered CHECK PASS and the content id of the newest page under ~/.claude/plans/ as it stands, read by
+ * the push guard's `checkerPassed`. The newest message the owner typed lifts it for that page where it carries the words without a walk.
+ * @returns {string|null} the refusal, or null. An agent's call, a repository whose checker's role does not speak of a walk and a folder with no page pass; no latch is set.
+ */
+function holdWalk(p) {
+  if (p.agent_id || String(p.tool_name ?? '') !== 'ExitPlanMode') return null;
+  if (!roleWalks(resolve(process.env.CLAUDE_PROJECT_DIR || p.cwd || process.cwd()))) return null;
+  const page = newestPage();
+  if (!page) return null;
+  const id = contentId(readFileSync(page));
+  if (pushGuard.checkerPassed(p, id).ok) return null;
+  if (/\bwithout a walk\b/i.test(lastTyped(p))) return null;
+  return `THE PAGE HAS NOT BEEN WALKED: the button waits until a checker that changed nothing has walked the page as it stands and answered CHECK PASS with the page's content id, ${id}. `
+    + `Send the checker with the words "${page} walk", put right every gap it names, and walk the page again after any change. `
+    + 'Why: a page\'s writer does not find what its worker finds, and a defect met in the middle of a run costs a return. '
+    + 'A typed message that carries the words without a walk lifts this for one page.';
 }
 
 /**
@@ -902,7 +1012,7 @@ function holdEject(p) {
  * @returns {string|null} the first refusal. A hold that throws is set aside, one line goes to the error output and the call passes it.
  */
 function holds(p) {
-  for (const [key, name, hold] of [['read', 'the read hold', holdRead], ['word', 'the typed word hold', holdWord], ['latch', 'the latch hold', holdLatch], ['manager', 'the manager hold', holdManager], ['plan', 'the plan file hold', holdPlan], ['eject', 'the eject hold', holdEject], ['runtier', 'the run tier hold', holdRunTier], ['plantier', 'the page tier hold', holdPlanTier], ['sendtier', 'the send tier hold', holdSendTier]]) {
+  for (const [key, name, hold] of [['read', 'the read hold', holdRead], ['word', 'the typed word hold', holdWord], ['latch', 'the latch hold', holdLatch], ['manager', 'the manager hold', holdManager], ['plan', 'the plan file hold', holdPlan], ['eject', 'the eject hold', holdEject], ['walk', 'the walk hold', holdWalk], ['runtier', 'the run tier hold', holdRunTier], ['sendtier', 'the send tier hold', holdSendTier]]) {
     try {
       if (process.env.HOOK_DISPATCH_THROW === key) throw new Error('planted fault');
       const why = hold(p);

@@ -35,6 +35,8 @@ The session scopes the work on one page with five parts, and the owner approves 
 
 Workers on the cheapest tier do the steps. A checker that did none of the work then opens the real output and judges it against the stated result, and nothing is pushed until it has passed the exact commit. The owner gets the result and what the check showed.
 
+Before the button, a checker that did not write the page walks it as its workers will meet it. After the button the run is a script the harness runs: it sends each step to its worker or its checker and stops at the first step that does not end as it should. The session that drew the page reads what the script returns, and no model command is typed. A page is drawn on whatever tier serves the thread, which is the owner's switch.
+
 A step that meets what its page did not foresee ejects, and the run stops there. Back on the top tier, the session finds the cause before it changes the page: what the step met, why the page was drawn that way, and how far that cause reaches. The changed page opens with those, and where the cause reaches past the page it carries one recommendation for it, to be made a page of its own.
 
 ## The never-rules
