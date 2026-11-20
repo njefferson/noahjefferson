@@ -1,0 +1,287 @@
+# What is held: every hold, guard and check that refuses
+
+Made by a step of the research page drawn on 19 November 2026. It records and recommends nothing. The documentation it cites was saved by that page's first step on the day it ran, and the commit that holds this file dates it.
+
+## What the part is for
+
+- The short page says lighter never means less protected, and that nothing is dropped to make the work run faster. Source: `plans/native/page.md:11`
+- The short page says a refusal from the harness or a hook is an instruction, to be reported plainly and never worked around. Source: `plans/native/page.md:49`
+- The short page says that where a page names a gate, hook or file retired on 12 November 2026 the behaviour it asks of a session still binds, and only the refusal no longer arrives. Source: `plans/native/page.md:64`
+- The dispatcher's head comment says three rules keep a hook: where a push may go, nothing personal in a repository, and the check before a push. Source: `hook-dispatch.mjs:5`
+- The dispatcher's head comment says it cannot block a session by its own fault, because an error thrown outside the push guard's own refusal is printed and the event exits 0. Source: `hook-dispatch.mjs:48`
+- The running page says the holds run in every session and that each says in its refusal what it holds and what lifts it. Source: `plans/native/running.md:43`
+- The record says each control of its section 2 was right when written, and that its cost column is what the control costs now. Source: `archive/plans/redesign-record.md:79`
+- The record gives the origin of the plan-mode control as a session launched above the repositories that ran none of their hooks, so that every rule rested on memory. Source: `archive/plans/redesign-record.md:81`
+- The record gives the origin of the manager that does no work as a main thread that read previews and acted on them. Source: `archive/plans/redesign-record.md:82`
+- The record gives the origin of the review before every move as a move nobody had read that was found wrong by the agent that ran it. Source: `archive/plans/redesign-record.md:83`
+- The record gives the origin of the stop guard's shapes as rule 11c written and broken the same day, with later lessons adding shapes. Source: `archive/plans/redesign-record.md:86`
+- The record gives the origin of the doctrine read whole at every start and compaction as a session that worked three sections from a summary. Source: `archive/plans/redesign-record.md:87`
+- The record gives the origin of the correction hold and the stop word as nine corrections once worked through on the session's own reading, and the cost as a go-word for every message that is not one. Source: `archive/plans/redesign-record.md:88`
+- The record gives the origin of the latch as the view that a second route to a refused end is the same bypass, and its cost as a message from the person the hub serves for every latching refusal. Source: `archive/plans/redesign-record.md:89`
+- The record says the push guard and the sweep cost nothing per turn, have held, and are the kind of control that does not ask the model to agree. Source: `archive/plans/redesign-record.md:91`
+- The record says each control was right alone and together they are the context size and the turn count. Source: `archive/plans/redesign-record.md:93`
+- The record says lesson 428 is the standing warning that a proposal to read less, print less or summarise more must answer the written reason of the rule it would weaken. Source: `archive/plans/redesign-record.md:95`
+- Section 1 of the record and `plans/native-setup.md` were not among the places this step may open, so the part's purpose is given here from the short page, the dispatcher's own comments, the running page and section 2 of the record only. Source: this step's reading
+
+## What is there today
+
+- The dispatcher is wired for nine events: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure, Stop, PreModelSwitch, PostModelSwitch and ConfigChange. Source: `hook-dispatch.mjs:65`
+- The calls the holds never refuse are the set named READS: Read, Glob, Grep, WebFetch, WebSearch, ToolSearch, TaskList, TaskGet, ListAgents, ReadNotifications, EnterPlanMode, ExitPlanMode and Skill. Source: `hook-dispatch.mjs:69`
+- At PreToolUse the choice popup, AskUserQuestion, is refused in every repository with the words CHOICE POPUP REFUSED, exit 2, and a latch is written. Source: `hook-dispatch.mjs:963`
+- At PreToolUse the push guard is run as a child, and its refusal is returned with exit 2 and a latch is written. Source: `hook-dispatch.mjs:970`
+- When the push guard exits with a status other than 0 and the call is not a read, the call is refused with the words that only reads run until it is fixed, and no latch is written. Source: `hook-dispatch.mjs:972`
+- After the push guard the nine holds run in a fixed order, and the first refusal is printed to the error output with exit 2, with no latch written by that branch. Source: `hook-dispatch.mjs:976`
+- The order of the nine holds is read, word, latch, manager, plan, eject, run tier, plan tier and send tier. Source: `hook-dispatch.mjs:905`
+- A hold that throws is set aside, one line goes to the error output, and the call passes it; the environment variable HOOK_DISPATCH_THROW names the hold to throw in a test. Source: `hook-dispatch.mjs:907`
+- After the holds each repository's own hooks run for the event, and a repository hook's refusal returns 2 and writes a latch. Source: `hook-dispatch.mjs:978`
+- The hold on the read at a start refuses, on the main thread, every call that is not a read until the short page, `doctrine/never.md` and `doctrine/hub.md` have each been read whole in the hub's copy or a checkout of it. Source: `hook-dispatch.mjs:717`
+- The read hold lets agents through, lets TaskStop through, writes no latch, and is lifted by Read results that between them return every line of each page; a compaction makes the read due again. Source: `hook-dispatch.mjs:749`
+- The read hold leaves the call through when the transcript cannot be read or its reach cannot be settled, and its test seam is HOOK_DISPATCH_READ_HOLD set to off. Source: `hook-dispatch.mjs:722`
+- The hold on the typed word reads the newest typed messages from the session's transcript, widening its tail from 2 to 8 to 32 megabytes until settled. Source: `hook-dispatch.mjs:478`
+- A newest typed message that holds the whole word stop and does not end with a go-word holds every call but a read, TaskStop on the main thread, an agent's own hand-back and a plan-file write made in plan mode. Source: `hook-dispatch.mjs:499`
+- The go-words are go, ok, continue, approved and yes, and a later typed message ending with one lifts the stop, as does an approval of a plan at the button given after it. Source: `hook-dispatch.mjs:278`
+- The names stop hook, stop hooks and stop guard are not the word stop. Source: `hook-dispatch.mjs:283`
+- A newest typed message with no go-word at its end holds the main thread's new starts, which are Agent, Task, SendMessage and Workflow, and a write of any file that is neither directly under the plans folder nor in the session scratchpad. Source: `hook-dispatch.mjs:506`
+- The hold on the typed word never holds an agent's call under a correction, and writes no latch for a refusal of hold 1 or hold 3 or of an agent's call. Source: `hook-dispatch.mjs:27`
+- A typed message still waiting in the queue holds as a delivered one does, the refusal prints it word for word, and it lifts nothing. Source: `hook-dispatch.mjs:306`
+- Under a correction the session's own EnterPlanMode is refused with the words NO PAGE WAS ASKED FOR, and plan mode set in the app is not held. Source: `hook-dispatch.mjs:315`
+- The latch hold refuses, on the main thread, every call that is not a read or TaskStop while a latch file stands for the session. Source: `hook-dispatch.mjs:555`
+- A latch is written by the popup's refusal, the push guard's refusal and a repository hook's refusal, never moves once standing, and is removed by a typed message whose typed time is after the latch's. Source: `hook-dispatch.mjs:532`
+- The manager hold refuses, on the main thread, a write of a file that is neither directly under the plans folder nor in the session scratchpad, a git command that changes a repository, and a Bash line that writes outside the scratchpad by redirect, sed -i or tee. Source: `hook-dispatch.mjs:633`
+- The git subcommands the manager hold counts as changing a repository are add, commit, push, rebase, merge, cherry-pick, revert, reset, restore, checkout, switch, stash, rm, mv, apply, am, tag and branch, less the listing forms. Source: `hook-dispatch.mjs:574`
+- The manager hold does not hold an agent, and nothing lifts it; its refusal says a worker does the step. Source: `hook-dispatch.mjs:300`
+- The plan file hold refuses, on the main thread, a write of a file under the plans folder when the harness reports a permission mode that is not plan, and passes when no mode is named. Source: `hook-dispatch.mjs:765`
+- The eject record is written when an agent's SubagentHandback message opens with the word EJECT, and it holds a new start on the main thread. Source: `hook-dispatch.mjs:843`
+- With an eject record standing, ExitPlanMode is refused until the newest file directly under the plans folder holds the heading Why it stopped and three lines opening What was met, Why the page was drawn that way and How far it reaches. Source: `hook-dispatch.mjs:885`
+- An eject record is removed by an approval at the button whose entry time is later than the record's. Source: `hook-dispatch.mjs:857`
+- The run tier hold refuses a new start on the main thread while the serving model's id carries fable or mythos, writes no latch, and is lifted by the model command claude-opus-5-5. Source: `hook-dispatch.mjs:805`
+- The page tier hold refuses a write of a plan file on the main thread while a model below the top serves, writes no latch, and is lifted by the model command claude-fable-5-2. Source: `hook-dispatch.mjs:816`
+- The send tier hold refuses an Agent or Task call on the main thread that names a model carrying neither sonnet nor haiku, and is cleared by sending again with no model named. Source: `hook-dispatch.mjs:830`
+- At Stop on the main thread the dispatcher runs `stop-guard.mjs` once, returns its refusal, and prints one line and lets the stop go on when the guard exits with any other nonzero status. Source: `hook-dispatch.mjs:980`
+- The dispatcher runs no repository hook for the events ConfigChange, PreModelSwitch and PostModelSwitch. Source: `hook-dispatch.mjs:76`
+- At SessionStart the dispatcher prints the one line naming the short page, and a second line naming the repositories when the launch folder is not a repository and holds two or more; the second line tells and refuses nothing. Source: `hook-dispatch.mjs:259`
+- The install writes the nine events into the user-level settings file and sets showClearContextOnPlanAccept to false. Source: `hook-dispatch.mjs:86`
+- The push guard refuses a git push that does not land on staging or main, a push with no refspec or with HEAD when it cannot read the current branch, and the forms all, branches, mirror, tags, follow-tags, delete, -d, prune and a colon-ref deletion. Source: `push-guard.mjs:11`
+- The push guard refuses a force-push to main, a plus refspec, and no-verify on a push or a commit. Source: `push-guard.mjs:21`
+- The push guard refuses a push it cannot resolve for certain: a destination in a variable or glob, a detached HEAD, a push configuration, an alias, git-dir, work-tree, -c, an environment variable of the GIT_DIR kind, env -C, xargs, find -exec, and a cd, pushd or popd it cannot follow. Source: `push-guard.mjs:23`
+- The push guard refuses the GitHub connector's branch-create tools, its file-write tools unless the branch is staging or main, and its pull-request merge and branch-update tools whatever they name. Source: `push-guard.mjs:30`
+- The check before a push refuses the connector's file writes to staging or main and any push that lands on staging or main unless a checker has passed the exact commit. Source: `push-guard.mjs:34`
+- A pass is an agent of the session whose hand-back, or final message, opens CHECK PASS and then the full id of the commit, and whose own transcript holds no Edit, Write, MultiEdit or NotebookEdit call outside the scratchpad and no git commit, add or push. Source: `push-guard.mjs:36`
+- The pass is read from the agents' transcripts and never from a file an agent could write, and a transcript that cannot be read is no pass. Source: `push-guard.mjs:41`
+- The push guard exits 2 to refuse, with the reason on the error output. Source: `push-guard.mjs:44`
+- The stop guard acts on the main thread only, reads the last assistant message, and refuses it with exit 2 when it runs past 150 words outside fenced blocks. Source: `stop-guard.mjs:5`
+- The stop guard also refuses a reply that names a feeling, promises conduct for a later turn, asks for a go-word on its open line, or does not end with a state line opening State and saying finished, paused or running. Source: `stop-guard.mjs:10`
+- The stop guard lists every fault of one reply in one refusal and never prints or quotes a typed message. Source: `stop-guard.mjs:15`
+- A turn that ended in a tool call or in no text passes the stop guard, and after two refusals in one chain of stops it passes with one line saying so. Source: `stop-guard.mjs:16`
+- Any error inside the stop guard exits 0, and other repositories call the file by its path from their own Stop hooks. Source: `stop-guard.mjs:17`
+- The rules check requires every non-blank line that stood on any rules page at the base commit to stand on some rules page of the working tree or be listed as released. Source: `rules-keep-check.mjs:7`
+- The rules check reads released lines from the fenced blocks of `plans/rules-released.md`, and that file is not itself a rules page. Source: `rules-keep-check.mjs:11`
+- The rules check takes its base from the base flag, else origin/main where that is an ancestor of HEAD and differs from it, else HEAD~1. Source: `rules-keep-check.mjs:14`
+- The rules check exits 1 and prints each lost line with its old file and line number, and exits 1 and says so when the base cannot be read. Source: `rules-keep-check.mjs:15`
+- The branch guard is generated into a hook that is installed into `.git/hooks` and not into a core hooks path, so that it survives a checkout of a branch that predates it. Source: `branch-guard.mjs:29`
+- The branch guard's configuration is a `.branch-guard` file with the keys work, promote, escape, escape-also and msg-also, and a repository with one branch declares work and has every other branch refused. Source: `branch-guard.mjs:44`
+- The hub's `.branch-guard` declares work as main and names three also checks: `example-check.mjs`, `privacy-check.mjs` and `plan-scope-check.mjs`. Source: `.branch-guard:2`
+- The repository's settings file wires SessionStart to `session-start.sh`, Stop to `stop-guard.sh`, and PreToolUse with the matcher .* to `plan-guard.sh`, all under the hooks folder. Source: `.claude/settings.json:40`
+- The repository's settings file holds a permissions block with an allow list of 34 entries and no deny list. Source: `.claude/settings.json:2`
+- The dispatcher replaces the shims `plan-guard.sh` and `stop-guard.sh` of a repository's settings with its own `plan-guard.mjs` and `stop-guard.mjs`, each run once. Source: `hook-dispatch.mjs:72`
+- The folder `guard-cases/` holds 16 case files with 122 case names in all, counted by the pattern of a name key at the start of a line. Source: Grep of the pattern for a name key at a line start under guard-cases, count mode, run in this step
+- The case file for the dispatcher holds 57 case names, the push guard's 8, the stop guard's 18 and the rules check's 9. Source: Grep of the pattern for a name key at a line start under guard-cases, count mode, run in this step
+- The dispatcher's cases that name hold 0, the read, stand at lines 1051, 1082, 1122 and 1502. Source: `guard-cases/dispatch.mjs:1051`
+- The dispatcher's cases that name hold 1 stand at lines 487, 525, 547, 573, 604, 624, 645, 668, 687, 708, 1149, 1171, 1202, 1438, 1464 and 1480, for the stop, harness text, the correction, the waiting message, plan mode entry, plan-file writes under a stop and the stop hook's names. Source: `guard-cases/dispatch.mjs:487`
+- The dispatcher's cases that name hold 2, the latch, stand at lines 727, 750, 774, 795, 869 and 894. Source: `guard-cases/dispatch.mjs:727`
+- The dispatcher's cases that name hold 3, the manager, stand at lines 816, 844, 928 and 972. Source: `guard-cases/dispatch.mjs:816`
+- The dispatcher's case that names hold 4, the approved page, stands at line 1234, and the cases for holds 6, 7 and 8 stand at lines 1273, 1303 and 1327. Source: `guard-cases/dispatch.mjs:1234`
+- The dispatcher's cases that name hold 9, the eject, stand at lines 1355 and 1400. Source: `guard-cases/dispatch.mjs:1355`
+- The dispatcher's case that a hold which throws passes the call stands at line 998, and the case that the Stop event runs the stop guard once stands at line 1022. Source: `guard-cases/dispatch.mjs:998`
+- The dispatcher's cases for the popup, the push guard's refusals, the one line, the bring-forward, repository hooks, the shims, the install and the repository line stand at lines 131, 143, 162, 177, 194, 222, 250, 272, 293, 311, 329, 339, 412, 438, 455 and 469. Source: `guard-cases/dispatch.mjs:131`
+- The dispatcher's three cases for the shell scripts stand at line 360 for `plan-guard.mjs`, line 381 for `session-brief.mjs` and line 399 for `plan-scope-check.mjs`, which prints one line saying the check was retired on 12 November 2026 and exits 0. Source: `guard-cases/dispatch.mjs:360`
+- The push guard's eight cases stand at lines 65, 87, 103, 120, 152, 169, 196 and 214: a push of main with no pass is refused, a pass of the exact commit passes, a different commit or a prefix is no pass, an agent that edited is no pass, an unreadable transcript is refused, a final-message pass counts, staging is judged as main is, and the connector's file writes to staging and main are refused. Source: `guard-cases/push-guard.mjs:65`
+- The stop guard's cases for the five faults stand at lines 28, 43, 58, 71 and 98, for length, a feeling, a promise, a go-word ask and a missing state line. Source: `guard-cases/stop-guard.mjs:28`
+- The stop guard's cases for the state line stand at lines 110, 118, 126, 134, 146 and 158, for finished, paused, running, a line that is not last, a line inside a fenced block and the count of faults. Source: `guard-cases/stop-guard.mjs:110`
+- The stop guard's remaining cases stand at lines 85, 170, 178, 191, 213, 224 and 236, for every fault listed together, an agent's stop, a turn ended by a tool call, at most two refusals in a chain, the Why sentence, an unreadable transcript, and the shim with the dispatcher wired. Source: `guard-cases/stop-guard.mjs:85`
+- The rules check's nine cases stand at lines 30, 46, 55, 69, 81, 90, 104, 118 and 131, for a removed line, a moved line, a released line, a reworded line, a non-rules page and a new page, an unreadable base, no base with an uncommitted removal, and no base with an unpushed commit. Source: `guard-cases/rules-keep-check.mjs:30`
+- The other case files under `guard-cases/` hold these counts of case names: binary-files 1, docs-check 2, doctrine-sync 1, gate-files 1, hub-pin-check 1, lessons-check 2, pin-check 1, privacy-check 1, program 13, quote-check 1, third-person-check 2 and transcript-tail 4. Source: Grep of the pattern for a name key at a line start under guard-cases, count mode, run in this step
+- The running page lists the holds of the typed word, a refusal, the manager, the run tier, the page tier, an eject, the tier of a send, the reply, nothing lost and the read at a start, each with its why. Source: `plans/native/running.md:44`
+- The running page says that when the push guard fails to run the dispatcher refuses every tool that is not a read, and that the way out is to revert the hub's commit on GitHub and resume the session. Source: `plans/native/running.md:41`
+- The running page says there is no stand-down and that the stand-down file was deleted on 12 November 2026. Source: `plans/native/running.md:40`
+- The ledger index says the hooks told a session 187 things, of which 51 are still told, 54 are told in part and 82 are no longer told. Source: `plans/rules-ledger/index.md:20`
+- The ledger index says 1,146 of the 1,390 rules were not kept whole, and that 648 of those name an enforcer the old page said enforced them. Source: `plans/rules-ledger/index.md:19`
+
+## What was there before the rebuild
+
+- The old dispatcher was written so that every gate runs however a session was launched, because a session with two repositories attached ran none of a repository's hooks. Source: `4ea3157:hook-dispatch.mjs:3`
+- The old dispatcher says a crash in it refused everything except reads at PreToolUse, because a dispatcher that fails open is the dead-gate state. Source: `4ea3157:hook-dispatch.mjs:25`
+- The old dispatcher's head comment lists the PreToolUse order as a subagent's own return, the pending guard, the judging of the app's exit from plan mode, the latch, the stop hold, the correction check, the recall gate, the state page gate, the manager fence with its dispatch gate, the report gate, the review gate, the rules gate and the reads gate. Source: `4ea3157:hook-dispatch.mjs:28`
+- The same comment continues with the in-app approval check, the family guards for drive, approved plan, reply and keep-info, the push guard, the plan fence for subagents only, the doctrine read guard for the main thread only, and then each repository's hooks. Source: `4ea3157:hook-dispatch.mjs:83`
+- The old dispatcher says every PreToolUse refusal set a latch except those of a listed set, among them the pending guard, the stop hold, the correction check, the recall gate, the state page gate, the doctrine gate, the in-app approval check, the review gate, the rules gate and the reads gate. Source: `4ea3157:hook-dispatch.mjs:86`
+- The old latch let only the status command, the check of a call, the plan check, the main thread's TaskStop, the reply guard's release command and a subagent's own return run until a message was typed after it. Source: `4ea3157:hook-dispatch.mjs:118`
+- The old dispatcher wrote an agent's own latch for a refusal inside an agent and left the session's alone, and said Stop refusals never latch. Source: `4ea3157:hook-dispatch.mjs:123`
+- At SessionStart the old dispatcher made the doctrine due and printed a line, and after a compaction made the status page due and the filed messages due and recorded the compaction with its time. Source: `4ea3157:hook-dispatch.mjs:127`
+- At UserPromptSubmit the old dispatcher printed the typed messages a later one had overtaken, then the held calls when the prompt ended with a go-word, then the goals every session serves. Source: `4ea3157:hook-dispatch.mjs:131`
+- The old dispatcher sent a Workflow call to a gate that refused it unless scripts were accepted, which was switched off, and the call carried the approved plan's own script. Source: `4ea3157:hook-dispatch.mjs:140`
+- The old dispatch gate sent a step only when the plan's Served by line named a goal for it, and the review gate sent a step only when a review had begun after the newest end of an agent for a step in the Order. Source: `4ea3157:hook-dispatch.mjs:61`
+- The old rules gate refused every step while a plan's Rules line pinned a version other than the rules file's, and the reads gate refused every step, a Workflow included, until a Read had returned on a record file a hook had refused. Source: `4ea3157:hook-dispatch.mjs:77`
+- The old `plan-guard.mjs` refused writes while plan mode was on, reading the payload's permission mode and a marker file named PLAN-LOCK, either of which denied, with exit 2 and a JSON deny reason. Source: `4ea3157:plan-guard.mjs:37`
+- The old `plan-fence.mjs` ran at PreToolUse for every call a subagent made, and refused any call outside the approved plan's Files and Commands sections once the agent's transcript held a Read of the rules file. Source: `4ea3157:plan-fence.mjs:3`
+- The old plan fence let through only an agent's own return, its own TaskStop, a dispatch of the branch-sweep workflow, a read, a write to a path the Files section names or the scratchpad, and a Bash line whose every segment was a reader or began with a Commands entry. Source: `4ea3157:plan-fence.mjs:19`
+- The old plan fence refused a Bash segment that was a cd, pushd or popd at any depth, before anything else was judged. Source: `4ea3157:plan-fence.mjs:40`
+- The old plan fence held a redirect's target to the rule for a Write and refused process substitution. Source: `4ea3157:plan-fence.mjs:45`
+- The old plan fence limited an agent sent for the plan's review step to writing in the scratchpad. Source: `4ea3157:plan-fence.mjs:53`
+- The old `approved-plan-guard.mjs` refused, outside plan mode, anything the plan guard would call a write unless a marker file recorded an approved plan whose hash still matched and whose session was this one. Source: `4ea3157:approved-plan-guard.mjs:15`
+- The old approved-plan guard let the main thread amend the approved plan only when its Goals, Asked, Files, Commands, Rules and Rules of this plan sections were the approved ones. Source: `4ea3157:approved-plan-guard.mjs:24`
+- The old approved-plan guard wrote the marker at PostToolUse on an approved ExitPlanMode, moved its hash on an amendment, and refused a main-session exit that minted nothing with exit 2. Source: `4ea3157:approved-plan-guard.mjs:42`
+- The old approved-plan guard recorded the marker from an approval pressed in the app and from an approval given at the button before the gates were installed. Source: `4ea3157:approved-plan-guard.mjs:61`
+- The old marker also held the hash of the plan's script, the step numbers at approval, the Standing steps and the review steps, and the guard wrote a steps file beside the plan. Source: `4ea3157:approved-plan-guard.mjs:104`
+- The old `stop-guard.mjs` refused, at Stop, a turn that ended saying something was still running or one that ended asking to be told to continue, unless the reply declared the stop in its first line. Source: `4ea3157:stop-guard.mjs:15`
+- The old stop guard noted that a Stop refusal arrives after the reply was written and seen, so whatever follows arrives as a second reply, and it refused a follow-up that repeated lines of the refused reply at most once per turn. Source: `4ea3157:stop-guard.mjs:44`
+- The old stop guard refused a stop while a step of the approved plan had no hand-back, no agent was running and the reply neither opened with a choice nor declared the stop. Source: `4ea3157:stop-guard.mjs:54`
+- The old stop guard refused the first reply after a compaction unless its first line said a compaction had happened and at what California time. Source: `4ea3157:stop-guard.mjs:69`
+- The old stop guard refused the first reply after the serving model changed to the top tier under an approval marker unless its first line named the tier and said whether the work needed it. Source: `4ea3157:stop-guard.mjs:79`
+- The old `reply-guard.mjs` refused, at PreToolUse for every agent, the next request to a host whose last declining reply had not been read, a request in another identity to a host that declined a script, and a failed call repeated unchanged before its error was read. Source: `4ea3157:reply-guard.mjs:14`
+- The old reply guard wrote declining replies and failed calls to a ledger at PostToolUse and PostToolUseFailure and put a declining reply in front of the session with exit 2. Source: `4ea3157:reply-guard.mjs:21`
+- The old reply guard's head comment names a known gap: a request by a program that names no URL on its command line or in its script file is invisible to it. Source: `4ea3157:reply-guard.mjs:43`
+- The old `pending-guard.mjs` refused, on the main thread at every PreToolUse, any typed message enqueued and not yet delivered, printed it verbatim, and refused a subagent only while a pending message started with STOP. Source: `4ea3157:pending-guard.mjs:13`
+- The old pending guard released a message once a message typed after it had arrived, printed the overtaken messages at UserPromptSubmit, and wrote each refused call to a held-work file printed at the next prompt. Source: `4ea3157:pending-guard.mjs:35`
+- The old `doctrine-read-guard.mjs` held the main thread to reads at SessionStart's due marker until the never page was read whole, and at the entry to plan mode until the plan rules page was read. Source: `4ea3157:doctrine-read-guard.mjs:22`
+- The old doctrine read guard made a startup, a clear and a compaction owe every line of the never page, made a resume owe only what the transcript since the last start did not hold, and did not hold subagents. Source: `4ea3157:doctrine-read-guard.mjs:31`
+- The old `keep-info-guard.mjs` refused, at PreToolUse on a Bash git commit, a commit whose Markdown changes added a sentence marking a source withdrawn or dropped a web domain the file named, lifted only by a typed message naming that source. Source: `4ea3157:keep-info-guard.mjs:13`
+- The old keep-info guard's head comment names its gaps: it reads Markdown only, judges a sentence by its words, and sees a commit made by a Bash command only. Source: `4ea3157:keep-info-guard.mjs:31`
+- The old `drive-guard.mjs` refused, at PreToolUse on any Google Drive connector tool, writes, listing of recent files and any full-text search, and passed a search only where a parent folder was in an index or already returned this session. Source: `4ea3157:drive-guard.mjs:12`
+- The old `compact-recall.mjs` refused nothing itself: at SessionStart after a compaction it printed the newest ten typed messages and filed all of them, and the dispatcher then held the main thread to reading that file. Source: `4ea3157:compact-recall.mjs:11`
+- The old `push-guard.mjs` refused the same pushes and connector tools as today's, and its head comment holds no paragraph on a checker's pass. Source: `4ea3157:push-guard.mjs:10`
+- The old `report.mjs` was the status command, and its gate mode refused a call at PreToolUse when an agent the session launched had ended since the last status, with no latch. Source: `4ea3157:report.mjs:97`
+- The old `report.mjs` wait mode returned when a running agent's progress note changed, an agent ended, a running agent was refused by a hook, or after four and a half minutes. Source: `4ea3157:report.mjs:105`
+- The old plan check, as functions named Problem in the old dispatcher, refused a plan whose approval set held a step or Standing step not in the recorded set. Source: `4ea3157:hook-dispatch.mjs:653`
+- The old plan check refused a plan whose recorded review step no longer had a Standing step following the review file. Source: `4ea3157:hook-dispatch.mjs:693`
+- The old plan check refused a plan whose Goals section lacked the standing block or whose Served by line left a step serving no goal. Source: `4ea3157:hook-dispatch.mjs:761`
+- The old plan check refused a plan whose steps file was not the plan's Rules, Steps and Commands as they stood. Source: `4ea3157:hook-dispatch.mjs:1624`
+- The old plan check refused an After line that was not of the form N after M or named a step outside the Order. Source: `4ea3157:hook-dispatch.mjs:1828`
+- The old plan check refused a plan with an Order whose Standing line named no step that follows the review file. Source: `4ea3157:hook-dispatch.mjs:1856`
+- The old plan check refused a plan whose Commands did not let the review step run its one node command on a script in the scratchpad's folder. Source: `4ea3157:hook-dispatch.mjs:1875`
+- The old plan check refused a Commands entry spelled with git -C. Source: `4ea3157:hook-dispatch.mjs:1898`
+- The old plan check refused a plan that sends agents whose Files section held no code span naming a file. Source: `4ea3157:hook-dispatch.mjs:1913`
+- The old plan check refused a step not on the Standing line that lacked any of the labels Facts, Do, Observe and Kill. Source: `4ea3157:hook-dispatch.mjs:1935`
+- The old plan check refused a plan whose Rules section held neither the pointer line at the rules file's version nor every rule line of the file. Source: `4ea3157:hook-dispatch.mjs:1987`
+- The old plan check refused a send while the plan's pinned rules version differed from the rules file's, and said no amendment carries the Rules line. Source: `4ea3157:hook-dispatch.mjs:2029`
+- The old plan check refused a plan that left unanswered the open findings of the repositories it named, unless each was answered as still queued or dropped with a reason. Source: `4ea3157:hook-dispatch.mjs:2276`
+- The old plan check refused a plan whose What is section held a quote its named file did not carry. Source: `4ea3157:hook-dispatch.mjs:2365`
+- The old plan check refused a plan whose What is files had not been read or searched after the newest compaction. Source: `4ea3157:hook-dispatch.mjs:2403`
+- The old plan check refused a plan with steps that lacked a Cost section stating pushes, sends and tier. Source: `4ea3157:hook-dispatch.mjs:2447`
+- The old plan check refused a step that cited a rule number of the plans page that was not there or whose text lacked the quoted words. Source: `4ea3157:hook-dispatch.mjs:2476`
+- The old plan check refused a step naming the decisions folder without the decisions check. Source: `4ea3157:hook-dispatch.mjs:2518`
+- The old plan check refused a Verification line that promised the main thread a read of a path outside the record. Source: `4ea3157:hook-dispatch.mjs:2542`
+- The old plan check refused a plan whose Design did not carry the lesson number for each gate function its steps named. Source: `4ea3157:hook-dispatch.mjs:2576`
+- The old plan check refused a plan with no line for an open roadmap item of a repository its Files named. Source: `4ea3157:hook-dispatch.mjs:2633`
+- The old plan check refused a plan that marked a roadmap item in without a read of the repository's commit log and a Shipped check line for the item. Source: `4ea3157:hook-dispatch.mjs:2762`
+- The old script check refused a Workflow script that started an agent with anything other than a literal of the plan's path and a step number, a non-built-in agent type or a forbidden construct. Source: `4ea3157:hook-dispatch.mjs:3370`
+- The old plan guard refused a plan whose Asked section shared a run of eight words with a typed message. Source: `4ea3157:plan-guard.mjs:547`
+- The old plan guard refused a plan whose title held a phrase the third-person check refuses. Source: `4ea3157:plan-guard.mjs:829`
+- The old plan guard refused a Files line that said read only beside a word that names a write. Source: `4ea3157:plan-guard.mjs:847`
+- The old plan guard refused a plan whose pull step did not follow every step that writes files. Source: `4ea3157:plan-guard.mjs:890`
+- The old plan guard refused a plan last written by a model below the top tier when no approved plan had a step open. Source: `4ea3157:plan-guard.mjs:979`
+- The old `guard-cases/` folder held 13 files listed and 136 case names in 12 of them: hook-dispatch 39, plan-seed 25, plan-land 15, report 12, plan-guard 10, plan-fence 9, stop-guard 8, program 7, approved-plan-guard 5, session-brief 3, plan-scope-check 2 and hub-pin-check 1. Source: Grep of the pattern for a name key at a line start under S/research/before/guard-cases, count mode, run in this step
+- The old `guard-cases/shape.mjs` is listed in that folder and holds none of the pattern's matches. Source: Glob of S/research/before/guard-cases, run in this step
+- The old repository settings file held the same three hooks as today's, SessionStart, Stop and PreToolUse, and an allow list of 21 entries with no deny list. Source: `4ea3157:.claude/settings.json:2`
+
+## What the documentation says
+
+- The hooks page groups events into three cadences: per session, per turn, and on every tool call inside the agentic loop. Source: docs:hooks, Hook lifecycle
+- The hooks page lists, among its events, PreToolUse, PermissionRequest, PermissionDenied, PostToolUse, Stop, StopFailure, ConfigChange, PreCompact, PostCompact, PreModelSwitch and PostModelSwitch. Source: docs:hooks, Hook lifecycle
+- A hook handler is one of five types: command, http, mcp_tool, prompt or agent. Source: docs:hooks, Hook handler fields
+- The matching hooks of an event run in parallel, and when more than 12 are prompt or agent hooks, 12 of those run at once. Source: docs:hooks, Hook handler fields
+- A handler defined in more than one settings file runs once. Source: docs:hooks, Hook handler fields
+- A hook's timeout defaults to 600 seconds for command, http and mcp_tool, 30 for prompt and 60 for agent, with command, http and mcp_tool lowered to 30 on UserPromptSubmit, PreModelSwitch and PostModelSwitch and to 10 on MessageDisplay. Source: docs:hooks, Common fields
+- Exit code 2 blocks the action on events that can block, and the stderr is the reason. Source: docs:hooks, Exit code 2
+- On PreToolUse exit code 2 blocks the tool call, and on UserPromptSubmit it blocks the prompt. Source: docs:hooks, Exit code 2 behavior per event
+- On Stop exit code 2 prevents Claude from stopping and continues the conversation. Source: docs:hooks, Exit code 2 behavior per event
+- On ConfigChange exit code 2 blocks the configuration change from taking effect, except for policy settings. Source: docs:hooks, Exit code 2 behavior per event
+- On PreCompact exit code 2 blocks compaction, and on PreModelSwitch it blocks the model switch. Source: docs:hooks, Exit code 2 behavior per event
+- On PostToolUse exit code 2 shows stderr to Claude and the tool has already run, and on PostModelSwitch the model has already switched. Source: docs:hooks, Exit code 2 behavior per event
+- On SessionStart, StopFailure, Notification and PermissionDenied exit code 2 blocks nothing. Source: docs:hooks, Exit code 2 behavior per event
+- An exit code other than 0 and 2 is a non-blocking error and the action goes ahead, and exit code 1 without valid JSON is not a block. Source: docs:hooks, Other exit codes
+- A timed-out PreToolUse hook does not block the tool call unless the hook is one whose failure blocks, set with onFailure block. Source: docs:hooks, Timeouts
+- A PreModelSwitch hook canceled at its timeout blocks the model switch. Source: docs:hooks, Timeouts
+- PreToolUse decisions are allow, deny, ask and defer, and when several hooks differ the precedence is deny, then defer, then ask, then allow. Source: docs:hooks, PreToolUse decision control
+- Deny and ask rules are still evaluated whatever a PreToolUse hook returns. Source: docs:hooks, PreToolUse decision control
+- A hook's deny blocks the tool in every permission mode, bypassPermissions included, and PreToolUse hooks fire before any permission-mode check. Source: docs:hooks-guide, Hooks and permission modes
+- A hook's allow does not bypass deny rules, and it cannot suppress the prompt for network-path reads, tools that require user interaction and organization connector tools set to ask. Source: docs:hooks-guide, Hooks and permission modes
+- In plan mode a PreToolUse hook's allow has no effect on a file edit or another call that is not read-only, apart from ExitPlanMode. Source: docs:permissions, Hook approvals in plan mode
+- A blocking hook takes precedence over allow rules, because exit code 2 stops the call before permission rules are evaluated. Source: docs:permissions, Precedence among rules, hooks, and mods
+- PreToolUse hooks run for every tool except EndConversation. Source: docs:permissions, Extend permissions with hooks
+- A typed slash command bypasses PreToolUse, and the UserPromptExpansion event covers that path. Source: docs:hooks, UserPromptExpansion
+- Command hooks communicate through stdout, stderr and exit codes only, and cannot trigger slash commands or tool calls. Source: docs:hooks-guide, Limitations
+- A PostToolUse hook cannot undo an action, since the tool has already executed. Source: docs:hooks-guide, Limitations
+- Command hooks, local MCP servers and helper commands run outside the sandbox with full access, and the sandbox covers shell commands only. Source: docs:sandboxing, What runs outside the sandbox
+- The Stop event runs when the main agent has finished responding, does not run on a user interrupt, and has API errors fire StopFailure instead. Source: docs:hooks, Stop
+- Stop hooks receive stop_hook_active, last_assistant_message, background_tasks and session_crons. Source: docs:hooks, Stop input
+- After stop hooks have continued a turn eight times in a row the harness overrides the next block and ends the turn, the count resets when a tool is called, and CLAUDE_CODE_STOP_HOOK_BLOCK_CAP raises the cap. Source: docs:hooks, Stop input
+- A Stop hook returns decision block with a reason to prevent Claude from stopping, or exits 2 with stderr as the explanation. Source: docs:hooks, Stop decision control
+- A Stop hook can return additionalContext instead, which continues the conversation under the same stop_hook_active and cap protections and is shown as a note from the hook and not as a hook error. Source: docs:hooks, Stop decision control
+- A hook at a stop can send the turn on, so that Claude writes a further reply after the one already produced, and its decision fields are decision, reason and additionalContext. Source: docs:hooks, Stop decision control
+- Nothing in the Stop decision fields edits or removes the text of the reply that was already produced; the page lists no such field. Source: docs:hooks, Stop decision control
+- The MessageDisplay event runs while an assistant message streams to the screen and renders the hook's replacement text in place of each batch of lines. Source: docs:hooks, MessageDisplay
+- MessageDisplay is display-only: the transcript and what Claude sees keep the original text, and when the hook fails or times out the original text is displayed. Source: docs:hooks, MessageDisplay
+- A blocked prompt never reaches Claude, but its text is written to the transcript on disk in the block message unless suppressOriginalPrompt is set. Source: docs:hooks, What a blocked prompt leaves behind
+- The ConfigChange event runs when a settings file, a managed policy file or a skill file changes during a session, with matchers user_settings, project_settings, local_settings, policy_settings and skills. Source: docs:hooks, ConfigChange
+- Rules and settings saved through Yes and don't ask again, /permissions or /model in the session that saved them take effect without ConfigChange hooks running there. Source: docs:hooks, ConfigChange
+- A ConfigChange hook blocks a change with exit code 2 or a block decision, the new settings are then not applied to the running session, and a blocked change surfaces no message to anyone and writes a line to the debug log only. Source: docs:hooks, ConfigChange decision control
+- A ConfigChange block on policy_settings is ignored, and ConfigChange hooks do not run when server-managed settings arrive or refresh. Source: docs:hooks, ConfigChange decision control
+- Permission rules are evaluated in the order deny, ask, allow, the first match decides, and an allow rule cannot carve an exception out of a deny rule. Source: docs:permissions, Manage permissions
+- A bare tool name in a deny rule removes the tool from Claude's context entirely, and a scoped rule leaves the tool available and blocks matching calls. Source: docs:permissions, Manage permissions
+- Permission rules are enforced by Claude Code and not by the model, and instructions in a prompt or CLAUDE.md do not change what Claude Code allows. Source: docs:permissions, Manage permissions
+- If a tool is denied at any level no other level can allow it, and managed settings are highest, so no other level can override a managed permission rule. Source: docs:permissions, Settings precedence
+- Managed settings cannot be overridden by user and project settings apart from a few security-sensitive keys, and allowManagedPermissionRulesOnly makes managed settings the only source of permission rules. Source: docs:permissions, Managed settings
+- A few restrictive keys are honored from a scope that otherwise could not override managed settings, among them blockReadsOutsideWorkingDirectories, blockWritesOutsideWorkingDirectories and denyInsteadOfPrompting. Source: docs:settings, Exceptions to managed settings precedence
+- The keys disableBypassPermissionsMode and disableAutoMode set to disable prevent those modes, from any settings file, and are most useful in managed settings. Source: docs:permissions, Permission modes
+- The key denyInsteadOfPrompting denies calls that would wait on a permission prompt so an unattended session keeps working. Source: docs:permissions, Permission modes
+- A deny rule of the form Agent followed by a name disables that subagent type. Source: docs:permissions, Agent (subagents)
+- Allow rules and additional directories in a project's settings apply only after the workspace trust dialog is accepted, and deny and ask rules apply right away. Source: docs:permissions, Project allow rules and workspace trust
+- Tool names are referenced in permissions.allow and permissions.deny, the allowedTools and disallowedTools flags, the Agent SDK's options, a skill's allowed-tools and a hook's if condition. Source: docs:tools-reference, Configure tools with permission rules and hooks
+- A subagent's tools come from the tools and disallowedTools fields of its definition, and disallowedTools takes precedence when a tool is in both. Source: docs:tools-reference, Agent tool behavior
+- A permissions deny rule, the disallowedTools flag or restricted mode removes Bash from the session. Source: docs:tools-reference, Glob tool behavior
+- The permission modes are default, acceptEdits, plan, auto, dontAsk and bypassPermissions. Source: docs:permissions, Permission modes
+- Claude Code does not auto-approve in any mode, bypassPermissions included, tools matched by an ask rule, tools that require user interaction and recognized critical-path removals. Source: docs:permission-modes, Actions no mode auto-approves
+- With blockWritesOutsideWorkingDirectories on, Claude Code refuses Write, Edit and NotebookEdit calls outside the working directories, and the key does not limit shell commands, MCP tools or the programs hooks run. Source: docs:permission-modes, Actions no mode auto-approves
+- Protected-path writes are prompted in default and acceptEdits, routed to the classifier in auto, denied in dontAsk and allowed in bypassPermissions. Source: docs:permission-modes, Protected paths
+- Allow rules in settings files do not pre-approve protected-path writes, because the safety check runs before allow rules are evaluated. Source: docs:permission-modes, Protected paths
+- The protected directories include .git and .claude, with exceptions such as the current session's own plan files in the plans folder, and the protected files include .mcp.json, .claude.json and the stored copy of server-managed settings. Source: docs:permission-modes, Protected paths
+- In auto mode allow, ask and deny rules resolve an action first, with exceptions for protected-path writes, which route to the classifier, and for critical-path removals, which no allow rule approves. Source: docs:permission-modes, How auto mode evaluates actions
+- A cloud session in an Anthropic-hosted environment asks the server to review auto mode actions, and where the server gives no verdict Claude Code denies the action. Source: docs:permission-modes, Server-side classifier review
+- If the classifier blocks an action 3 times in a row or 20 times in total, auto mode pauses and prompting resumes, and those thresholds are not configurable. Source: docs:permission-modes, When auto mode falls back
+- Under server-side review the turn can stop after ten responses in a row with no verdict. Source: docs:permission-modes, When auto mode falls back
+- Deny rules and explicit ask rules are evaluated before the classifier and still block or prompt. Source: docs:auto-mode-config, Configure auto mode
+- An ask rule makes the classifier unable to auto-approve a matching action, and a deny rule blocks before the classifier is consulted. Source: docs:auto-mode-config, Add a human checkpoint
+- A boundary stated in conversation can be lost when context compaction removes the message, so an ask or deny rule is the durable form. Source: docs:auto-mode-config, Add a human checkpoint
+- A push written as git -C followed by a directory does not match a Bash rule for git push, so a hook that inspects the full command text is the documented way to checkpoint it. Source: docs:auto-mode-config, Add a human checkpoint
+- The classifier reads autoMode settings from user settings, managed settings and the settings flag, and does not read them from project settings. Source: docs:auto-mode-config, Where the classifier reads configuration
+- A hook that changes a call's input after auto mode reviewed it can have the call denied with the words a hook changed this call's input after auto mode reviewed it. Source: docs:hooks, PreToolUse updatedInput in auto mode
+- The sandbox is off by default, wraps shell commands only, and leaves the file tools and hooks outside it. Source: docs:sandboxing, What the sandbox restricts
+- In a cloud thread in a project none of a repository's settings permission rules, hooks or env apply, and in a session with one repository outside a project's threads the repository's own settings file is read. Source: docs:settings, Settings in cloud sessions
+- The harness's proxy for GitHub in a cloud session rejects branch deletions and pushes of anything other than a branch, and GitHub decides which branches a session may update by applying the repository's branch protection rules and rulesets to the access connected. Source: docs:security, Cloud execution security
+- A branch rule that the connected GitHub access can bypass does not block a cloud session's push. Source: docs:security, Cloud execution security
+
+## What is not known
+
+- Whether the container's user-level settings file wires the dispatcher for each of the nine events was not looked at, because that file is not among the places this step may open. Source: this step's reading
+- The refusal wording of each old hold beyond the head comment of the old dispatcher, lines 1 to 146, was not read, so what each old hold printed and what lifted it is known only as the head comment gives it. Source: this step's reading
+- The old plan check's refusals that sit outside a function whose name holds the word Problem were not read, since the step lists the comment above each such function and no more. Source: this step's reading
+- Whether the old `guard-cases/shape.mjs` holds cases written without a name key at the start of a line is not known, because only the count of that key was run. Source: Grep of the pattern for a name key at a line start under S/research/before/guard-cases, count mode, run in this step
+- The case names of each old case file other than those counted were not read, so what each of the 136 old cases held is not known. Source: this step's reading
+- The wording of the stop guard's refusals and the patterns it matches were not read, because only its head comment, lines 1 to 23, is in the step's places. Source: this step's reading
+- The branch guard's refusal text and its installed hook were not read, because only the first 60 lines of its file are in the step's places. Source: this step's reading
+- The push guard's lists of connector tools named BRANCH_CREATE, FILE_WRITES, PR_MERGE and BRANCH_UPDATE were not read, because only its head comment, lines 1 to 45, is in the step's places. Source: this step's reading
+- The origin the record gives for the branch guard, the rules check and the reply hold is not known, because section 2 of the record, lines 77 to 96, names none of them. Source: `archive/plans/redesign-record.md:77`
+- Whether the session's permission mode is auto, and so whether the harness's own check in auto mode is on for this container, was not looked at, because no place of this step names the session's mode. Source: this step's reading
+- Whether any page on hooks or permissions describes a way for a hook to remove or alter reply text that was already shown, other than the MessageDisplay event, was looked for in the Stop, MessageDisplay and Stop-decision sections and was not found there. Source: docs:hooks, MessageDisplay
+- The hold that the harness's own stop hook places in this container is not described here, because the launcher settings and its scripts are not among this step's places. Source: this step's reading
+
+## Found
+
+- The dispatcher's head comment numbers five holds at PreToolUse, 0 to 4, and the code runs nine in one list, with the function comments numbering the read hold 4, the plan file hold 5, the run tier hold 6, the page tier hold 7, the send tier hold 8 and the eject hold 9. Source: `hook-dispatch.mjs:12`
+- The dispatcher's function comments call the read hold HOLD 4 and the plan file hold HOLD 5, and the case names call them hold 0 at line 1051 and hold 4 at line 1234 of the cases, with no case named hold 5. Source: `hook-dispatch.mjs:718`
+- The dispatcher's head comment says none of the holds ever refuses a read, and the typed-word hold refuses EnterPlanMode and ExitPlanMode, both of which are in the READS set. Source: `hook-dispatch.mjs:10`
+- The dispatcher's head comment says three rules keep a hook and everything else a session's hooks once ran is retired, and the same file runs nine holds. Source: `hook-dispatch.mjs:5`
+- The dispatcher's head comment says every other event runs each repository's own hooks, and the code sets ConfigChange, PreModelSwitch and PostModelSwitch to run none. Source: `hook-dispatch.mjs:43`
+- The hub's `.branch-guard` names `plan-scope-check.mjs` as an also check, and a case of the dispatcher says that check prints one line saying it was retired on 12 November 2026 and exits 0. Source: `.branch-guard:5`
+- The running page says a typed message with no go-word holds sending an agent or a workflow and writing a file, and the dispatcher passes a write of a plan file under the plans folder and of a file in the scratchpad under that hold. Source: `plans/native/running.md:44`
+- The stop guard's head comment says it passes after two refusals in one chain of stops, and the hooks page says the harness ends a turn after eight consecutive stop-hook continuations. Source: `stop-guard.mjs:17`

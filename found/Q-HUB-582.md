@@ -1,0 +1,3 @@
+Q-HUB-582: Seen at the landing of 20 November 2026: the lessons check prints 24 lines, each opening with a tilde, for lessons whose declared gate is a file this repository retired, and it still ends with PASS. The check was written to pass such a lesson with a mark. No page says whether those lessons are to be declared anew against the gates that stand, or left as the record of gates that are gone.
+
+Not placed: `lessons-check.mjs`, `LESSONS.md`. Each lesson whose declared gate is retired is either declared anew against what holds it today or marked as the record of a retired gate, and the check's lines say which.

@@ -1,0 +1,1314 @@
+{
+ "commit": "4ea3157",
+ "sources": [
+  {
+   "path": ".claude/hooks/session-start.sh",
+   "what": "start (every session, from the repo's own hook)",
+   "told": "session-start: the hub clone was absent and cloning it from $HUB_CLONE_SOURCE into $HUB_CLONE_PATH failed; the gates are not wired",
+   "today": "still told",
+   "where_today": ".claude/hooks/session-start.sh:22"
+  },
+  {
+   "path": ".claude/hooks/session-start.sh",
+   "what": "start, when the hub clone is absent",
+   "told": "session-start: the hub clone was absent; cloned it from $HUB_CLONE_SOURCE into $HUB_CLONE_PATH",
+   "today": "still told",
+   "where_today": ".claude/hooks/session-start.sh:15"
+  },
+  {
+   "path": ".claude/hooks/plan-guard.sh",
+   "what": "before a tool, in plan mode, when plan-guard.mjs cannot be found",
+   "told": "PLAN MODE, and plan-guard.mjs could not be found — refusing rather than assuming. Say so in plain text and stop (Doctrine §0d).",
+   "today": "still told",
+   "where_today": ".claude/hooks/plan-guard.sh:41"
+  },
+  {
+   "path": ".githooks/commit-msg",
+   "what": "on refusal, at commit (message holds a chat link, trailer or model name)",
+   "told": "REFUSED — a commit message is plain and reader-facing, with no trailer, no chat link and no model's name ($1).",
+   "today": "still told",
+   "where_today": ".githooks/commit-msg:11"
+  },
+  {
+   "path": ".githooks/pre-commit",
+   "what": "on refusal, at commit on a branch other than main",
+   "told": "REFUSED — you are on '$branch'. Work in this repo commits to 'main'. To move what you have written and keep it: git stash -u && git checkout main && git stash pop",
+   "today": "still told",
+   "where_today": ".githooks/pre-commit:49"
+  },
+  {
+   "path": ".githooks/pre-commit",
+   "what": "on refusal, at commit, when a declared check is missing",
+   "told": "REFUSED — .branch-guard declares also=example-check.mjs and it is missing or not executable. A declared check that silently stops running is worse than no check.",
+   "today": "still told",
+   "where_today": ".githooks/pre-commit:10"
+  },
+  {
+   "path": ".claude/skills/analytics-check/SKILL.md",
+   "what": "when the owner asks what is hitting the apps (skill)",
+   "told": "This measures TRAFFIC, not people: it cannot answer \"how many users do I have\" and must say so rather than answering anyway. Never a beacon; never claims requests are people; never claims DEVICES are people either.",
+   "today": "still told",
+   "where_today": ".claude/skills/analytics-check/SKILL.md:24"
+  },
+  {
+   "path": ".claude/skills/analytics-check/SKILL.md",
+   "what": "when reporting traffic (skill)",
+   "told": "Anchor to something known before reporting anything. For at least one app somebody already knows the real answer — an invite list, a login count — ask for that first.",
+   "today": "still told",
+   "where_today": ".claude/skills/analytics-check/SKILL.md:69"
+  },
+  {
+   "path": ".claude/skills/analytics-check/SKILL.md",
+   "what": "when reading Cloudflare counts (skill)",
+   "told": "requestSource = eyeball is the population the dashboard counts. Always filter to it. count is already sampling-adjusted: NEVER multiply by sampleInterval. Exclude known scanners (185.177.72.22).",
+   "today": "still told",
+   "where_today": ".claude/skills/analytics-check/SKILL.md:37"
+  },
+  {
+   "path": ".claude/skills/analytics-check/SKILL.md",
+   "what": "when quoting a device count (skill)",
+   "told": "So: the device count is an UPPER BOUND, not a floor. Never present it as a headcount, and never lead with it as the honest layer. Compute requests divided by devices before quoting any device number.",
+   "today": "still told",
+   "where_today": ".claude/skills/analytics-check/SKILL.md:61"
+  },
+  {
+   "path": "session-brief.mjs",
+   "what": "start, each resume and compaction (printed brief): a clone behind its remote",
+   "told": "*** THE HUB IS STALE — N commit(s) behind origin/main. *** The tree looks normal and is not. Do not measure against it, do not build a merge on it, and do not number anything off the end of a file in it. Catch up first.",
+   "today": "told in part",
+   "where_today": "hook-dispatch.mjs:207-217 (a copy of the hub is brought forward by fast-forward and the count is printed; the instruction not to measure or number against a stale tree is not told)"
+  },
+  {
+   "path": "session-brief.mjs",
+   "what": "start (printed brief): a clone behind that holds work",
+   "told": "HOLDS WORK THE REMOTE LACKS: N uncommitted change(s) and M commit(s) not on origin/main. No command is printed, because a catch-up that is wrong here would discard it. Commit it, then put the commits on top of the remote as the plan's landi",
+   "today": "told in part",
+   "where_today": "hook-dispatch.mjs:211 (left as it stands, with the reasons) and .claude/skills/landing/SKILL.md:22 (fetch, rebase, do not push if the head moved)"
+  },
+  {
+   "path": "session-brief.mjs",
+   "what": "start (printed brief): where work belongs",
+   "told": "BRANCH: on 'X'. Correct — work in this repo commits to 'Y'. / This is PRODUCTION. Work belongs on 'Y'. A commit here is refused unless ESC=1. / Work in this repo commits to 'Y'. A commit here will be refused.",
+   "today": "still told",
+   "where_today": "session-brief.mjs:45-47"
+  },
+  {
+   "path": "session-brief.mjs",
+   "what": "start (printed brief): no .branch-guard",
+   "told": "No .branch-guard — this repo is UNGUARDED. Write one and install: node ../noahjefferson/branch-guard.mjs --repo . --install",
+   "today": "still told",
+   "where_today": "session-brief.mjs:49"
+  },
+  {
+   "path": "session-brief.mjs",
+   "what": "start (printed brief): doctrine drift",
+   "told": "DOCTRINE: last read at X, hub is at Y. Run doctrine-sync.mjs --repo . BEFORE working.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "session-brief.mjs",
+   "what": "start (printed brief): hub not beside the repo",
+   "told": "DOCTRINE: the hub is not checked out beside this repo, so drift CANNOT be checked. Nothing here has verified that this repo is current. Say so rather than assuming it is.",
+   "today": "told in part",
+   "where_today": "plans/native/running.md:35 (the hub absent from the container: the session says so in its first reply, and commits and pushes nothing until the owner has answered)"
+  },
+  {
+   "path": "session-brief.mjs",
+   "what": "start (printed brief): never reconciled",
+   "told": "DOCTRINE: this repo has never recorded a reconciliation. Run: node ../noahjefferson/doctrine-sync.mjs --repo .",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "session-brief.mjs",
+   "what": "start (printed brief): the repository family",
+   "told": "REPOS (N): ... Full map, branch models and what each still owes: noahjefferson/REPOS.md",
+   "today": "told in part",
+   "where_today": "CLAUDE.md:27 (REPOS.md named as the page for the ten repositories; not printed at a start)"
+  },
+  {
+   "path": "session-brief.mjs",
+   "what": "start (printed brief): each repository's STATE.md, whole",
+   "told": "STATE.md of <repo> (<path>), whole: <its text> / STATE.md: none of the N repositories beside this brief keeps one.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "session-brief.mjs",
+   "what": "start, resume, compaction and clear (printed brief): the owner's core asks",
+   "told": "THE OWNER'S CORE ASKS (one page, from the hub CLAUDE.md; the never-rules page of the doctrine is read as well): <the section's lines, at most 40>",
+   "today": "told in part",
+   "where_today": "hook-dispatch.mjs:43 (one line naming the short page, plans/native/page.md, which holds the never-rules and what is wanted)"
+  },
+  {
+   "path": "session-brief.mjs",
+   "what": "start (printed brief): the lessons",
+   "told": "LESSONS (N) — titles only; each is its own file in noahjefferson/lessons/: <every title> / LESSONS: the hub is not checked out, so the cross-app record is UNAVAILABLE this session.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "session-brief.mjs",
+   "what": "start (printed brief): the doctrine's index",
+   "told": "THE DOCTRINE (index of the three files in doctrine/; never.md is read at every start, plans.md at the entry to plan mode, apps.md when a plan item points at it): <the index lines>",
+   "today": "told in part",
+   "where_today": "DOCTRINE.md:28 (the index is a page; it is not printed, and nothing says never.md is read at every start)"
+  },
+  {
+   "path": "session-brief.mjs",
+   "what": "start (printed brief): how to write back",
+   "told": "HOW WRITE BACK (Doctrine 2) — shapes that look like content and are not: <the bullet titles of section 2 of doctrine/plans.md>",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "session-brief.mjs",
+   "what": "start (printed brief): the traverse",
+   "told": "And the traverse (Doctrine 11f): strategic, then the real call chain, then BACK UP — given the whole app, was this the right thing to add? Before the commit, not after. Research first, never derive the domain (Doctrine 11e).",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "each prompt (UserPromptSubmit): head of the reminder",
+   "told": "OWNER MESSAGE (LESSONS §370). Before any tool call, reply to EVERY point in it.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "each prompt: when the message ends with a go-word",
+   "told": "It ends with a go-word: work held since the last message may be sent again, and the approved plan goes on.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "each prompt: when the message carries the word stop",
+   "told": "It carries the word stop and does not end with a go-word: everything is held, and only the status command, TaskStop, an agent's own return and, on the main thread, a read of the record pass. Answer it, say what was running and that it is st",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "each prompt: when the message is a correction",
+   "told": "It does not end with a go-word, so it is a correction: answer every point in it in this turn; the status command, TaskStop, a read of the record, the entry to plan mode and, in plan mode, a write of the plan file and the plan check pass. Ev",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:7 and :11 (a correction narrows the work; a question gets an answer and nothing else; no go-word, no hold, no turn-by-turn answer rule)"
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "each prompt: first line of the reply",
+   "told": "First line: what you are doing now; a stop's first line is \"Stopping here\", then paused, pending what lifts it, or finished, nothing pending.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "each prompt: the end of the reply",
+   "told": "End: done, not done, found and not fixed, open for the owner as decisions only, and the state line in its fixed forms: paused, pending what of the owner's; running, what; or finished. Never \"waiting on you\", and never \"nothing open\" for a p",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:9 (state at the end: finished, paused on what, or running what); the ban on \"waiting on you\" and on app notifications is not told"
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before a tool (AskUserQuestion)",
+   "told": "CHOICE POPUP REFUSED (Doctrine §0): AskUserQuestion is refused in every repository. Ask in plain text, and only a choice that is the owner's.",
+   "today": "still told",
+   "where_today": "hook-dispatch.mjs:287 and plan-guard.mjs:29; plans/native/page.md:36; doctrine/never.md:1"
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before a tool, when the dispatcher fails",
+   "told": "hook-dispatch.mjs failed (<error>); only reads run until it is fixed.",
+   "today": "told in part",
+   "where_today": "hook-dispatch.mjs:293 (push-guard.mjs did not run cleanly; only reads run until it is fixed) and plans/native/running.md \"When a session is locked\""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "start after a compaction",
+   "told": "AFTER COMPACTION: every tool used earlier in this session still exists. Try each route before reporting a limit (LESSONS §370). <a count of each tool used so far>",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "start after a compaction",
+   "told": "THE OWNER'S MESSAGES SINCE THE PREVIOUS COMPACTION, THE NEWEST N, VERBATIM, OLDEST FIRST. These outrank the summary: where the summary differs, these are right.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "after a compaction, before a tool (recall gate)",
+   "told": "RECALL GATE (Doctrine §0e rule 2): this session was compacted and the owner's messages since the previous compaction have not been read whole. Until Read results covering every line of the file have returned, the main thread may only read a",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "after a compaction, before a tool (state page gate)",
+   "told": "STATE PAGE GATE (Doctrine §0e rule 2): this session was compacted and the status page has not been read since. Read the whole page now: a summary of it, or another copy, is not it.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "at the owner's first reply after a compaction",
+   "told": "Compacted at HH:MM California time on DATE. This session's context was replaced by a summary at that time.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "start, resume or compaction (doctrine due line)",
+   "told": "DOCTRINE DUE (Doctrine §11e): this session <how it started>; until Read results on <doctrine> cover every line, the main thread may only read and give the status. Read it in full now, in as many Read calls as it takes; a summary of it, or a",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "entry to plan mode (plan rules gate)",
+   "told": "PLAN RULES GATE (Doctrine §11e): this call enters plan mode or is made in it, and the plan rules page has not been read since this session started, was compacted or left plan mode. Read it in full now",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "entry to plan mode (plan seed)",
+   "told": "PLAN SEED WRITTEN WHOLE to <file> (N lines): read it whole with the Read tool, because the harness cuts added context at a cap.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "start, resume or compaction after an approval",
+   "told": "PLAN MODE RESTORED BY THE HARNESS: the approval of <plan> is recorded, and the plan mode shown now is the harness's restore at a restart and not the owner's entry. The plan is in force and the main thread is not held.",
+   "today": "told in part",
+   "where_today": "plans/native/running.md:49 (a restart that closes an approval request nobody answered is the harness's own, and the page is put up again)"
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before a publish, when a resume restored plan mode",
+   "told": "Before this publish, write a line in a reply that tells the owner so: that the resume restored plan mode, that the plan is already approved, and that leaving plan mode in the app is the one move.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "model switch (PreModelSwitch)",
+   "told": "Model switch, from X to Y, N tokens re-sent with the next request, cache warm, estimated cost of writing it $Z.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "after a model switch (PostModelSwitch)",
+   "told": "Serving model: X, not the top tier. The work is on this model and not on the top tier (Doctrine §11b). / Serving model: X, the top tier. The manager's turns need no more than Opus, so this work does not need the top tier",
+   "today": "told in part",
+   "where_today": "plans/native/running.md:55 and doctrine/never.md:353 (say plainly when the work does not need the top tier; no line is printed at a switch)"
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before a tool, when a call was refused (refusal latch)",
+   "told": "REFUSAL LATCH (Doctrine §0d, §0e): every later call is refused except its own return. Return what you have, with the refusal's text. Another command, tool or wording for the same end is a second route, not a fresh start.",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:37 and plans/native/roles/worker.md:21 (a refusal is an instruction; stop that route, say what was refused, no other way to the same end); no latch holds the session"
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before a tool, after the word stop was written",
+   "told": "Say in plain text what was running and that it is stopped, answer the message, and end the turn; an agent returns what it has, saying it was stopped. A message whose last word is one of these lifts it: <go-words>.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before a tool, under a correction",
+   "told": "A question is answered from the record in the turn it is asked, so a read of the record passes, so a move the correction does not touch goes on after it and a move it touches does not",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:11 (a question from the owner gets an answer and nothing else; the approved plan stands as written)"
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending an agent (dispatch gate)",
+   "told": "DISPATCH GATE (Doctrine §0e): an agent's prompt is only the approved plan's path and a step number, so everything an agent is told is in the plan the owner read.",
+   "today": "told in part",
+   "where_today": "plans/native/skills/piece-of-work/SKILL.md:10 (a worker is told the page and its step, nothing more)"
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending an agent, custom agent type",
+   "told": "\"<type>\" is a custom agent type, and a custom type carries instructions of its own. Send one of: <the built-in types>.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending an agent, no plan in force",
+   "told": "No approved plan is in force, so no agent can be sent. Enter plan mode (EnterPlanMode), write the plan and put it to the button; or answer from the files in conversation.",
+   "today": "told in part",
+   "where_today": "plans/native/skills/piece-of-work/SKILL.md:8-9 (scope on one page, approved once, then workers are sent); nothing refuses a send"
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before a workflow script",
+   "told": "DISPATCH GATE (Doctrine §0e): a workflow is refused, so no script of the session's carries instructions the owner has not read. Send an agent with the plan's path and a step number.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before a tool on the main thread (manager fence)",
+   "told": "MANAGER FENCE (Doctrine §0e): the main thread plans, sends agents, checks their results and reports; it does no work itself.",
+   "today": "told in part",
+   "where_today": "plans/native/skills/piece-of-work/SKILL.md:6 (the session plans, sends and judges; workers do the steps); nothing refuses a call"
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before a read on the main thread (manager fence)",
+   "told": "MANAGER FENCE (Doctrine §0e rule 13): the main thread reads only the record: the approved plan and the plans folder, the session scratchpad, the hub's DOCTRINE.md, doctrine/, LESSONS.md ... Send an agent with the approved plan's path and a ",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step (sends priced)",
+   "told": "SENDS PRICED: the plan's own rules price its sends, and N agents have been sent under this approval, so no further agent is sent. The plan goes back through plan mode, where its \"Sends priced\" line is raised with the causes of the overrun n",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:8 and :23 (say what a long run will cost before it starts; the cost part names agents, tier and time); no cap on sends"
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step (review gate)",
+   "told": "AIM REVIEW (Doctrine §0e rule 2): the plan has an \"## Order\", so its \"Standing:\" line has to name a step whose text tells its agent to follow aim-review.md ... the move goes only when the review reads ON-AIM ROUTE-CLEAR naming it.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step (review reads OFF-AIM)",
+   "told": "the current review reads OFF-AIM, so the plan is aimed at the wrong thing and step N is not sent. ... rewrite the plan from them.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step (review reads ROUTE-REFUSED)",
+   "told": "the current review reads ROUTE-REFUSED: a command or write of the step it read would be refused by a guard. Step N is not sent. Amend the plan's Steps or Order from the commands the review names, then send the review again.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step (rules gate)",
+   "told": "the plan's Rules line pins version X and the agent rules file now says version Y, so the agents would follow rules the plan was not read with, and no step is sent.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step (approval set)",
+   "told": "STEP NOT IN THE PLAN AT APPROVAL (Doctrine §0e rule 13): step N was not in the plan's Steps when the plan was approved, so it is not sent: a step the owner has not read needs the owner's button, in a new plan through plan mode.",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:11 (a plan is changed only for a reason, the change is written in full and approved before any work is done under it)"
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step (reads gate)",
+   "told": "READS: a Read of the record that a hook refused or that failed is recorded, and no step is sent until a Read has returned on that file.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step, when no goal is named",
+   "told": "The plan's \"Served by:\" line names no goal for step N, so the step serves none and is not sent.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step, plan shape",
+   "told": "Every step that is not on the Standing line has Facts (the asks and the facts it depends on, restated), Do (the exact actions), Observe (what must be seen for the step to be done) and Kill (what ends it with nothing further written)",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step, found queue",
+   "told": "FOUND QUEUE (Doctrine §0e rule 2): the repositories this plan's Files names hold N queued findings the plan does not answer, and what one plan found and left is answered by the next. Add a \"## Found answered\" section",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step, roadmap",
+   "told": "ROADMAP (Doctrine §0e rule 2): the repositories this plan's Files names hold N open roadmap items, and M have no line in the plan. Add a \"## Roadmap\" section with one bullet for each",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step, shipped check",
+   "told": "SHIPPED CHECK (Doctrine §0e rule 2, LESSONS §423): a plan that marks a roadmap item in names it as work to build, and a line in the notes is not the state of the app. The commit log of the repository's two branches is, so it is read first",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step, what is",
+   "told": "the \"## What is\" section ... Quote the line itself, in double quotes, and name the file it is in; a sentence from a conversation or a page that is not in a repository is not evidence here.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step after a compaction",
+   "told": "READ AFTER COMPACTION (Doctrine §0e rule 2): the session was compacted, and a plan written from its summary rests on files it has not opened since. Read each, then put the plan up again.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before sending a step, lessons cited",
+   "told": "LESSONS CITED (Doctrine §11e, §11f): the plan's steps name a gate function that the lessons record fixes for, and its \"## Design\" does not account for them. Read each lesson named, and cite it in the \"## Design\"",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "before a tool on the main thread (check of a call)",
+   "told": "To check a call before making it, run: node hook-dispatch.mjs --can <tool> \"<path or command line>\". It says whether the manager fence and the latch would pass the call, and changes nothing.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "start (more than one repository)",
+   "told": "MORE THAN ONE REPOSITORY IN THIS SESSION: <names>. None of them loaded its own roles, settings or instruction file. Sessions are started with one repository, the app alone",
+   "today": "still told",
+   "where_today": "hook-dispatch.mjs:236"
+  },
+  {
+   "path": "hook-dispatch.mjs",
+   "what": "start and each prompt (the one line)",
+   "told": "HOW WORK GOES HERE: the short page, plans/native/page.md. The procedures and the roles are files under plans/native/skills and plans/native/roles. The push guard and the check before a push hold every push of staging and main",
+   "today": "still told",
+   "where_today": "hook-dispatch.mjs:43"
+  },
+  {
+   "path": "plan-guard.mjs",
+   "what": "before a tool, in plan mode (Bash line that is not a reader)",
+   "told": "PLAN MODE. In plan mode a Bash line runs only if every command in it is a reader: rewrite the line with readers (cat, ls, grep, head, tail, wc, a git read), or use the Read, Grep or Glob tool, and send it again. Prose approval does not lift",
+   "today": "told in part",
+   "where_today": "doctrine/never.md:103 (prose does not lift plan mode in either direction); no reader-only rule is told"
+  },
+  {
+   "path": "plan-guard.mjs",
+   "what": "before a tool, in plan mode (any non-read)",
+   "told": "PLAN MODE. <why> Say so in plain text and stop (Doctrine §0d). Prose approval does not lift this — the mode does.",
+   "today": "told in part",
+   "where_today": "doctrine/never.md:103"
+  },
+  {
+   "path": "plan-guard.mjs",
+   "what": "before a plan is put up (Asked section)",
+   "told": "the plan has no \"## Asked\" section saying, in the session's own words, what the owner asked for. ... the plan's \"## Asked\" copies words from the owner (a run of eight or more). Say what was asked in the session's own words",
+   "today": "told in part",
+   "where_today": "doctrine/never.md:106-151 (never quote the owner; no owner message is copied into any file); no Asked section"
+  },
+  {
+   "path": "plan-guard.mjs",
+   "what": "before a plan is put up (talk before the plan)",
+   "told": "The talk before a plan is about THIS plan: say what is being done and why again, asking nothing, let the owner answer it, and only then propose it (LESSONS §370).",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-guard.mjs",
+   "what": "before a plan is put up (names must exist)",
+   "told": "Correct the name, or mark it \"(new)\" on its line if the plan creates it (LESSONS §370). A Read of it, or a command that prints it, shows it. ExitPlanMode stays refused until each appears in a tool result read after that refusal",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-guard.mjs",
+   "what": "before a plan is put up (pull order)",
+   "told": "PULL ORDER (Q-HUB-386): A pull changes the gates under every agent that is running ... Make the pulling step the last act of a step that follows every step that writes",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-guard.mjs",
+   "what": "before a plan is put up (tier)",
+   "told": "PLAN TIER (Doctrine §11b, §0e rule 4): the plan file was last written by a reply served by <model>, which is not the top tier ... A new plan is drawn on the top tier.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-guard.mjs",
+   "what": "before ExitPlanMode under auto mode",
+   "told": "PLAN MODE. the owner's newest message is recorded under auto mode, so an exit from plan mode made now could be answered by the mode and not by the owner's button. The exit goes up only with the session out of auto mode",
+   "today": "told in part",
+   "where_today": "plans/native/running.md:49 (approval is only the button)"
+  },
+  {
+   "path": "plan-guard.mjs",
+   "what": "before a plan is put up (plan sections)",
+   "told": "Looked up: what was researched and what it said ... Whole app: why this belongs in the app and what would make it the wrong thing. Leaves open: every branch not taken to completion and where it now lives.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-guard.mjs",
+   "what": "before ExitPlanMode, a plan already approved",
+   "told": "the plan is already approved ... A plan is never put to the button twice. Send the plan's next step and carry on with it",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:18 (the owner approves it once)"
+  },
+  {
+   "path": "approved-plan-guard.mjs",
+   "what": "before a tool, with no approved plan",
+   "told": "PLAN MODE ONLY, AND TALK DURING THE WORK (Doctrine §0e): nothing runs that is not inside a plan the owner approved in plan mode; a request in chat gets a plan, not an action; while executing, say what each step does before it runs and what ",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:18 and plans/native/running.md:46-47 (plan mode for the scope, then the run after approval); saying what each step does before it runs is not told"
+  },
+  {
+   "path": "approved-plan-guard.mjs",
+   "what": "on a plan exit that is not the owner's",
+   "told": "An end of plan mode that the session's own ExitPlanMode call did not make is not the owner's approval, under any mode, so no approval marker is written from it and nothing is sent under it.",
+   "today": "told in part",
+   "where_today": "plans/native/running.md:49 (approval is only the button; a typed word approves nothing)"
+  },
+  {
+   "path": "approved-plan-guard.mjs",
+   "what": "before editing an approved plan",
+   "told": "Editing <plan> voids its approval, and every write after it would be refused. A changed plan goes back through plan mode. ... An edit to the Steps or the Order keeps the approval.",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:11 (the change is written in full and approved before any work is done under it)"
+  },
+  {
+   "path": "plan-fence.mjs",
+   "what": "before a tool, an agent's first call",
+   "told": "RULES FIRST: an agent's first call is a Read of <rules file>, and no other call runs before it ... your next call is the Read tool on <rules file>, and then you do the step with every file read through the Read or Grep tool.",
+   "today": "still told",
+   "where_today": "plans/native/roles/worker.md:9 and plans/native/roles/checker.md:9 (read the short page first, as your first call and alone)"
+  },
+  {
+   "path": "plan-fence.mjs",
+   "what": "before a tool, an agent (outside the plan)",
+   "told": "PLAN FENCE (Doctrine §0e): an agent works only inside the approved plan — its Files list, its Commands, readers, and the session scratchpad.",
+   "today": "told in part",
+   "where_today": "plans/native/roles/worker.md:15 (do that step and nothing outside it; if it seems to need something outside it, stop and say so)"
+  },
+  {
+   "path": "plan-fence.mjs",
+   "what": "before a Bash call, an agent (line shape)",
+   "told": "Rewrite the line as one command from the step's Commands, with every path written in full, no cd, no variable assignment in front, no semicolon, no && and no pipe, and any file read with the Read or Grep tool and written with the Edit or Wr",
+   "today": "told in part",
+   "where_today": "plans/native/roles/worker.md:16-17 (every path in full, no change of directory, a script written first and run by its full path); no ban on pipes, semicolons or && is told"
+  },
+  {
+   "path": "plan-fence.mjs",
+   "what": "before a Bash call, an agent (heredoc)",
+   "told": "A redirect writes <file> by a heredoc, and a heredoc write is a redirect write: write the file with the Write or Edit tool.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-fence.mjs",
+   "what": "before a Bash call, an agent (background run)",
+   "told": "BACKGROUND RUN ANNOUNCED FIRST (Q-HUB-295): a background run is announced first, with the agent's progress note progress/step-N.txt in the session scratchpad written, before the launch ... and the output file's full path",
+   "today": "told in part",
+   "where_today": "plans/native/roles/worker.md:18 (run in the foreground; if in the background, do not hand back until it has ended and its output is read)"
+  },
+  {
+   "path": "plan-fence.mjs",
+   "what": "before a Bash call, an agent (git directory flag)",
+   "told": "Write the entry bare (\"git log\" for \"git -C <directory> log\"); the agent still writes -C and the directory on its own line.",
+   "today": "told in part",
+   "where_today": "plans/native/roles/worker.md:16 (git takes -C and npm takes --prefix)"
+  },
+  {
+   "path": "plan-fence.mjs",
+   "what": "before a write, an agent whose own suite run was red",
+   "told": "a red run ends the send: Write what was seen into the report and the progress note in the scratchpad, hand back FAILED, and write nothing else; the next send starts from the report.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-fence.mjs",
+   "what": "before a commit, an agent edited a guard without a whole suite run",
+   "told": "Run `node <suite file>` once with no switch, read it whole, and commit only when every case passes; a run of the new cases by name leaves an existing case that asserts on the changed text stale until the runner finds it.",
+   "today": "told in part",
+   "where_today": ".claude/skills/landing/SKILL.md:19 (where code changed, run the suite and then its plants before a push)"
+  },
+  {
+   "path": "plan-fence.mjs",
+   "what": "before a commit, an agent (message text)",
+   "told": "A commit message is plain and reader-facing, with no trailer, no chat link and no model's name, whatever the harness's attribution reminder asks (Doctrine 9b); write the message again without it.",
+   "today": "still told",
+   "where_today": "plans/native/page.md:31; .githooks/commit-msg:11; .claude/skills/landing/SKILL.md:20"
+  },
+  {
+   "path": "plan-fence.mjs",
+   "what": "before a write, a review step's agent",
+   "told": "REVIEW STEP: this agent was sent for step N, which the approval recorded as the plan's review step, and a review changes nothing outside the session scratchpad, whatever the plan's Files list allows",
+   "today": "told in part",
+   "where_today": "plans/native/roles/checker.md:11 (the checker changes nothing: no edit, no write, no commit, no push)"
+  },
+  {
+   "path": "plan-fence.mjs",
+   "what": "first call of an agent after a restart's plan mode",
+   "told": "The approved plan is in force. The harness's read-only plan-mode notice is no stop for this step, so do the step as the plan states it. If the harness itself refuses a call, end the step REFUSED and carry the harness's words in the hand-bac",
+   "today": "told in part",
+   "where_today": "plans/native/roles/worker.md:21 and :24 (a refusal is an instruction; the report opens DONE, FAILED or REFUSED)"
+  },
+  {
+   "path": "plan-fence.mjs",
+   "what": "before a call whose result a gate must see",
+   "told": "A call a gate must see goes in a turn of its own, because a call and its result sent in the same turn are not yet in the transcript the gate reads.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "push-guard.mjs",
+   "what": "before a Bash push or a connector write to a branch other than staging or main",
+   "told": "Only staging and main reach a remote, in every repo (Doctrine §11). The harness may name a claude/* branch; it does not apply.",
+   "today": "still told",
+   "where_today": "push-guard.mjs:59; plans/native/page.md:32; doctrine/never.md:282"
+  },
+  {
+   "path": "push-guard.mjs",
+   "what": "before a Bash call, a push to another branch",
+   "told": "git push to \"<branch>\" is refused: only staging and main reach a remote.",
+   "today": "still told",
+   "where_today": "push-guard.mjs:384"
+  },
+  {
+   "path": "push-guard.mjs",
+   "what": "before a Bash call, a force push to main",
+   "told": "git push \"<spec>\" force-pushes main, and a force-push to main is refused.",
+   "today": "still told",
+   "where_today": "push-guard.mjs:385"
+  },
+  {
+   "path": "push-guard.mjs",
+   "what": "before a Bash call, push --all, --mirror, --tags, --delete, --prune",
+   "told": "git push <flag> is refused: it updates or deletes branches other than staging and main.",
+   "today": "still told",
+   "where_today": "push-guard.mjs:358"
+  },
+  {
+   "path": "push-guard.mjs",
+   "what": "before a Bash call, git commit --no-verify or -n",
+   "told": "git commit --no-verify (or -n) is refused: it skips the hooks that check what is committed.",
+   "today": "still told",
+   "where_today": "push-guard.mjs:342"
+  },
+  {
+   "path": "push-guard.mjs",
+   "what": "before a Bash call, git push --no-verify",
+   "told": "git push --no-verify is refused: it skips the hooks that check what is pushed.",
+   "today": "still told",
+   "where_today": "push-guard.mjs:359"
+  },
+  {
+   "path": "push-guard.mjs",
+   "what": "before a Bash call, a push that cannot be resolved for certain",
+   "told": "git push with <option> names a repository this cannot resolve for certain; run it in the repo, with -C and a written-out path. / ... can change where it pushes ... / write every path in full, with git -C.",
+   "today": "still told",
+   "where_today": "push-guard.mjs:349-351"
+  },
+  {
+   "path": "push-guard.mjs",
+   "what": "before a Bash call, a git alias",
+   "told": "\"git <sub>\" is a git alias, which this cannot resolve for certain; write the command out.",
+   "today": "still told",
+   "where_today": "push-guard.mjs:346 (also :329, :333, :345)"
+  },
+  {
+   "path": "push-guard.mjs",
+   "what": "before a Bash call, a configured push refspec or push.default=matching",
+   "told": "git push <remote> uses the refspecs configured in remote.<remote>.push, which this cannot judge; name the branch: git push <remote> HEAD:staging. / git push with push.default=matching pushes every matching branch; name the branch.",
+   "today": "still told",
+   "where_today": "push-guard.mjs:377-378"
+  },
+  {
+   "path": "push-guard.mjs",
+   "what": "before a GitHub connector call that writes a branch",
+   "told": "<tool> writes to branch \"<b>\", and only staging and main are written. Only staging and main reach a remote, in every repo (Doctrine §11).",
+   "today": "still told",
+   "where_today": "push-guard.mjs:437"
+  },
+  {
+   "path": "branch-guard.mjs",
+   "what": "on refusal at install, a stale hook",
+   "told": "A stale guard is not a smaller guard, it is a different one. Re-run with --install. / .githooks/commit-msg has DRIFTED from what branch-guard.mjs generates. Re-run with --install.",
+   "today": "still told",
+   "where_today": "branch-guard.mjs (the check text kept in the file; re-run with --install)"
+  },
+  {
+   "path": "branch-guard.mjs",
+   "what": "on refusal at install, escape or promote undeclared",
+   "told": "A production branch with no declared way in is a guard nobody can get past. / An override for nothing is a door in a wall with no room behind it.",
+   "today": "still told",
+   "where_today": "branch-guard.mjs (same file, same text)"
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, first reply after a compaction",
+   "told": "STOP REFUSED — this is the first reply since the session was compacted, and its first line does not say so and when. Open the follow-up with a line in these words: \"Compacted at HH:MM California time ...\"",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, top tier serving under an approved plan",
+   "told": "STOP REFUSED — the top tier is serving this session under an approved plan, and this reply's first line does not name the tier and say whether the work needs it. ... a session cannot change its own model, and this line is how the switch get",
+   "today": "told in part",
+   "where_today": "plans/native/running.md:55 and doctrine/never.md:353 (say plainly when the work does not need the top tier); no first-line rule"
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, tasks still running",
+   "told": "STOP REFUSED — N task(s) this session started are still running. Work running in the background IS the work. Ending the turn makes no tool call, so nothing else can hold you to it. Do not end the turn. Stay in it, read each result as it lan",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, a statement of state with no tool result this turn",
+   "told": "A statement of what state a task, an agent, a branch, a push, a deploy or a file is in is never made from memory. Read it now and say what the read showed; or, if checking would be a big job, say \"I think\" in that sentence and ask whether t",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:38 (a statement of state is read in the same turn, never remembered); the \"I think\" way out is not told"
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, a step handed to the owner",
+   "told": "never hand the owner a step a session can do, and never send them to settings, a menu, a setup script or an install. Try every route first and do it. If only the owner can do it, ask for exactly that, doable in the app with a tap or a reply",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:12 (work that stops on something only the owner can do is stated as a need, where it is done, why); doctrine/apps.md:307 (never hand the owner the blame)"
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, \"waiting on you\" or \"you owe\"",
+   "told": "Never \"waiting on you\", never \"you owe\". Name what is open instead: \"Open for you: <the specific decision>\". ... never a line saying nothing is open while the session is paused.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, approval asked in chat",
+   "told": "Approval is only the plan-mode button, which ExitPlanMode puts in front of the owner. A chat turn before a plan says what is being done and why, and asks nothing. Remove the request; if the plan is ready, call ExitPlanMode.",
+   "today": "told in part",
+   "where_today": "plans/native/running.md:49 (approval is only the button; a typed word approves nothing); plans/native/page.md:18"
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, a reply that names what the owner feels",
+   "told": "What the owner feels is never named: answer what the message asked, point by point, and say what was wrong and what was done about it.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, a promise about a later turn",
+   "told": "A promise is words about a later turn, and the gates are what hold a later turn. Say what was wrong and what was done, and stop there.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, asking for a go-word under a correction",
+   "told": "A go-word is the owner's to give. While a correction stands, answer every point in it and end the turn; held work is sent again after a go-word, and work the correction does not touch goes on without one.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, asking the owner for the next work",
+   "told": "The ranked roadmap in the repo's NOTES.md names the next work. Take it from there, the top items in parallel, and never hand the owner a question the record already answers.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, offering to drop verification",
+   "told": "Speed comes from cutting what is unnecessary, and verification is not that: it runs ONCE, over the integrated release, before anything reaches staging. Cut the per-step checks; never the release check.",
+   "today": "told in part",
+   "where_today": "doctrine/apps.md:330 (section 6, verify before delegating or claiming) and plans/native/page.md:26 (a checker opens the real output before a push)"
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, bolded lead-ins or bold headers",
+   "told": "a shape that looks like content and is not — emphasis on everything is emphasis on nothing ... Rewrite it as prose. Keep the finding and what it costs; cut the shape.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, many hostnames on one line",
+   "told": "A host list is pasted one host per line in one fenced block with nothing else on the line, so the owner copies it as it stands. Put each host on its own line inside one fenced block and remove it from the prose.",
+   "today": "still told",
+   "where_today": "doctrine/apps.md:818 and plans/native/page.md:35"
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, a choice that is not first",
+   "told": "An open choice is the first thing in a reply until it is answered ... Put the numbered options, recommendation first, at the top — after a stop declaration and one lead-in line at most — and the report beneath them. Write the choice once.",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:10 (a choice with the recommended option first); that it is the first thing in the reply is not told"
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, the end of the reply",
+   "told": "End the reply with one line of these words: \"State: paused, pending the owner's go-word\", \"State: paused, pending the button on the plan\", \"State: running, step N, nothing pending from the owner\" or \"State: finished, nothing pending from th",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:9 and plans/native/skills/piece-of-work/SKILL.md:14 (end with the state line: finished, paused on what, or running what)"
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, with plan steps left and no agent running",
+   "told": "STOP REFUSED — this turn ends with the plan's steps not all done ... Send the step the pointer names, with the plan's path and the step's number ... A turn may end only while an agent runs, with a choice only the owner can settle ... or dec",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, pointer none and Found lines unrecorded",
+   "told": "a line sorted as queued in the manager notes alone is lost when the session ends. Send an agent to write each into the queue under a new key, write the key into the Found line",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, parking for permission or saying the work is unfinished",
+   "told": "Two ways forward: 1. CONTINUE ... An approved plan is authority for ALL of its phases; a phase boundary is a seam in the work, not a checkpoint in the permission. 2. DECLARE IT — make the FIRST line of your reply, verbatim: Stopping here, t",
+   "today": "told in part",
+   "where_today": "plans/native/skills/piece-of-work/SKILL.md:9 (after approval the work runs to its end without further asking); the declared-stop first line is not told"
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, the refused reply sent again",
+   "told": "STOP REFUSED — this follow-up sends the refused reply again ... STOP PASSED — the transcript shows N stop refusals since the last tool call, and the harness's cap is M: this guard would have refused ... and does not",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "stop-guard.mjs",
+   "what": "at a stop, several faults at once",
+   "told": "STOP REFUSED — this reply has N faults, listed together so one follow-up corrects all of them.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "reply-guard.mjs",
+   "what": "before a request to a host that declined and whose reply was not read",
+   "told": "Doubt yourself first: a reply that declines usually says why, and how to ask instead. If its body was cut off, read it in full as yourself — curl -sS -i '<url>', an Accept header allowed, nothing discarded — then record the reading and the ",
+   "today": "told in part",
+   "where_today": "doctrine/apps.md:693 and :803 (identify the tool; a denied host is a question for the owner); no reading ledger"
+  },
+  {
+   "path": "reply-guard.mjs",
+   "what": "before a request, routes after a declining reply",
+   "told": "Routes: api, negotiate (a 406), tdm (the policy it names), author-copy, open-index, later (it said temporarily or gave Retry-After), owner. Never another identity.",
+   "today": "told in part",
+   "where_today": "doctrine/apps.md:697 (wait exactly the Retry-After) and :693 (identify ourselves on every request)"
+  },
+  {
+   "path": "reply-guard.mjs",
+   "what": "before a request, the container's proxy refused a host",
+   "told": "This container refused <host> before the request left. That is a fact about the container and says nothing about the source (LESSONS §188). Ask the owner to allow it, naming <host>; requests to it then wait for the owner's next message.",
+   "today": "still told",
+   "where_today": "doctrine/apps.md:803 (a denied host is a question for the owner, never a finding; ask for it by name) and :818"
+  },
+  {
+   "path": "reply-guard.mjs",
+   "what": "before a request, in another identity to a host that declined a script",
+   "told": "A request in another identity is a disguise, never a route — refused whatever the reading says. Ask the way the reply allows: content negotiation with an honest Accept, its API or published policy, the authors' own copy, an open index, a la",
+   "today": "told in part",
+   "where_today": "doctrine/apps.md:693 (identify ourselves on every request)"
+  },
+  {
+   "path": "reply-guard.mjs",
+   "what": "before a failed call is repeated unchanged",
+   "told": "this is the call that failed, unchanged, and its error has not been read. A repeat learns nothing the error did not already say. Read it and change the call.",
+   "today": "told in part",
+   "where_today": "doctrine/apps.md:566 (section 14, when a fix fails) and :307 (5b, when a tool fails, diagnose it)"
+  },
+  {
+   "path": "reply-guard.mjs",
+   "what": "before a Bash call touching the reply ledger",
+   "told": "the reply ledger is written by the guard alone. A reading is recorded with --read; an edited ledger is a reading invented.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "pending-guard.mjs",
+   "what": "before a tool, an owner message not yet delivered",
+   "told": "the owner has sent a message this session has not been given yet. Nothing runs until it is answered. Answer it now, in plain text, point by point, and end this turn; ending the turn is what delivers it.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "pending-guard.mjs",
+   "what": "before a tool, a subagent when the owner sent STOP",
+   "told": "the owner has sent STOP and it has not reached the session yet. This subagent stops: run nothing more, and return what you have now, saying it was stopped.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "pending-guard.mjs",
+   "what": "at the next prompt, calls held while a message waited",
+   "told": "HELD WORK: N calls were refused while a message from the owner waited. It is held here, not dropped. Send each again in this turn, in this order, unless the message says to stop.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "pending-guard.mjs",
+   "what": "at the next prompt, a message the session was never given",
+   "told": "MESSAGES THE SESSION WAS NEVER GIVEN: a message from the owner never reached this session as a prompt ... answer every point in each of them before anything else, and if one says something was done wrong, answer it and run nothing else this",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "drive-guard.mjs",
+   "what": "before a Drive connector call (write)",
+   "told": "Drive <op> refused: nothing is written to the owner's Drive.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "drive-guard.mjs",
+   "what": "before a Drive connector call (search)",
+   "told": "A Drive search must be scoped to a folder in tools/owner-images.json or one already listed this session, or to an exact title = '…' the owner named in their latest message. Never search for more (LESSONS §369).",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "drive-guard.mjs",
+   "what": "before a Drive connector call (recent, fullText, or/not)",
+   "told": "Listing recent Drive files is a search of the whole Drive, and it is refused. / A fullText Drive search reads the whole Drive, and it is refused. / A Drive search may only AND its clauses: or, not and != can widen a scoped search",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "drive-guard.mjs",
+   "what": "before a Drive file read by id",
+   "told": "Drive file <id> is neither in the owner-image index nor returned by any listing this session.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "keep-info-guard.mjs",
+   "what": "before a commit that takes back information",
+   "told": "this commit takes back information. A page an ordinary person can read in a normal browser is information however it was fetched: keep what was read, record how it was fetched as a fact, and fix the method, never the record.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "keep-info-guard.mjs",
+   "what": "before a commit that takes back information (what lifts it)",
+   "told": "Put the reading or the domain back. Only a message from the owner that names the source and asks for its removal lifts this.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "doctrine-read-guard.mjs",
+   "what": "start and resume (doctrine due)",
+   "told": "DOCTRINE HELD (Doctrine §11e): this session was resumed, and the Read results in it since its last startup or compaction cover every line of the doctrine as it stands, so none is due.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "compact-recall.mjs",
+   "what": "start after a compaction",
+   "told": "Not printed here: N older (the newest are printed). All N are in the transcript only: the file could not be written.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-seed.mjs",
+   "what": "entry to plan mode (the printed plan)",
+   "told": "The plan starts at the line of equals signs. Fill each angle-bracket placeholder, delete this header, and keep the rest as printed. Every line of the plan below was read from a file at this time.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-seed.mjs",
+   "what": "entry to plan mode (the Asked section)",
+   "told": "<What the owner asked, in the session's own words and sharing no run of eight words with any message of the owner: the plan guard refuses a line that does.>",
+   "today": "told in part",
+   "where_today": "doctrine/never.md:106-151 (never quote the owner; no message copied into a file)"
+  },
+  {
+   "path": "plan-seed.mjs",
+   "what": "entry to plan mode (steps)",
+   "told": "<the item's step N, one result>. <Repository>, one agent. Facts: <the asks and the facts the step depends on, restated>. Do: <the exact actions and nothing outside them>. Observe: <the observation that means it is done>. Kill: <what ends th",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:22 (steps small enough for one worker) and :21 (how it is checked); Facts, Do, Observe and Kill are not told"
+  },
+  {
+   "path": "plan-seed.mjs",
+   "what": "entry to plan mode (what is)",
+   "told": "<Each bullet quotes, in double quotes, twelve characters or more of one line of a file it names, read after the newest compaction, and the file is one a repository the plan names holds.>",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-seed.mjs",
+   "what": "entry to plan mode (cost)",
+   "told": "Each of the N steps runs on the sonnet tier with one agent for each, and a review is sent at the plan's first send ... Two pushes are made ... <The main thread's tier for the writing and for the management.>",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:23 and doctrine/never.md:373 (the cost part names agents, tier and time, and the pushes)"
+  },
+  {
+   "path": "plan-seed.mjs",
+   "what": "entry to plan mode (looked up, whole app, leaves open)",
+   "told": "<Each file or page read for this plan, and what it showed, in one line of more than twenty characters.> / <Each route the plan could have taken and did not, and why ...> / <What the plan leaves open and why ...>",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-seed.mjs",
+   "what": "entry to plan mode (movable reads)",
+   "told": "MOVABLE READS, each read at HH:MM California and marked, so a step reads it again at the time of use",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-seed.mjs",
+   "what": "on refusal, bad switch",
+   "told": "plan-seed: the key <key> is not in PROGRAM.md. The next free program key is P-N",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-scope-check.mjs",
+   "what": "at commit and at a push (judge of the diff)",
+   "told": "THE OWNER'S MESSAGES, printed here only and never copied into the record. The watcher judges the diff against these, not against the plan: every change is something the owner asked for, and nothing more (Doctrine §0f).",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:7 and doctrine/never.md:146 (do what the owner asked and nothing more); the check itself prints \"The plan-scope check was retired on 12 November 2026; this passes.\" (plan-scope-check.mjs:8)"
+  },
+  {
+   "path": "plan-scope-check.mjs",
+   "what": "on refusal, no verdict recorded",
+   "told": "FAIL no .plan-scope recorded — this diff has never been judged against the plan. Fix: have a watcher read the owner's messages printed above and this diff, then record its verdict",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-scope-check.mjs",
+   "what": "on refusal, a verdict over a partly read diff",
+   "told": "REFUSED the judge read N of the diff's M lines. A verdict over a diff it read in part is not recorded; nothing was written. Read the rest of the diff, then record the verdict with the count of the lines read.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "plan-scope-check.mjs",
+   "what": "on refusal, owner words in a verdict",
+   "told": "REFUSED the verdict or finding repeats a run of eight or more words from an owner message. The record is committed, and words from the owner never go in a file (Doctrine §0f).",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:30 and doctrine/never.md:106-151 (nothing in any file quotes the owner)"
+  },
+  {
+   "path": "plan-land.mjs",
+   "what": "landing, on refusal after the push",
+   "told": "PUSH NOT READ BACK: the remote's main is X and the local head is Y",
+   "today": "told in part",
+   "where_today": ".claude/skills/landing/SKILL.md:23 (read the remote's head after a push; a push is not a release)"
+  },
+  {
+   "path": "plan-land.mjs",
+   "what": "landing, on refusal at the rebase",
+   "told": "the rebase onto origin/main stopped on a conflict in <files>; the rebase was ended",
+   "today": "told in part",
+   "where_today": ".claude/skills/landing/SKILL.md:8-10 (fetch and rebase onto the remote's main; if the head moved, fetch, rebase and ask for the checker again)"
+  },
+  {
+   "path": "report.mjs",
+   "what": "at each status (a status is due when an agent has ended)",
+   "told": "Give one now, in chat AND as node report.mjs \"Status HH:MM — what changed and what it means; what was done about it; time remaining\". The status prints how each agent ended ... read those, and act on what they show. No app notifications.",
+   "today": "told in part",
+   "where_today": "plans/native/page.md:9 (report what changed and what it means, with the state at the end); no status command, no clock"
+  },
+  {
+   "path": "report.mjs",
+   "what": "at each status (flagged agent)",
+   "told": "step N: FLAGGED, the note is older than five minutes. ... Read instead of waiting",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "report.mjs",
+   "what": "at each status (hosts the proxy declined)",
+   "told": "Hosts the proxy declined since the last status, one per line, to allow or to read: <one fenced block>",
+   "today": "told in part",
+   "where_today": "doctrine/apps.md:803 and :818 (a denied host is asked for by name, in one fenced block, one host per line)"
+  },
+  {
+   "path": "report.mjs",
+   "what": "at each status (manager notes)",
+   "told": "State page: no manager notes ... written there, as plain text, one item to a line: \"Outcome: …\", \"Explanation standing: … | evidence\", \"Decision: … | reason\", \"Next: …\" and \"Found 41.3 fixed|stopping|queued: note\"",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "report.mjs",
+   "what": "at each status (a Found line is unsorted)",
+   "told": "N Found lines are not sorted yet by the manager; the status print lists each.",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "report.mjs",
+   "what": "at each status (way forward)",
+   "told": "The way forward: <next>; to write a new plan instead, the manager notes need a Done line for each step ended other than DONE, or an eject",
+   "today": "no longer told",
+   "where_today": ""
+  },
+  {
+   "path": "privacy-check.mjs",
+   "what": "on refusal at commit or push (a personal disclosure)",
+   "told": "FAIL STATE — N personal disclosure(s) about the owner. Locations only; the matched text is deliberately not printed. Remove the sentence, not the gate. Design statements stay; the person — and anything that was said — does not.",
+   "today": "still told",
+   "where_today": "privacy-check.mjs:147; plans/native/page.md:30; doctrine/never.md:198"
+  },
+  {
+   "path": "privacy-check.mjs",
+   "what": "on refusal (a sentinel region that never closes)",
+   "told": "This is a COVERAGE failure, not a find. ... Close the region, or — if a document is naming the marker rather than using it — write the two halves apart, the way prose has to.",
+   "today": "still told",
+   "where_today": "privacy-check.mjs:136-141"
+  },
+  {
+   "path": "third-person-check.mjs",
+   "what": "on refusal (a reference to the owner)",
+   "told": "A reference to the OWNER is never declarable. Rewrite it: say the ROLE for a governance fact, and for anything else say what was wrong and what it measured — never who reported it.",
+   "today": "still told",
+   "where_today": "third-person-check.mjs:256"
+  },
+  {
+   "path": "quote-check.mjs",
+   "what": "on refusal (a quoted person)",
+   "told": "A quotation of a PERSON is not declarable. Write what was wrong and what it measured — never who reported it, never in what words.",
+   "today": "still told",
+   "where_today": "quote-check.mjs:264"
+  },
+  {
+   "path": "docs-check.mjs",
+   "what": "on refusal (a table or grid)",
+   "told": "NO-GRID GATE FAILED — N grids. Tables do not display on the reader's device; the columns are lost, not squeezed. Rewrite each as a headed list — one item per heading, its facts on their own lines.",
+   "today": "still told",
+   "where_today": "docs-check.mjs:142-148; plans/native/page.md:34"
+  },
+  {
+   "path": "lessons-check.mjs",
+   "what": "on refusal (a lesson with no enforcement)",
+   "told": "no \"**Enforced by:**\" line. Every lesson must say how it is enforced — GATE, CHECKLIST or JUDGEMENT.",
+   "today": "still told",
+   "where_today": "lessons-check.mjs:268"
+  },
+  {
+   "path": "lessons-check.mjs",
+   "what": "on refusal (a gap in numbers)",
+   "told": "A gap usually means the entry was written against a clone that had not been fetched — the number was chosen from a file that was already behind. Fetch, renumber off the real end",
+   "today": "still told",
+   "where_today": "lessons-check.mjs:226"
+  },
+  {
+   "path": "pin-check.mjs",
+   "what": "on refusal (npm install in automation)",
+   "told": "`npm install` in automation resolves whatever the registry serves at that moment. Use `npm ci`, which is bound by the lockfile.",
+   "today": "still told",
+   "where_today": "pin-check.mjs:49-50"
+  },
+  {
+   "path": "pin-check.mjs",
+   "what": "on refusal (undeclared dependencies)",
+   "told": "Doctrine §16.3: undeclared dependencies are not absent dependencies.",
+   "today": "still told",
+   "where_today": "pin-check.mjs:99"
+  },
+  {
+   "path": "hub-pin-check.mjs",
+   "what": "on refusal (a pin that is not a full commit)",
+   "told": "A pin is re-pinned to a commit on the hub's main; a marker is re-adopted after the doctrine is read.",
+   "today": "still told",
+   "where_today": "hub-pin-check.mjs:160"
+  },
+  {
+   "path": "doctrine-sync.mjs",
+   "what": "when run in a sibling (marker unknown)",
+   "told": "Every section of DOCTRINE.md is unread since the rewrite: read it whole, not the sections.",
+   "today": "still told",
+   "where_today": "doctrine-sync.mjs:118"
+  },
+  {
+   "path": "doctrine-sync.mjs",
+   "what": "when run in a sibling (adopting)",
+   "told": "Adopting is an ASSERTION that the above was read —",
+   "today": "still told",
+   "where_today": "doctrine-sync.mjs:200"
+  },
+  {
+   "path": "handoff-check.mjs",
+   "what": "on refusal (a staging candidate not recorded)",
+   "told": "NOTES.md records no <project>.pages.dev URL. Doctrine §7: hand over the preview URL and leave a durable \"waiting on the owner\" signal, so a staged candidate is not invisible",
+   "today": "still told",
+   "where_today": "handoff-check.mjs:124"
+  },
+  {
+   "path": "handoff-check.mjs",
+   "what": "on refusal (a file path told to the reader)",
+   "told": "tells the reader to fetch \"<path>\" from the repo. the owner is iPad-first (§2) — ATTACH the file instead of naming a path on a machine that is not there.",
+   "today": "still told",
+   "where_today": "handoff-check.mjs:227-228"
+  },
+  {
+   "path": "a11y-gate.mjs",
+   "what": "on refusal (accessibility)",
+   "told": "Doctrine §4: accessibility is a hard gate. This exits non-zero.",
+   "today": "still told",
+   "where_today": "a11y-gate.mjs:437"
+  },
+  {
+   "path": "a11y-gate.mjs",
+   "what": "on refusal (page not measured)",
+   "told": "A page nothing opens is a page nothing measures (§4, §28).",
+   "today": "still told",
+   "where_today": "a11y-gate.mjs:111"
+  },
+  {
+   "path": "pwa-check.mjs",
+   "what": "on refusal (skipWaiting during install)",
+   "told": "calls skipWaiting() during install. The new worker then takes over under the OPEN page ... Let it wait, and skipWaiting only on a message from the page (§7h.1).",
+   "today": "still told",
+   "where_today": "pwa-check.mjs:96-98"
+  },
+  {
+   "path": "pwa-check.mjs",
+   "what": "on refusal (no notice of a new version)",
+   "told": "nothing in the app listens for a new version — no `updatefound`, no check of `registration.waiting`. A cached app cannot notice staleness on its own (§7h.2).",
+   "today": "still told",
+   "where_today": "pwa-check.mjs:123-124"
+  },
+  {
+   "path": "svg-check.mjs",
+   "what": "on refusal (a bare ampersand in an svg)",
+   "told": "a bare \"&\" in <where>. XML reads every \"&\" as the start of a reference — write \"&amp;\" for a literal one",
+   "today": "still told",
+   "where_today": "svg-check.mjs:122"
+  },
+  {
+   "path": "palette-check.mjs",
+   "what": "on a note (two colours too close)",
+   "told": "cannot separate <pair> — never let those two carry meaning by colour alone",
+   "today": "still told",
+   "where_today": "palette-check.mjs:331"
+  }
+ ]
+}
