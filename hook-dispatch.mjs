@@ -387,11 +387,17 @@ export function mainTranscript(p) {
 }
 
 const APPROVED = /^\s*User has approved your plan/;
+// The harness saves a result past a size to a file and records an envelope: `<persisted-output>`, a line that says where the result was
+// saved, a line that opens the preview, and then the result's first part.
+const APPROVED_SAVED = /^\s*<persisted-output>[^\n]*\n[^\n]*\n(?:\s*\n)?(?:Preview[^\n]*\n)?\s*User has approved your plan/;
+const REJECTED = /^\s*(?:<persisted-output>[^\n]*\n[^\n]*\n(?:\s*\n)?(?:Preview[^\n]*\n)?\s*)?(?:The user doesn't want to proceed|User rejected|The user rejected)/;
 /**
  * Where, in the entries, the plan was approved at the button.
  * @returns {number[]} the index of each user entry carrying the result of an ExitPlanMode call (found by the call's id, or by the entry's
- *   own `toolUseResult.plan` when the call is not in the entries) whose text opens "User has approved your plan". An agent's entry, an
- *   error result and the same words in the result of any other tool are no approval.
+ *   own `toolUseResult.plan` when the call is not in the entries) whose text opens "User has approved your plan", or, where the harness
+ *   saved the result to a file, whose text carries those words after the envelope's opening, or whose own `toolUseResult` holds a plan
+ *   and answers an ExitPlanMode call that was not rejected. An agent's entry, an error result, a rejected exit and the same words in
+ *   the result of any other tool are no approval.
  */
 export function approvalIndexes(entries) {
   const out = [];
@@ -404,9 +410,11 @@ export function approvalIndexes(entries) {
     for (const b of c) {
       if (b?.type !== 'tool_result' || b.is_error) continue;
       const text = typeof b.content === 'string' ? b.content : Array.isArray(b.content) ? b.content.map((x) => x?.text ?? '').join('\n') : '';
-      if (!APPROVED.test(text)) continue;
       const name = names.get(b.tool_use_id);
-      if (name === 'ExitPlanMode' || (name === undefined && e.toolUseResult && typeof e.toolUseResult === 'object' && 'plan' in e.toolUseResult)) out.push(i);
+      const hasPlan = !!(e.toolUseResult && typeof e.toolUseResult === 'object' && 'plan' in e.toolUseResult);
+      if (name === 'ExitPlanMode' && hasPlan && !REJECTED.test(text) && /^\s*<persisted-output>/.test(text)) { out.push(i); continue; }
+      if (!(APPROVED.test(text) || APPROVED_SAVED.test(text))) continue;
+      if (name === 'ExitPlanMode' || (name === undefined && hasPlan)) out.push(i);
     }
   });
   return out;

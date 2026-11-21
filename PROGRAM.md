@@ -7107,7 +7107,9 @@ Depends: none.
 
 ### P-637. Q-HUB-583: The approval of a long page is not read as an approval
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The dispatcher counts an approval whose result the harness saved to a file, and a case holds it with a planted envelope.
 
 Acceptance: A page of any length, approved at the button, is run by the script from the top tier with no model command.
 
