@@ -23,6 +23,7 @@ is a site change — verify the rendered page before pushing.
 - The dispatcher also holds the main thread: until the standing pages are read at a start, under the owner's word (the word stop, or a message with no go-word, delivered or still waiting), after a refusal, and from doing the work itself or rewriting an approved page outside plan mode. `plans/native/running.md` says what each holds and what lifts it.
 - The dispatcher refuses the button until a checker has walked the page as it stands. On the top tier it passes three calls: the walk, the hub's run script launched for an approved page, and a step of that page once the script has been launched.
 - `stop-guard.mjs` refuses a final reply past 150 words, one that names a feeling, promises conduct or asks for a go-word, or one that does not end with its state line, and `rules-keep-check.mjs` fails a commit that drops a line from a rules page.
+- The dispatcher files every typed message of the session, whole, in the session scratchpad at every start, and after a compaction it holds the main thread to reads until that file has been read.
 
 ## Where things are
 - `plans/native-setup.md`: the record of how the hub was rebuilt, and where the work stands.

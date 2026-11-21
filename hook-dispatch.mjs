@@ -11,7 +11,8 @@
  *                  the call and prints one line to the error output, and none of them ever refusing a read (READS):
  *                    0. the read at a start (holdRead): after a start, a clear or a compaction the main thread may only read until the
  *                       short page, doctrine/never.md and doctrine/hub.md have each been read whole, in the hub's copy or in a checkout of
- *                       the hub; an agent is not held by it (HOOK_DISPATCH_READ_HOLD=off is its test seam).
+ *                       the hub; after a compaction the file of the typed messages (`fileTypedMessages`, filed at every start) is due as well, where it is there;
+ *                       an agent is not held by it (HOOK_DISPATCH_READ_HOLD=off is its test seam).
  *                    1. the typed word: a newest typed message with the whole word stop and no go-word at its end holds every call of
  *                       the main thread and of every agent but a read (and TaskStop on the main thread, an agent's own hand-back);
  *                       a newest typed message with no go-word at its end holds the main thread's new starts (Agent, Task,
@@ -38,7 +39,9 @@
  *                  launch folder, are brought forward from the remote's main (`bringForward`); the lines are printed, then the one
  *                  line naming the short page, then each repository's own hooks and what they print. After the short-page line, at a
  *                  startup or a resume, one more line names the repositories when the launch folder is not itself a repository and two or
- *                  more sit directly beneath it (`moreThanOneRepoLine`); it tells and refuses nothing.
+ *                  more sit directly beneath it (`moreThanOneRepoLine`); it tells and refuses nothing. Then the typed messages of the session
+ *                  are filed whole in the session scratchpad (`fileTypedMessages`); a compaction's print names the file and its count, and a file
+ *                  that cannot be written is one line that says so.
  *   UserPromptSubmit   the one line, then each repository's own hooks and what they print.
  *   every other event  each repository's own hooks.
  *
@@ -665,6 +668,78 @@ function hubCopies(p) {
   return [...new Set(out.map(canon))];
 }
 
+// ---- the typed messages of the session, filed whole at every start of a main thread ----
+
+/** The first line of the file of the typed messages. */
+const RECALL_FIRST_LINE = 'Every message typed in this session, whole and in order, for this session to read. It is not copied into any repository.';
+/** The end of the refusal that holds the main thread to the file of the typed messages after a compaction. */
+const WHY_RECALL = 'Why: a summary loses the intent, and the typed messages are where it is.';
+
+/**
+ * The file of the session's typed messages: `recall/typed-messages.md` in the session scratchpad, the folder `<tmp>/claude-<uid>/<project>/<sid>/scratchpad`
+ * that `inScratchpad` reads, where `<project>` is the name of the folder that holds the session's record (the payload's `transcript_path`) and
+ * `<sid>` is the payload's `session_id`.
+ * @returns {string} its path, or '' where the payload names no transcript or no session, or no user id can be read.
+ */
+export function recallFile(p) {
+  const sid = String(p?.session_id ?? '');
+  const tr = String(p?.transcript_path ?? '');
+  if (!/^[\w-]+$/.test(sid) || !tr || typeof process.getuid !== 'function') return '';
+  const project = basename(dirname(resolve(tr)));
+  if (!project) return '';
+  const file = join(tmpdir(), `claude-${process.getuid()}`, project, sid, 'scratchpad', 'recall', 'typed-messages.md');
+  return inScratchpad(file, sid) ? file : '';
+}
+
+const CALIFORNIA = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+/** @returns {string} a time in California as the heading of a typed message shows it: the month's first three letters, the day, a comma, and the hour and minute of a 24-hour clock. */
+export function californiaStamp(ms) {
+  if (!Number.isFinite(ms)) return 'time not known';
+  const part = Object.fromEntries(CALIFORNIA.formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
+  return `${part.month} ${part.day}, ${part.hour}:${part.minute}`;
+}
+
+/**
+ * The typed messages of a session, read from its entries.
+ * @returns {{text: string, at: number}[]} each message a person typed, delivered as a prompt or from the queue in the middle of a turn, in order,
+ *   with its words whole and the time it was typed (`typedAt`). What is a typed message is told by `isOwnerMessage` of transcript-tail.mjs, which
+ *   sets aside hook feedback, a task notification, an agent's hand-back, a slash command's entry, a tool result and a compaction's summary.
+ */
+export function typedMessages(entries) {
+  const out = [];
+  entries.forEach((e, i) => {
+    if (e?.isSidechain || e?.agentId || !tail.isOwnerMessage(e)) return;
+    const text = tail.textOf(e);
+    const at = typedAt(entries, i);
+    const last = out[out.length - 1];
+    if (last && last.text === text && last.at === at) return;
+    out.push({ text, at });
+  });
+  return out;
+}
+
+/**
+ * File every typed message of the session, whole and in order, at `recallFile(p)`, making the folder where it is not there.
+ * @returns {{ok: boolean, file?: string, count?: number, skipped?: boolean, why?: string}} `skipped` where the payload names no transcript or no session
+ *   (there is nothing to file), `ok: false` with a `why` where the record cannot be read or the file cannot be written. It throws nothing.
+ */
+export function fileTypedMessages(p) {
+  const file = recallFile(p);
+  if (!file) return { ok: false, skipped: true, why: 'the start names no transcript or session' };
+  try {
+    const record = String(p.transcript_path);
+    const size = statSync(record).size;
+    const entries = tail.tailEntries(record, Math.max(size, 1));
+    if (size > 0 && !entries.length) return { ok: false, why: `the session's record ${record} could not be read` };
+    const list = typedMessages(entries);
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, `${[RECALL_FIRST_LINE, ...list.map((m, k) => `## ${k + 1}. ${californiaStamp(m.at)}\n\n${m.text}`)].join('\n\n')}\n`);
+    return { ok: true, file, count: list.length };
+  } catch (e) {
+    return { ok: false, why: `${file} could not be written: ${e?.message ?? e}` };
+  }
+}
+
 /** @returns {{text: number, split: number}|null} the lines of text a file holds and the count the harness records as its total (the empty text after a final newline counted); null when it cannot be read. */
 function linesOf(file) {
   try {
@@ -740,20 +815,28 @@ function holdRead(p) {
   try { size = statSync(file).size; } catch { return null; }
   const copies = hubCopies(p);
   const pages = STANDING_PAGES.map((rel) => ({ rel, files: copies.map((c) => join(c, rel)).filter((f) => existsSync(f)) })).filter((pg) => pg.files.length);
-  if (!pages.length) return null;
+  // After a compaction the file of the typed messages is due as well, where the start filed it: it is read whole after the compaction, or the call is held.
+  const recall = recallFile(p);
+  const recallHere = !!recall && existsSync(recall);
+  if (!pages.length && !recallHere) return null;
   for (const mb of [2, 8, 32]) {
     const entries = tail.tailEntries(file, mb * 1024 * 1024);
     if (!entries.length) return null;
     const cut = lastCompaction(entries);
     const live = entries.slice(cut + 1);
     const unread = pages.filter((pg) => !pg.files.some((f) => readWhole(live, f)));
-    if (!unread.length) return null;
+    const recallDue = recallHere && cut >= 0 && !readWhole(live, recall);
+    const recallUnsure = recallHere && cut < 0 && size > mb * 1024 * 1024 && !readWhole(entries, recall);
+    if (!unread.length && !recallDue && !recallUnsure) return null;
     if (cut >= 0 || size <= mb * 1024 * 1024) {
-      const list = unread.map((pg) => `${pg.files[0]} (every line, ${linesOf(pg.files[0])?.text} lines)`).join('; ');
-      return `STANDING PAGES UNREAD: this session started or was compacted and has not read ${unread.length === 1 ? 'a standing page' : 'the standing pages'} whole since, so the main thread may only read until ${unread.length === 1 ? 'it has' : 'each has'} been read: ${list}. `
-        + 'Only reads pass, and TaskStop on the main thread; an agent\'s calls are not held by it, and it sets no latch. Read each in full, in as many Read calls as it takes, in the hub\'s copy or in a checkout of the hub; a summary or another copy is not the page. '
+      const list = [...unread.map((pg) => `${pg.files[0]} (every line, ${linesOf(pg.files[0])?.text} lines)`), ...(recallDue ? [`${recall} (every line, ${linesOf(recall)?.text} lines)`] : [])].join('; ');
+      const due = unread.length + (recallDue ? 1 : 0);
+      const what = unread.length ? `${unread.length === 1 ? 'a standing page' : 'the standing pages'}${recallDue ? ' and the file of its typed messages' : ''}` : 'the file of its typed messages';
+      return `${unread.length ? 'STANDING PAGES UNREAD' : 'TYPED MESSAGES UNREAD'}: this session ${unread.length ? 'started or was compacted' : 'was compacted'} and has not read ${what} whole since, so the main thread may only read until ${due === 1 ? 'it has' : 'each has'} been read: ${list}. `
+        + 'Only reads pass, and TaskStop on the main thread; an agent\'s calls are not held by it, and it sets no latch. '
+        + (unread.length ? 'Read each in full, in as many Read calls as it takes, in the hub\'s copy or in a checkout of the hub; a summary or another copy is not the page. ' : 'Read it in full, in as many Read calls as it takes; a summary is not the typed messages. ')
         + 'Read results that between them return every line lift it, and a compaction makes the read due again. '
-        + WHY_READ.trimEnd();
+        + `${unread.length ? WHY_READ : ''}${recallDue ? WHY_RECALL : ''}`.trimEnd();
     }
   }
   return null;
@@ -1101,6 +1184,12 @@ async function main(event, raw, p) {
     for (const l of lines) process.stdout.write(`${l}\n`);
     process.stdout.write(`${PAGE_LINE}\n`);
     try { const more = moreThanOneRepoLine(p, root); if (more) process.stdout.write(`${more}\n`); } catch { /* the start prints without the line */ }
+    // The typed messages are filed at every start. A file that cannot be written refuses nothing: the start says so, in one line.
+    try {
+      const filed = fileTypedMessages(p);
+      if (filed.ok) { if (p.source === 'compact') process.stdout.write(`TYPED MESSAGES FILED: ${filed.file} holds the ${filed.count} typed message${filed.count === 1 ? '' : 's'} of this session, whole and in order. After a compaction the main thread may only read until it has been read whole.\n`); }
+      else if (!filed.skipped) process.stdout.write(`TYPED MESSAGES NOT FILED: ${filed.why}. Nothing is refused for it.\n`);
+    } catch (e) { process.stdout.write(`TYPED MESSAGES NOT FILED: ${e?.message ?? e}. Nothing is refused for it.\n`); }
   }
   if (event === 'UserPromptSubmit') process.stdout.write(`${PAGE_LINE}\n`);
   return repoHooks(event, raw, p);

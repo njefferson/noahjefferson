@@ -3,7 +3,7 @@
 // repository, home, launch folder and transcript is written under a temporary folder from `h`, and nothing is written into the checkout.
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, utimesSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const pageLine = (hub) => `HOW WORK GOES HERE: the short page, ${hub}/plans/native/page.md. The procedures and the roles are files under ${hub}/plans/native/skills and ${hub}/plans/native/roles. The push guard and the check before a push hold every push of staging and main, and the choice popup is refused.`;
@@ -125,6 +125,32 @@ const removed = (h, s, text) => ({ type: 'queue-operation', operation: 'remove',
 const absorbed = (h, s, text) => ({ type: 'attachment', timestamp: h.ts(s), attachment: { type: 'queued_command', prompt: text, commandMode: 'prompt', origin: { kind: 'human' }, timestamp: h.ts(s) } });
 const reading = (w, hub, payload) => w.run(hub, payload, { HOOK_DISPATCH_READ_HOLD: 'on' });
 const compaction = (h, s) => [{ type: 'system', subtype: 'compact_boundary', timestamp: h.ts(s) }, { type: 'user', timestamp: h.ts(s + 1), isCompactSummary: true, message: { role: 'user', content: 'This session is being continued from a previous conversation. Summary: planted.' } }];
+
+// ---- the typed messages of the session, filed whole at every start (fileTypedMessages in hook-dispatch.mjs) ----
+const RECALL_FIRST = 'Every message typed in this session, whole and in order, for this session to read. It is not copied into any repository.';
+const RECALL_WHY = 'Why: a summary loses the intent, and the typed messages are where it is.';
+const RECALL_LINES = ['Planted typed messages file', '', '## 1. Oct 1, 05:00', '', 'planted words'];
+/** Where the dispatcher files the typed messages of a session whose record is `record`, when the temp folder is `tmpRoot`. */
+const recallPath = (tmpRoot, record, sid = 'dp-session') => join(tmpRoot, `claude-${process.getuid()}`, basename(dirname(record)), sid, 'scratchpad', 'recall', 'typed-messages.md');
+/**
+ * A session record in a project folder of its own, so that the file of the typed messages has a path known beforehand. `build(file)` returns
+ * the entries, and `file` is that path. Where `filed` is true the file is written there with `lines`, as a start would have left it.
+ */
+function recallSession(h, tmpRoot, build, { filed = true, lines = RECALL_LINES, sid = 'dp-session' } = {}) {
+  const record = join(h.tmp('dp-proj-'), 't.jsonl');
+  const file = recallPath(tmpRoot, record, sid);
+  writeFileSync(record, build(file).map((e) => JSON.stringify(e)).join('\n') + '\n');
+  if (filed) { mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, lines.join('\n') + '\n'); }
+  return { record, file };
+}
+/** A Read call of a file whose text is `lines` and its result as the harness records them: lines `from` to `to` of a file whose total is one more than its lines. */
+function readFileOf(h, s, id, file, lines, { from = 1, to = lines.length + 1 } = {}) {
+  const rows = [...lines, ''];
+  const raw = rows.slice(from - 1, to).join('\n');
+  const text = rows.slice(from - 1, to).map((l, k) => `${from + k}\t${l}`).join('\n');
+  return [h.tool(s, id, 'Read', { file_path: file }), { ...h.result(s + 1, id, text), toolUseResult: { type: 'text', file: { filePath: file, content: raw, numLines: to - from + 1, startLine: from, totalLines: rows.length } } }];
+}
+const readingIn = (w, hub, payload, tmpRoot) => w.run(hub, payload, { HOOK_DISPATCH_READ_HOLD: 'on', TMPDIR: tmpRoot });
 
 export const cases = [
   {
@@ -1707,6 +1733,108 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'typed messages (filed): a start files every typed message whole under its heading with its California time, a prompt and one from the queue, and none of hook feedback, a notification, a hand-back, a slash command, a tool result or a compaction\'s summary; a compaction\'s print names the file and its count; an agent\'s start files none; a file that cannot be written is one line and no refusal',
+    guards: ['rc_first', 'rc_whole', 'rc_typed', 'rc_queue', 'rc_time', 'rc_mkdir', 'rc_path', 'rc_print', 'rc_failline', 'rc_skipped'],
+    run(m, dir, h) {
+      const first = 'Plant first message.\nIts second line holds a ## mark that is no heading.';
+      const queued = 'Plant queued message typed in the middle of a turn.';
+      const third = 'Plant third message.';
+      const fourth = 'Plant fourth message. Go.';
+      const tmpRoot = h.tmp('dp-tmp-');
+      const { record, file } = recallSession(h, tmpRoot, () => [
+        typed(h, 0, first),
+        h.turn(100, 'Stop hook feedback: planted feedback words'),
+        handBack(h, 200, 'planted hand-back words'),
+        modelCommand(h, 300, 'planted-model'),
+        h.tool(500, 'rc-t', 'Bash', { command: 'ls' }), h.result(501, 'rc-t', 'planted tool result words'),
+        { type: 'user', timestamp: h.ts(600), message: { role: 'user', content: '<task-notification>planted notification words</task-notification>' } },
+        ...compaction(h, 700),
+        enqueue(h, 3600, queued), absorbed(h, 3660, queued),
+        typed(h, 51300, third),
+        typed(h, 68400, fourth),
+      ], { filed: false, sid: 'rc-session' });
+      const payload = (source, extra = {}) => ({ source, transcript_path: record, session_id: 'rc-session', ...extra });
+      const env = { env: { TMPDIR: tmpRoot } };
+      const start = disp(h, dir, 'SessionStart', payload('startup'), env);
+      const got = existsSync(file) ? readFileSync(file, 'utf8') : null;
+      const expected = [RECALL_FIRST, '', '## 1. Oct 1, 05:00', '', first, '', '## 2. Oct 1, 06:00', '', queued, '', '## 3. Oct 1, 19:15', '', third, '', '## 4. Oct 2, 00:00', '', fourth, ''].join('\n');
+      const compact = disp(h, dir, 'SessionStart', payload('compact'), env);
+      const resume = disp(h, dir, 'SessionStart', payload('resume'), env);
+      const agentRoot = h.tmp('dp-tmp-');
+      const agentRec = recallSession(h, agentRoot, () => [typed(h, 0, first)], { filed: false, sid: 'rc-session' });
+      const agent = disp(h, dir, 'SessionStart', { source: 'startup', transcript_path: agentRec.record, session_id: 'rc-session', agent_id: 'a1' }, { env: { TMPDIR: agentRoot } });
+      const bareRoot = h.tmp('dp-tmp-');
+      const bare = disp(h, dir, 'SessionStart', { source: 'compact', session_id: 'rc-session' }, { env: { TMPDIR: bareRoot } });
+      const blocked = join(h.tmp('dp-tmp-'), 'not-a-folder');
+      writeFileSync(blocked, 'a file where a folder is needed\n');
+      const blockedRec = recallSession(h, blocked, () => [typed(h, 0, first)], { filed: false, sid: 'rc-session' });
+      const failed = disp(h, dir, 'SessionStart', { source: 'compact', transcript_path: blockedRec.record, session_id: 'rc-session' }, { env: { TMPDIR: blocked } });
+      const failLines = failed.stdout.split('\n').filter((l) => /^TYPED MESSAGES NOT FILED: /.test(l));
+      return h.assertAll([
+        ['a start with a transcript prints the one line and nothing else', start.status === 0 && start.stdout === `${pageLine(dir)}\n`, said(start)],
+        ['the file stands in the session scratchpad and holds block A1, then each typed message whole under its heading with its California time', got === expected, `${file}\n${got}`],
+        ['no hook feedback, notification, hand-back, slash command, tool result or summary is in it', got !== null && !/planted/.test(got), String(got)],
+        ['a compaction start prints the one line, then one line that names the file by its full path and the count of messages', compact.status === 0 && compact.stdout.startsWith(`${pageLine(dir)}\n`) && compact.stdout.includes(`TYPED MESSAGES FILED: ${file} holds the 4 typed messages`) && compact.stdout.split('\n').filter(Boolean).length === 2, said(compact)],
+        ['a resume prints the one line only', resume.status === 0 && resume.stdout === `${pageLine(dir)}\n`, said(resume)],
+        ['an agent\'s start files nothing and prints nothing', agent.status === 0 && agent.stdout === '' && !existsSync(recallPath(agentRoot, agentRec.record, 'rc-session')), said(agent)],
+        ['a start with no transcript prints the one line only and makes no folder', bare.status === 0 && bare.stdout === `${pageLine(dir)}\n` && readdirSync(bareRoot).length === 0, said(bare)],
+        ['a file that cannot be written is one line that says so and why, with the one line before it, and the start exits 0', failed.status === 0 && failed.stdout.startsWith(`${pageLine(dir)}\n`) && failLines.length === 1 && /could not be written/.test(failLines[0]), said(failed)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 0 (read): after a compaction a main-thread call is refused until the file of the typed messages has been read whole, the refusal names its path and ends with its Why; a Read of it passes; nothing is held where the file is not there, with no compaction since, for an agent, or once it has been read after the compaction',
+    guards: ['rc_hold', 'rc_live', 'rc_resume', 'rc_absent', 'rc_why_recall', 'rc_list', 'rc_head'],
+    run(m, dir, h) {
+      const w = world(h);
+      const hub = pagedHub(h, dir);
+      const tmpRoot = h.tmp('dp-tmp-');
+      const pages = (s) => readAllThree(h, s, hub);
+      const after = (more) => (file) => [typed(h, 0, 'Go.'), ...pages(1), ...compaction(h, 20), typed(h, 22, 'Carry on. Go.'), ...pages(30), ...more(file)];
+      const bashOf = (s, extra = {}) => readingIn(w, hub, call('Bash', { command: 'ls' }, s.record, extra), tmpRoot);
+      const due = recallSession(h, tmpRoot, after(() => []));
+      const unread = bashOf(due);
+      const readIt = readingIn(w, hub, call('Read', { file_path: due.file }, due.record), tmpRoot);
+      const partial = recallSession(h, tmpRoot, after((f) => readFileOf(h, 40, 'rc-p', f, RECALL_LINES, { from: 1, to: 3 })));
+      const whole = recallSession(h, tmpRoot, after((f) => readFileOf(h, 40, 'rc-w', f, RECALL_LINES)));
+      const early = recallSession(h, tmpRoot, (f) => [typed(h, 0, 'Go.'), ...pages(1), ...readFileOf(h, 15, 'rc-e', f, RECALL_LINES), ...compaction(h, 20), typed(h, 22, 'Carry on. Go.'), ...pages(30)]);
+      const resumed = recallSession(h, tmpRoot, () => [typed(h, 0, 'Go.'), ...pages(1)]);
+      const absent = recallSession(h, tmpRoot, after(() => []), { filed: false });
+      const both = recallSession(h, tmpRoot, () => [typed(h, 0, 'Go.'), ...compaction(h, 20), typed(h, 22, 'Carry on. Go.')]);
+      const bothR = bashOf(both);
+      return h.assertAll([
+        ['with the pages read after a compaction and the file not, a Bash is refused with the name in capitals and what passes', held(unread, /^TYPED MESSAGES UNREAD: .*may only read.*Only reads pass, and TaskStop on the main thread; an agent's calls are not held.*lift/s) && !/STANDING PAGES UNREAD/.test(unread.stderr), said(unread)],
+        ['the refusal names the file by its full path with its lines', unread.stderr.includes(`${due.file} (every line, ${RECALL_LINES.length} lines)`), said(unread)],
+        ['the refusal ends with the Why of block A2', unread.stderr.trim().endsWith(RECALL_WHY), said(unread)],
+        ['a Read of the file passes with nothing printed, and no latch was written', passes(readIt) && readdirSync(w.latch).length === 0, said(readIt) + readdirSync(w.latch).join(',')],
+        ['part of the file read after the compaction leaves it due', held(bashOf(partial), /^TYPED MESSAGES UNREAD/), said(bashOf(partial))],
+        ['the whole of it read after the compaction lifts it', passes(bashOf(whole)), said(bashOf(whole))],
+        ['a read of it before the compaction counts for nothing', held(bashOf(early), /^TYPED MESSAGES UNREAD/), said(bashOf(early))],
+        ['with no compaction since, as at a resume, nothing is held for the file', passes(bashOf(resumed)), said(bashOf(resumed))],
+        ['where the file is not there nothing is held', passes(bashOf(absent)), said(bashOf(absent))],
+        ['an agent\'s Bash is not held by it', passes(bashOf(due, { agent_id: 'ag1' })), said(bashOf(due, { agent_id: 'ag1' }))],
+        ['with the pages unread as well the one refusal names the pages and the file, and ends with block A2', held(bothR, /^STANDING PAGES UNREAD: .*the standing pages and the file of its typed messages/s) && bothR.stderr.includes(`${both.file} (every line, ${RECALL_LINES.length} lines)`) && bothR.stderr.trim().endsWith(RECALL_WHY), said(bothR)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 0 (read): after a compaction more than two megabytes back the file of the typed messages is still due, and a whole read of it lifts it',
+    guards: ['rc_unsure'],
+    run(m, dir, h) {
+      const w = world(h);
+      const hub = pagedHub(h, dir);
+      const tmpRoot = h.tmp('dp-tmp-');
+      const big = (more) => (file) => [typed(h, 0, 'Go.'), ...compaction(h, 20), typed(h, 22, 'Carry on. Go.'), h.result(25, 'rc-big', 'x'.repeat(3 * 1024 * 1024)), ...readAllThree(h, 30, hub), ...more(file)];
+      const bashOf = (s) => readingIn(w, hub, call('Bash', { command: 'ls' }, s.record), tmpRoot);
+      const unread = recallSession(h, tmpRoot, big(() => []));
+      const read = recallSession(h, tmpRoot, big((f) => readFileOf(h, 40, 'rc-bw', f, RECALL_LINES)));
+      return h.assertAll([
+        ['with the compaction beyond the first tail and the file unread a Bash is refused for the file', held(bashOf(unread), /^TYPED MESSAGES UNREAD/), said(bashOf(unread))],
+        ['with the file read whole after it a Bash passes', passes(bashOf(read)), said(bashOf(read))],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
@@ -1798,11 +1926,11 @@ export const plants = {
   hs_run: ["  if (event === 'Stop' && !p.agent_id) {", '  if (false) {', 'hook-dispatch.mjs'],
   hs_once: ["    return repoHooks(event, raw, p, new Set(['stop-guard.sh']));", '    return repoHooks(event, raw, p, new Set());', 'hook-dispatch.mjs'],
   hs_refuse: ["    if (s.deny) { process.stderr.write(s.reason + '\\n'); return 2; }", "    if (false) { process.stderr.write(s.reason + '\\n'); return 2; }", 'hook-dispatch.mjs'],
-  rd_hold: ['    if (!unread.length) return null;\n    if (cut >= 0', '    return null;\n    if (cut >= 0', 'hook-dispatch.mjs'],
+  rd_hold: ['    if (!unread.length && !recallDue && !recallUnsure) return null;\n    if (cut >= 0', '    return null;\n    if (cut >= 0', 'hook-dispatch.mjs'],
   rd_agent: ['  if (p.agent_id) return null;\n  if (READS.has(tool)) return null;\n  const file = mainTranscript(p);', '  if (READS.has(tool)) return null;\n  const file = mainTranscript(p);', 'hook-dispatch.mjs'],
   rd_reads: ['  if (p.agent_id) return null;\n  if (READS.has(tool)) return null;\n  const file = mainTranscript(p);', '  if (p.agent_id) return null;\n  const file = mainTranscript(p);', 'hook-dispatch.mjs'],
   rd_taskstop: ["  if (!p.agent_id && tool === 'TaskStop') return null;\n  if (p.agent_id) return null;", '  if (p.agent_id) return null;', 'hook-dispatch.mjs'],
-  rd_why: ['        + WHY_READ.trimEnd();', "        + '';", 'hook-dispatch.mjs'],
+  rd_why: ["        + `${unread.length ? WHY_READ : ''}${recallDue ? WHY_RECALL : ''}`.trimEnd();", "        + '';", 'hook-dispatch.mjs'],
   rd_no_latch: ['    if (cut >= 0 || size <= mb * 1024 * 1024) {\n', "    if (cut >= 0 || size <= mb * 1024 * 1024) {\n      latchAfter(p, 'planted read refusal');\n", 'hook-dispatch.mjs'],
   rd_lift: ['    const unread = pages.filter((pg) => !pg.files.some((f) => readWhole(live, f)));', '    const unread = pages;', 'hook-dispatch.mjs'],
   rd_partial: ['for (let k = 1; k <= n.text; k++) if (!got.has(k)) return false;', 'for (let k = 1; k <= 1; k++) if (!got.has(k)) return false;', 'hook-dispatch.mjs'],
@@ -1882,5 +2010,23 @@ export const plants = {
   wp_name_hook: ['\\bstop[ -](?:hooks?|guard)\\b', '\\bstop[ -](?:guard)\\b', 'hook-dispatch.mjs'],
   wp_name_hooks: ['\\bstop[ -](?:hooks?|guard)\\b', '\\bstop[ -](?:hook|guard)\\b', 'hook-dispatch.mjs'],
   wp_name_guard: ['\\bstop[ -](?:hooks?|guard)\\b', '\\bstop[ -](?:hooks?)\\b', 'hook-dispatch.mjs'],
+  rc_first: ['[RECALL_FIRST_LINE, ...list.map', '[...list.map', 'hook-dispatch.mjs'],
+  rc_whole: ['${californiaStamp(m.at)}\\n\\n${m.text}', "${californiaStamp(m.at)}\\n\\n${m.text.split('\\n')[0]}", 'hook-dispatch.mjs'],
+  rc_typed: ['if (e?.isSidechain || e?.agentId || !tail.isOwnerMessage(e)) return;', "if (e?.isSidechain || e?.agentId || (e?.type !== 'user' && e?.type !== 'attachment')) return;", 'hook-dispatch.mjs'],
+  rc_queue: ['if (e?.isSidechain || e?.agentId || !tail.isOwnerMessage(e)) return;', "if (e?.isSidechain || e?.agentId || e?.type !== 'user' || !tail.isOwnerMessage(e)) return;", 'hook-dispatch.mjs'],
+  rc_time: ["timeZone: 'America/Los_Angeles'", "timeZone: 'UTC'", 'hook-dispatch.mjs'],
+  rc_mkdir: ['    mkdirSync(dirname(file), { recursive: true });\n    writeFileSync(file, `', '    writeFileSync(file, `', 'hook-dispatch.mjs'],
+  rc_path: ["'scratchpad', 'recall', 'typed-messages.md')", "'recall', 'typed-messages.md')", 'hook-dispatch.mjs'],
+  rc_print: ["{ if (p.source === 'compact') process.stdout.write(", '{ if (false) process.stdout.write(', 'hook-dispatch.mjs'],
+  rc_failline: ['else if (!filed.skipped) process.stdout.write(', 'else if (false) process.stdout.write(', 'hook-dispatch.mjs'],
+  rc_skipped: ['else if (!filed.skipped) process.stdout.write(', 'else process.stdout.write(', 'hook-dispatch.mjs'],
+  rc_hold: ['const recallDue = recallHere && cut >= 0 && !readWhole(live, recall);', 'const recallDue = false;', 'hook-dispatch.mjs'],
+  rc_live: ['const recallDue = recallHere && cut >= 0 && !readWhole(live, recall);', 'const recallDue = recallHere && cut >= 0 && !readWhole(entries, recall);', 'hook-dispatch.mjs'],
+  rc_resume: ['const recallDue = recallHere && cut >= 0 && !readWhole(live, recall);', 'const recallDue = recallHere && !readWhole(live, recall);', 'hook-dispatch.mjs'],
+  rc_absent: ['const recallHere = !!recall && existsSync(recall);', 'const recallHere = !!recall;', 'hook-dispatch.mjs'],
+  rc_why_recall: ["${recallDue ? WHY_RECALL : ''}", '', 'hook-dispatch.mjs'],
+  rc_list: ['...(recallDue ? [`${recall} (every line, ${linesOf(recall)?.text} lines)`] : [])', '...[]', 'hook-dispatch.mjs'],
+  rc_head: ["${unread.length ? 'STANDING PAGES UNREAD' : 'TYPED MESSAGES UNREAD'}", 'STANDING PAGES UNREAD', 'hook-dispatch.mjs'],
+  rc_unsure: ['const recallUnsure = recallHere && cut < 0 && size > mb * 1024 * 1024 && !readWhole(entries, recall);', 'const recallUnsure = false;', 'hook-dispatch.mjs'],
   pl_no_latch: ["  return a.startsWith(root + '/') ? PLAN_TEXT : null;", "  if (a.startsWith(root + '/')) { latchAfter(p, 'planted plan file refusal'); return PLAN_TEXT; }\n  return null;", 'hook-dispatch.mjs'],
 };
