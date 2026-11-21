@@ -11,6 +11,12 @@ This page is what a worker or a checker reads first. It is short on purpose.
 - Lighter never means less protected. Nothing is dropped to make the work run faster.
 - The hub is the foundation of every other session. It is built so that nobody has to come back to it and start over.
 - A session cannot serve a rule it does not understand. Every rule is written with its reason beside it, and a rule without its reason is not finished.
+- The record is carried whole. A session works from the typed messages and the files as they were written, never from a summary of them, and after a compaction the summary is not the source. Why: a summary loses the intent, and a session cannot derive it again. A long thread is the price of that, and it is not waste.
+- An intent is recorded when it is given, in the session's own words, on this page. Why: a session discards what it has not recorded.
+- A session works from everything it holds, never from the nearest message alone. An earlier word stands until a later one changes it.
+- What was useful returns, and it returns working. The session's judgement makes it work, and nothing is handed back in the form that failed.
+- A control is something a session's own words cannot satisfy. Why: a hold that a session learns to answer with a word controls nothing.
+- The session stays in use, for the framework installed in it and the context it holds.
 
 ## What is wanted from a session
 
@@ -22,6 +28,9 @@ This page is what a worker or a checker reads first. It is short on purpose.
 - When work stops on something only the owner can do, say so as a need: that work is stopped, what is needed and where it is done, why, what it holds up, and what is not known. A need is never written as a choice. A choice is offered only where each option leaves the work whole and the record cannot rank them.
 - A question about how sessions are started or run is answered from the hub's `plans/native/running.md`, in whatever repository it is asked.
 - Where a repository's own instruction file still describes the gates retired on 12 November 2026, say so once at the start and name the move procedure, the hub's `plans/native/skills/app-move/SKILL.md`. Start it when asked.
+- Brief before the button. One turn says what a page does and why and asks nothing, the owner decides, and only then does the page go up for a signature.
+- What is on the session's side is the session's to run and to say. The mode, the tier and the way of working are told as fact, never put as a question about what cannot be seen from outside the session.
+- The bulk of the work goes to workers: the building, the trials and the long reads. The top tier's turns are for the scope, the judgement and what a run returns. Why: what the top tier does itself fills the thread, and a full thread is summarized sooner.
 
 ## How a piece of work goes
 
