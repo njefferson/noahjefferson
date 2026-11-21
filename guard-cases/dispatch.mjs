@@ -1529,9 +1529,10 @@ export const cases = [
         const w = world(h);
         mkdirSync(join(w.home, '.claude', 'plans'), { recursive: true });
         writeFileSync(w.plan, PAGE);
+        utimesSync(w.plan, new Date(Date.UTC(2026, 9, 1)), new Date(Date.UTC(2026, 9, 1)));
         if (o.role !== false) { mkdirSync(join(w.launch, '.claude', 'agents'), { recursive: true }); writeFileSync(join(w.launch, '.claude', 'agents', 'checker.md'), o.role === 'plain' ? 'A planted role that speaks of no such send.\n' : 'A planted role: where the words sent are a page\'s path and the word walk, the page is walked.\n'); }
         const id = idOf(w.plan);
-        const tr = walked(o.typed ?? 'Draw the page.', o.first === undefined ? undefined : o.first.replace('ID', id), o.final);
+        const tr = walked(o.typed ?? 'Draw the page. Go.', o.first === undefined ? undefined : o.first.replace('ID', id), o.final);
         const r = w.run(dir, call('ExitPlanMode', { plan: 'x' }, tr, { permission_mode: 'plan', ...(o.extra ?? {}) }));
         return { r, id, after: w.run(dir, call('Bash', { command: 'ls' }, tr)), latch: readdirSync(w.latch) };
       };
@@ -1542,7 +1543,7 @@ export const cases = [
       const failed = press({ first: 'CHECK FAIL ID' });
       const noRole = press({ role: false });
       const plainRole = press({ role: 'plain' });
-      const word = press({ typed: 'Put the page up without a walk.' });
+      const word = press({ typed: 'Put the page up without a walk. Go.' });
       const agent = press({ extra: { agent_id: 'ag1' } });
       const goTr = h.transcript([typed(h, 0, 'Go.'), modelReply(h, 1, 'claude-fable-5-2')]);
       const corrTr = h.transcript([typed(h, 0, 'Draw the page.'), modelReply(h, 1, 'claude-fable-5-2')]);
@@ -1578,6 +1579,48 @@ export const cases = [
         ['the checker sent a path outside the plans folder is refused', held(elsewhere, /RUN WAITS FOR ITS TIER/), said(elsewhere)],
         ['outside plan mode the same send is refused', held(notPlan, /RUN WAITS FOR ITS TIER/), said(notPlan)],
         ['with an eject standing the walk still passes, and a worker\'s send is refused', passes(walkEject) && held(workerEject, /A STEP EJECTED/), said(walkEject) + said(workerEject)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 11 (decision): the button is refused with NO DECISION ON THIS PAGE unless the newest typed message ends with a go-word and was typed after the page\'s last write; a page written again after the go-word, a later message with no go-word and no typed message at all are refused; an agent, a folder with no page and another tool pass; no latch is set',
+    guards: ['dc_listed', 'dc_agent', 'dc_tool', 'dc_nopage', 'dc_go', 'dc_after'],
+    run(m, dir, h) {
+      const DEC = /^NO DECISION ON THIS PAGE: no typed message that ends with a go-word has come after the page's last write, so nothing has been decided on the page as it stands\. Brief it: end this turn with one reply that says what the page does and why and asks nothing\. The button passes once a typed message that ends with a go-word has come after the page's last write\. Why: the decision is made on a brief of the page as it stands, and a go-word given before the page was written decided nothing about it\.\n?$/;
+      const base = Date.parse('2026-10-01T12:00:00Z');
+      const press = (o = {}) => {
+        const w = world(h);
+        mkdirSync(join(w.home, '.claude', 'plans'), { recursive: true });
+        if (o.page !== false) {
+          writeFileSync(w.plan, '# A page\n\nOne step.\n');
+          if (o.again) { utimesSync(w.plan, new Date(base - 600000), new Date(base - 600000)); writeFileSync(w.plan, '# A page\n\nOne step, changed.\n'); }
+          const at = new Date(base + (o.pageAt ?? -600) * 1000);
+          utimesSync(w.plan, at, at);
+        }
+        const tr = h.transcript(o.entries ?? [typed(h, 0, 'Go.'), modelReply(h, 1, 'claude-fable-5-2')]);
+        const r = w.run(dir, call(o.tool ?? 'ExitPlanMode', o.tool === 'Bash' ? { command: 'ls' } : { plan: 'x' }, tr, { permission_mode: 'plan', ...(o.extra ?? {}) }));
+        return { r, after: w.run(dir, call('Bash', { command: 'ls' }, tr)), latch: readdirSync(w.latch) };
+      };
+      const before = press({ pageAt: 500 });
+      const after = press();
+      const later = press({ entries: [typed(h, 0, 'Go.'), typed(h, 5, 'Draw it differently.'), modelReply(h, 6, 'claude-fable-5-2')] });
+      const again = press({ again: true, pageAt: 500 });
+      const goLast = press({ entries: [typed(h, 0, 'Draw it differently.'), typed(h, 5, 'Yes.'), modelReply(h, 6, 'claude-fable-5-2')] });
+      const none = press({ entries: [modelReply(h, 1, 'claude-fable-5-2')] });
+      const agent = press({ pageAt: 500, extra: { agent_id: 'ag1' } });
+      const noPage = press({ page: false });
+      const other = press({ pageAt: 500, tool: 'Bash' });
+      return h.assertAll([
+        ['where the page was written after the newest go-word the button exits 2 with block G1 word for word', held(before.r, DEC), said(before.r)],
+        ['a Bash read after that refusal passes, so no latch was set', passes(before.after) && before.latch.length === 0, said(before.after) + before.latch.join(',')],
+        ['where a go-word was typed after the page\'s last write the button passes', passes(after.r), said(after.r)],
+        ['where a later typed message ends with no go-word the button is refused', held(later.r, DEC), said(later.r)],
+        ['where the page was written again after the go-word the button is refused', held(again.r, DEC), said(again.r)],
+        ['a go-word typed after an earlier message with none passes', passes(goLast.r), said(goLast.r)],
+        ['with no typed message at all the button is refused', held(none.r, DEC), said(none.r)],
+        ['an agent\'s own call passes', passes(agent.r), said(agent.r)],
+        ['in a folder with no page the button passes', passes(noPage.r), said(noPage.r)],
+        ['a call of another tool passes though the page is newer than the go-word', passes(other.r), said(other.r)],
       ]);
     },
   },
@@ -2064,6 +2107,12 @@ export const plants = {
   wk_scope_text: ["/\\bthe word walk\\b/.test(readFileSync(join(root, '.claude', 'agents', 'checker.md'), 'utf8'))", "!!readFileSync(join(root, '.claude', 'agents', 'checker.md'), 'utf8')", 'hook-dispatch.mjs'],
   wk_word: ["  if (/\\bwithout a walk\\b/i.test(lastTyped(p))) return null;\n", '', 'hook-dispatch.mjs'],
   wk_agent: ["  if (p.agent_id || String(p.tool_name ?? '') !== 'ExitPlanMode') return null;", "  if (String(p.tool_name ?? '') !== 'ExitPlanMode') return null;", 'hook-dispatch.mjs'],
+  dc_listed: ["['walk', 'the walk hold', holdWalk], ['decision', 'the decision hold', holdDecision], ", "['walk', 'the walk hold', holdWalk], ", 'hook-dispatch.mjs'],
+  dc_agent: ["  if (p.agent_id) return null;\n  if (String(p.tool_name ?? '') !== 'ExitPlanMode') return null;\n  const decided", "  if (String(p.tool_name ?? '') !== 'ExitPlanMode') return null;\n  const decided", 'hook-dispatch.mjs'],
+  dc_tool: ["  if (String(p.tool_name ?? '') !== 'ExitPlanMode') return null;\n  const decided", '  const decided', 'hook-dispatch.mjs'],
+  dc_nopage: ['  if (!decided) return null;\n', '  if (!decided) return DECISION_TEXT;\n', 'hook-dispatch.mjs'],
+  dc_go: ['  if (last < 0 || !endsWithGoWord(tail.textOf(list[last]))) return DECISION_TEXT;\n', '', 'hook-dispatch.mjs'],
+  dc_after: ['  if (!(typedAt(list, last) > wrote)) return DECISION_TEXT;\n', '', 'hook-dispatch.mjs'],
   wk_send: ["  if (isWalkSend(p)) return null;\n  if (isRunSend(p, id)) return null;", "  if (isRunSend(p, id)) return null;", 'hook-dispatch.mjs'],
   wk_send_word: ["  if (isWalkSend(p)) return null;\n  if (NEW_STARTS.has(tool)) return text;", "  if (NEW_STARTS.has(tool)) return text;", 'hook-dispatch.mjs'],
   wk_send_eject: ["  if (isWalkSend(p)) return null;\n  return `A STEP EJECTED:", "  return `A STEP EJECTED:", 'hook-dispatch.mjs'],

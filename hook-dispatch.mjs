@@ -1110,12 +1110,33 @@ function holdWalk(p) {
     + 'A typed message that carries the words without a walk lifts this for one page.';
 }
 
+const DECISION_TEXT = 'NO DECISION ON THIS PAGE: no typed message that ends with a go-word has come after the page\'s last write, so nothing has been decided on the page as it stands. Brief it: end this turn with one reply that says what the page does and why and asks nothing. The button passes once a typed message that ends with a go-word has come after the page\'s last write. Why: the decision is made on a brief of the page as it stands, and a go-word given before the page was written decided nothing about it.';
+
+/**
+ * HOLD 11: a decision before the button. On the main thread ExitPlanMode is refused unless the newest typed message ends with a go-word and
+ * was typed (as `typedAt` reads it) after the last write of the newest page under ~/.claude/plans/. Nothing typed lifts it but such a go-word.
+ * @returns {string|null} the refusal, or null. An agent's call and a folder with no page pass; no latch is set.
+ */
+function holdDecision(p) {
+  if (p.agent_id) return null;
+  if (String(p.tool_name ?? '') !== 'ExitPlanMode') return null;
+  const decided = newestPage();
+  if (!decided) return null;
+  const wrote = statSync(decided).mtimeMs;
+  const list = tail.tailEntries(mainTranscript(p), 16 * 1024 * 1024);
+  let last = -1;
+  list.forEach((e, i) => { if (tail.isOwnerMessage(e)) last = i; });
+  if (last < 0 || !endsWithGoWord(tail.textOf(list[last]))) return DECISION_TEXT;
+  if (!(typedAt(list, last) > wrote)) return DECISION_TEXT;
+  return null;
+}
+
 /**
  * Run the holds on a call.
  * @returns {string|null} the first refusal. A hold that throws is set aside, one line goes to the error output and the call passes it.
  */
 function holds(p) {
-  for (const [key, name, hold] of [['read', 'the read hold', holdRead], ['word', 'the typed word hold', holdWord], ['latch', 'the latch hold', holdLatch], ['manager', 'the manager hold', holdManager], ['plan', 'the plan file hold', holdPlan], ['eject', 'the eject hold', holdEject], ['walk', 'the walk hold', holdWalk], ['runtier', 'the run tier hold', holdRunTier], ['sendtier', 'the send tier hold', holdSendTier]]) {
+  for (const [key, name, hold] of [['read', 'the read hold', holdRead], ['word', 'the typed word hold', holdWord], ['latch', 'the latch hold', holdLatch], ['manager', 'the manager hold', holdManager], ['plan', 'the plan file hold', holdPlan], ['eject', 'the eject hold', holdEject], ['walk', 'the walk hold', holdWalk], ['decision', 'the decision hold', holdDecision], ['runtier', 'the run tier hold', holdRunTier], ['sendtier', 'the send tier hold', holdSendTier]]) {
     try {
       if (process.env.HOOK_DISPATCH_THROW === key) throw new Error('planted fault');
       const why = hold(p);
