@@ -7137,7 +7137,9 @@ Depends: none.
 
 ### P-640. Q-HUB-586: A step whose commands cannot be made twice took its place from its report alone
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The procedure asks that a step holding a command that cannot be made twice reads the repository and can be sent again as written, and the walk reads each step for it.
 
 Acceptance: A step that is stopped in its middle is sent again by the script with nothing changed on its page.
 
