@@ -7123,7 +7123,9 @@ Depends: none.
 
 ### P-639. Q-HUB-585: The hold on every agent refused a step's own report, so the report was behind the work
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: Under the hold of the word stop an agent's write of its own report in the progress folder of the session scratchpad passes, and a case holds it.
 
 Acceptance: A step that a hold stops in its middle leaves a report that says what it made.
 

@@ -548,6 +548,36 @@ export const cases = [
     },
   },
   {
+    name: 'hold 1 (stop, report): under the word stop an agent\'s Write or Edit of a file directly in progress/ of the session scratchpad passes, any other write is refused, an agent\'s Bash is refused, and the main thread\'s Write of that file is refused',
+    guards: ['hw_progress_pass', 'hw_progress_dir', 'hw_progress_agent', 'hw_progress_direct'],
+    run(m, dir, h) {
+      const w = world(h);
+      const tr = h.transcript([typed(h, 0, 'Please stop everything right now.')]);
+      const report = `${SCRATCH}/progress/step-2-report.txt`;
+      const agentWrite = w.run(dir, call('Write', { file_path: report, content: 'x' }, tr, { agent_id: 'ag1' }));
+      const agentEdit = w.run(dir, call('Edit', { file_path: report, old_string: 'a', new_string: 'b' }, tr, { agent_id: 'ag1' }));
+      const agentOther = w.run(dir, call('Write', { file_path: `${SCRATCH}/other.txt`, content: 'x' }, tr, { agent_id: 'ag1' }));
+      const agentSibling = w.run(dir, call('Write', { file_path: `${SCRATCH}/notes/step-2-report.txt`, content: 'x' }, tr, { agent_id: 'ag1' }));
+      const agentDeep = w.run(dir, call('Write', { file_path: `${SCRATCH}/sub/progress/step-2-report.txt`, content: 'x' }, tr, { agent_id: 'ag1' }));
+      const agentBelow = w.run(dir, call('Write', { file_path: `${SCRATCH}/progress/sub/step-2-report.txt`, content: 'x' }, tr, { agent_id: 'ag1' }));
+      const agentRepo = w.run(dir, call('Write', { file_path: w.repoFile, content: 'x' }, tr, { agent_id: 'ag1' }));
+      const agentBash = w.run(dir, call('Bash', { command: 'ls' }, tr, { agent_id: 'ag1' }));
+      const mainWrite = w.run(dir, call('Write', { file_path: report, content: 'x' }, tr));
+      return h.assertAll([
+        ['an agent\'s Write of a file in progress/ of the scratchpad passes', passes(agentWrite), said(agentWrite)],
+        ['an agent\'s Edit of a file in progress/ of the scratchpad passes', passes(agentEdit), said(agentEdit)],
+        ['an agent\'s Write of another scratchpad file is refused', held(agentOther, /^STOP: /), said(agentOther)],
+        ['an agent\'s Write of a file in another folder of the scratchpad is refused', held(agentSibling, /^STOP: /), said(agentSibling)],
+        ['an agent\'s Write of a progress folder deeper in the scratchpad is refused', held(agentDeep, /^STOP: /), said(agentDeep)],
+        ['an agent\'s Write of a file below progress/ is refused', held(agentBelow, /^STOP: /), said(agentBelow)],
+        ['an agent\'s Write of a repository file is refused', held(agentRepo, /^STOP: /), said(agentRepo)],
+        ['an agent\'s Bash is refused', held(agentBash, /^STOP: /), said(agentBash)],
+        ['the main thread\'s Write of that same file is refused', held(mainWrite, /^STOP: /), said(mainWrite)],
+        ['the refusal says an agent may write its own report', /write its own report or progress note/.test(agentOther.stderr), said(agentOther)],
+      ]);
+    },
+  },
+  {
     name: 'hold 1 (stop): a later message ending with a go-word lifts it, an approval at the button after it lifts it, an approval before it does not, and the same words in another tool\'s result are no approval',
     guards: ['hw_goword_lift', 'hw_approval_lift', 'hw_approval_name', 'hw_goword_last'],
     run(m, dir, h) {
@@ -1878,6 +1908,10 @@ export const plants = {
   hy_manager: ['  + WHY_MANAGER.trimEnd();', "  + '';", 'hook-dispatch.mjs'],
   hw_stop_hold: ['    return h.waiting.length ? WAITING_TEXT(true, h.waiting) : STOP_TEXT;\n', '    return null;\n', 'hook-dispatch.mjs'],
   hw_stop_agents: ["    if (!p.agent_id && tool === 'TaskStop') return null;", "    if (tool === 'TaskStop') return null;", 'hook-dispatch.mjs'],
+  hw_progress_pass: ["    if (p.agent_id && (tool === 'Write' || tool === 'Edit') && isProgressFile(absPath(p, p.tool_input?.file_path ?? ''), p.session_id)) return null;\n", '', 'hook-dispatch.mjs'],
+  hw_progress_dir: ["return basename(d) === 'progress' && inScratchpad(a, sid)", 'return inScratchpad(a, sid)', 'hook-dispatch.mjs'],
+  hw_progress_agent: ["    if (p.agent_id && (tool === 'Write' || tool === 'Edit') && isProgress", "    if ((tool === 'Write' || tool === 'Edit') && isProgress", 'hook-dispatch.mjs'],
+  hw_progress_direct: ["inScratchpad(d, sid) && !inScratchpad(dirname(d), sid);", "inScratchpad(d, sid);", 'hook-dispatch.mjs'],
   hw_reads: ['  if (READS.has(tool) && !planEntry && !planExit) return null;\n  const h = ownerHolds(p);', '  const h = ownerHolds(p);', 'hook-dispatch.mjs'],
   hw_word_whole: ["wordsOf(String(text ?? '').replace(/\\bstop[ -](?:hooks?|guard)\\b/gi, ' ')).includes('stop')", "String(text ?? '').replace(/\\bstop[ -](?:hooks?|guard)\\b/gi, ' ').toLowerCase().includes('stop')", 'hook-dispatch.mjs'],
   hw_no_latch: ["    if (held) { process.stderr.write(held + '\\n'); return 2; }", "    if (held) { process.stderr.write(held + '\\n'); latchAfter(p, held); return 2; }", 'hook-dispatch.mjs'],

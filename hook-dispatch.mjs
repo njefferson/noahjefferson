@@ -294,7 +294,7 @@ const WHY_WORD = 'Why: without the hold the work goes on over a message and the 
 const WHY_LATCH = 'Why: another route to the same end puts the session\'s judgement above the control that refused it. ';
 const WHY_MANAGER = 'Why: the top tier is paid for judgement, and the cheapest tier that holds the rules does the rest. ';
 const STOP_TEXT =`STOP: the newest typed message carries the word stop and does not end with a go-word, so every call is held, the main thread's and every agent's. `
-  + 'Only reads pass, TaskStop on the main thread, and a write of a plan file directly under ~/.claude/plans/ made in plan mode (an agent may still hand back what it has). The session\'s own entry to plan mode and the button are refused. '
+  + 'Only reads pass, TaskStop on the main thread, and a write of a plan file directly under ~/.claude/plans/ made in plan mode (an agent may still hand back what it has, and write its own report or progress note, a file directly in progress/ of the session scratchpad). The session\'s own entry to plan mode and the button are refused. '
   + `A later typed message whose last word is one of ${GO_WORDS.join(', ')} lifts it, and so does an approval of a plan at the button given after it. `
   + WHY_WORD
   + 'Say in plain text what was running and that it is stopped, and end the turn.';
@@ -344,6 +344,12 @@ export function inScratchpad(path, sid) {
   const t = resolve(String(path));
   const bases = [...new Set(['/tmp', tmpdir()])].map(esc).join('|');
   return new RegExp(`^(?:${bases})/claude-\\d+/[^/]+/${esc(sid)}/scratchpad/.`).test(t);
+}
+
+/** Is the path a file directly in `progress/` of this session's scratchpad? (an agent's own report and progress note) */
+function isProgressFile(a, sid) {
+  const d = dirname(a);
+  return basename(d) === 'progress' && inScratchpad(a, sid) && inScratchpad(d, sid) && !inScratchpad(dirname(d), sid);
 }
 
 /** A path as a call writes it: `~` opened, a relative path taken from the call's folder. */
@@ -505,6 +511,7 @@ function holdWord(p) {
   if (h.stop) {
     if (!p.agent_id && tool === 'TaskStop') return null;
     if (p.agent_id && AGENT_RETURN.test(tool)) return null;
+    if (p.agent_id && (tool === 'Write' || tool === 'Edit') && isProgressFile(absPath(p, p.tool_input?.file_path ?? ''), p.session_id)) return null;
     if (!p.agent_id && FILE_WRITES.has(tool) && /plan/i.test(String(p.permission_mode ?? ''))
       && dirname(absPath(p, p.tool_input?.file_path ?? p.tool_input?.notebook_path ?? '')) === join(homedir(), '.claude', 'plans')) return null;
     return h.waiting.length ? WAITING_TEXT(true, h.waiting) : STOP_TEXT;
