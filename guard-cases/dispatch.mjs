@@ -600,6 +600,20 @@ export const cases = [
     },
   },
   {
+    name: 'hold 1 (stop, negative): not, never or a word ending in n\'t (either apostrophe, or none) directly before the word stop makes it no stop, and a stop with anything else before it is a stop',
+    guards: ['hw_neg_not', 'hw_neg_never', 'hw_neg_apos', 'hw_neg_plain', 'hw_neg_prev', 'hw_neg_direct', 'hw_word_whole'],
+    run(m, dir, h) {
+      const w = world(h);
+      const bashUnder = (text) => w.run(dir, call('Bash', { command: 'ls' }, h.transcript([typed(h, 0, text)])));
+      const noStop = ['do not stop', 'don\'t stop working', 'don’t stop working', 'dont stop', 'never stop', 'you must not stop', 'you cant stop now', 'I wouldn\'t stop'];
+      const isStop = ['stop', 'please stop now', 'do not go on, stop', 'not now, stop'];
+      const rows = [];
+      for (const t of noStop) { const r = bashUnder(t); rows.push([`"${t}" is no stop: a Bash passes`, passes(r), said(r)]); }
+      for (const t of isStop) { const r = bashUnder(t); rows.push([`"${t}" is a stop: a Bash is refused`, held(r, /STOP: /), said(r)]); }
+      return h.assertAll(rows);
+    },
+  },
+  {
     name: 'hold 1 (harness text): hook feedback, a task notification, an agent\'s hand-back, a restart notice, a system reminder and a slash command, each with the word stop, hold nothing',
     guards: ['hw_harness'],
     run(m, dir, h) {
@@ -1913,7 +1927,13 @@ export const plants = {
   hw_progress_agent: ["    if (p.agent_id && (tool === 'Write' || tool === 'Edit') && isProgress", "    if ((tool === 'Write' || tool === 'Edit') && isProgress", 'hook-dispatch.mjs'],
   hw_progress_direct: ["inScratchpad(d, sid) && !inScratchpad(dirname(d), sid);", "inScratchpad(d, sid);", 'hook-dispatch.mjs'],
   hw_reads: ['  if (READS.has(tool) && !planEntry && !planExit) return null;\n  const h = ownerHolds(p);', '  const h = ownerHolds(p);', 'hook-dispatch.mjs'],
-  hw_word_whole: ["wordsOf(String(text ?? '').replace(/\\bstop[ -](?:hooks?|guard)\\b/gi, ' ')).includes('stop')", "String(text ?? '').replace(/\\bstop[ -](?:hooks?|guard)\\b/gi, ' ').toLowerCase().includes('stop')", 'hook-dispatch.mjs'],
+  hw_word_whole: ["w.some((x, i) => x === 'stop' && ", "w.some((x, i) => x.includes('stop') && ", 'hook-dispatch.mjs'],
+  hw_neg_not: ['(?:not|never|', '(?:never|', 'hook-dispatch.mjs'],
+  hw_neg_never: ['not|never|', 'not|', 'hook-dispatch.mjs'],
+  hw_neg_apos: ["n['’]t|(?:do|", '(?:do|', 'hook-dispatch.mjs'],
+  hw_neg_plain: ['|(?:do|does|did|is|are|was|were|has|have|had|should|would|could|must|might|need|dare|ought|ca|wo|sha|ai)nt)$/u', ')$/u', 'hook-dispatch.mjs'],
+  hw_neg_prev: ['NEGATIVE_BEFORE_STOP.test(w[i - 1])', 'NEGATIVE_BEFORE_STOP.test(w[i])', 'hook-dispatch.mjs'],
+  hw_neg_direct: ['test(w[i - 1])', 'test(w[0])', 'hook-dispatch.mjs'],
   hw_no_latch: ["    if (held) { process.stderr.write(held + '\\n'); return 2; }", "    if (held) { process.stderr.write(held + '\\n'); latchAfter(p, held); return 2; }", 'hook-dispatch.mjs'],
   hw_main_tr: ['  if (m) return `${m[1]}.jsonl`;', '  void 0;', 'hook-dispatch.mjs'],
   hw_goword_lift: ['const lifted = (m) => (!m.waiting && idx.some((j) => j > m.i && endsWithGoWord(text(j)))) || approvals', 'const lifted = (m) => false || approvals', 'hook-dispatch.mjs'],

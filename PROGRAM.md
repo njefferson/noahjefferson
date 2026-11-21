@@ -7115,7 +7115,9 @@ Depends: none.
 
 ### P-638. Q-HUB-584: A message that asked for the work to go on held every agent, because it carried the word stop
 
-Repository: hub. Goal: 5. State: open. Plan: none.
+Repository: hub. Goal: 5. State: done. Plan: none.
+
+Done: The hold does not take the word stop as a stop where not, never or a word ending in n't stands directly before it, and a case holds each form.
 
 Acceptance: A message that asks for the work to go on holds no agent, and a run it arrives in ends as its page says.
 

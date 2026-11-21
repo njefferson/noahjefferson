@@ -285,8 +285,13 @@ export const GO_WORDS = ['go', 'ok', 'continue', 'approved', 'yes'];
 const wordsOf = (t) => String(t ?? '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ');
 /** @returns {boolean} true when, case and punctuation set aside, the last word of the text is a go-word. */
 export function endsWithGoWord(text) { const w = wordsOf(text); return GO_WORDS.includes(w[w.length - 1]); }
-/** @returns {boolean} true when the whole word stop is anywhere in the text ("stopped" and "unstoppable" are not it). */
-export function hasStopWord(text) { return wordsOf(String(text ?? '').replace(/\bstop[ -](?:hooks?|guard)\b/gi, ' ')).includes('stop'); }
+// The word directly before a stop that makes it no stop: not, never, a word that ends in n't (either apostrophe) and the same word with no apostrophe.
+const NEGATIVE_BEFORE_STOP = /^(?:not|never|[\p{L}\p{N}]*n['’]t|(?:do|does|did|is|are|was|were|has|have|had|should|would|could|must|might|need|dare|ought|ca|wo|sha|ai)nt)$/u;
+/** @returns {boolean} true when the whole word stop is anywhere in the text ("stopped" and "unstoppable" are not it), unless the word directly before it is a negative. */
+export function hasStopWord(text) {
+  const w = String(text ?? '').toLowerCase().replace(/\bstop[ -](?:hooks?|guard)\b/g, ' ').match(/[\p{L}\p{N}]+?n['’]t|[\p{L}\p{N}]+/gu) ?? [];
+  return w.some((x, i) => x === 'stop' && !(i > 0 && NEGATIVE_BEFORE_STOP.test(w[i - 1])));
+}
 /** @returns {boolean} a stop message: it has the whole word stop and does not end with a go-word. */
 export function isStopMessage(text) { return hasStopWord(text) && !endsWithGoWord(text); }
 
