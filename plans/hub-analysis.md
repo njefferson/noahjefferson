@@ -51,6 +51,8 @@ Each piece leaves the hub working, and nothing is torn out to make room for the 
 7. Part 8, as one need.
 8. Part 9.
 
+As it stands on 23 November 2026: lines 1 and 2 are landed, and of line 4 part 5 is landed. What comes next is the path made clear: part 4 of line 4, and lines 5 and 6. Part 9, the apps' side, follows them. Why: a way of working that a session sees plainly is one it keeps to as its own, with no hold and nobody reminding it, and the apps' side carries the hub's way into every app, so the way is made clear first. In an app's session a run still waits on a model command typed by hand, because the top tier there can send no step and no app holds the run script, and the proof of the apps' side is a page run by the script in a real app's session.
+
 ## What was ruled out
 
 - A tier below the top that plans, with the top tier as its adviser. In both cases read on 16 November the lower tier acted on a surprise and did not ask, and nothing forces an adviser's call.
