@@ -2,7 +2,7 @@
 // stop-guard.mjs, session-brief.mjs and plan-scope-check.mjs. The shape is shape.mjs. Every case runs the real files from `dir`; every
 // repository, home, launch folder and transcript is written under a temporary folder from `h`, and nothing is written into the checkout.
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, utimesSync, writeFileSync } from 'node:fs';
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -1956,6 +1956,178 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'typed messages kept current: a message typed after a start is added to the end of the file at its prompt, one delivered from the queue before the next send of an agent passes, each once and told by its place in the record, and harness text, an agent\'s call, a file with no state and a start with nothing filed add nothing',
+    guards: ['kt_prompt_hook', 'kt_prompt_main', 'kt_send', 'kt_send_main', 'kt_send_tool', 'kt_owner', 'kt_same', 'kt_absorb', 'kt_absorb_n', 'kt_pending_up', 'kt_anchor_after', 'kt_anchor_at', 'kt_number', 'kt_append', 'kt_state_write', 'kt_nostate', 'kt_file_exists', 'kt_widen', 'kt_state_start', 'kt_state_anchor', 'kt_state_filed'],
+    run(m, dir, h) {
+      const tmpRoot = h.tmp('dp-tmp-');
+      const env = { env: { TMPDIR: tmpRoot } };
+      const heads = (t) => (t.match(/^## \d+\. /gm) ?? []).length;
+      const times = (t, s) => t.split(s).length - 1;
+      const addToRecord = (record, entries) => appendFileSync(record, entries.map((e) => JSON.stringify(e)).join('\n') + '\n');
+      /** A session whose record holds `entries`, with the calls a session makes. */
+      const sess = (sid, entries, o = {}) => {
+        const s = recallSession(h, tmpRoot, () => entries, { filed: false, sid, ...o });
+        const payload = (extra = {}) => ({ transcript_path: s.record, session_id: sid, ...extra });
+        return {
+          ...s,
+          read: () => (existsSync(s.file) ? readFileSync(s.file, 'utf8') : ''),
+          add: (entries2) => addToRecord(s.record, entries2),
+          start: (source = 'startup') => disp(h, dir, 'SessionStart', payload({ source }), env),
+          prompt: (text, extra = {}) => disp(h, dir, 'UserPromptSubmit', payload({ prompt: text, ...extra }), env),
+          call: (tool_name, tool_input, extra = {}) => disp(h, dir, 'PreToolUse', payload({ tool_name, tool_input, ...extra }), env),
+        };
+      };
+      const first = 'Plant first message.';
+      const second = 'Plant second message.';
+      const third = 'Plant third message typed at its prompt.';
+      const queued = 'Plant queued message typed in the middle of a turn. Go.';
+      const a = sess('kt-a', [typed(h, 0, first), typed(h, 100, second)]);
+      const aStart = a.start();
+      const atStart = a.read();
+      const p1 = a.prompt(third);
+      const afterPrompt = a.read();
+      a.add([typed(h, 200, third), enqueue(h, 300, queued), absorbed(h, 360, queued)]);
+      const s1 = a.call('Agent', { prompt: 'x' });
+      const afterSend = a.read();
+      const s2 = a.call('Agent', { prompt: 'x' });
+      const afterSecond = a.read();
+      // A go-word typed twice, each at its own prompt, is filed twice, and neither is filed again before the next send.
+      const t = sess('kt-t', [typed(h, 0, 'Plant twice start.')]);
+      t.start();
+      t.prompt('Go.');
+      t.add([typed(h, 100, 'Go.')]);
+      t.prompt('Go.');
+      t.add([typed(h, 200, 'Go.'), typed(h, 300, 'Plant after the twice. Go.')]);
+      const tSend = t.call('Agent', { prompt: 'x' });
+      const tText = t.read();
+      // Harness text that arrives as a prompt is not filed.
+      const n = sess('kt-n', [typed(h, 0, first)]);
+      n.start();
+      const nBefore = n.read();
+      n.prompt('<task-notification>planted notice words</task-notification>');
+      n.prompt('Stop hook feedback: planted feedback words');
+      n.prompt('   ');
+      // A record that already holds the message at its prompt files it once.
+      const r = sess('kt-r', [typed(h, 0, first)]);
+      r.start();
+      r.add([typed(h, 100, 'Plant already in the record.')]);
+      r.prompt('Plant already in the record.');
+      const rText = r.read();
+      // An agent's prompt and an agent's send add nothing, and neither does a main-thread call that is no send.
+      const g = sess('kt-g', [typed(h, 0, first)]);
+      g.start();
+      g.add([typed(h, 100, 'Plant unfiled message. Go.')]);
+      const gBefore = g.read();
+      g.prompt('Plant words from an agent.', { agent_id: 'ag1' });
+      g.call('Agent', { prompt: 'x' }, { agent_id: 'ag1' });
+      const gAgent = g.read();
+      g.call('Bash', { command: 'ls' });
+      const gBash = g.read();
+      g.call('Agent', { prompt: 'x' });
+      const gSend = g.read();
+      // A file with no state beside it is left alone, and so is a state whose file is gone.
+      const z = sess('kt-z', [typed(h, 0, first)], { filed: true });
+      const zBefore = z.read();
+      z.prompt('Plant words with no state.');
+      const zAfter = z.read();
+      const y = sess('kt-y', [typed(h, 0, first)]);
+      y.start();
+      rmSync(y.file, { force: true });
+      y.prompt('Plant words with no file.');
+      // The message last filed is more than two megabytes back in the record: the tail widens to find it.
+      const b = sess('kt-b', [typed(h, 0, first)]);
+      b.start();
+      b.add([h.result(10, 'kt-big', 'x'.repeat(3 * 1024 * 1024)), typed(h, 20, 'Plant after the big result.')]);
+      b.prompt('Plant at the prompt after it.');
+      const bText = b.read();
+      const quiet = (r2) => r2.status === 0 && r2.stdout === `${pageLine(dir)}\n` && r2.stderr === '';
+      return h.assertAll([
+        ['a start files the two messages it finds', aStart.status === 0 && heads(atStart) === 2, said(aStart)],
+        ['a prompt prints the one line and nothing else, and exits 0', quiet(p1), said(p1)],
+        ['the message a prompt carries is added to the end, as message 3, and what was filed is left as it was', afterPrompt.startsWith(atStart) && heads(afterPrompt) === 3 && /^## 3\. [A-Z][a-z]{2} \d+, \d\d:\d\d$/m.test(afterPrompt) && afterPrompt.endsWith(`\n\n${third}\n`), afterPrompt],
+        ['a send of an agent passes', s1.status === 0 && s1.stdout === '' && s2.status === 0, said(s1) + said(s2)],
+        ['before the send passes the queued message is in the file, as message 4, after the third', heads(afterSend) === 4 && /^## 4\. /m.test(afterSend) && afterSend.startsWith(afterPrompt) && afterSend.endsWith(`\n\n${queued}\n`), afterSend],
+        ['the third message, added at its prompt, is not added again when the record shows it', times(afterSend, third) === 1, afterSend],
+        ['a second send adds nothing', afterSecond === afterSend, afterSecond],
+        ['a go-word typed twice at two prompts stands twice, and nothing was added again at the send', tSend.status === 0 && times(tText, '\nGo.\n') === 2 && heads(tText) === 4 && tText.endsWith('\n\nPlant after the twice. Go.\n'), tText],
+        ['a notice of a task, hook feedback and an empty prompt are not added', n.read() === nBefore, n.read()],
+        ['a message the record already holds at its prompt is filed once', times(rText, 'Plant already in the record.') === 1 && heads(rText) === 2, rText],
+        ['an agent\'s prompt and an agent\'s send add nothing', gAgent === gBefore, gAgent],
+        ['a main-thread call that is no send adds nothing', gBash === gBefore, gBash],
+        ['a send of the main thread adds the message the record holds', times(gSend, 'Plant unfiled message. Go.') === 1 && heads(gSend) === 2, gSend],
+        ['a file with no state is left as it was', zAfter === zBefore && !existsSync(z.file.replace(/\.md$/, '.state')), zAfter],
+        ['a state whose file is gone makes no file', !existsSync(y.file), y.read()],
+        ['a message more than two megabytes back is found, and the two after it are added in order', heads(bText) === 3 && bText.indexOf(first) < bText.indexOf('Plant after the big result.') && bText.indexOf('Plant after the big result.') < bText.indexOf('Plant at the prompt after it.'), bText.slice(0, 600)],
+      ]);
+    },
+  },
+  {
+    name: 'hold 0 (read): after a compaction only the lines the file held then are due: the start records their count, lines added later are never due, a resume makes nothing due, a read made before the file grew still counts, and where no count is recorded the file is due whole',
+    guards: ['kt_due_write', 'kt_due_any', 'kt_due_file', 'kt_due_parse', 'kt_due_lines', 'kt_cap', 'kt_total', 'kt_list_text', 'kt_dueto_here'],
+    run(m, dir, h) {
+      const w = world(h);
+      const hub = pagedHub(h, dir);
+      const tmpRoot = h.tmp('dp-tmp-');
+      const env = { env: { TMPDIR: tmpRoot } };
+      const pages = (s) => readAllThree(h, s, hub);
+      const addToRecord = (record, entries) => appendFileSync(record, entries.map((e) => JSON.stringify(e)).join('\n') + '\n');
+      const build = () => recallSession(h, tmpRoot, () => [typed(h, 0, 'Go.'), ...compaction(h, 20), typed(h, 22, 'Carry on. Go.'), ...pages(30)], { filed: false });
+      const startOf = (s, source) => disp(h, dir, 'SessionStart', { source, transcript_path: s.record, session_id: 'dp-session' }, env);
+      const bashOf = (s) => readingIn(w, hub, call('Bash', { command: 'ls' }, s.record), tmpRoot);
+      const linesOf = (s) => readFileSync(s.file, 'utf8').split('\n').slice(0, -1);
+      const dueOf = (s) => s.file.replace(/\.md$/, '.due');
+      const grow = (s) => disp(h, dir, 'UserPromptSubmit', { transcript_path: s.record, session_id: 'dp-session', prompt: 'Plant typed after the compaction. Go.' }, env);
+      // A: the count is recorded, a read of those lines lifts it, and the file grows.
+      const a = build();
+      startOf(a, 'compact');
+      const rows = linesOf(a);
+      const dueText = existsSync(dueOf(a)) ? readFileSync(dueOf(a), 'utf8') : null;
+      const noRead = bashOf(a);
+      addToRecord(a.record, readFileOf(h, 40, 'kt-r8', a.file, rows, { from: 1, to: rows.length - 1 }));
+      const short = bashOf(a);
+      addToRecord(a.record, readFileOf(h, 44, 'kt-r9', a.file, rows, { from: 1, to: rows.length }));
+      const covered = bashOf(a);
+      grow(a);
+      const grown = linesOf(a).length;
+      const afterGrow = bashOf(a);
+      addToRecord(a.record, [typed(h, 60, 'Plant typed after the compaction. Go.')]);
+      startOf(a, 'resume');
+      const afterResume = bashOf(a);
+      const dueResume = existsSync(dueOf(a)) ? readFileSync(dueOf(a), 'utf8') : null;
+      // B: no count was recorded, so the file is due whole, and a read that the file has outgrown counts for nothing.
+      const b = build();
+      startOf(b, 'compact');
+      rmSync(dueOf(b), { force: true });
+      addToRecord(b.record, readFileOf(h, 44, 'kt-b9', b.file, linesOf(b), { from: 1, to: linesOf(b).length }));
+      grow(b);
+      const bHeld = bashOf(b);
+      // C: a count that is not a number is no count.
+      const c = build();
+      startOf(c, 'compact');
+      writeFileSync(dueOf(c), 'plant words\n');
+      addToRecord(c.record, readFileOf(h, 44, 'kt-c9', c.file, linesOf(c), { from: 1, to: linesOf(c).length }));
+      grow(c);
+      const cHeld = bashOf(c);
+      // D: a count past the file's end is no more than the file.
+      const d = build();
+      startOf(d, 'compact');
+      writeFileSync(dueOf(d), '99\n');
+      addToRecord(d.record, readFileOf(h, 44, 'kt-d9', d.file, linesOf(d)));
+      const dPass = bashOf(d);
+      return h.assertAll([
+        ['a compaction start records the lines the file then held', rows.length === 9 && dueText === `${rows.length}\n`, `${rows.length} ${dueText}`],
+        ['with no read the file is due as far as that count, and the refusal says so', held(noRead, /^TYPED MESSAGES UNREAD/) && noRead.stderr.includes(`${a.file} (lines 1 to ${rows.length}, the file as it stood at the compaction)`), said(noRead)],
+        ['a read of one line fewer leaves it due', held(short, /^TYPED MESSAGES UNREAD/), said(short)],
+        ['a read of those lines lifts it', passes(covered), said(covered)],
+        ['lines added after the compaction are never due, though the read it made was of a file that has grown since', grown > rows.length && passes(afterGrow), `${grown} ${said(afterGrow)}`],
+        ['a resume that files one more message makes nothing due and records no new count', passes(afterResume) && dueResume === dueText, `${said(afterResume)} ${dueResume}`],
+        ['where no count is recorded the file is due whole, and a read of the file as it stood counts for nothing once it has grown', held(bHeld, /^TYPED MESSAGES UNREAD.*every line/s), said(bHeld)],
+        ['a count that is not a number is no count', held(cHeld, /^TYPED MESSAGES UNREAD.*every line/s), said(cHeld)],
+        ['a count past the file\'s end asks for no more than the file', passes(dPass), said(dPass)],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
@@ -1963,7 +2135,7 @@ export const plants = {
   dp_popup: ["    if (tool === 'AskUserQuestion') {", '    if (false) {', 'hook-dispatch.mjs'],
   dp_push_refusal: ["    if (o.deny) { process.stderr.write(o.reason + '\\n'); latchAfter(p, o.reason); return 2; }\n    if (o.status !== 0", "    if (false) { process.stderr.write(o.reason + '\\n'); return 2; }\n    if (o.status !== 0", 'hook-dispatch.mjs'],
   dp_unclean: ['    if (o.status !== 0 && !READS.has(tool)) {', '    if (false) {', 'hook-dispatch.mjs'],
-  dp_page_prompt: ["  if (event === 'UserPromptSubmit') process.stdout.write(`${PAGE_LINE}\\n`);", "  if (false) process.stdout.write(`${PAGE_LINE}\\n`);", 'hook-dispatch.mjs'],
+  dp_page_prompt: ["  if (event === 'UserPromptSubmit') {\n    process.stdout.write(`${PAGE_LINE}\\n`);", "  if (event === 'UserPromptSubmit') {\n    void 0;", 'hook-dispatch.mjs'],
   dp_page_start: ["    process.stdout.write(`${PAGE_LINE}\\n`);\n    try { const more = moreThanOneRepoLine(p, root);", "    void 0;\n    try { const more = moreThanOneRepoLine(p, root);", 'hook-dispatch.mjs'],
   dp_start_main_only: ["  if (event === 'SessionStart' && !p.agent_id) {\n    const root", "  if (event === 'SessionStart') {\n    const root", 'hook-dispatch.mjs'],
   dp_bring_merge: ["    const merged = git(dir, ['merge', '--ff-only', 'origin/main']);", "    const merged = git(dir, ['status']);", 'hook-dispatch.mjs'],
@@ -2068,8 +2240,8 @@ export const plants = {
   rd_why: ["        + `${unread.length ? WHY_READ : ''}${recallDue ? WHY_RECALL : ''}`.trimEnd();", "        + '';", 'hook-dispatch.mjs'],
   rd_no_latch: ['    if (cut >= 0 || size <= mb * 1024 * 1024) {\n', "    if (cut >= 0 || size <= mb * 1024 * 1024) {\n      latchAfter(p, 'planted read refusal');\n", 'hook-dispatch.mjs'],
   rd_lift: ['    const unread = pages.filter((pg) => !pg.files.some((f) => readWhole(live, f)));', '    const unread = pages;', 'hook-dispatch.mjs'],
-  rd_partial: ['for (let k = 1; k <= n.text; k++) if (!got.has(k)) return false;', 'for (let k = 1; k <= 1; k++) if (!got.has(k)) return false;', 'hook-dispatch.mjs'],
-  rd_stale: ['if (Number(rec.totalLines) > 0 && Number(rec.totalLines) !== n.text && Number(rec.totalLines) !== n.split) continue;', 'void 0;', 'hook-dispatch.mjs'],
+  rd_partial: ['for (let k = 1; k <= total; k++) if (!got.has(k)) return false;', 'for (let k = 1; k <= 1; k++) if (!got.has(k)) return false;', 'hook-dispatch.mjs'],
+  rd_stale: ['if (upTo === null && Number(rec.totalLines) > 0 && Number(rec.totalLines) !== n.text && Number(rec.totalLines) !== n.split) continue;', 'void 0;', 'hook-dispatch.mjs'],
   rd_error: ["if (b?.type !== 'tool_result' || b.is_error || !asked.has(b.tool_use_id)) continue;\n      const rec", "if (b?.type !== 'tool_result' || !asked.has(b.tool_use_id)) continue;\n      const rec", 'hook-dispatch.mjs'],
   rd_other_copy: ['if (canon(rec?.filePath || asked.get(b.tool_use_id)) !== want) continue;', 'void 0;', 'hook-dispatch.mjs'],
   rd_numlines: ['for (let k = 0; k < rec.numLines; k++) got.add(rec.startLine + k);', 'for (let k = 0; k < 1; k++) got.add(rec.startLine + k);', 'hook-dispatch.mjs'],
@@ -2158,13 +2330,43 @@ export const plants = {
   rc_print: ["{ if (p.source === 'compact') process.stdout.write(", '{ if (false) process.stdout.write(', 'hook-dispatch.mjs'],
   rc_failline: ['else if (!filed.skipped) process.stdout.write(', 'else if (false) process.stdout.write(', 'hook-dispatch.mjs'],
   rc_skipped: ['else if (!filed.skipped) process.stdout.write(', 'else process.stdout.write(', 'hook-dispatch.mjs'],
-  rc_hold: ['const recallDue = recallHere && cut >= 0 && !readWhole(live, recall);', 'const recallDue = false;', 'hook-dispatch.mjs'],
-  rc_live: ['const recallDue = recallHere && cut >= 0 && !readWhole(live, recall);', 'const recallDue = recallHere && cut >= 0 && !readWhole(entries, recall);', 'hook-dispatch.mjs'],
-  rc_resume: ['const recallDue = recallHere && cut >= 0 && !readWhole(live, recall);', 'const recallDue = recallHere && !readWhole(live, recall);', 'hook-dispatch.mjs'],
+  rc_hold: ['const recallDue = recallHere && cut >= 0 && !readWhole(live, recall, dueTo);', 'const recallDue = false;', 'hook-dispatch.mjs'],
+  rc_live: ['const recallDue = recallHere && cut >= 0 && !readWhole(live, recall, dueTo);', 'const recallDue = recallHere && cut >= 0 && !readWhole(entries, recall, dueTo);', 'hook-dispatch.mjs'],
+  rc_resume: ['const recallDue = recallHere && cut >= 0 && !readWhole(live, recall, dueTo);', 'const recallDue = recallHere && !readWhole(live, recall, dueTo);', 'hook-dispatch.mjs'],
   rc_absent: ['const recallHere = !!recall && existsSync(recall);', 'const recallHere = !!recall;', 'hook-dispatch.mjs'],
   rc_why_recall: ["${recallDue ? WHY_RECALL : ''}", '', 'hook-dispatch.mjs'],
-  rc_list: ['...(recallDue ? [`${recall} (every line, ${linesOf(recall)?.text} lines)`] : [])', '...[]', 'hook-dispatch.mjs'],
+  rc_list: ['...(recallDue ? [`${recall} (${recallLines})`] : [])', '...[]', 'hook-dispatch.mjs'],
   rc_head: ["${unread.length ? 'STANDING PAGES UNREAD' : 'TYPED MESSAGES UNREAD'}", 'STANDING PAGES UNREAD', 'hook-dispatch.mjs'],
   rc_unsure: ['const recallUnsure = recallHere && cut < 0 && size > mb * 1024 * 1024 && !readWhole(entries, recall);', 'const recallUnsure = false;', 'hook-dispatch.mjs'],
+  kt_prompt_hook: ["keepTypedMessages(p, typeof p.prompt === 'string' ? p.prompt : null);", 'void 0;', 'hook-dispatch.mjs'],
+  kt_prompt_main: ["    if (!p.agent_id) {\n      try { keepTypedMessages(p, typeof", "    if (true) {\n      try { keepTypedMessages(p, typeof", 'hook-dispatch.mjs'],
+  kt_send: ["    if (!p.agent_id && NEW_STARTS.has(tool)) {\n      try { keepTypedMessages(p); }", "    if (false) {\n      try { keepTypedMessages(p); }", 'hook-dispatch.mjs'],
+  kt_send_main: ["if (!p.agent_id && NEW_STARTS.has(tool)) {\n      try { keepTypedMessages", "if (NEW_STARTS.has(tool)) {\n      try { keepTypedMessages", 'hook-dispatch.mjs'],
+  kt_send_tool: ["if (!p.agent_id && NEW_STARTS.has(tool)) {\n      try { keepTypedMessages(p); }", "if (!p.agent_id) {\n      try { keepTypedMessages(p); }", 'hook-dispatch.mjs'],
+  kt_owner: ['if (tail.isOwnerMessage(entry) && !(last', 'if (!(last', 'hook-dispatch.mjs'],
+  kt_same: ['!(last && normText(last.text) === normText(tail.textOf(entry)))', 'true', 'hook-dispatch.mjs'],
+  kt_absorb: ['const add = fresh.slice(absorbed);', 'const add = fresh;', 'hook-dispatch.mjs'],
+  kt_absorb_n: ['const absorbed = Math.min(pending, fresh.length);', 'const absorbed = 0;', 'hook-dispatch.mjs'],
+  kt_pending_up: ['waiting += 1; }', 'waiting += 0; }', 'hook-dispatch.mjs'],
+  kt_anchor_after: ['fresh = list.slice(at + 1); break;', 'fresh = list.slice(at); break;', 'hook-dispatch.mjs'],
+  kt_anchor_at: ['if (String(list[k].at) === st.anchor.at && anchorOf(list[k]).hash === st.anchor.hash) at = k;', 'if (anchorOf(list[k]).hash === st.anchor.hash) at = k;', 'hook-dispatch.mjs'],
+  kt_number: ['let k = st.filed;', 'let k = 0;', 'hook-dispatch.mjs'],
+  kt_append: ['appendFileSync(file, add.map(', 'writeFileSync(file, add.map(', 'hook-dispatch.mjs'],
+  kt_state_write: ["writeFileSync(recallBeside(file, 'state'), JSON.stringify({ filed: st.filed, anchor, pending: waiting }));", 'void 0;', 'hook-dispatch.mjs'],
+  kt_nostate: ["if (!st || !Number.isInteger(st.filed) || st.filed < 0 || !existsSync(file)) return { ok: false, skipped: true, why: 'the file has no state' };", 'if (!st) st = { filed: 0, anchor: null, pending: 0 };', 'hook-dispatch.mjs'],
+  kt_file_exists: ["st.filed < 0 || !existsSync(file)) return", "st.filed < 0) return", 'hook-dispatch.mjs'],
+  kt_widen: ["for (const mb of [2, 8, 32]) {\n      const list = typedMessages(", "for (const mb of [2]) {\n      const list = typedMessages(", 'hook-dispatch.mjs'],
+  kt_state_start: ["try { writeFileSync(recallBeside(file, 'state'), JSON.stringify({ filed: list.length, anchor: anchorOf(list[list.length - 1]), pending: 0 })); } catch { /* the next start writes it */ }", 'void 0;', 'hook-dispatch.mjs'],
+  kt_state_anchor: ['anchor: anchorOf(list[list.length - 1]), pending: 0', 'anchor: null, pending: 0', 'hook-dispatch.mjs'],
+  kt_state_filed: ['JSON.stringify({ filed: list.length,', 'JSON.stringify({ filed: 0,', 'hook-dispatch.mjs'],
+  kt_due_write: ["if (p.source === 'compact') { try { writeFileSync(recallBeside(file, 'due')", "if (false) { try { writeFileSync(recallBeside(file, 'due')", 'hook-dispatch.mjs'],
+  kt_due_any: ["if (p.source === 'compact') { try { writeFileSync(recallBeside(file, 'due')", "if (true) { try { writeFileSync(recallBeside(file, 'due')", 'hook-dispatch.mjs'],
+  kt_due_file: ["readFileSync(recallBeside(file, 'due'), 'utf8')", "readFileSync(recallBeside(file, 'dun'), 'utf8')", 'hook-dispatch.mjs'],
+  kt_due_parse: ['return Number.isInteger(n) && n >= 0 ? n : null;', 'return n;', 'hook-dispatch.mjs'],
+  kt_due_lines: ["writeFileSync(recallBeside(file, 'due'), `${linesOf(file)?.text}\\n`)", "writeFileSync(recallBeside(file, 'due'), `${linesOf(file)?.split}\\n`)", 'hook-dispatch.mjs'],
+  kt_cap: ['Math.min(upTo, n.text)', 'upTo', 'hook-dispatch.mjs'],
+  kt_total: ['if (upTo === null && Number(rec.totalLines) > 0', 'if (Number(rec.totalLines) > 0', 'hook-dispatch.mjs'],
+  kt_list_text: ['const recallLines = dueTo === null ?', 'const recallLines = true ?', 'hook-dispatch.mjs'],
+  kt_dueto_here: ['const dueTo = recallHere ? recallDueLines(recall) : null;', 'const dueTo = null;', 'hook-dispatch.mjs'],
   pl_no_latch: ["  return a.startsWith(root + '/') ? PLAN_TEXT : null;", "  if (a.startsWith(root + '/')) { latchAfter(p, 'planted plan file refusal'); return PLAN_TEXT; }\n  return null;", 'hook-dispatch.mjs'],
 };

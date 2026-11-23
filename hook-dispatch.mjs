@@ -11,7 +11,9 @@
  *                  the call and prints one line to the error output, and none of them ever refusing a read (READS):
  *                    0. the read at a start (holdRead): after a start, a clear or a compaction the main thread may only read until the
  *                       short page, doctrine/never.md and doctrine/hub.md have each been read whole, in the hub's copy or in a checkout of
- *                       the hub; after a compaction the file of the typed messages (`fileTypedMessages`, filed at every start) is due as well, where it is there;
+ *                       the hub; after a compaction the file of the typed messages (`fileTypedMessages`, filed at every start and kept current by
+ *                       `keepTypedMessages`) is due as well, where it is there, as far as the lines it held at the compaction (`recallDueLines`; due whole where
+ *                       no count is recorded), and a resume makes nothing due;
  *                       an agent is not held by it (HOOK_DISPATCH_READ_HOLD=off is its test seam).
  *                    1. the typed word: a newest typed message that is the word stop by itself, or has it as a whole sentence, and has no
  *                       go-word at its end (a sentence ends at a full stop, an exclamation mark, a question mark or a line's end, and
@@ -44,7 +46,9 @@
  *                  more sit directly beneath it (`moreThanOneRepoLine`); it tells and refuses nothing. Then the typed messages of the session
  *                  are filed whole in the session scratchpad (`fileTypedMessages`); a compaction's print names the file and its count, and a file
  *                  that cannot be written is one line that says so.
- *   UserPromptSubmit   the one line, then each repository's own hooks and what they print.
+ *   UserPromptSubmit   the one line, then (main thread) the typed message the prompt carries is added to the end of the file of the typed messages
+ *                  (`keepTypedMessages`; before a send of an agent or a workflow passes it adds the typed messages the tail holds as well), then
+ *                  each repository's own hooks and what they print.
  *   every other event  each repository's own hooks.
  *
  * `node hook-dispatch.mjs --install` writes the wiring of the nine events into the user-level settings file. It runs from a stable
@@ -53,7 +57,7 @@
  * It cannot block a session by its own fault: an error thrown anywhere outside the push guard's own refusal is printed to the error
  * output and the event exits 0. It imports only node's own modules.
  */
-import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, realpathSync, statSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, appendFileSync, readdirSync, mkdirSync, realpathSync, statSync, rmSync } from 'node:fs';
 import { join, dirname, resolve, basename } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
@@ -758,11 +762,82 @@ export function fileTypedMessages(p) {
     if (size > 0 && !entries.length) return { ok: false, why: `the session's record ${record} could not be read` };
     const list = typedMessages(entries);
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, `${[RECALL_FIRST_LINE, ...list.map((m, k) => `## ${k + 1}. ${californiaStamp(m.at)}\n\n${m.text}`)].join('\n\n')}\n`);
+    writeFileSync(file, `${[RECALL_FIRST_LINE, ...list.map((m, k) => entryOf(k + 1, m))].join('\n\n')}\n`);
+    // What keeps the file current beside it, and, at a compaction alone, how many lines it holds then. A failure here refuses nothing: with no state
+    // the file is not added to until the next start, and with no count the file is due whole after a compaction.
+    try { writeFileSync(recallBeside(file, 'state'), JSON.stringify({ filed: list.length, anchor: anchorOf(list[list.length - 1]), pending: 0 })); } catch { /* the next start writes it */ }
+    if (p.source === 'compact') { try { writeFileSync(recallBeside(file, 'due'), `${linesOf(file)?.text}\n`); } catch { /* the file is then due whole */ } }
     return { ok: true, file, count: list.length };
   } catch (e) {
     return { ok: false, why: `${file} could not be written: ${e?.message ?? e}` };
   }
+}
+
+/** A file kept beside the file of the typed messages: its name with the extension `ext` in the place of `.md`. */
+const recallBeside = (file, ext) => file.replace(/\.md$/, `.${ext}`);
+/** How a filed message is told again in the record: the time it was typed and a hash of its words, kept in `state`. */
+const anchorOf = (m) => (m ? { at: String(m.at), hash: createHash('sha1').update(String(m.text)).digest('hex') } : null);
+/** The heading and the words of a message as the file shows them. */
+const entryOf = (k, m) => `## ${k}. ${californiaStamp(m.at)}\n\n${m.text}`;
+
+/**
+ * Keep the file of the typed messages current between starts, by adding to its end. It never rewrites what is filed and never reads the whole
+ * record: it reads the tail that the holds read (2, 8, then 32 MB), where the last message filed stands, and adds each typed message after it.
+ * The file's `state` beside it holds how many messages are filed, the last one the record showed (`anchor`), and how many were added at their
+ * prompt that the record has not shown yet (`pending`). A message is told from one filed by its place in the record: the messages after the
+ * anchor are the ones not yet seen, and the first `pending` of them are the ones already filed at their prompt. Where there is no state, or the
+ * anchor is not in the widest tail, nothing is added and the next start files the whole.
+ * @param {object} p  the payload of a main thread's call.
+ * @param {string|null} [prompt]  the words a UserPromptSubmit carries, added where the record does not hold them yet and `isOwnerMessage` accepts them.
+ * @returns {{ok: boolean, added?: number, skipped?: boolean, why?: string}} it throws nothing.
+ */
+export function keepTypedMessages(p, prompt = null) {
+  const file = recallFile(p);
+  if (!file) return { ok: false, skipped: true, why: 'the payload names no transcript or session' };
+  try {
+    let st = null;
+    try { st = JSON.parse(readFileSync(recallBeside(file, 'state'), 'utf8')); } catch { st = null; }
+    if (!st || !Number.isInteger(st.filed) || st.filed < 0 || !existsSync(file)) return { ok: false, skipped: true, why: 'the file has no state' };
+    const record = String(p.transcript_path);
+    const size = statSync(record).size;
+    let fresh = null;
+    for (const mb of [2, 8, 32]) {
+      const list = typedMessages(tail.tailEntries(record, mb * 1024 * 1024));
+      if (!st.anchor) { if (size <= mb * 1024 * 1024) { fresh = list; break; } continue; }
+      let at = -1;
+      for (let k = list.length - 1; k >= 0 && at < 0; k--) if (String(list[k].at) === st.anchor.at && anchorOf(list[k]).hash === st.anchor.hash) at = k;
+      if (at >= 0) { fresh = list.slice(at + 1); break; }
+    }
+    if (!fresh) return { ok: false, skipped: true, why: 'the last message filed is not in the record\'s tail' };
+    const pending = Math.max(0, Number(st.pending) || 0);
+    const absorbed = Math.min(pending, fresh.length);
+    const add = fresh.slice(absorbed);
+    let waiting = pending - absorbed;
+    const anchor = fresh.length ? anchorOf(fresh[fresh.length - 1]) : st.anchor;
+    if (prompt !== null) {
+      const entry = { type: 'user', origin: { kind: 'human' }, message: { role: 'user', content: String(prompt) } };
+      const last = add[add.length - 1];
+      // The record may hold the prompt already: then the last message it shows that is not filed is this one.
+      if (tail.isOwnerMessage(entry) && !(last && normText(last.text) === normText(tail.textOf(entry)))) { add.push({ text: tail.textOf(entry), at: Date.now() }); waiting += 1; }
+    }
+    if (add.length) {
+      let k = st.filed;
+      appendFileSync(file, add.map((m) => `\n${entryOf(++k, m)}\n`).join(''));
+      st.filed = k;
+    }
+    writeFileSync(recallBeside(file, 'state'), JSON.stringify({ filed: st.filed, anchor, pending: waiting }));
+    return { ok: true, added: add.length };
+  } catch (e) {
+    return { ok: false, why: `${file} could not be kept current: ${e?.message ?? e}` };
+  }
+}
+
+/** @returns {number|null} the lines the file of the typed messages held at the last compaction, as the start recorded them; null where none is recorded. */
+function recallDueLines(file) {
+  try {
+    const n = Number(readFileSync(recallBeside(file, 'due'), 'utf8').trim());
+    return Number.isInteger(n) && n >= 0 ? n : null;
+  } catch { return null; }
 }
 
 /** @returns {{text: number, split: number}|null} the lines of text a file holds and the count the harness records as its total (the empty text after a final newline counted); null when it cannot be read. */
@@ -779,11 +854,15 @@ function linesOf(file) {
  *   A result comes from the harness's own record (`toolUseResult.file`: its first line, its count of lines and the file's total) or,
  *   where that is absent, from the line numbers in its text. A result recorded with a total that is not the file's now was made of
  *   other text and counts for nothing; a call's offset and limit count for nothing, only the lines returned do.
+ *   Where `upTo` is given, only the lines from the first to that count (or to the file's last, where it is shorter) are asked for, and the
+ *   rule of the recorded total is not put: that is the file of the typed messages, which only grows.
  */
-export function readWhole(entries, file) {
+export function readWhole(entries, file, upTo = null) {
   const n = linesOf(file);
   if (!n) return false;
-  if (n.text === 0) return true;
+  // With `upTo` only the lines from the first to that count are asked for, and a result's recorded total is not put to the file: it only grows.
+  const total = upTo === null ? n.text : Math.min(upTo, n.text);
+  if (total === 0) return true;
   const want = canon(file);
   const asked = new Map();
   for (const e of entries) {
@@ -799,7 +878,7 @@ export function readWhole(entries, file) {
       const rec = e.toolUseResult?.file;
       if (canon(rec?.filePath || asked.get(b.tool_use_id)) !== want) continue;
       if (rec && Number.isFinite(rec.startLine) && Number.isFinite(rec.numLines) && typeof rec.content === 'string') {
-        if (Number(rec.totalLines) > 0 && Number(rec.totalLines) !== n.text && Number(rec.totalLines) !== n.split) continue;
+        if (upTo === null && Number(rec.totalLines) > 0 && Number(rec.totalLines) !== n.text && Number(rec.totalLines) !== n.split) continue;
         for (let k = 0; k < rec.numLines; k++) got.add(rec.startLine + k);
       } else {
         const t = typeof b.content === 'string' ? b.content : Array.isArray(b.content) ? b.content.map((x) => x?.text ?? '').join('\n') : '';
@@ -807,7 +886,7 @@ export function readWhole(entries, file) {
       }
     }
   }
-  for (let k = 1; k <= n.text; k++) if (!got.has(k)) return false;
+  for (let k = 1; k <= total; k++) if (!got.has(k)) return false;
   return true;
 }
 
@@ -844,17 +923,21 @@ function holdRead(p) {
   const recall = recallFile(p);
   const recallHere = !!recall && existsSync(recall);
   if (!pages.length && !recallHere) return null;
+  // What was due at the compaction is the lines the file then held, as the start recorded them; lines added later are never due. Where no count is
+  // recorded the file is due whole.
+  const dueTo = recallHere ? recallDueLines(recall) : null;
+  const recallLines = dueTo === null ? `every line, ${linesOf(recall)?.text} lines` : `lines 1 to ${dueTo}, the file as it stood at the compaction`;
   for (const mb of [2, 8, 32]) {
     const entries = tail.tailEntries(file, mb * 1024 * 1024);
     if (!entries.length) return null;
     const cut = lastCompaction(entries);
     const live = entries.slice(cut + 1);
     const unread = pages.filter((pg) => !pg.files.some((f) => readWhole(live, f)));
-    const recallDue = recallHere && cut >= 0 && !readWhole(live, recall);
+    const recallDue = recallHere && cut >= 0 && !readWhole(live, recall, dueTo);
     const recallUnsure = recallHere && cut < 0 && size > mb * 1024 * 1024 && !readWhole(entries, recall);
     if (!unread.length && !recallDue && !recallUnsure) return null;
     if (cut >= 0 || size <= mb * 1024 * 1024) {
-      const list = [...unread.map((pg) => `${pg.files[0]} (every line, ${linesOf(pg.files[0])?.text} lines)`), ...(recallDue ? [`${recall} (every line, ${linesOf(recall)?.text} lines)`] : [])].join('; ');
+      const list = [...unread.map((pg) => `${pg.files[0]} (every line, ${linesOf(pg.files[0])?.text} lines)`), ...(recallDue ? [`${recall} (${recallLines})`] : [])].join('; ');
       const due = unread.length + (recallDue ? 1 : 0);
       const what = unread.length ? `${unread.length === 1 ? 'a standing page' : 'the standing pages'}${recallDue ? ' and the file of its typed messages' : ''}` : 'the file of its typed messages';
       return `${unread.length ? 'STANDING PAGES UNREAD' : 'TYPED MESSAGES UNREAD'}: this session ${unread.length ? 'started or was compacted' : 'was compacted'} and has not read ${what} whole since, so the main thread may only read until ${due === 1 ? 'it has' : 'each has'} been read: ${list}. `
@@ -1214,6 +1297,10 @@ async function main(event, raw, p) {
     }
     const held = holds(p);
     if (held) { process.stderr.write(held + '\n'); return 2; }
+    // Before a send of an agent or a workflow passes, the typed messages the tail holds are filed, so that a checker reads every one typed up to its send.
+    if (!p.agent_id && NEW_STARTS.has(tool)) {
+      try { keepTypedMessages(p); } catch (e) { process.stderr.write(`hook-dispatch.mjs: the typed messages were not kept current: ${e?.message ?? e}\n`); }
+    }
     return repoHooks(event, raw, p, new Set(), (why) => latchAfter(p, why));
   }
   if (event === 'Stop' && !p.agent_id) {
@@ -1237,7 +1324,13 @@ async function main(event, raw, p) {
       else if (!filed.skipped) process.stdout.write(`TYPED MESSAGES NOT FILED: ${filed.why}. Nothing is refused for it.\n`);
     } catch (e) { process.stdout.write(`TYPED MESSAGES NOT FILED: ${e?.message ?? e}. Nothing is refused for it.\n`); }
   }
-  if (event === 'UserPromptSubmit') process.stdout.write(`${PAGE_LINE}\n`);
+  if (event === 'UserPromptSubmit') {
+    process.stdout.write(`${PAGE_LINE}\n`);
+    // The message this prompt carries is added to the file of the typed messages. A file that cannot be kept current refuses nothing and prints nothing.
+    if (!p.agent_id) {
+      try { keepTypedMessages(p, typeof p.prompt === 'string' ? p.prompt : null); } catch (e) { process.stderr.write(`hook-dispatch.mjs: the typed messages were not kept current: ${e?.message ?? e}\n`); }
+    }
+  }
   return repoHooks(event, raw, p);
 }
 

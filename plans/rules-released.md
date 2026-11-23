@@ -74,3 +74,10 @@ Report, in this order: what was done, what was seen, the files changed, and anyt
 - The reply. A final reply past 150 words, or one that names a feeling, promises conduct or asks for a go-word, is refused. Why: the reader wants the end result, not what was done or how, and cannot read a long reply. A feeling is not the session's to name, a promise is words about a later turn, and a go-word is the owner's to give.
 - `stop-guard.mjs` refuses a final reply past 150 words, one that names a feeling, promises conduct or asks for a go-word, or one that does not end with its state line, and `rules-keep-check.mjs` fails a commit that drops a line from a rules page.
 ```
+
+23 November 2026: the file of the typed messages is kept current at every typed message and before a send, so that a checker reads every message, and after a compaction only the file as it stood then is due, so that a resume makes nothing due. Two lines that said the file is written at every start were replaced.
+
+```
+  - After a compaction the typed messages are due as well. At every start the dispatcher files every typed message of the session, whole and in order, at `recall/typed-messages.md` in the session scratchpad, and after a compaction only reads pass until that file has been read whole. It holds nothing where the file is not there. Why: a summary loses the intent, and the typed messages are where it is.
+- The dispatcher files every typed message of the session, whole, in the session scratchpad at every start, and after a compaction it holds the main thread to reads until that file has been read.
+```
