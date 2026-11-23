@@ -57,3 +57,12 @@ Report, in this order: what was done, what was seen, the files changed, and anyt
 - A page waits for its tier. On the main thread, a write of a file under ~/.claude/plans/ is refused while a tier below the top serves. The refusal gives the line that puts the thread on the top tier. What lifts it: the change of model. Why: drawing a page and changing one are judgement. This holds an amendment too, which doctrine/plans.md lets stay on its running tier.
 - The tier is changed by hand, with the model command typed alone while the thread is idle. A change made with the app's picker while a message waits can be dropped. A session stops and asks at the two points the holds name, and ends its turn so that the thread is idle.
 ```
+
+23 November 2026: the word stop holds everything only by itself, as a whole message or a whole sentence of one, because the word among other words was read as a halt and held work that was meant to go on. Four lines were replaced: the running page's line on the word, its two lines on the names of the stop hook and on a negative before the word, which the rule now covers, and one line of the instruction file of 11 November.
+
+```
+- The owner's word. A message with the word stop holds the main thread and every agent. Any other message that does not end with a go-word holds new starts on the main thread: sending an agent or a workflow, and writing a file. A message that ends with a go-word lifts either, and so does an approval at the button. The go-words are go, ok, continue, approved and yes. Why: without the hold the work goes on over a message and the message is never answered. Only the owner can say it was answered, which is what the go-word is.
+  - The names stop hook, stop hooks and stop guard in a message are not the word stop. Why: on 16 November a message that named the stop hook held a session's plan edit.
+  - The word stop directly after not, never or a word that ends in n't is not the word stop. Why: a message that says not to stop asks for the work to go on, and on 20 November 2026 such a message held a run in the middle of a step.
+ that carries the whole word stop anywhere in it (first, second or last) and
+```

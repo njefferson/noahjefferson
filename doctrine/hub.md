@@ -418,7 +418,7 @@ Every item below has actually happened.
  end the turn. Where the plan has a review step the review step passes, and so
  does a step that a review begun after the message was typed cleared, so
  approved work the message does not touch goes on without a go-word. A message
- that carries the whole word stop anywhere in it (first, second or last) and
+ that is the word stop by itself, or has it as a whole sentence, and
  does not end with a go-word holds the main thread and every agent, a cleared
  step included, until a later message ends with a go-word. Held work is sent again
  only after a go-word. Nine corrections in a

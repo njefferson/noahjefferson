@@ -13,7 +13,9 @@
  *                       short page, doctrine/never.md and doctrine/hub.md have each been read whole, in the hub's copy or in a checkout of
  *                       the hub; after a compaction the file of the typed messages (`fileTypedMessages`, filed at every start) is due as well, where it is there;
  *                       an agent is not held by it (HOOK_DISPATCH_READ_HOLD=off is its test seam).
- *                    1. the typed word: a newest typed message with the whole word stop and no go-word at its end holds every call of
+ *                    1. the typed word: a newest typed message that is the word stop by itself, or has it as a whole sentence, and has no
+ *                       go-word at its end (a sentence ends at a full stop, an exclamation mark, a question mark or a line's end, and
+ *                       the word beside another word in its sentence is no stop) holds every call of
  *                       the main thread and of every agent but a read (and TaskStop on the main thread, an agent's own hand-back);
  *                       a newest typed message with no go-word at its end holds the main thread's new starts (Agent, Task,
  *                       SendMessage, Workflow, and a write of a file that is neither directly under ~/.claude/plans/ nor in the
@@ -285,20 +287,23 @@ export const GO_WORDS = ['go', 'ok', 'continue', 'approved', 'yes'];
 const wordsOf = (t) => String(t ?? '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ');
 /** @returns {boolean} true when, case and punctuation set aside, the last word of the text is a go-word. */
 export function endsWithGoWord(text) { const w = wordsOf(text); return GO_WORDS.includes(w[w.length - 1]); }
-// The word directly before a stop that makes it no stop: not, never, a word that ends in n't (either apostrophe) and the same word with no apostrophe.
-const NEGATIVE_BEFORE_STOP = /^(?:not|never|[\p{L}\p{N}]*n['’]t|(?:do|does|did|is|are|was|were|has|have|had|should|would|could|must|might|need|dare|ought|ca|wo|sha|ai)nt)$/u;
-/** @returns {boolean} true when the whole word stop is anywhere in the text ("stopped" and "unstoppable" are not it), unless the word directly before it is a negative. */
+// The word stop holds only by itself: a sentence is the word and nothing else. A sentence ends at a full stop, an exclamation mark, a question mark or the end of a line;
+// within it only its words are read, so a comma, a quotation mark or a dash counts for nothing. The word beside another word in its sentence (a negative before it, the
+// words hook or guard after it, "stopped") is no stop, and the message is read as any other.
+/** @returns {boolean} true when a sentence of the text is the word stop and nothing else, in any case, said once or several times. */
 export function hasStopWord(text) {
-  const w = String(text ?? '').toLowerCase().replace(/\bstop[ -](?:hooks?|guard)\b/g, ' ').match(/[\p{L}\p{N}]+?n['’]t|[\p{L}\p{N}]+/gu) ?? [];
-  return w.some((x, i) => x === 'stop' && !(i > 0 && NEGATIVE_BEFORE_STOP.test(w[i - 1])));
+  return String(text ?? '').split(/[.!?\n\r]+/).some((s) => {
+    const w = s.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+    return w.length > 0 && w.every((x) => x === 'stop');
+  });
 }
-/** @returns {boolean} a stop message: it has the whole word stop and does not end with a go-word. */
+/** @returns {boolean} a stop message: the word stop by itself or as a whole sentence, and no go-word at the end. */
 export function isStopMessage(text) { return hasStopWord(text) && !endsWithGoWord(text); }
 
 const WHY_WORD = 'Why: without the hold the work goes on over a message and the message is never answered, and only the one who typed it can say it was answered, which is what the go-word is. ';
 const WHY_LATCH = 'Why: another route to the same end puts the session\'s judgement above the control that refused it. ';
 const WHY_MANAGER = 'Why: the top tier is paid for judgement, and the cheapest tier that holds the rules does the rest. ';
-const STOP_TEXT =`STOP: the newest typed message carries the word stop and does not end with a go-word, so every call is held, the main thread's and every agent's. `
+const STOP_TEXT =`STOP: the newest typed message is the word stop by itself, or has it as a whole sentence, and does not end with a go-word, so every call is held, the main thread's and every agent's. `
   + 'Only reads pass, TaskStop on the main thread, and a write of a plan file directly under ~/.claude/plans/ made in plan mode (an agent may still hand back what it has, and write its own report or progress note, a file directly in progress/ of the session scratchpad). The session\'s own entry to plan mode and the button are refused. '
   + `A later typed message whose last word is one of ${GO_WORDS.join(', ')} lifts it, and so does an approval of a plan at the button given after it. `
   + WHY_WORD
@@ -317,7 +322,7 @@ const WHY_PLAN = 'Why: an approved page is changed only by a change that is writ
 /** The refusal of a message still waiting; it prints each waiting message word for word, so that it can be answered. */
 const WAITING_TEXT = (stop, texts) => `MESSAGE WAITING: ${texts.length === 1 ? 'a typed message is' : `${texts.length} typed messages are`} in the queue and not yet delivered to the session, and the session cannot see ${texts.length === 1 ? 'it' : 'them'} until the turn ends. `
   + (stop
-    ? 'One carries the word stop and does not end with a go-word, so every call is held, the main thread\'s and every agent\'s. Only reads pass, TaskStop on the main thread, and a write of a plan file directly under ~/.claude/plans/ made in plan mode (an agent may still hand back what it has). The session\'s own entry to plan mode and the button are refused. '
+    ? 'One is the word stop by itself, or has it as a whole sentence, and does not end with a go-word, so every call is held, the main thread\'s and every agent\'s. Only reads pass, TaskStop on the main thread, and a write of a plan file directly under ~/.claude/plans/ made in plan mode (an agent may still hand back what it has). The session\'s own entry to plan mode and the button are refused. '
     : 'The newest does not end with a go-word, so the main thread starts nothing new: no Agent, Task, SendMessage or Workflow, and no write of a file other than a plan file directly under ~/.claude/plans/ or a file in the session scratchpad. Reads, Bash, plan mode set in the app and the button pass, and agents already running go on; the session\'s own entry to plan mode is refused. ')
   + `A later typed message whose last word is one of ${GO_WORDS.join(', ')} lifts it, and so does an approval of a plan at the button given after it. `
   + WHY_WAITING
