@@ -1,0 +1,3 @@
+Q-HUB-591: Seen on 23 November 2026: a run stopped at its checker's fail on one planted failure that the piece before it had left uncaught. The piece ran only its own planted failures before its commit, so it could not see the one it had broken, and the page gave the fail no way on but a changed page and a second signature. The procedure's fourth item says that a worker fixes what the checker named and the checker looks again.
+
+Fix in: `plans/native/run-page.js`, `plans/native/skills/piece-of-work/SKILL.md`, `.claude/skills/piece-of-work/SKILL.md`. A run by the script sends a worker to put right what its checker named and has the checker look again, twice at most, and a piece that changes a guard file runs every planted failure of that file before its commit.
