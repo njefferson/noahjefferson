@@ -1319,8 +1319,8 @@ export const cases = [
       const arrivedNoLog = run1([typed(h, 0, 'Go.'), enqueue(h, 5, stopText), absorbed(h, 5, stopText)]);
       // the queue let go of it (a dequeue) and no delivery carries its words, as a slash command is delivered
       const letGo = run1([typed(h, 0, 'Go.'), enqueue(h, 5, stopText), dequeue(h, 6)]);
-      const handBackQ = run1([typed(h, 0, 'Go.'), enqueue(h, 5, '<agent-message from="worker-one">\n[Subagent hand-back] DONE\nThe hook said stop and the step ended there.\n</agent-message>')]);
-      const noticeQ = run1([typed(h, 0, 'Go.'), enqueue(h, 5, '<task-notification> the task was stopped, stop </task-notification>')]);
+      const handBackQ = run1([typed(h, 0, 'Go.'), enqueue(h, 5, '<agent-message from="worker-one">\n[Subagent hand-back] DONE\nThe step ended there.\nStop.\n</agent-message>')]);
+      const noticeQ = run1([typed(h, 0, 'Go.'), enqueue(h, 5, '<task-notification> the task ended.\nStop. </task-notification>')]);
       // a waiting stop that a later-typed message, delivered, has overtaken
       const overtaken = run1([typed(h, 0, 'Go.'), enqueue(h, 5, 'Stop. The work.'), enqueue(h, 6, 'Fine, ok'), dequeue(h, 7), typed(h, 8, 'Fine, ok')]);
       // a go message waiting alone, after a delivered go: no correction, nothing to hold
