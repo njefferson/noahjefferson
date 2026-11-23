@@ -2250,7 +2250,7 @@ export const plants = {
   rd_compaction: ['    const live = entries.slice(cut + 1);', '    const live = entries;', 'hook-dispatch.mjs'],
   rd_unknown: ['try { size = statSync(file).size; } catch { return null; }', 'size = statSync(file).size;', 'hook-dispatch.mjs'],
   wq_hold: ['  const wait = waitingMessages(entries);\n', '  const wait = [];\n', 'hook-dispatch.mjs'],
-  wq_stop_text: ['WAITING_TEXT(true, h.waiting) : STOP_TEXT', 'STOP_TEXT : STOP_TEXT', 'hook-dispatch.mjs'],
+  wq_stop_text: ['    return h.waiting.length ? WAITING_TEXT(true, h.waiting) : STOP_TEXT;\n  }\n  if (p.agent_id || !h.correction) return null;', '    return h.waiting.length ? STOP_TEXT : STOP_TEXT;\n  }\n  if (p.agent_id || !h.correction) return null;', 'hook-dispatch.mjs'],
   wq_new_text: ['const text = h.waiting.length ? WAITING_TEXT(false, h.waiting) : CORRECTION_TEXT;', 'const text = CORRECTION_TEXT;', 'hook-dispatch.mjs'],
   wq_print: ['`--- message ${i + 1} of ${texts.length} ---\\n${t}`', '`--- message ${i + 1} of ${texts.length} ---\\n`', 'hook-dispatch.mjs'],
   wq_why: ["  + WHY_WAITING\n  + 'Answer it now", "  + 'Answer it now", 'hook-dispatch.mjs'],
