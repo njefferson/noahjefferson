@@ -25,17 +25,17 @@ const STATE = 'State: finished';
 
 export const cases = [
   {
-    name: 'stop guard: a reply of 151 words is refused with its count and the way to cut it, one of 150 passes, and 400 words inside a fenced block with 20 outside pass',
-    guards: ['stop_word_limit', 'stop_fence_set_aside'],
+    name: 'stop guard: no count sets the length of a reply, so 400 words with no other fault pass, and a feeling named only inside a fenced block is not refused',
+    guards: ['stop_fence_set_aside'],
     run(m, dir, h) {
-      // The planted replies end with a state line (two words), so the counts are made up to 151 and 150 with it.
-      const over = reply(h, dir, `${words(149)}\n\n${STATE}`);
-      const exact = reply(h, dir, `${words(148)}\n\n${STATE}`);
-      const fenced = reply(h, dir, `${words(20)}\n\n\`\`\`\n${words(400)}\n\`\`\`\n\n${STATE}`);
+      // The planted replies end with a state line, so a reply of any length that has no other fault passes.
+      const long = reply(h, dir, `${words(400)}\n\n${STATE}`);
+      const edge = reply(h, dir, `${words(151)}\n\n${STATE}`);
+      const fenced = reply(h, dir, `${words(20)}\n\n\`\`\`\nYou are clearly annoyed about this.\n${words(400)}\n\`\`\`\n\n${STATE}`);
       return h.assertAll([
-        ['151 words is refused with its count', refused(over, /runs to 151 words, past 150/) && /put anything longer in a file/.test(over.stderr), over.status + over.stderr],
-        ['150 words passes', exact.status === 0, exact.status + exact.stderr],
-        ['400 words in a fence with 20 outside passes', fenced.status === 0, fenced.status + fenced.stderr],
+        ['400 words with a state line pass', long.status === 0, long.status + long.stderr],
+        ['151 words with a state line pass, with no count named', edge.status === 0 && !/words, past/.test(edge.stderr), edge.status + edge.stderr],
+        ['a feeling named only inside a fence is not refused', fenced.status === 0, fenced.status + fenced.stderr],
       ]);
     },
   },
@@ -83,13 +83,13 @@ export const cases = [
   },
   {
     name: 'stop guard: every fault of one reply is listed together in one refusal, and the refusal does not print the reply',
-    guards: ['stop_word_limit', 'stop_feeling', 'stop_promise', 'stop_go_word'],
+    guards: ['stop_feeling', 'stop_promise', 'stop_go_word'],
     run(m, dir, h) {
       const r = reply(h, dir, `Say go to continue. I understand your frustration. This will not happen again. ${words(160)}\n\n${STATE}`);
       return h.assertAll([
         ['exit 2', r.status === 2, r.status],
-        ['all four faults are named', /words, past 150/.test(r.stderr) && /feeling of the owner/.test(r.stderr) && /promises conduct/.test(r.stderr) && /go-word/.test(r.stderr), r.stderr],
-        ['the refusal counts four faults', /^STOP REFUSED: this reply has 4 faults\./.test(r.stderr), r.stderr],
+        ['all three faults are named, and no count of words', /feeling of the owner/.test(r.stderr) && /promises conduct/.test(r.stderr) && /go-word/.test(r.stderr) && !/words, past/.test(r.stderr), r.stderr],
+        ['the refusal counts three faults', /^STOP REFUSED: this reply has 3 faults\./.test(r.stderr), r.stderr],
         ['the refusal does not quote the reply', !/frustration|w100/.test(r.stderr), r.stderr],
       ]);
     },
@@ -213,8 +213,8 @@ export const cases = [
     name: 'stop guard: every refusal ends with the Why sentence, in plain English',
     guards: ['stop_why'],
     run(m, dir, h) {
-      const rs = [words(151), 'This will not happen again.', 'Say go to continue.', 'I understand your frustration.'].map((t) => reply(h, dir, t));
-      const why = 'Why: the reader wants the end result, not what was done or how, and cannot read a long reply, and must be able to tell at once whether the work is finished, paused on something, or still running. A feeling is not the session\'s to name, a promise is words about a later turn, and a go-word is for the one who types it to give.';
+      const rs = ['The list was changed.', 'This will not happen again.', 'Say go to continue.', 'I understand your frustration.'].map((t) => reply(h, dir, t));
+      const why = 'Why: the reader wants the end result, not what was done or how, and must be able to tell at once whether the work is finished, paused on something, or still running. A feeling is not the session\'s to name, a promise is words about a later turn, and a go-word is for the one who types it to give.';
       return h.assertAll([
         ['each refusal ends with the Why sentence as its last line', rs.every((r) => r.status === 2 && r.stderr.trimEnd().split('\n').pop() === why), rs.map((r) => r.stderr).join(' | ')],
       ]);
@@ -265,7 +265,6 @@ export const cases = [
 
 export const plants = {
   stop_shim_stands_aside: ["if grep -qs 'hook-dispatch\\.mjs' \"$HOOK_SETTINGS\"; then exit 0; fi", 'if false; then exit 0; fi', '.claude/hooks/stop-guard.sh'],
-  stop_word_limit: ['if (words > WORD_LIMIT)', 'if (false)', 'stop-guard.mjs'],
   stop_fence_set_aside: ["const prose = reply.replace(/```[\\s\\S]*?```/g, ' ');", 'const prose = reply;', 'stop-guard.mjs'],
   stop_feeling: ['if (EMOTION.some((re) => re.test(prose)))', 'if (false)', 'stop-guard.mjs'],
   stop_promise: ['if (PROMISE.some((re) => re.test(prose)))', 'if (false)', 'stop-guard.mjs'],

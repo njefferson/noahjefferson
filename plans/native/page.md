@@ -17,6 +17,7 @@ This page is what a worker or a checker reads first. It is short on purpose.
 - What was useful returns, and it returns working. The session's judgement makes it work, and nothing is handed back in the form that failed.
 - A control is something a session's own words cannot satisfy. Why: a hold that a session learns to answer with a word controls nothing.
 - The session stays in use, for the framework installed in it and the context it holds.
+- What is said to the owner is what the owner needs to see: neither padded nor cut down, and never what the session would like to say. No count sets its length. Why: a count cuts what is needed into fragments, and padding buries it.
 
 ## What is wanted from a session
 
@@ -62,7 +63,7 @@ A step that meets what its page did not foresee ejects, and the run stops there.
 - Start no process you will not manage, and confirm it ended by the resource, not the process list.
 - When an input does not clearly belong to the work in front of the session, such as an unfamiliar app, screenshot, link, file or repository, ask in plain text before doing anything at all.
 - Only the owner decides what appears on the hub's public pages, so a session adds, removes, proposes or mentions no app there unless the owner has named it.
-- A final reply is the result in 150 words or fewer. It names no feeling, promises no conduct and asks for no go-word. Anything longer goes in a file.
+- A final reply is an answer, a result, a need, a choice or a brief, as this page says each, and holds it whole and nothing beside it: neither padded nor cut down. No count sets its length. It names no feeling, promises no conduct and asks for no go-word. What was done and how goes in a file where it is wanted, and not in the reply. Why: the owner reads for the result, a count cuts what is needed into fragments, and padding buries it.
 
 ## The standing rules in full
 

@@ -6,17 +6,18 @@
  * stop is an agent's). It acts on the main thread only: with an agent_id, or with no transcript it can read, it exits 0. It reads the last
  * assistant message of the transcript (the text the owner will see) and refuses it, exit 2 with the reason on the error output, when the
  * reply:
- *   a. runs past 150 words, counted outside fenced code blocks;
- *   b. names a feeling of the owner's;
- *   c. promises conduct for a later turn;
- *   d. asks the owner for a go-word on its open line;
- *   e. does not end with a state line: its last line outside fenced blocks that is not empty must open with State: and then say
+ *   a. names a feeling of the owner's;
+ *   b. promises conduct for a later turn;
+ *   c. asks the owner for a go-word on its open line;
+ *   d. does not end with a state line: its last line outside fenced blocks that is not empty must open with State: and then say
  *      finished, paused or running.
+ * No count sets the length of a reply: what is said is what the reader needs to see, and the guard judges only the faults above.
+ * What stands inside a fenced code block is set aside for all of them.
  * Every fault of one reply is listed in one refusal, and the refusal never prints or quotes a message of the owner's. A turn that ended in
  * a tool call, or in no text, has nothing to judge and passes. It can never loop: after two refusals in one chain of stops (the Stop-hook
  * refusals the transcript shows since the newest tool call) it passes with one line saying so. Any error inside it exits 0.
  *
- * Patterns b, c and d are lifted from the stop guard of commit 4ea3157 (FEELING and EMOTION, PROMISE, GO_VERB, GO_OBJECT, GO_ASK,
+ * Patterns a, b and c are lifted from the stop guard of commit 4ea3157 (FEELING and EMOTION, PROMISE, GO_VERB, GO_OBJECT, GO_ASK,
  * STOPPING_HERE, GATE_HOLD and goInstruction), as narrow as they were there.
  *
  * Other repositories still call this file by this path from their own Stop hooks, so the path stays.
@@ -24,9 +25,8 @@
 import { readFileSync } from 'node:fs';
 import { tailEntries, textOf, isOwnerMessage } from './transcript-tail.mjs';
 
-const WHY = 'Why: the reader wants the end result, not what was done or how, and cannot read a long reply, and must be able to tell at once whether the work is finished, paused on something, or still running. A feeling is not the session\'s to name, a promise is words about a later turn, and a go-word is for the one who types it to give.';
+const WHY = 'Why: the reader wants the end result, not what was done or how, and must be able to tell at once whether the work is finished, paused on something, or still running. A feeling is not the session\'s to name, a promise is words about a later turn, and a go-word is for the one who types it to give.';
 const STATE_LINE = /^State:\s*(?:finished|paused|running)\b/i;
-const WORD_LIMIT = 150;
 const CHAIN_LIMIT = 2;
 
 const FEELING = String.raw`(?:frustrat\w*|annoy\w*|angry|anger|upset|irritat\w*|disappoint\w*|exasperat\w*|fed up|furious|unhappy|impatien\w*|anxious|worried)`;
@@ -101,8 +101,6 @@ try {
   const held = refusalsInChain(entries);
   const prose = reply.replace(/```[\s\S]*?```/g, ' ');
   const faults = [];
-  const words = prose.split(/\s+/).filter(Boolean).length;
-  if (words > WORD_LIMIT) faults.push(`it runs to ${words} words, past ${WORD_LIMIT} outside code blocks. Cut the reply to the result and put anything longer in a file.`);
   if (EMOTION.some((re) => re.test(prose))) faults.push('it names a feeling of the owner\'s. What a person feels is not the session\'s to say: answer what was asked and say what was done.');
   if (PROMISE.some((re) => re.test(prose))) faults.push('it promises conduct for a later turn. Say what was wrong and what was done, and stop there.');
   const open = prose.split('\n').map((l) => l.trim()).find(Boolean) ?? '';

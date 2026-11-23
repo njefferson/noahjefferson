@@ -66,3 +66,11 @@ Report, in this order: what was done, what was seen, the files changed, and anyt
   - The word stop directly after not, never or a word that ends in n't is not the word stop. Why: a message that says not to stop asks for the work to go on, and on 20 November 2026 such a message held a run in the middle of a step.
  that carries the whole word stop anywhere in it (first, second or last) and
 ```
+
+23 November 2026: no count sets the length of a reply any more, because a count cuts what the reader needs to see into fragments. Three lines that gave the count of 150 words were replaced.
+
+```
+- A final reply is the result in 150 words or fewer. It names no feeling, promises no conduct and asks for no go-word. Anything longer goes in a file.
+- The reply. A final reply past 150 words, or one that names a feeling, promises conduct or asks for a go-word, is refused. Why: the reader wants the end result, not what was done or how, and cannot read a long reply. A feeling is not the session's to name, a promise is words about a later turn, and a go-word is the owner's to give.
+- `stop-guard.mjs` refuses a final reply past 150 words, one that names a feeling, promises conduct or asks for a go-word, or one that does not end with its state line, and `rules-keep-check.mjs` fails a commit that drops a line from a rules page.
+```
