@@ -81,3 +81,12 @@ Report, in this order: what was done, what was seen, the files changed, and anyt
   - After a compaction the typed messages are due as well. At every start the dispatcher files every typed message of the session, whole and in order, at `recall/typed-messages.md` in the session scratchpad, and after a compaction only reads pass until that file has been read whole. It holds nothing where the file is not there. Why: a summary loses the intent, and the typed messages are where it is.
 - The dispatcher files every typed message of the session, whole, in the session scratchpad at every start, and after a compaction it holds the main thread to reads until that file has been read.
 ```
+
+23 November 2026: where the work stands is kept in the ranked list and told at the end of every run, so four lines were replaced: the procedure's line for the end of a run, which stood under its own number in each of the two copies, the instruction file's line that said the record of the rebuild holds where the work stands, and its line on the ranked list, which now names the order.
+
+```
+6. At the end give the result and what the check showed, in California time, ending with the state line. A workflow run still running when it was read is named in the state line and read again at the next turn.
+7. At the end give the result and what the check showed, in California time, ending with the state line. A workflow run still running when it was read is named in the state line and read again at the next turn.
+- `plans/native-setup.md`: the record of how the hub was rebuilt, and where the work stands.
+- `PROGRAM.md`: the ranked list of work across the hub and the apps. `program.mjs` writes it.
+```

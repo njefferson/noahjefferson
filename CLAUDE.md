@@ -26,11 +26,12 @@ is a site change — verify the rendered page before pushing.
 - The dispatcher files every typed message of the session, whole, in the session scratchpad, keeps that file current, and after a compaction holds the main thread to reads until the file as it then stood has been read.
 
 ## Where things are
-- `plans/native-setup.md`: the record of how the hub was rebuilt, and where the work stands.
+- `plans/the-plan.md`: where the hub's work stands: what is next, what is open, what has landed and what waits on the owner. It is made from `PROGRAM.md` by `node program.mjs stands --write` and is never edited by hand.
+- `plans/native-setup.md`: the record of how the hub was rebuilt on 11 and 12 November 2026.
 - `plans/hub-analysis.md`: why work kept coming back, the parts of the system that answers it, and the order they land in.
 - `plans/native/`: the short page, the page on how sessions are started and run, the worker and checker roles, the three procedures, and what the new way cost.
 - `REPOS.md`: the ten repositories, their branches and their deploy targets.
-- `PROGRAM.md`: the ranked list of work across the hub and the apps. `program.mjs` writes it.
+- `PROGRAM.md`: the ranked list of work across the hub and the apps, with the order its pieces are taken in. `program.mjs` writes it and prints where the work stands.
 - `DOCTRINE.md`, `doctrine/never.md` and `doctrine/apps.md`: the standing rules in full, and the rules every app is built to.
 - `HUB-REFERENCE.md`: the shared checks and how another repository calls them, the baseline every app ships, the cold read, patch notes and repository metadata.
 - `LESSONS.md` and `lessons/`: the archive of what went wrong and what it cost. No session loads it; search it when a question is about history.
