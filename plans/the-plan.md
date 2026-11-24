@@ -19,7 +19,7 @@ This page is made from `PROGRAM.md` by the list's own tool, `node program.mjs st
 - 13. A read by an agent before a page exists. P-654 open.
 - 14. Whether the two holds drawn on 23 November 2026 are built. P-655 open.
 - 15. The other settings outside the hub, each made exact and tried. P-659 open.
-- 16. What the run of 23 November 2026 found and left. P-650 open, P-651 open, P-652 open.
+- 16. What the run of 23 November 2026 found and left. P-650 open, P-652 open, P-662 open.
 - 17. The rules the workers and the checker read. P-84 open, P-123 open, P-284 open, P-470 open.
 - 18. The small records. P-72 open, P-211 open, P-269 open, P-320 open, P-474 open, P-503 open, P-532 open.
 - 19. The doctrine's own lines. P-533 open, P-542 open.

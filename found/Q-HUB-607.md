@@ -1,0 +1,3 @@
+Q-HUB-607: Seen on 23 November 2026 at 16:39 California time: the record of the session on disk began at 10:39 of that day and no longer held what came before, and the start wrote the file of the typed messages whole from it, so a file of 176 messages became one of 8. Nothing held the file to what it already had. The messages were put back from the records of two walks that had read the file whole.
+
+Fix in: `hook-dispatch.mjs`, `guard-cases/dispatch.mjs`, `plans/native/running.md`. A start writes the file whole only where it is not there, and otherwise adds to its end each typed message that the file does not hold.
