@@ -87,6 +87,33 @@ function countRun(dir, h, line, entries) {
   return run(dir, root, ['count']);
 }
 
+/**
+ * A list for the stands verb: the items as [key, repository, state], and the lines of the part headed The order and of the part headed What waits on the owner
+ * (null leaves the part out).
+ */
+function standsList(items, order, waits) {
+  return ['# The planted list', '', '## Items', '', `${items.length} items (planted).`, '',
+    ...(order === null ? [] : ['## The order', '', 'A planted lead line.', '', ...order, '']),
+    ...(waits === null ? [] : ['## What waits on the owner', '', 'A planted lead line.', '', ...waits, '']),
+    '## Items the planted list holds', '',
+    ...items.flatMap(([k, repo, state]) => [`### ${k}. Item ${k}`, '', `Repository: ${repo}. Goal: 2. State: ${state}. Plan: none.`, '', 'Acceptance: planted.', '', 'Depends: none.', ''])].join('\n');
+}
+
+/** A root holding that list, and nothing else. */
+function standsRoot(h, items, order, waits) {
+  const root = h.tmp('prog-stands-');
+  writeFileSync(join(root, 'PROGRAM.md'), standsList(items, order, waits));
+  return root;
+}
+
+const pagePath = (root) => join(root, 'plans', 'the-plan.md');
+/** The list and the page of a root as one string, so that two states can be compared; the page is absent as a word. */
+const standsSnap = (root) => `${readFileSync(join(root, 'PROGRAM.md'), 'utf8')}\n====\n${existsSync(pagePath(root)) ? readFileSync(pagePath(root), 'utf8') : 'NO PAGE'}`;
+const standsRun = (dir, root, ...args) => run(dir, root, ['stands', ...args]);
+const standsLines = (r) => String(r.stdout).split('\n').filter(Boolean);
+/** The last three lines the verb prints where no item is parked, in no piece or in another repository. */
+const NO_TAIL = ['program stands: parked: 0 items of the hub, each waiting on what its own entry names', 'program stands: in no piece: 0 open items of the hub', 'program stands: other repositories: 0 open items'];
+
 export const cases = [
   {
     name: 'P-291: the count verb passes an items count line that opens with the count of the entries and whose breakdown sums to it, however many brackets and numbers inside them the line holds, and writes nothing',
@@ -351,9 +378,170 @@ export const cases = [
       ]);
     },
   },
+  {
+    name: 'stands: the stands verb prints a landed piece and a next piece with the counts, in the order the lines are given, writes nothing without a switch, and is named by the usage line',
+    guards: ['stands_verb', 'stands_usage', 'stands_landed', 'stands_next', 'stands_no_write', 'stands_page_open_only'],
+    run(m, dir, h) {
+      const root = standsRoot(h, [['P-1', 'hub', 'done'], ['P-2', 'hub', 'done'], ['P-3', 'hub', 'open'], ['P-4', 'hub', 'done']], ['1. First planted piece: P-1, P-2.', '2. Second planted piece: P-3, P-4.'], []);
+      const before = standsSnap(root);
+      const r = standsRun(dir, root);
+      const afterPrint = standsSnap(root);
+      const verb = spawnSync('node', [join(dir, 'program.mjs'), 'bogus'], { encoding: 'utf8', timeout: 60000 });
+      standsRun(dir, root, '--write');
+      const page = readFileSync(pagePath(root), 'utf8');
+      return h.assertAll([
+        ['the page names only the item not closed of the next piece, in Next and in Open', page.includes('## Next\n\n2. Second planted piece. P-3 open.\n\n## Open, in order\n\n- 2. Second planted piece. P-3 open.\n') && !page.includes('P-4 done') && page.includes('## Landed\n\n- 1. First planted piece.\n'), page],
+        ['it exits 0', r.status === 0, out(r)],
+        ['it prints the counts, the next piece, the landed piece, the open piece and the three closing lines, in that order', JSON.stringify(standsLines(r)) === JSON.stringify([
+          'program stands: 2 pieces, 1 landed, 1 open',
+          'program stands: next: 2. Second planted piece (P-3 open, P-4 done)',
+          'program stands: landed: 1. First planted piece',
+          'program stands: open: 2. Second planted piece (P-3 open, P-4 done)',
+          ...NO_TAIL]), out(r)],
+        ['it writes nothing without a switch', afterPrint === before && afterPrint.endsWith('NO PAGE'), afterPrint],
+        ['the usage line names the verb', verb.status === 2 && /\|count\|stands>/.test(verb.stdout), out(verb)],
+      ]);
+    },
+  },
+  {
+    name: 'stands: a piece whose only open item a waits line names is not next, prints as open and under what waits, a line whose items are all closed is not printed, and the piece after it is next',
+    guards: ['stands_waiting', 'stands_next', 'stands_waits_lines', 'stands_page_waits'],
+    run(m, dir, h) {
+      const root = standsRoot(h, [['P-1', 'hub', 'open'], ['P-2', 'hub', 'open'], ['P-3', 'hub', 'open'], ['P-9', 'hub', 'done']],
+        ['1. Waiting piece: P-1.', '2. Next piece: P-2.', '3. Last piece: P-3.'], ['- A planted need: P-1.', '- A need already met: P-9.']);
+      const r = standsRun(dir, root);
+      const afterPrint = standsSnap(root);
+      const w = standsRun(dir, root, '--write');
+      const page = existsSync(pagePath(root)) ? readFileSync(pagePath(root), 'utf8') : '';
+      return h.assertAll([
+        ['the piece after the waiting one is next, the waiting one is open, and the line of what waits is printed once', r.status === 0 && JSON.stringify(standsLines(r)) === JSON.stringify([
+          'program stands: 3 pieces, 0 landed, 3 open',
+          'program stands: next: 2. Next piece (P-2 open)',
+          'program stands: open: 1. Waiting piece (P-1 open)',
+          'program stands: open: 2. Next piece (P-2 open)',
+          'program stands: open: 3. Last piece (P-3 open)',
+          'program stands: waits on the owner: A planted need (P-1 open)',
+          ...NO_TAIL]), out(r)],
+        ['the print wrote nothing and --write wrote the page', afterPrint.endsWith('NO PAGE') && w.status === 0 && /^program stands: wrote plans\/the-plan\.md$/m.test(w.stdout), out(w)],
+        ['the page names the next piece, lists the three pieces open and the line of what waits, and holds no landed piece', page.includes('## Next\n\n2. Next piece. P-2 open.\n') && page.includes('## Open, in order\n\n- 1. Waiting piece. P-1 open.\n- 2. Next piece. P-2 open.\n- 3. Last piece. P-3 open.\n')
+          && page.includes('## Landed\n\nNone.\n') && page.includes('## What waits on the owner\n\n- A planted need. P-1 open.\n\n## Outside the order') && !page.includes('already met'), page],
+      ]);
+    },
+  },
+  {
+    name: 'stands: a retired item counts as closed, a list whose every piece is landed prints no piece next, and the page then says nothing is next',
+    guards: ['stands_retired', 'stands_none', 'stands_page_nothing'],
+    run(m, dir, h) {
+      const root = standsRoot(h, [['P-1', 'hub', 'retired']], ['1. Only planted piece: P-1.'], null);
+      const r = standsRun(dir, root);
+      const w = standsRun(dir, root, '--write');
+      const page = existsSync(pagePath(root)) ? readFileSync(pagePath(root), 'utf8') : '';
+      return h.assertAll([
+        ['the piece is landed and none is next', r.status === 0 && JSON.stringify(standsLines(r)) === JSON.stringify([
+          'program stands: 1 pieces, 1 landed, 0 open', 'program stands: next: none', 'program stands: landed: 1. Only planted piece', ...NO_TAIL]), out(r)],
+        ['the page says nothing is next and lists no open piece', w.status === 0 && page.includes('## Next\n\nNothing. Every piece is landed or waits on the owner.\n\n## Open, in order\n\nNone.\n\n## Landed\n\n- 1. Only planted piece.\n'), page],
+      ]);
+    },
+  },
+  {
+    name: 'stands: a parked item of the hub is counted as parked and never as in no piece, a piece whose only item not closed is parked is not next, and open items of the hub in no piece and of other repositories are counted as printed',
+    guards: ['stands_parked_waits', 'stands_parked_count', 'stands_in_no_piece', 'stands_in_no_piece_parked', 'stands_others', 'stands_others_closed'],
+    run(m, dir, h) {
+      const root = standsRoot(h, [['P-1', 'hub', 'done'], ['P-2', 'hub', 'open'], ['P-3', 'hub', 'parked'], ['P-4', 'hub', 'parked'], ['P-5', 'hub', 'open'], ['P-6', 'Alpha-App', 'open'],
+        ['P-7', 'Alpha-App', 'open'], ['P-8', 'Beta-App', 'open'], ['P-9', 'Beta-App', 'done'], ['P-10', 'Gamma-App', 'parked']], ['1. Parked planted piece: P-4.', '2. Real planted piece: P-5.'], []);
+      const r = standsRun(dir, root);
+      const page = (standsRun(dir, root, '--write'), readFileSync(pagePath(root), 'utf8'));
+      return h.assertAll([
+        ['the parked piece is open and not next, the other is next, two items are parked, one stands in no piece, and four belong to three other repositories', r.status === 0 && JSON.stringify(standsLines(r)) === JSON.stringify([
+          'program stands: 2 pieces, 0 landed, 2 open',
+          'program stands: next: 2. Real planted piece (P-5 open)',
+          'program stands: open: 1. Parked planted piece (P-4 parked)',
+          'program stands: open: 2. Real planted piece (P-5 open)',
+          'program stands: parked: 2 items of the hub, each waiting on what its own entry names',
+          'program stands: in no piece: 1 open items of the hub',
+          'program stands: other repositories: 4 open items (Alpha-App 2, Beta-App 1, Gamma-App 1)']), out(r)],
+        ['the page gives the same three counts', page.includes('- 2 items of the hub are parked: each waits on a choice or a setting that its own entry names.\n- 1 open items of the hub stand in no piece.\n- 4 open items belong to other repositories: Alpha-App 2, Beta-App 1, Gamma-App 1.\n'), page],
+      ]);
+    },
+  },
+  {
+    name: 'stands: the verb refuses a list with no part headed The order, one with no piece in it, a piece that names no key, a key that is no item in a piece or in a waits line, and a key that two pieces name, each with exit 1 and nothing written',
+    guards: ['stands_no_order', 'stands_no_piece', 'stands_no_key', 'stands_unheld_key', 'stands_waits_key', 'stands_dup_key', 'prog_refuse_exit'],
+    run(m, dir, h) {
+      const items = [['P-1', 'hub', 'open'], ['P-2', 'hub', 'open']];
+      const refused = (order, waits, re) => {
+        const root = standsRoot(h, items, order, waits);
+        const before = standsSnap(root);
+        const r = standsRun(dir, root, '--write');
+        return [r.status === 1 && re.test(r.stdout) && /program stands: nothing written/.test(r.stdout) && standsSnap(root) === before && !existsSync(pagePath(root)), out(r)];
+      };
+      return h.assertAll([
+        ['a list with no part headed The order', ...refused(null, [], /REFUSED, the list holds no part headed The order/)],
+        ['a part with no piece in it', ...refused(['A line that opens with no number.'], [], /REFUSED, the part headed The order holds no piece/)],
+        ['a piece that names no key', ...refused(['1. A piece with a colon and no key: none.', '2. A second piece: P-2.'], [], /REFUSED, piece 1 names no key/)],
+        ['a key in a piece that is no item of the list', ...refused(['1. A piece: P-1, P-99.'], [], /REFUSED, piece 1 names P-99, which is no item of the list/)],
+        ['a key in a waits line that is no item of the list', ...refused(['1. A piece: P-1.'], ['- A need: P-98.'], /REFUSED, a line of what waits on the owner names P-98, which is no item of the list/)],
+        ['a key that two pieces name', ...refused(['1. A piece: P-1.', '2. Another piece: P-2, P-1.'], [], /REFUSED, P-1 is named by piece 1 and by piece 2/)],
+      ]);
+    },
+  },
+  {
+    name: 'stands: --write then --check passes, --check fails where the page is not there and after an item is set done until the page is written again, and the page holds only the items not closed',
+    guards: ['stands_check_differs', 'stands_check_exit', 'stands_write_writes', 'stands_page_open_only'],
+    run(m, dir, h) {
+      const root = standsRoot(h, [['P-1', 'hub', 'open'], ['P-2', 'hub', 'open']], ['1. First planted piece: P-1.', '2. Second planted piece: P-2.'], []);
+      const noPage = standsRun(dir, root, '--check');
+      const pageAfterCheck = existsSync(pagePath(root));
+      const w =standsRun(dir, root, '--write');
+      const page1 = existsSync(pagePath(root)) ? readFileSync(pagePath(root), 'utf8') : '';
+      const ok = standsRun(dir, root, '--check');
+      const d = run(dir, root, ['done', '--item', 'P-1=A planted sentence.']);
+      const stale = standsRun(dir, root, '--check');
+      const w2 = standsRun(dir, root, '--write');
+      const page2 = existsSync(pagePath(root)) ? readFileSync(pagePath(root), 'utf8') : '';
+      const ok2 = standsRun(dir, root, '--check');
+      return h.assertAll([
+        ['--check where the page is not there exits 1 with its line and writes nothing', noPage.status === 1 && /^program stands: FAILED, plans\/the-plan\.md is not what the list gives$/m.test(noPage.stdout) && !pageAfterCheck, out(noPage)],
+        ['--write writes the page and says so', w.status === 0 && /^program stands: wrote plans\/the-plan\.md$/m.test(w.stdout), out(w)],
+        ['the page opens with its heading and its note, names the first piece next, lists both open, holds no landed piece and counts nothing outside the order', page1.startsWith('# Where the work stands\n\nThis page is made from `PROGRAM.md` by the list\'s own tool, `node program.mjs stands --write`, and is never edited by hand.')
+          && page1.includes('## Next\n\n1. First planted piece. P-1 open.\n\n## Open, in order\n\n- 1. First planted piece. P-1 open.\n- 2. Second planted piece. P-2 open.\n\n## Landed\n\nNone.\n\n## What waits on the owner\n\nNone.\n\n## Outside the order\n\n- 0 items of the hub are parked: each waits on a choice or a setting that its own entry names.\n- 0 open items of the hub stand in no piece.\n- 0 open items belong to other repositories.\n'), page1],
+        ['--check passes on the page just written', ok.status === 0 && /^program stands: plans\/the-plan\.md is what the list gives$/m.test(ok.stdout), out(ok)],
+        ['--check exits 1 after an item is set done with the list\'s own tool', d.status === 0 && stale.status === 1 && /FAILED, plans\/the-plan\.md is not what the list gives/.test(stale.stdout), out(stale)],
+        ['the page written again names the second piece next, lists only it as open and the first as landed, and names no closed item', w2.status === 0 && page2.includes('## Next\n\n2. Second planted piece. P-2 open.\n\n## Open, in order\n\n- 2. Second planted piece. P-2 open.\n\n## Landed\n\n- 1. First planted piece.\n') && !page2.includes('P-1 done'), page2],
+        ['--check passes again', ok2.status === 0, out(ok2)],
+      ]);
+    },
+  },
 ];
 
 export const plants = {
+  stands_verb: ['lesson, count, stands };', 'lesson, count };', 'program.mjs'],
+  stands_usage: ['|lesson|count|stands>', '|lesson|count>', 'program.mjs'],
+  stands_retired: ['new Set([\'done\', \'retired\'])', 'new Set([\'done\'])', 'program.mjs'],
+  stands_landed: ['const landed = items.every(isClosed);', 'const landed = true;', 'program.mjs'],
+  stands_waiting: ['const waiting = !landed && open.every(waitsItem);', 'const waiting = false;', 'program.mjs'],
+  stands_parked_waits: ['(e.state === \'parked\' || waitKeys.has(e.key))', 'waitKeys.has(e.key)', 'program.mjs'],
+  stands_next: ['shaped.find((p) => !p.landed && !p.waiting) ?? null;', 'shaped.find((p) => !p.landed) ?? null;', 'program.mjs'],
+  stands_none: ['\'program stands: next: none\'', '\'program stands: next: \'', 'program.mjs'],
+  stands_waits_lines: ['waitLines.filter((w) => w.keys.some((k) => !isClosed(byKey.get(k))))', 'waitLines.filter((w) => w.keys.length)', 'program.mjs'],
+  stands_in_no_piece: ['e.state !== \'parked\' && !named.has(e.key)).length', 'e.state !== \'parked\').length', 'program.mjs'],
+  stands_in_no_piece_parked: ['!isClosed(e) && e.state !== \'parked\' && !named', '!isClosed(e) && !named', 'program.mjs'],
+  stands_parked_count: ['e.repository === \'hub\' && e.state === \'parked\').length', 'e.state === \'parked\').length', 'program.mjs'],
+  stands_others: ['e.repository !== \'hub\') others.set(', 'e.repository !== \'hub\' && false) others.set(', 'program.mjs'],
+  stands_others_closed: ['if (!isClosed(e) && e.repository !== \'hub\') others.set(', 'if (e.repository !== \'hub\') others.set(', 'program.mjs'],
+  stands_no_order: ['if (order === null) problems.push(', 'if (false) problems.push(', 'program.mjs'],
+  stands_no_piece: ['if (!pieces.length) problems.push(', 'if (false) problems.push(', 'program.mjs'],
+  stands_no_key: ['if (!p.keys.length) problems.push(', 'if (false) problems.push(', 'program.mjs'],
+  stands_unheld_key: ['if (!byKey.has(k)) problems.push(`piece', 'if (false) problems.push(`piece', 'program.mjs'],
+  stands_waits_key: ['if (!byKey.has(k)) problems.push(`a line of what', 'if (false) problems.push(`a line of what', 'program.mjs'],
+  stands_dup_key: ['else if (owner.has(k) && owner.get(k) !== p.number) problems.push(', 'else if (false) problems.push(', 'program.mjs'],
+  stands_no_write: ['  if (a.includes(\'--write\')) {', '  if (true) {', 'program.mjs'],
+  stands_write_writes: ['write(root, P.plan, page, []);', 'page.length;', 'program.mjs'],
+  stands_check_differs: ['if (slurp(P.plan) !== page) {', 'if (slurp(P.plan) === null) {', 'program.mjs'],
+  stands_check_exit: ['is not what the list gives\\n\');\n      process.exit(1);', 'is not what the list gives\\n\');\n      process.exit(0);', 'program.mjs'],
+  stands_page_open_only: ['const open = (items) => itemsText(items.filter((e) => !isClosed(e)));', 'const open = (items) => itemsText(items);', 'program.mjs'],
+  stands_page_nothing: ['\'Nothing. Every piece is landed or waits on the owner.\'', '\'Nothing.\'', 'program.mjs'],
+  stands_page_waits: ['...list(m.waits.map((w) => `- ${w.words}. ${open(w.items)}.`)),', '...list([]),', 'program.mjs'],
   prog_count_opens: ['if (opens !== entries) problems.push(', 'if (false) problems.push(', 'program.mjs'],
   prog_count_sum: ['else if (sum !== opens) problems.push(', 'else if (false) problems.push(', 'program.mjs'],
   prog_count_bracket: ['if (c === \',\' && depth === 0) flush(); else seg += c;', 'if (c === \',\') flush(); else seg += c;', 'program.mjs'],

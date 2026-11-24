@@ -12,6 +12,7 @@
  *   measure <session transcript> [--plan=<n>] [--root ...]   writes the close entry of the plan the instrument numbers n (the plan last approved without --plan) under P-10, from session-cost.mjs
  *   lesson --title <t> --declaration <d> --body <file>   writes the next lesson's file and its row in LESSONS.md
  *   count [--root ...]                             writes nothing; exits 1 when the items count line does not open with the count of the entries or its breakdown does not sum to it (P-291)
+ *   stands [--write|--check] [--root ...]          prints where the work stands from the part headed The order and the part headed What waits on the owner; with --write writes plans/the-plan.md from them, with --check exits 1 when that page is not what the list gives
  *
  * A verb that refuses writes nothing, names each cause on its own line and exits 1. A verb that writes prints one line for each thing it wrote.
  * The findings file is a JSON array (or an object with a findings array); each finding holds text, kind (Fix in, Put right already, Not the
@@ -152,7 +153,7 @@ const lastTrim = (s) => String(s).replace(/\s+$/, '');
 const noStop = (s) => String(s).trim().replace(/[.\s]+$/, '');
 
 function paths(root) {
-  return { program: join(root, 'PROGRAM.md'), found: join(root, 'found'), lessons: join(root, 'lessons'), lessonsMd: join(root, 'LESSONS.md') };
+  return { program: join(root, 'PROGRAM.md'), found: join(root, 'found'), lessons: join(root, 'lessons'), lessonsMd: join(root, 'LESSONS.md'), plan: join(root, 'plans', 'the-plan.md') };
 }
 
 function write(root, file, text, wrote) {
@@ -430,16 +431,181 @@ function lesson(a, root) {
   process.stdout.write(`program lesson: wrote lesson ${n}; wrote ${wrote.join(', ')}\n`);
 }
 
+const CLOSED = new Set(['done', 'retired']);
+const isClosed = (e) => CLOSED.has(e.state);
+
+/** The lines of a part of the list: from the line after its heading to the line before the next heading of level two, or null where the part is not there. */
+function partOf(lines, heading) {
+  const at = lines.findIndex((l) => l.trimEnd() === heading);
+  if (at < 0) return null;
+  let end = lines.length;
+  for (let j = at + 1; j < lines.length; j++) if (/^## /.test(lines[j])) { end = j; break; }
+  return lines.slice(at + 1, end);
+}
+
+/** The words of a line of the order or of what waits on the owner, which stand before its last colon, and the keys after that colon. */
+function splitKeys(rest) {
+  const c = rest.lastIndexOf(':');
+  if (c < 0) return { words: rest.trim(), keys: [] };
+  return { words: rest.slice(0, c).trim(), keys: [...rest.slice(c + 1).matchAll(/\bP-\d+\b/g)].map((m) => m[0]) };
+}
+
+/**
+ * Where the work stands, worked out from the list (the order of its pieces and what waits on the owner).
+ * An item is closed where its state is done or retired, parked where its state is parked and open in every other state. A piece is landed where every
+ * item it names is closed. An item waits where it is parked, or where it is open and a line of what waits on the owner names it. A piece waits where it is
+ * not landed and every item of it that is not closed waits. The piece that is next is the first that is neither landed nor waiting.
+ * @param {string} text  PROGRAM.md.
+ * @returns {{problems: string[], pieces?: object[], next?: object|null, waits?: object[], parked?: number, inNoPiece?: number, others?: [string, number][]}} the faults that
+ *   refuse the list, or the pieces (number, title, keys, items, landed, waiting), the piece that is next, the lines of what waits that name an item not closed,
+ *   the count of parked items of the hub, the count of open items of the hub in no piece, and the open items of other repositories by repository.
+ */
+export function standsModel(text) {
+  const src = String(text ?? '');
+  const lines = src.split('\n');
+  const entries = programEntries(src);
+  const byKey = new Map(entries.map((e) => [e.key, e]));
+  const problems = [];
+  const order = partOf(lines, '## The order');
+  const pieces = [];
+  if (order === null) problems.push('the list holds no part headed The order');
+  else {
+    for (const l of order) {
+      const m = /^(\d+)\. (.*)$/.exec(l);
+      if (!m) continue;
+      const { words, keys } = splitKeys(m[2]);
+      pieces.push({ number: Number(m[1]), title: words, keys });
+    }
+    if (!pieces.length) problems.push('the part headed The order holds no piece');
+  }
+  const waitLines = [];
+  for (const l of partOf(lines, '## What waits on the owner') ?? []) {
+    const m = /^- (.*)$/.exec(l);
+    if (m) waitLines.push(splitKeys(m[1]));
+  }
+  const owner = new Map();
+  for (const p of pieces) {
+    if (!p.keys.length) problems.push(`piece ${p.number} names no key`);
+    for (const k of p.keys) {
+      if (!byKey.has(k)) problems.push(`piece ${p.number} names ${k}, which is no item of the list`);
+      else if (owner.has(k) && owner.get(k) !== p.number) problems.push(`${k} is named by piece ${owner.get(k)} and by piece ${p.number}`);
+      else owner.set(k, p.number);
+    }
+  }
+  for (const w of waitLines) for (const k of w.keys) if (!byKey.has(k)) problems.push(`a line of what waits on the owner names ${k}, which is no item of the list`);
+  if (problems.length) return { problems: [...new Set(problems)] };
+  const waitKeys = new Set(waitLines.flatMap((w) => w.keys));
+  const waitsItem = (e) => !isClosed(e) && (e.state === 'parked' || waitKeys.has(e.key));
+  const shaped = pieces.map((p) => {
+    const items = [...new Set(p.keys)].map((k) => byKey.get(k));
+    const open = items.filter((e) => !isClosed(e));
+    const landed = items.every(isClosed);
+    const waiting = !landed && open.every(waitsItem);
+    return { ...p, items, landed, waiting };
+  });
+  const next = shaped.find((p) => !p.landed && !p.waiting) ?? null;
+  const named = new Set(shaped.flatMap((p) => p.keys));
+  const parked = entries.filter((e) => e.repository === 'hub' && e.state === 'parked').length;
+  const inNoPiece = entries.filter((e) => e.repository === 'hub' && !isClosed(e) && e.state !== 'parked' && !named.has(e.key)).length;
+  const others = new Map();
+  for (const e of entries) if (!isClosed(e) && e.repository !== 'hub') others.set(e.repository, (others.get(e.repository) ?? 0) + 1);
+  const waits = waitLines.filter((w) => w.keys.some((k) => !isClosed(byKey.get(k)))).map((w) => ({ words: w.words, items: w.keys.map((k) => byKey.get(k)) }));
+  return { problems, pieces: shaped, next, waits, parked, inNoPiece, others: [...others] };
+}
+
+const itemsText = (items) => items.map((e) => `${e.key} ${e.state || 'open'}`).join(', ');
+
+/**
+ * The lines the verb prints with no switch.
+ * @param {object} m  what standsModel returned, with no problem.
+ * @returns {string[]} the lines, each opening `program stands: `.
+ */
+export function standsPrint(m) {
+  const landed = m.pieces.filter((p) => p.landed).length;
+  const out = [`program stands: ${m.pieces.length} pieces, ${landed} landed, ${m.pieces.length - landed} open`];
+  out.push(m.next ? `program stands: next: ${m.next.number}. ${m.next.title} (${itemsText(m.next.items)})` : 'program stands: next: none');
+  for (const p of m.pieces) if (p.landed) out.push(`program stands: landed: ${p.number}. ${p.title}`);
+  for (const p of m.pieces) if (!p.landed) out.push(`program stands: open: ${p.number}. ${p.title} (${itemsText(p.items)})`);
+  for (const w of m.waits) out.push(`program stands: waits on the owner: ${w.words} (${itemsText(w.items)})`);
+  out.push(`program stands: parked: ${m.parked} items of the hub, each waiting on what its own entry names`);
+  out.push(`program stands: in no piece: ${m.inNoPiece} open items of the hub`);
+  const total = m.others.reduce((s, [, n]) => s + n, 0);
+  out.push(total ? `program stands: other repositories: ${total} open items (${m.others.map(([r, n]) => `${r} ${n}`).join(', ')})` : 'program stands: other repositories: 0 open items');
+  return out;
+}
+
+/**
+ * The page the verb writes with --write.
+ * @param {object} m  what standsModel returned, with no problem.
+ * @returns {string} the whole page, each list holding only the items that are not closed.
+ */
+export function standsPage(m) {
+  const open = (items) => itemsText(items.filter((e) => !isClosed(e)));
+  const list = (rows) => (rows.length ? rows : ['None.']);
+  const total = m.others.reduce((s, [, n]) => s + n, 0);
+  return [
+    '# Where the work stands',
+    '',
+    'This page is made from `PROGRAM.md` by the list\'s own tool, `node program.mjs stands --write`, and is never edited by hand. `node program.mjs stands --check` fails when it is not what the list gives. The order of the pieces is the part of the list headed The order, and why its first parts exist is on `plans/hub-analysis.md`.',
+    '',
+    '## Next',
+    '',
+    m.next ? `${m.next.number}. ${m.next.title}. ${open(m.next.items)}.` : 'Nothing. Every piece is landed or waits on the owner.',
+    '',
+    '## Open, in order',
+    '',
+    ...list(m.pieces.filter((p) => !p.landed).map((p) => `- ${p.number}. ${p.title}. ${open(p.items)}.`)),
+    '',
+    '## Landed',
+    '',
+    ...list(m.pieces.filter((p) => p.landed).map((p) => `- ${p.number}. ${p.title}.`)),
+    '',
+    '## What waits on the owner',
+    '',
+    ...list(m.waits.map((w) => `- ${w.words}. ${open(w.items)}.`)),
+    '',
+    '## Outside the order',
+    '',
+    `- ${m.parked} items of the hub are parked: each waits on a choice or a setting that its own entry names.`,
+    `- ${m.inNoPiece} open items of the hub stand in no piece.`,
+    `- ${total} open items belong to other repositories${total ? `: ${m.others.map(([r, n]) => `${r} ${n}`).join(', ')}` : ''}.`,
+    '',
+  ].join('\n');
+}
+
+function stands(a, root) {
+  const P = paths(root);
+  const text = slurp(P.program);
+  if (text === null) refuse('stands', ['PROGRAM.md cannot be read']);
+  const m = standsModel(text);
+  if (m.problems.length) refuse('stands', m.problems);
+  const page = standsPage(m);
+  if (a.includes('--check')) {
+    if (slurp(P.plan) !== page) {
+      process.stdout.write('program stands: FAILED, plans/the-plan.md is not what the list gives\n');
+      process.exit(1);
+    }
+    process.stdout.write('program stands: plans/the-plan.md is what the list gives\n');
+    return;
+  }
+  if (a.includes('--write')) {
+    write(root, P.plan, page, []);
+    process.stdout.write('program stands: wrote plans/the-plan.md\n');
+    return;
+  }
+  for (const l of standsPrint(m)) process.stdout.write(`${l}\n`);
+}
+
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const a = process.argv.slice(2);
   const rootAt = a.indexOf('--root');
   const root = rootAt >= 0 && a[rootAt + 1] ? resolve(a[rootAt + 1]) : HERE;
   const rest = rootAt >= 0 ? a.filter((_, i) => i !== rootAt && i !== rootAt + 1) : a;
-  const verbs = { claim, file: fileFindings, done, measure, lesson, count };
+  const verbs = { claim, file: fileFindings, done, measure, lesson, count, stands };
   const verb = rest[0];
   if (!verbs[verb]) {
-    process.stdout.write('usage: node program.mjs <claim|file|done|measure|lesson|count> [switches] [--root <path>]; see the header of this file for each verb\'s switches\n');
+    process.stdout.write('usage: node program.mjs <claim|file|done|measure|lesson|count|stands> [switches] [--root <path>]; see the header of this file for each verb\'s switches\n');
     process.exit(2);
   }
   verbs[verb](rest.slice(1), root);
