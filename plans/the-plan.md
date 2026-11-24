@@ -4,7 +4,7 @@ This page is made from `PROGRAM.md` by the list's own tool, `node program.mjs st
 
 ## Next
 
-5. Two settings outside the hub that bear on secrets and on the network, each put as an exact need. P-657 open, P-658 open.
+6. The run script sends together the steps that share no file, and puts right what a checker named. P-645 open, P-648 open, P-649 open.
 
 ## Open, in order
 
@@ -19,7 +19,7 @@ This page is made from `PROGRAM.md` by the list's own tool, `node program.mjs st
 - 13. A read by an agent before a page exists. P-654 open.
 - 14. Whether the two holds drawn on 23 November 2026 are built. P-655 open.
 - 15. The other settings outside the hub, each made exact and tried. P-659 open.
-- 16. What the run of 23 November 2026 found and left. P-650 open, P-652 open, P-662 open.
+- 16. What the run of 23 November 2026 found and left. P-650 open, P-652 open, P-662 open, P-663 open, P-664 open, P-665 open, P-666 open, P-667 open, P-668 open, P-669 open.
 - 17. The rules the workers and the checker read. P-84 open, P-123 open, P-284 open, P-470 open.
 - 18. The small records. P-72 open, P-211 open, P-269 open, P-320 open, P-474 open, P-503 open, P-532 open.
 - 19. The doctrine's own lines. P-533 open, P-542 open.
@@ -40,6 +40,8 @@ This page is made from `PROGRAM.md` by the list's own tool, `node program.mjs st
 - Two dependency pull requests that stand open. P-184 open.
 - The allow list of the settings. P-186 open, P-193 open.
 - Nineteen lesson citations that name a repository on no list. P-183 open.
+- The credentials of one environment moved out of plain variables, by the block in the file `found/Q-HUB-603.md`, pasted into a session on that environment. P-657 open.
+- A choice for the environment with an open network, which the file `found/Q-HUB-604.md` puts with its options, to keep it open with nothing stored on it, to limit it to named hosts, or to remove it. P-658 open.
 
 ## Outside the order
 

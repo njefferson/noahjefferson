@@ -1,0 +1,3 @@
+Q-HUB-609: Seen on 23 November 2026: the last line of the print of where the work stands counts open items by the words of the repository field of each entry, and entries of the list name things such as the cloud environment and the settings of a session there. So the line names those wordings as repositories, and its count is not a count of the work of the apps. The block that gave the form of the print also did not say whether every key of a piece or only the open ones are printed.
+
+Fix in: `program.mjs`, `guard-cases/program.mjs`, `PROGRAM.md`. The last line counts the open items of each repository that the list of repositories names, and gathers every other wording under one count.
