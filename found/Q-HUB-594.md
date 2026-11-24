@@ -1,0 +1,3 @@
+Q-HUB-594: Seen on 23 November 2026 in a run by the script: the two steps that pushed found no file that held the answer of the checker for the commit, and took the sending of the step by the script as the pass. The push guard holds a push until a checker has passed the exact commit, so the push was held by it, and the words of the step gave the worker nothing to read.
+
+Fix in: `plans/native/run-page.js`, `plans/native/skills/piece-of-work/SKILL.md`, `.claude/skills/piece-of-work/SKILL.md`. A step that pushes is given the first line of the answer of the checker for the commit it pushes, by the script or by its page.

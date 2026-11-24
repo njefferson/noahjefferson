@@ -1,0 +1,3 @@
+Q-HUB-606: Seen on 23 November 2026: the list holds 140 open items of the hub by a count of that day, most of them older than the rebuild of 12 November, and 21 parked ones, each of which waits on what its own entry names. The items filed between 14 and 23 November were not read against what landed in those days, but for the ones a landing closed by name, and the parked ones were not read at all.
+
+Fix in: `PROGRAM.md`. Each open item in no piece and each parked item is read against the repository, and is set done, retired, placed on a line of the order, or kept parked with what it waits on said as a need.
