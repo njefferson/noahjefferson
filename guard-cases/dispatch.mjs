@@ -126,7 +126,7 @@ const absorbed = (h, s, text) => ({ type: 'attachment', timestamp: h.ts(s), atta
 const reading = (w, hub, payload) => w.run(hub, payload, { HOOK_DISPATCH_READ_HOLD: 'on' });
 const compaction = (h, s) => [{ type: 'system', subtype: 'compact_boundary', timestamp: h.ts(s) }, { type: 'user', timestamp: h.ts(s + 1), isCompactSummary: true, message: { role: 'user', content: 'This session is being continued from a previous conversation. Summary: planted.' } }];
 
-// ---- the typed messages of the session, filed whole at every start (fileTypedMessages in hook-dispatch.mjs) ----
+// ---- the typed messages of the session, filed at every start: whole only where the file is not there, and otherwise only added to (fileTypedMessages in hook-dispatch.mjs) ----
 const RECALL_FIRST = 'Every message typed in this session, whole and in order, for this session to read. It is not copied into any repository.';
 const RECALL_WHY = 'Why: a summary loses the intent, and the typed messages are where it is.';
 const RECALL_LINES = ['Planted typed messages file', '', '## 1. Oct 1, 05:00', '', 'planted words'];
@@ -1855,7 +1855,7 @@ export const cases = [
     },
   },
   {
-    name: 'typed messages (filed): a start files every typed message whole under its heading with its California time, a prompt and one from the queue, and none of hook feedback, a notification, a hand-back, a slash command, a tool result or a compaction\'s summary; a compaction\'s print names the file and its count; an agent\'s start files none; a file that cannot be written is one line and no refusal',
+    name: 'typed messages (filed): a start with no file writes every typed message whole under its heading with its California time, a prompt and one from the queue, and none of hook feedback, a notification, a hand-back, a slash command, a tool result or a compaction\'s summary; a compaction\'s print names the file and its count; an agent\'s start files none; a file that cannot be written is one line and no refusal',
     guards: ['rc_first', 'rc_whole', 'rc_typed', 'rc_queue', 'rc_time', 'rc_mkdir', 'rc_path', 'rc_print', 'rc_failline', 'rc_skipped'],
     run(m, dir, h) {
       const first = 'Plant first message.\nIts second line holds a ## mark that is no heading.';
@@ -1957,7 +1957,7 @@ export const cases = [
     },
   },
   {
-    name: 'typed messages kept current: a message typed after a start is added to the end of the file at its prompt, one delivered from the queue before the next send of an agent passes, each once and told by its place in the record, and harness text, an agent\'s call, a file with no state and a start with nothing filed add nothing',
+    name: 'typed messages kept current: a message typed after a start is added to the end of the file at its prompt, one delivered from the queue before the next send of an agent passes, each once and told by its place in the record, harness text and an agent\'s call add nothing, a file with no state is added to and its state is written, and a state whose file is gone makes no file',
     guards: ['kt_prompt_hook', 'kt_prompt_main', 'kt_send', 'kt_send_main', 'kt_send_tool', 'kt_owner', 'kt_same', 'kt_absorb', 'kt_absorb_n', 'kt_pending_up', 'kt_anchor_after', 'kt_anchor_at', 'kt_number', 'kt_append', 'kt_state_write', 'kt_nostate', 'kt_file_exists', 'kt_widen', 'kt_state_start', 'kt_state_anchor', 'kt_state_filed'],
     run(m, dir, h) {
       const tmpRoot = h.tmp('dp-tmp-');
@@ -2026,11 +2026,12 @@ export const cases = [
       const gBash = g.read();
       g.call('Agent', { prompt: 'x' });
       const gSend = g.read();
-      // A file with no state beside it is left alone, and so is a state whose file is gone.
+      // A file with no state beside it is added to at the next typed message, and its state is written; a state whose file is gone makes no file.
       const z = sess('kt-z', [typed(h, 0, first)], { filed: true });
       const zBefore = z.read();
       z.prompt('Plant words with no state.');
       const zAfter = z.read();
+      const zState = existsSync(z.file.replace(/\.md$/, '.state')) ? JSON.parse(readFileSync(z.file.replace(/\.md$/, '.state'), 'utf8')) : null;
       const y = sess('kt-y', [typed(h, 0, first)]);
       y.start();
       rmSync(y.file, { force: true });
@@ -2056,9 +2057,110 @@ export const cases = [
         ['an agent\'s prompt and an agent\'s send add nothing', gAgent === gBefore, gAgent],
         ['a main-thread call that is no send adds nothing', gBash === gBefore, gBash],
         ['a send of the main thread adds the message the record holds', times(gSend, 'Plant unfiled message. Go.') === 1 && heads(gSend) === 2, gSend],
-        ['a file with no state is left as it was', zAfter === zBefore && !existsSync(z.file.replace(/\.md$/, '.state')), zAfter],
+        ['a file with no state is added to at the next typed message, what it held stays as it was, the message of the record that it did not hold and the prompt\'s are added, and its state is written', zAfter.startsWith(zBefore) && heads(zAfter) === 3 && times(zAfter, first) === 1 && times(zAfter, 'Plant words with no state.') === 1 && zState !== null && zState.filed === 3 && zState.pending === 1, zAfter],
         ['a state whose file is gone makes no file', !existsSync(y.file), y.read()],
         ['a message more than two megabytes back is found, and the two after it are added in order', heads(bText) === 3 && bText.indexOf(first) < bText.indexOf('Plant after the big result.') && bText.indexOf('Plant after the big result.') < bText.indexOf('Plant at the prompt after it.'), bText.slice(0, 600)],
+      ]);
+    },
+  },
+  {
+    name: 'typed messages (a start only adds): a start writes the file whole only where it is not there; with the file there it adds each typed message the file does not hold, numbered on, and leaves every filed line as it was, whether the record shows all of the filed messages, only the last of them, or none; with no state it adds only what the file does not hold, files nothing twice and writes the state; a message added at its prompt and then shown by the record is not added again; at a compaction the count printed and the count of lines that is due are the file\'s',
+    guards: ['ks_keep', 'ks_add', 'ks_count', 'ks_cut_time', 'ks_take', 'kt_nostate', 'ks_state_k', 'kt_state_start', 'kt_state_anchor', 'kt_state_filed'],
+    run(m, dir, h) {
+      const tmpRoot = h.tmp('dp-tmp-');
+      const env = { env: { TMPDIR: tmpRoot } };
+      const heads = (t) => (t.match(/^## \d+\. /gm) ?? []).length;
+      const times = (t, s) => t.split(s).length - 1;
+      const lineEntries = (entries) => entries.map((e) => JSON.stringify(e)).join('\n') + '\n';
+      /** A session whose record holds `entries`, with the calls a session makes. */
+      const sess = (sid, entries) => {
+        const s = recallSession(h, tmpRoot, () => entries, { filed: false, sid });
+        const payload = (extra = {}) => ({ transcript_path: s.record, session_id: sid, ...extra });
+        const statePath = s.file.replace(/\.md$/, '.state');
+        return {
+          ...s,
+          statePath,
+          read: () => (existsSync(s.file) ? readFileSync(s.file, 'utf8') : ''),
+          stateOf: () => (existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : null),
+          add: (more) => appendFileSync(s.record, lineEntries(more)),
+          rewrite: (more) => writeFileSync(s.record, lineEntries(more)),
+          start: (source = 'startup') => disp(h, dir, 'SessionStart', payload({ source }), env),
+          prompt: (text) => disp(h, dir, 'UserPromptSubmit', payload({ prompt: text }), env),
+        };
+      };
+      const ten = Array.from({ length: 10 }, (_, k) => typed(h, k * 100, `Plant message number ${k + 1} of the ten.`));
+      // A: a start with no file writes it whole; a record that holds every filed message and two more has the two added at the end, numbered on.
+      const a = sess('ks-a', ten.slice(0, 3));
+      a.start();
+      const aWhole = a.read();
+      const aState = a.stateOf();
+      a.add([typed(h, 1000, 'Plant later message one.'), typed(h, 1100, 'Plant later message two.')]);
+      a.start();
+      const aAfter = a.read();
+      const aRestart = a.start();
+      // B: a record that holds only the last three of ten filed messages and one more leaves the ten and adds the one.
+      const b = sess('ks-b', ten);
+      b.start();
+      const bBefore = b.read();
+      b.rewrite([...ten.slice(7), typed(h, 2000, 'Plant after the cut.')]);
+      b.start();
+      const bAfter = b.read();
+      // C: a record that holds none of the filed messages and two that were typed later leaves the ten and adds the two.
+      const c = sess('ks-c', ten);
+      c.start();
+      const cBefore = c.read();
+      c.rewrite([typed(h, 450, 'Plant older than the last filed.'), typed(h, 3000, 'Plant far message one.'), typed(h, 3100, 'Plant far message two.')]);
+      c.start();
+      const cAfter = c.read();
+      // D: a record that holds no typed message at all takes nothing out of the file.
+      const d = sess('ks-d', ten);
+      d.start();
+      const dBefore = d.read();
+      d.rewrite([h.turn(5, 'Stop hook feedback: planted feedback words')]);
+      d.start();
+      const dAfter = d.read();
+      // E: a file with no state: only what the file does not hold is added, a go-word typed twice in one minute is held twice, the state is written,
+      // and the same holds between starts at the next typed message.
+      const e = sess('ks-e', [typed(h, 0, 'Plant first of the set.'), typed(h, 60, 'Go.')]);
+      e.start();
+      rmSync(e.statePath, { force: true });
+      e.add([typed(h, 90, 'Go.'), typed(h, 500, 'Plant later of the set.')]);
+      e.start();
+      const eStart = e.read();
+      const eState = e.stateOf();
+      rmSync(e.statePath, { force: true });
+      e.add([typed(h, 700, 'Plant between the starts.')]);
+      e.prompt('Plant typed at its prompt.');
+      const eBetween = e.read();
+      const eStateBetween = e.stateOf();
+      // The message added at its prompt is then shown by the record at a start and is not added again.
+      e.add([typed(h, 800, 'Plant typed at its prompt.')]);
+      e.start();
+      const eShown = e.read();
+      // F: at a compaction the count printed and the count of lines that is due are the file's, with a record that was cut.
+      const f = sess('ks-f', ten);
+      f.start();
+      f.rewrite([...ten.slice(7), typed(h, 2000, 'Plant after the cut. Go.')]);
+      const fCompact = f.start('compact');
+      const fText = f.read();
+      const fLines = fText.split('\n').slice(0, -1).length;
+      const fDue = existsSync(f.file.replace(/\.md$/, '.due')) ? readFileSync(f.file.replace(/\.md$/, '.due'), 'utf8') : null;
+      return h.assertAll([
+        ['a start with no file writes the three messages whole', heads(aWhole) === 3 && aWhole.startsWith(`${RECALL_FIRST}\n\n## 1. `), aWhole],
+        ['a record that holds every filed message and two more has the two added at the end, numbered on, and every earlier line stands byte for byte', aAfter.startsWith(aWhole) && heads(aAfter) === 5 && /\n## 4\. [A-Z][a-z]{2} \d+, \d\d:\d\d\n\nPlant later message one\.\n\n## 5\. [^\n]+\n\nPlant later message two\.\n$/.test(aAfter), aAfter],
+        ['a start that finds nothing new leaves the file as it was', aRestart.status === 0 && a.read() === aAfter, a.read()],
+        ['a record that holds only the last three of ten filed messages and one more leaves the ten and adds the one', bAfter.startsWith(bBefore) && heads(bBefore) === 10 && heads(bAfter) === 11 && /\n## 11\. [^\n]+\n\nPlant after the cut\.\n$/.test(bAfter) && bAfter.endsWith('\n\nPlant after the cut.\n') && times(bAfter, 'of the ten.') === 10, bAfter],
+        ['a record that holds none of the filed messages and two typed later leaves the ten and adds the two, numbered on', cAfter.startsWith(cBefore) && heads(cAfter) === 12 && /\n## 11\. [^\n]+\n\nPlant far message one\.\n\n## 12\. [^\n]+\n\nPlant far message two\.\n$/.test(cAfter), cAfter],
+        ['a message of the record typed before the last one filed is not added', times(cAfter, 'Plant older than the last filed.') === 0, cAfter],
+        ['the state after the cut says twelve are filed', c.stateOf()?.filed === 12, JSON.stringify(c.stateOf())],
+        ['a start that writes the file whole writes the state beside it: three filed, the last message and none waiting', aState?.filed === 3 && typeof aState?.anchor?.at === 'string' && typeof aState?.anchor?.hash === 'string' && aState?.pending === 0, JSON.stringify(aState)],
+        ['a record that holds no typed message at all takes nothing out of the file', dAfter === dBefore && heads(dAfter) === 10, dAfter.slice(0, 300)],
+        ['with no state a start adds only what the file does not hold: the later message and the second go-word, and nothing twice', heads(eStart) === 4 && times(eStart, 'Plant first of the set.') === 1 && times(eStart, '\nGo.\n') === 2 && eStart.endsWith('\n\nPlant later of the set.\n'), eStart],
+        ['the start wrote the state, with four filed', eState?.filed === 4 && eState?.pending === 0, JSON.stringify(eState)],
+        ['between starts, with no state, the message the record holds and the prompt\'s are added and nothing is added twice, and the state is written', heads(eBetween) === 6 && times(eBetween, 'Plant between the starts.') === 1 && times(eBetween, 'Plant typed at its prompt.') === 1 && eBetween.startsWith(eStart) && eStateBetween?.filed === 6 && eStateBetween?.pending === 1, eBetween],
+        ['a message added at its prompt and then shown by the record at a start is not added again', eShown === eBetween && e.stateOf()?.pending === 0, eShown],
+        ['at a compaction the print gives the file\'s count of messages, which is more than the record\'s', fCompact.status === 0 && fCompact.stdout.includes(`TYPED MESSAGES FILED: ${f.file} holds the 11 typed messages of this session`), said(fCompact)],
+        ['at a compaction the count of lines that is due is the lines of the file after the adding', heads(fText) === 11 && fDue === `${fLines}\n`, `${fLines} ${fDue}`],
       ]);
     },
   },
@@ -2325,7 +2427,7 @@ export const plants = {
   rc_typed: ['if (e?.isSidechain || e?.agentId || !tail.isOwnerMessage(e)) return;', "if (e?.isSidechain || e?.agentId || (e?.type !== 'user' && e?.type !== 'attachment')) return;", 'hook-dispatch.mjs'],
   rc_queue: ['if (e?.isSidechain || e?.agentId || !tail.isOwnerMessage(e)) return;', "if (e?.isSidechain || e?.agentId || e?.type !== 'user' || !tail.isOwnerMessage(e)) return;", 'hook-dispatch.mjs'],
   rc_time: ["timeZone: 'America/Los_Angeles'", "timeZone: 'UTC'", 'hook-dispatch.mjs'],
-  rc_mkdir: ['    mkdirSync(dirname(file), { recursive: true });\n    writeFileSync(file, `', '    writeFileSync(file, `', 'hook-dispatch.mjs'],
+  rc_mkdir: ['      mkdirSync(dirname(file), { recursive: true });\n      writeFileSync(file, `', '      writeFileSync(file, `', 'hook-dispatch.mjs'],
   rc_path: ["'scratchpad', 'recall', 'typed-messages.md')", "'recall', 'typed-messages.md')", 'hook-dispatch.mjs'],
   rc_print: ["{ if (p.source === 'compact') process.stdout.write(", '{ if (false) process.stdout.write(', 'hook-dispatch.mjs'],
   rc_failline: ['else if (!filed.skipped) process.stdout.write(', 'else if (false) process.stdout.write(', 'hook-dispatch.mjs'],
@@ -2345,18 +2447,24 @@ export const plants = {
   kt_send_tool: ["if (!p.agent_id && NEW_STARTS.has(tool)) {\n      try { keepTypedMessages(p); }", "if (!p.agent_id) {\n      try { keepTypedMessages(p); }", 'hook-dispatch.mjs'],
   kt_owner: ['if (tail.isOwnerMessage(entry) && !(last', 'if (!(last', 'hook-dispatch.mjs'],
   kt_same: ['!(last && normText(last.text) === normText(tail.textOf(entry)))', 'true', 'hook-dispatch.mjs'],
-  kt_absorb: ['const add = fresh.slice(absorbed);', 'const add = fresh;', 'hook-dispatch.mjs'],
+  kt_absorb: ['add = fresh.slice(absorbed);', 'add = fresh;', 'hook-dispatch.mjs'],
   kt_absorb_n: ['const absorbed = Math.min(pending, fresh.length);', 'const absorbed = 0;', 'hook-dispatch.mjs'],
   kt_pending_up: ['waiting += 1; }', 'waiting += 0; }', 'hook-dispatch.mjs'],
-  kt_anchor_after: ['fresh = list.slice(at + 1); break;', 'fresh = list.slice(at); break;', 'hook-dispatch.mjs'],
+  kt_anchor_after: ['if (at >= 0) fresh = list.slice(at + 1);', 'if (at >= 0) fresh = list.slice(at);', 'hook-dispatch.mjs'],
   kt_anchor_at: ['if (String(list[k].at) === st.anchor.at && anchorOf(list[k]).hash === st.anchor.hash) at = k;', 'if (anchorOf(list[k]).hash === st.anchor.hash) at = k;', 'hook-dispatch.mjs'],
-  kt_number: ['let k = st.filed;', 'let k = 0;', 'hook-dispatch.mjs'],
+  kt_number: ['let k = held.length;', 'let k = 0;', 'hook-dispatch.mjs'],
   kt_append: ['appendFileSync(file, add.map(', 'writeFileSync(file, add.map(', 'hook-dispatch.mjs'],
-  kt_state_write: ["writeFileSync(recallBeside(file, 'state'), JSON.stringify({ filed: st.filed, anchor, pending: waiting }));", 'void 0;', 'hook-dispatch.mjs'],
-  kt_nostate: ["if (!st || !Number.isInteger(st.filed) || st.filed < 0 || !existsSync(file)) return { ok: false, skipped: true, why: 'the file has no state' };", 'if (!st) st = { filed: 0, anchor: null, pending: 0 };', 'hook-dispatch.mjs'],
-  kt_file_exists: ["st.filed < 0 || !existsSync(file)) return", "st.filed < 0) return", 'hook-dispatch.mjs'],
+  kt_state_write: ["try { writeFileSync(recallBeside(file, 'state'), JSON.stringify({ filed: k, anchor, pending: waiting })); }", 'try { void 0; }', 'hook-dispatch.mjs'],
+  kt_nostate: ['add = list.filter((m) => !take(m));', 'add = [];', 'hook-dispatch.mjs'],
+  kt_file_exists: ["if (!existsSync(file)) return { ok: false, skipped: true, why: 'the file is not there' };", "if (false) return { ok: false, skipped: true, why: 'the file is not there' };", 'hook-dispatch.mjs'],
+  ks_keep: ['    if (!held) {\n      mkdirSync(', '    if (true) {\n      mkdirSync(', 'hook-dispatch.mjs'],
+  ks_add: ['count = addTypedMessages(file, list, true)?.count ?? held;', 'count = held;', 'hook-dispatch.mjs'],
+  ks_count: ['return { ok: true, file, count };', 'return { ok: true, file, count: list.length };', 'hook-dispatch.mjs'],
+  ks_cut_time: ['else if (whole) fresh = list.filter((m) => m.at > Number(st.anchor.at));', 'else if (whole) fresh = list;', 'hook-dispatch.mjs'],
+  ks_take: ['if (n > 0) { counts.set(key, n - 1); return true; }', 'if (n > 0) { return true; }', 'hook-dispatch.mjs'],
+  ks_state_k: ['JSON.stringify({ filed: k, anchor, pending: waiting })', 'JSON.stringify({ filed: 0, anchor, pending: waiting })', 'hook-dispatch.mjs'],
   kt_widen: ["for (const mb of [2, 8, 32]) {\n      const list = typedMessages(", "for (const mb of [2]) {\n      const list = typedMessages(", 'hook-dispatch.mjs'],
-  kt_state_start: ["try { writeFileSync(recallBeside(file, 'state'), JSON.stringify({ filed: list.length, anchor: anchorOf(list[list.length - 1]), pending: 0 })); } catch { /* the next start writes it */ }", 'void 0;', 'hook-dispatch.mjs'],
+  kt_state_start: ["try { writeFileSync(recallBeside(file, 'state'), JSON.stringify({ filed: list.length, anchor: anchorOf(list[list.length - 1]), pending: 0 })); } catch { /* the next adding writes it */ }", 'void 0;', 'hook-dispatch.mjs'],
   kt_state_anchor: ['anchor: anchorOf(list[list.length - 1]), pending: 0', 'anchor: null, pending: 0', 'hook-dispatch.mjs'],
   kt_state_filed: ['JSON.stringify({ filed: list.length,', 'JSON.stringify({ filed: 0,', 'hook-dispatch.mjs'],
   kt_due_write: ["if (p.source === 'compact') { try { writeFileSync(recallBeside(file, 'due')", "if (false) { try { writeFileSync(recallBeside(file, 'due')", 'hook-dispatch.mjs'],

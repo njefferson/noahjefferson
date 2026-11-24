@@ -90,3 +90,9 @@ Report, in this order: what was done, what was seen, the files changed, and anyt
 - `plans/native-setup.md`: the record of how the hub was rebuilt, and where the work stands.
 - `PROGRAM.md`: the ranked list of work across the hub and the apps. `program.mjs` writes it.
 ```
+
+23 November 2026: a start only adds to the file of the typed messages, because a start that wrote it whole from a record that had been cut took 168 messages out of it. One line that said the file is written at every start was replaced.
+
+```
+  - After a compaction the typed messages are due as well. The dispatcher files every typed message of the session, whole and in order, at `recall/typed-messages.md` in the session scratchpad, and keeps that file current: it writes it at every start, at every typed message, and before an agent or a workflow is sent. After a compaction only reads pass until the file as it stood at that compaction has been read whole. A message typed later is in the conversation and is never due, and a resume makes nothing due. It holds nothing where the file is not there. Why: a summary loses the intent, and the typed messages are where it is.
+```
