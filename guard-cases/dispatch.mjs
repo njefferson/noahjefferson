@@ -1639,7 +1639,7 @@ export const cases = [
   },
   {
     name: 'hold 6 (run tier, the top tier\'s run): on the top tier the hub\'s run script launched for a page that stands as it was approved passes, and a worker or a checker sent that page\'s path and a step passes only once the script has been launched for it; another script, a changed script, a page changed since its approval, no approval, plan mode and a path elsewhere are refused',
-    guards: ['rn_send', 'rn_mode', 'rn_script', 'rn_script_same', 'rn_place', 'rn_text', 'rn_approval', 'rn_step_role', 'rn_step_words', 'rn_step_first', 'rn_step_after', 'rn_step_page', 'rn_what'],
+    guards: ['rn_send', 'rn_mode', 'rn_script', 'rn_script_same', 'rn_installed', 'rn_place', 'rn_text', 'rn_approval', 'rn_step_role', 'rn_step_words', 'rn_step_first', 'rn_step_after', 'rn_step_page', 'rn_what'],
     run(m, dir, h) {
       const PAGE = '# A page\n\nOne step.\n';
       const SCRIPT = 'planted run script\n';
@@ -1661,17 +1661,18 @@ export const cases = [
         if (o.script !== false) writeFileSync(script, o.script ?? SCRIPT);
         const elsewhere = join(w.launch, 'another.js');
         writeFileSync(elsewhere, SCRIPT);
+        const installed = join(hub, 'plans', 'native', 'run-page.js');
         const model = o.model ?? 'claude-fable-5-2';
         const entries = [typed(h, 0, 'Go.'), modelReply(h, 1, model),
           ...(o.before ? launchedFor(2, 'r0', script, w.plan) : []),
           ...(o.approval === false ? [] : approved(4, 'ap1', o.approvedFile === 'outside' ? outside : w.plan, PAGE)),
-          ...(o.after ? launchedFor(6, 'r1', o.afterScript === 'elsewhere' ? elsewhere : script, o.afterFor === 'other' ? other : w.plan) : []),
+          ...(o.after ? launchedFor(6, 'r1', o.afterScript === 'elsewhere' ? elsewhere : o.afterScript === 'installed' ? installed : script, o.afterFor === 'other' ? other : w.plan) : []),
           modelReply(h, 8, model)];
         const tr = h.transcript(entries);
         const launch = (input, mode = 'auto') => w.run(hub, call('Workflow', input, tr, { permission_mode: mode }));
         const send = (input, mode = 'auto') => w.run(hub, call('Agent', { description: 'x', ...input }, tr, { permission_mode: mode }));
         const args = (page) => ({ page, steps: [{ n: 1, role: 'worker' }] });
-        return { w, launch, send, other, outside, script, elsewhere, args, tr };
+        return { w, launch, send, other, outside, script, elsewhere, installed, args, tr };
       };
       const a = make();
       const run = a.launch({ scriptPath: a.script, args: a.args(a.w.plan) });
@@ -1711,6 +1712,11 @@ export const cases = [
       const stepByOther = byOther.send({ subagent_type: 'worker', prompt: `${byOther.w.plan} step 1` });
       const opus = make({ model: 'claude-opus-5-5', approval: false });
       const opusAny = opus.launch({ script: 'x' });
+      const runInstalled = a.launch({ scriptPath: a.installed, args: a.args(a.w.plan) });
+      const runInstalledNoScript = noScript.launch({ scriptPath: noScript.installed, args: noScript.args(noScript.w.plan) });
+      const runInstalledNone = none.launch({ scriptPath: none.installed, args: none.args(none.w.plan) });
+      const byInstalled = make({ script: false, after: true, afterScript: 'installed' });
+      const stepByInstalled = byInstalled.send({ subagent_type: 'worker', prompt: `${byInstalled.w.plan} step 1` });
       const refused = (r) => held(r, /^RUN WAITS FOR ITS TIER: /);
       return h.assertAll([
         ['on the top tier, outside plan mode, the hub\'s run script launched for a page that stands as it was approved passes', passes(run), said(run)],
@@ -1734,6 +1740,10 @@ export const cases = [
         ['a launch before the newest approval does not count', refused(stepBefore), said(stepBefore)],
         ['a launch for another page does not count', refused(stepForOther), said(stepForOther)],
         ['a launch of another script does not count', refused(stepByOther), said(stepByOther)],
+        ['the installed hub\'s own run script, named by its path, passes for a page that stands as it was approved', passes(runInstalled), said(runInstalled)],
+        ['it passes where the launch folder holds no run script, as an app\'s folder and a folder above the hub\'s checkout do', passes(runInstalledNoScript), said(runInstalledNoScript)],
+        ['it is refused where the transcript holds no approval', refused(runInstalledNone), said(runInstalledNone)],
+        ['a step passes once the installed script has been launched for the page, in a launch folder that holds no run script', passes(stepByInstalled), said(stepByInstalled)],
         ['a tier below the top is not held, whatever it launches', passes(opusAny), said(opusAny)],
       ]);
     },
@@ -2407,6 +2417,7 @@ export const plants = {
   rn_mode: ["  if (!isTopTier(id) || /plan/i.test(String(p.permission_mode ?? ''))) return false;", "  if (!isTopTier(id)) return false;", 'hook-dispatch.mjs'],
   rn_script: ["script && canon(absPath(p, String(input?.scriptPath ?? ''))) === canon(script) && ", "script && ", 'hook-dispatch.mjs'],
   rn_script_same: ["readFileSync(mine, 'utf8') === readFileSync(join(HUB, 'plans', 'native', 'run-page.js'), 'utf8') ? mine : ''", "readFileSync(mine, 'utf8') ? mine : ''", 'hook-dispatch.mjs'],
+  rn_installed: ["canon(absPath(p, String(input?.scriptPath ?? ''))) === canon(installed) && ", '', 'hook-dispatch.mjs'],
   rn_place: ["  if (dirname(page) !== join(homedir(), '.claude', 'plans')) return null;\n", '', 'hook-dispatch.mjs'],
   rn_text: ['  return ok && ok.text.trim() === now.trim() ? ok : null;', '  return ok || null;', 'hook-dispatch.mjs'],
   rn_approval: ['  return ok && ok.text.trim() === now.trim() ? ok : null;', '  return !ok || ok.text.trim() === now.trim() ? (ok || { entries: [], at: -1 }) : null;', 'hook-dispatch.mjs'],

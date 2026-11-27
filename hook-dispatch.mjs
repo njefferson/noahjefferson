@@ -1239,7 +1239,11 @@ function isRunSend(p, id) {
   if (!isTopTier(id) || /plan/i.test(String(p.permission_mode ?? ''))) return false;
   const tool = String(p.tool_name ?? '');
   const script = runScript(p);
-  const launched = (input) => (script && canon(absPath(p, String(input?.scriptPath ?? ''))) === canon(script) && typeof input?.args?.page === 'string' ? absPath(p, input.args.page) : '');
+  // The installed hub's own run script stands beside this dispatcher, at the same place in every session, whatever the launch folder is.
+  const installed = join(HUB, 'plans', 'native', 'run-page.js');
+  const inFolder = (input) => (script && canon(absPath(p, String(input?.scriptPath ?? ''))) === canon(script) && typeof input?.args?.page === 'string' ? absPath(p, input.args.page) : '');
+  const inInstalled = (input) => (canon(absPath(p, String(input?.scriptPath ?? ''))) === canon(installed) && typeof input?.args?.page === 'string' ? absPath(p, input.args.page) : '');
+  const launched = (input) => inFolder(input) || inInstalled(input);
   if (tool === 'Workflow') { const page = launched(p.tool_input); return !!page && !!approvedAsItStands(p, page); }
   if (tool !== 'Agent') return false;
   const m = /^(\S+) step \d+$/.exec(String(p.tool_input?.prompt ?? '').trim());
